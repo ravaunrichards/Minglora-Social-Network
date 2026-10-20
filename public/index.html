@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1769e0"><meta name="description" content="Connect with friends, share moments, and find your community.">
+  <title>Gather — Your community, together</title><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="auth-screen" class="auth-screen hidden">
+    <section class="auth-brand"><div class="brand-mark">g</div><h1>Gather</h1><p>Share what matters. Find your people. Build your community.</p></section>
+    <section class="auth-card"><form id="login-form"><h2>Welcome back</h2><label>Email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="Your password"></label><button class="primary full" type="submit">Log in</button><p class="auth-error" id="login-error"></p><div class="auth-divider"><span>or create an account</span></div></form>
+      <form id="register-form" class="register-form"><label>Your name<input name="name" required minlength="2" placeholder="Full name"></label><label>Username<input name="username" required minlength="3" pattern="[A-Za-z0-9_]+" placeholder="yourname"></label><label>Email<input name="email" type="email" required placeholder="you@example.com"></label><label>Password<input name="password" type="password" required minlength="10" placeholder="At least 10 characters"></label><button class="success full" type="submit">Create new account</button><p class="auth-error" id="register-error"></p></form>
+    </section><p class="auth-foot">An independent social networking project.</p>
+  </div>
+  <div id="app" class="hidden">
+    <header class="topbar">
+      <div class="top-left"><button class="brand" id="home-brand" aria-label="Gather home"><span class="brand-mark">g</span><span>Gather</span></button><form id="search-form" class="search-box"><span>⌕</span><input id="search-input" placeholder="Search Gather" aria-label="Search Gather"></form></div>
+      <nav class="top-nav" aria-label="Main navigation"><button class="nav-item active" data-view="feed" title="Home"><span>⌂</span><small>Home</small></button><button class="nav-item" data-view="friends" title="Friends"><span>♧</span><small>Friends</small></button><button class="nav-item" data-view="groups" title="Groups"><span>◉</span><small>Groups</small></button><button class="nav-item" data-view="messages" title="Messages"><span>▤</span><small>Messages</small></button></nav>
+      <div class="top-actions"><button class="circle-action" id="notifications-btn" aria-label="Notifications">♧<i id="notification-dot" class="dot hidden"></i></button><button class="profile-menu" id="profile-menu"><img id="top-avatar" alt="Your profile"><span id="top-name">Profile</span>⌄</button><button class="logout-btn" id="logout-btn">Log out</button></div>
+    </header>
+    <div class="mobile-nav"><button data-view="feed" class="active">⌂<small>Home</small></button><button data-view="friends">♧<small>Friends</small></button><button data-view="groups">◉<small>Groups</small></button><button data-view="messages">▤<small>Messages</small></button></div>
+    <main class="layout">
+      <aside class="left-rail"><button class="rail-profile" id="rail-profile"><img id="rail-avatar" alt=""><span id="rail-name">My profile</span></button><button class="rail-link" data-view="friends"><span>♧</span> Friends</button><button class="rail-link" data-view="groups"><span>◉</span> Groups</button><button class="rail-link" data-view="messages"><span>▤</span> Messages</button><button class="rail-link" id="rail-notifications"><span>♢</span> Notifications</button><div class="rail-heading">Your shortcuts</div><div id="shortcut-groups"></div><div class="rail-note">Connect with people and communities that matter to you.</div></aside>
+      <section id="main-content" class="main-content" aria-live="polite"></section>
+      <aside class="right-rail"><section class="side-card"><div class="side-card-heading"><h3>People you may know</h3><button id="see-people" class="text-button">See all</button></div><div id="suggested-people" class="suggested-list"></div></section><section class="side-card"><div class="side-card-heading"><h3>Your communities</h3><button id="see-groups" class="text-button">Browse</button></div><div id="suggested-groups" class="suggested-list"></div></section><footer>Privacy · Terms · Community guidelines<br>© 2026 Gather</footer></aside>
+    </main>
+    <div id="toast" class="toast" role="status"></div>
+  </div>
+  <script src="/app.js" defer></script>
+</body></html>

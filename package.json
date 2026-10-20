@@ -1,0 +1,9 @@
+{
+  "name": "social-network-starter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Independent, responsive social networking application starter with an API and persistent local JSON store.",
+  "type": "module",
+  "scripts": { "start": "node src/server.js", "dev": "node --watch src/server.js", "test": "node --test" },
+  "engines": { "node": ">=20" }
+}
