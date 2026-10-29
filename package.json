@@ -1,9 +1,15 @@
 {
-  "name": "social-network-starter",
-  "version": "1.0.0",
+  "name": "minglora-social-network",
+  "version": "1.1.0",
   "private": true,
-  "description": "Independent, responsive social networking application starter with an API and persistent local JSON store.",
+  "description": "Minglora — an independent social networking application with a responsive web interface and Node.js API.",
   "type": "module",
-  "scripts": { "start": "node src/server.js", "dev": "node --watch src/server.js", "test": "node --test" },
-  "engines": { "node": ">=20" }
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
