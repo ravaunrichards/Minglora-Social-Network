@@ -91,5 +91,4 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html']});res.end(d);});return;}res.writeHead(200,{'Content-Type':MIME[path.extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
-async function bootstrap(){ const demo=db.users.find(u=>u.email==='demo@example.com'); if(demo && !demo.passwordHash){const salt=crypto.randomBytes(16).toString('hex');const hash=(await scrypt('DemoPass123!',salt,64)).toString('hex');demo.passwordHash=`${salt}:${hash}`;saveStore();} server.listen(PORT,'0.0.0.0',()=>console.log(`Social Network running at http://localhost:${PORT}`)); }
-bootstrap().catch(err=>{console.error('Startup failed:',err);process.exitCode=1;});
+server.listen(PORT,'0.0.0.0',()=>console.log(`Minglora listening on port ${PORT}`));
