@@ -7,7 +7,7 @@ This document distinguishes working code from unfinished product requirements. A
 | Account access | Registration, login, logout, salted scrypt password hashes, signed HttpOnly session cookie | Email verification, password reset, MFA, login rate limiting, account recovery |
 | Feed | Authenticated All/Following/Friends scopes, optional cursor pagination, post create/edit/delete by owner, text and HTTPS image URL, saved posts UI/API, recent/oldest ordering | Media upload/storage, personalized ranking, post audience controls, reporting |
 | Reactions | Like toggle in browser; API accepts like, love, care, haha, wow, sad and angry | Full reaction picker and reaction analytics |
-| Comments | Add comments; comments display on post cards | Edit/delete, threaded replies, moderation and reporting |
+| Comments | Add comments and delete comments as the comment author or post author | Edit, threaded replies, reaction lifecycle, moderation and reporting |
 | Profiles | View profiles/posts, edit name/bio/location/avatar/cover, see real follower/following/post counts, follow/unfollow and block/unblock from profile UI | Profile privacy, verified accounts, themes, and granular audience settings |
 | Friends and follows | Send/accept friend requests, accepted friend lists, directed follow/unfollow, block/unblock and followers/following lists | Unfriend lifecycle beyond blocking, mute/restrict, report flows and request cancellation |
 | Groups | Create, browse and join groups | Group posts, roles, events, invitations, private groups and moderation |
