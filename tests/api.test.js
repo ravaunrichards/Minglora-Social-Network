@@ -98,6 +98,22 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.deepEqual(feedPage.body.posts.map(item => item.id), [post.body.post.id]);
   assert.equal(feedPage.body.hasMore, false);
 
+  const editedPost = await request(`/api/posts/${post.body.post.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ text: 'Edited integration post' })
+  });
+  assert.equal(editedPost.status, 200);
+  assert.equal(editedPost.body.post.text, 'Edited integration post');
+
+  const saved = await request(`/api/posts/${post.body.post.id}/save`, { method: 'POST', body: '{}' });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.saved, true);
+  const savedPosts = await request('/api/saved-posts');
+  assert.equal(savedPosts.status, 200);
+  assert.equal(savedPosts.body.posts.length, 1);
+  const unsaved = await request(`/api/posts/${post.body.post.id}/save`, { method: 'DELETE', body: '{}' });
+  assert.equal(unsaved.body.saved, false);
+
   const reaction = await request(`/api/posts/${post.body.post.id}/reactions`, {
     method: 'POST',
     body: JSON.stringify({ reaction: 'like' })
@@ -119,6 +135,63 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(group.status, 201);
   assert.equal(group.body.group.name, 'Test Community');
 
+  const firstCookie = cookie;
+  const firstUserId = registration.body.user.id;
+  cookie = '';
+  const secondRegistration = await request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Second Test User',
+      username: 'secondtest',
+      email: 'second-user@example.test',
+      password: 'AnotherPassword123!'
+    })
+  });
+  assert.equal(secondRegistration.status, 201);
+  const secondUserId = secondRegistration.body.user.id;
+  const secondCookie = cookie;
+
+  const follow = await request(`/api/users/${firstUserId}/follow`, { method: 'POST', body: '{}' });
+  assert.equal(follow.status, 200);
+  assert.equal(follow.body.following, true);
+  const followers = await request(`/api/users/${firstUserId}/followers`);
+  assert.equal(followers.body.count, 1);
+  assert.equal(followers.body.users[0].id, secondUserId);
+
+  const forbiddenEdit = await request(`/api/posts/${post.body.post.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'Not the owner' }) });
+  assert.equal(forbiddenEdit.status, 403);
+  const forbiddenDelete = await request(`/api/posts/${post.body.post.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(forbiddenDelete.status, 403);
+
+  const otherSave = await request(`/api/posts/${post.body.post.id}/save`, { method: 'POST', body: '{}' });
+  assert.equal(otherSave.body.saved, true);
+  assert.equal((await request('/api/saved-posts')).body.posts.length, 1);
+
+  const block = await request(`/api/users/${firstUserId}/block`, { method: 'POST', body: '{}' });
+  assert.equal(block.body.blocked, true);
+  assert.equal((await request('/api/feed')).body.posts.length, 0);
+  assert.equal((await request(`/api/users/${firstUserId}`)).status, 404);
+  assert.equal((await request('/api/blocks')).body.users.length, 1);
+  const blockedMessage = await request('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify({ to: firstUserId, text: 'This should be rejected while blocked.' })
+  });
+  assert.equal(blockedMessage.status, 400);
+
+  const unblock = await request(`/api/users/${firstUserId}/block`, { method: 'DELETE', body: '{}' });
+  assert.equal(unblock.body.blocked, false);
+  assert.equal((await request(`/api/users/${firstUserId}`)).status, 200);
+  const refollow = await request(`/api/users/${firstUserId}/follow`, { method: 'POST', body: '{}' });
+  assert.equal(refollow.body.following, true);
+  assert.equal((await request(`/api/users/${firstUserId}/followers`)).body.count, 1);
+
+  cookie = firstCookie;
+  const deleteOwnPost = await request(`/api/posts/${post.body.post.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteOwnPost.status, 200);
+  cookie = secondCookie;
+  assert.equal((await request('/api/saved-posts')).body.posts.length, 0);
+
+  cookie = firstCookie;
   const logout = await request('/api/auth/logout', { method: 'POST', body: '{}' });
   assert.equal(logout.status, 200);
   cookie = '';
