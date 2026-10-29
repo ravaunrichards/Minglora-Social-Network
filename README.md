@@ -13,9 +13,9 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - Responsive browser interface and account registration/sign-in/sign-out
 - Salted scrypt password hashes and signed HttpOnly session cookies
 - Basic profile viewing/editing
-- Chronological feed, text posts and optional HTTPS image URLs
-- Basic post reactions and comments
-- Friend requests and friend lists
+- All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination
+- Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
+- Friend requests and friend lists, directed follows/unfollows, block/unblock, follower/following lists and profile counts
 - Basic group creation, browsing and membership
 - Direct text messages and conversation history
 - In-app notifications for supported actions
