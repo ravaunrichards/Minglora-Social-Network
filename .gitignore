@@ -3,3 +3,9 @@ node_modules/
 .DS_Store
 *.log
 data/db.json
+.env.*
+!.env.example
+data/*
+!data/.gitkeep
+coverage/
+.DS_Store
