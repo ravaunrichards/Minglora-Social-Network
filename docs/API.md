@@ -16,7 +16,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/feed` | Current authenticated feed; optional cursor pagination with `?limit=20&cursor=...` |
+| GET | `/api/feed` | Current authenticated feed; `scope=all|following|friends`; optional cursor pagination with `?limit=20&cursor=...` |
 | POST | `/api/posts` | Create a text post and optional HTTPS image URL |
 | PATCH | `/api/posts/:id` | Edit own post |
 | DELETE | `/api/posts/:id` | Delete own post and saved-post references |
