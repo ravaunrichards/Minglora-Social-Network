@@ -1,0 +1,3 @@
+# Schema documentation
+
+Document table purposes, ownership, sensitivity, retention, constraints and cross-domain relationships here. The initial relational proposal lives in `../migrations/001_social_core.sql`. Update the data dictionary and migration tests whenever a schema change alters application behavior. Never put real user exports or production records here.
