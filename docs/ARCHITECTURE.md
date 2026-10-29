@@ -41,7 +41,7 @@ This is the runtime that actually serves requests today. The expanded module/dat
 - `apps/`: boundaries for future web, mobile and admin client projects. The live browser client remains in `public/` until it is deliberately extracted.
 - `backend/modules/`: ownership, authorization expectations, current implementation status and acceptance rules for social-network domains. These are module contracts, not route-mounted services yet.
 - `backend/realtime/` and `backend/workers/`: planned boundaries for realtime transport and durable background jobs.
-- `src/domain/`: pure, tested helper functions for validation, cursor pagination and relationship visibility. They are not yet wired into the existing API route handlers; avoid treating them as full authorization enforcement until integrated and tested on every route.
+- `src/domain/`: pure, tested helpers for validation, cursor pagination and relationship visibility. Validation is now used by registration, post creation and profile edits. Optional cursor pagination is used by `GET /api/feed` when `limit` or `cursor` is supplied. Relationship visibility is not yet integrated across profile, feed, search and other privacy-sensitive routes.
 - `packages/`: shared API contracts, validation and platform-neutral helpers. These package boundaries are documented but not independently built or published.
 - `database/migrations/001_social_core.sql`: relational schema foundation for users, profiles, relationships, media assets, posts, reactions, comments, saved posts, groups, Pages, Stories, messaging, notifications, events, reports, Marketplace listings and audit history.
 - `database/policies/`, `database/functions/`, and `database/schemas/`: policy/function design boundaries and schema documentation.
@@ -68,5 +68,5 @@ The target persistence architecture uses versioned relational migrations, constr
 - Production startup requires a strong `SESSION_SECRET`.
 - JSON API responses set `Cache-Control: no-store`.
 - Request bodies have a size limit and inputs are validated at route boundaries.
-- The new pure domain validation helpers have unit tests but are not yet connected to existing route handlers.
+- Domain validation and optional feed pagination are integrated and unit-tested. Route-wide privacy enforcement, rate limiting, email verification, password recovery, moderation/reporting and hardened deployment controls remain required.
 - This is not a completed security audit. CSRF protection, rate limiting, email verification, password recovery, moderation/reporting, privacy-wide authorization tests and hardened deployment controls remain required before broad public release.
