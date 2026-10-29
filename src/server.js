@@ -162,9 +162,27 @@ async function route(req, res) {
       if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length}); }
       if(method==='PATCH'&&p==='/api/users/me'){const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});Object.assign(user,validation.value);saveStore();return json(res,200,{user:safeUser(user)}); }
       m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
-      if(method==='POST'&&m){if(m[1]===user.id||!db.users.some(u=>u.id===m[1]))return json(res,400,{error:'Invalid friend.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}saveStore();return json(res,200,{friendship:f});}
+      if(method==='POST'&&m){if(m[1]===user.id||!db.users.some(u=>u.id===m[1]))return json(res,400,{error:'Invalid friend.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/accept$/);
       if(method==='POST'&&m){const f=db.friendships.find(x=>x.from===m[1]&&x.to===user.id&&x.status==='pending');if(!f)return json(res,404,{error:'Pending request not found.'});f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);saveStore();return json(res,200,{friendship:f});}
+      m=p.match(/^\/api\/friends\/([^/]+)\/decline$/);
+      if(method==='POST'&&m){
+        const request=db.friendships.find(f=>f.from===m[1]&&f.to===user.id&&f.status==='pending');
+        if(!request)return json(res,404,{error:'Pending friend request not found.'});
+        request.status='declined';request.updatedAt=now();
+        notify(request.from,user.id,'friend',`${user.name} declined your friend request.`);
+        saveStore();return json(res,200,{friendship:request});
+      }
+      m=p.match(/^\/api\/friends\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        if(blockedBetween(user.id,m[1]))return json(res,404,{error:'Friendship not found.'});
+        const friendship=db.friendships.find(f=>(f.from===user.id&&f.to===m[1]||f.from===m[1]&&f.to===user.id)&&['accepted','pending'].includes(f.status));
+        if(!friendship)return json(res,404,{error:'Friendship not found.'});
+        if(friendship.status==='pending'&&friendship.from!==user.id)return json(res,403,{error:'Only the requester can cancel a pending request. Use decline for incoming requests.'});
+        const wasAccepted=friendship.status==='accepted';
+        db.friendships=db.friendships.filter(f=>f.id!==friendship.id);
+        saveStore();return json(res,200,{removed:true,wasAccepted});
+      }
       if(method==='GET'&&p==='/api/friends'){const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)&&!blockedBetween(user.id,f.from===user.id?f.to:f.from)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending'&&!blockedBetween(user.id,f.from)).map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));return json(res,200,{friends:list,incoming});}
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
       if(method==='POST'&&p==='/api/groups'){const name=String(input.name||'').trim(),description=String(input.description||'').trim();if(name.length<3||name.length>80||description.length>500)return json(res,400,{error:'Group name must be 3–80 characters; description max 500.'});const g={id:uid(),name,description,ownerId:user.id,members:[user.id],createdAt:now()};db.groups.unshift(g);saveStore();return json(res,201,{group:g});}
