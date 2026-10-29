@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], people:[], groups:[], notifications:[], conversations:[], activeConversation:null, profile:null, searchResults:null };
 const fallbackAvatar = name => {
-  const initials = String(name || '?').trim().split(/\\s+/).filter(Boolean).slice(0, 2)
+  const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2)
     .map(part => part[0]).join('').toUpperCase().replace(/[^A-Z0-9]/g, '') || '?';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="64" fill="#dce8fb"/><text x="64" y="70" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="#2457a7">${initials}</text></svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
