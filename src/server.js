@@ -33,9 +33,11 @@ async function body(req) {
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
 const notify = (userId, actorId, type, text) => db.notifications.unshift({ id:uid(), userId, actorId, type, text, createdAt:now(), read:false });
+const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 function publicPost(p, viewerId) {
   const author = db.users.find(u=>u.id===p.userId);
   return { ...p, author:safeUser(author), reactions:p.reactions || {}, reactionCount:Object.values(p.reactions || {}).length, myReaction:(p.reactions || {})[viewerId] || null,
+    isSaved:(db.savedPosts || []).some(saved => saved.userId === viewerId && saved.postId === p.id),
     comments:(p.comments || []).map(c=>({...c, author:safeUser(db.users.find(u=>u.id===c.userId))})) };
 }
 async function route(req, res) {
@@ -62,7 +64,7 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
       if (method==='GET' && p==='/api/feed') {
-        const posts=db.posts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
+        const posts=db.posts.filter(x=>!blockedBetween(user.id,x.userId)).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
         if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts});
         try {
           const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
@@ -70,28 +72,90 @@ async function route(req, res) {
         } catch (e) { return json(res,400,{error:e.message}); }
       }
       if (method==='POST' && p==='/api/posts') { const validation=validatePostInput(input); if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')}); const {text,imageUrl}=validation.value; const post={id:uid(),userId:user.id,text,imageUrl,createdAt:now(),reactions:{},comments:[]};db.posts.unshift(post);saveStore();return json(res,201,{post:publicPost(post,user.id)}); }
-      let m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post)return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);saveStore();return json(res,200,{post:publicPost(post,user.id)});}
+      let m=p.match(/^\/api\/posts\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        if(!post)return json(res,404,{error:'Post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the post author can edit this post.'});
+        const validation=validatePostInput({text:input.text===undefined?post.text:input.text,imageUrl:input.imageUrl===undefined?post.imageUrl:input.imageUrl});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        Object.assign(post,validation.value,{updatedAt:now()});saveStore();return json(res,200,{post:publicPost(post,user.id)});
+      }
+      if(method==='DELETE'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        if(!post)return json(res,404,{error:'Post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the post author can delete this post.'});
+        db.posts=db.posts.filter(x=>x.id!==post.id);
+        db.savedPosts=(db.savedPosts||[]).filter(saved=>saved.postId!==post.id);
+        saveStore();return json(res,200,{ok:true,id:post.id});
+      }
+      if(method==='GET'&&p==='/api/saved-posts'){
+        const posts=(db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id));
+        return json(res,200,{posts});
+      }
+      m=p.match(/^\/api\/posts\/([^/]+)\/save$/);
+      if((method==='POST'||method==='DELETE')&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        const exists=(db.savedPosts||[]).some(saved=>saved.userId===user.id&&saved.postId===post.id);
+        if(method==='POST'&&!exists)db.savedPosts.push({id:uid(),userId:user.id,postId:post.id,createdAt:now()});
+        if(method==='DELETE'&&exists)db.savedPosts=db.savedPosts.filter(saved=>!(saved.userId===user.id&&saved.postId===post.id));
+        saveStore();return json(res,200,{saved:method==='POST'});
+      }
+      m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);saveStore();return json(res,200,{post:publicPost(post,user.id)});}
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post)return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
-      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null}))});
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+      m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
+      if((method==='POST'||method==='DELETE')&&m){
+        const target=db.users.find(u=>u.id===m[1]);
+        if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
+        if(blockedBetween(user.id,target.id))return json(res,403,{error:'This relationship is unavailable.'});
+        const exists=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id);
+        if(method==='POST'&&!exists){db.follows.push({id:uid(),followerId:user.id,followedId:target.id,createdAt:now()});notify(target.id,user.id,'follow',`${user.name} started following you.`);}
+        if(method==='DELETE'&&exists)db.follows=db.follows.filter(f=>!(f.followerId===user.id&&f.followedId===target.id));
+        saveStore();return json(res,200,{following:method==='POST'});
+      }
+      m=p.match(/^\/api\/users\/([^/]+)\/block$/);
+      if((method==='POST'||method==='DELETE')&&m){
+        const target=db.users.find(u=>u.id===m[1]);
+        if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
+        const exists=(db.blocks||[]).some(b=>b.blockerId===user.id&&b.blockedId===target.id);
+        if(method==='POST'&&!exists){
+          db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
+          db.follows=(db.follows||[]).filter(f=>!((f.followerId===user.id&&f.followedId===target.id)||(f.followerId===target.id&&f.followedId===user.id)));
+          db.friendships=db.friendships.filter(f=>!((f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id)));
+        }
+        if(method==='DELETE'&&exists)db.blocks=db.blocks.filter(b=>!(b.blockerId===user.id&&b.blockedId===target.id));
+        saveStore();return json(res,200,{blocked:method==='POST'});
+      }
+      if(method==='GET'&&p==='/api/blocks')return json(res,200,{users:(db.blocks||[]).filter(b=>b.blockerId===user.id).map(b=>safeUser(db.users.find(u=>u.id===b.blockedId))).filter(Boolean)});
+      m=p.match(/^\/api\/users\/([^/]+)\/(followers|following)$/);
+      if(method==='GET'&&m){
+        const target=db.users.find(u=>u.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id))return json(res,404,{error:'Profile not found.'});
+        const rows=m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id);
+        const users=rows.map(f=>db.users.find(u=>u.id===(m[2]==='followers'?f.followerId:f.followedId))).filter(u=>u&&!blockedBetween(user.id,u.id)).map(safeUser);
+        return json(res,200,{users,count:users.length});
+      }
       m=p.match(/^\/api\/users\/([^/]+)$/);
-      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target)return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null});}
+      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id)}); }
       if(method==='PATCH'&&p==='/api/users/me'){const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});Object.assign(user,validation.value);saveStore();return json(res,200,{user:safeUser(user)}); }
       m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
-      if(method==='POST'&&m){if(m[1]===user.id||!db.users.some(u=>u.id===m[1]))return json(res,400,{error:'Invalid friend.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}saveStore();return json(res,200,{friendship:f});}
+      if(method==='POST'&&m){if(m[1]===user.id||!db.users.some(u=>u.id===m[1]))return json(res,400,{error:'Invalid friend.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/accept$/);
       if(method==='POST'&&m){const f=db.friendships.find(x=>x.from===m[1]&&x.to===user.id&&x.status==='pending');if(!f)return json(res,404,{error:'Pending request not found.'});f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);saveStore();return json(res,200,{friendship:f});}
-      if(method==='GET'&&p==='/api/friends'){const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending').map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));return json(res,200,{friends:list,incoming});}
+      if(method==='GET'&&p==='/api/friends'){const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)&&!blockedBetween(user.id,f.from===user.id?f.to:f.from)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending'&&!blockedBetween(user.id,f.from)).map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));return json(res,200,{friends:list,incoming});}
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
       if(method==='POST'&&p==='/api/groups'){const name=String(input.name||'').trim(),description=String(input.description||'').trim();if(name.length<3||name.length>80||description.length>500)return json(res,400,{error:'Group name must be 3–80 characters; description max 500.'});const g={id:uid(),name,description,ownerId:user.id,members:[user.id],createdAt:now()};db.groups.unshift(g);saveStore();return json(res,201,{group:g});}
       m=p.match(/^\/api\/groups\/([^/]+)\/join$/);
       if(method==='POST'&&m){const g=db.groups.find(g=>g.id===m[1]);if(!g)return json(res,404,{error:'Group not found.'});if(!g.members.includes(user.id))g.members.push(user.id);saveStore();return json(res,200,{group:{...g,isMember:true}});}
-      if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))];return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
-      if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim();if(!db.users.some(u=>u.id===to)||to===user.id||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
-      if(method==='GET'&&p==='/api/notifications')return json(res,200,{notifications:db.notifications.filter(n=>n.userId===user.id).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))}))});
+      if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
+      if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim();if(!db.users.some(u=>u.id===to)||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
+      if(method==='GET'&&p==='/api/notifications')return json(res,200,{notifications:db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))}))});
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);saveStore();return json(res,200,{ok:true});}
-      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[]});return json(res,200,{users:db.users.filter(u=>u.name.toLowerCase().includes(q)||u.username.includes(q)).map(safeUser),posts:db.posts.filter(x=>x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id)),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q))});}
+      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id)),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q))});}
       return json(res,404,{error:'API route not found.'});
     } catch(e) { return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
   }
