@@ -74,9 +74,16 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
 
+  const invalidProfile = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ avatar: 'javascript:alert(1)' }) });
+  assert.equal(invalidProfile.status, 400);
+
   const feed = await request('/api/feed');
   assert.equal(feed.status, 200);
   assert.equal(feed.body.posts.length, 0);
+  const emptyPage = await request('/api/feed?limit=1');
+  assert.equal(emptyPage.status, 200);
+  assert.equal(emptyPage.body.posts.length, 0);
+  assert.equal(emptyPage.body.hasMore, false);
 
   const post = await request('/api/posts', {
     method: 'POST',
@@ -84,6 +91,12 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(post.status, 201);
   assert.equal(post.body.post.text, 'Automated integration test post');
+  const invalidPost = await request('/api/posts', { method: 'POST', body: JSON.stringify({ imageUrl: 'http://example.test/not-secure.jpg' }) });
+  assert.equal(invalidPost.status, 400);
+  const feedPage = await request('/api/feed?limit=1');
+  assert.equal(feedPage.status, 200);
+  assert.deepEqual(feedPage.body.posts.map(item => item.id), [post.body.post.id]);
+  assert.equal(feedPage.body.hasMore, false);
 
   const reaction = await request(`/api/posts/${post.body.post.id}/reactions`, {
     method: 'POST',
