@@ -16,7 +16,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/feed` | Current authenticated feed |
+| GET | `/api/feed` | Current authenticated feed; optional cursor pagination with `?limit=20&cursor=...` |
 | POST | `/api/posts` | Create a text post and optional HTTPS image URL |
 | POST | `/api/posts/:id/reactions` | Toggle a supported reaction |
 | POST | `/api/posts/:id/comments` | Add a comment |
@@ -50,6 +50,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 - JSON API responses use `Cache-Control: no-store`.
 - Unauthenticated access to protected routes returns HTTP 401.
 - Invalid input returns a 4xx response with an `error` message.
+- `GET /api/feed` returns all current posts when no pagination parameters are supplied. If `limit` or `cursor` is supplied, it returns `{ posts, nextCursor, hasMore }`; `limit` must be an integer from 1 to 100 (default 20 when only a cursor is supplied). Treat `nextCursor` as an opaque value.
 - Missing resources return HTTP 404.
 - The server caps JSON request bodies at 1 MB.
 - Passwords are never returned in public account objects.
