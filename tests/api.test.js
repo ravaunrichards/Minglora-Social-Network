@@ -157,6 +157,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const followers = await request(`/api/users/${firstUserId}/followers`);
   assert.equal(followers.body.count, 1);
   assert.equal(followers.body.users[0].id, secondUserId);
+  const viewedProfile = await request(`/api/users/${firstUserId}`);
+  assert.equal(viewedProfile.status, 200);
+  assert.equal(viewedProfile.body.followersCount, 1);
+  assert.equal(viewedProfile.body.followingCount, 0);
 
   const followingFeed = await request('/api/feed?scope=following');
   assert.equal(followingFeed.status, 200);
