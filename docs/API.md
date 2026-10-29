@@ -22,6 +22,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | DELETE | `/api/posts/:id` | Delete own post and saved-post references |
 | POST | `/api/posts/:id/reactions` | Toggle a supported reaction |
 | POST | `/api/posts/:id/comments` | Add a comment |
+| DELETE | `/api/posts/:id/comments/:commentId` | Delete a comment as its author or the post author |
 | GET | `/api/saved-posts` | List the current account's saved posts |
 | POST/DELETE | `/api/posts/:id/save` | Save or unsave a post |
 | GET | `/api/users` | List other accounts and friendship status |
