@@ -5,7 +5,7 @@ This document distinguishes working code from unfinished product requirements. A
 | Area | Implemented now | Not implemented / limitation |
 |---|---|---|
 | Account access | Registration, login, logout, salted scrypt password hashes, signed HttpOnly session cookie | Email verification, password reset, MFA, login rate limiting, account recovery |
-| Feed | Authenticated chronological feed, post creation, text and HTTPS image URL attachment, recent/oldest ordering | Media upload/storage, feed ranking, following-based feed, privacy/audience controls, edit/delete, reporting |
+| Feed | Authenticated chronological feed, optional cursor pagination, post creation, text and HTTPS image URL attachment, recent/oldest ordering | Media upload/storage, feed ranking, following-based feed, privacy/audience controls, edit/delete, reporting |
 | Reactions | Like toggle in browser; API accepts like, love, care, haha, wow, sad and angry | Full reaction picker and reaction analytics |
 | Comments | Add comments; comments display on post cards | Edit/delete, threaded replies, moderation and reporting |
 | Profiles | View profiles and posts; edit name, bio, location, avatar URL and cover URL | Profile privacy, verified accounts, profile themes and granular visibility settings |
