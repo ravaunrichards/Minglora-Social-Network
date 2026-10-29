@@ -64,11 +64,20 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
       if (method==='GET' && p==='/api/feed') {
-        const posts=db.posts.filter(x=>!blockedBetween(user.id,x.userId)).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
-        if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts});
+        const scope=String(url.searchParams.get('scope')||'all');
+        if(!['all','following','friends'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, or friends.'});
+        let eligibleIds=null;
+        if(scope==='following'){
+          eligibleIds=new Set([user.id,...(db.follows||[]).filter(f=>f.followerId===user.id).map(f=>f.followedId)]);
+        } else if(scope==='friends'){
+          eligibleIds=new Set([user.id,...db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)).map(f=>f.from===user.id?f.to:f.from)]);
+        }
+        const posts=db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)))
+          .slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
+        if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts,scope});
         try {
           const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
-          return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore});
+          return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
       }
       if (method==='POST' && p==='/api/posts') { const validation=validatePostInput(input); if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')}); const {text,imageUrl}=validation.value; const post={id:uid(),userId:user.id,text,imageUrl,createdAt:now(),reactions:{},comments:[]};db.posts.unshift(post);saveStore();return json(res,201,{post:publicPost(post,user.id)}); }
