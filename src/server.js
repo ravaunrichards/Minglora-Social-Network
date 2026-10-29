@@ -5,6 +5,8 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now } from './store.js';
+import { normalizeEmail, normalizeUsername, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
+import { paginateDescending } from './domain/pagination.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -44,8 +46,8 @@ async function route(req, res) {
     const user = sessionUser(req);
     try {
       if (method==='POST' && p==='/api/auth/register') {
-        const name=String(input.name||'').trim(), username=String(input.username||'').trim().toLowerCase(), email=String(input.email||'').trim().toLowerCase(), password=String(input.password||'');
-        if (name.length<2 || username.length<3 || !/^[a-z0-9_]+$/.test(username) || !/^\S+@\S+\.\S+$/.test(email) || password.length<10) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
+        const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||'');
+        if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
         if (db.users.some(u=>u.email===email || u.username===username)) return json(res,409,{error:'That email or username is already registered.'});
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',avatar:'',cover:'',createdAt:now()}; db.users.push(created);
         const sid=uid(); db.sessions.push({id:sid,userId:created.id,expiresAt:new Date(Date.now()+7*86400000).toISOString()}); saveStore(); return json(res,201,{user:safeUser(created)},{'Set-Cookie':`sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`});
@@ -59,8 +61,15 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
-      if (method==='GET' && p==='/api/feed') return json(res,200,{posts:db.posts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id))});
-      if (method==='POST' && p==='/api/posts') { const text=String(input.text||'').trim(), imageUrl=String(input.imageUrl||'').trim(); if(!text && !imageUrl)return json(res,400,{error:'Add text or an image URL to publish a post.'}); if(text.length>5000 || imageUrl.length>2000 || (imageUrl && !/^https:\/\//i.test(imageUrl)))return json(res,400,{error:'Post is too long or image URL is invalid. Use an HTTPS image URL.'}); const post={id:uid(),userId:user.id,text,imageUrl,createdAt:now(),reactions:{},comments:[]};db.posts.unshift(post);saveStore();return json(res,201,{post:publicPost(post,user.id)}); }
+      if (method==='GET' && p==='/api/feed') {
+        const posts=db.posts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
+        if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts});
+        try {
+          const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
+          return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore});
+        } catch (e) { return json(res,400,{error:e.message}); }
+      }
+      if (method==='POST' && p==='/api/posts') { const validation=validatePostInput(input); if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')}); const {text,imageUrl}=validation.value; const post={id:uid(),userId:user.id,text,imageUrl,createdAt:now(),reactions:{},comments:[]};db.posts.unshift(post);saveStore();return json(res,201,{post:publicPost(post,user.id)}); }
       let m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post)return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);saveStore();return json(res,200,{post:publicPost(post,user.id)});}
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
@@ -68,7 +77,7 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null}))});
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target)return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null});}
-      if(method==='PATCH'&&p==='/api/users/me'){for(const key of ['name','bio','location','avatar','cover'])if(input[key]!==undefined){const val=String(input[key]).trim();if(val.length>(key==='bio'?500: key==='cover'||key==='avatar'?2000:120))return json(res,400,{error:`${key} is too long.`});if(['avatar','cover'].includes(key)&&val&&!/^https:\/\//i.test(val))return json(res,400,{error:'Profile images must use HTTPS URLs.'});user[key]=val;}saveStore();return json(res,200,{user:safeUser(user)});}
+      if(method==='PATCH'&&p==='/api/users/me'){const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});Object.assign(user,validation.value);saveStore();return json(res,200,{user:safeUser(user)}); }
       m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&m){if(m[1]===user.id||!db.users.some(u=>u.id===m[1]))return json(res,400,{error:'Invalid friend.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/accept$/);
