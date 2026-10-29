@@ -14,5 +14,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run integration tests
+      - name: Check JavaScript syntax
+        run: |
+          node --check public/app.js
+          node --check src/server.js
+          node --check src/store.js
+          node --check src/domain/validation.js
+          node --check src/domain/pagination.js
+          node --check src/domain/relationships.js
+      - name: Run automated tests
         run: npm test
