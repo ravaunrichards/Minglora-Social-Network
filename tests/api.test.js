@@ -158,6 +158,16 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(followers.body.count, 1);
   assert.equal(followers.body.users[0].id, secondUserId);
 
+  const followingFeed = await request('/api/feed?scope=following');
+  assert.equal(followingFeed.status, 200);
+  assert.deepEqual(followingFeed.body.posts.map(item => item.id), [post.body.post.id]);
+  assert.equal(followingFeed.body.scope, 'following');
+  const friendsFeed = await request('/api/feed?scope=friends');
+  assert.equal(friendsFeed.status, 200);
+  assert.equal(friendsFeed.body.posts.length, 0);
+  const invalidScope = await request('/api/feed?scope=secret');
+  assert.equal(invalidScope.status, 400);
+
   const forbiddenEdit = await request(`/api/posts/${post.body.post.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'Not the owner' }) });
   assert.equal(forbiddenEdit.status, 403);
   const forbiddenDelete = await request(`/api/posts/${post.body.post.id}`, { method: 'DELETE', body: '{}' });
