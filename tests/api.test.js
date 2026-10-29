@@ -151,6 +151,25 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const secondUserId = secondRegistration.body.user.id;
   const secondCookie = cookie;
 
+  const forbiddenCommentDelete = await request(`/api/posts/${post.body.post.id}/comments/${comment.body.comment.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(forbiddenCommentDelete.status, 403);
+  const secondComment = await request(`/api/posts/${post.body.post.id}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ text: 'Comment created by the second test account' })
+  });
+  assert.equal(secondComment.status, 201);
+  const deleteOwnComment = await request(`/api/posts/${post.body.post.id}/comments/${secondComment.body.comment.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteOwnComment.status, 200);
+  const secondCommentForOwner = await request(`/api/posts/${post.body.post.id}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A second account comment for post-owner moderation' })
+  });
+  assert.equal(secondCommentForOwner.status, 201);
+  cookie = firstCookie;
+  const deleteCommentAsPostOwner = await request(`/api/posts/${post.body.post.id}/comments/${secondCommentForOwner.body.comment.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteCommentAsPostOwner.status, 200);
+  cookie = secondCookie;
+
   const follow = await request(`/api/users/${firstUserId}/follow`, { method: 'POST', body: '{}' });
   assert.equal(follow.status, 200);
   assert.equal(follow.body.following, true);
