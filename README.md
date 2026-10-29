@@ -29,7 +29,7 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 
 - `public/`: current browser UI and client code.
 - `src/server.js` and `src/store.js`: current HTTP/API and JSON persistence implementation.
-- `src/domain/`: reusable, unit-tested validation, cursor-pagination and relationship-policy helpers. These helpers are **not yet wired into the existing API routes**.
+- `src/domain/`: reusable, unit-tested validation, cursor-pagination and relationship-policy helpers. Validation is integrated into registration, post creation and profile editing; optional cursor pagination is integrated into the feed. The relationship visibility helper still needs to be applied consistently to every privacy-sensitive route.
 - `backend/modules/`: domain boundaries and acceptance requirements for posts, profiles, relationships, groups, Pages, Stories, messaging, notifications, search, media, Live, Video, Marketplace, Ads, privacy and moderation. Documentation here is not proof that the feature is implemented.
 - `apps/`: documented boundaries for web, mobile and admin clients. The current web runtime still lives in `public/`; separate mobile/admin applications are not yet implemented.
 - `database/migrations/001_social_core.sql`: relational schema foundation for future database-backed persistence. The current app does **not** execute this migration or use this schema.
@@ -84,7 +84,7 @@ All application API endpoints use the `/api` prefix.
 
 - `GET /api/health`
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
-- `GET /api/feed`, `POST /api/posts`
+- `GET /api/feed` (optional `?limit=20&cursor=...` pagination), `POST /api/posts`
 - `POST /api/posts/:id/reactions`, `POST /api/posts/:id/comments`
 - `GET /api/users`, `GET /api/users/:id`, `PATCH /api/users/me`
 - `POST /api/friends/:id/request`, `POST /api/friends/:id/accept`
