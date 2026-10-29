@@ -113,6 +113,16 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);saveStore();return json(res,200,{post:publicPost(post,user.id)});}
+      m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        const comment=(post.comments||[]).find(x=>x.id===m[2]);
+        if(!comment)return json(res,404,{error:'Comment not found.'});
+        if(comment.userId!==user.id&&post.userId!==user.id)return json(res,403,{error:'Only the comment author or post author can delete this comment.'});
+        post.comments=post.comments.filter(x=>x.id!==comment.id);
+        saveStore();return json(res,200,{ok:true,id:comment.id});
+      }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
