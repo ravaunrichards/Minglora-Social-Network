@@ -5,15 +5,15 @@ This document distinguishes working code from unfinished product requirements. A
 | Area | Implemented now | Not implemented / limitation |
 |---|---|---|
 | Account access | Registration, login, logout, salted scrypt password hashes, signed HttpOnly session cookie | Email verification, password reset, MFA, login rate limiting, account recovery |
-| Feed | Authenticated chronological feed, optional cursor pagination, post creation, text and HTTPS image URL attachment, recent/oldest ordering | Media upload/storage, feed ranking, following-based feed, privacy/audience controls, edit/delete, reporting |
+| Feed | Authenticated chronological feed, optional cursor pagination, post creation/edit/delete by owner, text and HTTPS image URL attachment, saved posts, recent/oldest ordering | Media upload/storage, feed ranking, following-based feed, post audience controls, reporting |
 | Reactions | Like toggle in browser; API accepts like, love, care, haha, wow, sad and angry | Full reaction picker and reaction analytics |
 | Comments | Add comments; comments display on post cards | Edit/delete, threaded replies, moderation and reporting |
 | Profiles | View profiles and posts; edit name, bio, location, avatar URL and cover URL | Profile privacy, verified accounts, profile themes and granular visibility settings |
-| Friends | Send and accept friend requests; list accepted friends and incoming requests | Unfriend, block, mute, report, request cancellation |
+| Friends and follows | Send/accept friend requests, accepted friend lists, directed follow/unfollow, block/unblock and followers/following lists | Unfriend lifecycle beyond blocking, mute/restrict, report flows and request cancellation |
 | Groups | Create, browse and join groups | Group posts, roles, events, invitations, private groups and moderation |
-| Messages | Direct text messages and conversation history | Real-time delivery, attachments, read receipts, message deletion and blocking |
+| Messages | Direct text messages and conversation history; blocked pairs cannot start messages and are filtered from conversation lists | Real-time delivery, attachments, read receipts, message deletion and full conversation authorization lifecycle |
 | Notifications | In-app notifications for supported reactions, comments, friend requests and messages; mark all read | Push/email delivery, per-notification read state and notification preferences |
-| Search | Basic substring search across users, posts and groups | Search indexing, relevance ranking, filters and privacy-aware discovery |
+| Search | Basic substring search across users, posts and groups; block-aware filtering for people/posts | Search indexing, relevance ranking, advanced filters and complete privacy-aware discovery |
 | Responsive interface | Desktop three-column layout, tablet adaptation and mobile bottom navigation | Formal device/browser accessibility and cross-platform QA |
 | Operations | Node runtime, health endpoint, isolated API tests, Docker packaging and CI workflow | Production database, migrations, backup/restore automation, observability and deployment hardening |
 
