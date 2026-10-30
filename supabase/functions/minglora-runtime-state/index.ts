@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
-    "economy_update_payout"
+    "economy_update_payout", "relationship_follow", "relationship_unfollow"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -85,6 +85,32 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "relationship_follow" || action === "relationship_unfollow") {
+    const followerId = String(input.followerId || ""), followedId = String(input.followedId || "");
+    if (!validUuid(followerId) || !validUuid(followedId) || followerId === followedId) {
+      return json(400, { error: "Invalid follow relationship." });
+    }
+    if (action === "relationship_follow") {
+      const { error } = await admin.from("user_follows")
+        .upsert({ follower_id: followerId, followed_id: followedId }, {
+          onConflict: "follower_id,followed_id", ignoreDuplicates: true
+        });
+      if (error) return fail(error, "Minglora could not save this follow.");
+    } else {
+      const { error } = await admin.from("user_follows")
+        .delete().eq("follower_id", followerId).eq("followed_id", followedId);
+      if (error) return fail(error, "Minglora could not remove this follow.");
+    }
+    const { data: reverse, error: reverseError } = await admin.from("user_follows")
+      .select("follower_id").eq("follower_id", followedId).eq("followed_id", followerId).maybeSingle();
+    if (reverseError) return json(503, { error: "Minglora could not verify mutual follow status." });
+    return json(200, {
+      following: action === "relationship_follow",
+      mutual: action === "relationship_follow" && Boolean(reverse),
+      friends: action === "relationship_follow" && Boolean(reverse)
+    });
+  }
 
   if (action === "economy_catalog") {
     const [packagesResult, giftsResult] = await Promise.all([
