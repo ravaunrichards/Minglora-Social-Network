@@ -323,7 +323,7 @@ async function route(req, res) {
       ok: ready,
       service: 'minglora-social-network',
       timestamp: now(),
-      components: { persistence, auth }
+      components: { persistence, auth, live: { provider: 'livekit', configured: isLiveKitConfigured() } }
     });
   }
   if (p.startsWith('/api/') &&
@@ -1516,6 +1516,8 @@ server.listen(PORT,'0.0.0.0',async()=>{
     authConfigured: AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured(),
     persistenceDriver: persistence.driver,
     persistenceDurable: persistence.durable,
-    persistenceReady: persistence.ready
+    persistenceReady: persistence.ready,
+    liveProvider: 'livekit',
+    liveConfigured: isLiveKitConfigured()
   }));
 });
