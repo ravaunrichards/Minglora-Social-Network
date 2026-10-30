@@ -135,11 +135,39 @@ async function pruneExpiredStories() {
   db.storyViews = cleaned.views;
   await saveStore();
 }
-function publicPost(p, viewerId) {
-  const author = db.users.find(u=>u.id===p.userId);
-  return { ...p, author:safeUser(author), reactions:p.reactions || {}, reactionCount:Object.values(p.reactions || {}).length, myReaction:(p.reactions || {})[viewerId] || null,
-    isSaved:(db.savedPosts || []).some(saved => saved.userId === viewerId && saved.postId === p.id),
-    comments:(p.comments || []).map(c=>({...c, author:safeUser(db.users.find(u=>u.id===c.userId))})) };
+async function mediaGateway(action,payload) {
+  const stateApiUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim();
+  const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
+  const publishableKey=String(process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'').trim();
+  if(!stateApiUrl||!stateApiKey||!publishableKey)throw Object.assign(new Error('Minglora media storage is not configured.'),{status:503});
+  let response;try{response=await fetch(stateApiUrl,{method:'POST',headers:{apikey:publishableKey,'x-minglora-api-key':stateApiKey,'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});}catch{throw Object.assign(new Error('Minglora media storage is unavailable.'),{status:503});}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Object.assign(new Error(data.error||'Minglora media storage request failed.'),{status:response.status});
+  return data;
+}
+async function resolveAssetUrl(asset) {
+  if(!asset)return null;
+  if(asset.url)return asset.url;
+  const result=await mediaGateway('media_sign',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
+  return result.url||null;
+}
+async function publicPost(p,viewerId) {
+  const author=db.users.find(u=>u.id===p.userId);
+  const media=await Promise.all((p.mediaIds||[]).map(async id=>{
+    const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
+    if(!asset||asset.status==='deleted')return null;
+    try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
+  }));
+  return {...p,media:media.filter(item=>item?.url),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+    isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
+    comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
+}
+async function publicStory(story,viewerId,includeViews=false) {
+  const asset=story.mediaId?(db.mediaAssets||[]).find(item=>item.id===story.mediaId&&item.ownerId===story.userId&&item.slot==='story'):null;
+  let media=null;if(asset){try{media={mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset)};}catch{}}
+  const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
+  return {...story,media,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
+    viewers:includeViews&&story.userId===viewerId?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined};
 }
 async function route(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`); const p = url.pathname; const method = req.method;
@@ -279,34 +307,41 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
       if(method==='POST'&&p==='/api/media/upload'){
-        const slot=String(input.slot||'');
-        const mimeType=String(input.mimeType||'').toLowerCase();
-        const base64=String(input.base64||'');
+        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),base64=String(input.base64||'');
         const maxBytes=8*1024*1024;
-        const extensions={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
-        if(!['avatar','cover'].includes(slot)||!extensions[mimeType]||!base64||base64.length>Math.ceil(maxBytes*4/3)+8||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))return json(res,400,{error:'Choose a supported profile image or cover photo.'});
+        const mimeKinds={
+          'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
+          'video/mp4':'video','video/webm':'video','audio/mpeg':'audio','audio/mp4':'audio','model/gltf-binary':'model3d'
+        };
+        const allowedSlots={
+          avatar:['image/jpeg','image/png','image/webp','image/avif'],
+          cover:['image/jpeg','image/png','image/webp','image/avif'],
+          post:Object.keys(mimeKinds),
+          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm']
+        };
+        if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!base64||base64.length>Math.ceil(maxBytes*4/3)+8||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))return json(res,400,{error:'Choose a supported image, video, audio or GLB file.'});
         const bytes=Buffer.from(base64,'base64');
-        if(!bytes.length||bytes.length>maxBytes||bytes.toString('base64')!==base64)return json(res,413,{error:'Images must be valid and 8 MB or smaller.'});
+        if(!bytes.length||bytes.length>maxBytes||bytes.toString('base64')!==base64)return json(res,413,{error:'Each media file must be valid and 8 MB or smaller.'});
         const ascii=(start,end)=>bytes.toString('ascii',start,end);
         const signatureValid=
           (mimeType==='image/jpeg'&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)||
           (mimeType==='image/png'&&bytes.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])))||
           (mimeType==='image/webp'&&ascii(0,4)==='RIFF'&&ascii(8,12)==='WEBP')||
-          (mimeType==='image/avif'&&ascii(4,8)==='ftyp'&&['avif','avis','mif1'].includes(ascii(8,12)));
-        if(!signatureValid)return json(res,415,{error:'The image contents do not match the selected file type.'});
-        const stateApiUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim();
-        const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
-        const publishableKey=String(process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'').trim();
-        if(!stateApiUrl||!stateApiKey||!publishableKey)return json(res,503,{error:'Minglora image storage is not configured.'});
-        let uploadResponse;
-        try{
-          uploadResponse=await fetch(stateApiUrl,{method:'POST',headers:{apikey:publishableKey,'x-minglora-api-key':stateApiKey,'Content-Type':'application/json'},body:JSON.stringify({action:'media_upload',ownerId:user.id,slot,mimeType,base64})});
-        }catch{return json(res,503,{error:'Minglora could not reach image storage.'});}
-        const uploaded=await uploadResponse.json().catch(()=>({}));
-        if(!uploadResponse.ok||typeof uploaded.url!=='string'||!uploaded.url.startsWith('https://'))return json(res,502,{error:uploaded.error||'Minglora could not store the selected image.'});
-        user[slot]=uploaded.url;
-        await saveStore();
-        return json(res,201,{slot,url:uploaded.url,user:safeUser(user),byteSize:bytes.length});
+          (mimeType==='image/avif'&&ascii(4,8)==='ftyp'&&['avif','avis','mif1'].includes(ascii(8,12)))||
+          (mimeType==='video/mp4'&&ascii(4,8)==='ftyp')||
+          (mimeType==='video/webm'&&bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])))||
+          (mimeType==='audio/mpeg'&&ascii(0,3)==='ID3')||
+          (mimeType==='audio/mp4'&&ascii(4,8)==='ftyp')||
+          (mimeType==='model/gltf-binary'&&ascii(0,4)==='glTF');
+        if(!signatureValid)return json(res,415,{error:'The selected file contents do not match its media type.'});
+        const uploaded=await mediaGateway('media_upload',{ownerId:user.id,slot,mimeType,base64});
+        if(slot==='avatar'||slot==='cover'){
+          if(typeof uploaded.url!=='string'||!uploaded.url.startsWith('https://'))return json(res,502,{error:'Minglora could not store this profile image.'});
+          user[slot]=uploaded.url;await saveStore();return json(res,201,{slot,url:uploaded.url,user:safeUser(user),byteSize:bytes.length});
+        }
+        const asset={id:uid(),ownerId:user.id,slot,bucket:uploaded.bucket,path:uploaded.path,mimeType,mediaType:mimeKinds[mimeType],byteSize:bytes.length,status:'uploaded',createdAt:now()};
+        db.mediaAssets.push(asset);await saveStore();
+        return json(res,201,{asset:{id:asset.id,slot,mediaType:asset.mediaType,mimeType,byteSize:asset.byteSize,previewUrl:uploaded.signedUrl||uploaded.url}});
       }
       if(method==='GET'&&p==='/api/account/export'){
         const ownedPosts=db.posts.filter(item=>item.userId===user.id);
