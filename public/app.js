@@ -646,7 +646,7 @@ async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{})
 
 let mediaPickerSequence=0;
 function mediaAccept(slot){
-  if(slot==='message')return 'image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/ogg,application/pdf';
+  if(slot==='message')return 'image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/ogg,application/pdf,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation';
   return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime': 'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/webm,model/gltf-binary,.glb';
 }
 function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\.hei[cf]$/i.test(file.name||'');}
@@ -736,13 +736,13 @@ function createMediaPicker(root,options={}){
     if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
     else if(entry.url&&entry.mediaType==='audio')preview='<audio controls preload="metadata" src="'+esc(entry.url)+'"></audio>';
     else if(entry.url&&entry.mediaType==='model3d')preview='<model-viewer src="'+esc(entry.url)+'" alt="3D model preview" camera-controls auto-rotate></model-viewer>';
-    else if(entry.url&&entry.mediaType==='document')preview='<a class="message-attachment-document" href="'+esc(entry.url)+'" target="_blank" rel="noopener">Open PDF attachment</a>';
+    else if(entry.url&&entry.mediaType==='document')preview='<a class="message-attachment-document" href="'+esc(entry.url)+'" target="_blank" rel="noopener">Open '+esc(entry.name||'file')+'</a>';
     else if(entry.url)preview='<img style="transform:scale('+entry.zoom+') rotate('+entry.rotation+'deg)" src="'+esc(entry.url)+'" alt="Selected image preview">';
     else if(entry.file&&imageMime(entry.file))preview='<img style="transform:scale('+entry.zoom+') rotate('+entry.rotation+'deg)" src="'+esc(entry.previewUrl)+'" alt="Selected image preview">';
     else if(entry.file&&entry.file.type.startsWith('video/'))preview='<video controls playsinline src="'+esc(entry.previewUrl)+'"></video>';
     else if(entry.file&&entry.file.type.startsWith('audio/'))preview='<audio controls src="'+esc(entry.previewUrl)+'"></audio>';
     else if(entry.file&&entry.file.type==='model/gltf-binary')preview='<div class="media-3d-placeholder">3D model selected · preview after upload</div>';
-    else if(entry.file&&entry.file.type==='application/pdf')preview='<span class="message-attachment-document">PDF document selected</span>';
+    else if(entry.file&&(entry.file.type==='application/pdf'||entry.file.type.startsWith('application/')||entry.file.type.startsWith('text/')))preview='<span class="message-attachment-document">Document selected · '+esc(entry.file.name)+'</span>';
     const edit=imageMime(entry.file)?'<label class="media-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="'+entry.zoom+'" data-media-zoom="'+index+'"></label><button type="button" class="secondary" data-media-rotate="'+index+'">Rotate 90°</button>':'';
     return '<article class="media-picker-item"><div class="media-picker-preview">'+preview+'</div><div class="media-picker-meta"><strong>'+esc(entry.file?.name||entry.name||'Attached media')+'</strong><small>'+((entry.file?.size||entry.byteSize||0)/1024/1024).toFixed(2)+' MB</small><div class="media-picker-tools">'+edit+'<button type="button" class="secondary" data-media-remove="'+index+'">Remove</button></div></div></article>';
   }
@@ -759,7 +759,7 @@ function createMediaPicker(root,options={}){
       const allowed=accept.split(',').some(pattern=>pattern.trim().startsWith('.')?file.name.toLowerCase().endsWith(pattern.trim().toLowerCase()):pattern.trim().endsWith('/*')?file.type.startsWith(pattern.trim().slice(0,-1)):file.type===pattern.trim());
       if(!allowed){status.textContent=file.name+' has an unsupported file type.';continue;}
       const previewUrl=URL.createObjectURL(file);objectUrls.push(previewUrl);
-      entries.push({file,previewUrl,zoom:1,rotation:0,mediaType:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':file.type==='application/pdf'?'document':'model3d'});
+      entries.push({file,previewUrl,zoom:1,rotation:0,mediaType:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':file.type==='model/gltf-binary'?'model3d':'document'});
     }
     render();
   }
