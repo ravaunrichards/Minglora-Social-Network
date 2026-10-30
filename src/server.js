@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth } from './store.js';
+import { createLiveKitToken, isLiveKitConfigured } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
@@ -88,6 +89,114 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
+      if (method === 'GET' && p === '/api/live/status') {
+        return json(res, 200, { provider: 'livekit', configured: isLiveKitConfigured() });
+      }
+      if (method === 'GET' && p === '/api/live/sessions') {
+        const canView = session => {
+          if (session.hostId === user.id || session.visibility === 'public') return true;
+          if (session.visibility !== 'friends') return false;
+          return (db.friendships || []).some(friendship =>
+            friendship.status === 'accepted' &&
+            ((friendship.from === user.id && friendship.to === session.hostId) ||
+             (friendship.to === user.id && friendship.from === session.hostId))
+          );
+        };
+        const sessions = (db.liveSessions || [])
+          .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map(session => ({
+            ...session,
+            host: safeUser(db.users.find(member => member.id === session.hostId)),
+            viewerCount: (db.liveParticipants || []).filter(participant =>
+              participant.sessionId === session.id && !participant.leftAt
+            ).length
+          }));
+        return json(res, 200, { sessions });
+      }
+      if (method === 'POST' && p === '/api/live/sessions') {
+        if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured. Add Minglora LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET to the server environment.' });
+        const title = String(input.title || '').trim();
+        const visibility = String(input.visibility || 'public');
+        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(visibility)) {
+          return json(res, 400, { error: 'Enter a live title (1–120 characters) and choose public, friends or private visibility.' });
+        }
+        const id = uid();
+        const roomName = 'minglora-' + id.replace(/-/g, '');
+        const liveKit = await createLiveKitToken({
+          identity: user.id,
+          name: user.name,
+          roomName,
+          canPublish: true
+        });
+        const session = { id, roomName, hostId: user.id, title, visibility, status: 'live', createdAt: now(), endedAt: null };
+        db.liveSessions = db.liveSessions || [];
+        db.liveParticipants = db.liveParticipants || [];
+        db.liveSessions.unshift(session);
+        db.liveParticipants.push({ id: uid(), sessionId: id, userId: user.id, role: 'host', joinedAt: now(), leftAt: null });
+        await saveStore();
+        return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
+      }
+      let liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/join$/);
+      if (method === 'POST' && liveMatch) {
+        if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured for Minglora.' });
+        const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
+        const isFriend = (db.friendships || []).some(friendship =>
+          friendship.status === 'accepted' &&
+          ((friendship.from === user.id && friendship.to === session.hostId) ||
+           (friendship.to === user.id && friendship.from === session.hostId))
+        );
+        const allowed = session.hostId === user.id ||
+          session.visibility === 'public' ||
+          (session.visibility === 'friends' && isFriend);
+        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
+        const role = session.hostId === user.id ? 'host' : 'viewer';
+        const liveKit = await createLiveKitToken({
+          identity: user.id,
+          name: user.name,
+          roomName: session.roomName,
+          canPublish: role === 'host'
+        });
+        db.liveParticipants = db.liveParticipants || [];
+        const existing = db.liveParticipants.find(participant =>
+          participant.sessionId === session.id && participant.userId === user.id && !participant.leftAt
+        );
+        if (existing) {
+          existing.joinedAt = now();
+          existing.role = role;
+        } else {
+          db.liveParticipants.push({ id: uid(), sessionId: session.id, userId: user.id, role, joinedAt: now(), leftAt: null });
+        }
+        await saveStore();
+        return json(res, 200, { session, liveKit: { ...liveKit, role } });
+      }
+      liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/leave$/);
+      if (method === 'POST' && liveMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveMatch[1]);
+        if (!session) return json(res, 404, { error: 'Live session not found.' });
+        const participant = (db.liveParticipants || []).find(item =>
+          item.sessionId === session.id && item.userId === user.id && !item.leftAt
+        );
+        if (!participant) return json(res, 404, { error: 'You are not an active participant in this live session.' });
+        participant.leftAt = now();
+        await saveStore();
+        return json(res, 200, { ok: true });
+      }
+      liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/end$/);
+      if (method === 'POST' && liveMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveMatch[1]);
+        if (!session) return json(res, 404, { error: 'Live session not found.' });
+        if (session.hostId !== user.id) return json(res, 403, { error: 'Only the host can end this live session.' });
+        if (session.status !== 'ended') {
+          session.status = 'ended';
+          session.endedAt = now();
+          (db.liveParticipants || []).filter(item => item.sessionId === session.id && !item.leftAt)
+            .forEach(item => { item.leftAt = session.endedAt; });
+          await saveStore();
+        }
+        return json(res, 200, { ok: true, session });
+      }
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
         if(!['all','following','friends'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, or friends.'});

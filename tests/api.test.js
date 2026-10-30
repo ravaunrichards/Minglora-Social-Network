@@ -79,6 +79,17 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
 
+  const liveStatus = await request('/api/live/status');
+  assert.equal(liveStatus.status, 200);
+  assert.equal(liveStatus.body.provider, 'livekit');
+  assert.equal(liveStatus.body.configured, false);
+  const unconfiguredLiveStart = await request('/api/live/sessions', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'This must not create a fake live room', visibility: 'public' })
+  });
+  assert.equal(unconfiguredLiveStart.status, 503);
+
+
   const invalidProfile = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ avatar: 'javascript:alert(1)' }) });
   assert.equal(invalidProfile.status, 400);
 

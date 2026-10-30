@@ -16,6 +16,9 @@ Add these in the existing Render service:
 - `PGSSLMODE=require`
 - `PG_POOL_MAX=5`
 - `SESSION_SECRET` — newly generated random secret of at least 32 characters, stored only in Render
+- `LIVEKIT_URL` — Minglora LiveKit Cloud WebSocket URL
+- `LIVEKIT_API_KEY` — Minglora-only LiveKit API key
+- `LIVEKIT_API_SECRET` — Minglora-only LiveKit API secret; keep private and never expose it in frontend variables
 
 Set the health-check path to `/api/ready`. Keep one instance while the current single-document PostgreSQL adapter is active.
 
@@ -31,3 +34,8 @@ Do not copy ZUNO database URLs or keys into this service. Do not commit secrets.
 - No separate Minglora realtime, media-processing, notifications, or background-worker Render services are deployed yet. The existing web service is the only confirmed Minglora Render service.
 
 Use paid database or service tiers only after reviewing and approving the quoted cost.
+
+
+## LiveKit isolation
+
+Configure the three LiveKit settings only on the Minglora service, using credentials from the separate LiveKit Cloud project named Minglora. Never copy credentials from ZUNO, Zovara, or another product. The API reports LiveKit as unconfigured until all three values are present.

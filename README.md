@@ -22,6 +22,7 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - Direct text messages and conversation history
 - In-app notifications for supported actions
 - Basic substring search across people, posts, groups and Pages
+- Server-side LiveKit session and token API foundation with host publishing permissions and subscriber-only viewer tokens (requires a separate Minglora LiveKit Cloud project and server credentials)
 - JSON-file persistence for local development and PostgreSQL-backed durable storage for one running API instance
 - Node test runner, integration tests, Docker packaging and GitHub Actions CI
 
@@ -96,6 +97,7 @@ All application API endpoints use the `/api` prefix.
 - `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
 - `GET /api/messages`, `POST /api/messages`
 - `GET /api/notifications`, `GET /api/search?q=...`
+- `/api/live/*` session/status routes documented in [LiveKit integration](backend/modules/live/README.md)
 
 See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must not be treated as implemented.
 

@@ -11,7 +11,7 @@ const now = () => new Date().toISOString();
 const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
-  'pageFollows', 'pagePosts', 'messages', 'notifications', 'sessions'
+  'pageFollows', 'pagePosts', 'messages', 'notifications', 'sessions', 'liveSessions', 'liveParticipants'
 ];
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
 const persistenceDriver = requestedDriver || (process.env.DATABASE_URL ? 'postgres' : 'json');
