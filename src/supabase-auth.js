@@ -112,6 +112,9 @@ async function authenticatedRequest(path, accessToken, method='GET', payload) {
 export function supabaseUpdatePassword(accessToken,password) {
   return authenticatedRequest('user',accessToken,'PUT',{password});
 }
+export function supabaseUpdateEmail(accessToken,email) {
+  return authenticatedRequest('user',accessToken,'PUT',{email});
+}
 export function supabaseListFactors(accessToken) {
   return authenticatedRequest('factors',accessToken,'GET');
 }
