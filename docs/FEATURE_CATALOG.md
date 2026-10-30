@@ -12,6 +12,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Groups | Public groups with join/leave, details and member discussion posts; roles/private groups/moderation incomplete |
 | Pages | Create, follow, detail and owner publishing workflows; role management and insights incomplete |
 | Stories | Text/HTTPS-image stories with audiences, 24-hour expiry and view tracking; moderation/media uploads incomplete |
+| Profile image upload | Device gallery/file-picker uploads for avatar and cover, saved to the existing Minglora avatar/cover Storage buckets | Crop editor, old-media cleanup and gallery/albums are incomplete |
 | Photos and albums | Not implemented |
 | Reels/short-form video | Not implemented |
 | Watch/long-form video | Not implemented |
