@@ -123,6 +123,28 @@ Deno.serve(async (req: Request) => {
     const storedSize=Number(meta.size??meta.contentLength??byteSize);
     const storedType=String(meta.mimetype||meta.contentType||mimeType).toLowerCase();
     if(storedSize!==byteSize||storedType!==mimeType)return json(409,{error:"The uploaded file did not match the expected size or type."});
+    const {data:signedProbe,error:probeError}=await admin.storage.from(bucket).createSignedUrl(objectPath,60);
+    if(probeError||!signedProbe?.signedUrl)return json(502,{error:"Minglora could not verify the uploaded media."});
+    let probeResponse:Response;
+    try{probeResponse=await fetch(signedProbe.signedUrl,{headers:{Range:"bytes=0-31"}});}catch{return json(502,{error:"Minglora could not inspect the uploaded media."});}
+    if(probeResponse.status!==206){await probeResponse.body?.cancel();return json(502,{error:"Storage did not return a bounded media signature check."});}
+    const prefix=new Uint8Array(await probeResponse.arrayBuffer());
+    const starts=(values:number[])=>values.every((value,index)=>prefix[index]===value);
+    const ascii=(start:number,end:number)=>String.fromCharCode(...prefix.slice(start,end));
+    const validSignature=
+      (mimeType==="image/jpeg"&&starts([0xff,0xd8,0xff]))||
+      (mimeType==="image/png"&&starts([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))||
+      (mimeType==="image/webp"&&ascii(0,4)==="RIFF"&&ascii(8,12)==="WEBP")||
+      (mimeType==="image/avif"&&ascii(4,8)==="ftyp"&&["avif","avis","mif1"].includes(ascii(8,12)))||
+      (["video/mp4","video/quicktime","audio/mp4"].includes(mimeType)&&ascii(4,8)==="ftyp")||
+      (["video/webm","audio/webm"].includes(mimeType)&&starts([0x1a,0x45,0xdf,0xa3]))||
+      (mimeType==="audio/mpeg"&&(ascii(0,3)==="ID3"||(prefix[0]===0xff&&(prefix[1]&0xe0)===0xe0)))||
+      (mimeType==="audio/ogg"&&ascii(0,4)==="OggS")||
+      (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF");
+    if(!validSignature){
+      await admin.storage.from(bucket).remove([objectPath]);
+      return json(415,{error:"The uploaded file contents do not match the selected media type. The file was removed."});
+    }
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
