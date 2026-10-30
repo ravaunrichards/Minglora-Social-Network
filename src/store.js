@@ -23,6 +23,10 @@ export function initialState() {
     groupPosts: [],
     stories: [],
     storyViews: [],
+    pages: [],
+    pageRoles: [],
+    pageFollows: [],
+    pagePosts: [],
     messages: [],
     notifications: [],
     sessions: []
@@ -61,6 +65,11 @@ function stripLegacyDemoData(state) {
   const removedStoryIds = new Set((state.stories || []).filter(story => demoUsers.has(story.userId)).map(story => story.id));
   state.stories = (state.stories || []).filter(story => !demoUsers.has(story.userId));
   state.storyViews = (state.storyViews || []).filter(view => !demoUsers.has(view.viewerId) && !removedStoryIds.has(view.storyId));
+  const removedPageIds = new Set((state.pages || []).filter(page => demoUsers.has(page.createdBy)).map(page => page.id));
+  state.pages = (state.pages || []).filter(page => !demoUsers.has(page.createdBy));
+  state.pageRoles = (state.pageRoles || []).filter(role => !demoUsers.has(role.userId) && !removedPageIds.has(role.pageId));
+  state.pageFollows = (state.pageFollows || []).filter(follow => !demoUsers.has(follow.userId) && !removedPageIds.has(follow.pageId));
+  state.pagePosts = (state.pagePosts || []).filter(post => !demoUsers.has(post.publishedBy) && !removedPageIds.has(post.pageId));
   state.messages = (state.messages || []).filter(message =>
     !demoUsers.has(message.from) && !demoUsers.has(message.to));
   state.notifications = (state.notifications || []).filter(notification =>
@@ -84,7 +93,7 @@ export function loadStore() {
     throw new Error(`Data store at ${dbPath} must contain a JSON object.`);
   }
   let changed = false;
-  for (const key of ['users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'groups', 'groupPosts', 'stories', 'storyViews', 'messages', 'notifications', 'sessions']) {
+  for (const key of ['users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles', 'pageFollows', 'pagePosts', 'messages', 'notifications', 'sessions']) {
     if (!Array.isArray(state[key])) {
       state[key] = [];
       changed = true;
