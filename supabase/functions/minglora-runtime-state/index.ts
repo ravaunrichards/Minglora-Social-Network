@@ -337,13 +337,14 @@ Deno.serve(async (req: Request) => {
     const image={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
     const post={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","model/gltf-binary":"glb"};
     const story={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"};
-    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:{};
-    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":"";
-    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="post"?500*1024*1024:0;
+    const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","application/pdf":"pdf"};
+    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="message"?message:{};
+    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="message"?"minglora-message-attachments":"";
+    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="message"?100*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
-    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="application/pdf"?"document":"model3d";
     const objectPath=`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
     const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(objectPath,{upsert:false});
     if(error||!data?.token)return json(502,{error:"Minglora could not prepare a secure upload."});
@@ -364,6 +365,7 @@ Deno.serve(async (req: Request) => {
       "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-post-media":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime","audio/mpeg","audio/mp4","audio/ogg","audio/webm","model/gltf-binary"],
+      "minglora-message-attachments":["image/jpeg","image/png","image/webp","video/mp4","audio/mpeg","audio/mp4","audio/ogg","application/pdf"],
       "minglora-stories":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime"]
     };
     const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
@@ -395,12 +397,13 @@ Deno.serve(async (req: Request) => {
       (["video/webm","audio/webm"].includes(mimeType)&&starts([0x1a,0x45,0xdf,0xa3]))||
       (mimeType==="audio/mpeg"&&(ascii(0,3)==="ID3"||(prefix[0]===0xff&&(prefix[1]&0xe0)===0xe0)))||
       (mimeType==="audio/ogg"&&ascii(0,4)==="OggS")||
-      (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF");
+      (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF")||
+      (mimeType==="application/pdf"&&ascii(0,4)==="%PDF");
     if(!validSignature){
       await admin.storage.from(bucket).remove([objectPath]);
       return json(415,{error:"The uploaded file contents do not match the selected media type. The file was removed."});
     }
-    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="application/pdf"?"document":"model3d";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
       const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);result.url=data.publicUrl;
@@ -417,7 +420,7 @@ Deno.serve(async (req: Request) => {
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
     const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
+    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers","minglora-message-attachments"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
       return json(400,{error:"Invalid media reference."});
     }
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
