@@ -229,11 +229,13 @@ let activeLiveRoom=null;
 let activeLiveSession=null;
 let activeLiveRole=null;
 let liveChatRefreshTimer=null;
+let liveDirectoryRefreshTimer=null;
 let liveCameraEnabled=true;
 let liveMicrophoneEnabled=true;
 let liveGiftCatalogue=[];
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
+function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function renderLiveDirectory(sessions,status,catalog,wallet){
   const cards=sessions.length?sessions.map(session=>
@@ -262,10 +264,29 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     const session=sessions.find(item=>item.id===button.dataset.watchLive);if(session)openLiveRoom(session,"viewer");
   }));
 }
+async function refreshLiveDirectorySessions(){
+  if(state.view!=='live'||activeLiveRoom){stopLiveDirectoryRefresh();return;}
+  try{
+    const data=await api('/live/sessions'),sessions=data.sessions||[],container=$('.live-room-grid');
+    if(!container)return;
+    container.innerHTML=sessions.length?sessions.map(session=>
+      "<article class='live-room-card'><div class='live-room-preview'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
+      (session.viewerCountVerified?"◉ "+Number(session.viewerCount||0).toLocaleString()+" watching":"Viewers unavailable")+
+      "</span><div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div></div><div class='live-room-details'><strong>"+
+      esc(session.title)+"</strong><span>"+esc(session.host?.name||"Minglora creator")+"</span><small>@"+
+      esc(session.host?.username||"member")+"</small><button class='primary' data-watch-live='"+esc(session.id)+"'>Watch LIVE</button></div></article>"
+    ).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
+    document.querySelectorAll('[data-watch-live]').forEach(button=>button.onclick=()=>{
+      const session=sessions.find(item=>item.id===button.dataset.watchLive);
+      if(session)openLiveRoom(session,"viewer").catch(error=>toast(error.message));
+    });
+  }catch{}
+}
 async function renderLive(){
-  activateSilent("live");stopLiveChatRefresh();
+  activateSilent("live");stopLiveChatRefresh();stopLiveDirectoryRefresh();
   const result=await Promise.all([api("/live/status"),api("/live/sessions"),api("/coins/catalog"),api("/coins/wallet")]);
   liveGiftCatalogue=result[2].gifts||[];renderLiveDirectory(result[1].sessions||[],result[0],result[2],result[3]);
+  liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,12000);
 }
 function attachLiveTrack(track,participant,local){
   if(!track)return;
