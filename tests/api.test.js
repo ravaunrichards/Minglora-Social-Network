@@ -152,7 +152,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const hiddenFromDiscovery = await request('/api/users');
   assert.equal(hiddenFromDiscovery.body.users.some(item => item.id === registration.body.user.id), false);
   const deniedFriendRequest = await request(`/api/friends/${registration.body.user.id}/request`, { method: 'POST', body: '{}' });
-  assert.equal(deniedFriendRequest.status, 403);
+  assert.equal(deniedFriendRequest.status, 409);
+  assert.match(deniedFriendRequest.body.error, /follow each other to become friends/i);
   const deniedMessage = await request('/api/messages', { method: 'POST', body: JSON.stringify({ to: registration.body.user.id, text: 'Should be blocked' }) });
   assert.equal(deniedMessage.status, 403);
   cookie = firstAccountCookie;
