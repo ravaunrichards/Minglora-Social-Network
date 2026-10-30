@@ -10,9 +10,11 @@ This map separates the **running application** from the **target architecture**.
 - `docs/API.md`, `docs/FEATURES.md`, `docs/ARCHITECTURE.md`: current behavior and limitations.
 
 ## Target boundaries
-- `apps/`: web/mobile/admin client boundaries.
-- `backend/modules/`: feature ownership, rules, and acceptance contracts.
-- `src/domain/`: tested pure domain utilities; not automatically wired to existing routes.
+- `apps/`: web, Android, iOS, desktop, TV, admin and Creator Studio boundaries.
+- `frontend/`: target components, layouts, pages, navigation and theme organization; active UI remains in `public/`.
+- `backend/modules/`: feature ownership and acceptance contracts for current social functions and the wider feature set. Groups, Pages and Stories now include imported service modules and unit tests.
+- `src/domain/`: tested validation and pagination utilities used by active routes; relationship helper still needs broader privacy-route coverage.
+- `tests/unit/`: domain helper tests plus Groups, Pages and Stories service-policy tests.
 - `database/migrations/`: relational schema foundation; not executed by the JSON-backed app.
 - `packages/`: shared API, validation, and platform-neutral contracts.
 
