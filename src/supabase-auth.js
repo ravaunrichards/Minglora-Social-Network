@@ -28,7 +28,7 @@ export function supabaseAuthConfigured() {
 
 function requireConfig() {
   if (!supabaseAuthConfigured()) {
-    throw Object.assign(new Error('Minglora Supabase Auth is not configured. Set Minglora's project URL and publishable key on the API service. Supported names are SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY, or NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Both values must come from the same Minglora project; a key without its matching project URL cannot connect.'), { status: 503 });
+    throw Object.assign(new Error("Minglora Supabase Auth is not configured. Set Minglora's project URL and publishable key on the API service. Supported names are SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY, or NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Both values must come from the same Minglora project; a key without its matching project URL cannot connect."), { status: 503 });
   }
 }
 
