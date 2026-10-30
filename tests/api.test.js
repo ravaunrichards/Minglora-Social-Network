@@ -82,6 +82,24 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
 
+  const invalidPushEndpoint = await request('/api/push/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify({ endpoint: 'http://push.example/subscription', keys: { p256dh: 'A'.repeat(90), auth: 'B'.repeat(24) } })
+  });
+  assert.equal(invalidPushEndpoint.status, 400);
+  const pushSubscription = await request('/api/push/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify({ endpoint: 'https://push.example/subscription/test-device', keys: { p256dh: 'A'.repeat(90), auth: 'B'.repeat(24) } })
+  });
+  assert.equal(pushSubscription.status, 201);
+  assert.equal(pushSubscription.body.subscriptions, 1);
+  const removePushSubscription = await request('/api/push/subscriptions', {
+    method: 'DELETE',
+    body: JSON.stringify({ endpoint: 'https://push.example/subscription/test-device' })
+  });
+  assert.equal(removePushSubscription.status, 200);
+  assert.equal(removePushSubscription.body.removed, 1);
+
   const malformedSessionCookie = await request('/api/feed', {
     headers: { Cookie: 'sid=%E0%A4%A' }
   });
@@ -126,6 +144,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(defaultSettings.status, 200);
   assert.equal(defaultSettings.body.settings.privacy.profileVisibility, 'public');
   assert.equal(defaultSettings.body.settings.notifications.inApp, true);
+  assert.equal(defaultSettings.body.settings.notifications.push, true);
   const savedSettings = await request('/api/settings', {
     method: 'PATCH',
     body: JSON.stringify({
