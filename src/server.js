@@ -517,14 +517,19 @@ async function route(req, res) {
         const mimeKinds={
           'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
           'video/mp4':'video','video/webm':'video','video/quicktime':'video',
-          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d','application/pdf':'document'
+          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d','application/pdf':'document',
+          'text/plain':'document','text/csv':'document','application/zip':'document','application/x-zip-compressed':'document',
+          'application/msword':'document','application/vnd.ms-excel':'document','application/vnd.ms-powerpoint':'document',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'document',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'document',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation':'document'
         };
         const allowedSlots={
           avatar:['image/jpeg','image/png','image/webp','image/avif'],
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
-          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','application/pdf']
+          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
         };
         const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
