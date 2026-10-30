@@ -8,7 +8,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Profiles | Edit display name, unique username, bio and location; avatar/cover from gallery, folders or camera with image zoom/crop/rotation and Supabase Storage upload | Verified profiles, themes, albums and tagging |
 | Feed/posts | Posts accept device-uploaded photos, videos, audio and GLB 3D attachments; zoom/crop/rotation tools for images; edit and delete own posts | Automated video transcoding, chunked large uploads, personalized ranking and per-post audiences |
 | Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
-| Relationships | Friend requests/acceptance; follow/unfollow, block, mute and restrict incomplete |
+| Relationships | Follow/unfollow, clickable follower/following lists, automatic friendship on reciprocal follow, friend requests/acceptance and block/unblock | Mute/restrict and other advanced relationship controls |
 | Groups | Public groups with join/leave, details and member discussion posts; roles/private groups/moderation incomplete |
 | Pages | Create, follow, detail and owner publishing workflows; role management and insights incomplete |
 | Stories | Text/HTTPS-image stories with audiences, 24-hour expiry and view tracking; moderation/media uploads incomplete |
