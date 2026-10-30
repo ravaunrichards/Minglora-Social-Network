@@ -1017,7 +1017,7 @@ async function route(req, res) {
           db.follows=db.follows.filter(f=>!(f.followerId===user.id&&f.followedId===target.id));
         }
         const mutual=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id)&&(db.follows||[]).some(f=>f.followerId===target.id&&f.followedId===user.id);
-        let friendship=isFriend(user.id,target.id)?db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id)&&f.source==='mutual_follow'):null;
+        let friendship=(db.friendships||[]).find(f=>(f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id))||null;
         if(mutual&&!friendship){friendship={id:uid(),from:user.id,to:target.id,status:'accepted',source:'mutual_follow',createdAt:now(),updatedAt:now()};db.friendships.push(friendship);notify(target.id,user.id,'friend',`You and ${user.name} are now friends because you follow each other.`);notify(user.id,target.id,'friend',`You and ${target.name} are now friends because you follow each other.`);}
         else if(mutual&&friendship&&friendship.status!=='accepted'){friendship.status='accepted';friendship.source='mutual_follow';friendship.updatedAt=now();}
         else if(!mutual&&method==='DELETE'&&friendship?.source==='mutual_follow'){db.friendships=db.friendships.filter(item=>item.id!==friendship.id);}
