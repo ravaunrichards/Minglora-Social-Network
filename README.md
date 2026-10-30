@@ -21,7 +21,7 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - Text/HTTPS-image Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Direct text messages and conversation history
 - In-app notifications for supported actions
-- Basic substring search across people, posts and groups
+- Basic substring search across people, posts, groups and Pages
 - JSON-backed persistence for one running application instance
 - Node test runner, integration tests, Docker packaging and GitHub Actions CI
 
@@ -32,14 +32,15 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 - `public/`: current browser UI and client code.
 - `src/server.js` and `src/store.js`: current HTTP/API and JSON persistence implementation.
 - `src/domain/`: reusable, unit-tested validation, cursor-pagination and relationship-policy helpers. Validation is integrated into registration, post creation and profile editing; optional cursor pagination is integrated into the feed. The relationship visibility helper still needs to be applied consistently to every privacy-sensitive route.
-- `backend/modules/`: domain boundaries and acceptance requirements for posts, profiles, relationships, groups, Pages, Stories, messaging, notifications, search, media, Live, Video, Marketplace, Ads, privacy and moderation. Documentation here is not proof that the feature is implemented.
-- `apps/`: documented boundaries for web, mobile and admin clients. The current web runtime still lives in `public/`; separate mobile/admin applications are not yet implemented.
+- `backend/modules/`: domain boundaries for posts, profiles, relationships, Groups, Pages, Stories, messaging, notifications, search, media, Live, Video, Marketplace, Ads, privacy, moderation, Reels, albums, calls, Memories, Events and data rights. Groups, Pages and Stories have imported service modules with unit tests; other module documents are not proof of implementation.
+- `apps/`: documented boundaries for web, Android, iOS, desktop, TV, admin and Creator Studio clients. Only the browser client is currently implemented.
+- `frontend/`: target component, layout, page, navigation and theme organization; current UI remains in `public/`.
 - `database/migrations/001_social_core.sql`: relational schema foundation for future database-backed persistence. The current app does **not** execute this migration or use this schema.
 - `packages/`: planned shared API contracts, validation and platform-neutral helpers.
 - `tests/`: current API integration tests plus unit tests and test plans for security, accessibility, performance and browser flows.
 - `docs/`: architecture map, feature catalog, roadmap, API, security and deployment guides.
 
-See [the repository map](docs/REPOSITORY_MAP.md), [feature implementation status](docs/FEATURES.md), [feature catalog](docs/FEATURE_CATALOG.md), and [roadmap](docs/ROADMAP.md) for the distinction between live functionality and planned work.
+See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATFORM_COVERAGE.md), [feature implementation status](docs/FEATURES.md), [feature catalog](docs/FEATURE_CATALOG.md), and [roadmap](docs/ROADMAP.md) for the distinction between live functionality and planned work.
 
 ## Requirements
 
