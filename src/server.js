@@ -579,4 +579,14 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],...SECURITY_HEADERS});res.end(d);});return;}res.writeHead(200,{'Content-Type':MIME[path.extname(file)]||'application/octet-stream',...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
-server.listen(PORT,'0.0.0.0',()=>console.log(`Minglora listening on port ${PORT}`));
+server.listen(PORT,'0.0.0.0',async()=>{
+  console.log(`Minglora listening on port ${PORT}`);
+  const persistence = await persistenceHealth();
+  console.info('[Minglora readiness]', JSON.stringify({
+    authProvider: AUTH_PROVIDER,
+    authConfigured: AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured(),
+    persistenceDriver: persistence.driver,
+    persistenceDurable: persistence.durable,
+    persistenceReady: persistence.ready
+  }));
+});
