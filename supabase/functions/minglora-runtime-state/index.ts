@@ -84,11 +84,11 @@ Deno.serve(async (req: Request) => {
     };
     const postExtensions: Record<string,string> = {
       ...imageExtensions,
-      "video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a",
-      "model/gltf-binary":"glb"
+      "video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","audio/mpeg":"mp3","audio/mp4":"m4a",
+      "audio/ogg":"ogg","audio/webm":"webm","model/gltf-binary":"glb"
     };
     const storyExtensions: Record<string,string> = {
-      ...imageExtensions,"video/mp4":"mp4","video/webm":"webm"
+      ...imageExtensions,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"
     };
     const extensions = slot === "avatar" || slot === "cover" ? imageExtensions
       : slot === "post" ? postExtensions : slot === "story" ? storyExtensions : {};
@@ -118,10 +118,12 @@ Deno.serve(async (req: Request) => {
       (mimeType==="image/webp"&&ascii(0,4)==="RIFF"&&ascii(8,12)==="WEBP") ||
       (mimeType==="image/avif"&&ascii(4,8)==="ftyp"&&["avif","avis","mif1"].includes(ascii(8,12)));
     const mediaValid =
-      (mimeType==="video/mp4"&&ascii(4,8)==="ftyp") ||
+      (["video/mp4","video/quicktime"].includes(mimeType)&&ascii(4,8)==="ftyp") ||
       (mimeType==="video/webm"&&hasPrefix([0x1a,0x45,0xdf,0xa3])) ||
       (mimeType==="audio/mpeg"&&ascii(0,3)==="ID3") ||
       (mimeType==="audio/mp4"&&ascii(4,8)==="ftyp") ||
+      (mimeType==="audio/ogg"&&ascii(0,4)==="OggS") ||
+      (mimeType==="audio/webm"&&hasPrefix([0x1a,0x45,0xdf,0xa3])) ||
       (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF");
     if (!imageValid && !mediaValid) {
       return json(415, { error: "The file contents do not match the selected media type." });
