@@ -508,6 +508,50 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(reciprocalFollow.status, 200);
   assert.equal(reciprocalFollow.body.following, true);
   assert.equal(reciprocalFollow.body.friends, true);
+
+  cookie = firstCookie;
+  const sentDirectMessage = await request('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify({ to: secondUserId, text: 'Read receipt integration test.' })
+  });
+  assert.equal(sentDirectMessage.status, 201);
+  assert.equal(sentDirectMessage.body.message.read, false);
+
+  const senderInboxBeforeRead = await request('/api/messages');
+  const senderConversation = senderInboxBeforeRead.body.conversations.find(item => item.user.id === secondUserId);
+  assert.equal(senderConversation.unreadCount, 0);
+  assert.equal(senderConversation.messages.at(-1).read, false);
+
+  cookie = secondCookie;
+  const recipientInboxBeforeRead = await request('/api/messages');
+  const recipientConversation = recipientInboxBeforeRead.body.conversations.find(item => item.user.id === firstUserId);
+  assert.equal(recipientConversation.unreadCount, 1);
+  assert.equal(recipientConversation.messages.at(-1).read, false);
+
+  const rejectSelfRead = await request('/api/messages/' + secondUserId + '/read', { method: 'POST', body: '{}' });
+  assert.equal(rejectSelfRead.status, 400);
+  const markConversationRead = await request('/api/messages/' + firstUserId + '/read', { method: 'POST', body: '{}' });
+  assert.equal(markConversationRead.status, 200);
+  assert.equal(markConversationRead.body.updated, 1);
+  assert.ok(markConversationRead.body.readAt);
+
+  const recipientInboxAfterRead = await request('/api/messages');
+  const readConversation = recipientInboxAfterRead.body.conversations.find(item => item.user.id === firstUserId);
+  assert.equal(readConversation.unreadCount, 0);
+  assert.equal(readConversation.messages.at(-1).read, true);
+  assert.ok(readConversation.messages.at(-1).readAt);
+
+  cookie = firstCookie;
+  const senderInboxAfterRead = await request('/api/messages');
+  const senderReadConversation = senderInboxAfterRead.body.conversations.find(item => item.user.id === secondUserId);
+  assert.equal(senderReadConversation.messages.at(-1).read, true);
+  assert.ok(senderReadConversation.messages.at(-1).readAt);
+
+  cookie = secondCookie;
+  const unknownConversationRead = await request('/api/messages/not-a-real-member/read', { method: 'POST', body: '{}' });
+  assert.equal(unknownConversationRead.status, 404);
+
+  cookie = firstCookie;
   const mutualFriends = await request('/api/friends');
   assert.equal(mutualFriends.body.friends.some(member => member.id === secondUserId), true);
   const reciprocalFollowing = await request(`/api/users/${firstUserId}/following`);
