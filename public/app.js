@@ -275,6 +275,92 @@ async function uploadProfileImage(slot,file){
   const base64=await fileAsBase64(file);
   return api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType:file.type,base64})});
 }
+
+let mediaPickerSequence=0;
+function mediaAccept(slot){
+  return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm': 'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,audio/mpeg,audio/mp4,model/gltf-binary,.glb';
+}
+function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif'].includes(file.type);}
+async function transformMediaImage(file,zoom=1,rotation=0){
+  if(zoom<=1.001&&rotation===0)return file;
+  const bitmap=await createImageBitmap(file);
+  const swap=Math.abs(rotation%180)===90;
+  const width=swap?bitmap.height:bitmap.width,height=swap?bitmap.width:bitmap.height;
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d');if(!context)throw new Error('Image editing is not supported in this browser.');
+  context.translate(width/2,height/2);context.rotate(rotation*Math.PI/180);context.scale(zoom,zoom);
+  context.drawImage(bitmap,-bitmap.width/2,-bitmap.height/2);bitmap.close?.();
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Could not prepare the edited image.')),'image/jpeg',.92));
+  const base=(file.name||'minglora-image').replace(/\.[^.]+$/,'');
+  return new File([blob],base+'-edited.jpg',{type:'image/jpeg',lastModified:Date.now()});
+}
+async function uploadMediaFile(slot,file,zoom=1,rotation=0){
+  let prepared=file;
+  if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
+  const base64=await fileAsBase64(prepared);
+  const result=await api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType:prepared.type,base64})});
+  if(!result.asset?.id)throw new Error('Minglora did not return a saved media record.');
+  return result.asset;
+}
+function createMediaPicker(root,options={}){
+  const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
+  const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
+  initialMedia.forEach(item=>entries.push({existing:true,id:item.id,url:item.url,mimeType:item.mimeType||'image/jpeg',mediaType:item.mediaType||'image',name:'Attached media',zoom:1,rotation:0}));
+  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>Take photo / video</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your device. Gallery, folders and the camera are available where your browser supports them. Up to '+maxFiles+' files; 8 MB each.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p></div>';
+  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]');
+  function mediaCard(entry,index){
+    let preview='';
+    if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
+    else if(entry.url&&entry.mediaType==='audio')preview='<audio controls preload="metadata" src="'+esc(entry.url)+'"></audio>';
+    else if(entry.url&&entry.mediaType==='model3d')preview='<model-viewer src="'+esc(entry.url)+'" alt="3D model preview" camera-controls auto-rotate></model-viewer>';
+    else if(entry.url)preview='<img src="'+esc(entry.url)+'" alt="Selected image preview">';
+    else if(entry.file&&imageMime(entry.file))preview='<img src="'+esc(entry.previewUrl)+'" alt="Selected image preview">';
+    else if(entry.file&&entry.file.type.startsWith('video/'))preview='<video controls playsinline src="'+esc(entry.previewUrl)+'"></video>';
+    else if(entry.file&&entry.file.type.startsWith('audio/'))preview='<audio controls src="'+esc(entry.previewUrl)+'"></audio>';
+    else if(entry.file&&entry.file.type==='model/gltf-binary')preview='<div class="media-3d-placeholder">3D model selected · preview after upload</div>';
+    const edit=imageMime(entry.file)?'<label class="media-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="'+entry.zoom+'" data-media-zoom="'+index+'"></label><button type="button" class="secondary" data-media-rotate="'+index+'">Rotate 90°</button>':'';
+    return '<article class="media-picker-item"><div class="media-picker-preview">'+preview+'</div><div class="media-picker-meta"><strong>'+esc(entry.file?.name||entry.name||'Attached media')+'</strong><small>'+((entry.file?.size||entry.byteSize||0)/1024/1024).toFixed(2)+' MB</small><div class="media-picker-tools">'+edit+'<button type="button" class="secondary" data-media-remove="'+index+'">Remove</button></div></div></article>';
+  }
+  function render(){
+    list.innerHTML=entries.map(mediaCard).join('');
+    list.querySelectorAll('[data-media-zoom]').forEach(control=>control.addEventListener('input',()=>{entries[Number(control.dataset.mediaZoom)].zoom=Number(control.value);}));
+    list.querySelectorAll('[data-media-rotate]').forEach(button=>button.addEventListener('click',()=>{const item=entries[Number(button.dataset.mediaRotate)];item.rotation=(item.rotation+90)%360;render();}));
+    list.querySelectorAll('[data-media-remove]').forEach(button=>button.addEventListener('click',()=>{const index=Number(button.dataset.mediaRemove),item=entries[index];if(item.previewUrl){URL.revokeObjectURL(item.previewUrl);objectUrls.splice(objectUrls.indexOf(item.previewUrl),1);}entries.splice(index,1);render();}));
+  }
+  function addFiles(fileList){
+    for(const file of Array.from(fileList||[])){
+      if(entries.length>=maxFiles){status.textContent='You can select up to '+maxFiles+' files.';break;}
+      if(file.size>8*1024*1024){status.textContent=file.name+' is over the 8 MB limit.';continue;}
+      const allowed=accept.split(',').some(pattern=>pattern.trim().startsWith('.')?file.name.toLowerCase().endsWith(pattern.trim().toLowerCase()):pattern.trim().endsWith('/*')?file.type.startsWith(pattern.trim().slice(0,-1)):file.type===pattern.trim());
+      if(!allowed){status.textContent=file.name+' has an unsupported file type.';continue;}
+      const previewUrl=URL.createObjectURL(file);objectUrls.push(previewUrl);
+      entries.push({file,previewUrl,zoom:1,rotation:0,mediaType:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'model3d'});
+    }
+    render();
+  }
+  gallery.addEventListener('change',()=>{addFiles(gallery.files);gallery.value='';});
+  camera.addEventListener('change',()=>{addFiles(camera.files);camera.value='';});
+  root.querySelector('[data-media-gallery]').addEventListener('click',()=>gallery.click());
+  root.querySelector('[data-media-camera]').addEventListener('click',()=>camera.click());
+  render();
+  return {
+    hasSelection:()=>entries.length>0,
+    async upload(){
+      const ids=[];
+      for(const entry of entries){
+        if(entry.existing){ids.push(entry.id);continue;}
+        status.textContent='Uploading '+(entry.file?.name||'media')+'…';
+        const saved=await uploadMediaFile(slot,entry.file,entry.zoom,entry.rotation);
+        ids.push(saved.id);
+        entry.existing=true;entry.id=saved.id;entry.url=saved.previewUrl||null;entry.mediaType=saved.mediaType;entry.mimeType=saved.mimeType;entry.byteSize=saved.byteSize;entry.name=entry.file.name;entry.file=null;
+      }
+      status.textContent=ids.length?'Media uploaded and ready.':'No media selected.';
+      return ids;
+    },
+    destroy(){objectUrls.forEach(url=>URL.revokeObjectURL(url));root.innerHTML='';}
+  };
+}
+
 function openEditProfile(u){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML=`<section class="modal profile-editor-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
