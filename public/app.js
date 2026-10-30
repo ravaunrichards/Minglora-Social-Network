@@ -328,9 +328,9 @@ let mediaPickerSequence=0;
 function mediaAccept(slot){
   return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime': 'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/webm,model/gltf-binary,.glb';
 }
-function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\\.hei[cf]$/i.test(file.name||'');}
+function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\.hei[cf]$/i.test(file.name||'');}
 async function transformMediaImage(file,zoom=1,rotation=0){
-  const needsConversion=['image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\\.hei[cf]$/i.test(file.name||'');
+  const needsConversion=['image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\.hei[cf]$/i.test(file.name||'');
   if(zoom<=1.001&&rotation===0&&!needsConversion)return file;
   const bitmap=await createImageBitmap(file);
   const swap=Math.abs(rotation%180)===90;
