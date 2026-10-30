@@ -363,6 +363,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   cookie = firstCookie;
   const deleteCommentAsPostOwner = await request(`/api/posts/${post.body.post.id}/comments/${secondCommentForOwner.body.comment.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(deleteCommentAsPostOwner.status, 200);
+  await request('/api/settings', { method: 'PATCH', body: JSON.stringify({ privacy: { profileVisibility: 'public' } }) });
   cookie = secondCookie;
 
   const follow = await request(`/api/users/${firstUserId}/follow`, { method: 'POST', body: '{}' });
