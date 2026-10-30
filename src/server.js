@@ -386,6 +386,162 @@ async function route(req, res) {
         const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
         user.settings=validation.settings;await saveStore();return json(res,200,{settings:getUserSettings(user)});
       }
+      const currentSession=sessionFromRequest(req);
+      if(method==='GET'&&p==='/api/security/sessions'){
+        const sessions=(db.sessions||[]).filter(item=>item.userId===user.id&&new Date(item.expiresAt)>new Date()).map(item=>({
+          id:item.id,current:item.id===currentSession?.id,createdAt:item.createdAt||item.expiresAt,lastSeenAt:item.lastSeenAt||item.createdAt||item.expiresAt,expiresAt:item.expiresAt,userAgent:item.userAgent||'Unknown device'
+        }));
+        return json(res,200,{sessions});
+      }
+      if(method==='DELETE'&&p.startsWith('/api/security/sessions/')){
+        const sessionId=decodeURIComponent(p.slice('/api/security/sessions/'.length));
+        const target=(db.sessions||[]).find(item=>item.id===sessionId&&item.userId===user.id);
+        if(!target)return json(res,404,{error:'Session not found.'});
+        db.sessions=db.sessions.filter(item=>item.id!==sessionId);await saveStore();
+        return json(res,200,{ok:true,current:target.id===currentSession?.id},target.id===currentSession?.id?{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}:{});
+      }
+      if(method==='POST'&&p==='/api/security/sessions/revoke-others'){
+        db.sessions=db.sessions.filter(item=>item.userId!==user.id||item.id===currentSession?.id);
+        await saveStore();return json(res,200,{ok:true});
+      }
+      if(method==='POST'&&p==='/api/security/password'){
+        const currentPassword=String(input.currentPassword||''),newPassword=String(input.newPassword||'');
+        if(newPassword.length<10||newPassword.length>1024)return json(res,400,{error:'Your new password must contain at least 10 characters.'});
+        if(AUTH_PROVIDER==='supabase'){
+          if(!currentPassword)return json(res,400,{error:'Enter your current password to confirm this change.'});
+          await supabaseSignIn({email:user.email,password:currentPassword});
+          const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+          await supabaseUpdatePassword(auth.access_token,newPassword);
+        }else{
+          const [salt,expected]=String(user.passwordHash||':').split(':');
+          if(!salt||!expected)return json(res,400,{error:'This account does not have a local password to update.'});
+          const actual=(await scrypt(currentPassword,salt,64)).toString('hex');
+          if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return json(res,401,{error:'Your current password is incorrect.'});
+          const newSalt=crypto.randomBytes(16).toString('hex');
+          user.passwordHash=newSalt+':'+(await scrypt(newPassword,newSalt,64)).toString('hex');
+        }
+        await saveStore();return json(res,200,{ok:true,message:'Your password has been updated.'});
+      }
+      if(method==='GET'&&p==='/api/security/mfa'){
+        if(AUTH_PROVIDER!=='supabase')return json(res,200,{enabled:false,available:false,factors:[]});
+        const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        const result=await supabaseListFactors(auth.access_token);
+        const factors=(result.factors||[]).map(factor=>({id:factor.id,type:factor.factor_type,status:factor.status,friendlyName:factor.friendly_name,createdAt:factor.created_at,updatedAt:factor.updated_at}));
+        return json(res,200,{enabled:factors.some(item=>item.type==='totp'&&item.status==='verified'),available:true,factors});
+      }
+      if(method==='POST'&&p==='/api/security/mfa/totp/enroll'){
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Authenticator-based MFA requires Minglora Supabase Auth.'});
+        const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        const result=await supabaseEnrollTotp(auth.access_token,'Minglora authenticator');
+        return json(res,201,{factor:{id:result.id,type:result.type||'totp',status:result.status||'unverified',friendlyName:result.friendly_name},totp:result.totp||null});
+      }
+      if(method==='POST'&&p==='/api/security/mfa/totp/verify'){
+        const factorId=String(input.factorId||''),code=String(input.code||'').replace(/\s/g,'');
+        if(!factorId||! /^\d{6,8}$/.test(code))return json(res,400,{error:'Enter the authenticator code.'});
+        const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        const challenge=await supabaseChallengeFactor(auth.access_token,factorId);
+        const verified=await supabaseVerifyFactor(auth.access_token,factorId,challenge.id,code);
+        currentSession.mfaVerified=true;await saveStore();
+        return json(res,200,{ok:true,factor:{id:verified.id,status:verified.status||'verified'}});
+      }
+      m=p.match(/^\/api\/security\/mfa\/factors\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        await supabaseUnenrollFactor(auth.access_token,m[1]);return json(res,200,{ok:true});
+      }
+      if(method==='POST'&&p==='/api/reports'){
+        const targetType=String(input.targetType||''),targetId=String(input.targetId||''),category=String(input.category||''),details=String(input.details||'').trim();
+        const allowedTypes=['user','post','comment','story','group','page','message'];
+        const allowedCategories=['spam','harassment','hate','nudity','violence','scam','impersonation','copyright','privacy','other'];
+        if(!allowedTypes.includes(targetType)||!targetId||!allowedCategories.includes(category)||details.length>2000)return json(res,400,{error:'Choose a report type, reason and optional details (maximum 2000 characters).'});
+        let exists=false;
+        if(targetType==='user')exists=db.users.some(item=>item.id===targetId&&item.id!==user.id);
+        if(targetType==='post')exists=db.posts.some(item=>item.id===targetId);
+        if(targetType==='comment')exists=db.posts.some(post=>(post.comments||[]).some(comment=>comment.id===targetId));
+        if(targetType==='story')exists=(db.stories||[]).some(item=>item.id===targetId);
+        if(targetType==='group')exists=(db.groups||[]).some(item=>item.id===targetId);
+        if(targetType==='page')exists=(db.pages||[]).some(item=>item.id===targetId);
+        if(targetType==='message')exists=(db.messages||[]).some(item=>item.id===targetId&&(item.from===user.id||item.to===user.id));
+        if(!exists)return json(res,404,{error:'The content you are reporting could not be found.'});
+        const duplicate=(db.reports||[]).find(item=>item.reporterId===user.id&&item.targetType===targetType&&item.targetId===targetId&&['open','triaged'].includes(item.status));
+        if(duplicate)return json(res,409,{error:'You have already reported this content. You can follow up through Help & support.'});
+        const report={id:uid(),reporterId:user.id,targetType,targetId,category,details,status:'open',createdAt:now(),reviewedAt:null,reviewedBy:null};
+        db.reports.unshift(report);await saveStore();
+        return json(res,201,{report:{id:report.id,targetType,category,status:report.status,createdAt:report.createdAt}});
+      }
+      if(method==='GET'&&p==='/api/reports/mine'){
+        return json(res,200,{reports:(db.reports||[]).filter(item=>item.reporterId===user.id).map(item=>({...item,reviewedBy:undefined}))});
+      }
+      if(method==='GET'&&p==='/api/moderation/reports'){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const status=String(url.searchParams.get('status')||'open');
+        const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>({
+          ...item,reporter:safeUser(db.users.find(u=>u.id===item.reporterId)),
+          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===db.posts.find(post=>post.id===item.targetId)?.userId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null))
+        }));
+        return json(res,200,{reports});
+      }
+      m=p.match(/^\/api\/moderation\/reports\/([^/]+)$/);
+      if((method==='PATCH'||method==='DELETE')&&m){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const report=(db.reports||[]).find(item=>item.id===m[1]);if(!report)return json(res,404,{error:'Report not found.'});
+        if(method==='DELETE')report.status='dismissed';
+        else{
+          const status=String(input.status||''),allowed=['open','triaged','actioned','dismissed','appealed'];
+          if(!allowed.includes(status))return json(res,400,{error:'Choose a valid moderation status.'});
+          report.status=status;
+        }
+        report.reviewedAt=now();report.reviewedBy=user.id;
+        if(input.action&&['hide_post','remove_post','remove_story','suspend_account'].includes(input.action)){
+          const action=String(input.action);
+          if(action==='hide_post'&&report.targetType==='post'){const post=db.posts.find(item=>item.id===report.targetId);if(post){post.status='hidden';post.hiddenAt=now();}}
+          if(action==='remove_post'&&report.targetType==='post'){const post=db.posts.find(item=>item.id===report.targetId);if(post){db.posts=db.posts.filter(item=>item.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});}}
+          if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);}}
+          if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);}}
+          (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,reportId:report.id,action,targetType:report.targetType,targetId:report.targetId,createdAt:now()});
+          (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.action',targetType:report.targetType,targetId:report.targetId,createdAt:now()});
+        }
+        await saveStore();return json(res,200,{report});
+      }
+      if(method==='GET'&&p==='/api/support/tickets'){
+        if(isModerator(user)&&url.searchParams.get('scope')==='all'){
+          const tickets=(db.supportTickets||[]).map(ticket=>({...ticket,requester:safeUser(db.users.find(u=>u.id===ticket.userId)),messages:(db.supportMessages||[]).filter(message=>message.ticketId===ticket.id)}));
+          return json(res,200,{tickets});
+        }
+        const tickets=(db.supportTickets||[]).filter(ticket=>ticket.userId===user.id).map(ticket=>({...ticket,messages:(db.supportMessages||[]).filter(message=>message.ticketId===ticket.id)}));
+        return json(res,200,{tickets});
+      }
+      if(method==='POST'&&p==='/api/support/tickets'){
+        const subject=String(input.subject||'').trim(),category=String(input.category||'general'),message=String(input.message||'').trim();
+        if(subject.length<4||subject.length>120||message.length<2||message.length>5000||!['general','account','security','bug','abuse','billing','privacy'].includes(category))return json(res,400,{error:'Enter a subject, category and message for support.'});
+        const ticket={id:uid(),userId:user.id,subject,category,status:'open',createdAt:now(),updatedAt:now()};
+        const first={id:uid(),ticketId:ticket.id,senderId:user.id,message,createdAt:now(),sender:safeUser(user)};
+        db.supportTickets.unshift(ticket);db.supportMessages.push(first);await saveStore();
+        return json(res,201,{ticket:{...ticket,messages:[first]}});
+      }
+      m=p.match(/^\/api\/support\/tickets\/([^/]+)\/messages$/);
+      if(method==='POST'&&m){
+        const ticket=(db.supportTickets||[]).find(item=>item.id===m[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
+        if(ticket.userId!==user.id&&!isModerator(user))return json(res,403,{error:'This support conversation belongs to another member.'});
+        const message=String(input.message||'').trim();if(message.length<1||message.length>5000)return json(res,400,{error:'Support message must contain 1–5000 characters.'});
+        if(ticket.status==='closed'&&!isModerator(user))return json(res,409,{error:'This ticket is closed. Create a new ticket to contact support.'});
+        const item={id:uid(),ticketId:ticket.id,senderId:user.id,message,createdAt:now(),sender:safeUser(user)};
+        db.supportMessages.push(item);ticket.updatedAt=now();if(isModerator(user))ticket.status='waiting_for_member';else ticket.status='open';await saveStore();
+        return json(res,201,{message:item,ticket});
+      }
+      m=p.match(/^\/api\/support\/tickets\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        const ticket=(db.supportTickets||[]).find(item=>item.id===m[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
+        if(ticket.userId!==user.id&&!isModerator(user))return json(res,403,{error:'This support ticket belongs to another member.'});
+        const status=String(input.status||'');
+        if(isModerator(user)&&['open','waiting_for_member','in_progress','closed'].includes(status))ticket.status=status;
+        else if(ticket.userId===user.id&&status==='closed')ticket.status='closed';
+        else return json(res,403,{error:'You cannot set this support ticket status.'});
+        ticket.updatedAt=now();await saveStore();return json(res,200,{ticket});
+      }
+      if(method==='GET'&&p==='/api/support/ticket-categories'){
+        return json(res,200,{categories:['general','account','security','bug','abuse','billing','privacy']});
+      }
       if (method === 'GET' && p === '/api/live/status') {
         return json(res, 200, { provider: 'livekit', configured: isLiveKitConfigured() });
       }
