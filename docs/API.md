@@ -84,7 +84,7 @@ Stories expire after 24 hours; expired records and their view records are remove
 | POST | `/api/messages` | Send a direct text message |
 | GET | `/api/notifications` | Current account's notifications |
 | POST | `/api/notifications/read` | Mark all current account notifications as read |
-| GET | `/api/search?q=...` | Search accounts, posts and groups |
+| GET | `/api/search?q=...` | Search accounts, posts, groups and active Pages; blocked accounts/Pages are filtered |
 
 ## General behavior
 
