@@ -398,7 +398,6 @@ async function route(req, res) {
           }
           const signedInUser=ensureLocalUser(authenticated.user);
           if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
-          if(signedInUser.status==='deactivated'){signedInUser.status='active';await supabaseUpdateUserMetadata(authenticated.access_token,{account_status:'active'});await saveStore();}
           const accessToken=authenticated.access_token;
           if(accessToken){
             const factors=await supabaseListFactors(accessToken);
@@ -410,6 +409,7 @@ async function route(req, res) {
               return json(res,200,{mfaRequired:true,challengeId:pendingId,message:'Enter the code from your authenticator app to finish signing in.'});
             }
           }
+          if(signedInUser.status==='deactivated'){signedInUser.status='active';await supabaseUpdateUserMetadata(accessToken,{account_status:'active'});await saveStore();}
           const sessionCookie=await createAppSession(signedInUser,authenticated,req);clearLoginFailures(rate.key);
           return json(res,200,{user:safeUser(signedInUser,signedInUser.id)},{'Set-Cookie':sessionCookie});
         }
@@ -435,6 +435,7 @@ async function route(req, res) {
         const account=db.users.find(item=>item.id===pending.userId);
         if(!account)return json(res,401,{error:'Account not found.'});
         db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
+        if(account.status==='deactivated'){account.status='active';await supabaseUpdateUserMetadata(verified.access_token,{account_status:'active'});}
         const sessionCookie=await createAppSession(account,verified,req);
         await saveStore();
         return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
