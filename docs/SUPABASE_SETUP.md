@@ -1,32 +1,51 @@
 # Minglora Supabase setup
 
-Minglora must use its own Supabase project. Do not put Zovara, ZUNO, or another product's project URL or keys in Minglora's environment.
+Minglora's dedicated Supabase project is **`gzycobgbasnqqhnympkr`** in its own organization. Never use another product's project or keys.
 
-## Configure Auth
+## Database deployment
 
-1. In the Minglora Supabase project, copy the Project URL and publishable key.
-2. Set AUTH_PROVIDER=supabase, SUPABASE_URL, and SUPABASE_PUBLISHABLE_KEY in the Minglora server environment.
-3. Set SUPABASE_AUTH_REDIRECT_URL to the deployed Minglora origin plus the configured auth callback path when using email confirmation redirects.
-4. Keep SUPABASE_SERVICE_ROLE_KEY server-only. The current signup/login implementation does not need it.
-5. In Supabase Auth settings, configure the site URL and allowed redirect URLs for the actual Minglora domain. Choose whether email confirmation is required and configure a working SMTP provider before relying on confirmation email delivery.
+The following migrations have been applied and verified on the Minglora project:
 
-## Apply the profile migration
+- `005_minglora_supabase_relational_platform`
+- `006_minglora_database_hardening`
 
-Apply migrations/004_supabase_auth_profiles.sql to the Minglora Supabase database using the SQL Editor or an approved migration workflow. It creates public.profiles, enables RLS, applies owner-only profile updates, creates a profile automatically when a row is inserted into auth.users, and backfills profiles for Auth users that already exist.
+Migration 005 creates the Auth-linked profile model and the application's relational social domains. It also enables RLS on all public tables, adds table policies and privileges, configures 11 Minglora Storage buckets with object access policies, and adds eight user-facing tables to the Realtime publication. Migration 006 adds missing foreign-key indexes, a primary key to `memory_exclusions`, and removes public execution rights from the platform-installed `public.rls_auto_enable()` function.
 
-The migration is scoped to auth.users and public.profiles. Do not apply it to another product's project.
+The database starts empty. No test user or sample engagement data was inserted.
 
-## Verify
+## Auth identity model
 
-After applying the migration, create one test account through Minglora. Confirm that:
-- the account appears in Supabase Dashboard → Authentication → Users;
-- a profile row exists in public.profiles with the same UUID;
-- the profile username and display name match the signup metadata;
-- the user can log in after completing email confirmation, when confirmation is enabled;
-- an unauthenticated user cannot update a profile.
+Supabase Auth's `auth.users` is the authoritative identity store. A private-schema database trigger creates a matching `public.profiles` record after each Auth user is inserted. The profile UUID is the Auth UUID. Password hashes, reset tokens and verification tokens are not stored in Minglora public tables; Supabase Auth owns those functions.
 
-Minglora will not silently fall back to local-only account creation in production. If the Supabase URL/key are absent or placeholders, the Auth endpoints return HTTP 503. This keeps incomplete setup visible instead of recording accounts in the wrong place.
+The current server integration accepts these matching environment pairs (prefer the first):
 
-## Existing Minglora accounts
+- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- Legacy compatibility: `SUPABASE_URL` and `SUPABASE_ANON_KEY`
 
-Accounts created before the Supabase Auth integration remain in the existing application store. When an existing member logs in with their correct old password, Minglora verifies the stored password hash and creates the corresponding Supabase Auth account and profile. Existing application user IDs and social relationships are retained. This is a lazy migration; it occurs on that member's next successful login.
+Both values must belong to this Minglora project. Publishable/anon keys are suitable for browser requests subject to RLS. Never put a Supabase secret/service-role key in browser code or public environment variables. The current signup/login integration does not require a service-role key.
+
+## Dashboard settings still required
+
+In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to the actual deployed Minglora origin and add only the actual Minglora callback/redirect URLs used by the application. Configure email confirmation according to the launch policy. Before relying on confirmation or recovery emails, configure and test a transactional SMTP provider with an appropriate sender domain and delivery limits. These Auth dashboard settings cannot be set by the database migration.
+
+## Storage
+
+The migration created these 11 buckets:
+
+- Public delivery: `minglora-avatars`, `minglora-covers`.
+- Private: `minglora-post-media`, `minglora-stories`, `minglora-short-videos`, `minglora-message-attachments`, `minglora-group-media`, `minglora-page-media`, `minglora-marketplace-media`, `minglora-live-thumbnails`, `minglora-data-exports`.
+
+Authenticated object paths are owner-scoped: the first folder segment must be the uploader's Auth UUID. Private asset delivery should use authenticated download or signed URLs.
+
+## Verification
+
+After configuring Auth URLs and SMTP, create a real test account through Minglora and verify that it appears in Authentication → Users and has a `public.profiles` row with the same UUID. Test a confirmed login, profile update, and a rejected attempt to update another member's profile. Do not seed fake accounts to simulate this.
+
+## Application integration still required
+
+The Supabase schema is deployed, but the existing Node application still uses the single-row `public.minglora_runtime_state` compatibility store. The normalized domain tables are not yet the active data adapter for all application routes. The server also needs its private `DATABASE_URL`, `PERSISTENCE_DRIVER=postgres`, `PGSSLMODE=require`, `SUPABASE_URL`, and matching `SUPABASE_PUBLISHABLE_KEY` configured in the Minglora hosting environment before its production readiness check can pass.
+
+The generated database types are maintained at `database/types/database.types.ts`.
