@@ -298,33 +298,41 @@
 .device-camera-status{min-height:20px;color:#cbd4e5;font-size:12px;margin:10px 2px}
 .device-camera-controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .device-camera-controls button{min-width:120px}
-.message-window-dock{position:fixed;right:16px;bottom:0;z-index:2400;display:flex;align-items:flex-end;gap:12px;max-width:calc(100vw - 32px);overflow-x:auto;pointer-events:none}
-.message-window{width:340px;min-width:300px;height:470px;max-height:78vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:var(--surface);color:var(--text);box-shadow:0 12px 45px rgba(0,0,0,.24);pointer-events:auto}
-.message-window.is-minimized{height:auto;min-width:260px}
-.message-window.is-maximized{position:fixed;right:16px;bottom:16px;left:16px;top:16px;width:auto;height:auto;max-height:none;z-index:1;border-radius:14px}
-.message-window-header{min-height:52px;display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--surface-soft);border-bottom:1px solid var(--line)}
-.message-window-header>img{width:34px;height:34px;object-fit:cover;border-radius:50%}
-.message-window-header>div:nth-child(2){display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-.message-window-header strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.message-window-header small{font-size:10px;color:var(--muted)}
-.message-window-controls{display:flex;gap:3px}
-.message-window-controls button{width:27px;height:27px;border:0;border-radius:6px;background:transparent;color:var(--text);font-size:16px;cursor:pointer}
-.message-window-controls button:hover{background:var(--line)}
-.message-window-body{flex:1;min-height:0;display:flex;flex-direction:column}
-.message-window-scroll{flex:1;min-height:70px;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:9px}
-.message-window-bubble{align-self:flex-start;max-width:88%;padding:8px 10px;border-radius:12px 12px 12px 3px;background:var(--surface-soft);overflow-wrap:anywhere}
-.message-window-bubble.mine{align-self:flex-end;border-radius:12px 12px 3px 12px;background:rgba(49,112,232,.13)}
-.message-window-bubble p{margin:0;font-size:12px;white-space:pre-wrap}
+
+/* Messenger-style desktop popups: 328 × 455 px at standard desktop viewport sizes. */
+.message-window-dock{position:fixed;right:16px;bottom:0;z-index:2400;display:flex;align-items:flex-end;gap:12px;max-width:calc(100vw - 32px);overflow-x:auto;overflow-y:visible;pointer-events:none}
+.message-window{width:328px;min-width:328px;height:min(455px,calc(100vh - 16px));max-height:calc(100vh - 16px);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--surface);color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,.22);pointer-events:auto}
+.message-window.is-minimized{height:auto;min-height:48px}
+.message-window.is-maximized{position:fixed;right:16px;bottom:16px;left:16px;top:16px;width:auto;height:auto;max-height:none;z-index:1;border-radius:10px}
+.message-window-header{min-height:48px;display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.message-window-profile{min-width:0;flex:1;display:flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.message-window-profile>img{width:30px;height:30px;flex:0 0 30px;object-fit:cover;border-radius:50%}
+.message-window-profile>span{min-width:0;display:flex;flex-direction:column;gap:2px}
+.message-window-header strong{font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.message-window-header small{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.message-window-controls{display:flex;align-items:center;gap:2px;flex:0 0 auto}
+.message-window-controls button{width:26px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:transparent;color:var(--blue);font-size:17px;line-height:1;cursor:pointer}
+.message-window-controls button:hover{background:var(--surface-soft)}
+.message-window-controls button[data-message-minimize],.message-window-controls button[data-message-maximize],.message-window-controls button[data-message-close]{color:var(--muted);font-size:18px}
+.message-window-controls button:focus-visible,.message-window-profile:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.message-window-body{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--surface)}
+.message-window-scroll{flex:1;min-height:70px;overflow:auto;overscroll-behavior:contain;padding:12px 10px;display:flex;flex-direction:column;gap:8px}
+.message-window-empty{margin:auto;padding:20px;text-align:center;color:var(--muted);font-size:12px}
+.message-window-bubble{align-self:flex-start;max-width:82%;padding:8px 12px;border-radius:18px 18px 18px 5px;background:var(--surface-soft);color:var(--text);overflow-wrap:anywhere}
+.message-window-bubble.mine{align-self:flex-end;border-radius:18px 18px 5px 18px;background:var(--blue);color:#fff}
+.message-window-bubble p{margin:0;font-size:13px;line-height:1.35;white-space:pre-wrap}
 .message-window-bubble small{display:block;color:var(--muted);font-size:9px;margin-top:5px}
-.message-window-picker{padding:6px 9px;border-top:1px solid var(--line);max-height:125px;overflow:auto}
+.message-window-bubble.mine small{color:rgba(255,255,255,.78)}
+.message-window-picker{padding:6px 9px;border-top:1px solid var(--line);max-height:96px;overflow:auto}
 .message-window-picker .media-picker-help,.message-window-picker .media-picker-status,.message-window-picker progress{display:none}
 .message-window-picker .media-picker-actions{display:flex;gap:6px}
 .message-window-picker .media-picker-actions button{font-size:10px;padding:6px 8px}
 .message-window-picker .media-picker-items{display:flex;gap:5px;overflow-x:auto}
 .message-window-picker .media-picker-item{min-width:110px;max-width:140px}
-.message-window-form{display:flex;gap:7px;padding:9px;border-top:1px solid var(--line)}
-.message-window-form input{min-width:0;flex:1;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);padding:10px}
-.message-window-form button{padding:0 13px}
+.message-window-form{display:flex;align-items:center;gap:7px;padding:9px;border-top:1px solid var(--line);background:var(--surface)}
+.message-window-form input{min-width:0;flex:1;height:38px;border:0;border-radius:20px;background:var(--surface-soft);color:var(--text);padding:0 14px;outline:none}
+.message-window-form input:focus{box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
+.message-window-form button{min-height:36px;padding:0 14px;border-radius:18px}
 .inbox-people-list{display:flex;flex-direction:column;gap:5px}
 .inbox-person-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid var(--line)}
 .inbox-person-row .avatar{width:38px;height:38px;object-fit:cover;border-radius:50%}
@@ -350,10 +358,10 @@
 .settings-account-action p{margin:5px 0 0;font-size:11px;color:var(--muted)}
 .settings-account-actions .settings-security-form{margin:0;padding:14px;border:1px solid var(--line);border-radius:12px}
 @media(max-width:700px){
-  .message-window-dock{right:0;left:0;max-width:100vw;gap:5px}
-  .message-window{width:calc(100vw - 20px);min-width:calc(100vw - 20px);height:70vh;max-height:70vh}
-  .message-window.is-maximized{right:6px;bottom:6px;left:6px;top:6px;width:auto;height:auto;max-height:none}
-  .message-window.is-minimized{width:190px;min-width:190px;height:auto;max-height:none}
+  .message-window-dock{right:6px;left:6px;max-width:calc(100vw - 12px);gap:6px;justify-content:flex-start}
+  .message-window{width:calc(100vw - 12px);min-width:calc(100vw - 12px);height:min(70vh,650px);max-height:70vh;border-radius:10px 10px 0 0}
+  .message-window.is-maximized{right:6px;bottom:6px;left:6px;top:6px;width:auto;height:auto;max-height:none;border-radius:10px}
+  .message-window.is-minimized{width:min(328px,calc(100vw - 12px));min-width:min(328px,calc(100vw - 12px));height:auto;max-height:none}
   .call-overlay{padding:5px}.call-panel{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
   .call-video-stage{grid-template-columns:1fr}
   .call-controls button{flex:1;min-width:0}
