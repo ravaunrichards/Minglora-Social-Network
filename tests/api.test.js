@@ -151,6 +151,36 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const secondUserId = secondRegistration.body.user.id;
   const secondCookie = cookie;
 
+  const joinGroup = await request(`/api/groups/${group.body.group.id}/join`, { method: 'POST', body: '{}' });
+  assert.equal(joinGroup.status, 200);
+  const groupDetail = await request(`/api/groups/${group.body.group.id}`);
+  assert.equal(groupDetail.status, 200);
+  assert.equal(groupDetail.body.group.memberCount, 2);
+  assert.equal(groupDetail.body.group.isMember, true);
+  const groupPost = await request(`/api/groups/${group.body.group.id}/posts`, {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A real group discussion post' })
+  });
+  assert.equal(groupPost.status, 201);
+  assert.equal((await request(`/api/groups/${group.body.group.id}`)).body.posts.length, 1);
+  const deleteOwnGroupPost = await request(`/api/groups/${group.body.group.id}/posts/${groupPost.body.post.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteOwnGroupPost.status, 200);
+  const groupPostForOwner = await request(`/api/groups/${group.body.group.id}/posts`, {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A post for group-owner moderation' })
+  });
+  assert.equal(groupPostForOwner.status, 201);
+  cookie = firstCookie;
+  const ownerCannotLeaveGroup = await request(`/api/groups/${group.body.group.id}/join`, { method: 'DELETE', body: '{}' });
+  assert.equal(ownerCannotLeaveGroup.status, 409);
+  const deleteGroupPostAsOwner = await request(`/api/groups/${group.body.group.id}/posts/${groupPostForOwner.body.post.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteGroupPostAsOwner.status, 200);
+  cookie = secondCookie;
+  const leaveGroup = await request(`/api/groups/${group.body.group.id}/join`, { method: 'DELETE', body: '{}' });
+  assert.equal(leaveGroup.status, 200);
+  const postAfterLeave = await request(`/api/groups/${group.body.group.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'Not allowed after leaving' }) });
+  assert.equal(postAfterLeave.status, 403);
+
   const forbiddenCommentDelete = await request(`/api/posts/${post.body.post.id}/comments/${comment.body.comment.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(forbiddenCommentDelete.status, 403);
   const secondComment = await request(`/api/posts/${post.body.post.id}/comments`, {
