@@ -314,6 +314,7 @@ function mediaMaxLabel(slot){
   return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':'500 MB';
 }
 async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
+  if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
   let prepared=file;
   if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
   let mimeType=prepared.type;
@@ -352,6 +353,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
 }
 async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!file)return null;
+  if(file.size>mediaMaxBytes(slot))throw new Error('Profile media must be '+mediaMaxLabel(slot)+' or smaller.');
   const allowed=['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'];
   if(!allowed.includes(file.type)&&!/\.(jpe?g|png|webp|avif|heic|heif)$/i.test(file.name||''))throw new Error('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');
   return uploadMediaFile(slot,file,zoom,rotation,onProgress);
@@ -493,8 +495,8 @@ function openEditProfile(u){
     const payload={name:values.get('name'),bio:values.get('bio'),location:values.get('location')};
     button.disabled=true;
     try{
-      if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);await uploadProfileImage('avatar',edited);}
-      if(coverInput.files?.[0]){status.textContent='Uploading cover photo…';const edited=await transformMediaImage(coverInput.files[0],coverEdit.zoom,coverEdit.rotation);await uploadProfileImage('cover',edited);}
+      if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});}
+      if(coverInput.files?.[0]){status.textContent='Uploading cover photo…';const edited=await transformMediaImage(coverInput.files[0],coverEdit.zoom,coverEdit.rotation);await uploadProfileImage('cover',edited,1,0,update=>{status.textContent='Uploading cover photo… '+update.percentage+'%';});}
       status.textContent='Saving profile details…';
       const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(payload)});
       state.user=result.user;close();showApp();await openProfile(state.user.id);toast('Profile updated.');
