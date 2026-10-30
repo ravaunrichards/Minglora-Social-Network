@@ -149,6 +149,18 @@ CREATE TABLE IF NOT EXISTS group_memberships (
 );
 CREATE INDEX IF NOT EXISTS group_memberships_user_idx ON group_memberships (user_id, status, joined_at DESC);
 
+CREATE TABLE IF NOT EXISTS group_posts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES social_groups(id) ON DELETE CASCADE,
+  author_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body text NOT NULL CHECK (length(body) BETWEEN 1 AND 5000),
+  status text NOT NULL DEFAULT 'published' CHECK (status IN ('published','hidden','deleted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS group_posts_group_created_idx ON group_posts (group_id, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS group_posts_author_created_idx ON group_posts (author_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS pages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   handle text NOT NULL,
