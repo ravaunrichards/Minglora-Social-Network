@@ -510,6 +510,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(reciprocalFollow.body.friends, true);
 
   cookie = firstCookie;
+  const rejectReadBeforeConversation = await request('/api/messages/' + secondUserId + '/read', { method: 'POST', body: '{}' });
+  assert.equal(rejectReadBeforeConversation.status, 404);
   const sentDirectMessage = await request('/api/messages', {
     method: 'POST',
     body: JSON.stringify({ to: secondUserId, text: 'Read receipt integration test.' })
