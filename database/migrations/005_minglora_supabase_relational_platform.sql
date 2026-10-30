@@ -103,27 +103,7 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS users (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  username text NOT NULL,
-  email text NOT NULL,
-  password_hash text NOT NULL,
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','deactivated','pending_deletion')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
 
-CREATE TABLE IF NOT EXISTS profiles (
-  user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
-  display_name text NOT NULL,
-  bio text NOT NULL DEFAULT '',
-  location text NOT NULL DEFAULT '',
-  avatar_asset_id uuid,
-  cover_asset_id uuid,
-  visibility text NOT NULL DEFAULT 'public' CHECK (visibility IN ('public','friends','private')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
 
 CREATE TABLE IF NOT EXISTS user_blocks (
   blocker_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -570,24 +550,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   PRIMARY KEY (user_id, event_type, channel)
 );
 
-CREATE TABLE IF NOT EXISTS password_reset_tokens (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  token_hash text NOT NULL UNIQUE,
-  expires_at timestamptz NOT NULL,
-  used_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
 
-CREATE TABLE IF NOT EXISTS email_verification_tokens (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  email_hash text NOT NULL,
-  token_hash text NOT NULL UNIQUE,
-  expires_at timestamptz NOT NULL,
-  used_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
 
 CREATE TABLE IF NOT EXISTS memory_preferences (
   user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -1021,17 +984,30 @@ FOR DELETE TO authenticated USING (EXISTS (
 CREATE POLICY minglora_stories_read ON public.stories
 FOR SELECT TO anon, authenticated
 USING (
-  expires_at>now() AND (
+  expires_at > now()
+  AND (
     audience='public'
     OR author_id=(select auth.uid())
-    OR (audience='followers' AND EXISTS (SELECT 1 FROM public.user_follows f
-       WHERE f.follower_id=(select auth.uid()) AND f.followed_id=stories.author_id))
-    OR (audience='friends' AND EXISTS (SELECT 1 FROM public.friendships f
-       WHERE f.status='accepted' AND
-       ((f.requester_id=stories.author_id AND f.recipient_id=(select auth.uid()))
-        OR (f.recipient_id=stories.author_id AND f.requester_id=(select auth.uid()))))
+    OR (
+      audience='followers'
+      AND EXISTS (
+        SELECT 1 FROM public.user_follows f
+        WHERE f.follower_id=(select auth.uid()) AND f.followed_id=stories.author_id
+      )
+    )
+    OR (
+      audience='friends'
+      AND EXISTS (
+        SELECT 1 FROM public.friendships f
+        WHERE f.status='accepted'
+          AND (
+            (f.requester_id=stories.author_id AND f.recipient_id=(select auth.uid()))
+            OR (f.recipient_id=stories.author_id AND f.requester_id=(select auth.uid()))
+          )
+      )
+    )
   )
-);
+)
 CREATE POLICY minglora_stories_insert_self ON public.stories
 FOR INSERT TO authenticated WITH CHECK (
   author_id=(select auth.uid()) AND expires_at>now()
@@ -1208,17 +1184,33 @@ USING (tagged_user_id=(select auth.uid()) OR tagged_by=(select auth.uid()));
 CREATE POLICY minglora_short_videos_read ON public.short_videos
 FOR SELECT TO anon, authenticated
 USING (
-  status='ready' AND (
-    audience='public' OR creator_id=(select auth.uid())
-    OR (audience='followers' AND EXISTS (SELECT 1 FROM public.user_follows f
-      WHERE f.follower_id=(select auth.uid()) AND f.followed_id=short_videos.creator_id))
-    OR (audience='friends' AND EXISTS (SELECT 1 FROM public.friendships f
-      WHERE f.status='accepted' AND
-      ((f.requester_id=short_videos.creator_id AND f.recipient_id=(select auth.uid()))
-       OR (f.recipient_id=short_videos.creator_id AND f.requester_id=(select auth.uid()))))
+  (
+    status='ready'
+    AND (
+      audience='public'
+      OR creator_id=(select auth.uid())
+      OR (
+        audience='followers'
+        AND EXISTS (
+          SELECT 1 FROM public.user_follows f
+          WHERE f.follower_id=(select auth.uid()) AND f.followed_id=short_videos.creator_id
+        )
+      )
+      OR (
+        audience='friends'
+        AND EXISTS (
+          SELECT 1 FROM public.friendships f
+          WHERE f.status='accepted'
+            AND (
+              (f.requester_id=short_videos.creator_id AND f.recipient_id=(select auth.uid()))
+              OR (f.recipient_id=short_videos.creator_id AND f.requester_id=(select auth.uid()))
+            )
+        )
+      )
+    )
   )
   OR creator_id=(select auth.uid())
-);
+)
 CREATE POLICY minglora_short_videos_insert_self ON public.short_videos
 FOR INSERT TO authenticated WITH CHECK (creator_id=(select auth.uid()));
 CREATE POLICY minglora_short_videos_update_self ON public.short_videos
@@ -1292,14 +1284,27 @@ FOR DELETE TO authenticated USING (user_id=(select auth.uid()));
 CREATE POLICY minglora_checkins_read ON public.checkins
 FOR SELECT TO anon, authenticated
 USING (
-  audience='public' OR user_id=(select auth.uid())
-  OR (audience='followers' AND EXISTS (SELECT 1 FROM public.user_follows f
-    WHERE f.follower_id=(select auth.uid()) AND f.followed_id=checkins.user_id))
-  OR (audience='friends' AND EXISTS (SELECT 1 FROM public.friendships f
-    WHERE f.status='accepted' AND
-    ((f.requester_id=checkins.user_id AND f.recipient_id=(select auth.uid()))
-     OR (f.recipient_id=checkins.user_id AND f.requester_id=(select auth.uid()))))
-);
+  audience='public'
+  OR user_id=(select auth.uid())
+  OR (
+    audience='followers'
+    AND EXISTS (
+      SELECT 1 FROM public.user_follows f
+      WHERE f.follower_id=(select auth.uid()) AND f.followed_id=checkins.user_id
+    )
+  )
+  OR (
+    audience='friends'
+    AND EXISTS (
+      SELECT 1 FROM public.friendships f
+      WHERE f.status='accepted'
+        AND (
+          (f.requester_id=checkins.user_id AND f.recipient_id=(select auth.uid()))
+          OR (f.recipient_id=checkins.user_id AND f.requester_id=(select auth.uid()))
+        )
+    )
+  )
+)
 CREATE POLICY minglora_checkins_insert_self ON public.checkins
 FOR INSERT TO authenticated WITH CHECK (user_id=(select auth.uid()));
 CREATE POLICY minglora_checkins_update_self ON public.checkins
