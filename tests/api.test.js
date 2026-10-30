@@ -63,8 +63,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(health.headers.get('x-frame-options'), 'DENY');
   const readiness = await request('/api/ready');
   assert.equal(readiness.status, 200);
-  assert.equal(readiness.body.persistence.driver, 'json');
-  assert.equal(readiness.body.persistence.durable, false);
+  assert.equal(readiness.body.components.persistence.driver, 'json');
+  assert.equal(readiness.body.components.persistence.durable, false);
 
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
