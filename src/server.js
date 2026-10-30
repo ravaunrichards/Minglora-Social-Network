@@ -499,23 +499,34 @@ async function route(req, res) {
         } else if(scope==='friends'){
           eligibleIds=new Set([user.id,...db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)).map(f=>f.from===user.id?f.to:f.from)]);
         }
-        const posts=db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&(!eligibleIds||eligibleIds.has(x.userId)))
-          .slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
+        const posts=await Promise.all(db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&(!eligibleIds||eligibleIds.has(x.userId)))
+          .slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id)));
         if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts,scope});
         try {
           const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
       }
-      if (method==='POST' && p==='/api/posts') { const validation=validatePostInput(input); if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')}); const {text,imageUrl}=validation.value; const post={id:uid(),userId:user.id,text,imageUrl,createdAt:now(),reactions:{},comments:[]};db.posts.unshift(post);await saveStore();return json(res,201,{post:publicPost(post,user.id)}); }
+      if(method==='POST'&&p==='/api/posts'){
+        const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
+        const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,createdAt:now(),reactions:{},comments:[]};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
+      }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
       if(method==='PATCH'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
         if(!post)return json(res,404,{error:'Post not found.'});
         if(post.userId!==user.id)return json(res,403,{error:'Only the post author can edit this post.'});
-        const validation=validatePostInput({text:input.text===undefined?post.text:input.text,imageUrl:input.imageUrl===undefined?post.imageUrl:input.imageUrl});
+        const validation=validatePostInput({text:input.text===undefined?post.text:input.text,mediaIds:input.mediaIds===undefined?(post.mediaIds||[]):input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
-        Object.assign(post,validation.value,{updatedAt:now()});await saveStore();return json(res,200,{post:publicPost(post,user.id)});
+        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&(asset.status==='uploaded'||asset.attachedTo===post.id)));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are not available to this post.'});
+        (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
+        post.text=validation.value.text;post.mediaIds=ids;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -526,7 +537,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       if(method==='GET'&&p==='/api/saved-posts'){
-        const posts=(db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id));
+        const posts=await Promise.all((db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
         return json(res,200,{posts});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/save$/);
@@ -539,7 +550,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:publicPost(post,user.id)});}
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
       m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -586,7 +597,7 @@ async function route(req, res) {
         return json(res,200,{users,count:users.length});
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
-      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length}); }
+      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:await Promise.all(db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id))),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length}); }
       if(method==='PATCH'&&p==='/api/users/me'){const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});Object.assign(user,validation.value);await saveStore();return json(res,200,{user:safeUser(user)}); }
       m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&m){const recipient=db.users.find(u=>u.id===m[1]);if(m[1]===user.id||!recipient)return json(res,400,{error:'Invalid friend.'});if(getUserSettings(recipient).privacy.allowFriendRequests===false)return json(res,403,{error:'This member is not accepting friend requests.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}await saveStore();return json(res,200,{friendship:f});}
@@ -747,7 +758,7 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(u=>u.id===to);if(!recipient||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const audience=getUserSettings(recipient).privacy.messageAudience;if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);await saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
       if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
-      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id)),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
+      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:await Promise.all(db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id))),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
       return json(res,404,{error:'API route not found.'});
     } catch(e) { console.error('[Minglora API error]',e); return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
   }
