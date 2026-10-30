@@ -9,7 +9,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Feed/posts | Posts accept device-uploaded photos, videos, audio and GLB 3D attachments; zoom/crop/rotation tools for images; edit and delete own posts | Automated video transcoding, chunked large uploads, personalized ranking and per-post audiences |
 | Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
 | Relationships | Follow/unfollow, clickable follower/following lists, automatic friendship on reciprocal follow, friend requests/acceptance and block/unblock | Mute/restrict and other advanced relationship controls |
-| Groups | Public groups with join/leave, details and member discussion posts; roles/private groups/moderation incomplete |
+| Groups | Public groups with join/leave, details and member posts supporting uploaded images, video, audio and 3D media; report posts and author/owner deletion | Roles, private groups, invitations, transcoding and automated moderation incomplete |
 | Pages | Create, follow, detail and owner publishing workflows; role management and insights incomplete |
 | Stories | Text, uploaded photo/video, audience rules, 24-hour expiry and view tracking | Story scheduling, transcoding and advanced moderation |
 | Profile image upload | Device gallery/file-picker uploads for avatar and cover, saved to the existing Minglora avatar/cover Storage buckets | Crop editor, old-media cleanup and gallery/albums are incomplete |
