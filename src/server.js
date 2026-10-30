@@ -582,8 +582,20 @@ async function route(req, res) {
           const actual=(await scrypt(currentPassword,salt,64)).toString('hex');
           if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return json(res,401,{error:'Your current password is incorrect.'});
         }
-        const requestResult=await requestSupabaseState('account_deletion_request',{userId:user.id});
-        return json(res,202,{ok:true,request:requestResult.request,message:'Your permanent deletion request has been recorded for review. Your account remains active until the deletion process is completed.'});
+        let deletionRequest;
+        if(AUTH_PROVIDER==='supabase'){
+          const requestResult=await requestSupabaseState('account_deletion_request',{userId:user.id});
+          deletionRequest=requestResult.request;
+        }else{
+          db.dataRightsRequests=db.dataRightsRequests||[];
+          deletionRequest=db.dataRightsRequests.find(item=>item.userId===user.id&&item.requestType==='deletion'&&['requested','processing'].includes(item.status));
+          if(!deletionRequest){
+            deletionRequest={id:uid(),userId:user.id,requestType:'deletion',status:'requested',requestedAt:now(),completedAt:null};
+            db.dataRightsRequests.push(deletionRequest);
+            await saveStore();
+          }
+        }
+        return json(res,202,{ok:true,alreadyRequested:Boolean(deletionRequest?.alreadyRequested),request:deletionRequest,message:'Your permanent deletion request has been recorded for review. Your account remains active until the deletion process is completed.'});
       }
       if(method==='GET'&&p==='/api/account/export'){
         const ownedPosts=db.posts.filter(item=>item.userId===user.id);
