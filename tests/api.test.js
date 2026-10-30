@@ -26,7 +26,7 @@ async function request(url, options = {}) {
   if (setCookie) cookie = setCookie.split(';')[0];
   let body = {};
   try { body = await response.json(); } catch {}
-  return { status: response.status, body };
+  return { status: response.status, body, headers: response.headers };
 }
 
 test('API supports empty startup, registration, feed, posting, reactions, comments, groups and logout', async t => {
@@ -59,6 +59,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(health?.status, 200);
   assert.equal(health.body.ok, true);
   assert.equal(health.body.service, 'minglora-social-network');
+  assert.equal(health.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(health.headers.get('x-frame-options'), 'DENY');
   const readiness = await request('/api/ready');
   assert.equal(readiness.status, 200);
   assert.equal(readiness.body.persistence.driver, 'json');
@@ -78,6 +80,32 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
+
+  const malformedSessionCookie = await request('/api/feed', {
+    headers: { Cookie: 'sid=%E0%A4%A' }
+  });
+  assert.equal(malformedSessionCookie.status, 401);
+
+  const crossOriginWrite = await request('/api/notifications/read', {
+    method: 'POST',
+    headers: { Origin: 'https://attacker.example' },
+    body: '{}'
+  });
+  assert.equal(crossOriginWrite.status, 403);
+
+  const crossSiteWrite = await request('/api/notifications/read', {
+    method: 'POST',
+    headers: { 'Sec-Fetch-Site': 'cross-site' },
+    body: '{}'
+  });
+  assert.equal(crossSiteWrite.status, 403);
+
+  const sameOriginWrite = await request('/api/notifications/read', {
+    method: 'POST',
+    headers: { Origin: `http://127.0.0.1:${port}`, 'Sec-Fetch-Site': 'same-origin' },
+    body: '{}'
+  });
+  assert.equal(sameOriginWrite.status, 200);
 
   const liveStatus = await request('/api/live/status');
   assert.equal(liveStatus.status, 200);
