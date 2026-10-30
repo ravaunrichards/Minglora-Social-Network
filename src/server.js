@@ -39,10 +39,10 @@ function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
   const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions'],preferences:['theme','feedSort','reducedMotion']};
-  for(const [section,keys] of Object.entries(input)){
-    if(!allowed[section]||!input[section]||typeof input[section]!=='object'||Array.isArray(input[section]))return {valid:false,error:'Unsupported settings section.'};
-    for(const [key,value] of Object.entries(input[section])){
-      if(!keys.includes(key))return {valid:false,error:'Unsupported setting: '+key};
+  for(const [section,values] of Object.entries(input)){
+    if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
+    for(const [key,value] of Object.entries(values)){
+      if(!allowed[section].includes(key))return {valid:false,error:'Unsupported setting: '+key};
       if(section==='privacy'&&key==='profileVisibility'&&!['public','friends','private'].includes(value))return {valid:false,error:'Profile visibility must be public, friends or private.'};
       if(section==='privacy'&&key==='messageAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Message audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
@@ -610,7 +610,7 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id)),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
       return json(res,404,{error:'API route not found.'});
-    } catch(e) { if(process.env.NODE_ENV==='test')return json(res,e.status||500,{error:e.message,stack:e.stack}); console.error('[Minglora API error]',e); return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
+    } catch(e) { console.error('[Minglora API error]',e); return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
   }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
   if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
