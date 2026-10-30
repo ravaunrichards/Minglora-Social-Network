@@ -191,6 +191,27 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const invalidScope = await request('/api/feed?scope=secret');
   assert.equal(invalidScope.status, 400);
 
+  const sentRequest = await request(`/api/friends/${firstUserId}/request`, { method: 'POST', body: '{}' });
+  assert.equal(sentRequest.status, 200);
+  cookie = firstCookie;
+  const firstInbox = await request('/api/friends');
+  assert.equal(firstInbox.body.incoming.some(person => person.id === secondUserId), true);
+  const declineRequest = await request(`/api/friends/${secondUserId}/decline`, { method: 'POST', body: '{}' });
+  assert.equal(declineRequest.status, 200);
+  cookie = secondCookie;
+  const retriedRequest = await request(`/api/friends/${firstUserId}/request`, { method: 'POST', body: '{}' });
+  assert.equal(retriedRequest.status, 200);
+  cookie = firstCookie;
+  const acceptRequest = await request(`/api/friends/${secondUserId}/accept`, { method: 'POST', body: '{}' });
+  assert.equal(acceptRequest.status, 200);
+  cookie = secondCookie;
+  const friendsFeedAfterAcceptance = await request('/api/feed?scope=friends');
+  assert.deepEqual(friendsFeedAfterAcceptance.body.posts.map(item => item.id), [post.body.post.id]);
+  const unfriend = await request(`/api/friends/${firstUserId}`, { method: 'DELETE', body: '{}' });
+  assert.equal(unfriend.status, 200);
+  assert.equal(unfriend.body.wasAccepted, true);
+  assert.equal((await request('/api/feed?scope=friends')).body.posts.length, 0);
+
   const forbiddenEdit = await request(`/api/posts/${post.body.post.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'Not the owner' }) });
   assert.equal(forbiddenEdit.status, 403);
   const forbiddenDelete = await request(`/api/posts/${post.body.post.id}`, { method: 'DELETE', body: '{}' });
