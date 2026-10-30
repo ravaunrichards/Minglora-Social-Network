@@ -318,6 +318,42 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
+      if(method==='POST'&&p==='/api/media/upload/prepare'){
+        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0);
+        const mimeKinds={
+          'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
+          'video/mp4':'video','video/webm':'video','video/quicktime':'video',
+          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d'
+        };
+        const allowedSlots={
+          avatar:['image/jpeg','image/png','image/webp','image/avif'],
+          cover:['image/jpeg','image/png','image/webp','image/avif'],
+          post:Object.keys(mimeKinds),
+          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime']
+        };
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024};
+        if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
+        const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
+        const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,status:'uploading',createdAt:now()};
+        db.mediaAssets.push(asset);await saveStore();
+        return json(res,201,{assetId:asset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,bucket:prepared.bucket,path:prepared.path},mimeType,mediaType:asset.mediaType,byteSize});
+      }
+      if(method==='POST'&&p==='/api/media/upload/complete'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id);
+        if(!asset)return json(res,404,{error:'The media upload record was not found.'});
+        if(asset.status!=='uploading')return json(res,409,{error:'This upload has already been completed or retired.'});
+        const completed=await mediaGateway('media_upload_complete',{ownerId:user.id,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,byteSize:asset.byteSize});
+        if(asset.slot==='avatar'||asset.slot==='cover'){
+          if(typeof completed.url!=='string'||!completed.url.startsWith('https://'))return json(res,502,{error:'Minglora could not finalize this profile image.'});
+          const previous=(db.mediaAssets||[]).find(item=>item.ownerId===user.id&&item.slot===asset.slot&&item.status==='attached');
+          if(previous){previous.status='deleted';previous.deletedAt=now();}
+          user[asset.slot]=completed.url;asset.status='attached';asset.attachedTo='profile:'+asset.slot;asset.url=completed.url;
+        }else{
+          asset.status='uploaded';
+        }
+        asset.completedAt=now();await saveStore();
+        return json(res,200,{asset:{id:asset.id,slot:asset.slot,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,previewUrl:completed.signedUrl||completed.url||null,url:completed.url||null},user:(asset.slot==='avatar'||asset.slot==='cover')?safeUser(user):undefined});
+      }
       if(method==='POST'&&p==='/api/media/upload'){
         const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),base64=String(input.base64||'');
         const maxBytes=8*1024*1024;
