@@ -624,7 +624,7 @@ function openEditProfile(u){
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
       <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"><label class="about-toggle"><input type="checkbox" name="show_location" ${aboutVisibility.location?'checked':''}> Display location on my profile</label></div>
       <section class="about-editor-section"><h3>About details</h3><p class="muted">Choose what people can see. Hidden details remain saved privately.</p>
-        <div class="field"><label for="edit-contact-phone">Contact phone</label><input id="edit-contact-phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" pattern="\\+[1-9][0-9]{7,14}" maxlength="24" value="${esc(u.contactPhone||'')}" placeholder="+18765551234"><label class="about-toggle"><input type="checkbox" name="show_contactPhone" ${aboutVisibility.contactPhone?'checked':''}> Display contact phone on my profile</label></div>
+        <div class="field"><label for="edit-contact-phone">Contact phone</label><input id="edit-contact-phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" pattern="\\\\+[1-9][0-9]{7,14}" maxlength="24" value="${esc(u.contactPhone||'')}" placeholder="+18765551234"><button class="secondary" type="button" id="request-phone-verification">Verify phone for Supabase</button><div id="phone-verification-panel" hidden><label for="phone-verification-code">SMS verification code</label><input id="phone-verification-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code"><button class="secondary" type="button" id="confirm-phone-verification">Confirm phone number</button></div><small id="phone-verification-status" class="muted" role="status">Verification saves this number in Supabase Auth. It remains hidden from your profile unless you enable Display.</small><label class="about-toggle"><input type="checkbox" name="show_contactPhone" ${aboutVisibility.contactPhone?'checked':''}> Display contact phone on my profile</label></div>
         <div class="about-editor-grid">
           <div class="field"><label for="edit-country">Country</label><input id="edit-country" name="country" maxlength="120" value="${esc(u.country||'')}"><label class="about-toggle"><input type="checkbox" name="show_country" ${aboutVisibility.country?'checked':''}> Display</label></div>
           <div class="field"><label for="edit-county">County</label><input id="edit-county" name="county" maxlength="120" value="${esc(u.county||'')}"><label class="about-toggle"><input type="checkbox" name="show_county" ${aboutVisibility.county?'checked':''}> Display</label></div>
@@ -654,6 +654,33 @@ function openEditProfile(u){
   const coverPreview=modal.querySelector('#edit-cover-preview');
   if(u.cover)coverPreview.style.backgroundImage='url("'+String(u.cover).replace(/["\\]/g,'')+'")';
   const previewUrls=[];
+  const phoneInput=modal.querySelector('#edit-contact-phone');
+  const phoneStatus=modal.querySelector('#phone-verification-status');
+  const phonePanel=modal.querySelector('#phone-verification-panel');
+  const phoneRequest=modal.querySelector('#request-phone-verification');
+  const phoneVerify=modal.querySelector('#confirm-phone-verification');
+  phoneRequest.onclick=async()=>{
+    const phone=String(phoneInput.value||'').trim();
+    phoneRequest.disabled=true;phoneStatus.textContent='Requesting a verification code…';
+    try{
+      const saved=await api('/users/me',{method:'PATCH',body:JSON.stringify({contactPhone:phone})});
+      state.user.contactPhone=saved.user.contactPhone;
+      await api('/auth/phone/change',{method:'POST',body:JSON.stringify({phone})});
+      phonePanel.hidden=false;phoneStatus.textContent='Code sent. Check your SMS messages and enter the six-digit code.';
+      modal.querySelector('#phone-verification-code').focus();
+    }catch(error){phoneStatus.textContent=error.message;toast(error.message);}
+    finally{phoneRequest.disabled=false;}
+  };
+  phoneVerify.onclick=async()=>{
+    const phone=String(phoneInput.value||'').trim(),token=String(modal.querySelector('#phone-verification-code').value||'').trim();
+    phoneVerify.disabled=true;phoneStatus.textContent='Verifying phone number…';
+    try{
+      await api('/auth/phone/verify',{method:'POST',body:JSON.stringify({phone,token})});
+      phoneStatus.textContent='Phone verified in Supabase Auth. The private contact number is saved.';
+      phoneVerify.textContent='Verified';phoneVerify.disabled=true;
+      state.user.contactPhone=phone;
+    }catch(error){phoneStatus.textContent=error.message;toast(error.message);phoneVerify.disabled=false;}
+  };
   function previewFile(input,target){
     const file=input.files?.[0];if(!file)return;
     if(!imageMime(file)){toast('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');input.value='';return;}
