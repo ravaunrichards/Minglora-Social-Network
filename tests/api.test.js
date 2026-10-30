@@ -141,11 +141,11 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(reloadedSettings.body.settings.notifications.messages, false);
 
   const firstAccountCookie = cookie;
-  const secondRegistration = await request('/api/auth/register', {
+  const privacyTestRegistration = await request('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ name: 'Second Test User', username: 'secondtestuser', email: 'second-user@example.test', password: 'SecondTestPassword123!' })
+    body: JSON.stringify({ name: 'Privacy Test User', username: 'privacytestuser', email: 'privacy-user@example.test', password: 'PrivacyTestPassword123!' })
   });
-  assert.equal(secondRegistration.status, 201);
+  assert.equal(privacyTestRegistration.status, 201);
   const hiddenProfile = await request(`/api/users/${registration.body.user.id}`);
   assert.equal(hiddenProfile.status, 404);
   const hiddenFromDiscovery = await request('/api/users');
