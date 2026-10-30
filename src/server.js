@@ -278,7 +278,7 @@ async function route(req, res) {
           if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
           if(accessToken){
-            const factors=await supabaseListFactors(accessToken).catch(()=>({factors:[]}));
+            const factors=await supabaseListFactors(accessToken);
             const verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified');
             if(verifiedTotp&&tokenAal(accessToken)!=='aal2'){
               const pendingId=uid();
