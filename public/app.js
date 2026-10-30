@@ -36,8 +36,7 @@ function renderPostMedia(post){
     if(item.mediaType==='model3d')return '<model-viewer class="post-media-3d" src="'+url+'" alt="Interactive 3D model" camera-controls auto-rotate shadow-intensity="1" loading="lazy"></model-viewer>';
     return '<img class="post-image" loading="lazy" src="'+url+'" alt="Post attachment">';
   }).join('');
-  const legacy=post.imageUrl?'<img class="post-image" loading="lazy" src="'+esc(post.imageUrl)+'" alt="Legacy post attachment">':'';
-  return items+legacy;
+  return items;
 }
 function postCard(post){
   const author=post.author||{}, comments=post.comments||[];
