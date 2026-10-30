@@ -31,6 +31,8 @@ export function validateProfilePatch(input = {}) {
   const limits = { name: 120, username: 30, bio: 500, location: 120 };
   const value = {};
   const errors = [];
+  const allowedKeys=new Set(Object.keys(limits));
+  for(const key of Object.keys(input||{}))if(!allowedKeys.has(key))errors.push(key+' cannot be edited through profile details. Choose a file from your device for profile media.');
   for (const [key, limit] of Object.entries(limits)) {
     if (input[key] === undefined) continue;
     const normalized = String(input[key] ?? '').trim();
