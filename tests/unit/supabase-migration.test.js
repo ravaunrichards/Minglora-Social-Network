@@ -25,7 +25,7 @@ test('the production relational migration uses Supabase Auth as the only identit
   assert.match(sql, /CREATE OR REPLACE FUNCTION private\.handle_new_minglora_user\(\)/);
   assert.doesNotMatch(sql, /CREATE TABLE IF NOT EXISTS users\s*\(/i);
   assert.doesNotMatch(sql, /password_hash/i);
-  assert.match(sql, /ALTER TABLE public\.minglora_runtime_state ENABLE ROW LEVEL SECURITY/);
+  assert.match(sql, /ALTER TABLE public\.%I ENABLE ROW LEVEL SECURITY/);
 });
 
 test('Minglora database hardening migrations are complete and ordered', () => {
