@@ -70,11 +70,12 @@ async function authRequest(path, payload) {
   return data;
 }
 
-export function supabaseSignUp({ email, password, name, username }) {
+export function supabaseSignUp({ email, password, name, username, phoneNumber }) {
+  const contactPhone=String(phoneNumber||'').trim();
   return authRequest('signup', {
     email,
     password,
-    data: { name, username }
+    data: { name, username, contact_phone:contactPhone, phone_number:contactPhone }
   });
 }
 
