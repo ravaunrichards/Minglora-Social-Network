@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn } from '../../src/supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseRequestPhoneChange, supabaseVerifyPhoneChange } from '../../src/supabase-auth.js';
 
 test('Supabase Auth refuses placeholder credentials', () => {
   const saved = {
@@ -56,6 +56,42 @@ test('Supabase signup sends metadata and uses only the publishable key', async (
     if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
     if (saved.redirect === undefined) delete process.env.SUPABASE_AUTH_REDIRECT_URL; else process.env.SUPABASE_AUTH_REDIRECT_URL = saved.redirect;
     globalThis.fetch = saved.fetch;
+  }
+});
+
+test('Supabase authenticated phone change requests an SMS verification code', async () => {
+  const saved={url:process.env.SUPABASE_URL,key:process.env.SUPABASE_PUBLISHABLE_KEY,fetch:globalThis.fetch};
+  let observed;
+  try{
+    process.env.SUPABASE_URL='https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY='sb_publishable_test-key';
+    globalThis.fetch=async(url,options)=>{observed={url:String(url),options};return new Response(JSON.stringify({user:{phone:'+18765550123'}}),{status:200,headers:{'content-type':'application/json'}});};
+    await supabaseRequestPhoneChange('x'.repeat(32),'+18765550123');
+    assert.equal(observed.url,'https://minglora-unit-test.supabase.co/auth/v1/user');
+    assert.equal(observed.options.method,'PUT');
+    assert.deepEqual(JSON.parse(observed.options.body),{phone:'+18765550123'});
+  }finally{
+    if(saved.url===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=saved.url;
+    if(saved.key===undefined)delete process.env.SUPABASE_PUBLISHABLE_KEY;else process.env.SUPABASE_PUBLISHABLE_KEY=saved.key;
+    globalThis.fetch=saved.fetch;
+  }
+});
+
+test('Supabase verifies a phone change with the phone_change OTP type', async () => {
+  const saved={url:process.env.SUPABASE_URL,key:process.env.SUPABASE_PUBLISHABLE_KEY,fetch:globalThis.fetch};
+  let observed;
+  try{
+    process.env.SUPABASE_URL='https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY='sb_publishable_test-key';
+    globalThis.fetch=async(url,options)=>{observed={url:String(url),options};return new Response(JSON.stringify({user:{phone:'+18765550123'},access_token:'verified-session-token',refresh_token:'verified-refresh-token',expires_in:3600}),{status:200,headers:{'content-type':'application/json'}});};
+    const result=await supabaseVerifyPhoneChange('x'.repeat(32),'+18765550123','123456');
+    assert.equal(result.user.phone,'+18765550123');
+    assert.equal(observed.url,'https://minglora-unit-test.supabase.co/auth/v1/verify');
+    assert.deepEqual(JSON.parse(observed.options.body),{type:'phone_change',phone:'+18765550123',token:'123456'});
+  }finally{
+    if(saved.url===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=saved.url;
+    if(saved.key===undefined)delete process.env.SUPABASE_PUBLISHABLE_KEY;else process.env.SUPABASE_PUBLISHABLE_KEY=saved.key;
+    globalThis.fetch=saved.fetch;
   }
 });
 
