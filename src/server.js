@@ -21,13 +21,48 @@ if (process.env.NODE_ENV === 'production' &&
 }
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()'
+};
 const safeUser = u => u && ({ id:u.id, name:u.name, username:u.username, bio:u.bio || '', location:u.location || '', avatar:u.avatar || '', cover:u.cover || '', createdAt:u.createdAt });
-const json = (res, status, body, headers={}) => { res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', ...headers }); res.end(JSON.stringify(body)); };
+const json = (res, status, body, headers={}) => { res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS, ...headers }); res.end(JSON.stringify(body)); };
 const cookie = (req, name) => (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1);
 const sign = value => crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
+function isSameOriginApiWrite(req) {
+  if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') return false;
+  const suppliedOrigin = req.headers.origin;
+  if (!suppliedOrigin) return true;
+  try {
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http')).split(',')[0].trim();
+    const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+    const expectedOrigin = process.env.APP_ORIGIN
+      ? new URL(process.env.APP_ORIGIN).origin
+      : new URL(`${forwardedProto}://${forwardedHost}`).origin;
+    const origin = new URL(String(suppliedOrigin));
+    return ['http:', 'https:'].includes(origin.protocol) && origin.origin === expectedOrigin;
+  } catch {
+    return false;
+  }
+}
 function sessionUser(req) {
-  const raw = cookie(req, 'sid'); if (!raw) return null;
-  const [id, sig] = decodeURIComponent(raw).split('.'); const expected = id ? sign(id) : ''; if (!id || !sig || sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  const raw = cookie(req, 'sid');
+  if (!raw) return null;
+  let decoded;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  const parts = decoded.split('.');
+  if (parts.length !== 2) return null;
+  const [id, sig] = parts;
+  if (!id || !sig) return null;
+  const expected = Buffer.from(sign(id), 'utf8');
+  const supplied = Buffer.from(sig, 'utf8');
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return null;
   const session = db.sessions.find(s => s.id === id && new Date(s.expiresAt) > new Date());
   return session ? db.users.find(u => u.id === session.userId) || null : null;
 }
@@ -68,6 +103,9 @@ async function route(req, res) {
       timestamp: now(),
       persistence
     });
+  }
+  if (p.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+    return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req); } catch(e) { return json(res,e.status||400,{error:e.message}); }
@@ -460,7 +498,7 @@ async function route(req, res) {
   }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
   if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
-  fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html']});res.end(d);});return;}res.writeHead(200,{'Content-Type':MIME[path.extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'});res.end(data);});
+  fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],...SECURITY_HEADERS});res.end(d);});return;}res.writeHead(200,{'Content-Type':MIME[path.extname(file)]||'application/octet-stream',...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
 server.listen(PORT,'0.0.0.0',()=>console.log(`Minglora listening on port ${PORT}`));
