@@ -14,7 +14,7 @@ export function supabaseAuthConfigured() {
 
 function requireConfig() {
   if (!supabaseAuthConfigured()) {
-    throw Object.assign(new Error('Minglora Supabase Auth is not configured. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in the server environment.'), { status: 503 });
+    throw Object.assign(new Error('Minglora Supabase Auth is not configured. Set both SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY on the Minglora API service environment; a publishable key without its matching project URL cannot connect.'), { status: 503 });
   }
 }
 
