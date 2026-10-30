@@ -175,7 +175,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
-    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, avatar:'', cover:'', createdAt:authUser.created_at || now() };
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), createdAt:authUser.created_at || now() };
     db.users.push(user);
   } else {
     user.name = name || user.name;
@@ -187,10 +187,13 @@ function ensureLocalUser(authUser, fallback = {}) {
     }
     if(metadata.relationship_status!==undefined||metadata.relationshipStatus!==undefined)user.relationshipStatus=String(metadata.relationship_status||metadata.relationshipStatus||'');
     if(metadata.about_visibility||metadata.aboutVisibility)user.aboutVisibility=metadata.about_visibility||metadata.aboutVisibility;
+    if(metadata.avatar_url!==undefined)user.avatar=String(metadata.avatar_url||'');
+    if(metadata.cover_url!==undefined)user.cover=String(metadata.cover_url||'');
+    if(metadata.account_status!==undefined)user.status=String(metadata.account_status||'active');
   }
   return user;
 }
-function sessionUser(req) {const session=sessionFromRequest(req);const account=session?db.users.find(item=>item.id===session.userId)||null:null;return account?.status==='suspended'?null:account;}
+function sessionUser(req) {const session=sessionFromRequest(req);const account=session?db.users.find(item=>item.id===session.userId)||null:null;return ['suspended','deactivated'].includes(account?.status)?null:account;}
 async function sessionAuth(session){if(!session?.authSealed)return null;let tokens=openSessionAuth(session.authSealed);if(!tokens?.access_token)return null;if(session.authExpiresAt&&new Date(session.authExpiresAt).getTime()<Date.now()+60000&&tokens.refresh_token){const refreshed=await supabaseRefreshSession(tokens.refresh_token);tokens={...tokens,...refreshed};session.authSealed=sealSessionAuth(tokens);session.authExpiresAt=new Date(Date.now()+Math.max(60,Number(tokens.expires_in||3600))*1000).toISOString();await saveStore();}return tokens;}
 async function body(req, maxBytes=1_000_000) {
   let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
@@ -395,6 +398,7 @@ async function route(req, res) {
           }
           const signedInUser=ensureLocalUser(authenticated.user);
           if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+          if(signedInUser.status==='deactivated'){signedInUser.status='active';await supabaseUpdateUserMetadata(authenticated.access_token,{account_status:'active'});await saveStore();}
           const accessToken=authenticated.access_token;
           if(accessToken){
             const factors=await supabaseListFactors(accessToken);
@@ -415,6 +419,7 @@ async function route(req, res) {
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
+        if(found.status==='deactivated'){found.status='active';await saveStore();}
         const sessionCookie=await createAppSession(found,null,req);clearLoginFailures(rate.key);
         return json(res,200,{user:safeUser(found)},{'Set-Cookie':sessionCookie});
       }
@@ -500,6 +505,36 @@ async function route(req, res) {
         return json(res,200,{asset:{id:asset.id,slot:asset.slot,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,previewUrl:completed.signedUrl||completed.url||null,url:completed.url||null},user:(asset.slot==='avatar'||asset.slot==='cover')?safeUser(user):undefined});
       }
       if(method==='POST'&&p==='/api/media/upload')return json(res,410,{error:'Direct base64 media uploads have been retired. Use the signed resumable device-media upload flow.'});
+      if(method==='POST'&&p==='/api/account/deactivate'){
+        const confirmation=String(input.confirmation||'');
+        if(confirmation!=='DEACTIVATE')return json(res,400,{error:'Type DEACTIVATE to confirm temporary account deactivation.'});
+        const currentSession=sessionFromRequest(req);
+        if(AUTH_PROVIDER==='supabase'){
+          const auth=await sessionAuth(currentSession);
+          if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+          await supabaseUpdateUserMetadata(auth.access_token,{account_status:'deactivated'});
+        }
+        user.status='deactivated';
+        db.sessions=(db.sessions||[]).filter(item=>item.userId!==user.id);
+        db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==user.id);
+        await saveStore();
+        return json(res,200,{ok:true,message:'Your Minglora account is deactivated. Sign in again to reactivate it.'},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'});
+      }
+      if(method==='POST'&&p==='/api/account/deletion-request'){
+        const currentPassword=String(input.currentPassword||'');
+        if(currentPassword.length<10)return json(res,400,{error:'Enter your current password to confirm this deletion request.'});
+        if(AUTH_PROVIDER==='supabase'){
+          const reauthenticated=await supabaseSignIn({email:user.email,password:currentPassword});
+          if(reauthenticated.user?.id&&reauthenticated.user.id!==user.id)return json(res,401,{error:'Your current password did not authenticate this account.'});
+        }else{
+          if(!user.passwordHash)return json(res,503,{error:'Account deletion confirmation is unavailable for this account provider.'});
+          const [salt,expected]=user.passwordHash.split(':');
+          const actual=(await scrypt(currentPassword,salt,64)).toString('hex');
+          if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return json(res,401,{error:'Your current password is incorrect.'});
+        }
+        const requestResult=await requestSupabaseState('account_deletion_request',{userId:user.id});
+        return json(res,202,{ok:true,request:requestResult.request,message:'Your permanent deletion request has been recorded for review. Your account remains active until the deletion process is completed.'});
+      }
       if(method==='GET'&&p==='/api/account/export'){
         const ownedPosts=db.posts.filter(item=>item.userId===user.id);
         const ownedPostIds=new Set(ownedPosts.map(item=>item.id));
