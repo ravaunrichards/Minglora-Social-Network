@@ -27,23 +27,49 @@ export function validatePostInput(input = {}) {
   if (mediaIds.some(id => id.length > 80)) errors.push('One or more media references are invalid.');
   return { valid: errors.length === 0, errors, value: { text, mediaIds } };
 }
+const ABOUT_VISIBILITY_KEYS = ['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
+
+export function normalizeContactPhone(value) {
+  return String(value ?? '').trim().replace(/[\\s().-]/g,'');
+}
+
+export function validateContactPhone(value) {
+  const phone=normalizeContactPhone(value);
+  return {valid:!phone || /^\\+[1-9]\\d{7,14}$/.test(phone),value:phone};
+}
+
 export function validateProfilePatch(input = {}) {
-  const limits = { name: 120, username: 30, bio: 500, location: 120 };
+  const limits = {
+    name:120, username:30, bio:500, location:120, contactPhone:24,
+    country:120, county:120, parish:120, city:120, gender:60, relationshipStatus:80
+  };
   const value = {};
   const errors = [];
-  const allowedKeys=new Set(Object.keys(limits));
+  const allowedKeys=new Set([...Object.keys(limits),'aboutVisibility']);
   for(const key of Object.keys(input||{}))if(!allowedKeys.has(key))errors.push(key+' cannot be edited through profile details. Choose a file from your device for profile media.');
   for (const [key, limit] of Object.entries(limits)) {
     if (input[key] === undefined) continue;
-    const normalized = String(input[key] ?? '').trim();
+    const normalized = key==='contactPhone'?normalizeContactPhone(input[key]):String(input[key] ?? '').trim();
     if (normalized.length > limit) errors.push(`${key} must be ${limit} characters or fewer.`);
-    if (['avatar', 'cover'].includes(key) && normalized) {
-      try { if (new URL(normalized).protocol !== 'https:') errors.push(`${key} must use HTTPS.`); }
-      catch { errors.push(`${key} must be a valid absolute URL.`); }
-    }
     value[key] = normalized;
+  }
+  if (Object.hasOwn(value,'contactPhone') && !validateContactPhone(value.contactPhone).valid) {
+    errors.push('Enter a phone number in international format, including + and country code (for example +18765551234).');
   }
   if (Object.hasOwn(value, 'name') && value.name.length < 2) errors.push('name must contain at least 2 characters.');
   if (Object.hasOwn(value, 'username')) { const normalized=normalizeUsername(value.username); if (!validateUsername(normalized).valid) errors.push('username must contain 3–30 letters, numbers or underscores.'); value.username=normalized; }
+  if (input.aboutVisibility !== undefined) {
+    if (!input.aboutVisibility || typeof input.aboutVisibility !== 'object' || Array.isArray(input.aboutVisibility)) {
+      errors.push('About visibility must be a set of show/hide choices.');
+    } else {
+      const visibility={};
+      for(const [key,flag] of Object.entries(input.aboutVisibility)) {
+        if(!ABOUT_VISIBILITY_KEYS.includes(key)){errors.push('Unsupported About visibility field: '+key);continue;}
+        if(typeof flag!=='boolean'){errors.push('About visibility choices must be enabled or disabled.');continue;}
+        visibility[key]=flag;
+      }
+      value.aboutVisibility=visibility;
+    }
+  }
   return { valid: errors.length === 0, errors, value };
 }
