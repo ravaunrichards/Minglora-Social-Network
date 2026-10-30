@@ -224,7 +224,7 @@ async function route(req, res) {
             return json(res,202,{confirmationRequired:true,message:'Check your email for a confirmation link. After confirming your address, return here and log in.'});
           }
           const created = ensureLocalUser(result.user, { name, username });
-          const sessionCookie = await createAppSession(created);
+          const sessionCookie = await createAppSession(created,result.session,req);
           return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
         }
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',avatar:'',cover:'',createdAt:now()}; db.users.push(created);
