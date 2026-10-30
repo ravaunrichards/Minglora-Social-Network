@@ -80,6 +80,7 @@ function stripLegacyDemoData(state) {
   state.pageFollows = (state.pageFollows || []).filter(f => !demoUsers.has(f.userId) && !removedPageIds.has(f.pageId));
   state.pagePosts = (state.pagePosts || []).filter(p => !demoUsers.has(p.publishedBy) && !removedPageIds.has(p.pageId));
   state.messages = (state.messages || []).filter(m => !demoUsers.has(m.from) && !demoUsers.has(m.to));
+  state.messageConversationHides = (state.messageConversationHides || []).filter(item => !demoUsers.has(item.userId) && !demoUsers.has(item.peerId));
   state.notifications = (state.notifications || []).filter(n => !demoUsers.has(n.userId) && !demoUsers.has(n.actorId));
   state.sessions = (state.sessions || []).filter(s => !demoUsers.has(s.userId));
   return true;

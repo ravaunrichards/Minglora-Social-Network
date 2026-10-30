@@ -622,27 +622,41 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
     onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
   }else{
     if(!window.tus?.Upload||!uploadInfo.endpoint||!uploadInfo.token)throw new Error('The secure resumable upload component did not load. Refresh Minglora and try again.');
-    await new Promise((resolve,reject)=>{
-      try{
-        const upload=new window.tus.Upload(prepared,{
-          endpoint:uploadInfo.endpoint,
-          retryDelays:[0,3000,5000,10000,20000],
-          headers:{'x-signature':uploadInfo.token},
-          uploadDataDuringCreation:true,
-          removeFingerprintOnSuccess:true,
-          storeFingerprintForResuming:false,
-          chunkSize:6*1024*1024,
-          metadata:{bucketName:uploadInfo.bucket,objectName:uploadInfo.path,contentType:mimeType,cacheControl:'3600'},
-          onProgress:(bytesUploaded,bytesTotal)=>{
-            const percentage=bytesTotal?Math.min(100,Math.round(bytesUploaded/bytesTotal*100)):0;
-            onProgress({bytesUploaded,bytesTotal,percentage});
-          },
-          onError:error=>reject(new Error('Upload failed: '+(error?.message||'The connection was interrupted. Try again.'))),
-          onSuccess:()=>resolve()
-        });
-        upload.start();
-      }catch(error){reject(error);}
-    });
+    try{
+      await new Promise((resolve,reject)=>{
+        try{
+          const upload=new window.tus.Upload(prepared,{
+            endpoint:uploadInfo.endpoint,
+            retryDelays:[0,3000,5000,10000,20000],
+            headers:{'x-signature':uploadInfo.token},
+            uploadDataDuringCreation:true,
+            removeFingerprintOnSuccess:true,
+            storeFingerprintForResuming:false,
+            chunkSize:6*1024*1024,
+            metadata:{bucketName:uploadInfo.bucket,objectName:uploadInfo.path,contentType:mimeType,cacheControl:'3600'},
+            onProgress:(bytesUploaded,bytesTotal)=>{
+              const percentage=bytesTotal?Math.min(100,Math.round(bytesUploaded/bytesTotal*100)):0;
+              onProgress({bytesUploaded,bytesTotal,percentage});
+            },
+            onError:error=>reject(new Error('Upload failed: '+(error?.message||'The connection was interrupted. Try again.'))),
+            onSuccess:()=>resolve()
+          });
+          upload.start();
+        }catch(error){reject(error);}
+      });
+    }catch(error){
+      const reason=String(error?.message||error);
+      if(!uploadInfo.signedUrl||!/(invalid compact jws|accessdenied|unauthorized|403)/i.test(reason))throw error;
+      const formData=new FormData();
+      formData.append('cacheControl','3600');
+      formData.append('',prepared,prepared.name||'minglora-upload');
+      const response=await fetch(uploadInfo.signedUrl,{method:'PUT',headers:{'x-upsert':'false'},body:formData});
+      if(!response.ok){
+        const result=await response.json().catch(()=>({}));
+        throw new Error(result.message||result.error||'The secure upload could not be completed. Please try again.');
+      }
+      onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
+    }
   }
   onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
   const completed=await api('/media/upload/complete',{method:'POST',body:JSON.stringify({assetId:preparedUpload.assetId})});
