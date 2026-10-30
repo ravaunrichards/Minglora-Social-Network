@@ -179,6 +179,14 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(post.status, 201);
   assert.equal(post.body.post.text, 'Automated integration test post');
+
+  const accountExport = await request('/api/account/export');
+  assert.equal(accountExport.status, 200);
+  assert.equal(accountExport.body.format, 'minglora-account-export');
+  assert.equal(accountExport.body.profile.id, registration.body.user.id);
+  assert.equal(accountExport.body.posts.some(item => item.id === post.body.post.id), true);
+  assert.equal('sessions' in accountExport.body, false);
+  assert.equal('passwordHash' in accountExport.body.profile, false);
   const invalidPost = await request('/api/posts', { method: 'POST', body: JSON.stringify({ imageUrl: 'http://example.test/not-secure.jpg' }) });
   assert.equal(invalidPost.status, 400);
   const feedPage = await request('/api/feed?limit=1');
