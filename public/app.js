@@ -63,7 +63,7 @@ async function handleMingloraPushNavigation(){
     if(type==='decline-call'&&callId){await declineMingloraCall(callId);return;}
     if(type==='live'&&liveSessionId){
       const sessions=(await api('/live/sessions')).sessions||[],session=sessions.find(item=>item.id===liveSessionId);
-      if(session){await openLiveRoom(session,'viewer');return;}
+      if(session){await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');return;}
       toast('This LIVE session has ended.');
     }
     if(type==='message'&&actorId){
@@ -318,7 +318,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   $("#refresh-live")?.addEventListener("click",renderLive);
   $("#open-live-coins")?.addEventListener("click",()=>activateNav("coins"));
   document.querySelectorAll("[data-watch-live]").forEach(button=>button.addEventListener("click",()=>{
-    const session=sessions.find(item=>item.id===button.dataset.watchLive);if(session)openLiveRoom(session,"viewer");
+    const session=sessions.find(item=>item.id===button.dataset.watchLive);if(session)openLiveRoom(session,session.hostId===state.user.id?"host":"viewer");
   }));
 }
 async function refreshLiveDirectorySessions(){
@@ -335,7 +335,7 @@ async function refreshLiveDirectorySessions(){
     ).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     document.querySelectorAll('[data-watch-live]').forEach(button=>button.onclick=()=>{
       const session=sessions.find(item=>item.id===button.dataset.watchLive);
-      if(session)openLiveRoom(session,"viewer").catch(error=>toast(error.message));
+      if(session)openLiveRoom(session,session.hostId===state.user.id?"host":"viewer").catch(error=>toast(error.message));
     });
   }catch{}
 }
@@ -358,6 +358,18 @@ function attachLiveTrack(track,participant,local){
     const root=$("#live-audio-root");if(root){const element=track.attach();element.autoplay=true;root.append(element);}
   }
 }
+
+function endHostedLiveOnPageHide(){
+  if(activeLiveRole!=="host"||!activeLiveSession?.id)return;
+  const sessionId=encodeURIComponent(activeLiveSession.id);
+  try{activeLiveRoom?.disconnect();}catch{}
+  fetch("/api/live/sessions/"+sessionId+"/end",{
+    method:"POST",credentials:"same-origin",keepalive:true,
+    headers:{"Content-Type":"application/json"},body:"{}"
+  }).catch(()=>{});
+}
+window.addEventListener("pagehide",endHostedLiveOnPageHide);
+
 async function refreshLiveChat(broadcastId){
   try{
     const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
@@ -366,6 +378,7 @@ async function refreshLiveChat(broadcastId){
   }catch(error){if($("#live-chat-list"))toast(error.message);}
 }
 async function openLiveRoom(session,role,issuedLiveKit){
+  role=(session?.hostId===state.user?.id||role==="host")?"host":"viewer";
   stopLiveChatRefresh();
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   const client=window.LivekitClient;
@@ -1417,7 +1430,7 @@ async function renderNotifications(){
   document.querySelectorAll('[data-decline-call]').forEach(button=>button.onclick=()=>declineMingloraCall(button.dataset.declineCall));
   document.querySelectorAll('[data-message-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.messageActor);if(item?.actor)openMessageWindow(item.actor);});
   document.querySelectorAll('[data-watch-notified-live]').forEach(button=>button.onclick=async()=>{
-    try{const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.watchNotifiedLive);if(!session){toast('This LIVE session has ended.');return;}await openLiveRoom(session,'viewer');}
+    try{const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.watchNotifiedLive);if(!session){toast('This LIVE session has ended.');return;}await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');}
     catch(error){toast(error.message);}
   });
   $('#mark-read').onclick=async()=>{await api('/notifications/read',{method:'POST',body:'{}'});toast('Notifications marked as read.');renderNotifications();updateNotificationDot();};

@@ -124,3 +124,19 @@ export async function listLiveKitParticipants(roomName) {
     joinedAt: participant.joinedAt ? new Date(Number(participant.joinedAt) * 1000).toISOString() : null
   }));
 }
+
+export async function deleteLiveKitRoom(roomName) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid LIVE room name is required.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  await service.deleteRoom(roomName);
+}

@@ -6,7 +6,7 @@ import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
-import { createLiveKitToken, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, deleteLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -338,6 +338,68 @@ async function publicStory(story,viewerId,includeViews=false) {
   return {...story,media,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
     viewers:includeViews&&story.userId===viewerId?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined};
 }
+
+const LIVE_HOST_CONNECT_GRACE_MS = 30_000;
+const liveSessionEndOperations = new Map();
+let liveSessionCleanupReady = Promise.resolve({ ended: 0, preserved: 0, verified: true });
+
+async function endLiveSession(session, { deleteRoom = false } = {}) {
+  if (!session?.id) return false;
+  const active = liveSessionEndOperations.get(session.id);
+  if (active) return active;
+  const operation = (async () => {
+    const wasLive = session.status === 'live';
+    const endedAt = session.endedAt || now();
+    if (wasLive) {
+      session.status = 'ended';
+      session.endedAt = endedAt;
+      (db.liveParticipants || []).filter(item => item.sessionId === session.id && !item.leftAt)
+        .forEach(item => { item.leftAt = endedAt; });
+      await saveStore();
+    }
+    if (session.hostId) {
+      await requestSupabaseState('live_broadcast_end', { id: session.id, hostId: session.hostId });
+    }
+    if (deleteRoom && session.roomName) {
+      try { await deleteLiveKitRoom(session.roomName); }
+      catch (error) {
+        // A missing room is already stopped; record only the session cleanup failure details.
+        const status = Number(error?.statusCode || error?.status || 0);
+        if (status !== 404) console.warn('[Minglora LIVE cleanup] Could not delete an inactive LiveKit room.', { sessionId: session.id, status });
+      }
+    }
+    return wasLive;
+  })();
+  liveSessionEndOperations.set(session.id, operation);
+  try { return await operation; }
+  finally { liveSessionEndOperations.delete(session.id); }
+}
+
+async function cleanupPersistedLiveSessions() {
+  const pending = (db.liveSessions || []).filter(session => session.status === 'live');
+  if (!pending.length) return { ended: 0, preserved: 0, verified: true };
+  const health = await verifyLiveKitConnection({ force: true });
+  if (!health.connected) {
+    console.warn('[Minglora LIVE cleanup] LiveKit is not reachable; active rows will stay hidden until room presence can be verified.');
+    return { ended: 0, preserved: 0, verified: false };
+  }
+  let ended = 0, preserved = 0;
+  for (const session of pending) {
+    try {
+      const participants = await listLiveKitParticipants(session.roomName);
+      const hostPresent = participants.some(participant => participant.identity === session.hostId);
+      if (hostPresent) { preserved++; continue; }
+      const startedAt = new Date(session.createdAt || 0).getTime();
+      if (Number.isFinite(startedAt) && Date.now() - startedAt < LIVE_HOST_CONNECT_GRACE_MS) continue;
+      await endLiveSession(session, { deleteRoom: true });
+      ended++;
+    } catch (error) {
+      console.warn('[Minglora LIVE cleanup] Could not reconcile a saved LIVE session.', { sessionId: session.id, message: String(error?.message || 'verification failed').slice(0, 180) });
+    }
+  }
+  return { ended, preserved, verified: true };
+}
+
 async function route(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`); const p = url.pathname; const method = req.method;
   if (method === 'GET' && p === '/api/health') return json(res,200,{ok:true,service:'minglora-social-network',timestamp:now()});
@@ -850,6 +912,9 @@ async function route(req, res) {
         return json(res, 200, { provider: 'livekit', ...health });
       }
       if (method === 'GET' && p === '/api/live/sessions') {
+        await liveSessionCleanupReady;
+        const liveHealth = await verifyLiveKitConnection();
+        if (!liveHealth.connected) return json(res, 200, { sessions: [] });
         const canView = session => {
           if (session.hostId === user.id || session.visibility === 'public') return true;
           if (session.visibility !== 'friends') return false;
@@ -858,22 +923,30 @@ async function route(req, res) {
         const activeSessions = (db.liveSessions || [])
           .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        const sessions = await Promise.all(activeSessions.map(async session => {
-          let participants = [];
-          let viewerCountVerified = false;
+        const sessions = [];
+        for (const session of activeSessions) {
           try {
-            participants = await listLiveKitParticipants(session.roomName);
-            viewerCountVerified = true;
+            const participants = await listLiveKitParticipants(session.roomName);
+            const hostPresent = participants.some(participant => participant.identity === session.hostId);
+            if (!hostPresent) {
+              const startedAt = new Date(session.createdAt || 0).getTime();
+              if (Number.isFinite(startedAt) && Date.now() - startedAt >= LIVE_HOST_CONNECT_GRACE_MS) {
+                try { await endLiveSession(session, { deleteRoom: true }); }
+                catch (error) { console.warn('[Minglora LIVE cleanup] Could not persist an ended session.', { sessionId: session.id, message: String(error?.message || 'cleanup failed').slice(0, 180) }); }
+              }
+              // No creator is connected. Never show this session or substitute stale app-side presence.
+              continue;
+            }
+            sessions.push({
+              ...session,
+              host: safeUser(db.users.find(member => member.id === session.hostId), user.id),
+              viewerCount: participants.filter(participant => participant.identity !== session.hostId).length,
+              viewerCountVerified: true
+            });
           } catch {
-            // Never substitute app-side presence rows for authoritative room presence.
+            // Fail closed: an unverified room is not advertised as live.
           }
-          return {
-            ...session,
-            host: safeUser(db.users.find(member => member.id === session.hostId),user.id),
-            viewerCount: viewerCountVerified ? participants.filter(participant => participant.identity !== session.hostId).length : 0,
-            viewerCountVerified
-          };
-        }));
+        }
         return json(res, 200, { sessions });
       }
       if (method === 'POST' && p === '/api/live/sessions') {
@@ -955,13 +1028,11 @@ async function route(req, res) {
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1]);
         if (!session) return json(res, 404, { error: 'Live session not found.' });
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the host can end this live session.' });
-        if (session.status !== 'ended') {
-          await requestSupabaseState('live_broadcast_end',{id:session.id,hostId:user.id});
-          session.status = 'ended';
-          session.endedAt = now();
-          (db.liveParticipants || []).filter(item => item.sessionId === session.id && !item.leftAt)
-            .forEach(item => { item.leftAt = session.endedAt; });
-          await saveStore();
+        try {
+          await endLiveSession(session, { deleteRoom: true });
+        } catch (error) {
+          console.error('[Minglora LIVE] Could not confirm that the session ended.', { sessionId: session.id, message: String(error?.message || 'cleanup failed').slice(0, 180) });
+          return json(res, 503, { error: 'Minglora could not confirm that this LIVE session ended. Try again.' });
         }
         return json(res, 200, { ok: true, session });
       }
@@ -1662,6 +1733,9 @@ async function route(req, res) {
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
 server.listen(PORT,'0.0.0.0',async()=>{
+  liveSessionCleanupReady = cleanupPersistedLiveSessions();
+  const liveCleanup = await liveSessionCleanupReady;
+  console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   console.log(`Minglora listening on port ${PORT}`);
   const persistence = await persistenceHealth();
   console.info('[Minglora readiness]', JSON.stringify({
