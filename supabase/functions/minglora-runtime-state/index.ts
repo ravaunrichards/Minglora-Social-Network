@@ -69,8 +69,221 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = input.action;
-  if (!["load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete"].includes(String(action))) {
+  const supportedActions = [
+    "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete",
+    "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
+    "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
+    "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
+    "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
+    "economy_update_payout"
+  ];
+  if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
+  }
+
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
+  const fail = (error: any, fallback: string) =>
+    json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "economy_catalog") {
+    const [packagesResult, giftsResult] = await Promise.all([
+      admin.from("coin_packages").select("code,name,coin_amount,price_minor,currency").eq("active", true).order("sort_order"),
+      admin.from("live_gift_catalog").select("code,name,category,emoji,animation_key,coin_price").eq("active", true).order("sort_order")
+    ]);
+    if (packagesResult.error || giftsResult.error) return json(503, { error: "Minglora coin and gift catalogue is unavailable." });
+    return json(200, { packages: packagesResult.data || [], gifts: giftsResult.data || [], currency: "USD", coinName: "Minglora Coins" });
+  }
+
+  if (action === "economy_wallet") {
+    const userId = String(input.userId || "");
+    if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
+    const [walletResult, ledgerResult] = await Promise.all([
+      admin.from("coin_wallets").select("balance_coins,updated_at").eq("user_id", userId).maybeSingle(),
+      admin.from("coin_ledger").select("id,delta_coins,balance_after,entry_type,description,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100)
+    ]);
+    if (walletResult.error || ledgerResult.error) return json(503, { error: "Minglora wallet could not be loaded." });
+    return json(200, { wallet: walletResult.data || { balance_coins: 0 }, ledger: ledgerResult.data || [] });
+  }
+
+  if (action === "economy_purchase_create") {
+    const userId = String(input.userId || "");
+    const orderId = String(input.paypalOrderId || "");
+    const coins = Number(input.coinAmount);
+    if (!validUuid(userId) || orderId.length < 5 || orderId.length > 160 ||
+        !Number.isSafeInteger(coins) || coins < 100 || coins > 100000 || coins % 2 !== 0) {
+      return json(400, { error: "Invalid Minglora coin purchase details." });
+    }
+    const { data, error } = await admin.rpc("minglora_create_coin_purchase", {
+      p_user_id: userId, p_paypal_order_id: orderId, p_coin_amount: coins, p_amount_minor: coins
+    });
+    if (error) return fail(error, "Minglora could not record the PayPal purchase.");
+    return json(201, { purchaseId: data, paypalOrderId: orderId, coinAmount: coins, amountMinor: coins });
+  }
+
+  if (action === "economy_purchase_get") {
+    const userId = String(input.userId || ""), orderId = String(input.paypalOrderId || "");
+    if (!validUuid(userId) || !orderId) return json(400, { error: "Invalid purchase reference." });
+    const { data, error } = await admin.from("coin_purchase_orders")
+      .select("id,user_id,paypal_order_id,coin_amount,amount_minor,currency,status")
+      .eq("user_id", userId).eq("paypal_order_id", orderId).maybeSingle();
+    if (error) return json(503, { error: "Minglora could not verify the coin purchase." });
+    if (!data) return json(404, { error: "Minglora purchase was not found for this account." });
+    return json(200, { purchase: data });
+  }
+
+  if (action === "economy_purchase_settle") {
+    const userId = String(input.userId || ""), orderId = String(input.paypalOrderId || "");
+    const captureId = String(input.paypalCaptureId || "");
+    if (!validUuid(userId) || !orderId || captureId.length < 5 || captureId.length > 160) {
+      return json(400, { error: "Invalid PayPal capture details." });
+    }
+    const { data, error } = await admin.rpc("minglora_settle_coin_purchase", {
+      p_user_id: userId, p_paypal_order_id: orderId, p_paypal_capture_id: captureId
+    });
+    if (error) return fail(error, "Minglora could not settle the PayPal coin purchase.");
+    return json(200, { settlement: data });
+  }
+
+  if (action === "economy_send_gift") {
+    const senderId = String(input.senderId || ""), broadcastId = String(input.broadcastId || "");
+    const giftCode = String(input.giftCode || "");
+    if (!validUuid(senderId) || !validUuid(broadcastId) || !/^[a-z0-9_-]{1,60}$/.test(giftCode)) {
+      return json(400, { error: "Invalid LIVE gift request." });
+    }
+    const { data, error } = await admin.rpc("minglora_send_live_gift", {
+      p_sender_id: senderId, p_broadcast_id: broadcastId, p_gift_code: giftCode
+    });
+    if (error) return fail(error, "Minglora could not send the LIVE gift.");
+    return json(200, { gift: data });
+  }
+
+  if (action === "economy_creator_earnings") {
+    const creatorId = String(input.creatorId || "");
+    if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
+    const [ledgerResult, payoutsResult, accountResult] = await Promise.all([
+      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
+      admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
+      admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle()
+    ]);
+    if (ledgerResult.error || payoutsResult.error || accountResult.error) return json(503, { error: "Creator earnings are temporarily unavailable." });
+    const ledger = ledgerResult.data || [], payouts = payoutsResult.data || [];
+    const earnedMinor = ledger.reduce((sum: number, row: any) => sum + Number(row.creator_share_minor || 0), 0);
+    const reservedMinor = payouts.filter((row: any) => ["requested", "processing", "paid"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.amount_minor || 0), 0);
+    return json(200, { ledger, payouts, payoutAccount: accountResult.data || null, earnedMinor, reservedMinor, availableMinor: Math.max(0, earnedMinor - reservedMinor), currency: "USD", creatorSharePercent: 50, platformSharePercent: 50 });
+  }
+
+  if (action === "economy_get_payout_account") {
+    const userId = String(input.userId || "");
+    if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
+    const { data, error } = await admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", userId).maybeSingle();
+    if (error) return json(503, { error: "PayPal payout account could not be loaded." });
+    return json(200, { payoutAccount: data || null });
+  }
+
+  if (action === "economy_set_payout_account") {
+    const userId = String(input.userId || ""), email = String(input.paypalEmail || "").trim().toLowerCase();
+    if (!validUuid(userId) || email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      return json(400, { error: "Enter a valid PayPal email address." });
+    }
+    const { data, error } = await admin.from("creator_payout_accounts")
+      .upsert({ user_id: userId, paypal_email: email, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .select("paypal_email,updated_at").single();
+    if (error) return fail(error, "PayPal payout details could not be saved.");
+    return json(200, { payoutAccount: data });
+  }
+
+  if (action === "economy_request_payout") {
+    const creatorId = String(input.creatorId || ""), amountMinor = Number(input.amountMinor);
+    if (!validUuid(creatorId) || !Number.isSafeInteger(amountMinor) || amountMinor < 100) {
+      return json(400, { error: "Payout must be at least USD 1.00." });
+    }
+    const { data, error } = await admin.rpc("minglora_request_creator_payout", {
+      p_creator_id: creatorId, p_amount_minor: amountMinor
+    });
+    if (error) return fail(error, "The payout exceeds the available creator balance.");
+    return json(201, { payoutId: data, amountMinor, currency: "USD" });
+  }
+
+  if (action === "economy_update_payout") {
+    const creatorId = String(input.creatorId || ""), payoutId = String(input.payoutId || "");
+    const status = String(input.status || ""), batchId = input.paypalBatchId ? String(input.paypalBatchId) : null;
+    if (!validUuid(creatorId) || !validUuid(payoutId) || !["processing", "paid", "failed", "cancelled"].includes(status)) {
+      return json(400, { error: "Invalid creator payout update." });
+    }
+    const patch: Record<string, unknown> = { status };
+    if (batchId) patch.paypal_batch_id = batchId;
+    if (status === "paid") patch.paid_at = new Date().toISOString();
+    const { data, error } = await admin.from("creator_payouts").update(patch)
+      .eq("id", payoutId).eq("creator_id", creatorId).select("id,status,amount_minor,paypal_batch_id,paid_at").maybeSingle();
+    if (error) return json(503, { error: "Minglora could not update payout status." });
+    if (!data) return json(404, { error: "Creator payout was not found." });
+    return json(200, { payout: data });
+  }
+
+  if (action === "live_broadcast_create") {
+    const broadcastId = String(input.id || ""), hostId = String(input.hostId || "");
+    const title = String(input.title || "").trim(), description = String(input.description || "");
+    const audience = String(input.audience || "public"), roomRef = String(input.roomRef || "");
+    if (!validUuid(broadcastId) || !validUuid(hostId) || !title || title.length > 180 ||
+        description.length > 2000 || roomRef.length < 1 || roomRef.length > 200 ||
+        !["public", "friends", "followers", "private", "subscribers"].includes(audience)) {
+      return json(400, { error: "Invalid Minglora LIVE broadcast details." });
+    }
+    const startedAt = new Date().toISOString();
+    const { data, error } = await admin.from("live_broadcasts").insert({
+      id: broadcastId, host_id: hostId, title, description, audience,
+      room_ref: roomRef, status: "live", started_at: startedAt
+    }).select("id,host_id,title,description,audience,room_ref,status,started_at").single();
+    if (error) return fail(error, "Minglora could not save this LIVE session.");
+    return json(201, { broadcast: data });
+  }
+
+  if (action === "live_broadcast_end") {
+    const broadcastId = String(input.id || ""), hostId = String(input.hostId || "");
+    if (!validUuid(broadcastId) || !validUuid(hostId)) return json(400, { error: "Invalid LIVE session." });
+    const { data, error } = await admin.from("live_broadcasts").update({
+      status: "ended", ended_at: new Date().toISOString()
+    }).eq("id", broadcastId).eq("host_id", hostId).eq("status", "live")
+      .select("id,status,ended_at").maybeSingle();
+    if (error) return json(503, { error: "Minglora could not close the LIVE session." });
+    return json(200, { broadcast: data || { id: broadcastId, status: "ended" } });
+  }
+
+  if (action === "live_chat_send") {
+    const broadcastId = String(input.broadcastId || ""), userId = String(input.userId || "");
+    const body = String(input.body || "").trim();
+    if (!validUuid(broadcastId) || !validUuid(userId) || body.length < 1 || body.length > 500) {
+      return json(400, { error: "LIVE comments must contain 1–500 characters." });
+    }
+    const { data: broadcast, error: broadcastError } = await admin.from("live_broadcasts")
+      .select("id,status").eq("id", broadcastId).eq("status", "live").maybeSingle();
+    if (broadcastError || !broadcast) return json(404, { error: "LIVE session not found." });
+    const { data, error } = await admin.from("live_chat_messages")
+      .insert({ broadcast_id: broadcastId, user_id: userId, body })
+      .select("id,user_id,body,created_at").single();
+    if (error) return json(503, { error: "LIVE comment could not be sent." });
+    const { data: profile } = await admin.from("profiles").select("id,display_name,username").eq("id", userId).maybeSingle();
+    return json(201, { message: { ...data, user: profile ? { id: profile.id, name: profile.display_name, username: profile.username } : null } });
+  }
+
+  if (action === "live_chat_list") {
+    const broadcastId = String(input.broadcastId || "");
+    if (!validUuid(broadcastId)) return json(400, { error: "Invalid LIVE session." });
+    const { data: broadcast, error: broadcastError } = await admin.from("live_broadcasts")
+      .select("id,status").eq("id", broadcastId).in("status", ["live", "ended"]).maybeSingle();
+    if (broadcastError || !broadcast) return json(404, { error: "LIVE session not found." });
+    const { data, error } = await admin.from("live_chat_messages")
+      .select("id,user_id,body,created_at").eq("broadcast_id", broadcastId)
+      .order("created_at", { ascending: false }).limit(100);
+    if (error) return json(503, { error: "LIVE comments could not be loaded." });
+    const rows = (data || []).reverse(), ids = [...new Set(rows.map((row: any) => row.user_id))];
+    const { data: profiles } = ids.length ? await admin.from("profiles").select("id,display_name,username").in("id", ids) : { data: [] };
+    const profileMap = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
+    return json(200, { messages: rows.map((row: any) => {
+      const profile = profileMap.get(row.user_id);
+      return { ...row, user: profile ? { id: profile.id, name: profile.display_name, username: profile.username } : null };
+    }) });
   }
 
   if (action === "media_upload_prepare") {
