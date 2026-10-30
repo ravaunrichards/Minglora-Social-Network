@@ -318,13 +318,13 @@ async function route(req, res) {
         const maxBytes=8*1024*1024;
         const mimeKinds={
           'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
-          'video/mp4':'video','video/webm':'video','audio/mpeg':'audio','audio/mp4':'audio','model/gltf-binary':'model3d'
+          'video/mp4':'video','video/webm':'video','video/quicktime':'video','audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d'
         };
         const allowedSlots={
           avatar:['image/jpeg','image/png','image/webp','image/avif'],
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
-          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm']
+          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime']
         };
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!base64||base64.length>Math.ceil(maxBytes*4/3)+8||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))return json(res,400,{error:'Choose a supported image, video, audio or GLB file.'});
         const bytes=Buffer.from(base64,'base64');
@@ -335,10 +335,12 @@ async function route(req, res) {
           (mimeType==='image/png'&&bytes.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])))||
           (mimeType==='image/webp'&&ascii(0,4)==='RIFF'&&ascii(8,12)==='WEBP')||
           (mimeType==='image/avif'&&ascii(4,8)==='ftyp'&&['avif','avis','mif1'].includes(ascii(8,12)))||
-          (mimeType==='video/mp4'&&ascii(4,8)==='ftyp')||
+          (['video/mp4','video/quicktime'].includes(mimeType)&&ascii(4,8)==='ftyp')||
           (mimeType==='video/webm'&&bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])))||
           (mimeType==='audio/mpeg'&&ascii(0,3)==='ID3')||
           (mimeType==='audio/mp4'&&ascii(4,8)==='ftyp')||
+          (mimeType==='audio/ogg'&&ascii(0,4)==='OggS')||
+          (mimeType==='audio/webm'&&bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])))||
           (mimeType==='model/gltf-binary'&&ascii(0,4)==='glTF');
         if(!signatureValid)return json(res,415,{error:'The selected file contents do not match its media type.'});
         const uploaded=await mediaGateway('media_upload',{ownerId:user.id,slot,mimeType,base64});
