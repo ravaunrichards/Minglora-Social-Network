@@ -18,6 +18,19 @@ function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classLis
 function activateNav(view){state.view=view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
+function renderPostMedia(post){
+  const media=Array.isArray(post.media)?post.media:[];
+  const items=media.map(item=>{
+    const url=esc(item.url||'');
+    if(!url)return '';
+    if(item.mediaType==='video')return '<video class="post-media-video" controls playsinline preload="metadata" src="'+url+'"></video>';
+    if(item.mediaType==='audio')return '<audio class="post-media-audio" controls preload="metadata" src="'+url+'"></audio>';
+    if(item.mediaType==='model3d')return '<model-viewer class="post-media-3d" src="'+url+'" alt="Interactive 3D model" camera-controls auto-rotate shadow-intensity="1" loading="lazy"></model-viewer>';
+    return '<img class="post-image" loading="lazy" src="'+url+'" alt="Post attachment">';
+  }).join('');
+  const legacy=post.imageUrl?'<img class="post-image" loading="lazy" src="'+esc(post.imageUrl)+'" alt="Legacy post attachment">':'';
+  return items+legacy;
+}
 function postCard(post){
   const author=post.author||{}, comments=post.comments||[];
   return `<article class="card post" data-post="${esc(post.id)}">
@@ -26,7 +39,7 @@ function postCard(post){
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
-    ${post.imageUrl?`<img class="post-image" loading="lazy" src="${esc(post.imageUrl)}" alt="Post attachment" onerror="this.style.display='none'">`:''}
+    ${renderPostMedia(post)}
     <div class="post-stats"><span>👍 ${post.reactionCount||0} ${post.reactionCount===1?'reaction':'reactions'}</span><span>${comments.length} comments</span></div>
     <div class="post-actions">
       <button class="${post.myReaction?'liked':''}" data-react="${esc(post.id)}">${post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction?'👍':'♡'} &nbsp; ${post.myReaction?esc(post.myReaction[0].toUpperCase()+post.myReaction.slice(1)):'Like'}</button>
