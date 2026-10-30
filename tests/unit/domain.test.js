@@ -9,12 +9,15 @@ test('normalizes usernames and emails and rejects invalid emails', () => {
   assert.equal(validateEmail(' Person@Example.com ').valid, true);
   assert.equal(validateEmail('not-an-email').valid, false);
 });
-test('validates post text and requires HTTPS image URLs', () => {
+test('accepts post text and owned media references but rejects pasted image URLs', () => {
   assert.equal(validatePostInput({}).valid, false);
   assert.equal(validatePostInput({ text: 'Hello' }).valid, true);
+  assert.equal(validatePostInput({ mediaIds: ['owned-media-id'] }).valid, true);
+  assert.equal(validatePostInput({ text: 'Hello', mediaIds: ['one','two'] }).valid, true);
   assert.equal(validatePostInput({ imageUrl: 'http://example.test/a.jpg' }).valid, false);
-  assert.equal(validatePostInput({ imageUrl: 'https://example.test/a.jpg' }).valid, true);
+  assert.equal(validatePostInput({ imageUrl: 'https://example.test/a.jpg' }).valid, false);
   assert.equal(validatePostInput({ text: 'x'.repeat(5001) }).valid, false);
+  assert.equal(validatePostInput({ mediaIds: Array.from({length:11},(_,i)=>String(i)) }).valid, false);
 });
 test('validates editable profile fields', () => {
   assert.equal(validateProfilePatch({ name: 'Minglora Member', bio: 'Hello' }).valid, true);
