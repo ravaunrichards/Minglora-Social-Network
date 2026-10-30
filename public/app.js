@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], groups:[], notifications:[], conversations:[], activeConversation:null, activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}});
 const fallbackAvatar = name => {
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2)
@@ -896,7 +896,78 @@ async function renderSavedPosts(){
   setContent(`<div class="page-heading"><h1>Saved posts</h1></div>${state.savedPosts.length?state.savedPosts.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">▣</div><h3>No saved posts yet</h3><p>Use Save on a post to keep it here for later.</p></section>`}`);
   bindFeed();
 }
-async function renderMessages(){activateSilent('messages');state.conversations=(await api('/messages')).conversations;const peer=state.conversations.find(c=>c.user.id===state.activeConversation)||state.conversations[0];state.activeConversation=peer?.user.id||null;setContent(`<div class="page-heading"><h1>Messages</h1></div><section class="card" style="padding:0;overflow:hidden"><div class="message-layout"><aside class="message-peers">${state.conversations.length?state.conversations.map(c=>`<button class="conversation ${c.user.id===state.activeConversation?'active':''}" data-conversation="${esc(c.user.id)}"><img class="avatar" src="${avatar(c.user)}" alt=""><span><strong>${esc(c.user.name.split(' ')[0])}</strong><small>${esc(c.messages.at(-1)?.text||'Open chat')}</small></span></button>`).join(''):'<p style="font-size:11px;color:var(--muted)">No chats yet. Visit Friends to connect.</p>'}</aside><div class="message-area">${peer?`<div class="post-head" style="padding-bottom:10px;border-bottom:1px solid var(--line)"><img class="avatar" src="${avatar(peer.user)}" alt=""><div class="post-author"><strong>${esc(peer.user.name)}</strong><small>@${esc(peer.user.username)}</small></div></div><div class="message-scroll" id="message-scroll">${peer.messages.map(m=>`<div class="message-bubble ${m.from===state.user.id?'mine':''}">${esc(m.text)}<small><small>\${timeAgo(m.createdAt)}</small>\${m.from!==state.user.id?'<button class="message-report" type="button" data-report-message="'+esc(m.id)+'">Report</button>':''}</div>`).join('')}</div><form class="message-send" id="message-form"><input name="text" maxlength="3000" placeholder="Write a message…" required><button>Send</button></form>`:`<div class="empty-state"><div class="empty-icon">▤</div><h3>Your messages</h3><p>Start a conversation by connecting with another member.</p><button class="primary" id="go-friends">Find people</button></div>`}</div></div></section>`);document.querySelectorAll('[data-report-message]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('message',btn.dataset.reportMessage)));document.querySelectorAll('[data-conversation]').forEach(btn=>btn.onclick=()=>{state.activeConversation=btn.dataset.conversation;renderMessages()});$('#go-friends')?.addEventListener('click',()=>activateNav('friends'));$('#message-scroll')?.scrollTo(0,99999);$('#message-form')?.addEventListener('submit',async e=>{e.preventDefault();const text=e.currentTarget.elements.text.value;try{await api('/messages',{method:'POST',body:JSON.stringify({to:state.activeConversation,text})});await renderMessages()}catch(err){toast(err.message)}});}
+const messagePickers=new Map();
+function messageAttachmentHtml(attachments=[]){
+  return (attachments||[]).map(file=>{
+    if(!file.url)return '';
+    if(file.mediaType==='image')return '<a class="message-attachment-image" href="'+esc(file.url)+'" target="_blank" rel="noopener"><img src="'+esc(file.url)+'" alt="'+esc(file.name||'Image attachment')+'"></a>';
+    if(file.mediaType==='video')return '<video class="message-attachment-video" controls playsinline src="'+esc(file.url)+'"></video>';
+    if(file.mediaType==='audio')return '<audio controls src="'+esc(file.url)+'"></audio>';
+    return '<a class="message-attachment-document" href="'+esc(file.url)+'" target="_blank" rel="noopener">📄 '+esc(file.name||'Open attachment')+'</a>';
+  }).join('');
+}
+function renderMessageWindows(){
+  let dock=document.querySelector('#message-window-dock');
+  if(!state.messageWindows.length){messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();dock?.remove();return;}
+  if(!dock){dock=document.createElement('div');dock.id='message-window-dock';document.body.append(dock);}
+  messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();
+  dock.innerHTML=state.messageWindows.map(win=>{
+    const conversation=state.conversations.find(item=>item.user.id===win.user.id);
+    const messages=conversation?.messages||[];
+    const body=win.minimized?'':('<div class="message-window-body"><div class="message-window-scroll">'+messages.map(message=>'<article class="message-window-bubble '+(message.from===state.user.id?'mine':'')+'">'+(message.text?'<p>'+esc(message.text)+'</p>':'')+messageAttachmentHtml(message.attachments)+'<small>'+timeAgo(message.createdAt)+'</small></article>').join('')+'</div><div class="message-window-picker" data-message-picker="'+esc(win.user.id)+'"></div><form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Write a message…" autocomplete="off"><button class="primary" type="submit">Send</button></form></div>');
+    return '<section class="message-window '+(win.maximized?'is-maximized ':'')+(win.minimized?'is-minimized':'')+'" data-message-window="'+esc(win.user.id)+'"><header class="message-window-header"><img src="'+avatar(win.user)+'" alt=""><div><strong>'+esc(win.user.name)+'</strong><small>@'+esc(win.user.username||'member')+'</small></div><div class="message-window-controls"><button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="'+(win.minimized?'Restore':'Minimize')+'">'+(win.minimized?'▢':'—')+'</button><button type="button" data-message-maximize="'+esc(win.user.id)+'" aria-label="Maximize or restore">'+(win.maximized?'❐':'□')+'</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close">×</button></div></header>'+body+'</section>';
+  }).join('');
+  dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
+  dock.querySelectorAll('[data-message-maximize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMaximize);if(win){win.maximized=!win.maximized;renderMessageWindows();}});
+  dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{state.messageWindows=state.messageWindows.filter(item=>item.user.id!==button.dataset.messageClose);renderMessageWindows();});
+  state.messageWindows.filter(win=>!win.minimized).forEach(win=>{
+    const root=dock.querySelector('[data-message-picker="'+CSS.escape(win.user.id)+'"]');
+    if(root)messagePickers.set(win.user.id,createMediaPicker(root,{slot:'message',maxFiles:5}));
+    const form=dock.querySelector('[data-message-form="'+CSS.escape(win.user.id)+'"]');
+    form?.addEventListener('submit',async event=>{
+      event.preventDefault();const button=form.querySelector('button[type="submit"]'),text=String(form.elements.text.value||'').trim(),picker=messagePickers.get(win.user.id);
+      button.disabled=true;
+      try{
+        const attachmentIds=picker?await picker.upload():[];
+        if(!text&&!attachmentIds.length){toast('Write a message or attach a file.');return;}
+        await api('/messages',{method:'POST',body:JSON.stringify({to:win.user.id,text,attachmentIds})});
+        state.conversations=(await api('/messages')).conversations;
+        renderMessageWindows();
+      }catch(error){toast(error.message);}
+      finally{button.disabled=false;}
+    });
+    const scroll=dock.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"] .message-window-scroll');
+    if(scroll)scroll.scrollTop=scroll.scrollHeight;
+  });
+}
+async function openMessageWindow(member){
+  if(!member?.id||member.id===state.user.id)return;
+  const existing=state.messageWindows.find(item=>item.user.id===member.id);
+  if(existing){existing.minimized=false;existing.maximized=false;}
+  else{
+    if(state.messageWindows.length>=5){toast('You can keep up to five message windows open at once.');return;}
+    state.messageWindows.push({user:member,minimized:false,maximized:false});
+  }
+  try{state.conversations=(await api('/messages')).conversations;}catch(error){toast(error.message);return;}
+  renderMessageWindows();
+}
+async function renderMessages(){
+  activateSilent('messages');
+  const [messageData,peopleData]=await Promise.all([api('/messages'),api('/users')]);
+  state.conversations=messageData.conversations||[];
+  const conversationRows=state.conversations.length?state.conversations.map(conversation=>{
+    const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':'Open chat');
+    return '<div class="inbox-person-row"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small></div><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button></div>';
+  }).join(''):'<p class="muted">No conversations yet. View a member profile and choose Message to start a chat.</p>';
+  const people=(peopleData.users||[]).slice(0,40);
+  const peopleRows=people.length?people.map(person=>'<div class="inbox-person-row"><img class="avatar" src="'+avatar(person)+'" alt=""><div class="person-meta"><strong>'+esc(person.name)+'</strong><small>@'+esc(person.username)+'</small></div><button class="secondary" type="button" data-start-inbox-chat="'+esc(person.id)+'">Message</button><button class="text-button" type="button" data-open-inbox-profile="'+esc(person.id)+'">Profile</button></div>').join(''):'<p class="muted">No other members are available to message yet.</p>';
+  setContent('<div class="page-heading"><div><h1>Inbox</h1><p class="muted">Private conversations and files, in separate chat windows.</p></div><span class="eyebrow">'+state.conversations.length+' conversations</span></div><section class="card"><h2>Recent messages</h2><div class="inbox-people-list">'+conversationRows+'</div></section><section class="card"><div class="page-heading"><div><h2>Start a message</h2><p class="muted">Choose a member to open another chat window.</p></div></div><div class="inbox-people-list">'+peopleRows+'</div></section>');
+  document.querySelectorAll('[data-open-inbox-chat]').forEach(button=>button.onclick=()=>{const conversation=state.conversations.find(item=>item.user.id===button.dataset.openInboxChat);if(conversation)openMessageWindow(conversation.user);});
+  document.querySelectorAll('[data-start-inbox-chat]').forEach(button=>button.onclick=()=>{const person=people.find(item=>item.id===button.dataset.startInboxChat);if(person)openMessageWindow(person);});
+  document.querySelectorAll('[data-open-inbox-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.openInboxProfile));
+  renderMessageWindows();
+}
+
 async function renderNotifications(){state.notifications=(await api('/notifications')).notifications;setContent(`<div class="page-heading"><h1>Notifications</h1><button class="text-button" id="mark-read">Mark all read</button></div><section class="card">${state.notifications.length?state.notifications.map(n=>`<div class="notice-item ${n.read?'':'unread'}"><div class="notice-icon">${n.type==='message'?'▤':n.type==='friend'?'♧':n.type==='reaction'?'♡':'♢'}</div><div><p>${esc(n.text)}</p><small>${timeAgo(n.createdAt)}</small></div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>'}</section>`);$('#mark-read').onclick=async()=>{await api('/notifications/read',{method:'POST',body:'{}'});toast('Notifications marked as read.');renderNotifications();updateNotificationDot()};}
 async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));}catch{}}
 async function renderSearch(q){
