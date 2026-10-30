@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { db, saveStore, uid, now, persistenceHealth } from './store.js';
+import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
 import { createLiveKitToken, isLiveKitConfigured } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -25,6 +25,62 @@ const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (process.env.NODE_ENV 
 if (!['supabase', 'legacy'].includes(AUTH_PROVIDER)) throw new Error('AUTH_PROVIDER must be supabase or legacy.');
 if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase. When Minglora Supabase credentials are missing, authentication routes fail closed with HTTP 503 instead of writing accounts to local storage.');
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
+
+let paypalAccessTokenCache=null;
+function paypalConfig(){
+  const clientId=String(process.env.PAYPAL_CLIENT_ID||'').trim();
+  const clientSecret=String(process.env.PAYPAL_CLIENT_SECRET||'').trim();
+  const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||'sandbox').trim().toLowerCase();
+  const base=String(process.env.PAYPAL_API_BASE_URL||'').trim().replace(/\\/+$/,'')||
+    (mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com');
+  return {clientId,clientSecret,base,configured:Boolean(clientId&&clientSecret)};
+}
+async function paypalToken(){
+  const cfg=paypalConfig();
+  if(!cfg.configured)throw Object.assign(new Error('PayPal is not configured for Minglora yet. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to the Minglora server environment.'),{status:503});
+  if(paypalAccessTokenCache&&paypalAccessTokenCache.expiresAt>Date.now()+60000)return paypalAccessTokenCache.value;
+  let response;
+  try{
+    response=await fetch(cfg.base+'/v1/oauth2/token',{
+      method:'POST',
+      headers:{Authorization:'Basic '+Buffer.from(cfg.clientId+':'+cfg.clientSecret).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
+      body:'grant_type=client_credentials'
+    });
+  }catch{throw Object.assign(new Error('Could not reach PayPal. Try again shortly.'),{status:503});}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.access_token){
+    throw Object.assign(new Error(String(data.error_description||data.message||'PayPal authentication failed. Check the configured API credentials.')),{status:502,code:data.error||null});
+  }
+  paypalAccessTokenCache={value:data.access_token,expiresAt:Date.now()+Math.max(60,Number(data.expires_in||300))*1000};
+  return data.access_token;
+}
+async function paypalRequest(path,method='POST',payload={},requestId){
+  const cfg=paypalConfig(),token=await paypalToken();
+  let response;
+  try{
+    response=await fetch(cfg.base+path,{
+      method,
+      headers:{
+        Authorization:'Bearer '+token,
+        'Content-Type':'application/json',
+        ...(requestId?{'PayPal-Request-Id':String(requestId).slice(0,108)}:{})
+      },
+      ...(payload===undefined?{}:{body:JSON.stringify(payload)})
+    });
+  }catch{throw Object.assign(new Error('Could not reach PayPal to process this request.'),{status:503});}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const detail=Array.isArray(data.details)?data.details[0]?.description:null;
+    throw Object.assign(new Error(String(detail||data.message||data.name||'PayPal could not complete the request.')),{status:502,code:data.name||null});
+  }
+  return data;
+}
+function appOrigin(req){
+  if(process.env.APP_ORIGIN)return new URL(process.env.APP_ORIGIN).origin;
+  const proto=String(req.headers['x-forwarded-proto']||(req.socket?.encrypted?'https':'http')).split(',')[0].trim();
+  const host=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim();
+  return new URL(proto+'://'+host).origin;
+}
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
