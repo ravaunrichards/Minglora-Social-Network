@@ -1,8 +1,22 @@
 const trimSlash = value => String(value || '').trim().replace(/\/+$/, '');
+const configuredValue = (...values) => values.find(value => String(value || '').trim()) || '';
+const supabaseUrl = () => trimSlash(configuredValue(
+  process.env.SUPABASE_URL,
+  process.env.VITE_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.PUBLIC_SUPABASE_URL
+));
+const supabasePublishableKey = () => String(configuredValue(
+  process.env.SUPABASE_PUBLISHABLE_KEY,
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  process.env.SUPABASE_ANON_KEY
+)).trim();
 
 export function supabaseAuthConfigured() {
-  const rawUrl = trimSlash(process.env.SUPABASE_URL);
-  const key = String(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  const rawUrl = supabaseUrl();
+  const key = supabasePublishableKey();
   if (!rawUrl || !key || /YOUR_PROJECT_REF|REPLACE_ME|placeholder/i.test(rawUrl + key)) return false;
   try {
     const url = new URL(rawUrl);
@@ -14,14 +28,14 @@ export function supabaseAuthConfigured() {
 
 function requireConfig() {
   if (!supabaseAuthConfigured()) {
-    throw Object.assign(new Error('Minglora Supabase Auth is not configured. Set both SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY on the Minglora API service environment; a publishable key without its matching project URL cannot connect.'), { status: 503 });
+    throw Object.assign(new Error('Minglora Supabase Auth is not configured. Set Minglora's project URL and publishable key on the API service. Supported names are SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY, or NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Both values must come from the same Minglora project; a key without its matching project URL cannot connect.'), { status: 503 });
   }
 }
 
 async function authRequest(path, payload) {
   requireConfig();
-  const baseUrl = trimSlash(process.env.SUPABASE_URL);
-  const apiKey = String(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  const baseUrl = supabaseUrl();
+  const apiKey = supabasePublishableKey();
   const redirectTo = String(process.env.SUPABASE_AUTH_REDIRECT_URL || '').trim();
   const target = new URL(`${baseUrl}/auth/v1/${path}`);
   if (redirectTo && path === 'signup') target.searchParams.set('redirect_to', redirectTo);
