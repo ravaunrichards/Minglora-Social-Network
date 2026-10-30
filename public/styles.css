@@ -280,3 +280,82 @@
   .creator-payout-form{align-items:stretch;flex-direction:column}
   .creator-payout-form input{max-width:none;width:100%}
 }
+
+
+/* Minglora media capture, inbox windows, calls and profile media */
+.profile-cover[data-view-image],.profile-info img[data-view-image]{cursor:zoom-in}
+.profile-cover[data-view-image]:hover,.profile-info img[data-view-image]:hover{filter:brightness(1.06)}
+.image-viewer-backdrop{z-index:5000;background:rgba(0,0,0,.92)}
+.image-viewer-modal{position:relative;width:min(94vw,1200px);height:min(92vh,900px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.image-viewer-modal>img{max-width:100%;max-height:calc(100% - 35px);object-fit:contain;border-radius:12px;box-shadow:0 20px 70px rgba(0,0,0,.55)}
+.image-viewer-modal>p{margin:0;color:#e5e9f1;font-size:12px}
+.image-viewer-close{position:absolute;right:0;top:-38px;width:34px;height:34px;border:0;border-radius:50%;background:#262b36;color:white;font-size:22px;cursor:pointer}
+.device-camera-backdrop{z-index:4500;background:rgba(5,8,16,.88)}
+.device-camera-modal{width:min(94vw,780px);padding:14px;border-radius:18px;background:#101722;color:#f5f7fb;box-shadow:0 22px 80px rgba(0,0,0,.55)}
+.device-camera-header{display:flex;align-items:center;justify-content:space-between;padding:3px 2px 12px}
+.device-camera-close{border:0;border-radius:50%;width:34px;height:34px;background:#293140;color:white;font-size:23px}
+.device-camera-preview{width:100%;max-height:68vh;min-height:240px;aspect-ratio:4/3;object-fit:cover;background:#05070b;border-radius:12px}
+.device-camera-status{min-height:20px;color:#cbd4e5;font-size:12px;margin:10px 2px}
+.device-camera-controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.device-camera-controls button{min-width:120px}
+.message-window-dock{position:fixed;right:16px;bottom:0;z-index:2400;display:flex;align-items:flex-end;gap:12px;max-width:calc(100vw - 32px);overflow-x:auto;pointer-events:none}
+.message-window{width:340px;min-width:300px;height:470px;max-height:78vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:var(--surface);color:var(--text);box-shadow:0 12px 45px rgba(0,0,0,.24);pointer-events:auto}
+.message-window.is-minimized{height:auto;min-width:260px}
+.message-window.is-maximized{position:fixed;right:16px;bottom:16px;left:16px;top:16px;width:auto;height:auto;max-height:none;z-index:1;border-radius:14px}
+.message-window-header{min-height:52px;display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--surface-soft);border-bottom:1px solid var(--line)}
+.message-window-header>img{width:34px;height:34px;object-fit:cover;border-radius:50%}
+.message-window-header>div:nth-child(2){display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.message-window-header strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.message-window-header small{font-size:10px;color:var(--muted)}
+.message-window-controls{display:flex;gap:3px}
+.message-window-controls button{width:27px;height:27px;border:0;border-radius:6px;background:transparent;color:var(--text);font-size:16px;cursor:pointer}
+.message-window-controls button:hover{background:var(--line)}
+.message-window-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.message-window-scroll{flex:1;min-height:70px;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:9px}
+.message-window-bubble{align-self:flex-start;max-width:88%;padding:8px 10px;border-radius:12px 12px 12px 3px;background:var(--surface-soft);overflow-wrap:anywhere}
+.message-window-bubble.mine{align-self:flex-end;border-radius:12px 12px 3px 12px;background:rgba(49,112,232,.13)}
+.message-window-bubble p{margin:0;font-size:12px;white-space:pre-wrap}
+.message-window-bubble small{display:block;color:var(--muted);font-size:9px;margin-top:5px}
+.message-window-picker{padding:6px 9px;border-top:1px solid var(--line);max-height:125px;overflow:auto}
+.message-window-picker .media-picker-help,.message-window-picker .media-picker-status,.message-window-picker progress{display:none}
+.message-window-picker .media-picker-actions{display:flex;gap:6px}
+.message-window-picker .media-picker-actions button{font-size:10px;padding:6px 8px}
+.message-window-picker .media-picker-items{display:flex;gap:5px;overflow-x:auto}
+.message-window-picker .media-picker-item{min-width:110px;max-width:140px}
+.message-window-form{display:flex;gap:7px;padding:9px;border-top:1px solid var(--line)}
+.message-window-form input{min-width:0;flex:1;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);padding:10px}
+.message-window-form button{padding:0 13px}
+.inbox-people-list{display:flex;flex-direction:column;gap:5px}
+.inbox-person-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid var(--line)}
+.inbox-person-row .avatar{width:38px;height:38px;object-fit:cover;border-radius:50%}
+.inbox-person-row .person-meta{flex:1;min-width:0}
+.inbox-person-row .person-meta strong,.inbox-person-row .person-meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inbox-person-row .person-meta strong{font-size:12px}.inbox-person-row .person-meta small{font-size:10px;color:var(--muted)}
+.message-attachment-image img{display:block;max-width:min(230px,100%);max-height:220px;object-fit:cover;border-radius:8px}
+.message-attachment-video{display:block;width:min(230px,100%);max-height:240px;border-radius:8px;background:#090b10}
+.message-attachment-document{display:inline-flex;gap:6px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--surface-soft);color:var(--blue);font-size:11px;text-decoration:none}
+.call-overlay{position:fixed;inset:0;z-index:4800;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(4,7,13,.88)}
+.call-panel{width:min(1100px,96vw);height:min(850px,94vh);display:flex;flex-direction:column;overflow:hidden;border:1px solid #343e51;border-radius:18px;background:#0b111b;color:#f4f6fb;box-shadow:0 24px 90px rgba(0,0,0,.6)}
+.call-panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;background:#151d2a}
+.call-panel-header>div{display:flex;flex-direction:column;gap:4px}.call-panel-header strong{font-size:15px}.call-panel-header span{font-size:11px;color:#acb8ca}
+.call-video-stage{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-content:center;gap:8px;padding:12px;background:radial-gradient(circle at center,#1e2c43,#070b12 78%)}
+.call-empty-stage{grid-column:1/-1;align-self:center;justify-self:center;color:#c1cad8;font-size:13px}
+.call-video-element{width:100%;max-height:62vh;min-height:180px;object-fit:cover;border-radius:12px;background:#05080d}
+.call-audio-root{display:none}
+.call-controls{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;padding:14px;background:#111a28}
+.call-controls button{min-width:130px}.call-controls .danger{background:#d93651;color:#fff;border:0}
+.notice-content{min-width:0;flex:1}.notice-actions{display:flex;gap:7px;margin-top:8px}.notice-actions button{font-size:11px;padding:6px 10px}
+.settings-account-actions{display:grid;gap:15px;margin-top:16px}
+.settings-account-action{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px;border:1px solid var(--line);border-radius:12px}
+.settings-account-action p{margin:5px 0 0;font-size:11px;color:var(--muted)}
+.settings-account-actions .settings-security-form{margin:0;padding:14px;border:1px solid var(--line);border-radius:12px}
+@media(max-width:700px){
+  .message-window-dock{right:0;left:0;max-width:100vw;gap:5px}
+  .message-window{width:calc(100vw - 20px);min-width:calc(100vw - 20px);height:70vh;max-height:70vh}
+  .message-window.is-maximized{right:6px;bottom:6px;left:6px;top:6px;width:auto;height:auto;max-height:none}
+  .message-window.is-minimized{width:190px;min-width:190px;height:auto;max-height:none}
+  .call-overlay{padding:5px}.call-panel{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+  .call-video-stage{grid-template-columns:1fr}
+  .call-controls button{flex:1;min-width:0}
+  .settings-account-action{align-items:flex-start;flex-direction:column}
+}
