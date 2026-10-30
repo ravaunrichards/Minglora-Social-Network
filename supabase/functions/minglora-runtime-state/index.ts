@@ -354,7 +354,7 @@ Deno.serve(async (req: Request) => {
     const image={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
     const post={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","model/gltf-binary":"glb"};
     const story={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"};
-    const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","application/pdf":"pdf"};
+    const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","application/pdf":"pdf"};
     const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="message"?message:{};
     const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="message"?"minglora-message-attachments":"";
     const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="message"?100*1024*1024:slot==="post"?500*1024*1024:0;
@@ -382,7 +382,7 @@ Deno.serve(async (req: Request) => {
       "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-post-media":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime","audio/mpeg","audio/mp4","audio/ogg","audio/webm","model/gltf-binary"],
-      "minglora-message-attachments":["image/jpeg","image/png","image/webp","video/mp4","audio/mpeg","audio/mp4","audio/ogg","application/pdf"],
+      "minglora-message-attachments":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/mp4","audio/ogg","application/pdf"],
       "minglora-stories":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime"]
     };
     const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
