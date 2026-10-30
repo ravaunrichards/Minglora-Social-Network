@@ -1369,8 +1369,8 @@ INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
 VALUES
  ('minglora-avatars','minglora-avatars',true,10485760,ARRAY['image/jpeg','image/png','image/webp','image/avif']),
  ('minglora-covers','minglora-covers',true,20971520,ARRAY['image/jpeg','image/png','image/webp','image/avif']),
- ('minglora-post-media','minglora-post-media',false,524288000,ARRAY['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg']),
- ('minglora-stories','minglora-stories',false,209715200,ARRAY['image/jpeg','image/png','image/webp','video/mp4','video/webm']),
+ ('minglora-post-media','minglora-post-media',false,524288000,ARRAY['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime','audio/mpeg','audio/mp4','audio/ogg','audio/webm','model/gltf-binary']),
+ ('minglora-stories','minglora-stories',false,209715200,ARRAY['image/jpeg','image/png','image/webp','video/mp4','video/webm','video/quicktime']),
  ('minglora-short-videos','minglora-short-videos',false,1073741824,ARRAY['video/mp4','video/webm','video/quicktime']),
  ('minglora-message-attachments','minglora-message-attachments',false,104857600,ARRAY['image/jpeg','image/png','image/webp','video/mp4','audio/mpeg','audio/mp4','audio/ogg','application/pdf']),
  ('minglora-group-media','minglora-group-media',false,262144000,ARRAY['image/jpeg','image/png','image/webp','video/mp4']),
