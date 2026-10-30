@@ -60,7 +60,7 @@ export async function createLiveKitToken({ identity, name, roomName, canPublish 
 
 export async function listLiveKitParticipants(roomName) {
   const settings = config();
-  if (!settings.url || !settings.apiKey || !settings.apiSecret) {
+  if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
     const error = new Error('LiveKit is not configured for Minglora.');
     error.status = 503;
     throw error;
