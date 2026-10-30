@@ -15,7 +15,7 @@ This document distinguishes working code from unfinished product requirements. A
 | Stories | Create text/HTTPS-image stories, public/friends/followers/private audiences, 24-hour expiry, unique view tracking and author-only deletion | Media uploads, video processing, reports/moderation, mute controls, and scheduled cleanup independent of requests |
 | Messages | Direct text messages and conversation history; blocked pairs cannot start messages and are filtered from conversation lists | Real-time delivery, attachments, read receipts, message deletion and full conversation authorization lifecycle |
 | Notifications | In-app notifications for supported reactions, comments, friend requests and messages; mark all read | Push/email delivery, per-notification read state and notification preferences |
-| Search | Basic substring search across users, posts and groups; block-aware filtering for people/posts | Search indexing, relevance ranking, advanced filters and complete privacy-aware discovery |
+| Search | Basic substring search across users, posts, groups and Pages; block-aware filtering for people/posts/Pages | Search indexing, relevance ranking, advanced filters and complete privacy-aware discovery |
 | Responsive interface | Desktop three-column layout, tablet adaptation and mobile bottom navigation | Formal device/browser accessibility and cross-platform QA |
 | Operations | Node runtime, health endpoint, isolated API tests, Docker packaging and CI workflow | Production database, migrations, backup/restore automation, observability and deployment hardening |
 
