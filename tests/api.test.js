@@ -162,8 +162,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(invalidSettings.status, 400);
 
-  const invalidImageUpload = await request('/api/media/upload', { method: 'POST', body: JSON.stringify({ slot: 'avatar', mimeType: 'image/gif', base64: 'R0lGODlh' }) });
-  assert.equal(invalidImageUpload.status, 400);
+  const retiredBase64Upload = await request('/api/media/upload', { method: 'POST', body: JSON.stringify({ slot: 'avatar', mimeType: 'image/jpeg', base64: 'AA==' }) });
+  assert.equal(retiredBase64Upload.status, 410);
   const invalidResumablePrepare = await request('/api/media/upload/prepare', { method: 'POST', body: JSON.stringify({ slot: 'post', mimeType: 'image/gif', byteSize: 100 }) });
   assert.equal(invalidResumablePrepare.status, 400);
   const oversizedResumablePrepare = await request('/api/media/upload/prepare', { method: 'POST', body: JSON.stringify({ slot: 'post', mimeType: 'image/jpeg', byteSize: 500 * 1024 * 1024 + 1 }) });
