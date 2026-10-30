@@ -44,7 +44,8 @@ This is the runtime that actually serves requests today. The expanded module/dat
 - `backend/realtime/` and `backend/workers/`: planned boundaries for realtime transport and durable background jobs.
 - `src/domain/`: pure, tested helpers for validation, cursor pagination and relationship visibility. Validation is now used by registration, post creation and profile edits. Optional cursor pagination is used by `GET /api/feed` when `limit` or `cursor` is supplied. Relationship visibility is not yet integrated across profile, feed, search and other privacy-sensitive routes.
 - `packages/`: shared API contracts, validation and platform-neutral helpers. These package boundaries are documented but not independently built or published.
-- `database/migrations/001_social_core.sql`: relational schema foundation for users, profiles, relationships, media assets, posts, reactions, comments, saved posts, groups, Pages, Stories, messaging, notifications, events, reports, Marketplace listings and audit history.
+- `database/migrations/001_social_core.sql`: initial relational schema foundation for accounts, relationships, posts, groups, Pages, Stories, messaging, notifications, Events, reports, Marketplace listings and audit history.
+- `database/migrations/002_extended_social_domains.sql`: design tables for photo albums, short video/Reels and play events, Live sessions, calls, check-ins, notification preferences, password reset/email verification tokens, Memories preferences, fundraisers, data-rights requests and watch history.
 - `database/policies/`, `database/functions/`, and `database/schemas/`: policy/function design boundaries and schema documentation.
 - `docs/REPOSITORY_MAP.md`, `docs/FEATURE_CATALOG.md`, `docs/PLATFORM_COVERAGE.md`, `docs/ROADMAP.md`: map, platform/domain coverage and ordered implementation plan.
 
