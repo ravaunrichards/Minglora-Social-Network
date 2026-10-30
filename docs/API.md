@@ -51,6 +51,20 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST | `/api/groups/:id/posts` | Publish a text post as a group member |
 | DELETE | `/api/groups/:id/posts/:postId` | Delete a group post as author or group owner |
 
+## Pages
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/pages` | List active Pages and current follow/role state |
+| POST | `/api/pages` | Create a Page with a unique handle; creator becomes owner |
+| GET | `/api/pages/:id` | Read a Page and its published posts |
+| DELETE | `/api/pages/:id` | Delete a Page as its owner, including its posts and follows |
+| POST/DELETE | `/api/pages/:id/follow` | Follow or unfollow a Page |
+| POST | `/api/pages/:id/posts` | Publish a Page post as a Page owner/admin/editor |
+| DELETE | `/api/pages/:id/posts/:postId` | Delete a Page post as its publisher or Page owner/admin |
+
+The current UI assigns only the creator/owner role; an interface for appointing additional Page admins/editors is not implemented.
+
 ## Stories
 
 | Method | Path | Purpose |
