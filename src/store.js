@@ -86,6 +86,9 @@ function stripLegacyDemoData(state) {
 }
 
 export async function requestSupabaseState(action, extra = {}) {
+  // Local JSON-mode tests and development do not call the hosted Supabase gateway.
+  // Production requires Supabase persistence and continues through the guarded request below.
+  if (persistenceDriver !== 'supabase') return { ok: true, skipped: true };
   if (!stateApiUrl || !stateApiKey || !publishableKey) {
     throw new Error('Supabase persistence requires SUPABASE_STATE_API_URL, SUPABASE_STATE_API_KEY and SUPABASE_PUBLISHABLE_KEY.');
   }
