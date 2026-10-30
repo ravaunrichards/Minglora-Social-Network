@@ -1176,7 +1176,7 @@ async function pollBrowserNotifications(){
         browserNotificationSeen.add(item.id);
         if(webPushSubscriptionActive||!['live','call','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':'New Minglora message';
-        const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-notification.png'});
+        const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
       }
     }
