@@ -301,7 +301,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
   room.on(client.RoomEvent.ParticipantConnected,updatePresence);room.on(client.RoomEvent.ParticipantDisconnected,updatePresence);
   room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room)toast("Your LIVE connection was disconnected.");});
   try{
-    await room.connect(liveKit.url,liveKit.token);$(".live-video-placeholder")?.remove();
+    let connectTimeout;
+    try{
+      await Promise.race([
+        room.connect(liveKit.url,liveKit.token),
+        new Promise((_,reject)=>{connectTimeout=setTimeout(()=>reject(new Error('Could not establish a LIVE connection within 20 seconds. Check the LiveKit server URL, firewall and network connection, then try again.')),20000);})
+      ]);
+    }finally{if(connectTimeout)clearTimeout(connectTimeout);}
+    $(".live-video-placeholder")?.remove();
     if(role==="host"){
       await room.localParticipant.enableCameraAndMicrophone();
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
@@ -344,6 +351,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
     stopLiveChatRefresh();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
+    if(state.view==='live'){
+      setContent("<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE connection failed</h3><p>"+esc(error.message||'Minglora could not connect to the LIVE room.')+"</p><button class='primary' id='retry-live-connection'>Try again</button><button class='secondary' id='back-live-directory'>Back to LIVE</button></section>");
+      $('#retry-live-connection')?.addEventListener('click',()=>openLiveRoom(session,role,issuedLiveKit).catch(err=>toast(err.message)));
+      $('#back-live-directory')?.addEventListener('click',()=>renderLive());
+    }
     throw error;
   }
 }
