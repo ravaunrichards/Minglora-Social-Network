@@ -73,7 +73,7 @@ async function handleMingloraPushNavigation(){
     await renderNotifications();
   }catch(error){toast(error.message);}
 }
-function activateNav(view){state.view=view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
+function activateNav(view){state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
 function renderSingleMedia(media,className='post-media-viewer'){
@@ -484,7 +484,7 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function activateSilent(view){state.view=view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
+function activateSilent(view){state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
   activateSilent('groups');await loadGroups();
@@ -992,21 +992,80 @@ function messageAttachmentHtml(attachments=[]){
     return '<a class="message-attachment-document" href="'+esc(file.url)+'" target="_blank" rel="noopener">📄 '+esc(file.name||'Open attachment')+'</a>';
   }).join('');
 }
+let messageRefreshTimer=null;
+let messageRefreshInFlight=false;
+function renderMessageContent(messages=[]){
+  if(!messages.length)return '<div class="message-window-empty">Start the conversation by sending a message.</div>';
+  return messages.map(message=>{
+    const receipt=message.from===state.user.id?(message.read?'Seen':'Sent'):'';
+    return '<article class="message-window-bubble '+(message.from===state.user.id?'mine':'')+'">'+(message.text?'<p>'+esc(message.text)+'</p>':'')+messageAttachmentHtml(message.attachments)+'<small>'+timeAgo(message.createdAt)+(receipt?' · '+receipt:'')+'</small></article>';
+  }).join('');
+}
+function messageSignature(messages=[]){return messages.map(message=>String(message.id)+':'+(message.read?'1':'0')).join('|');}
+function syncMessageRefreshPolling(){
+  const enabled=Boolean(state.user)&&(state.view==='messages'||state.messageWindows.length>0);
+  if(enabled&&!messageRefreshTimer)messageRefreshTimer=setInterval(refreshMessageConversations,5000);
+  if(!enabled&&messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;}
+}
+async function refreshMessageConversations(){
+  if(!state.user||document.visibilityState==='hidden'||messageRefreshInFlight)return;
+  messageRefreshInFlight=true;
+  try{
+    let result=await api('/messages');
+    state.conversations=result.conversations||[];
+    const activeIds=new Set(state.messageWindows.filter(win=>!win.minimized).map(win=>win.user.id));
+    const unread=state.conversations.filter(conversation=>activeIds.has(conversation.user.id)&&(conversation.unreadCount||0)>0);
+    if(unread.length){
+      await Promise.all(unread.map(conversation=>api('/messages/'+encodeURIComponent(conversation.user.id)+'/read',{method:'POST',body:'{}'}).catch(()=>null)));
+      result=await api('/messages');
+      state.conversations=result.conversations||[];
+    }
+    state.messageWindows.filter(win=>!win.minimized).forEach(win=>{
+      const conversation=state.conversations.find(item=>item.user.id===win.user.id);
+      const messages=conversation?.messages||[];
+      const scroll=document.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"] .message-window-scroll');
+      if(!scroll)return;
+      const signature=messageSignature(messages);
+      if(scroll.dataset.messageSignature===signature)return;
+      const nearBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<64;
+      scroll.innerHTML=renderMessageContent(messages);
+      scroll.dataset.messageSignature=signature;
+      if(nearBottom)scroll.scrollTop=scroll.scrollHeight;
+    });
+    document.querySelectorAll('[data-inbox-peer]').forEach(row=>{
+      const conversation=state.conversations.find(item=>item.user.id===row.dataset.inboxPeer);
+      const meta=row.querySelector('.person-meta');
+      if(!conversation||!meta)return;
+      const badge=meta.querySelector('.inbox-unread-badge');
+      if(conversation.unreadCount>0){
+        const nextBadge=badge||document.createElement('span');
+        nextBadge.className='inbox-unread-badge';
+        nextBadge.textContent=String(conversation.unreadCount);
+        if(!badge)meta.append(nextBadge);
+      }else badge?.remove();
+      const preview=meta.querySelector('small');
+      const last=conversation.messages.at(-1);
+      if(preview&&last)preview.textContent=last.text||((last.attachments||[]).length?'Attachment':'Open chat');
+    });
+  }catch{
+    // Keep the existing conversation visible during transient connectivity loss.
+  }finally{messageRefreshInFlight=false;}
+}
 function renderMessageWindows(){
   let dock=document.querySelector('#message-window-dock');
-  if(!state.messageWindows.length){messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();dock?.remove();return;}
+  if(!state.messageWindows.length){messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();dock?.remove();syncMessageRefreshPolling();return;}
   if(!dock){dock=document.createElement('div');dock.id='message-window-dock';document.body.append(dock);}
   messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();
   dock.innerHTML=state.messageWindows.map(win=>{
     const conversation=state.conversations.find(item=>item.user.id===win.user.id);
     const messages=conversation?.messages||[];
-    const messageContent=messages.length?messages.map(message=>'<article class="message-window-bubble '+(message.from===state.user.id?'mine':'')+'">'+(message.text?'<p>'+esc(message.text)+'</p>':'')+messageAttachmentHtml(message.attachments)+'<small>'+timeAgo(message.createdAt)+'</small></article>').join(''):'<div class="message-window-empty">Start the conversation by sending a message.</div>';
-    const body=win.minimized?'':('<div class="message-window-body"><div class="message-window-scroll">'+messageContent+'</div><div class="message-window-picker" data-message-picker="'+esc(win.user.id)+'"></div><form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Write a message…" autocomplete="off" aria-label="Write a message"><button class="primary" type="submit">Send</button></form></div>');
+    const messageContent=renderMessageContent(messages),signature=messageSignature(messages);
+    const body=win.minimized?'':('<div class="message-window-body"><div class="message-window-scroll" data-message-signature="'+esc(signature)+'">'+messageContent+'</div><div class="message-window-picker" data-message-picker="'+esc(win.user.id)+'"></div><form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Write a message…" autocomplete="off" aria-label="Write a message"><button class="primary" type="submit">Send</button></form></div>');
     return '<section class="message-window '+(win.maximized?'is-maximized ':'')+(win.minimized?'is-minimized':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header"><button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small>@'+esc(win.user.username||'member')+'</small></span></button><div class="message-window-controls"><button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Start voice call" title="Voice call">☎</button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Start video call" title="Video call">▣</button><button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="'+(win.minimized?'Restore':'Minimize')+'" title="'+(win.minimized?'Restore':'Minimize')+'">'+(win.minimized?'▢':'—')+'</button><button type="button" data-message-maximize="'+esc(win.user.id)+'" aria-label="Maximize or restore" title="Expand or restore">'+(win.maximized?'❐':'□')+'</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close conversation" title="Close">×</button></div></header>'+body+'</section>';
   }).join('');
   dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-maximize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMaximize);if(win){win.maximized=!win.maximized;renderMessageWindows();}});
-  dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{state.messageWindows=state.messageWindows.filter(item=>item.user.id!==button.dataset.messageClose);renderMessageWindows();});
+  dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{state.messageWindows=state.messageWindows.filter(item=>item.user.id!==button.dataset.messageClose);renderMessageWindows();syncMessageRefreshPolling();});
   dock.querySelectorAll('[data-message-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.messageProfile));
   dock.querySelectorAll('[data-message-audio]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageAudio);if(win)startMingloraCall(win.user,'audio');});
   dock.querySelectorAll('[data-message-video]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageVideo);if(win)startMingloraCall(win.user,'video');});
@@ -1029,6 +1088,7 @@ function renderMessageWindows(){
     const scroll=dock.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"] .message-window-scroll');
     if(scroll)scroll.scrollTop=scroll.scrollHeight;
   });
+  syncMessageRefreshPolling();
 }
 async function openMessageWindow(member){
   if(!member?.id||member.id===state.user.id)return;
@@ -1038,7 +1098,15 @@ async function openMessageWindow(member){
     if(state.messageWindows.length>=5){toast('You can keep up to five message windows open at once.');return;}
     state.messageWindows.push({user:member,minimized:false,maximized:false});
   }
-  try{state.conversations=(await api('/messages')).conversations;}catch(error){toast(error.message);return;}
+  try{
+    state.conversations=(await api('/messages')).conversations;
+    const conversation=state.conversations.find(item=>item.user.id===member.id);
+    if(conversation?.unreadCount>0){
+      await api('/messages/'+encodeURIComponent(member.id)+'/read',{method:'POST',body:'{}'});
+      state.conversations=(await api('/messages')).conversations;
+    }
+  }catch(error){toast(error.message);return;}
+  syncMessageRefreshPolling();
   renderMessageWindows();
 }
 async function renderMessages(){
@@ -1047,7 +1115,7 @@ async function renderMessages(){
   state.conversations=messageData.conversations||[];
   const conversationRows=state.conversations.length?state.conversations.map(conversation=>{
     const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':'Open chat');
-    return '<div class="inbox-person-row"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small></div><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button></div>';
+    return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button></div>';
   }).join(''):'<p class="muted">No conversations yet. View a member profile and choose Message to start a chat.</p>';
   const people=(peopleData.users||[]).slice(0,40);
   const peopleRows=people.length?people.map(person=>'<div class="inbox-person-row"><img class="avatar" src="'+avatar(person)+'" alt=""><div class="person-meta"><strong>'+esc(person.name)+'</strong><small>@'+esc(person.username)+'</small></div><button class="secondary" type="button" data-start-inbox-chat="'+esc(person.id)+'">Message</button><button class="text-button" type="button" data-open-inbox-profile="'+esc(person.id)+'">Profile</button></div>').join(''):'<p class="muted">No other members are available to message yet.</p>';
@@ -1207,7 +1275,7 @@ async function renderSearch(q){
   document.querySelectorAll('[data-open-page]').forEach(el=>el.addEventListener('click',()=>renderPage(el.dataset.openPage)));
 }
 async function renderView(){try{if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='live')await renderLive();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
-function bindNavigation(){document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));$('#home-brand').onclick=()=>activateNav('feed');$('#rail-profile').onclick=()=>openProfile(state.user.id);$('#profile-menu').onclick=()=>openProfile(state.user.id);$('#rail-notifications').onclick=()=>renderNotifications();$('#notifications-btn').onclick=()=>renderNotifications();$('#see-people').onclick=()=>activateNav('friends');$('#see-groups').onclick=()=>activateNav('groups');$('#search-form').addEventListener('submit',async e=>{e.preventDefault();const q=$('#search-input').value.trim();if(q)try{await renderSearch(q)}catch(err){toast(err.message)}});$('#logout-btn').onclick=async()=>{try{await api('/auth/logout',{method:'POST',body:'{}'})}finally{state.user=null;showAuth()}};}
+function bindNavigation(){document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));$('#home-brand').onclick=()=>activateNav('feed');$('#rail-profile').onclick=()=>openProfile(state.user.id);$('#profile-menu').onclick=()=>openProfile(state.user.id);$('#rail-notifications').onclick=()=>renderNotifications();$('#notifications-btn').onclick=()=>renderNotifications();$('#see-people').onclick=()=>activateNav('friends');$('#see-groups').onclick=()=>activateNav('groups');$('#search-form').addEventListener('submit',async e=>{e.preventDefault();const q=$('#search-input').value.trim();if(q)try{await renderSearch(q)}catch(err){toast(err.message)}});$('#logout-btn').onclick=async()=>{try{await api('/auth/logout',{method:'POST',body:'{}')}finally{state.user=null;state.messageWindows=[];messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();syncMessageRefreshPolling();showAuth()}};}
 async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><img class="avatar" src="${avatar(p)}" alt=""><div class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></div><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
 async function enterMingloraApp(user,showWelcome=false){
   state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();
