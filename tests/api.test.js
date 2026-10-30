@@ -164,6 +164,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
 
   const invalidImageUpload = await request('/api/media/upload', { method: 'POST', body: JSON.stringify({ slot: 'avatar', mimeType: 'image/gif', base64: 'R0lGODlh' }) });
   assert.equal(invalidImageUpload.status, 400);
+  const invalidResumablePrepare = await request('/api/media/upload/prepare', { method: 'POST', body: JSON.stringify({ slot: 'post', mimeType: 'image/gif', byteSize: 100 }) });
+  assert.equal(invalidResumablePrepare.status, 400);
+  const oversizedResumablePrepare = await request('/api/media/upload/prepare', { method: 'POST', body: JSON.stringify({ slot: 'post', mimeType: 'image/jpeg', byteSize: 500 * 1024 * 1024 + 1 }) });
+  assert.equal(oversizedResumablePrepare.status, 400);
 
   const activeSessions = await request('/api/security/sessions');
   assert.equal(activeSessions.status, 200);
@@ -333,6 +337,13 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(secondRegistration.status, 201);
   const secondUserId = secondRegistration.body.user.id;
   const secondCookie = cookie;
+  cookie = firstCookie;
+  const duplicateUsernameEdit = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ username: 'secondtest' }) });
+  assert.equal(duplicateUsernameEdit.status, 409);
+  const usernameEdit = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ username: 'minglora_member', name: 'Minglora Member' }) });
+  assert.equal(usernameEdit.status, 200);
+  assert.equal(usernameEdit.body.user.username, 'minglora_member');
+  cookie = secondCookie;
 
   const pages = await request('/api/pages');
   assert.equal(pages.status, 200);
@@ -438,6 +449,9 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const followers = await request(`/api/users/${firstUserId}/followers`);
   assert.equal(followers.body.count, 1);
   assert.equal(followers.body.users[0].id, secondUserId);
+  const following = await request(`/api/users/${secondUserId}/following`);
+  assert.equal(following.body.count, 1);
+  assert.equal(following.body.users[0].id, firstUserId);
   const viewedProfile = await request(`/api/users/${firstUserId}`);
   assert.equal(viewedProfile.status, 200);
   assert.equal(viewedProfile.body.followersCount, 1);
@@ -487,6 +501,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(reciprocalFollow.body.friends, true);
   const mutualFriends = await request('/api/friends');
   assert.equal(mutualFriends.body.friends.some(member => member.id === secondUserId), true);
+  const reciprocalFollowing = await request(`/api/users/${firstUserId}/following`);
+  assert.equal(reciprocalFollowing.body.users.some(member => member.id === secondUserId), true);
   cookie = secondCookie;
 
   const forbiddenEdit = await request(`/api/posts/${post.body.post.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'Not the owner' }) });
