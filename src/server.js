@@ -491,7 +491,7 @@ async function route(req, res) {
           if(typeof completed.url!=='string'||!completed.url.startsWith('https://'))return json(res,502,{error:'Minglora could not finalize this profile image.'});
           const previous=(db.mediaAssets||[]).find(item=>item.ownerId===user.id&&item.slot===asset.slot&&item.status==='attached');
           if(previous){previous.status='deleted';previous.deletedAt=now();}
-          user[asset.slot]=completed.url;asset.status='attached';asset.attachedTo='profile:'+asset.slot;asset.url=completed.url;
+          user[asset.slot]=completed.url;user[asset.slot+'AssetId']=asset.id;asset.status='attached';asset.attachedTo='profile:'+asset.slot;asset.url=completed.url;
         }else{
           asset.status='uploaded';
         }
@@ -1085,13 +1085,14 @@ async function route(req, res) {
           const currentSession=sessionFromRequest(req),auth=await sessionAuth(currentSession);
           if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
           const metadata={
-            name:next.name,username:next.username,contact_phone:next.contactPhone||'',phone_number:next.contactPhone||'',
+            name:next.name,username:next.username,avatar_url:next.avatar||'',cover_url:next.cover||'',contact_phone:next.contactPhone||'',phone_number:next.contactPhone||'',
             bio:next.bio||'',location:next.location||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
             gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
           };
           await supabaseUpdateUserMetadata(auth.access_token,metadata);
           await supabaseUpdateProfile(auth.access_token,user.id,{
             username:next.username,display_name:next.name,bio:next.bio||'',location:next.location||'',
+            avatar_url:next.avatar||'',cover_url:next.cover||'',
             contact_phone:next.contactPhone||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
             gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
           });
