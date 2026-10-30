@@ -92,7 +92,7 @@ Deno.serve(async (req: Request) => {
     if(!validUuid(userId))return json(400,{error:"Invalid account deletion request."});
     const {data:existing,error:lookupError}=await admin.from("data_rights_requests")
       .select("id,user_id,request_type,status,requested_at")
-      .eq("user_id",userId).eq("request_type","delete_account")
+      .eq("user_id",userId).eq("request_type","deletion")
       .in("status",["requested","processing"]).order("requested_at",{ascending:false}).limit(1).maybeSingle();
     if(lookupError)return json(503,{error:"Minglora could not check existing deletion requests."});
     if(existing)return json(200,{request:existing,alreadyRequested:true});
