@@ -34,7 +34,8 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST/DELETE | `/api/users/:id/follow` | Follow or unfollow a member |
 | GET | `/api/users/:id/followers` | List that member's followers |
 | GET | `/api/users/:id/following` | List that member's follows |
-| POST | `/api/media/upload` | Upload a member-owned image, video, audio or GLB asset from the device; each file is limited to 8 MB |
+| POST | `/api/media/upload/prepare` | Allocate a member-owned media asset and return a signed TUS upload token |
+| POST | `/api/media/upload/complete` | Verify the stored object and finalize the member-owned media asset after TUS upload |
 | POST/DELETE | `/api/users/:id/block` | Block or unblock a member |
 | GET | `/api/blocks` | List accounts currently blocked by the caller |
 
@@ -78,7 +79,7 @@ The current UI assigns only the creator/owner role; an interface for appointing 
 | POST | `/api/stories/:id/view` | Record a story view; author can inspect viewer list |
 | DELETE | `/api/stories/:id` | Delete own story |
 
-Stories expire after 24 hours; expired records and their view records are removed when story endpoints are accessed. Audience values are `public`, `friends`, `followers`, and `private`. Stories accept uploaded image/video assets only; private media is served with expiring signed URLs. Each upload is limited to 8 MB; automated video transcoding is not implemented.
+Stories expire after 24 hours; expired records and their view records are removed when story endpoints are accessed. Audience values are `public`, `friends`, `followers`, and `private`. Stories accept uploaded image/video assets only; private media is served with expiring signed URLs. Story files are limited to 200 MB each; automated video transcoding is not implemented.
 
 ## Account security
 
@@ -127,7 +128,7 @@ Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with a
 - Invalid input returns a 4xx response with an `error` message.
 - `GET /api/feed` returns all current posts when no pagination parameters are supplied. If `limit` or `cursor` is supplied, it returns `{ posts, nextCursor, hasMore }`; `limit` must be an integer from 1 to 100 (default 20 when only a cursor is supplied). Treat `nextCursor` as an opaque value.
 - Missing resources return HTTP 404.
-- The server caps ordinary JSON request bodies at 1 MB and media-upload JSON bodies at 12 MB; individual uploaded files are limited to 8 MB. Media is owned by the uploading account and private post/story assets are served through expiring signed URLs.
+- The server caps JSON API and upload-control messages at 1 MB. Media bytes upload directly to Supabase Storage through signed TUS resumable uploads in 6 MB chunks, with automatic retry and browser progress reporting. Per-file limits are 10 MB for profile pictures, 20 MB for cover photos, 200 MB for Stories, and 500 MB for post/group/Page attachments. The API verifies ownership, stored size, MIME type and file signatures before finalizing an asset. Private post/story assets use expiring signed viewing URLs.
 - Passwords are never returned in public account objects.
 - Post updates and deletions are restricted to the post author. Unavailable posts in blocked relationships return not found for read/reaction/comment/save flows. Blocking removes the existing friend and follow edges between the two accounts.
 - Current API behavior is defined by `src/server.js`; update this document and tests whenever routes or payloads change.
