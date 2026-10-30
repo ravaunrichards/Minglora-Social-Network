@@ -105,7 +105,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     headers: { Origin: `http://127.0.0.1:${port}`, 'Sec-Fetch-Site': 'same-origin' },
     body: '{}'
   });
-  assert.equal(sameOriginWrite.status, 200);
+  assert.equal(sameOriginWrite.status, 200, JSON.stringify(sameOriginWrite.body));
 
   const liveStatus = await request('/api/live/status');
   assert.equal(liveStatus.status, 200);
