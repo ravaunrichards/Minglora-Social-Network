@@ -17,6 +17,7 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, block/unblock, follower/following lists and profile counts
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
+- Public Pages with unique handles, Page follows, Page details, owner publishing and deletion
 - Text/HTTPS-image Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Direct text messages and conversation history
 - In-app notifications for supported actions
@@ -90,6 +91,7 @@ All application API endpoints use the `/api` prefix.
 - `GET /api/users`, `GET /api/users/:id`, `PATCH /api/users/me`
 - `POST /api/friends/:id/request`, `POST /api/friends/:id/accept`
 - `GET /api/groups`, `POST /api/groups`, group detail and discussion routes under `/api/groups/:id`
+- `GET /api/pages`, `POST /api/pages`, Page detail/follow/post routes under `/api/pages/:id`
 - `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
 - `GET /api/messages`, `POST /api/messages`
 - `GET /api/notifications`, `GET /api/search?q=...`
