@@ -1,5 +1,5 @@
 # Database layer
 
-The active service currently uses the JSON file in `DATA_DIR`; it does not execute SQL migrations. `migrations/001_social_core.sql` defines the initial relational social core, and `migrations/002_extended_social_domains.sql` adds design tables for albums/photos, Reels/play events, Live sessions, calls, check-ins, notification preferences, account recovery/verification, Memories, fundraisers, and data-rights requests. Both are schema-design foundations only; neither is applied by the running JSON-backed application.
+The active social API still uses the JSON/PostgreSQL compatibility state adapter; migrations 001 and 002 remain relational design foundations only. Migration 003 defines the protected PostgreSQL runtime-state table. Migration 004 is the active Minglora Supabase Auth profile integration and must be applied to the dedicated Minglora Supabase project before enabling Supabase Auth. See docs/SUPABASE_SETUP.md.
 
 Before adoption, build a database adapter, migration execution and rollback strategy, least-privilege credentials, disposable-database CI checks, and a backup/verification plan for migrating real records. Do not run this schema against production merely because it exists.
