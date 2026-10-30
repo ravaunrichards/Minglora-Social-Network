@@ -1,23 +1,28 @@
-const trimSlash = value => String(value || '').trim().replace(/\/+$/, '');
-const configuredValue = (...values) => values.find(value => String(value || '').trim()) || '';
-const supabaseUrl = () => trimSlash(configuredValue(
-  process.env.SUPABASE_URL,
-  process.env.VITE_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.PUBLIC_SUPABASE_URL
-));
-const supabasePublishableKey = () => String(configuredValue(
-  process.env.SUPABASE_PUBLISHABLE_KEY,
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  process.env.SUPABASE_ANON_KEY
-)).trim();
+const trimSlash = value => String(value || '').trim().replace(/\\/+$/, '');
+
+function supabaseConfig() {
+  const pairs = [
+    [process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY],
+    [process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_PUBLISHABLE_KEY],
+    [process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY],
+    [process.env.PUBLIC_SUPABASE_URL, process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY],
+    // Backward compatibility: the legacy anon key is paired only with SUPABASE_URL.
+    [process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY]
+  ];
+
+  const pair = pairs.find(([url, key]) =>
+    String(url || '').trim() && String(key || '').trim()
+  );
+
+  return pair
+    ? { url: trimSlash(pair[0]), key: String(pair[1]).trim() }
+    : { url: '', key: '' };
+}
 
 export function supabaseAuthConfigured() {
-  const rawUrl = supabaseUrl();
-  const key = supabasePublishableKey();
+  const { url: rawUrl, key } = supabaseConfig();
   if (!rawUrl || !key || /YOUR_PROJECT_REF|REPLACE_ME|placeholder/i.test(rawUrl + key)) return false;
+
   try {
     const url = new URL(rawUrl);
     return url.protocol === 'https:' && Boolean(url.host);
@@ -28,14 +33,13 @@ export function supabaseAuthConfigured() {
 
 function requireConfig() {
   if (!supabaseAuthConfigured()) {
-    throw Object.assign(new Error("Minglora Supabase Auth is not configured. Set Minglora's project URL and publishable key on the API service. Supported names are SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY, or NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Both values must come from the same Minglora project; a key without its matching project URL cannot connect."), { status: 503 });
+    throw Object.assign(new Error("Minglora Supabase Auth is not configured. Set Minglora's project URL and matching publishable key on the API service. Supported pairs are SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY, or NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Both values must come from the same Minglora project; a key without its matching project URL cannot connect."), { status: 503 });
   }
 }
 
 async function authRequest(path, payload) {
   requireConfig();
-  const baseUrl = supabaseUrl();
-  const apiKey = supabasePublishableKey();
+  const { url: baseUrl, key: apiKey } = supabaseConfig();
   const redirectTo = String(process.env.SUPABASE_AUTH_REDIRECT_URL || '').trim();
   const target = new URL(`${baseUrl}/auth/v1/${path}`);
   if (redirectTo && path === 'signup') target.searchParams.set('redirect_to', redirectTo);
