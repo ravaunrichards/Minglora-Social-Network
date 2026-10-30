@@ -354,8 +354,8 @@ function createMediaPicker(root,options={}){
     if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
     else if(entry.url&&entry.mediaType==='audio')preview='<audio controls preload="metadata" src="'+esc(entry.url)+'"></audio>';
     else if(entry.url&&entry.mediaType==='model3d')preview='<model-viewer src="'+esc(entry.url)+'" alt="3D model preview" camera-controls auto-rotate></model-viewer>';
-    else if(entry.url)preview='<img src="'+esc(entry.url)+'" alt="Selected image preview">';
-    else if(entry.file&&imageMime(entry.file))preview='<img src="'+esc(entry.previewUrl)+'" alt="Selected image preview">';
+    else if(entry.url)preview='<img style="transform:scale('+entry.zoom+') rotate('+entry.rotation+'deg)" src="'+esc(entry.url)+'" alt="Selected image preview">';
+    else if(entry.file&&imageMime(entry.file))preview='<img style="transform:scale('+entry.zoom+') rotate('+entry.rotation+'deg)" src="'+esc(entry.previewUrl)+'" alt="Selected image preview">';
     else if(entry.file&&entry.file.type.startsWith('video/'))preview='<video controls playsinline src="'+esc(entry.previewUrl)+'"></video>';
     else if(entry.file&&entry.file.type.startsWith('audio/'))preview='<audio controls src="'+esc(entry.previewUrl)+'"></audio>';
     else if(entry.file&&entry.file.type==='model/gltf-binary')preview='<div class="media-3d-placeholder">3D model selected · preview after upload</div>';
@@ -364,7 +364,7 @@ function createMediaPicker(root,options={}){
   }
   function render(){
     list.innerHTML=entries.map(mediaCard).join('');
-    list.querySelectorAll('[data-media-zoom]').forEach(control=>control.addEventListener('input',()=>{entries[Number(control.dataset.mediaZoom)].zoom=Number(control.value);}));
+    list.querySelectorAll('[data-media-zoom]').forEach(control=>control.addEventListener('input',()=>{const item=entries[Number(control.dataset.mediaZoom)];item.zoom=Number(control.value);const image=control.closest('.media-picker-item')?.querySelector('.media-picker-preview img');if(image)image.style.transform='scale('+item.zoom+') rotate('+item.rotation+'deg)';}));
     list.querySelectorAll('[data-media-rotate]').forEach(button=>button.addEventListener('click',()=>{const item=entries[Number(button.dataset.mediaRotate)];item.rotation=(item.rotation+90)%360;render();}));
     list.querySelectorAll('[data-media-remove]').forEach(button=>button.addEventListener('click',()=>{const index=Number(button.dataset.mediaRemove),item=entries[index];if(item.previewUrl){URL.revokeObjectURL(item.previewUrl);objectUrls.splice(objectUrls.indexOf(item.previewUrl),1);}entries.splice(index,1);render();}));
   }
@@ -433,10 +433,10 @@ function openEditProfile(u){
     const file=input.files?.[0];if(!file)return;
     if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)){toast('Choose a JPG, PNG, WEBP or AVIF image.');input.value='';return;}
     if(file.size>8*1024*1024){toast('Images must be 8 MB or smaller.');input.value='';return;}
-    const url=URL.createObjectURL(file);previewUrls.push(url);if(target.tagName==='IMG')target.src=url;else target.style.backgroundImage='url("'+url+'")';target.classList.add('has-preview');
+    const url=URL.createObjectURL(file);previewUrls.push(url);if(target.tagName==='IMG')target.src=url;else{target.style.backgroundImage='url("'+url+'")';target.style.backgroundSize='cover';}target.classList.add('has-preview');
   }
-  avatarInput.addEventListener('change',()=>{avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';previewFile(avatarInput,avatarPreview);});
-  coverInput.addEventListener('change',()=>{coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';previewFile(coverInput,coverPreview);});
+  avatarInput.addEventListener('change',()=>{avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';avatarPreview.style.transform='scale(1) rotate(0deg)';previewFile(avatarInput,avatarPreview);});
+  coverInput.addEventListener('change',()=>{coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';coverPreview.style.transform='scale(1) rotate(0deg)';coverPreview.style.backgroundSize='cover';previewFile(coverInput,coverPreview);});
   function assignCameraFile(cameraInput,targetInput,targetPreview,editState,zoomInput){
     const file=cameraInput.files?.[0];if(!file)return;
     const transfer=new DataTransfer();transfer.items.add(file);targetInput.files=transfer.files;
@@ -446,10 +446,10 @@ function openEditProfile(u){
   modal.querySelector('#edit-cover-camera-button').onclick=()=>coverCamera.click();
   avatarCamera.addEventListener('change',()=>assignCameraFile(avatarCamera,avatarInput,avatarPreview,avatarEdit,modal.querySelector('#edit-avatar-zoom')));
   coverCamera.addEventListener('change',()=>assignCameraFile(coverCamera,coverInput,coverPreview,coverEdit,modal.querySelector('#edit-cover-zoom')));
-  modal.querySelector('#edit-avatar-zoom').addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);});
-  modal.querySelector('#edit-cover-zoom').addEventListener('input',event=>{coverEdit.zoom=Number(event.target.value);});
-  modal.querySelector('#edit-avatar-rotate').onclick=()=>{avatarEdit.rotation=(avatarEdit.rotation+90)%360;};
-  modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;};
+  modal.querySelector('#edit-avatar-zoom').addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);avatarPreview.style.transform='scale('+avatarEdit.zoom+') rotate('+avatarEdit.rotation+'deg)';});
+  modal.querySelector('#edit-cover-zoom').addEventListener('input',event=>{coverEdit.zoom=Number(event.target.value);coverPreview.style.backgroundSize=(coverEdit.zoom*100)+'%';coverPreview.style.transform='rotate('+coverEdit.rotation+'deg)';});
+  modal.querySelector('#edit-avatar-rotate').onclick=()=>{avatarEdit.rotation=(avatarEdit.rotation+90)%360;avatarPreview.style.transform='scale('+avatarEdit.zoom+') rotate('+avatarEdit.rotation+'deg)';};
+  modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;coverPreview.style.transform='rotate('+coverEdit.rotation+'deg)';};
   const close=()=>{previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
