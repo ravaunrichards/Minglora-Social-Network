@@ -114,7 +114,7 @@
             <section class="card settings-card" id="settings-security">
               ${sectionHeading('▣', 'Security and login', 'Protect your password, sign-in email, authenticator and active sessions.')}
               <form id="security-email-form" class="settings-security-form">
-                <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label>
+                <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
                 <button class="secondary" type="submit">Request email change</button><p class="settings-form-status" id="security-email-status" role="status"></p>
               </form>
               <form id="security-password-form" class="settings-security-form">
@@ -199,7 +199,7 @@
 
       document.querySelector('#security-email-form')?.addEventListener('submit',async event=>{
         event.preventDefault();const form=event.currentTarget,status=document.querySelector('#security-email-status'),button=form.querySelector('button[type="submit"]');button.disabled=true;
-        try{const values=new FormData(form);const result=await api('/security/email',{method:'POST',body:JSON.stringify({email:values.get('email')})});status.textContent=result.message||'Check your new email for a verification link.';form.reset();}
+        try{const values=new FormData(form);const result=await api('/security/email',{method:'POST',body:JSON.stringify({email:values.get('email'),currentPassword:values.get('currentPassword')})});status.textContent=result.message||'Check your new email for a verification link.';form.reset();}
         catch(error){status.textContent=error.message;}
         finally{button.disabled=false;}
       });
