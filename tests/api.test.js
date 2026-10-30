@@ -162,6 +162,9 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(invalidSettings.status, 400);
 
+  const invalidImageUpload = await request('/api/media/upload', { method: 'POST', body: JSON.stringify({ slot: 'avatar', mimeType: 'image/gif', base64: 'R0lGODlh' }) });
+  assert.equal(invalidImageUpload.status, 400);
+
   const feed = await request('/api/feed');
   assert.equal(feed.status, 200);
   assert.equal(feed.body.posts.length, 0);
