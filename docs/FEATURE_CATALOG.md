@@ -29,7 +29,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Notification preferences | Persisted in-app, friend-request, message and interaction controls; push/email/device delivery not implemented |
 | Account settings | Dedicated Settings & Privacy with saved privacy/notification/appearance preferences, blocked-member management, account export, password/email, MFA and session management, support tickets and member reports | Account deletion and advanced recovery options |
 | Data export/deletion | Authenticated JSON download of the member's profile, content, relationships and account activity; secrets and sessions excluded | Verified deletion requests and coordinated erasure/retention workflows are not implemented |
-| Safety/privacy | Complete reporting, moderation, export/deletion and audience enforcement not implemented |
+| Safety/privacy | Reports for members, posts, comments, stories, groups, Pages and messages; moderator queue and supported actions; audit records; support ticket/reply workflow | Human moderator allow-list configuration, appeals automation, automated media scanning and comprehensive safety policies |
 | Operations | Node, JSON store, basic tests, Docker and CI exist; durable database and production operations incomplete |
 
 A feature is complete only after end-to-end integration and tests. A document, SQL table, or empty UI does not count.
