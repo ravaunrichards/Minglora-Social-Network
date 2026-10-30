@@ -139,6 +139,23 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const reloadedSettings = await request('/api/settings');
   assert.equal(reloadedSettings.body.settings.privacy.allowFriendRequests, false);
   assert.equal(reloadedSettings.body.settings.notifications.messages, false);
+
+  const firstAccountCookie = cookie;
+  const secondRegistration = await request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Second Test User', username: 'secondtestuser', email: 'second-user@example.test', password: 'SecondTestPassword123!' })
+  });
+  assert.equal(secondRegistration.status, 201);
+  const hiddenProfile = await request(`/api/users/${registration.body.user.id}`);
+  assert.equal(hiddenProfile.status, 404);
+  const hiddenFromDiscovery = await request('/api/users');
+  assert.equal(hiddenFromDiscovery.body.users.some(item => item.id === registration.body.user.id), false);
+  const deniedFriendRequest = await request(`/api/friends/${registration.body.user.id}/request`, { method: 'POST', body: '{}' });
+  assert.equal(deniedFriendRequest.status, 403);
+  const deniedMessage = await request('/api/messages', { method: 'POST', body: JSON.stringify({ to: registration.body.user.id, text: 'Should be blocked' }) });
+  assert.equal(deniedMessage.status, 403);
+  cookie = firstAccountCookie;
+
   const invalidSettings = await request('/api/settings', {
     method: 'PATCH',
     body: JSON.stringify({ privacy: { profileVisibility: 'worldwide' } })
