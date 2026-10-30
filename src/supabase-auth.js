@@ -81,3 +81,63 @@ export function supabaseSignUp({ email, password, name, username }) {
 export function supabaseSignIn({ email, password }) {
   return authRequest('token?grant_type=password', { email, password });
 }
+
+function requireAccessToken(accessToken) {
+  if (!accessToken || typeof accessToken !== 'string' || accessToken.length < 20) {
+    throw Object.assign(new Error('Your sign-in session is no longer valid. Please log in again.'), { status:401 });
+  }
+}
+async function authenticatedRequest(path, accessToken, method='GET', payload) {
+  requireConfig();
+  requireAccessToken(accessToken);
+  const { url:baseUrl, key:apiKey } = supabaseConfig();
+  let response;
+  try {
+    response=await fetch(baseUrl+'/auth/v1/'+path,{
+      method,
+      headers:{apikey:apiKey,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      ...(payload===undefined?{}:{body:JSON.stringify(payload)})
+    });
+  } catch {
+    throw Object.assign(new Error('Could not reach Minglora Supabase Auth.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const error=new Error(String(data.msg||data.message||data.error_description||data.error||'Supabase Auth request failed.'));
+    error.status=response.status===429?429:response.status>=500?503:response.status;
+    throw error;
+  }
+  return data;
+}
+export function supabaseUpdatePassword(accessToken,password) {
+  return authenticatedRequest('user',accessToken,'PUT',{password});
+}
+export function supabaseListFactors(accessToken) {
+  return authenticatedRequest('factors',accessToken,'GET');
+}
+export function supabaseEnrollTotp(accessToken,friendlyName='Minglora authenticator') {
+  return authenticatedRequest('factors',accessToken,'POST',{factor_type:'totp',friendly_name:friendlyName});
+}
+export function supabaseChallengeFactor(accessToken,factorId) {
+  return authenticatedRequest('factors/'+encodeURIComponent(factorId)+'/challenge',accessToken,'POST',{});
+}
+export function supabaseVerifyFactor(accessToken,factorId,challengeId,code) {
+  return authenticatedRequest('factors/'+encodeURIComponent(factorId)+'/verify',accessToken,'POST',{challenge_id:challengeId,code});
+}
+export function supabaseUnenrollFactor(accessToken,factorId) {
+  return authenticatedRequest('factors/'+encodeURIComponent(factorId),accessToken,'DELETE');
+}
+export function supabaseRefreshSession(refreshToken) {
+  return authRequest('token?grant_type=refresh_token',{refresh_token:refreshToken});
+}
+export function supabaseRequestPasswordReset(email,redirectTo) {
+  requireConfig();
+  const {url:baseUrl,key:apiKey}=supabaseConfig();
+  const target=new URL(baseUrl+'/auth/v1/recover');
+  if(redirectTo)target.searchParams.set('redirect_to',redirectTo);
+  return fetch(target,{method:'POST',headers:{apikey:apiKey,Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({email})})
+    .then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok){const error=new Error(String(data.msg||data.message||data.error_description||data.error||'Password reset request failed.'));error.status=response.status===429?429:response.status>=500?503:response.status;throw error;}return data;});
+}
+export function supabaseCompletePasswordReset(accessToken,password) {
+  return supabaseUpdatePassword(accessToken,password);
+}
