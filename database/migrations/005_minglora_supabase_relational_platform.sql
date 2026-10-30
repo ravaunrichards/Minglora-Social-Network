@@ -981,6 +981,7 @@ FOR DELETE TO authenticated USING (EXISTS (
 ));
 
 -- Stories and audience-limited story views.
+
 CREATE POLICY minglora_stories_read ON public.stories
 FOR SELECT TO anon, authenticated
 USING (
@@ -1007,7 +1008,7 @@ USING (
       )
     )
   )
-)
+);
 CREATE POLICY minglora_stories_insert_self ON public.stories
 FOR INSERT TO authenticated WITH CHECK (
   author_id=(select auth.uid()) AND expires_at>now()
@@ -1135,17 +1136,32 @@ FOR DELETE TO authenticated USING (EXISTS (
 ));
 
 -- Photo albums and tagging.
+
 CREATE POLICY minglora_albums_read ON public.photo_albums
 FOR SELECT TO anon, authenticated
 USING (
-  status='active' AND (
-    audience='public' OR owner_id=(select auth.uid())
-    OR (audience='followers' AND EXISTS (SELECT 1 FROM public.user_follows f
-      WHERE f.follower_id=(select auth.uid()) AND f.followed_id=photo_albums.owner_id))
-    OR (audience='friends' AND EXISTS (SELECT 1 FROM public.friendships f
-      WHERE f.status='accepted' AND
-      ((f.requester_id=photo_albums.owner_id AND f.recipient_id=(select auth.uid()))
-       OR (f.recipient_id=photo_albums.owner_id AND f.requester_id=(select auth.uid()))))
+  status='active'
+  AND (
+    audience='public'
+    OR owner_id=(select auth.uid())
+    OR (
+      audience='followers'
+      AND EXISTS (
+        SELECT 1 FROM public.user_follows f
+        WHERE f.follower_id=(select auth.uid()) AND f.followed_id=photo_albums.owner_id
+      )
+    )
+    OR (
+      audience='friends'
+      AND EXISTS (
+        SELECT 1 FROM public.friendships f
+        WHERE f.status='accepted'
+          AND (
+            (f.requester_id=photo_albums.owner_id AND f.recipient_id=(select auth.uid()))
+            OR (f.recipient_id=photo_albums.owner_id AND f.requester_id=(select auth.uid()))
+          )
+      )
+    )
   )
 );
 CREATE POLICY minglora_albums_insert_self ON public.photo_albums
@@ -1181,14 +1197,15 @@ FOR DELETE TO authenticated
 USING (tagged_user_id=(select auth.uid()) OR tagged_by=(select auth.uid()));
 
 -- Short video feeds, watch events and creator ownership.
+
 CREATE POLICY minglora_short_videos_read ON public.short_videos
 FOR SELECT TO anon, authenticated
 USING (
-  (
+  creator_id=(select auth.uid())
+  OR (
     status='ready'
     AND (
       audience='public'
-      OR creator_id=(select auth.uid())
       OR (
         audience='followers'
         AND EXISTS (
@@ -1209,8 +1226,7 @@ USING (
       )
     )
   )
-  OR creator_id=(select auth.uid())
-)
+);
 CREATE POLICY minglora_short_videos_insert_self ON public.short_videos
 FOR INSERT TO authenticated WITH CHECK (creator_id=(select auth.uid()));
 CREATE POLICY minglora_short_videos_update_self ON public.short_videos
@@ -1281,6 +1297,7 @@ CREATE POLICY minglora_call_participants_delete_self ON public.call_participants
 FOR DELETE TO authenticated USING (user_id=(select auth.uid()));
 
 -- Check-ins, preferences, fundraiser/payment records and data-rights requests.
+
 CREATE POLICY minglora_checkins_read ON public.checkins
 FOR SELECT TO anon, authenticated
 USING (
@@ -1304,7 +1321,7 @@ USING (
         )
     )
   )
-)
+);
 CREATE POLICY minglora_checkins_insert_self ON public.checkins
 FOR INSERT TO authenticated WITH CHECK (user_id=(select auth.uid()));
 CREATE POLICY minglora_checkins_update_self ON public.checkins
