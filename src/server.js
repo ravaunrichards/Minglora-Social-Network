@@ -34,6 +34,8 @@ async function body(req) {
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
 const notify = (userId, actorId, type, text) => db.notifications.unshift({ id:uid(), userId, actorId, type, text, createdAt:now(), read:false });
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
+const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
+const canManagePage = (pageId, userId) => ['owner','admin','editor'].includes(pageRole(pageId,userId));
 const canViewStory = (viewerId, story) => {
   if (!viewerId || !story?.userId) return false;
   if (viewerId === story.userId) return true;
@@ -275,6 +277,65 @@ async function route(req, res) {
         if(story.userId!==user.id)return json(res,403,{error:'Only the story author can delete this story.'});
         db.stories=db.stories.filter(x=>x.id!==story.id);db.storyViews=(db.storyViews||[]).filter(view=>view.storyId!==story.id);
         saveStore();return json(res,200,{ok:true,id:story.id});
+      }
+      if(method==='GET'&&p==='/api/pages'){
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)}));
+        return json(res,200,{pages});
+      }
+      if(method==='POST'&&p==='/api/pages'){
+        const handle=String(input.handle||'').trim().toLowerCase(),title=String(input.title||'').trim(),description=String(input.description||'').trim(),category=String(input.category||'').trim();
+        if(!/^[a-z0-9][a-z0-9_-]{2,29}$/.test(handle))return json(res,400,{error:'Page handle must be 3–30 lowercase letters, numbers, underscores or hyphens, starting with a letter or number.'});
+        if(title.length<3||title.length>160||description.length>2000||category.length>60)return json(res,400,{error:'Page title must be 3–160 characters; description max 2000 and category max 60.'});
+        if((db.pages||[]).some(page=>page.handle.toLowerCase()===handle))return json(res,409,{error:'That Page handle is already taken.'});
+        const page={id:uid(),handle,title,description,category,status:'active',createdBy:user.id,createdAt:now()};
+        db.pages.push(page);db.pageRoles.push({pageId:page.id,userId:user.id,role:'owner',createdAt:now()});saveStore();
+        return json(res,201,{page:{...page,owner:safeUser(user),followerCount:0,isFollowing:false,myRole:'owner'}});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)\/follow$/);
+      if((method==='POST'||method==='DELETE')&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        if(page.createdBy===user.id)return json(res,400,{error:'You already manage this Page.'});
+        const exists=(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id);
+        if(method==='POST'&&!exists)db.pageFollows.push({pageId:page.id,userId:user.id,createdAt:now()});
+        if(method==='DELETE'&&exists)db.pageFollows=db.pageFollows.filter(f=>!(f.pageId===page.id&&f.userId===user.id));
+        saveStore();return json(res,200,{isFollowing:method==='POST'});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)\/posts$/);
+      if(method==='POST'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        if(!canManagePage(page.id,user.id))return json(res,403,{error:'Only Page owners, admins or editors can publish.'});
+        const validation=validatePostInput({text:input.text,imageUrl:input.imageUrl});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,imageUrl:validation.value.imageUrl,createdAt:now(),updatedAt:now(),status:'published'};
+        db.pagePosts.push(post);saveStore();return json(res,201,{post:{...post,author:safeUser(user),page:{id:page.id,title:page.title,handle:page.handle}}});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)\/posts\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]);if(!page)return json(res,404,{error:'Page not found.'});
+        const post=(db.pagePosts||[]).find(item=>item.id===m[2]&&item.pageId===page.id);
+        if(!post)return json(res,404,{error:'Page post not found.'});
+        if(post.publishedBy!==user.id&&!['owner','admin'].includes(pageRole(page.id,user.id)))return json(res,403,{error:'Only the publisher or Page owner/admin can delete this post.'});
+        db.pagePosts=db.pagePosts.filter(item=>item.id!==post.id);saveStore();return json(res,200,{ok:true,id:post.id});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)$/);
+      if(method==='GET'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        const posts=(db.pagePosts||[]).filter(post=>post.pageId===page.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>({...post,author:safeUser(db.users.find(u=>u.id===post.publishedBy)),page:{id:page.id,title:page.title,handle:page.handle}}));
+        return json(res,200,{page:{...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)},posts});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]);
+        if(!page)return json(res,404,{error:'Page not found.'});
+        if(page.createdBy!==user.id)return json(res,403,{error:'Only the Page owner can delete this Page.'});
+        db.pages=db.pages.filter(item=>item.id!==page.id);
+        db.pageRoles=db.pageRoles.filter(role=>role.pageId!==page.id);
+        db.pageFollows=db.pageFollows.filter(f=>f.pageId!==page.id);
+        db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
+        saveStore();return json(res,200,{ok:true,id:page.id});
       }
       if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
       if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim();if(!db.users.some(u=>u.id===to)||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
