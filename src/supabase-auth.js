@@ -10,9 +10,13 @@ function supabaseConfig() {
     [process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY]
   ];
 
-  const pair = pairs.find(([url, key]) =>
-    String(url || '').trim() && String(key || '').trim()
-  );
+  const pair = pairs.find(([url, key]) => {
+    const projectUrl = String(url || '').trim();
+    const projectKey = String(key || '').trim();
+    if (!projectUrl || !projectKey || /YOUR_PROJECT_REF|REPLACE_ME|placeholder/i.test(projectUrl + projectKey)) return false;
+    try { return new URL(projectUrl).protocol === 'https:'; }
+    catch { return false; }
+  });
 
   return pair
     ? { url: trimSlash(pair[0]), key: String(pair[1]).trim() }

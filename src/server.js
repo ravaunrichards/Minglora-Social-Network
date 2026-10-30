@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
 import { createLiveKitToken, isLiveKitConfigured, listLiveKitParticipants } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
+import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
@@ -129,7 +130,16 @@ const json = (res, status, body, headers={}) => { res.writeHead(status, { 'Conte
 const cookie = (req, name) => (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1);
 const sign = value => crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
 const sessionCipherKey=crypto.createHash('sha256').update(SESSION_SECRET+'|minglora-session-vault-v1').digest();
-function sealSessionAuth(value){if(!value?.access_token)return null;const iv=crypto.randomBytes(12);const cipher=crypto.createCipheriv('aes-256-gcm',sessionCipherKey,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify({access_token:value.access_token,refresh_token:value.refresh_token||'',expires_in:Number(value.expires_in||3600),token_type:value.token_type||'bearer'}),'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),encrypted]).toString('base64url');}
+function sealSessionAuth(value){
+  if(!value?.access_token)return null;
+  const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',sessionCipherKey,iv);
+  const encrypted=Buffer.concat([cipher.update(JSON.stringify({
+    access_token:value.access_token,refresh_token:value.refresh_token||'',
+    expires_in:Number(value.expires_in||3600),expires_at:value.expires_at||null,
+    token_type:value.token_type||'bearer'
+  }),'utf8'),cipher.final()]);
+  return Buffer.concat([iv,cipher.getAuthTag(),encrypted]).toString('base64url');
+}
 function openSessionAuth(sealed){if(!sealed)return null;try{const bytes=Buffer.from(sealed,'base64url');const iv=bytes.subarray(0,12),tag=bytes.subarray(12,28),encrypted=bytes.subarray(28);const decipher=crypto.createDecipheriv('aes-256-gcm',sessionCipherKey,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(encrypted),decipher.final()]).toString('utf8'));}catch{return null;}}
 function sessionFromRequest(req){const raw=cookie(req,'sid');if(!raw)return null;let decoded;try{decoded=decodeURIComponent(raw);}catch{return null;}const parts=decoded.split('.');if(parts.length!==2)return null;const [id,sig]=parts;if(!id||!sig)return null;const expected=Buffer.from(sign(id),'utf8'),supplied=Buffer.from(sig,'utf8');if(supplied.length!==expected.length||!crypto.timingSafeEqual(supplied,expected))return null;return db.sessions.find(item=>item.id===id&&new Date(item.expiresAt)>new Date())||null;}
 function isModerator(user){const ids=String(process.env.MODERATOR_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);return Boolean(user&&(user.role==='admin'||user.role==='moderator'||ids.includes(user.id)));}
@@ -160,7 +170,7 @@ function appSessionCookie(sid) {
 }
 async function createAppSession(user,authTokens=null,req=null) {
   const sid=uid();const createdAt=now();
-  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(Date.now()+Math.max(60,Number(authTokens.expires_in||3600))*1000).toISOString():null,userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240),mfaVerified:true});
+  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240),mfaVerified:true});
   await saveStore();return appSessionCookie(sid);
 }
 function ensureLocalUser(authUser, fallback = {}) {
@@ -194,13 +204,32 @@ function ensureLocalUser(authUser, fallback = {}) {
   }
   return user;
 }
-function sessionUser(req) {const session=sessionFromRequest(req);const account=session?db.users.find(item=>item.id===session.userId)||null:null;return ['suspended','deactivated'].includes(account?.status)?null:account;}
-async function sessionAuth(session){if(!session?.authSealed)return null;let tokens=openSessionAuth(session.authSealed);if(!tokens?.access_token)return null;if(session.authExpiresAt&&new Date(session.authExpiresAt).getTime()<Date.now()+60000&&tokens.refresh_token){const refreshed=await supabaseRefreshSession(tokens.refresh_token);tokens={...tokens,...refreshed};session.authSealed=sealSessionAuth(tokens);session.authExpiresAt=new Date(Date.now()+Math.max(60,Number(tokens.expires_in||3600))*1000).toISOString();await saveStore();}return tokens;}
+function sessionUser(req){
+  const session=sessionFromRequest(req);
+  const account=session?db.users.find(item=>item.id===session.userId)||null:null;
+  if(session?.authInvalidatedAt&&AUTH_PROVIDER==='supabase')return null;
+  return ['suspended','deactivated'].includes(account?.status)?null:account;
+}
+const sessionAuth=createSessionAuthManager({
+  openSession:openSessionAuth,sealSession:sealSessionAuth,
+  refreshSession:supabaseRefreshSession,save:saveStore
+});
 async function body(req, maxBytes=1_000_000) {
   let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
+const MESSAGE_STICKERS=Object.freeze({
+  heart:'💖',fire:'🔥',celebration:'🎉',crown:'👑',flower:'🌺',
+  butterfly:'🦋',laugh:'😂',party:'🥳',clap:'👏',love:'😍'
+});
+function safeTenorGifUrl(value){
+  try{
+    const parsed=new URL(String(value||''));
+    return parsed.protocol==='https:'&&parsed.hostname.toLowerCase()==='media.tenor.com'&&parsed.pathname.toLowerCase().endsWith('.gif')?parsed.toString():null;
+  }catch{return null;}
+}
+
 let webPushConfigKey='';
 function configureWebPush(){
   const publicKey=String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim();
@@ -529,7 +558,7 @@ async function route(req, res) {
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
-          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
+          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
         };
         const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
@@ -1446,6 +1475,27 @@ async function route(req, res) {
           await saveStore();return json(res,200,{ok:true,call});
         }
       }
+      if(method==='GET'&&p==='/api/messages/gifs'){
+        const apiKey=String(process.env.TENOR_API_KEY||'').trim();
+        if(!apiKey)return json(res,503,{error:'GIF search is not configured yet. Add TENOR_API_KEY to Minglora’s private server environment.'});
+        const query=String(url.searchParams.get('q')||'').trim().slice(0,80);
+        if(!query)return json(res,400,{error:'Enter a word or phrase to search for GIFs.'});
+        const target=new URL('https://tenor.googleapis.com/v2/search');
+        target.searchParams.set('key',apiKey);target.searchParams.set('q',query);
+        target.searchParams.set('client_key','minglora');target.searchParams.set('limit','20');
+        target.searchParams.set('media_filter','gif,tinygif');target.searchParams.set('contentfilter','high');
+        let response;
+        try{response=await fetch(target,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});}
+        catch{return json(res,503,{error:'Minglora could not reach GIF search. Try again shortly.'});}
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok)return json(res,502,{error:'GIF search rejected its server credential. Check TENOR_API_KEY in Minglora’s private environment.'});
+        const gifs=(Array.isArray(payload.results)?payload.results:[]).map(item=>{
+          const formats=item.media_formats||{},gifUrl=safeTenorGifUrl(formats.gif?.url||formats.mediumgif?.url);
+          const previewUrl=safeTenorGifUrl(formats.tinygif?.url||formats.gif?.url);
+          return gifUrl?{id:String(item.id||''),title:String(item.content_description||item.title||'GIF').slice(0,100),url:gifUrl,previewUrl:previewUrl||gifUrl}:null;
+        }).filter(Boolean);
+        return json(res,200,{gifs});
+      }
       if(method==='GET'&&p==='/api/messages'){
         const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
         const conversations=await Promise.all(peers.map(async id=>{
@@ -1486,12 +1536,18 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/messages'){
         const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
         const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
-        if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message or attach up to five files.'});
+        const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
+        const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
+        if(input.stickerId&&!stickerEmoji)return json(res,400,{error:'That Minglora sticker is not available.'});
+        if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
+        if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
+        if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message, attach a file, or select a sticker or GIF.'});
         const audience=getUserSettings(recipient).privacy.messageAudience;
         if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});
         const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
-        const msg={id:uid(),from:user.id,to,text,attachmentIds,createdAt:now(),read:false};
+        const messageText=stickerEmoji||text;
+        const msg={id:uid(),from:user.id,to,text:messageText,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,createdAt:now(),read:false};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
         db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
         await saveStore();
