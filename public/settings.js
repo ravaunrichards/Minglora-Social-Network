@@ -196,6 +196,79 @@
         }
       }));
 
+      document.querySelector('#security-email-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#security-email-status'),button=form.querySelector('button[type="submit"]');button.disabled=true;
+        try{const values=new FormData(form);const result=await api('/security/email',{method:'POST',body:JSON.stringify({email:values.get('email')})});status.textContent=result.message||'Check your new email for a verification link.';form.reset();}
+        catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+      document.querySelector('#security-password-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#security-password-status'),button=form.querySelector('button[type="submit"]'),values=new FormData(form);
+        if(values.get('newPassword')!==values.get('confirmPassword')){status.textContent='The new passwords do not match.';return;}
+        button.disabled=true;
+        try{await api('/security/password',{method:'POST',body:JSON.stringify({currentPassword:values.get('currentPassword'),newPassword:values.get('newPassword')})});status.textContent='Password updated successfully.';form.reset();}
+        catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+      document.querySelector('#enroll-totp')?.addEventListener('click',async buttonEvent=>{
+        const button=buttonEvent.currentTarget,panel=document.querySelector('#mfa-enrollment-panel'),status=document.querySelector('#mfa-status');button.disabled=true;
+        try{
+          const result=await api('/security/mfa/totp/enroll',{method:'POST',body:'{}'}),factor=result.factor||{},totp=result.totp||{};
+          const qr=String(totp.qr_code||''),secret=String(totp.secret||''),uri=String(totp.uri||'');
+          panel.innerHTML='<div class="mfa-enrollment"><p>1. Scan this QR code in your authenticator app, or enter the secret manually.</p>'+(qr.startsWith('data:image/')?'<img class="mfa-qr" src="'+escapeHtml(qr)+'" alt="Authenticator QR code">':'<p class="muted">A QR image was not returned. Use the secret below.</p>')+'<div class="mfa-secret"><small>Authenticator secret</small><code>'+escapeHtml(secret||'Secret not returned')+'</code></div><p class="muted">'+escapeHtml(uri)+'</p><form id="mfa-verify-form"><input type="hidden" name="factorId" value="'+escapeHtml(factor.id||'')+'"><label class="field"><span>2. Enter the 6-digit verification code</span><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" required></label><button class="primary" type="submit">Verify and enable two-factor authentication</button></form></div>';
+          panel.querySelector('#mfa-verify-form')?.addEventListener('submit',async formEvent=>{
+            formEvent.preventDefault();const verifyButton=formEvent.currentTarget.querySelector('button[type="submit"]');verifyButton.disabled=true;
+            try{const data=new FormData(formEvent.currentTarget);await api('/security/mfa/totp/verify',{method:'POST',body:JSON.stringify({factorId:data.get('factorId'),code:data.get('code')})});window.alert('Two-factor authentication is enabled. You will need an authenticator code at your next sign-in.');await openSettings();}
+            catch(error){status.textContent=error.message;verifyButton.disabled=false;}
+          });
+          status.textContent='Authenticator enrollment started. Verify the code to finish setup.';
+        }catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+      document.querySelectorAll('[data-remove-factor]').forEach(button=>button.addEventListener('click',async()=>{
+        if(!window.confirm('Remove this authenticator factor? This reduces your sign-in protection.'))return;
+        button.disabled=true;
+        try{await api('/security/mfa/factors/'+encodeURIComponent(button.dataset.removeFactor),{method:'DELETE',body:'{}'});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      }));
+      document.querySelector('#revoke-other-sessions')?.addEventListener('click',async buttonEvent=>{
+        const button=buttonEvent.currentTarget;if(!window.confirm('Log out all Minglora sessions except this device?'))return;button.disabled=true;
+        try{await api('/security/sessions/revoke-others',{method:'POST',body:'{}'});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      });
+      document.querySelectorAll('[data-revoke-session]').forEach(button=>button.addEventListener('click',async()=>{
+        if(!window.confirm('Revoke this device session?'))return;button.disabled=true;
+        try{await api('/security/sessions/'+encodeURIComponent(button.dataset.revokeSession),{method:'DELETE',body:'{}'});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      }));
+      document.querySelector('#support-ticket-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#support-create-status'),button=form.querySelector('button[type="submit"]'),values=new FormData(form);button.disabled=true;
+        try{await api('/support/tickets',{method:'POST',body:JSON.stringify({category:values.get('category'),subject:values.get('subject'),message:values.get('message')})});await openSettings();}
+        catch(error){status.textContent=error.message;button.disabled=false;}
+      });
+      document.querySelectorAll('[data-reply-ticket]').forEach(form=>form.addEventListener('submit',async event=>{
+        event.preventDefault();const values=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+        try{await api('/support/tickets/'+encodeURIComponent(form.dataset.replyTicket)+'/messages',{method:'POST',body:JSON.stringify({message:values.get('message')})});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      }));
+      async function loadModerationQueue(){
+        const panel=document.querySelector('#moderation-reports-list');if(!panel)return;panel.textContent='Loading reports…';
+        try{
+          const result=await api('/moderation/reports?status=open');
+          panel.innerHTML=(result.reports||[]).map(report=>{
+            const actions=report.targetType==='post'?'<option value="hide_post">Hide post</option><option value="remove_post">Remove post</option>':report.targetType==='story'?'<option value="remove_story">Remove story</option>':report.targetType==='user'?'<option value="suspend_account">Suspend account</option>':'';
+            return '<article class="moderation-report"><div class="settings-inline-heading"><strong>'+escapeHtml(report.targetType)+' · '+escapeHtml(report.category)+'</strong><span class="settings-status-pill">'+escapeHtml(report.status)+'</span></div><p>'+escapeHtml(report.details||'No extra details')+'</p><small>Reporter: '+escapeHtml(report.reporter?.username||'member')+' · Target owner: '+escapeHtml(report.targetOwner?.username||'unknown')+'</small><form class="moderation-report-form" data-moderate-report="'+escapeHtml(report.id)+'"><select name="status"><option value="triaged">Mark in review</option><option value="actioned">Mark actioned</option><option value="dismissed">Dismiss</option><option value="open">Keep open</option></select><select name="action"><option value="">No content action</option>'+actions+'</select><button class="primary" type="submit">Apply</button></form></article>';
+          }).join('')||'<p class="settings-empty">No open reports.</p>';
+          panel.querySelectorAll('[data-moderate-report]').forEach(form=>form.addEventListener('submit',async event=>{
+            event.preventDefault();const values=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+            try{await api('/moderation/reports/'+encodeURIComponent(form.dataset.moderateReport),{method:'PATCH',body:JSON.stringify({status:values.get('status'),action:values.get('action')||null})});await loadModerationQueue();}
+            catch(error){window.alert(error.message);button.disabled=false;}
+          }));
+        }catch(error){panel.textContent=error.message;}
+      }
+      document.querySelector('#refresh-moderation')?.addEventListener('click',loadModerationQueue);
+      if(canModerate)loadModerationQueue();
+      
       document.querySelector('#settings-form')?.addEventListener('submit', async event => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
