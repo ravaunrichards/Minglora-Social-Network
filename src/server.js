@@ -11,7 +11,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -58,6 +58,16 @@ function validateSettingsPatch(input,user){
 const json = (res, status, body, headers={}) => { res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS, ...headers }); res.end(JSON.stringify(body)); };
 const cookie = (req, name) => (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1);
 const sign = value => crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
+const sessionCipherKey=crypto.createHash('sha256').update(SESSION_SECRET+'|minglora-session-vault-v1').digest();
+function sealSessionAuth(value){if(!value?.access_token)return null;const iv=crypto.randomBytes(12);const cipher=crypto.createCipheriv('aes-256-gcm',sessionCipherKey,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify({access_token:value.access_token,refresh_token:value.refresh_token||'',expires_in:Number(value.expires_in||3600),token_type:value.token_type||'bearer'}),'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),encrypted]).toString('base64url');}
+function openSessionAuth(sealed){if(!sealed)return null;try{const bytes=Buffer.from(sealed,'base64url');const iv=bytes.subarray(0,12),tag=bytes.subarray(12,28),encrypted=bytes.subarray(28);const decipher=crypto.createDecipheriv('aes-256-gcm',sessionCipherKey,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(encrypted),decipher.final()]).toString('utf8'));}catch{return null;}}
+function sessionFromRequest(req){const raw=cookie(req,'sid');if(!raw)return null;let decoded;try{decoded=decodeURIComponent(raw);}catch{return null;}const parts=decoded.split('.');if(parts.length!==2)return null;const [id,sig]=parts;if(!id||!sig)return null;const expected=Buffer.from(sign(id),'utf8'),supplied=Buffer.from(sig,'utf8');if(supplied.length!==expected.length||!crypto.timingSafeEqual(supplied,expected))return null;return db.sessions.find(item=>item.id===id&&new Date(item.expiresAt)>new Date())||null;}
+function isModerator(user){const ids=String(process.env.MODERATOR_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);return Boolean(user&&(user.role==='admin'||user.role==='moderator'||ids.includes(user.id)));}
+const loginFailures=new Map();
+function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(ip+'|'+email).digest('hex');}
+function checkLoginRateLimit(req,email){const key=loginRateLimitKey(req,email),entry=loginFailures.get(key);if(!entry)return {allowed:true,key};if(entry.resetAt<Date.now()){loginFailures.delete(key);return {allowed:true,key};}return {allowed:entry.count<5,key,retryAfterMs:Math.max(0,entry.resetAt-Date.now())};}
+function recordLoginFailure(key){const current=loginFailures.get(key);if(!current||current.resetAt<Date.now())loginFailures.set(key,{count:1,resetAt:Date.now()+15*60*1000});else current.count++;}
+function clearLoginFailures(key){loginFailures.delete(key);}
 function isSameOriginApiWrite(req) {
   if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') return false;
   const suppliedOrigin = req.headers.origin;
@@ -77,11 +87,10 @@ function isSameOriginApiWrite(req) {
 function appSessionCookie(sid) {
   return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
-async function createAppSession(user) {
-  const sid = uid();
-  db.sessions.push({ id:sid, userId:user.id, expiresAt:new Date(Date.now()+7*86400000).toISOString() });
-  await saveStore();
-  return appSessionCookie(sid);
+async function createAppSession(user,authTokens=null,req=null) {
+  const sid=uid();const createdAt=now();
+  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(Date.now()+Math.max(60,Number(authTokens.expires_in||3600))*1000).toISOString():null,userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240),mfaVerified:true});
+  await saveStore();return appSessionCookie(sid);
 }
 function ensureLocalUser(authUser, fallback = {}) {
   if (!authUser?.id || !authUser?.email) throw Object.assign(new Error('Supabase Auth returned an incomplete user record.'), { status:502 });
@@ -103,25 +112,8 @@ function ensureLocalUser(authUser, fallback = {}) {
   }
   return user;
 }
-function sessionUser(req) {
-  const raw = cookie(req, 'sid');
-  if (!raw) return null;
-  let decoded;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
-  const parts = decoded.split('.');
-  if (parts.length !== 2) return null;
-  const [id, sig] = parts;
-  if (!id || !sig) return null;
-  const expected = Buffer.from(sign(id), 'utf8');
-  const supplied = Buffer.from(sig, 'utf8');
-  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return null;
-  const session = db.sessions.find(s => s.id === id && new Date(s.expiresAt) > new Date());
-  return session ? db.users.find(u => u.id === session.userId) || null : null;
-}
+function sessionUser(req) {const session=sessionFromRequest(req);return session?db.users.find(item=>item.id===session.userId)||null:null;}
+async function sessionAuth(session){if(!session?.authSealed)return null;let tokens=openSessionAuth(session.authSealed);if(!tokens?.access_token)return null;if(session.authExpiresAt&&new Date(session.authExpiresAt).getTime()<Date.now()+60000&&tokens.refresh_token){const refreshed=await supabaseRefreshSession(tokens.refresh_token);tokens={...tokens,...refreshed};session.authSealed=sealSessionAuth(tokens);session.authExpiresAt=new Date(Date.now()+Math.max(60,Number(tokens.expires_in||3600))*1000).toISOString();await saveStore();}return tokens;}
 async function body(req, maxBytes=1_000_000) {
   let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
