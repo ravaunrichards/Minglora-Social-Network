@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = input.action;
-  if (!["load", "save", "health", "media_upload"].includes(String(action))) {
+  if (!["load", "save", "health", "media_upload", "media_sign"].includes(String(action))) {
     return json(400, { error: "Unsupported action." });
   }
 
@@ -78,50 +78,89 @@ Deno.serve(async (req: Request) => {
     const slot = String(input.slot || "");
     const mimeType = String(input.mimeType || "").toLowerCase();
     const base64 = String(input.base64 || "");
-    const isAvatar = slot === "avatar";
-    const isCover = slot === "cover";
-    const bucket = isAvatar ? "minglora-avatars" : isCover ? "minglora-covers" : "";
-    const maxBytes = 8 * 1024 * 1024;
-    const extensionByMime: Record<string, string> = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "image/avif": "avif"
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const imageExtensions: Record<string,string> = {
+      "image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"
     };
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId) ||
-        !bucket || !extensionByMime[mimeType] ||
+    const postExtensions: Record<string,string> = {
+      ...imageExtensions,
+      "video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a",
+      "model/gltf-binary":"glb"
+    };
+    const storyExtensions: Record<string,string> = {
+      ...imageExtensions,"video/mp4":"mp4","video/webm":"webm"
+    };
+    const extensions = slot === "avatar" || slot === "cover" ? imageExtensions
+      : slot === "post" ? postExtensions : slot === "story" ? storyExtensions : {};
+    const bucket = slot === "avatar" ? "minglora-avatars"
+      : slot === "cover" ? "minglora-covers"
+      : slot === "post" ? "minglora-post-media"
+      : slot === "story" ? "minglora-stories" : "";
+    const maxBytes = 8 * 1024 * 1024;
+    if (!uuidPattern.test(ownerId) || !bucket || !extensions[mimeType] ||
         !base64 || base64.length > Math.ceil(maxBytes * 4 / 3) + 8 ||
         !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
-      return json(400, { error: "Choose a supported profile image or cover photo." });
+      return json(400, { error: "Choose a supported image, video, audio or GLB file." });
     }
     let binary: string;
-    try {
-      binary = atob(base64);
-    } catch {
-      return json(400, { error: "The selected image could not be decoded." });
+    try { binary = atob(base64); } catch {
+      return json(400, { error: "The selected file could not be decoded." });
     }
     if (!binary.length || binary.length > maxBytes) {
-      return json(413, { error: "Images must be 8 MB or smaller." });
+      return json(413, { error: "Each media file must be 8 MB or smaller." });
     }
     const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
-    const hasPrefix = (prefix: number[]) => prefix.every((value, index) => bytes[index] === value);
-    const ascii = (start: number, end: number) => String.fromCharCode(...bytes.slice(start, end));
-    const signatureValid =
-      (mimeType === "image/jpeg" && hasPrefix([0xff, 0xd8, 0xff])) ||
-      (mimeType === "image/png" && hasPrefix([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ||
-      (mimeType === "image/webp" && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") ||
-      (mimeType === "image/avif" && ascii(4, 8) === "ftyp" && ["avif", "avis", "mif1"].includes(ascii(8, 12)));
-    if (!signatureValid) return json(415, { error: "The image contents do not match the selected file type." });
-
-    const objectPath = `${ownerId}/${crypto.randomUUID()}.${extensionByMime[mimeType]}`;
-    const { error: uploadError } = await admin.storage.from(bucket).upload(objectPath, bytes, {
-      contentType: mimeType,
-      cacheControl: "31536000",
-      upsert: false
+    const hasPrefix = (prefix: number[]) => prefix.every((value,index)=>bytes[index]===value);
+    const ascii = (start:number,end:number) => String.fromCharCode(...bytes.slice(start,end));
+    const imageValid =
+      (mimeType==="image/jpeg"&&hasPrefix([0xff,0xd8,0xff])) ||
+      (mimeType==="image/png"&&hasPrefix([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])) ||
+      (mimeType==="image/webp"&&ascii(0,4)==="RIFF"&&ascii(8,12)==="WEBP") ||
+      (mimeType==="image/avif"&&ascii(4,8)==="ftyp"&&["avif","avis","mif1"].includes(ascii(8,12)));
+    const mediaValid =
+      (mimeType==="video/mp4"&&ascii(4,8)==="ftyp") ||
+      (mimeType==="video/webm"&&hasPrefix([0x1a,0x45,0xdf,0xa3])) ||
+      (mimeType==="audio/mpeg"&&ascii(0,3)==="ID3") ||
+      (mimeType==="audio/mp4"&&ascii(4,8)==="ftyp") ||
+      (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF");
+    if (!imageValid && !mediaValid) {
+      return json(415, { error: "The file contents do not match the selected media type." });
+    }
+    const objectPath = `${ownerId}/${crypto.randomUUID()}.${extensions[mimeType]}`;
+    const { error: uploadError } = await admin.storage.from(bucket).upload(objectPath,bytes,{
+      contentType:mimeType,cacheControl:"3600",upsert:false
     });
-    if (uploadError) return json(502, { error: "Minglora could not store the selected image." });
-    const { data: publicData } = admin.storage.from(bucket).getPublicUrl(objectPath);
-    return json(201, { url: publicData.publicUrl, path: objectPath, bucket, byteSize: bytes.byteLength });
+    if(uploadError)return json(502,{error:"Minglora could not store the selected media."});
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const result: Record<string,unknown> = {
+      bucket,path:objectPath,mimeType,mediaType,byteSize:bytes.byteLength
+    };
+    if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
+      const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);
+      result.url=data.publicUrl;
+    } else {
+      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
+      if(error)return json(502,{error:"The uploaded media could not be prepared for viewing."});
+      result.signedUrl=data.signedUrl;
+    }
+    return json(201,result);
+  }
+
+  if (action === "media_sign") {
+    const ownerId=String(input.ownerId||"");
+    const bucket=String(input.bucket||"");
+    const objectPath=String(input.path||"");
+    const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
+      return json(400,{error:"Invalid media reference."});
+    }
+    if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
+      const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);
+      return json(200,{url:data.publicUrl});
+    }
+    const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
+    if(error||!data?.signedUrl)return json(404,{error:"Media is unavailable."});
+    return json(200,{url:data.signedUrl});
   }
 
   if (action === "load" || action === "health") {
