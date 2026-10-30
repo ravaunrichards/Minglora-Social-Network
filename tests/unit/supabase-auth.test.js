@@ -121,3 +121,14 @@ test('Supabase password sign-in uses the Auth password grant endpoint', async ()
     globalThis.fetch = saved.fetch;
   }
 });
+
+
+test('Minglora skips stale placeholder Supabase credentials when another valid pair exists', () => {
+  withCleanSupabaseEnv(() => {
+    process.env.SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_REPLACE_ME';
+    process.env.VITE_SUPABASE_URL = 'https://minglora-project.supabase.co';
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_valid_test';
+    assert.equal(supabaseAuthConfigured(), true);
+  });
+});

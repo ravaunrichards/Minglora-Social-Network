@@ -39,7 +39,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       NODE_ENV: 'test',
       PERSISTENCE_DRIVER: 'json',
       DATA_DIR: testDataDir,
-      SESSION_SECRET: 'test-secret-with-enough-entropy-for-isolated-tests'
+      SESSION_SECRET: 'test-secret-with-enough-entropy-for-isolated-tests',
+      TENOR_API_KEY: ''
     },
     stdio: 'ignore'
   });
@@ -552,6 +553,29 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   cookie = secondCookie;
   const unknownConversationRead = await request('/api/messages/not-a-real-member/read', { method: 'POST', body: '{}' });
   assert.equal(unknownConversationRead.status, 404);
+
+  const stickerMessage = await request('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify({ to: firstUserId, stickerId: 'heart' })
+  });
+  assert.equal(stickerMessage.status, 201);
+  assert.equal(stickerMessage.body.message.stickerId, 'heart');
+  assert.equal(stickerMessage.body.message.text, '💖');
+
+  const invalidSticker = await request('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify({ to: firstUserId, stickerId: 'not-a-real-sticker' })
+  });
+  assert.equal(invalidSticker.status, 400);
+
+  const unsafeGif = await request('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify({ to: firstUserId, gifUrl: 'https://not-tenor.example/file.gif' })
+  });
+  assert.equal(unsafeGif.status, 400);
+
+  const unconfiguredGifSearch = await request('/api/messages/gifs?q=funny');
+  assert.equal(unconfiguredGifSearch.status, 503);
 
   cookie = firstCookie;
   const mutualFriends = await request('/api/friends');

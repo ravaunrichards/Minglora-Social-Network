@@ -19,7 +19,7 @@ The local JSON store includes narrowly scoped cleanup for explicitly identified 
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
 - Public Pages with unique handles, Page follows, Page details, owner publishing with device-uploaded media and deletion
 - Text and uploaded photo/video Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
-- Direct one-to-one text messages with authorized uploaded image/video/audio/document attachments, unread counts, recipient-confirmed read receipts and floating Messenger-style chat windows (visible windows refresh every five seconds; this is polling, not WebSocket delivery)
+- Direct one-to-one messaging with uploaded media/documents, browser-recorded voice notes, a curated sticker pack, Tenor GIF search/send when configured, emoji composer, compact Messenger-style chat popups, unread counts and read receipts; active windows refresh every five seconds (polling, not WebSocket delivery)
 - In-app notifications for supported actions, with persisted account-level notification controls
 - Dedicated Settings & Privacy hub with server-persisted privacy and notification preferences, password/email change requests, TOTP MFA, session revocation, blocked members and downloadable account export
 - Basic substring search across people, posts, groups and Pages

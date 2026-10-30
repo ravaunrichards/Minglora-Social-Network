@@ -1,7 +1,11 @@
 # Messaging
 
-**Current:** Direct one-to-one messaging with text and authorized uploaded attachments; blocked relationships are enforced; inbox unread counts and recipient-confirmed read receipts are persisted. Visible floating chat windows refresh from the authenticated API every five seconds and mark incoming messages read only while the conversation window is open. Desktop windows use a 328 × 455 px Messenger-style footprint and adapt to mobile screens.
+**Current:** Direct one-to-one conversations with text, authorized photo/video/audio/document attachments, browser-recorded voice notes (WebM), a curated sticker set and Tenor GIF search/send when the private `TENOR_API_KEY` is configured. Profile Message actions open a compact popup immediately; an empty popup is ephemeral and does not create an Inbox conversation until the first message is sent. Inbox lists only actual conversations. Read receipts, unread counts and blocked-pair checks are enforced by the API.
 
-**API:** `GET /api/messages`, `POST /api/messages`, and `POST /api/messages/:peerId/read`. The read endpoint only changes messages sent by the selected peer to the authenticated member. It rejects self-targets, unknown peers, blocked pairs and pairs without an established message conversation.
+**Composer:** photo/video/file attachment picker, voice recording, emoji panel, stickers, Tenor GIF search, message text and send action. Voice notes upload through the signed media pipeline as private message attachments. Voice recording needs microphone permission and a secure browser context.
 
-**Ownership:** conversation membership, message delivery/read state, edits/deletes, attachments, typing/presence, message requests, blocks, abuse reporting and retention. The current implementation is direct one-to-one only and uses the JSONB compatibility state adapter; it is not yet a normalized transactional messaging repository. Five-second polling is not WebSocket or Supabase Realtime delivery.
+**API:** `GET /api/messages`, `GET /api/messages/gifs?q=...`, `POST /api/messages`, and `POST /api/messages/:peerId/read`. GIF search is server-side; the Tenor API key is never exposed to the browser. Only HTTPS GIF URLs returned from `media.tenor.com` are accepted for sending.
+
+**Token reliability:** Supabase refresh-token rotation is serialized per application session so concurrent API requests cannot consume the same one-time refresh token. Expired/reused refresh tokens invalidate only that session; transient provider outages do not erase it.
+
+**Remaining:** WebSocket/Supabase Realtime delivery, group conversations, message edit/delete/retention, typing/presence, and normalized transactional conversation repositories are not implemented. Five-second refresh remains polling, not realtime.

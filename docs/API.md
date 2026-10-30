@@ -116,8 +116,9 @@ Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with a
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/messages` | Current account's direct conversations, message history and unread counts |
-| POST | `/api/messages` | Send a direct text message or up to five authorized attachments |
+| GET | `/api/messages` | Current account's established direct conversations, history and unread counts |
+| GET | `/api/messages/gifs?q=...` | Search Tenor GIFs through Minglora's server (requires private `TENOR_API_KEY`) |
+| POST | `/api/messages` | Send text, up to five authorized attachments, a Minglora sticker or verified Tenor GIF |
 | POST | `/api/messages/:peerId/read` | Mark incoming messages from the selected conversation member as read; returns the number updated |
 | GET | `/api/notifications` | Current account's notifications |
 | POST | `/api/notifications/read` | Mark all current account notifications as read |
