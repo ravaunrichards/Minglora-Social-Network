@@ -165,3 +165,6 @@
   .settings-session-row{align-items:flex-start}
   .post-media-3d{height:280px}
 }
+
+.message-report{display:block;margin:5px 0 0 auto;border:0;background:transparent;color:var(--muted);font-size:10px;text-decoration:underline;padding:2px 0}.message-report:hover{color:var(--blue)}
+.connection-row{gap:12px}.connection-row button{flex-shrink:0}
