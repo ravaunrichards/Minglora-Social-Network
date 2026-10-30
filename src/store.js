@@ -103,29 +103,8 @@ async function connectPostgres() {
   });
   pool.on('error', error => console.error('Minglora PostgreSQL pool error:', error.message));
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS public.minglora_runtime_state (
-      state_key text PRIMARY KEY CHECK (state_key = 'primary'),
-      state jsonb NOT NULL CHECK (jsonb_typeof(state) = 'object'),
-      revision bigint NOT NULL DEFAULT 1,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now()
-    )
-  `);
-  await pool.query(`
-    ALTER TABLE public.minglora_runtime_state ENABLE ROW LEVEL SECURITY;
-    REVOKE ALL PRIVILEGES ON TABLE public.minglora_runtime_state FROM PUBLIC;
-    DO $$
-    BEGIN
-      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-        EXECUTE 'REVOKE ALL PRIVILEGES ON TABLE public.minglora_runtime_state FROM anon';
-      END IF;
-      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-        EXECUTE 'REVOKE ALL PRIVILEGES ON TABLE public.minglora_runtime_state FROM authenticated';
-      END IF;
-    END
-    $$;
-  `);
+  // Schema and privileges are provisioned by versioned Supabase migrations.
+  // The runtime role is deliberately not a table owner and cannot run DDL.
   await pool.query(
     `INSERT INTO public.minglora_runtime_state (state_key, state)
      VALUES ('primary', $1::jsonb)
