@@ -4,6 +4,8 @@ Minglora's dedicated Supabase project is `gzycobgbasnqqhnympkr`. The live projec
 
 - `005_minglora_supabase_relational_platform.sql` — Auth-linked profile records, social and content domains, messaging, Groups, Pages, Stories, Live, calls, Marketplace, events, reporting, fundraisers, data-rights requests, protected runtime state, RLS policies, Storage buckets/policies, and Realtime publication membership.
 - `006_minglora_database_hardening.sql` — missing foreign-key indexes, a primary key on `memory_exclusions`, and restricted execution of the platform's `public.rls_auto_enable()` function.
+- `007_minglora_authorization_and_live_integrity.sql` — fixes group and Page ownership scoping, limits client access to Live/call state transitions, and hardens fundraiser review state.
+- `008_minglora_live_policy_consolidation.sql` — consolidates Live participant policies to reduce permissive-policy overhead.
 
 The generated Supabase database types are in `database/types/database.types.ts`.
 
