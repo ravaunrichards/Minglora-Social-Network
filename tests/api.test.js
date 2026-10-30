@@ -133,7 +133,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       preferences: { theme: 'dark', feedSort: 'oldest', reducedMotion: true }
     })
   });
-  assert.equal(savedSettings.status, 200);
+  assert.equal(savedSettings.status, 200, JSON.stringify(savedSettings.body));
   assert.equal(savedSettings.body.settings.privacy.profileVisibility, 'friends');
   assert.equal(savedSettings.body.settings.preferences.theme, 'dark');
   const reloadedSettings = await request('/api/settings');
