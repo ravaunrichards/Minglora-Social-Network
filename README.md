@@ -6,7 +6,7 @@
 
 A new installation starts empty. The application does **not** create example users, sample posts, pretend reactions, fake messages, placeholder groups, invented notifications or fabricated engagement counts. People must register and publish real content before those areas contain records.
 
-The JSON store includes narrowly scoped cleanup for explicitly identified legacy sample records. It must not remove unrelated user records. Automated tests use isolated temporary storage.
+The local JSON store includes narrowly scoped cleanup for explicitly identified legacy sample records. It must not remove unrelated user records. Automated tests use isolated temporary storage.
 
 ## What works in the current application
 
@@ -23,7 +23,7 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - In-app notifications for supported actions
 - Basic substring search across people, posts, groups and Pages
 - Server-side LiveKit session and token API foundation with host publishing permissions and subscriber-only viewer tokens (requires a separate Minglora LiveKit Cloud project and server credentials)
-- JSON-file persistence for local development and PostgreSQL-backed durable storage for one running API instance
+- Local JSON-file persistence for development and durable Supabase-backed persistence for the hosted API
 - Node test runner, integration tests, Docker packaging and GitHub Actions CI
 
 These are the capabilities in the **current runtime**, not a claim of Facebook feature parity.
@@ -31,18 +31,16 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 ## Expanded repository layout
 
 - `public/`: current browser UI and client code.
-- `src/server.js` and `src/store.js`: current HTTP/API and JSON/PostgreSQL persistence adapters.
+- `src/server.js` and `src/store.js`: current HTTP/API and local JSON / Supabase persistence adapters.
 - `src/domain/`: reusable, unit-tested validation, cursor-pagination and relationship-policy helpers. Validation is integrated into registration, post creation and profile editing; optional cursor pagination is integrated into the feed. The relationship visibility helper still needs to be applied consistently to every privacy-sensitive route.
 - `backend/modules/`: domain boundaries for posts, profiles, relationships, Groups, Pages, Stories, messaging, notifications, search, media, Live, Video, Marketplace, Ads, privacy, moderation, Reels, albums, calls, Memories, Events and data rights. Groups, Pages and Stories have imported service modules with unit tests; other module documents are not proof of implementation.
 - `apps/`: documented boundaries for web, Android, iOS, desktop, TV, admin and Creator Studio clients. Only the browser client is currently implemented.
 - `frontend/`: target component, layout, page, navigation and theme organization; current UI remains in `public/`.
 - `database/migrations/005_minglora_supabase_relational_platform.sql`: consolidated Supabase-native relational schema using `auth.users` as the identity source, with RLS, storage and Realtime configuration.
-- `database/migrations/006_minglora_database_hardening.sql`: foreign-key indexes, missing primary-key repair and function privilege hardening.
-- `database/migrations/007_minglora_authorization_and_live_integrity.sql`: corrects group/Page access scope and reserves Live/call lifecycle changes for trusted server flows.
-- `database/migrations/008_minglora_live_policy_consolidation.sql`: consolidates Live participant RLS policies.
-- `database/migrations/009`–`013`: restricted runtime-role creation, write-column and ownership hardening, private RLS recursion helpers, and a login lock pending private password setup.
+- `database/migrations/006`–`014`: database hardening, authorization controls, restricted-role lockdown and the Supabase Edge Function runtime gateway.
 - `database/types/database.types.ts`: generated types for the deployed Minglora Supabase schema.
 - `database/migrations/001`–`004`: historical design/setup artifacts; do not apply these separately to a clean Supabase project.
+- `supabase/functions/minglora-runtime-state/index.ts`: server-only HTTPS gateway for the current application persistence adapter.
 - `packages/`: planned shared API contracts, validation and platform-neutral helpers.
 - `tests/`: current API integration tests plus unit tests and test plans for security, accessibility, performance and browser flows.
 - `docs/`: architecture map, feature catalog, roadmap, API, security and deployment guides.
@@ -56,9 +54,11 @@ See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATF
 
 ## Persistence modes
 
-Local development defaults to the empty-first-run JSON store. For hosted persistence, set `PERSISTENCE_DRIVER=postgres`, `DATABASE_URL`, and `PGSSLMODE=require`. `public.minglora_runtime_state` is pre-provisioned by the versioned Supabase migrations; the runtime database role does not run DDL. See [PostgreSQL setup](docs/POSTGRES_SETUP.md) and [Render configuration](infrastructure/render/README.md).
+Local development defaults to the empty-first-run JSON store. The hosted application uses `PERSISTENCE_DRIVER=supabase` and calls Minglora's secured Supabase Edge Function over HTTPS. The Edge Function reads and writes the existing `public.minglora_runtime_state` row using the server-only Supabase secret key provided by Supabase. The Render app does not install the `pg` package, open a raw PostgreSQL connection, or require a database connection string/password.
 
-The live Supabase project contains the normalized relational schema, Auth-linked profiles, RLS, Storage buckets and Realtime publication. The current Node API still stores route state in one JSONB compatibility document; it does not yet use the normalized tables as its active repository layer. That adapter is durable but single-instance only. Do not scale horizontally until transaction-oriented repositories replace it.
+Supabase itself is the managed PostgreSQL database. There is no separate Render PostgreSQL database. The Render-to-function credential is held only in Render; Supabase stores only its SHA-256 digest. See [Supabase persistence setup](docs/POSTGRES_SETUP.md) and [Render configuration](infrastructure/render/README.md).
+
+**Current architecture limitation:** the app still serializes its route model into one JSONB compatibility document. The normalized Supabase relational schema, policies, Storage buckets and Realtime publication are installed, but the current Node route handlers have not yet been migrated to use those normalized tables as individual transactional repositories. This adapter is durable but single-instance only. Do not scale horizontally or add independent write workers until the route layer has been converted to transactional repositories.
 
 ## Run locally
 
@@ -92,7 +92,7 @@ Set a strong `SESSION_SECRET` in your shell or private local environment, then r
 docker compose up --build
 ```
 
-The Compose service mounts a named volume at `/app/data` to persist application records. Never commit environment files, session secrets, database files or production credentials.
+The Compose service mounts a named volume at `/app/data` to persist local application records. Never commit environment files, session secrets, database files or production credentials.
 
 ## Current API overview
 
@@ -115,13 +115,15 @@ See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must 
 
 ## Production limitations
 
-The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter currently provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Minglora's Supabase-native relational schema and hardening migrations 005–013 are installed. Application routes still use the single-row JSONB compatibility adapter rather than the normalized domain tables; this is not a high-concurrency relational repository implementation.
+Hosted persistence now uses Supabase's PostgreSQL database through the Supabase Edge Function gateway. The old direct app database login is disabled; no raw database URL or password is required on Render. JSON mode remains for development only because the Render filesystem is ephemeral.
+
+The single-row JSONB compatibility adapter is durable but does not provide normalized relational transactions or multi-instance concurrency. Minglora's Supabase relational schema and hardening migrations 005–014 are installed. Application routes still need to move to the normalized tables before the system can be considered a high-concurrency social-network data layer.
 
 Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, wire Supabase Auth URL and SMTP settings, implement rate limiting, CSRF safeguards, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
 
 ## Supabase Auth integration
 
-New registrations are sent to Minglora Supabase Auth. The browser never receives a service-role key. When email confirmation is enabled in Supabase, Minglora displays a confirmation message and waits for the user to verify the email before login. A database trigger creates the matching profile row. Existing accounts created by the legacy local password store are migrated lazily on their next successful legacy-password login; the old password is verified locally before a Supabase Auth user is created. Minglora's Supabase migrations 005–013 are applied to its dedicated project. Supabase Auth is the identity source and the database creates a matching profile automatically. The Minglora project URL and publishable key are configured on Render. The private PostgreSQL connection remains pending the `minglora_runtime` password being set in Supabase and the corresponding `DATABASE_URL` secret being added to Render. Production startup refuses a legacy-only or placeholder Supabase configuration.
+New registrations are sent to Minglora Supabase Auth. The browser never receives a service-role or secret key. When email confirmation is enabled in Supabase, Minglora displays a confirmation message and waits for the user to verify the email before login. A database trigger creates the matching profile row. Existing accounts created by the legacy local password store are migrated lazily on their next successful legacy-password login; the old password is verified locally before a Supabase Auth user is created. Minglora's Supabase migrations 005–014 are applied to its dedicated project. Supabase Auth is the identity source and the database creates a matching profile automatically. The project URL and publishable key are configured on Render. Production uses the secured Edge Function runtime gateway; no `DATABASE_URL` or direct PostgreSQL login is required.
 
 Copy `.env.example` to a private environment file and replace each `YOUR_PROJECT_REF` / `REPLACE_ME` value with credentials from Minglora's own services.
 
