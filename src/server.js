@@ -343,6 +343,12 @@ const LIVE_HOST_CONNECT_GRACE_MS = 30_000;
 const liveSessionEndOperations = new Map();
 let liveSessionCleanupReady = Promise.resolve({ ended: 0, preserved: 0, verified: true });
 
+function isMissingLiveKitRoom(error) {
+  const status = Number(error?.statusCode || error?.status || error?.response?.status || 0);
+  const message = String(error?.message || '');
+  return status === 404 || /requested room does not exist|room not found|no such room/i.test(message);
+}
+
 async function endLiveSession(session, { deleteRoom = false } = {}) {
   if (!session?.id) return false;
   const active = liveSessionEndOperations.get(session.id);
@@ -394,7 +400,13 @@ async function cleanupPersistedLiveSessions() {
       await endLiveSession(session, { deleteRoom: true });
       ended++;
     } catch (error) {
-      console.warn('[Minglora LIVE cleanup] Could not reconcile a saved LIVE session.', { sessionId: session.id, message: String(error?.message || 'verification failed').slice(0, 180) });
+      const startedAt = new Date(session.createdAt || 0).getTime();
+      if (isMissingLiveKitRoom(error) && Number.isFinite(startedAt) && Date.now() - startedAt >= LIVE_HOST_CONNECT_GRACE_MS) {
+        try { await endLiveSession(session); ended++; }
+        catch (cleanupError) { console.warn('[Minglora LIVE cleanup] Could not close a missing-room session.', { sessionId: session.id, message: String(cleanupError?.message || 'cleanup failed').slice(0, 180) }); }
+      } else {
+        console.warn('[Minglora LIVE cleanup] Could not reconcile a saved LIVE session.', { sessionId: session.id, message: String(error?.message || 'verification failed').slice(0, 180) });
+      }
     }
   }
   return { ended, preserved, verified: true };
@@ -943,7 +955,12 @@ async function route(req, res) {
               viewerCount: participants.filter(participant => participant.identity !== session.hostId).length,
               viewerCountVerified: true
             });
-          } catch {
+          } catch (error) {
+            const startedAt = new Date(session.createdAt || 0).getTime();
+            if (isMissingLiveKitRoom(error) && Number.isFinite(startedAt) && Date.now() - startedAt >= LIVE_HOST_CONNECT_GRACE_MS) {
+              try { await endLiveSession(session); }
+              catch (cleanupError) { console.warn('[Minglora LIVE cleanup] Could not close a missing-room session.', { sessionId: session.id, message: String(cleanupError?.message || 'cleanup failed').slice(0, 180) }); }
+            }
             // Fail closed: an unverified room is not advertised as live.
           }
         }
