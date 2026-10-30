@@ -354,14 +354,14 @@ Deno.serve(async (req: Request) => {
     const image={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
     const post={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","model/gltf-binary":"glb"};
     const story={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"};
-    const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","application/pdf":"pdf"};
+    const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","application/pdf":"pdf","text/plain":"txt","text/csv":"csv","application/zip":"zip","application/x-zip-compressed":"zip","application/msword":"doc","application/vnd.ms-excel":"xls","application/vnd.ms-powerpoint":"ppt","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"xlsx","application/vnd.openxmlformats-officedocument.presentationml.presentation":"pptx"};
     const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="message"?message:{};
     const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="message"?"minglora-message-attachments":"";
     const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="message"?100*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
-    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="application/pdf"?"document":"model3d";
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const objectPath=`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
     const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(objectPath,{upsert:false});
     if(error||!data?.token)return json(502,{error:"Minglora could not prepare a secure upload."});
@@ -382,7 +382,7 @@ Deno.serve(async (req: Request) => {
       "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-post-media":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime","audio/mpeg","audio/mp4","audio/ogg","audio/webm","model/gltf-binary"],
-      "minglora-message-attachments":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/mp4","audio/ogg","application/pdf"],
+      "minglora-message-attachments":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/mp4","audio/ogg","application/pdf","text/plain","text/csv","application/zip","application/x-zip-compressed","application/msword","application/vnd.ms-excel","application/vnd.ms-powerpoint","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.openxmlformats-officedocument.presentationml.presentation"],
       "minglora-stories":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime"]
     };
     const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
@@ -415,12 +415,15 @@ Deno.serve(async (req: Request) => {
       (mimeType==="audio/mpeg"&&(ascii(0,3)==="ID3"||(prefix[0]===0xff&&(prefix[1]&0xe0)===0xe0)))||
       (mimeType==="audio/ogg"&&ascii(0,4)==="OggS")||
       (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF")||
-      (mimeType==="application/pdf"&&ascii(0,4)==="%PDF");
+      (mimeType==="application/pdf"&&ascii(0,4)==="%PDF")||
+      (["application/zip","application/x-zip-compressed","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.openxmlformats-officedocument.presentationml.presentation"].includes(mimeType)&&(starts([0x50,0x4b,0x03,0x04])||starts([0x50,0x4b,0x05,0x06])||starts([0x50,0x4b,0x07,0x08])))||
+      (["application/msword","application/vnd.ms-excel","application/vnd.ms-powerpoint"].includes(mimeType)&&starts([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1]))||
+      (["text/plain","text/csv"].includes(mimeType)&&prefix.length>0&&prefix.every(value=>value===9||value===10||value===13||value>=32));
     if(!validSignature){
       await admin.storage.from(bucket).remove([objectPath]);
       return json(415,{error:"The uploaded file contents do not match the selected media type. The file was removed."});
     }
-    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="application/pdf"?"document":"model3d";
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
       const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);result.url=data.publicUrl;
