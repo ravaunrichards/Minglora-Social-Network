@@ -10,7 +10,7 @@
 - Unsafe API requests reject cross-site Fetch Metadata and validate a supplied browser `Origin` against `APP_ORIGIN` or the effective request origin.
 - API and static responses include baseline content-type, frame, referrer and camera/microphone permissions headers.
 - Passwords are never returned in public account objects; local development passwords use salted scrypt hashes, while Supabase Auth owns production passwords.
-- Profile, post, Page and Story media use authenticated uploads, owner-scoped storage paths, server-side file-signature checks, 8 MB per-file caps and signed URLs for private media. Browser forms do not accept pasted image URLs.
+- Profile, post, Page and Story media use authenticated owner-scoped uploads with signed TUS upload tokens, 6 MB resumable chunks, automatic retries, per-slot size limits (10 MB avatar, 20 MB cover, 200 MB Story, 500 MB post/Page/group), server-side MIME/size/file-signature checks and signed URLs for private media. Media bytes are sent directly to Storage, not through the Node/Edge JSON gateway. Browser forms do not accept pasted image URLs.
 - Member reports, support ticket conversations, moderator report status changes, supported content/account actions and audit entries are persisted in the current application state.
 - Moderator actions are restricted to IDs in `MODERATOR_USER_IDS` or trusted accounts with explicit `admin`/`moderator` roles.
 - The runtime does not seed demo users, posts, messages, reactions or engagement counts.
