@@ -268,6 +268,40 @@ async function route(req, res) {
         await saveStore();
         return json(res,201,{slot,url:uploaded.url,user:safeUser(user),byteSize:bytes.length});
       }
+      if(method==='GET'&&p==='/api/account/export'){
+        const ownedPosts=db.posts.filter(item=>item.userId===user.id);
+        const ownedPostIds=new Set(ownedPosts.map(item=>item.id));
+        const ownedStories=db.stories.filter(item=>item.userId===user.id);
+        const ownedStoryIds=new Set(ownedStories.map(item=>item.id));
+        const ownedPages=db.pages.filter(item=>item.createdBy===user.id);
+        const ownedPageIds=new Set(ownedPages.map(item=>item.id));
+        const ownedGroups=db.groups.filter(item=>item.ownerId===user.id||(item.members||[]).includes(user.id));
+        const ownedGroupIds=new Set(ownedGroups.map(item=>item.id));
+        const exportData={
+          format:'minglora-account-export',
+          schemaVersion:1,
+          exportedAt:now(),
+          profile:{...safeUser(user),email:user.email||''},
+          settings:getUserSettings(user),
+          posts:ownedPosts,
+          comments:db.posts.flatMap(post=>(post.comments||[]).filter(comment=>comment.userId===user.id).map(comment=>({postId:post.id,...comment}))),
+          friendships:(db.friendships||[]).filter(item=>item.from===user.id||item.to===user.id),
+          follows:(db.follows||[]).filter(item=>item.followerId===user.id||item.followedId===user.id),
+          blocks:(db.blocks||[]).filter(item=>item.blockerId===user.id||item.blockedId===user.id),
+          savedPosts:(db.savedPosts||[]).filter(item=>item.userId===user.id),
+          groups:ownedGroups,
+          groupPosts:(db.groupPosts||[]).filter(item=>item.userId===user.id||ownedGroupIds.has(item.groupId)),
+          stories:ownedStories,
+          storyViews:(db.storyViews||[]).filter(item=>item.viewerId===user.id||ownedStoryIds.has(item.storyId)),
+          pages:ownedPages,
+          pageRoles:(db.pageRoles||[]).filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
+          pageFollows:(db.pageFollows||[]).filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
+          pagePosts:(db.pagePosts||[]).filter(item=>item.publishedBy===user.id||ownedPageIds.has(item.pageId)),
+          messages:(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id),
+          notifications:(db.notifications||[]).filter(item=>item.userId===user.id)
+        };
+        return json(res,200,exportData,{'Content-Disposition':'attachment; filename="minglora-account-export.json"','Cache-Control':'no-store'});
+      }
       if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{name:user.name,username:user.username,email:user.email||''}});
       if(method==='PATCH'&&p==='/api/settings'){
         const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
