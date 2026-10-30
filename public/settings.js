@@ -1,7 +1,7 @@
 (() => {
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone' },
-    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true },
+    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true },
     preferences: { theme: 'system', feedSort: 'recent', reducedMotion: false }
   };
 
@@ -94,6 +94,7 @@
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
             </section>
             <section class="card settings-card" id="settings-preferences">
               ${sectionHeading('☼', 'Preferences', 'Personalize the appearance and default feed order on your account.')}
@@ -332,7 +333,8 @@
             inApp: formData.has('notificationInApp'),
             friendRequests: formData.has('notificationFriendRequests'),
             messages: formData.has('notificationMessages'),
-            interactions: formData.has('notificationInteractions')
+            interactions: formData.has('notificationInteractions'),
+            push: formData.has('notificationPush')
           },
           preferences: {
             theme: formData.get('theme'),
