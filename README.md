@@ -16,7 +16,8 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination
 - Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, block/unblock, follower/following lists and profile counts
-- Basic group creation, browsing and membership
+- Group creation/browsing, join/leave, group detail pages and member-only text discussions
+- Text/HTTPS-image Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Direct text messages and conversation history
 - In-app notifications for supported actions
 - Basic substring search across people, posts and groups
@@ -88,7 +89,8 @@ All application API endpoints use the `/api` prefix.
 - `POST /api/posts/:id/reactions`, `POST /api/posts/:id/comments`
 - `GET /api/users`, `GET /api/users/:id`, `PATCH /api/users/me`
 - `POST /api/friends/:id/request`, `POST /api/friends/:id/accept`
-- `GET /api/groups`, `POST /api/groups`, `POST /api/groups/:id/join`
+- `GET /api/groups`, `POST /api/groups`, group detail and discussion routes under `/api/groups/:id`
+- `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
 - `GET /api/messages`, `POST /api/messages`
 - `GET /api/notifications`, `GET /api/search?q=...`
 
@@ -98,7 +100,7 @@ See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must 
 
 The current JSON store is intended for a single application instance. It does not provide relational transactions, schema migrations or production-grade multi-instance safety. The SQL migration is a design foundation only and is not applied automatically.
 
-Before opening public registration at scale, implement durable database access, migration and backup/restore procedures, rate limiting, CSRF review, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Stories, realtime messaging, Live video, Marketplace and Ads are not currently implemented.
+Before opening public registration at scale, implement durable database access, migration and backup/restore procedures, rate limiting, CSRF review, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
 
 ## Project identity
 
