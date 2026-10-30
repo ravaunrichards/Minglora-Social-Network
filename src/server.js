@@ -7,6 +7,9 @@ import { promisify } from 'node:util';
 import { db, saveStore, uid, now } from './store.js';
 import { normalizeEmail, normalizeUsername, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { paginateDescending } from './domain/pagination.js';
+import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
+import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
+import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -35,23 +38,16 @@ const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in 
 const notify = (userId, actorId, type, text) => db.notifications.unshift({ id:uid(), userId, actorId, type, text, createdAt:now(), read:false });
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
-const canManagePage = (pageId, userId) => ['owner','admin','editor'].includes(pageRole(pageId,userId));
-const canViewStory = (viewerId, story) => {
-  if (!viewerId || !story?.userId) return false;
-  if (viewerId === story.userId) return true;
-  if (blockedBetween(viewerId, story.userId)) return false;
-  if (story.audience === 'public') return true;
-  if (story.audience === 'friends') return db.friendships.some(f => f.status === 'accepted' && ((f.from === viewerId && f.to === story.userId) || (f.from === story.userId && f.to === viewerId)));
-  if (story.audience === 'followers') return (db.follows || []).some(f => f.followerId === viewerId && f.followedId === story.userId);
-  return false;
-};
+const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
+const canViewStory = (viewerId, story) => canViewStoryPolicy({
+  viewerId, story, friendships:db.friendships, follows:db.follows || [], blocks:db.blocks || []
+});
 function pruneExpiredStories() {
   const current = Date.now();
-  const expired = (db.stories || []).filter(story => !Number.isFinite(Date.parse(story.expiresAt)) || Date.parse(story.expiresAt) <= current);
-  if (!expired.length) return;
-  const expiredIds = new Set(expired.map(story => story.id));
-  db.stories = (db.stories || []).filter(story => !expiredIds.has(story.id));
-  db.storyViews = (db.storyViews || []).filter(view => !expiredIds.has(view.storyId));
+  const cleaned = removeExpiredStories({ stories:db.stories || [], views:db.storyViews || [], now:current });
+  if (!cleaned.removedCount) return;
+  db.stories = cleaned.stories;
+  db.storyViews = cleaned.views;
   saveStore();
 }
 function publicPost(p, viewerId) {
@@ -213,7 +209,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/groups\/([^/]+)\/posts$/);
       if(method==='POST'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        if(!group.members.includes(user.id))return json(res,403,{error:'Join this group before posting.'});
+        if(!canPublishGroupPost(group,user.id))return json(res,403,{error:'Join this group before posting.'});
         const text=String(input.text||'').trim();
         if(!text||text.length>5000)return json(res,400,{error:'Group post must contain 1–5000 characters.'});
         const post={id:uid(),groupId:group.id,userId:user.id,text,createdAt:now(),updatedAt:now()};
@@ -224,7 +220,7 @@ async function route(req, res) {
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
         const post=(db.groupPosts||[]).find(x=>x.groupId===group.id&&x.id===m[2]);
         if(!post)return json(res,404,{error:'Group post not found.'});
-        if(post.userId!==user.id&&group.ownerId!==user.id)return json(res,403,{error:'Only the post author or group owner can delete this post.'});
+        if(!canDeleteGroupPost(group,post,user.id))return json(res,403,{error:'Only the post author or group owner can delete this post.'});
         db.groupPosts=db.groupPosts.filter(x=>x.id!==post.id);saveStore();return json(res,200,{ok:true,id:post.id});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/join$/);
@@ -234,7 +230,7 @@ async function route(req, res) {
       }
       if(method==='DELETE'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        if(group.ownerId===user.id)return json(res,409,{error:'The group owner cannot leave without transferring ownership or deleting the group.'});
+        if(!canLeaveGroup(group,user.id))return json(res,409,{error:'The group owner cannot leave without transferring ownership or deleting the group.'});
         group.members=group.members.filter(id=>id!==user.id);saveStore();return json(res,200,{left:!group.members.includes(user.id)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)$/);
@@ -283,10 +279,9 @@ async function route(req, res) {
         return json(res,200,{pages});
       }
       if(method==='POST'&&p==='/api/pages'){
-        const handle=String(input.handle||'').trim().toLowerCase(),title=String(input.title||'').trim(),description=String(input.description||'').trim(),category=String(input.category||'').trim();
-        if(!/^[a-z0-9][a-z0-9_-]{2,29}$/.test(handle))return json(res,400,{error:'Page handle must be 3–30 lowercase letters, numbers, underscores or hyphens, starting with a letter or number.'});
-        if(title.length<3||title.length>160||description.length>2000||category.length>60)return json(res,400,{error:'Page title must be 3–160 characters; description max 2000 and category max 60.'});
-        if((db.pages||[]).some(page=>page.handle.toLowerCase()===handle))return json(res,409,{error:'That Page handle is already taken.'});
+        const validation=validatePageInput(input,db.pages || []);
+        if(!validation.valid)return json(res,validation.errors.some(error=>error.includes('already taken'))?409:400,{error:validation.errors.join(' ')});
+        const {handle,title,description,category}=validation.value;
         const page={id:uid(),handle,title,description,category,status:'active',createdBy:user.id,createdAt:now()};
         db.pages.push(page);db.pageRoles.push({pageId:page.id,userId:user.id,role:'owner',createdAt:now()});saveStore();
         return json(res,201,{page:{...page,owner:safeUser(user),followerCount:0,isFollowing:false,myRole:'owner'}});
@@ -316,7 +311,7 @@ async function route(req, res) {
         const page=(db.pages||[]).find(item=>item.id===m[1]);if(!page)return json(res,404,{error:'Page not found.'});
         const post=(db.pagePosts||[]).find(item=>item.id===m[2]&&item.pageId===page.id);
         if(!post)return json(res,404,{error:'Page post not found.'});
-        if(post.publishedBy!==user.id&&!['owner','admin'].includes(pageRole(page.id,user.id)))return json(res,403,{error:'Only the publisher or Page owner/admin can delete this post.'});
+        if(!canDeletePagePost(db.pageRoles || [],post,user.id))return json(res,403,{error:'Only the publisher or Page owner/admin can delete this post.'});
         db.pagePosts=db.pagePosts.filter(item=>item.id!==post.id);saveStore();return json(res,200,{ok:true,id:post.id});
       }
       m=p.match(/^\/api\/pages\/([^/]+)$/);
@@ -330,7 +325,7 @@ async function route(req, res) {
       if(method==='DELETE'&&m){
         const page=(db.pages||[]).find(item=>item.id===m[1]);
         if(!page)return json(res,404,{error:'Page not found.'});
-        if(page.createdBy!==user.id)return json(res,403,{error:'Only the Page owner can delete this Page.'});
+        if(!canDeletePage(db.pages || [],page.id,user.id))return json(res,403,{error:'Only the Page owner can delete this Page.'});
         db.pages=db.pages.filter(item=>item.id!==page.id);
         db.pageRoles=db.pageRoles.filter(role=>role.pageId!==page.id);
         db.pageFollows=db.pageFollows.filter(f=>f.pageId!==page.id);
