@@ -30,12 +30,12 @@ export function validatePostInput(input = {}) {
 const ABOUT_VISIBILITY_KEYS = ['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
 
 export function normalizeContactPhone(value) {
-  return String(value ?? '').trim().replace(/[\\s().-]/g,'');
+  return String(value ?? '').trim().replace(/[\s().-]/g,'');
 }
 
 export function validateContactPhone(value) {
   const phone=normalizeContactPhone(value);
-  return {valid:!phone || /^\\+[1-9]\\d{7,14}$/.test(phone),value:phone};
+  return {valid:!phone || /^\+[1-9]\d{7,14}$/.test(phone),value:phone};
 }
 
 export function validateProfilePatch(input = {}) {

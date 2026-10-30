@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUsername, validateEmail, validatePostInput, validateProfilePatch } from '../../src/domain/validation.js';
+import { normalizeUsername, validateEmail, validatePostInput, validateProfilePatch, normalizeContactPhone, validateContactPhone } from '../../src/domain/validation.js';
 import { decodeCursor, paginateDescending } from '../../src/domain/pagination.js';
 import { areFriends, canViewAudience, isBlocked } from '../../src/domain/relationships.js';
 
@@ -8,6 +8,14 @@ test('normalizes usernames and emails and rejects invalid emails', () => {
   assert.equal(normalizeUsername('  MiNgLe_1 '), 'mingle_1');
   assert.equal(validateEmail(' Person@Example.com ').valid, true);
   assert.equal(validateEmail('not-an-email').valid, false);
+});
+test('normalizes and validates international contact phone numbers', () => {
+  assert.equal(normalizeContactPhone(' +1 (876) 555-0123 '), '+18765550123');
+  assert.equal(validateContactPhone('+18765550123').valid, true);
+  assert.equal(validateContactPhone('+441234567890').valid, true);
+  assert.equal(validateContactPhone('18765550123').valid, false);
+  assert.equal(validateContactPhone('+01234567890').valid, false);
+  assert.equal(validateContactPhone('+123').valid, false);
 });
 test('accepts post text and owned media references but rejects pasted image URLs', () => {
   assert.equal(validatePostInput({}).valid, false);

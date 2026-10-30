@@ -75,6 +75,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       name: 'Minglora Test User',
       username: 'mingloratest',
       email: 'test-user@example.test',
+      phoneNumber: '+18765550123',
       password: 'TestPassword123!'
     })
   });
@@ -143,7 +144,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const firstAccountCookie = cookie;
   const privacyTestRegistration = await request('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ name: 'Privacy Test User', username: 'privacytestuser', email: 'privacy-user@example.test', password: 'PrivacyTestPassword123!' })
+    body: JSON.stringify({ name: 'Privacy Test User', username: 'privacytestuser', email: 'privacy-user@example.test', phoneNumber: '+18765550124', password: 'PrivacyTestPassword123!' })
   });
   assert.equal(privacyTestRegistration.status, 201);
   const hiddenProfile = await request(`/api/users/${registration.body.user.id}`);
@@ -151,7 +152,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const hiddenFromDiscovery = await request('/api/users');
   assert.equal(hiddenFromDiscovery.body.users.some(item => item.id === registration.body.user.id), false);
   const deniedFriendRequest = await request(`/api/friends/${registration.body.user.id}/request`, { method: 'POST', body: '{}' });
-  assert.equal(deniedFriendRequest.status, 403);
+  assert.equal(deniedFriendRequest.status, 409);
+  assert.match(deniedFriendRequest.body.error, /follow each other to become friends/i);
   const deniedMessage = await request('/api/messages', { method: 'POST', body: JSON.stringify({ to: registration.body.user.id, text: 'Should be blocked' }) });
   assert.equal(deniedMessage.status, 403);
   cookie = firstAccountCookie;
@@ -335,6 +337,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       name: 'Second Test User',
       username: 'secondtest',
       email: 'second-user@example.test',
+      phoneNumber: '+18765550125',
       password: 'AnotherPassword123!'
     })
   });
@@ -475,37 +478,14 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const invalidScope = await request('/api/feed?scope=secret');
   assert.equal(invalidScope.status, 400);
 
-  const sentRequest = await request(`/api/friends/${firstUserId}/request`, { method: 'POST', body: '{}' });
-  assert.equal(sentRequest.status, 200);
-  cookie = firstCookie;
-  const firstInbox = await request('/api/friends');
-  assert.equal(firstInbox.body.incoming.some(person => person.id === secondUserId), true);
-  const declineRequest = await request(`/api/friends/${secondUserId}/decline`, { method: 'POST', body: '{}' });
-  assert.equal(declineRequest.status, 200);
-  cookie = secondCookie;
-  const retriedRequest = await request(`/api/friends/${firstUserId}/request`, { method: 'POST', body: '{}' });
-  assert.equal(retriedRequest.status, 200);
-  cookie = firstCookie;
-  const acceptRequest = await request(`/api/friends/${secondUserId}/accept`, { method: 'POST', body: '{}' });
-  assert.equal(acceptRequest.status, 200);
-  cookie = secondCookie;
-  const friendsStoryAfterAcceptance = await request('/api/stories');
-  assert.equal(friendsStoryAfterAcceptance.body.stories.some(story => story.id === friendsStory.body.story.id), true);
-  const friendStoryView = await request(`/api/stories/${friendsStory.body.story.id}/view`, { method: 'POST', body: '{}' });
-  assert.equal(friendStoryView.status, 200);
-  cookie = firstCookie;
-  const deleteOwnStory = await request(`/api/stories/${friendsStory.body.story.id}`, { method: 'DELETE', body: '{}' });
-  assert.equal(deleteOwnStory.status, 200);
-  cookie = secondCookie;
-  const friendsFeedAfterAcceptance = await request('/api/feed?scope=friends');
-  assert.deepEqual(friendsFeedAfterAcceptance.body.posts.map(item => item.id), [post.body.post.id]);
-  const unfriend = await request(`/api/friends/${firstUserId}`, { method: 'DELETE', body: '{}' });
-  assert.equal(unfriend.status, 200);
-  assert.equal(unfriend.body.wasAccepted, true);
-  assert.equal((await request('/api/feed?scope=friends')).body.posts.length, 0);
+  const disabledFriendRequest = await request(`/api/friends/${firstUserId}/request`, { method: 'POST', body: '{}' });
+  assert.equal(disabledFriendRequest.status, 409);
+  assert.match(disabledFriendRequest.body.error, /follow each other to become friends/i);
+
   cookie = firstCookie;
   const reciprocalFollow = await request(`/api/users/${secondUserId}/follow`, { method: 'POST', body: '{}' });
   assert.equal(reciprocalFollow.status, 200);
+  assert.equal(reciprocalFollow.body.following, true);
   assert.equal(reciprocalFollow.body.friends, true);
   const mutualFriends = await request('/api/friends');
   assert.equal(mutualFriends.body.friends.some(member => member.id === secondUserId), true);
@@ -515,6 +495,30 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(profileFriends.body.users.some(member => member.id === secondUserId), true);
   const friendsCountProfile = await request(`/api/users/${firstUserId}`);
   assert.equal(friendsCountProfile.body.friendsCount, 1);
+
+  cookie = secondCookie;
+  const friendsStoryAfterMutualFollow = await request('/api/stories');
+  assert.equal(friendsStoryAfterMutualFollow.body.stories.some(story => story.id === friendsStory.body.story.id), true);
+  const friendStoryView = await request(`/api/stories/${friendsStory.body.story.id}/view`, { method: 'POST', body: '{}' });
+  assert.equal(friendStoryView.status, 200);
+  cookie = firstCookie;
+  const deleteOwnStory = await request(`/api/stories/${friendsStory.body.story.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteOwnStory.status, 200);
+  cookie = secondCookie;
+  const friendsFeedAfterMutualFollow = await request('/api/feed?scope=friends');
+  assert.deepEqual(friendsFeedAfterMutualFollow.body.posts.map(item => item.id), [post.body.post.id]);
+
+  const unfollow = await request(`/api/users/${firstUserId}/follow`, { method: 'DELETE', body: '{}' });
+  assert.equal(unfollow.status, 200);
+  assert.equal(unfollow.body.friends, false);
+  assert.equal((await request('/api/feed?scope=friends')).body.posts.length, 0);
+  const noLongerFriends = await request('/api/users');
+  assert.equal(noLongerFriends.body.users.find(member => member.id === firstUserId)?.friendship, null);
+
+  cookie = secondCookie;
+  const mutualFollowAgain = await request(`/api/users/${firstUserId}/follow`, { method: 'POST', body: '{}' });
+  assert.equal(mutualFollowAgain.status, 200);
+  assert.equal(mutualFollowAgain.body.friends, true);
   cookie = secondCookie;
 
   const forbiddenEdit = await request(`/api/posts/${post.body.post.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'Not the owner' }) });
