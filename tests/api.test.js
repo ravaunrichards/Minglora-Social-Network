@@ -152,6 +152,23 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(group.status, 201);
   assert.equal(group.body.group.name, 'Test Community');
 
+  const page = await request('/api/pages', {
+    method: 'POST',
+    body: JSON.stringify({ handle: 'minglora-labs', title: 'Minglora Labs', description: 'Page created by the isolated integration test', category: 'Community' })
+  });
+  assert.equal(page.status, 201);
+  assert.equal(page.body.page.myRole, 'owner');
+  const duplicatePage = await request('/api/pages', {
+    method: 'POST',
+    body: JSON.stringify({ handle: 'MINGLORA-LABS', title: 'Duplicate Page', description: '' })
+  });
+  assert.equal(duplicatePage.status, 409);
+  const pagePost = await request(`/api/pages/${page.body.page.id}/posts`, {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A genuine Page update' })
+  });
+  assert.equal(pagePost.status, 201);
+
   const firstCookie = cookie;
   const firstUserId = registration.body.user.id;
   cookie = '';
@@ -167,6 +184,31 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(secondRegistration.status, 201);
   const secondUserId = secondRegistration.body.user.id;
   const secondCookie = cookie;
+
+  const pages = await request('/api/pages');
+  assert.equal(pages.status, 200);
+  assert.equal(pages.body.pages.some(item => item.id === page.body.page.id), true);
+  const followPage = await request(`/api/pages/${page.body.page.id}/follow`, { method: 'POST', body: '{}' });
+  assert.equal(followPage.status, 200);
+  assert.equal(followPage.body.isFollowing, true);
+  const pageDetail = await request(`/api/pages/${page.body.page.id}`);
+  assert.equal(pageDetail.status, 200);
+  assert.equal(pageDetail.body.page.followerCount, 1);
+  assert.equal(pageDetail.body.page.isFollowing, true);
+  assert.equal(pageDetail.body.posts.length, 1);
+  const deniedPagePublish = await request(`/api/pages/${page.body.page.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'Not an editor' }) });
+  assert.equal(deniedPagePublish.status, 403);
+  const deniedPagePostDelete = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deniedPagePostDelete.status, 403);
+  cookie = firstCookie;
+  const ownerDeletePagePost = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(ownerDeletePagePost.status, 200);
+  const ownerCannotFollowOwnPage = await request(`/api/pages/${page.body.page.id}/follow`, { method: 'POST', body: '{}' });
+  assert.equal(ownerCannotFollowOwnPage.status, 400);
+  cookie = secondCookie;
+  const unfollowPage = await request(`/api/pages/${page.body.page.id}/follow`, { method: 'DELETE', body: '{}' });
+  assert.equal(unfollowPage.status, 200);
+  assert.equal(unfollowPage.body.isFollowing, false);
 
   const secondStories = await request('/api/stories');
   assert.equal(secondStories.status, 200);
@@ -319,6 +361,12 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal((await request('/api/saved-posts')).body.posts.length, 0);
 
   cookie = firstCookie;
+  cookie = firstCookie;
+  const deletePage = await request(`/api/pages/${page.body.page.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deletePage.status, 200);
+  cookie = secondCookie;
+  assert.equal((await request(`/api/pages/${page.body.page.id}`)).status, 404);
+
   const logout = await request('/api/auth/logout', { method: 'POST', body: '{}' });
   assert.equal(logout.status, 200);
   cookie = '';
