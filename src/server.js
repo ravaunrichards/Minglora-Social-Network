@@ -33,7 +33,7 @@ function paypalConfig(){
   const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||(process.env.NODE_ENV==='production'?'live':'sandbox')).trim().toLowerCase();
   const base=String(process.env.PAYPAL_API_BASE_URL||'').trim().replace(/\\/+$/,'')||
     (mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com');
-  return {clientId,clientSecret,base,configured:Boolean(clientId&&clientSecret)};
+  return {clientId,clientSecret,webhookId:String(process.env.PAYPAL_WEBHOOK_ID||'').trim(),base,configured:Boolean(clientId&&clientSecret)};
 }
 async function paypalToken(){
   const cfg=paypalConfig();
@@ -280,7 +280,7 @@ async function route(req, res) {
   }
   if (p.startsWith('/api/') &&
       !['GET', 'HEAD', 'OPTIONS'].includes(method) &&
-      p !== '/api/auth/logout') {
+      p !== '/api/auth/logout' && p !== '/api/webhooks/paypal') {
     const persistence = await persistenceHealth();
     if (!persistence.ready) {
       return json(res, 503, {
@@ -288,9 +288,44 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
+  if (method === 'POST' && p === '/api/webhooks/paypal') {
+    let event;
+    try { event = await body(req, 1_000_000); }
+    catch (error) { return json(res, error.status || 400, { error: error.message }); }
+    const paypal = paypalConfig();
+    if (!paypal.webhookId || !paypal.configured) {
+      return json(res, 503, { error: 'PayPal webhook verification is not configured for Minglora.' });
+    }
+    const headers = req.headers;
+    const verification = await paypalRequest('/v1/notifications/verify-webhook-signature', 'POST', {
+      auth_algo: headers['paypal-auth-algo'],
+      cert_url: headers['paypal-cert-url'],
+      transmission_id: headers['paypal-transmission-id'],
+      transmission_sig: headers['paypal-transmission-sig'],
+      transmission_time: headers['paypal-transmission-time'],
+      webhook_id: paypal.webhookId,
+      webhook_event: event
+    });
+    if (verification.verification_status !== 'SUCCESS') {
+      return json(res, 401, { error: 'PayPal webhook signature could not be verified.' });
+    }
+    const eventType = String(event.event_type || '');
+    const resource = event.resource || {};
+    const batchId = String(resource.payout_batch_id || resource.batch_header?.payout_batch_id || '');
+    const succeeded = ['PAYMENT.PAYOUTSBATCH.SUCCESS', 'PAYMENT.PAYOUTS-ITEM.SUCCEEDED'].includes(eventType);
+    const failed = ['PAYMENT.PAYOUTSBATCH.DENIED', 'PAYMENT.PAYOUTS-ITEM.FAILED', 'PAYMENT.PAYOUTS-ITEM.BLOCKED'].includes(eventType);
+    if (batchId && (succeeded || failed)) {
+      await requestSupabaseState('economy_payout_webhook', {
+        paypalBatchId: batchId,
+        status: succeeded ? 'paid' : 'failed'
+      });
+    }
+    return json(res, 200, { received: true });
+  }
+
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
@@ -298,7 +333,7 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
-        if(!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter your contact phone in international format, including + and country code.'});
+        if(!phoneNumber||!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter your contact phone in international format, including + and country code.'});
         if (db.users.some(u=>normalizeEmail(u.email)===email || u.username===username)) return json(res,409,{error:'That email or username is already registered. Log in instead.'});
         if (AUTH_PROVIDER === 'supabase') {
           const result = await supabaseSignUp({ email, password, name, username, phoneNumber });
@@ -662,11 +697,7 @@ async function route(req, res) {
         const canView = session => {
           if (session.hostId === user.id || session.visibility === 'public') return true;
           if (session.visibility !== 'friends') return false;
-          return (db.friendships || []).some(friendship =>
-            friendship.status === 'accepted' &&
-            ((friendship.from === user.id && friendship.to === session.hostId) ||
-             (friendship.to === user.id && friendship.from === session.hostId))
-          );
+          return isFriend(user.id, session.hostId);
         };
         const activeSessions = (db.liveSessions || [])
           .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
@@ -718,11 +749,7 @@ async function route(req, res) {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured for Minglora.' });
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
-        const isFriend = (db.friendships || []).some(friendship =>
-          friendship.status === 'accepted' &&
-          ((friendship.from === user.id && friendship.to === session.hostId) ||
-           (friendship.to === user.id && friendship.from === session.hostId))
-        );
+        const isFriend = isFriendMutual(user.id, session.hostId);
         const allowed = session.hostId === user.id ||
           session.visibility === 'public' ||
           (session.visibility === 'friends' && isFriend);
@@ -872,7 +899,8 @@ async function route(req, res) {
           await requestSupabaseState('economy_update_payout',{creatorId:user.id,payoutId,status:'processing',paypalBatchId:batchId});
           return json(res,202,{ok:true,payoutId,batchId,status:'processing',amountMinor,currency:'USD'});
         }catch(error){
-          try{await requestSupabaseState('economy_update_payout',{creatorId:user.id,payoutId,status:'failed'});}catch{}
+          // Keep uncertain provider submissions reserved until a verified PayPal event
+          // or an administrator reconciliation confirms their final status.
           throw error;
         }
       }
@@ -880,7 +908,7 @@ async function route(req, res) {
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
         if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available for gifting.'});
-        const friends=(db.friendships||[]).some(f=>f.status==='accepted'&&((f.from===user.id&&f.to===session.hostId)||(f.to===user.id&&f.from===session.hostId)));
+        const friends=isFriend(user.id,session.hostId);
         const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
         if(!canView)return json(res,404,{error:'LIVE session is not available for gifting.'});
         const result=await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
@@ -892,7 +920,7 @@ async function route(req, res) {
       if(liveChat&&['GET','POST'].includes(method)){
         const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
         if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
-        const friends=(db.friendships||[]).some(f=>f.status==='accepted'&&((f.from===user.id&&f.to===session.hostId)||(f.to===user.id&&f.from===session.hostId)));
+        const friends=isFriend(user.id,session.hostId);
         const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
         if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
