@@ -21,6 +21,8 @@ export function initialState() {
     savedPosts: [],
     groups: [],
     groupPosts: [],
+    stories: [],
+    storyViews: [],
     messages: [],
     notifications: [],
     sessions: []
@@ -56,6 +58,9 @@ function stripLegacyDemoData(state) {
     .filter(group => !demoUsers.has(group.ownerId) && group.id !== 'group-creators')
     .map(group => ({ ...group, members: (group.members || []).filter(id => !demoUsers.has(id)) }));
   state.groupPosts = (state.groupPosts || []).filter(post => !demoUsers.has(post.userId) && !removedGroupIds.has(post.groupId));
+  const removedStoryIds = new Set((state.stories || []).filter(story => demoUsers.has(story.userId)).map(story => story.id));
+  state.stories = (state.stories || []).filter(story => !demoUsers.has(story.userId));
+  state.storyViews = (state.storyViews || []).filter(view => !demoUsers.has(view.viewerId) && !removedStoryIds.has(view.storyId));
   state.messages = (state.messages || []).filter(message =>
     !demoUsers.has(message.from) && !demoUsers.has(message.to));
   state.notifications = (state.notifications || []).filter(notification =>
@@ -79,7 +84,7 @@ export function loadStore() {
     throw new Error(`Data store at ${dbPath} must contain a JSON object.`);
   }
   let changed = false;
-  for (const key of ['users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'groups', 'groupPosts', 'messages', 'notifications', 'sessions']) {
+  for (const key of ['users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'groups', 'groupPosts', 'stories', 'storyViews', 'messages', 'notifications', 'sessions']) {
     if (!Array.isArray(state[key])) {
       state[key] = [];
       changed = true;
