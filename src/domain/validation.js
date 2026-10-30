@@ -18,18 +18,17 @@ export function validateEmail(value) {
 export function validatePostInput(input = {}) {
   const text = String(input.text ?? '').trim();
   const imageUrl = String(input.imageUrl ?? '').trim();
+  const mediaIds = Array.isArray(input.mediaIds) ? input.mediaIds.map(value => String(value || '').trim()).filter(Boolean) : [];
   const errors = [];
-  if (!text && !imageUrl) errors.push('Add text or an image URL.');
+  if (!text && !imageUrl && mediaIds.length === 0) errors.push('Add text or select media from your device.');
   if (text.length > 5000) errors.push('Post text must be 5000 characters or fewer.');
-  if (imageUrl.length > 2000) errors.push('Image URL must be 2000 characters or fewer.');
-  if (imageUrl) {
-    try { if (new URL(imageUrl).protocol !== 'https:') errors.push('Image URL must use HTTPS.'); }
-    catch { errors.push('Image URL must be a valid absolute URL.'); }
-  }
-  return { valid: errors.length === 0, errors, value: { text, imageUrl } };
+  if (imageUrl) errors.push('Image URLs are no longer accepted. Select media from your device instead.');
+  if (mediaIds.length > 10) errors.push('A post can contain up to 10 media attachments.');
+  if (mediaIds.some(id => id.length > 80)) errors.push('One or more media references are invalid.');
+  return { valid: errors.length === 0, errors, value: { text, mediaIds } };
 }
 export function validateProfilePatch(input = {}) {
-  const limits = { name: 120, bio: 500, location: 120, avatar: 2000, cover: 2000 };
+  const limits = { name: 120, username: 30, bio: 500, location: 120 };
   const value = {};
   const errors = [];
   for (const [key, limit] of Object.entries(limits)) {
@@ -43,5 +42,6 @@ export function validateProfilePatch(input = {}) {
     value[key] = normalized;
   }
   if (Object.hasOwn(value, 'name') && value.name.length < 2) errors.push('name must contain at least 2 characters.');
+  if (Object.hasOwn(value, 'username')) { const normalized=normalizeUsername(value.username); if (!validateUsername(normalized).valid) errors.push('username must contain 3–30 letters, numbers or underscores.'); value.username=normalized; }
   return { valid: errors.length === 0, errors, value };
 }
