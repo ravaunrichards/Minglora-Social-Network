@@ -39,8 +39,10 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/friends` | Accepted friends and incoming requests |
-| POST | `/api/friends/:id/request` | Send a request or accept a reciprocal pending request |
+| POST | `/api/friends/:id/request` | Send a request, accept a reciprocal pending request, or retry a declined request |
 | POST | `/api/friends/:id/accept` | Accept an incoming request |
+| POST | `/api/friends/:id/decline` | Decline an incoming request |
+| DELETE | `/api/friends/:id` | Cancel own pending request or remove an accepted friendship |
 | GET | `/api/groups` | List groups and membership state |
 | POST | `/api/groups` | Create a group |
 | POST | `/api/groups/:id/join` | Join a group |
