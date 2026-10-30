@@ -12,7 +12,7 @@ Add these in the existing Render service:
 
 - `NODE_ENV=production`
 - `PERSISTENCE_DRIVER=postgres`
-- `DATABASE_URL` — private connection string for Minglora's separate PostgreSQL database
+- `DATABASE_URL` — private Minglora Session Pooler connection string using the restricted `minglora_runtime` role
 - `PGSSLMODE=require`
 - `PG_POOL_MAX=5`
 - `AUTH_PROVIDER=supabase`
@@ -52,4 +52,16 @@ The API uses the publishable key server-side for Supabase Auth REST requests. It
 
 The `DATABASE_URL` value is a separate PostgreSQL connection string, not the publishable API key. If Supabase is the database provider, copy the connection string from the PostgreSQL connection settings for the same Minglora project. Never point Minglora at Zovara, ZUNO, or another product's project.
 
-After configuration, apply `database/migrations/004_supabase_auth_profiles.sql` to Minglora's own Supabase project before enabling Supabase Auth. Migrations `001` and `002` are design foundations not consumed by the current runtime; the current PostgreSQL adapter creates `public.minglora_runtime_state` on startup (the equivalent schema is documented in migration `003`). Use `/api/ready` as the Render health-check path after the PostgreSQL connection is configured. The readiness response reports only whether persistence and Auth are configured; it never returns key values.
+Minglora's Supabase schema migrations 005–013 are already installed. Do not apply historical migrations 001–004 to this project. The runtime role `minglora_runtime` was created with access only to `public.minglora_runtime_state` and is intentionally `NOLOGIN` pending password setup. In the Minglora Supabase SQL Editor, set a new long random password:
+
+```sql
+ALTER ROLE minglora_runtime WITH LOGIN PASSWORD '<new-long-random-password>';
+```
+
+Then set the Render service's private `DATABASE_URL` to:
+
+```text
+postgresql://minglora_runtime.gzycobgbasnqqhnympkr:<URL-ENCODED-PASSWORD>@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require&application_name=minglora-api
+```
+
+Use a long random hex password to avoid URI-reserved characters. Keep the password only in the Supabase SQL Editor and Render secret field. Do not use the `postgres` owner login. Set `PERSISTENCE_DRIVER=postgres`, `PGSSLMODE=require` and `PG_POOL_MAX=5`. Render already has the Minglora-only `SUPABASE_URL`, matching publishable key, `AUTH_PROVIDER=supabase`, `APP_ORIGIN` and confirmation redirect configured. Use `/api/ready` as the Render health-check path after the database connection is saved. Readiness must report `persistence.driver=postgres`, `durable=true`, and `auth.configured=true` before accepting production writes.
