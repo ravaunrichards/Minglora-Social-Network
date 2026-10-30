@@ -158,7 +158,8 @@ async function publicPost(p,viewerId) {
     if(!asset||asset.status==='deleted')return null;
     try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
   }));
-  return {...p,media:media.filter(item=>item?.url),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  const {imageUrl,...cleanPost}=p;
+  return {...cleanPost,media:media.filter(item=>item?.url),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
@@ -509,7 +510,7 @@ async function route(req, res) {
           const action=String(input.action);
           if(action==='hide_post'&&report.targetType==='post'){const post=db.posts.find(item=>item.id===report.targetId);if(post){post.status='hidden';post.hiddenAt=now();}}
           if(action==='remove_post'&&report.targetType==='post'){const post=db.posts.find(item=>item.id===report.targetId);if(post){db.posts=db.posts.filter(item=>item.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});}}
-          if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);}}
+          if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}}}
           if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);}}
           (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,reportId:report.id,action,targetType:report.targetType,targetId:report.targetId,createdAt:now()});
           (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.action',targetType:report.targetType,targetId:report.targetId,createdAt:now()});
@@ -706,6 +707,7 @@ async function route(req, res) {
         if(!post)return json(res,404,{error:'Post not found.'});
         if(post.userId!==user.id)return json(res,403,{error:'Only the post author can delete this post.'});
         db.posts=db.posts.filter(x=>x.id!==post.id);
+        (post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
         db.savedPosts=(db.savedPosts||[]).filter(saved=>saved.postId!==post.id);
         await saveStore();return json(res,200,{ok:true,id:post.id});
       }
@@ -949,6 +951,7 @@ async function route(req, res) {
         if(!page)return json(res,404,{error:'Page not found.'});
         if(!canDeletePage(db.pages || [],page.id,user.id))return json(res,403,{error:'Only the Page owner can delete this Page.'});
         db.pages=db.pages.filter(item=>item.id!==page.id);
+        db.pagePosts.filter(post=>post.pageId===page.id).forEach(post=>(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}}));
         db.pageRoles=db.pageRoles.filter(role=>role.pageId!==page.id);
         db.pageFollows=db.pageFollows.filter(f=>f.pageId!==page.id);
         db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
