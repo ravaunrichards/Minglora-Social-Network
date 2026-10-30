@@ -387,7 +387,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(otherMemberProfile.body.user.bio, '');
   assert.equal(otherMemberProfile.body.user.location, '');
   assert.equal('country' in otherMemberProfile.body.user, false);
-  cookie = firstCookie;
+  cookie = secondCookie;
 
   const pages = await request('/api/pages');
   assert.equal(pages.status, 200);
