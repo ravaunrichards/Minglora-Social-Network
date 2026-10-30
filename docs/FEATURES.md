@@ -18,7 +18,7 @@ This document distinguishes working code from unfinished product requirements. A
 | Search | Basic substring search across users, posts, groups and Pages; block-aware filtering for people/posts/Pages | Search indexing, relevance ranking, advanced filters and complete privacy-aware discovery |
 | Settings & privacy | Dedicated Settings & Privacy hub; account identity display; persisted profile visibility, friend-request, new-message, in-app notification, theme, feed-sort and reduced-motion preferences; privacy controls enforced by relevant API routes | Password changes, MFA, session/device management, email changes, data export/deletion, per-post audiences and support/appeals workflows |
 | Responsive interface | Desktop three-column layout, tablet adaptation and mobile bottom navigation | Formal device/browser accessibility and cross-platform QA |
-| Operations | Node runtime, health endpoint, isolated API tests, Docker packaging and CI workflow | Production database, migrations, backup/restore automation, observability and deployment hardening |
+| Operations | Node runtime, health endpoint, isolated API tests, Docker packaging, applied Supabase migrations, durable single-row Supabase compatibility persistence and GitHub Actions CI | Transactional normalized repositories, backup/restore automation, observability and deployment hardening |
 
 ## Empty-state rules
 
