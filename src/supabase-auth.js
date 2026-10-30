@@ -41,7 +41,7 @@ async function authRequest(path, payload) {
   requireConfig();
   const { url: baseUrl, key: apiKey } = supabaseConfig();
   const redirectTo = String(process.env.SUPABASE_AUTH_REDIRECT_URL || '').trim();
-  const target = new URL(\`\${baseUrl}/auth/v1/\${path}\`);
+  const target = new URL(baseUrl + '/auth/v1/' + path);
   if (redirectTo && path === 'signup') target.searchParams.set('redirect_to', redirectTo);
 
   let response;
@@ -50,7 +50,7 @@ async function authRequest(path, payload) {
       method: 'POST',
       headers: {
         apikey: apiKey,
-        Authorization: \`Bearer \${apiKey}\`,
+        Authorization: 'Bearer ' + apiKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
