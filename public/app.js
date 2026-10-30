@@ -336,14 +336,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
     });
     const results=await Promise.all([api("/coins/catalog"),api("/coins/wallet")]);liveGiftCatalogue=results[0].gifts||[];
     $("#live-wallet-balance").textContent=Number(results[1].wallet?.balance_coins||0).toLocaleString()+" Coins";
-    $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span>"+esc(gift.emoji)+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
+    $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
     document.querySelectorAll("[data-live-gift]").forEach(button=>button.addEventListener("click",async()=>{
       button.disabled=true;
       try{
         const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})}),gift=sent.gift;
         toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
         const wallet=await api("/coins/wallet");$("#live-wallet-balance").textContent=Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins";
-        const stage=$("#live-video-stage");if(stage){const effect=document.createElement("div");effect.className="live-gift-effect";effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),1800);}
+        const stage=$("#live-video-stage");if(stage){const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";if(gift.model_url){effect.innerHTML="<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.giftName||gift.name)+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";}else effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),2600);}
       }catch(error){toast(error.message);}finally{button.disabled=false;}
     }));
     $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
