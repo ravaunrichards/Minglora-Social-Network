@@ -142,6 +142,16 @@ async function route(req, res) {
       components: { persistence, auth }
     });
   }
+  if (p.startsWith('/api/') &&
+      !['GET', 'HEAD', 'OPTIONS'].includes(method) &&
+      p !== '/api/auth/logout') {
+    const persistence = await persistenceHealth();
+    if (!persistence.ready) {
+      return json(res, 503, {
+        error: 'Minglora cannot save changes yet because durable production database storage is not configured or is unavailable. Connect Minglora to its own PostgreSQL database before registering or changing account data.'
+      });
+    }
+  }
   if (p.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
