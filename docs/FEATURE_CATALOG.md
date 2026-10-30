@@ -9,7 +9,8 @@ This is a scope checklist, not a claim of Facebook parity.
 | Feed/posts | Chronological feed, text and HTTPS image URL posts; ranking, audience controls, edits/deletes and uploads incomplete |
 | Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
 | Relationships | Friend requests/acceptance; follow/unfollow, block, mute and restrict incomplete |
-| Groups/Pages | Basic group workflows; full roles/moderation and Pages incomplete |
+| Groups | Public groups with join/leave, details and member discussion posts; roles/private groups/moderation incomplete |
+| Pages | Create, follow, detail and owner publishing workflows; role management and insights incomplete |
 | Stories | Text/HTTPS-image stories with audiences, 24-hour expiry and view tracking; moderation/media uploads incomplete |
 | Short video/video streaming | Not implemented |
 | Messaging | Basic direct text messaging; realtime, attachments and read receipts incomplete |
