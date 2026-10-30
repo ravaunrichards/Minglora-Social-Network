@@ -14,7 +14,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "pg": "^8.16.3",
     "livekit-server-sdk": "2.19.2"
   }
 }
