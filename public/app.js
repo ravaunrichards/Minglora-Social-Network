@@ -317,7 +317,7 @@ async function uploadProfileImage(slot,file){
 
 let mediaPickerSequence=0;
 function mediaAccept(slot){
-  return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm': 'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,audio/mpeg,audio/mp4,model/gltf-binary,.glb';
+  return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime': 'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/webm,model/gltf-binary,.glb';
 }
 function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif'].includes(file.type);}
 async function transformMediaImage(file,zoom=1,rotation=0){
@@ -336,8 +336,10 @@ async function transformMediaImage(file,zoom=1,rotation=0){
 async function uploadMediaFile(slot,file,zoom=1,rotation=0){
   let prepared=file;
   if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
+  let mimeType=prepared.type;
+  if(!mimeType&&prepared.name?.toLowerCase().endsWith('.glb'))mimeType='model/gltf-binary';
   const base64=await fileAsBase64(prepared);
-  const result=await api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType:prepared.type,base64})});
+  const result=await api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType,base64})});
   if(!result.asset?.id)throw new Error('Minglora did not return a saved media record.');
   return result.asset;
 }
