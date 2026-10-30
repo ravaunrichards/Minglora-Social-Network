@@ -196,6 +196,9 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(pageDetail.body.page.followerCount, 1);
   assert.equal(pageDetail.body.page.isFollowing, true);
   assert.equal(pageDetail.body.posts.length, 1);
+  const pageSearch = await request('/api/search?q=Minglora%20Labs');
+  assert.equal(pageSearch.status, 200);
+  assert.equal(pageSearch.body.pages.some(item => item.id === page.body.page.id), true);
   const deniedPagePublish = await request(`/api/pages/${page.body.page.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'Not an editor' }) });
   assert.equal(deniedPagePublish.status, 403);
   const deniedPagePostDelete = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });
