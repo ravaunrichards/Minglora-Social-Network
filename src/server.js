@@ -197,7 +197,7 @@ async function body(req, maxBytes=1_000_000) {
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
-const notify = (userId, actorId, type, text) => {const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;const prefs=getUserSettings(recipient).notifications;if(!prefs.inApp||(type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;db.notifications.unshift({id:uid(),userId,actorId,type,text,createdAt:now(),read:false});};
+const notify = (userId, actorId, type, text, extra = {}) => {const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;const prefs=getUserSettings(recipient).notifications;if(!prefs.inApp||(type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;db.notifications.unshift({id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false});};
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
@@ -467,15 +467,16 @@ async function route(req, res) {
         const mimeKinds={
           'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
           'video/mp4':'video','video/webm':'video','video/quicktime':'video',
-          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d'
+          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d','application/pdf':'document'
         };
         const allowedSlots={
           avatar:['image/jpeg','image/png','image/webp','image/avif'],
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
-          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime']
+          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
+          message:['image/jpeg','image/png','image/webp','video/mp4','audio/mpeg','audio/mp4','audio/ogg','application/pdf']
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,status:'uploading',createdAt:now()};
@@ -767,6 +768,10 @@ async function route(req, res) {
         db.liveParticipants = db.liveParticipants || [];
         db.liveSessions.unshift(session);
         db.liveParticipants.push({ id: uid(), sessionId: id, userId: user.id, role: 'host', joinedAt: now(), leftAt: null });
+        if(visibility==='public'){
+          const followerIds=[...new Set((db.follows||[]).filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
+          for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',user.name+' is LIVE: '+title,{liveSessionId:id});
+        }
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
       }
@@ -1277,8 +1282,36 @@ async function route(req, res) {
         db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
         await saveStore();return json(res,200,{ok:true,id:page.id});
       }
-      if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
-      if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(u=>u.id===to);if(!recipient||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const audience=getUserSettings(recipient).privacy.messageAudience;if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);await saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
+      if(method==='GET'&&p==='/api/messages'){
+        const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
+        const conversations=await Promise.all(peers.map(async id=>{
+          const messages=await Promise.all(db.messages.filter(item=>(item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(async item=>{
+            const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+              const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+              if(!asset)return null;
+              try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+            }));
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from))};
+          }));
+          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages};
+        }));
+        return json(res,200,{conversations});
+      }
+      if(method==='POST'&&p==='/api/messages'){
+        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message or attach up to five files.'});
+        const audience=getUserSettings(recipient).privacy.messageAudience;
+        if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const msg={id:uid(),from:user.id,to,text,attachmentIds,createdAt:now(),read:false};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user)}});
+      }
       if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id))),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
