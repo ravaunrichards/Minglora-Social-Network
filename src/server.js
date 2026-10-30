@@ -402,6 +402,10 @@ async function route(req, res) {
         if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid new email address.'});
         if(db.users.some(item=>item.id!==user.id&&normalizeEmail(item.email)===email))return json(res,409,{error:'That email address is already registered.'});
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Email changes require the authenticated email provider.'});
+        const currentPassword=String(input.currentPassword||'');
+        if(!currentPassword)return json(res,400,{error:'Enter your current password to confirm the email change.'});
+        const reauthenticated=await supabaseSignIn({email:user.email,password:currentPassword});
+        if(reauthenticated.user?.id&&reauthenticated.user.id!==user.id)return json(res,401,{error:'Your current password did not authenticate this account.'});
         const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
         const result=await supabaseUpdateEmail(auth.access_token,email);
         currentSession.pendingEmail=email;await saveStore();
