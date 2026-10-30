@@ -32,6 +32,29 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()'
 };
 const safeUser = u => u && ({ id:u.id, name:u.name, username:u.username, bio:u.bio || '', location:u.location || '', avatar:u.avatar || '', cover:u.cover || '', createdAt:u.createdAt });
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
+function getUserSettings(user){const saved=user?.settings||{};return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences:{...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})}};}
+function isFriend(firstId,secondId){return (db.friendships||[]).some(item=>item.status==='accepted'&&((item.from===firstId&&item.to===secondId)||(item.from===secondId&&item.to===firstId)));}
+function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
+function validateSettingsPatch(input,user){
+  if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions'],preferences:['theme','feedSort','reducedMotion']};
+  for(const [section,keys] of Object.entries(input)){
+    if(!allowed[section]||!input[section]||typeof input[section]!=='object'||Array.isArray(input[section]))return {valid:false,error:'Unsupported settings section.'};
+    for(const [key,value] of Object.entries(input[section])){
+      if(!keys.includes(key))return {valid:false,error:'Unsupported setting: '+key};
+      if(section==='privacy'&&key==='profileVisibility'&&!['public','friends','private'].includes(value))return {valid:false,error:'Profile visibility must be public, friends or private.'};
+      if(section==='privacy'&&key==='messageAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Message audience must be everyone, friends or nobody.'};
+      if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
+      if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
+      if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
+      if(section==='preferences'&&key==='feedSort'&&!['recent','oldest'].includes(value))return {valid:false,error:'Feed sort must be recent or oldest.'};
+      if(section==='preferences'&&key==='reducedMotion'&&typeof value!=='boolean')return {valid:false,error:'Reduced motion must be true or false.'};
+      next[section][key]=value;
+    }
+  }
+  return {valid:true,settings:next};
+}
 const json = (res, status, body, headers={}) => { res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS, ...headers }); res.end(JSON.stringify(body)); };
 const cookie = (req, name) => (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1);
 const sign = value => crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
@@ -104,7 +127,7 @@ async function body(req) {
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
-const notify = (userId, actorId, type, text) => db.notifications.unshift({ id:uid(), userId, actorId, type, text, createdAt:now(), read:false });
+const notify = (userId, actorId, type, text) => {const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;const prefs=getUserSettings(recipient).notifications;if(!prefs.inApp||(type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;db.notifications.unshift({id:uid(),userId,actorId,type,text,createdAt:now(),read:false});};
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
@@ -215,6 +238,11 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
+      if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{name:user.name,username:user.username,email:user.email||''}});
+      if(method==='PATCH'&&p==='/api/settings'){
+        const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
+        user.settings=validation.settings;await saveStore();return json(res,200,{settings:getUserSettings(user)});
+      }
       if (method === 'GET' && p === '/api/live/status') {
         return json(res, 200, { provider: 'livekit', configured: isLiveKitConfigured() });
       }
@@ -332,7 +360,7 @@ async function route(req, res) {
         } else if(scope==='friends'){
           eligibleIds=new Set([user.id,...db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)).map(f=>f.from===user.id?f.to:f.from)]);
         }
-        const posts=db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)))
+        const posts=db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&(!eligibleIds||eligibleIds.has(x.userId)))
           .slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id));
         if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts,scope});
         try {
@@ -385,7 +413,7 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
-      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
@@ -415,14 +443,14 @@ async function route(req, res) {
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||blockedBetween(user.id,target.id))return json(res,404,{error:'Profile not found.'});
         const rows=m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id);
-        const users=rows.map(f=>db.users.find(u=>u.id===(m[2]==='followers'?f.followerId:f.followedId))).filter(u=>u&&!blockedBetween(user.id,u.id)).map(safeUser);
+        const users=rows.map(f=>db.users.find(u=>u.id===(m[2]==='followers'?f.followerId:f.followedId))).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
         return json(res,200,{users,count:users.length});
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
-      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length}); }
+      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id)),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length}); }
       if(method==='PATCH'&&p==='/api/users/me'){const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});Object.assign(user,validation.value);await saveStore();return json(res,200,{user:safeUser(user)}); }
       m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
-      if(method==='POST'&&m){if(m[1]===user.id||!db.users.some(u=>u.id===m[1]))return json(res,400,{error:'Invalid friend.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}await saveStore();return json(res,200,{friendship:f});}
+      if(method==='POST'&&m){const recipient=db.users.find(u=>u.id===m[1]);if(m[1]===user.id||!recipient)return json(res,400,{error:'Invalid friend.'});if(getUserSettings(recipient).privacy.allowFriendRequests===false)return json(res,403,{error:'This member is not accepting friend requests.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}await saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/accept$/);
       if(method==='POST'&&m){const f=db.friendships.find(x=>x.from===m[1]&&x.to===user.id&&x.status==='pending');if(!f)return json(res,404,{error:'Pending request not found.'});f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);await saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/decline$/);
@@ -577,10 +605,10 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:page.id});
       }
       if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
-      if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim();if(!db.users.some(u=>u.id===to)||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);await saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
-      if(method==='GET'&&p==='/api/notifications')return json(res,200,{notifications:db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))}))});
+      if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(u=>u.id===to);if(!recipient||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const audience=getUserSettings(recipient).privacy.messageAudience;if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);await saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
+      if(method==='GET'&&p==='/api/notifications')return json(res,200,{notifications:getUserSettings(user).notifications.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[]});
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
-      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id)),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
+      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:db.posts.filter(x=>!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id)),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
       return json(res,404,{error:'API route not found.'});
     } catch(e) { return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
   }
