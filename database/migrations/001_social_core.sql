@@ -183,11 +183,15 @@ CREATE TABLE IF NOT EXISTS page_roles (
 CREATE TABLE IF NOT EXISTS stories (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   author_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  asset_id uuid NOT NULL REFERENCES media_assets(id) ON DELETE RESTRICT,
-  audience text NOT NULL DEFAULT 'friends' CHECK (audience IN ('public','friends','followers','private')),
+  asset_id uuid REFERENCES media_assets(id) ON DELETE RESTRICT,
+  text text NOT NULL DEFAULT '' CHECK (length(text) <= 1000),
+  image_url text NOT NULL DEFAULT '' CHECK (length(image_url) <= 2000),
+  audience text NOT NULL DEFAULT 'public' CHECK (audience IN ('public','friends','followers','private')),
   created_at timestamptz NOT NULL DEFAULT now(),
   expires_at timestamptz NOT NULL,
-  CHECK (expires_at > created_at)
+  CHECK (expires_at > created_at),
+  CHECK (text <> '' OR image_url <> '' OR asset_id IS NOT NULL),
+  CHECK (image_url = '' OR image_url LIKE 'https://%')
 );
 CREATE INDEX IF NOT EXISTS stories_active_idx ON stories (expires_at, author_id);
 CREATE TABLE IF NOT EXISTS story_views (
