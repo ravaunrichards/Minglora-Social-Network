@@ -1,5 +1,5 @@
 # Database layer
 
-The active service currently uses the JSON file in `DATA_DIR`; it does not execute SQL migrations. `migrations/001_social_core.sql` is a relational schema foundation for the planned database-backed architecture, not an active application database.
+The active service currently uses the JSON file in `DATA_DIR`; it does not execute SQL migrations. `migrations/001_social_core.sql` defines the initial relational social core, and `migrations/002_extended_social_domains.sql` adds design tables for albums/photos, Reels/play events, Live sessions, calls, check-ins, notification preferences, account recovery/verification, Memories, fundraisers, and data-rights requests. Both are schema-design foundations only; neither is applied by the running JSON-backed application.
 
 Before adoption, build a database adapter, migration execution and rollback strategy, least-privilege credentials, disposable-database CI checks, and a backup/verification plan for migrating real records. Do not run this schema against production merely because it exists.
