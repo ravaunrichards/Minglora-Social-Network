@@ -21,10 +21,9 @@ if (process.env.NODE_ENV === 'production' &&
   throw new Error('Production startup requires SESSION_SECRET to contain at least 32 characters.');
 }
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (supabaseAuthConfigured() ? 'supabase' : 'legacy')).trim().toLowerCase();
+const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (process.env.NODE_ENV === 'production' || supabaseAuthConfigured() ? 'supabase' : 'legacy')).trim().toLowerCase();
 if (!['supabase', 'legacy'].includes(AUTH_PROVIDER)) throw new Error('AUTH_PROVIDER must be supabase or legacy.');
-if (AUTH_PROVIDER === 'supabase' && !supabaseAuthConfigured()) throw new Error('Supabase Auth is enabled but SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are missing or placeholders.');
-if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase and a real Minglora Supabase configuration.');
+if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase. When Minglora Supabase credentials are missing, authentication routes fail closed with HTTP 503 instead of writing accounts to local storage.');
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
