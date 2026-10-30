@@ -5,7 +5,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Domain | Current state |
 |---|---|
 | Accounts | Supabase Auth sign-up/sign-in; login rate limiting, password reset/change, email-change verification, server-sealed auth tokens, session revoke and TOTP MFA when provider configured | Passkeys, push login alerts and account deletion |
-| Profiles | Profile fields editable; avatar and cover selected from device gallery/files and uploaded to Supabase Storage; public/friends-only/private visibility and contact controls enforced | Verified profiles, per-post audiences, albums, photo tagging and profile themes |
+| Profiles | Edit display name, unique username, bio and location; avatar/cover from gallery, folders or camera with image zoom/crop/rotation and Supabase Storage upload | Verified profiles, themes, albums and tagging |
 | Feed/posts | Chronological feed, text and HTTPS image URL posts; ranking, audience controls, edits/deletes and uploads incomplete |
 | Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
 | Relationships | Friend requests/acceptance; follow/unfollow, block, mute and restrict incomplete |
