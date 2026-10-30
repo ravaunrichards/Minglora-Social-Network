@@ -1382,7 +1382,6 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit=EXCLUDED.file_size_limit,
   allowed_mime_types=EXCLUDED.allowed_mime_types;
 
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 CREATE POLICY minglora_avatars_insert_owner ON storage.objects
 FOR INSERT TO authenticated WITH CHECK (
   bucket_id='minglora-avatars' AND (storage.foldername(name))[1]=(select auth.uid())::text
