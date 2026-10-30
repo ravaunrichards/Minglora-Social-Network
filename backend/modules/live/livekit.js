@@ -1,8 +1,21 @@
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 
 function config() {
+  const rawUrl=String(process.env.LIVEKIT_URL||'').trim();
+  let serverUrl='',clientUrl='';
+  try{
+    const parsed=new URL(rawUrl);
+    if(parsed.protocol==='https:'||parsed.protocol==='wss:'){
+      serverUrl='https://'+parsed.host;
+      clientUrl='wss://'+parsed.host;
+    }else if(parsed.protocol==='http:'||parsed.protocol==='ws:'){
+      serverUrl='http://'+parsed.host;
+      clientUrl='ws://'+parsed.host;
+    }
+  }catch{}
   return {
-    url: String(process.env.LIVEKIT_URL || '').trim(),
+    serverUrl,
+    clientUrl,
     apiKey: String(process.env.LIVEKIT_API_KEY || '').trim(),
     apiSecret: String(process.env.LIVEKIT_API_SECRET || '').trim()
   };
@@ -10,12 +23,12 @@ function config() {
 
 export function isLiveKitConfigured() {
   const settings = config();
-  return Boolean(settings.url && settings.apiKey && settings.apiSecret);
+  return Boolean(settings.serverUrl && settings.clientUrl && settings.apiKey && settings.apiSecret);
 }
 
 export async function createLiveKitToken({ identity, name, roomName, canPublish = false }) {
   const settings = config();
-  if (!settings.url || !settings.apiKey || !settings.apiSecret) {
+  if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
     const error = new Error('LiveKit is not configured for Minglora.');
     error.status = 503;
     throw error;
@@ -40,14 +53,14 @@ export async function createLiveKitToken({ identity, name, roomName, canPublish 
   });
 
   return {
-    url: settings.url,
+    url: settings.clientUrl,
     token: await accessToken.toJwt()
   };
 }
 
 export async function listLiveKitParticipants(roomName) {
   const settings = config();
-  if (!settings.url || !settings.apiKey || !settings.apiSecret) {
+  if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
     const error = new Error('LiveKit is not configured for Minglora.');
     error.status = 503;
     throw error;
@@ -57,7 +70,7 @@ export async function listLiveKitParticipants(roomName) {
     error.status = 400;
     throw error;
   }
-  const service = new RoomServiceClient(settings.url, settings.apiKey, settings.apiSecret);
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
   const participants = await service.listParticipants(roomName);
   return participants.map(participant => ({
     identity: participant.identity,

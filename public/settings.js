@@ -1,7 +1,7 @@
 (() => {
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone' },
-    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true },
+    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true },
     preferences: { theme: 'system', feedSort: 'recent', reducedMotion: false }
   };
 
@@ -94,6 +94,7 @@
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
             </section>
             <section class="card settings-card" id="settings-preferences">
               ${sectionHeading('☼', 'Preferences', 'Personalize the appearance and default feed order on your account.')}
@@ -108,7 +109,17 @@
             <section class="card settings-card" id="settings-data">
               ${sectionHeading('⇩', 'Your information', 'Download a copy of the information associated with your Minglora account.')}
               <div class="settings-data-export"><div><strong>Download your information</strong><p>Creates a JSON file with your profile, settings, posts, comments, relationships, groups, Pages, Stories, messages and in-app notifications. Passwords, authentication tokens and active session secrets are not included.</p></div><button class="primary" type="button" id="download-account-data">Download information</button></div>
-              <div class="settings-unavailable"><strong>Account deletion is not enabled yet.</strong><p>Permanent account deletion needs a verified re-authentication and a coordinated removal process across posts, media, messages, provider identity and retention obligations. Minglora will not pretend to delete an account before that process is implemented.</p></div>
+              <div class="settings-account-actions">
+                <div class="settings-account-action"><div><strong>Temporarily deactivate your account</strong><p>Sign out all devices and hide your account. Signing in again reactivates it.</p></div><button class="secondary" type="button" id="deactivate-account">Deactivate account</button></div>
+                <form id="account-deletion-request-form" class="settings-security-form">
+                  <h3>Request permanent account deletion</h3>
+                  <p class="muted">Confirm your password to submit a permanent deletion request. Your account remains available until the verified deletion process is completed.</p>
+                  <label class="field"><span>Current password</span><input type="password" name="currentPassword" autocomplete="current-password" minlength="10" maxlength="1024" required></label>
+                  <label class="settings-toggle"><span><strong>I understand this is a permanent deletion request</strong><small>Content, account identity and stored media will be reviewed for coordinated deletion.</small></span><input type="checkbox" name="confirmDeletion" required></label>
+                  <button class="danger" type="submit">Submit deletion request</button>
+                  <p class="settings-form-status" id="account-deletion-status" role="status"></p>
+                </form>
+              </div>
               <p class="settings-data-status" id="account-export-status" role="status"></p>
             </section>
             <section class="card settings-card" id="settings-security">
@@ -183,6 +194,28 @@
         } finally {
           button.disabled = false;
         }
+      });
+
+      document.querySelector('#deactivate-account')?.addEventListener('click',async event=>{
+        const button=event.currentTarget;
+        const confirmation=window.prompt('Type DEACTIVATE to sign out all devices and temporarily deactivate your Minglora account.');
+        if(confirmation!=='DEACTIVATE')return;
+        button.disabled=true;
+        try{
+          await api('/account/deactivate',{method:'POST',body:JSON.stringify({confirmation})});
+          window.alert('Your account is deactivated. Sign in again when you are ready to reactivate it.');
+          window.location.reload();
+        }catch(error){window.alert(error.message);button.disabled=false;}
+      });
+      document.querySelector('#account-deletion-request-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#account-deletion-status'),button=form.querySelector('button[type="submit"]'),values=new FormData(form);
+        if(!values.get('confirmDeletion')){status.textContent='Confirm that you understand the permanent deletion request.';return;}
+        button.disabled=true;status.textContent='Verifying your password and submitting the request…';
+        try{
+          const result=await api('/account/deletion-request',{method:'POST',body:JSON.stringify({currentPassword:values.get('currentPassword')})});
+          status.textContent=result.message||'Your deletion request has been recorded.';form.reset();
+        }catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
       });
 
       document.querySelectorAll('[data-unblock-user]').forEach(button => button.addEventListener('click', async () => {
@@ -300,7 +333,8 @@
             inApp: formData.has('notificationInApp'),
             friendRequests: formData.has('notificationFriendRequests'),
             messages: formData.has('notificationMessages'),
-            interactions: formData.has('notificationInteractions')
+            interactions: formData.has('notificationInteractions'),
+            push: formData.has('notificationPush')
           },
           preferences: {
             theme: formData.get('theme'),

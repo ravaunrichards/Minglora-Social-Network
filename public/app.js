@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], groups:[], notifications:[], conversations:[], activeConversation:null, activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}});
 const fallbackAvatar = name => {
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2)
@@ -12,9 +12,67 @@ const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { const res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
 let toastTimer;
+let browserNotificationTimer=null;
+let browserNotificationSeen=new Set();
+let browserNotificationPrimed=false;
+let webPushSubscriptionActive=false;
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
 function showAuth(){ $('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
-function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready')); }
+function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startBrowserNotificationPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
+function base64UrlToBytes(value){
+  const base64=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
+  const padded=base64+'='.repeat((4-base64.length%4)%4);
+  return Uint8Array.from(atob(padded),character=>character.charCodeAt(0));
+}
+async function prepareMingloraServiceWorker(){
+  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
+  try{
+    const registration=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+    const subscription=await registration.pushManager.getSubscription();
+    if(subscription){
+      webPushSubscriptionActive=true;
+      await api('/push/subscriptions',{method:'POST',body:JSON.stringify(subscription.toJSON())}).catch(()=>{});
+    }
+  }catch(error){console.warn('Minglora background push setup:',error.message);}
+}
+async function enableMingloraPush(){
+  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){toast('This browser does not support device push notifications.');return;}
+  try{
+    const permission=Notification.permission==='granted'? 'granted':await Notification.requestPermission();
+    if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
+    const [keyData,registration]=await Promise.all([
+      api('/push/public-key'),
+      navigator.serviceWorker.register('/sw.js',{scope:'/'})
+    ]);
+    if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
+    let subscription=await registration.pushManager.getSubscription();
+    if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(keyData.publicKey)});
+    await api('/push/subscriptions',{method:'POST',body:JSON.stringify(subscription.toJSON())});
+    webPushSubscriptionActive=true;
+    toast('Minglora push notifications are enabled on this device.');
+    return true;
+  }catch(error){toast(error.message||'Could not enable device push.');return false;}
+}
+async function handleMingloraPushNavigation(){
+  const params=new URLSearchParams(window.location.search),type=params.get('minglora-push');
+  if(!type||!state.user)return;
+  const callId=params.get('callId'),liveSessionId=params.get('liveSessionId'),actorId=params.get('actorId');
+  window.history.replaceState({},'',window.location.pathname+window.location.hash);
+  try{
+    if(type==='call'&&callId){await answerMingloraCall(callId);return;}
+    if(type==='decline-call'&&callId){await declineMingloraCall(callId);return;}
+    if(type==='live'&&liveSessionId){
+      const sessions=(await api('/live/sessions')).sessions||[],session=sessions.find(item=>item.id===liveSessionId);
+      if(session){await openLiveRoom(session,'viewer');return;}
+      toast('This LIVE session has ended.');
+    }
+    if(type==='message'&&actorId){
+      const member=(await api('/users')).users?.find(item=>item.id===actorId);
+      if(member){await openMessageWindow(member);return;}
+    }
+    await renderNotifications();
+  }catch(error){toast(error.message);}
+}
 function activateNav(view){state.view=view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
@@ -220,15 +278,19 @@ async function renderFriends(){
   bindPeople();
 }
 
+let activeCallRoom=null;
+let activeCallOverlay=null;
 let activeLiveRoom=null;
 let activeLiveSession=null;
 let activeLiveRole=null;
 let liveChatRefreshTimer=null;
+let liveDirectoryRefreshTimer=null;
 let liveCameraEnabled=true;
 let liveMicrophoneEnabled=true;
 let liveGiftCatalogue=[];
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
+function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function renderLiveDirectory(sessions,status,catalog,wallet){
   const cards=sessions.length?sessions.map(session=>
@@ -257,10 +319,29 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     const session=sessions.find(item=>item.id===button.dataset.watchLive);if(session)openLiveRoom(session,"viewer");
   }));
 }
+async function refreshLiveDirectorySessions(){
+  if(state.view!=='live'||activeLiveRoom){stopLiveDirectoryRefresh();return;}
+  try{
+    const data=await api('/live/sessions'),sessions=data.sessions||[],container=$('.live-room-grid');
+    if(!container)return;
+    container.innerHTML=sessions.length?sessions.map(session=>
+      "<article class='live-room-card'><div class='live-room-preview'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
+      (session.viewerCountVerified?"◉ "+Number(session.viewerCount||0).toLocaleString()+" watching":"Viewers unavailable")+
+      "</span><div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div></div><div class='live-room-details'><strong>"+
+      esc(session.title)+"</strong><span>"+esc(session.host?.name||"Minglora creator")+"</span><small>@"+
+      esc(session.host?.username||"member")+"</small><button class='primary' data-watch-live='"+esc(session.id)+"'>Watch LIVE</button></div></article>"
+    ).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
+    document.querySelectorAll('[data-watch-live]').forEach(button=>button.onclick=()=>{
+      const session=sessions.find(item=>item.id===button.dataset.watchLive);
+      if(session)openLiveRoom(session,"viewer").catch(error=>toast(error.message));
+    });
+  }catch{}
+}
 async function renderLive(){
-  activateSilent("live");stopLiveChatRefresh();
+  activateSilent("live");stopLiveChatRefresh();stopLiveDirectoryRefresh();
   const result=await Promise.all([api("/live/status"),api("/live/sessions"),api("/coins/catalog"),api("/coins/wallet")]);
   liveGiftCatalogue=result[2].gifts||[];renderLiveDirectory(result[1].sessions||[],result[0],result[2],result[3]);
+  liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,12000);
 }
 function attachLiveTrack(track,participant,local){
   if(!track)return;
@@ -301,7 +382,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
   room.on(client.RoomEvent.ParticipantConnected,updatePresence);room.on(client.RoomEvent.ParticipantDisconnected,updatePresence);
   room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room)toast("Your LIVE connection was disconnected.");});
   try{
-    await room.connect(liveKit.url,liveKit.token);$(".live-video-placeholder")?.remove();
+    let connectTimeout;
+    try{
+      await Promise.race([
+        room.connect(liveKit.url,liveKit.token),
+        new Promise((_,reject)=>{connectTimeout=setTimeout(()=>reject(new Error('Could not establish a LIVE connection within 20 seconds. Check the LiveKit server URL, firewall and network connection, then try again.')),20000);})
+      ]);
+    }finally{if(connectTimeout)clearTimeout(connectTimeout);}
+    $(".live-video-placeholder")?.remove();
     if(role==="host"){
       await room.localParticipant.enableCameraAndMicrophone();
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
@@ -327,14 +415,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
     });
     const results=await Promise.all([api("/coins/catalog"),api("/coins/wallet")]);liveGiftCatalogue=results[0].gifts||[];
     $("#live-wallet-balance").textContent=Number(results[1].wallet?.balance_coins||0).toLocaleString()+" Coins";
-    $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span>"+esc(gift.emoji)+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
+    $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
     document.querySelectorAll("[data-live-gift]").forEach(button=>button.addEventListener("click",async()=>{
       button.disabled=true;
       try{
         const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})}),gift=sent.gift;
         toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
         const wallet=await api("/coins/wallet");$("#live-wallet-balance").textContent=Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins";
-        const stage=$("#live-video-stage");if(stage){const effect=document.createElement("div");effect.className="live-gift-effect";effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),1800);}
+        const stage=$("#live-video-stage"),catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift)||{};if(stage){const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";effect.dataset.animationPreset=catalogGift.animation_preset||catalogGift.animation_key||"gift-float";if(catalogGift.model_url){effect.innerHTML="<model-viewer src='"+esc(catalogGift.model_url)+"' alt='"+esc(catalogGift.name||gift.giftName||"Minglora gift")+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";}else effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),2600);}
       }catch(error){toast(error.message);}finally{button.disabled=false;}
     }));
     $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
@@ -344,6 +432,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
     stopLiveChatRefresh();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
+    if(state.view==='live'){
+      setContent("<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE connection failed</h3><p>"+esc(error.message||'Minglora could not connect to the LIVE room.')+"</p><button class='primary' id='retry-live-connection'>Try again</button><button class='secondary' id='back-live-directory'>Back to LIVE</button></section>");
+      $('#retry-live-connection')?.addEventListener('click',()=>{
+        if(role==='host'){renderLive();return;}
+        openLiveRoom(session,'viewer').catch(err=>toast(err.message));
+      });
+      $('#back-live-directory')?.addEventListener('click',()=>renderLive());
+    }
     throw error;
   }
 }
@@ -452,11 +548,21 @@ async function renderConnections(profileId,kind){
   }catch(error){toast(error.message);if(state.profile)renderProfile(state.profile);}
 }
 
+function openImageViewer(url,label='Image'){
+  if(!url)return;
+  const modal=document.createElement('div');modal.className='modal-backdrop image-viewer-backdrop';
+  modal.innerHTML='<section class="image-viewer-modal" role="dialog" aria-modal="true" aria-label="'+esc(label)+'"><button type="button" class="image-viewer-close" aria-label="Close image">×</button><img src="'+esc(url)+'" alt="'+esc(label)+'"><p>'+esc(label)+'</p></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.image-viewer-close').onclick=close;
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  document.addEventListener('keydown',function onKey(event){if(event.key==='Escape'){close();document.removeEventListener('keydown',onKey);}});
+}
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
     ? '<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
-    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
+    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
   const aboutRows=[
     ['About',u.bio],['Location',u.location],['Country',u.country],['County',u.county],
     ['Parish',u.parish],['City',u.city],['Gender',u.gender],
@@ -464,7 +570,7 @@ function renderProfile(data){
   ].filter(([,value])=>String(value||'').trim());
   aboutRows.push(['Joined',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})]);
   const aboutHtml=aboutRows.map(([label,value])=>`<div class="about-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
-  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover" style="${u.cover?`background-image:url('${esc(u.cover)}')`:''}"></div><div class="profile-info"><img class="avatar" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p>${esc(u.bio||'')}</p><p>${esc(u.location||'')}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p></div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>About</h3>${isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':''}</div>${aboutHtml||'<p class="muted">No About details have been added yet.</p>'}</div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
+  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover" data-view-image="${esc(u.cover||'')}" data-image-label="${esc(u.name)} cover photo" style="${u.cover?`background-image:url('${esc(u.cover)}')`:''}"></div><div class="profile-info"><img class="avatar" data-view-image="${esc(u.avatar||'')}" data-image-label="${esc(u.name)} profile picture" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p>${esc(u.bio||'')}</p><p>${esc(u.location||'')}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p></div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>About</h3>${isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':''}</div>${aboutHtml||'<p class="muted">No About details have been added yet.</p>'}</div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
   bindFeed();
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
   $('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(u));
@@ -476,18 +582,21 @@ function renderProfile(data){
       await openProfile(u.id);
     }catch(e){toast(e.message);}
   });
+  $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
+  document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
   $('#profile-block')?.addEventListener('click',async()=>{if(!window.confirm(`Block ${u.name}? You will no longer see each other’s profile, posts or messages.`))return;try{await api(`/users/${u.id}/block`,{method:'POST',body:'{}'});toast('Member blocked.');state.profile=null;state.view='feed';await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar()}catch(e){toast(e.message)}});
   $('#profile-composer')?.addEventListener('click',()=>openComposer());
-  $('#profile-about-tab')?.addEventListener('click',()=>document.querySelector('.profile-about')?.scrollIntoView({behavior:'smooth'}));
-  $('#profile-friends-tab')?.addEventListener('click',()=>activateNav('friends'));
+  $('#profile-about-tab')?.addEventListener('click',()=>{document.querySelectorAll('.profile-tabs button').forEach(button=>button.classList.toggle('active',button.id==='profile-about-tab'));document.querySelector('.profile-about')?.scrollIntoView({behavior:'smooth'});});
+  $('#profile-friends-tab')?.addEventListener('click',()=>renderConnections(u.id,'friends'));
   document.querySelectorAll('[data-open-connections]').forEach(button=>button.addEventListener('click',()=>renderConnections(u.id,button.dataset.openConnections)));
+  document.querySelectorAll('[data-view-image]').forEach(image=>image.addEventListener('click',()=>{const url=image.dataset.viewImage;if(url)openImageViewer(url,image.dataset.imageLabel||'Profile image');}));
 }
 function mediaMaxBytes(slot){
-  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:500*1024*1024;
+  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:slot==='message'?100*1024*1024:500*1024*1024;
 }
 function mediaMaxLabel(slot){
-  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':'500 MB';
+  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':slot==='message'?'100 MB':'500 MB';
 }
 async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
@@ -498,7 +607,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!mimeType)throw new Error('Minglora could not detect the selected file type. Choose a supported photo, video, audio or GLB file.');
   if(prepared.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
   if(!window.tus?.Upload)throw new Error('The secure upload component did not load. Refresh Minglora and try again.');
-  const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size})});
+  const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size,fileName:prepared.name||'Attachment'})});
   const uploadInfo=preparedUpload.upload||{};
   if(!preparedUpload.assetId||!uploadInfo.endpoint||!uploadInfo.token||!uploadInfo.bucket||!uploadInfo.path)throw new Error('Minglora could not prepare this secure upload.');
   await new Promise((resolve,reject)=>{
@@ -537,6 +646,7 @@ async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{})
 
 let mediaPickerSequence=0;
 function mediaAccept(slot){
+  if(slot==='message')return 'image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/ogg,application/pdf,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation';
   return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime': 'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/webm,model/gltf-binary,.glb';
 }
 function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\.hei[cf]$/i.test(file.name||'');}
@@ -555,6 +665,66 @@ async function transformMediaImage(file,zoom=1,rotation=0){
   return new File([blob],base+'-edited.jpg',{type:'image/jpeg',lastModified:Date.now()});
 }
 
+async function openDeviceCapture({mode='both',onCapture}={}){
+  if(!navigator.mediaDevices?.getUserMedia){toast('Camera access is unavailable. Open Minglora over HTTPS in a browser that supports device camera access.');return;}
+  const modal=document.createElement('div');modal.className='modal-backdrop device-camera-backdrop';
+  modal.innerHTML='<section class="device-camera-modal" role="dialog" aria-modal="true" aria-label="Device camera"><div class="device-camera-header"><strong>Minglora camera</strong><button type="button" class="device-camera-close" aria-label="Close camera">×</button></div><video class="device-camera-preview" autoplay muted playsinline></video><p class="device-camera-status" role="status">Requesting camera permission…</p><div class="device-camera-controls"><button type="button" class="secondary" data-camera-switch>Switch camera</button><button type="button" class="secondary" data-camera-photo>Take photo</button><button type="button" class="primary" data-camera-record>Record video</button><button type="button" class="danger" data-camera-stop hidden>Stop recording</button></div></section>';
+  document.body.append(modal);
+  const video=modal.querySelector('.device-camera-preview'),status=modal.querySelector('.device-camera-status');
+  const photoButton=modal.querySelector('[data-camera-photo]'),recordButton=modal.querySelector('[data-camera-record]'),stopButton=modal.querySelector('[data-camera-stop]');
+  let stream=null,recorder=null,chunks=[],facingMode='environment',recording=false,closed=false;
+  const stopTracks=()=>{if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}video.srcObject=null;};
+  const close=()=>{if(closed)return;closed=true;try{if(recorder&&recorder.state!=='inactive')recorder.stop();}catch{}stopTracks();modal.remove();};
+  const setControls=()=>{photoButton.hidden=mode==='video';recordButton.hidden=mode==='photo'||recording;stopButton.hidden=!recording;};
+  const openStream=async()=>{
+    stopTracks();
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}},audio:mode!=='photo'});
+    video.srcObject=stream;await video.play();
+    status.textContent='Camera ready. Take a photo or record a video.';
+  };
+  const finishCapture=async(file)=>{
+    if(!file||closed)return;
+    close();
+    try{await onCapture?.(file);}catch(error){toast(error.message||'The captured media could not be added.');}
+  };
+  modal.querySelector('.device-camera-close').onclick=close;
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('[data-camera-switch]').onclick=async()=>{
+    facingMode=facingMode==='environment'?'user':'environment';status.textContent='Switching camera…';
+    try{await openStream();}catch(error){status.textContent=error.message||'Could not switch cameras.';toast(status.textContent);}
+  };
+  photoButton.onclick=async()=>{
+    if(!video.videoWidth||!video.videoHeight){toast('The camera is still starting.');return;}
+    const scale=Math.min(1,1920/video.videoWidth),canvas=document.createElement('canvas');
+    canvas.width=Math.round(video.videoWidth*scale);canvas.height=Math.round(video.videoHeight*scale);
+    const context=canvas.getContext('2d');if(!context){toast('Photo capture is not supported by this browser.');return;}
+    context.drawImage(video,0,0,canvas.width,canvas.height);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));
+    if(!blob){toast('Minglora could not capture this photo.');return;}
+    await finishCapture(new File([blob],'minglora-photo-'+Date.now()+'.jpg',{type:'image/jpeg',lastModified:Date.now()}));
+  };
+  recordButton.onclick=()=>{
+    if(!stream||typeof MediaRecorder==='undefined'){toast('Video recording is not supported by this browser.');return;}
+    const candidates=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+    const mimeType=candidates.find(type=>MediaRecorder.isTypeSupported?.(type));
+    try{
+      recorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);chunks=[];
+      recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data);};
+      recorder.onerror=()=>{recording=false;setControls();status.textContent='Video recording failed.';};
+      recorder.onstop=async()=>{
+        recording=false;setControls();
+        const type=recorder.mimeType||mimeType||'video/webm',extension=type.includes('mp4')?'mp4':'webm';
+        const blob=new Blob(chunks,{type});
+        if(blob.size)await finishCapture(new File([blob],'minglora-video-'+Date.now()+'.'+extension,{type,lastModified:Date.now()}));
+        else status.textContent='No video was recorded.';
+      };
+      recorder.start(500);recording=true;setControls();status.textContent='Recording video… press Stop recording when finished.';
+    }catch(error){toast(error.message||'Could not start video recording.');}
+  };
+  stopButton.onclick=()=>{if(recorder&&recorder.state!=='inactive')recorder.stop();};
+  setControls();
+  try{await openStream();}catch(error){status.textContent=error.message||'Camera permission was denied.';toast(status.textContent);photoButton.disabled=true;recordButton.disabled=true;}
+}
 function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
@@ -566,11 +736,13 @@ function createMediaPicker(root,options={}){
     if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
     else if(entry.url&&entry.mediaType==='audio')preview='<audio controls preload="metadata" src="'+esc(entry.url)+'"></audio>';
     else if(entry.url&&entry.mediaType==='model3d')preview='<model-viewer src="'+esc(entry.url)+'" alt="3D model preview" camera-controls auto-rotate></model-viewer>';
+    else if(entry.url&&entry.mediaType==='document')preview='<a class="message-attachment-document" href="'+esc(entry.url)+'" target="_blank" rel="noopener">Open '+esc(entry.name||'file')+'</a>';
     else if(entry.url)preview='<img style="transform:scale('+entry.zoom+') rotate('+entry.rotation+'deg)" src="'+esc(entry.url)+'" alt="Selected image preview">';
     else if(entry.file&&imageMime(entry.file))preview='<img style="transform:scale('+entry.zoom+') rotate('+entry.rotation+'deg)" src="'+esc(entry.previewUrl)+'" alt="Selected image preview">';
     else if(entry.file&&entry.file.type.startsWith('video/'))preview='<video controls playsinline src="'+esc(entry.previewUrl)+'"></video>';
     else if(entry.file&&entry.file.type.startsWith('audio/'))preview='<audio controls src="'+esc(entry.previewUrl)+'"></audio>';
     else if(entry.file&&entry.file.type==='model/gltf-binary')preview='<div class="media-3d-placeholder">3D model selected · preview after upload</div>';
+    else if(entry.file&&(entry.file.type==='application/pdf'||entry.file.type.startsWith('application/')||entry.file.type.startsWith('text/')))preview='<span class="message-attachment-document">Document selected · '+esc(entry.file.name)+'</span>';
     const edit=imageMime(entry.file)?'<label class="media-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="'+entry.zoom+'" data-media-zoom="'+index+'"></label><button type="button" class="secondary" data-media-rotate="'+index+'">Rotate 90°</button>':'';
     return '<article class="media-picker-item"><div class="media-picker-preview">'+preview+'</div><div class="media-picker-meta"><strong>'+esc(entry.file?.name||entry.name||'Attached media')+'</strong><small>'+((entry.file?.size||entry.byteSize||0)/1024/1024).toFixed(2)+' MB</small><div class="media-picker-tools">'+edit+'<button type="button" class="secondary" data-media-remove="'+index+'">Remove</button></div></div></article>';
   }
@@ -587,14 +759,14 @@ function createMediaPicker(root,options={}){
       const allowed=accept.split(',').some(pattern=>pattern.trim().startsWith('.')?file.name.toLowerCase().endsWith(pattern.trim().toLowerCase()):pattern.trim().endsWith('/*')?file.type.startsWith(pattern.trim().slice(0,-1)):file.type===pattern.trim());
       if(!allowed){status.textContent=file.name+' has an unsupported file type.';continue;}
       const previewUrl=URL.createObjectURL(file);objectUrls.push(previewUrl);
-      entries.push({file,previewUrl,zoom:1,rotation:0,mediaType:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'model3d'});
+      entries.push({file,previewUrl,zoom:1,rotation:0,mediaType:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':file.type==='model/gltf-binary'?'model3d':'document'});
     }
     render();
   }
   gallery.addEventListener('change',()=>{addFiles(gallery.files);gallery.value='';});
   camera.addEventListener('change',()=>{addFiles(camera.files);camera.value='';});
   root.querySelector('[data-media-gallery]').addEventListener('click',()=>gallery.click());
-  root.querySelector('[data-media-camera]').addEventListener('click',()=>camera.click());
+  root.querySelector('[data-media-camera]').addEventListener('click',()=>openDeviceCapture({mode:'both',onCapture:file=>addFiles([file])}));
   render();
   return {
     hasSelection:()=>entries.length>0,
@@ -624,7 +796,7 @@ function openEditProfile(u){
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
       <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"><label class="about-toggle"><input type="checkbox" name="show_location" ${aboutVisibility.location?'checked':''}> Display location on my profile</label></div>
       <section class="about-editor-section"><h3>About details</h3><p class="muted">Choose what people can see. Hidden details remain saved privately.</p>
-        <div class="field"><label for="edit-contact-phone">Contact phone</label><input id="edit-contact-phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" pattern="\\+[1-9][0-9]{7,14}" maxlength="24" value="${esc(u.contactPhone||'')}" placeholder="+18765551234"><button class="secondary" type="button" id="request-phone-verification">Verify phone for Supabase</button><div id="phone-verification-panel" hidden><label for="phone-verification-code">SMS verification code</label><input id="phone-verification-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code"><button class="secondary" type="button" id="confirm-phone-verification">Confirm phone number</button></div><small id="phone-verification-status" class="muted" role="status">Verification saves this number in Supabase Auth. It remains hidden from your profile unless you enable Display.</small><label class="about-toggle"><input type="checkbox" name="show_contactPhone" ${aboutVisibility.contactPhone?'checked':''}> Display contact phone on my profile</label></div>
+        <div class="field"><label for="edit-contact-phone">Contact phone</label><input id="edit-contact-phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" pattern="\+[1-9][0-9]{7,14}" maxlength="24" value="${esc(u.contactPhone||'')}" placeholder="+18765551234"><button class="secondary" type="button" id="request-phone-verification">Verify phone for Supabase</button><div id="phone-verification-panel" hidden><label for="phone-verification-code">SMS verification code</label><input id="phone-verification-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code"><button class="secondary" type="button" id="confirm-phone-verification">Confirm phone number</button></div><small id="phone-verification-status" class="muted" role="status">Verification saves this number in Supabase Auth. It remains hidden from your profile unless you enable Display.</small><label class="about-toggle"><input type="checkbox" name="show_contactPhone" ${aboutVisibility.contactPhone?'checked':''}> Display contact phone on my profile</label></div>
         <div class="about-editor-grid">
           <div class="field"><label for="edit-country">Country</label><input id="edit-country" name="country" maxlength="120" value="${esc(u.country||'')}"><label class="about-toggle"><input type="checkbox" name="show_country" ${aboutVisibility.country?'checked':''}> Display</label></div>
           <div class="field"><label for="edit-county">County</label><input id="edit-county" name="county" maxlength="120" value="${esc(u.county||'')}"><label class="about-toggle"><input type="checkbox" name="show_county" ${aboutVisibility.county?'checked':''}> Display</label></div>
@@ -694,8 +866,8 @@ function openEditProfile(u){
     const transfer=new DataTransfer();transfer.items.add(file);targetInput.files=transfer.files;
     editState.zoom=1;editState.rotation=0;zoomInput.value='1';previewFile(targetInput,targetPreview);
   }
-  modal.querySelector('#edit-avatar-camera-button').onclick=()=>avatarCamera.click();
-  modal.querySelector('#edit-cover-camera-button').onclick=()=>coverCamera.click();
+  modal.querySelector('#edit-avatar-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{const transfer=new DataTransfer();transfer.items.add(file);avatarInput.files=transfer.files;avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';previewFile(avatarInput,avatarPreview);}});
+  modal.querySelector('#edit-cover-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{const transfer=new DataTransfer();transfer.items.add(file);coverInput.files=transfer.files;coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';previewFile(coverInput,coverPreview);}});
   avatarCamera.addEventListener('change',()=>assignCameraFile(avatarCamera,avatarInput,avatarPreview,avatarEdit,modal.querySelector('#edit-avatar-zoom')));
   coverCamera.addEventListener('change',()=>assignCameraFile(coverCamera,coverInput,coverPreview,coverEdit,modal.querySelector('#edit-cover-zoom')));
   modal.querySelector('#edit-avatar-zoom').addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);avatarPreview.style.transform='scale('+avatarEdit.zoom+') rotate('+avatarEdit.rotation+'deg)';});
@@ -709,7 +881,7 @@ function openEditProfile(u){
     event.preventDefault();const form=event.currentTarget,button=modal.querySelector('#save-profile-button'),status=modal.querySelector('#profile-upload-status');
     const values=new FormData(form);
     const payload={
-      name:values.get('name'),bio:values.get('bio'),location:values.get('location'),
+      name:values.get('name'),username:values.get('username'),bio:values.get('bio'),location:values.get('location'),
       contactPhone:values.get('contactPhone'),country:values.get('country'),county:values.get('county'),
       parish:values.get('parish'),city:values.get('city'),gender:values.get('gender'),
       relationshipStatus:values.get('relationshipStatus'),
@@ -810,8 +982,213 @@ async function renderSavedPosts(){
   setContent(`<div class="page-heading"><h1>Saved posts</h1></div>${state.savedPosts.length?state.savedPosts.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">▣</div><h3>No saved posts yet</h3><p>Use Save on a post to keep it here for later.</p></section>`}`);
   bindFeed();
 }
-async function renderMessages(){activateSilent('messages');state.conversations=(await api('/messages')).conversations;const peer=state.conversations.find(c=>c.user.id===state.activeConversation)||state.conversations[0];state.activeConversation=peer?.user.id||null;setContent(`<div class="page-heading"><h1>Messages</h1></div><section class="card" style="padding:0;overflow:hidden"><div class="message-layout"><aside class="message-peers">${state.conversations.length?state.conversations.map(c=>`<button class="conversation ${c.user.id===state.activeConversation?'active':''}" data-conversation="${esc(c.user.id)}"><img class="avatar" src="${avatar(c.user)}" alt=""><span><strong>${esc(c.user.name.split(' ')[0])}</strong><small>${esc(c.messages.at(-1)?.text||'Open chat')}</small></span></button>`).join(''):'<p style="font-size:11px;color:var(--muted)">No chats yet. Visit Friends to connect.</p>'}</aside><div class="message-area">${peer?`<div class="post-head" style="padding-bottom:10px;border-bottom:1px solid var(--line)"><img class="avatar" src="${avatar(peer.user)}" alt=""><div class="post-author"><strong>${esc(peer.user.name)}</strong><small>@${esc(peer.user.username)}</small></div></div><div class="message-scroll" id="message-scroll">${peer.messages.map(m=>`<div class="message-bubble ${m.from===state.user.id?'mine':''}">${esc(m.text)}<small><small>\${timeAgo(m.createdAt)}</small>\${m.from!==state.user.id?'<button class="message-report" type="button" data-report-message="'+esc(m.id)+'">Report</button>':''}</div>`).join('')}</div><form class="message-send" id="message-form"><input name="text" maxlength="3000" placeholder="Write a message…" required><button>Send</button></form>`:`<div class="empty-state"><div class="empty-icon">▤</div><h3>Your messages</h3><p>Start a conversation by connecting with another member.</p><button class="primary" id="go-friends">Find people</button></div>`}</div></div></section>`);document.querySelectorAll('[data-report-message]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('message',btn.dataset.reportMessage)));document.querySelectorAll('[data-conversation]').forEach(btn=>btn.onclick=()=>{state.activeConversation=btn.dataset.conversation;renderMessages()});$('#go-friends')?.addEventListener('click',()=>activateNav('friends'));$('#message-scroll')?.scrollTo(0,99999);$('#message-form')?.addEventListener('submit',async e=>{e.preventDefault();const text=e.currentTarget.elements.text.value;try{await api('/messages',{method:'POST',body:JSON.stringify({to:state.activeConversation,text})});await renderMessages()}catch(err){toast(err.message)}});}
-async function renderNotifications(){state.notifications=(await api('/notifications')).notifications;setContent(`<div class="page-heading"><h1>Notifications</h1><button class="text-button" id="mark-read">Mark all read</button></div><section class="card">${state.notifications.length?state.notifications.map(n=>`<div class="notice-item ${n.read?'':'unread'}"><div class="notice-icon">${n.type==='message'?'▤':n.type==='friend'?'♧':n.type==='reaction'?'♡':'♢'}</div><div><p>${esc(n.text)}</p><small>${timeAgo(n.createdAt)}</small></div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>'}</section>`);$('#mark-read').onclick=async()=>{await api('/notifications/read',{method:'POST',body:'{}'});toast('Notifications marked as read.');renderNotifications();updateNotificationDot()};}
+const messagePickers=new Map();
+function messageAttachmentHtml(attachments=[]){
+  return (attachments||[]).map(file=>{
+    if(!file.url)return '';
+    if(file.mediaType==='image')return '<a class="message-attachment-image" href="'+esc(file.url)+'" target="_blank" rel="noopener"><img src="'+esc(file.url)+'" alt="'+esc(file.name||'Image attachment')+'"></a>';
+    if(file.mediaType==='video')return '<video class="message-attachment-video" controls playsinline src="'+esc(file.url)+'"></video>';
+    if(file.mediaType==='audio')return '<audio controls src="'+esc(file.url)+'"></audio>';
+    return '<a class="message-attachment-document" href="'+esc(file.url)+'" target="_blank" rel="noopener">📄 '+esc(file.name||'Open attachment')+'</a>';
+  }).join('');
+}
+function renderMessageWindows(){
+  let dock=document.querySelector('#message-window-dock');
+  if(!state.messageWindows.length){messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();dock?.remove();return;}
+  if(!dock){dock=document.createElement('div');dock.id='message-window-dock';document.body.append(dock);}
+  messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();
+  dock.innerHTML=state.messageWindows.map(win=>{
+    const conversation=state.conversations.find(item=>item.user.id===win.user.id);
+    const messages=conversation?.messages||[];
+    const body=win.minimized?'':('<div class="message-window-body"><div class="message-window-scroll">'+messages.map(message=>'<article class="message-window-bubble '+(message.from===state.user.id?'mine':'')+'">'+(message.text?'<p>'+esc(message.text)+'</p>':'')+messageAttachmentHtml(message.attachments)+'<small>'+timeAgo(message.createdAt)+'</small></article>').join('')+'</div><div class="message-window-picker" data-message-picker="'+esc(win.user.id)+'"></div><form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Write a message…" autocomplete="off"><button class="primary" type="submit">Send</button></form></div>');
+    return '<section class="message-window '+(win.maximized?'is-maximized ':'')+(win.minimized?'is-minimized':'')+'" data-message-window="'+esc(win.user.id)+'"><header class="message-window-header"><img src="'+avatar(win.user)+'" alt=""><div><strong>'+esc(win.user.name)+'</strong><small>@'+esc(win.user.username||'member')+'</small></div><div class="message-window-controls"><button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="'+(win.minimized?'Restore':'Minimize')+'">'+(win.minimized?'▢':'—')+'</button><button type="button" data-message-maximize="'+esc(win.user.id)+'" aria-label="Maximize or restore">'+(win.maximized?'❐':'□')+'</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close">×</button></div></header>'+body+'</section>';
+  }).join('');
+  dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
+  dock.querySelectorAll('[data-message-maximize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMaximize);if(win){win.maximized=!win.maximized;renderMessageWindows();}});
+  dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{state.messageWindows=state.messageWindows.filter(item=>item.user.id!==button.dataset.messageClose);renderMessageWindows();});
+  state.messageWindows.filter(win=>!win.minimized).forEach(win=>{
+    const root=dock.querySelector('[data-message-picker="'+CSS.escape(win.user.id)+'"]');
+    if(root)messagePickers.set(win.user.id,createMediaPicker(root,{slot:'message',maxFiles:5}));
+    const form=dock.querySelector('[data-message-form="'+CSS.escape(win.user.id)+'"]');
+    form?.addEventListener('submit',async event=>{
+      event.preventDefault();const button=form.querySelector('button[type="submit"]'),text=String(form.elements.text.value||'').trim(),picker=messagePickers.get(win.user.id);
+      button.disabled=true;
+      try{
+        const attachmentIds=picker?await picker.upload():[];
+        if(!text&&!attachmentIds.length){toast('Write a message or attach a file.');return;}
+        await api('/messages',{method:'POST',body:JSON.stringify({to:win.user.id,text,attachmentIds})});
+        state.conversations=(await api('/messages')).conversations;
+        renderMessageWindows();
+      }catch(error){toast(error.message);}
+      finally{button.disabled=false;}
+    });
+    const scroll=dock.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"] .message-window-scroll');
+    if(scroll)scroll.scrollTop=scroll.scrollHeight;
+  });
+}
+async function openMessageWindow(member){
+  if(!member?.id||member.id===state.user.id)return;
+  const existing=state.messageWindows.find(item=>item.user.id===member.id);
+  if(existing){existing.minimized=false;existing.maximized=false;}
+  else{
+    if(state.messageWindows.length>=5){toast('You can keep up to five message windows open at once.');return;}
+    state.messageWindows.push({user:member,minimized:false,maximized:false});
+  }
+  try{state.conversations=(await api('/messages')).conversations;}catch(error){toast(error.message);return;}
+  renderMessageWindows();
+}
+async function renderMessages(){
+  activateSilent('messages');
+  const [messageData,peopleData]=await Promise.all([api('/messages'),api('/users')]);
+  state.conversations=messageData.conversations||[];
+  const conversationRows=state.conversations.length?state.conversations.map(conversation=>{
+    const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':'Open chat');
+    return '<div class="inbox-person-row"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small></div><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button></div>';
+  }).join(''):'<p class="muted">No conversations yet. View a member profile and choose Message to start a chat.</p>';
+  const people=(peopleData.users||[]).slice(0,40);
+  const peopleRows=people.length?people.map(person=>'<div class="inbox-person-row"><img class="avatar" src="'+avatar(person)+'" alt=""><div class="person-meta"><strong>'+esc(person.name)+'</strong><small>@'+esc(person.username)+'</small></div><button class="secondary" type="button" data-start-inbox-chat="'+esc(person.id)+'">Message</button><button class="text-button" type="button" data-open-inbox-profile="'+esc(person.id)+'">Profile</button></div>').join(''):'<p class="muted">No other members are available to message yet.</p>';
+  setContent('<div class="page-heading"><div><h1>Inbox</h1><p class="muted">Private conversations and files, in separate chat windows.</p></div><span class="eyebrow">'+state.conversations.length+' conversations</span></div><section class="card"><h2>Recent messages</h2><div class="inbox-people-list">'+conversationRows+'</div></section><section class="card"><div class="page-heading"><div><h2>Start a message</h2><p class="muted">Choose a member to open another chat window.</p></div></div><div class="inbox-people-list">'+peopleRows+'</div></section>');
+  document.querySelectorAll('[data-open-inbox-chat]').forEach(button=>button.onclick=()=>{const conversation=state.conversations.find(item=>item.user.id===button.dataset.openInboxChat);if(conversation)openMessageWindow(conversation.user);});
+  document.querySelectorAll('[data-start-inbox-chat]').forEach(button=>button.onclick=()=>{const person=people.find(item=>item.id===button.dataset.startInboxChat);if(person)openMessageWindow(person);});
+  document.querySelectorAll('[data-open-inbox-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.openInboxProfile));
+  renderMessageWindows();
+}
+
+async function startMingloraCall(member,kind='video'){
+  if(!member?.id||member.id===state.user.id)return;
+  if(activeCallRoom){toast('Finish your current call before starting another.');return;}
+  try{
+    const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});
+    await openMingloraCall(created.call,created.liveKit);
+  }catch(error){toast(error.message);}
+}
+async function answerMingloraCall(callId){
+  try{
+    const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});
+    await openMingloraCall(joined.call,joined.liveKit);
+  }catch(error){toast(error.message);}
+}
+async function declineMingloraCall(callId){
+  try{await api('/calls/'+encodeURIComponent(callId)+'/leave',{method:'POST',body:'{}'});toast('Call declined.');await renderNotifications();}
+  catch(error){toast(error.message);}
+}
+async function openMingloraCall(call,liveKit){
+  if(activeCallRoom){toast('A call is already open.');return;}
+  const client=window.LivekitClient;
+  if(!client?.Room||!client?.RoomEvent){toast('The call player could not load. Refresh Minglora and try again.');return;}
+  const overlay=document.createElement('div');overlay.className='call-overlay';
+  overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">End call</button></footer></section>';
+  document.body.append(overlay);activeCallOverlay=overlay;
+  const room=new client.Room({adaptiveStream:true,dynacast:true});activeCallRoom=room;
+  let microphoneEnabled=true,cameraEnabled=call.kind==='video';
+  const status=overlay.querySelector('#call-connection-status'),count=overlay.querySelector('#call-participant-count'),stage=overlay.querySelector('#call-video-stage');
+  const attach=(track,participant,local=false)=>{
+    if(!track)return;
+    const element=track.attach();
+    if(track.kind==='video'){element.autoplay=true;element.playsInline=true;element.className='call-video-element';if(local)element.muted=true;element.dataset.identity=participant?.identity||'local';stage.querySelector('.call-empty-stage')?.remove();stage.append(element);}
+    else{element.autoplay=true;element.playsInline=true;element.className='call-audio-element';overlay.querySelector('#call-audio-root').append(element);}
+  };
+  const updateCount=()=>{count.textContent=(Number(room.remoteParticipants?.size||0)+1)+' in call';};
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attach(track,participant,false));
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
+  room.on(client.RoomEvent.ParticipantConnected,updateCount);
+  room.on(client.RoomEvent.ParticipantDisconnected,updateCount);
+  const closeOverlay=()=>{if(activeCallOverlay===overlay)activeCallOverlay=null;overlay.remove();};
+  overlay.querySelector('#call-leave').onclick=async()=>{
+    const button=overlay.querySelector('#call-leave');button.disabled=true;
+    try{
+      const action=call.createdBy===state.user.id?'end':'leave';
+      await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'});
+    }catch(error){toast(error.message);}
+    await room.disconnect();if(activeCallRoom===room)activeCallRoom=null;closeOverlay();
+  };
+  overlay.querySelector('#call-microphone').onclick=async()=>{
+    try{microphoneEnabled=!microphoneEnabled;await room.localParticipant.setMicrophoneEnabled(microphoneEnabled);overlay.querySelector('#call-microphone').textContent=microphoneEnabled?'Mute microphone':'Unmute microphone';}
+    catch(error){toast(error.message);}
+  };
+  overlay.querySelector('#call-camera').onclick=async()=>{
+    try{cameraEnabled=!cameraEnabled;await room.localParticipant.setCameraEnabled(cameraEnabled);overlay.querySelector('#call-camera').textContent=cameraEnabled?'Turn camera off':'Turn video on';}
+    catch(error){cameraEnabled=!cameraEnabled;toast(error.message);}
+  };
+  overlay.querySelector('#call-add-people').onclick=async()=>{
+    try{
+      const visible=(await api('/users')).users||[];
+      const usernames=window.prompt('Enter usernames to add, separated by commas. Up to six people can be invited.');
+      if(!usernames)return;
+      const wanted=usernames.split(',').map(value=>value.trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
+      const userIds=visible.filter(member=>wanted.includes(String(member.username||'').toLowerCase())).map(member=>member.id);
+      if(!userIds.length){toast('No matching members were found.');return;}
+      const result=await api('/calls/'+encodeURIComponent(call.id)+'/invite',{method:'POST',body:JSON.stringify({userIds})});
+      toast(result.count+' call invitation(s) sent.');
+    }catch(error){toast(error.message);}
+  };
+  room.on(client.RoomEvent.Disconnected,()=>{if(activeCallRoom===room){activeCallRoom=null;closeOverlay();toast('The call connection ended.');}});
+  try{
+    status.textContent='Connecting securely…';
+    let timeout;
+    try{await Promise.race([room.connect(liveKit.url,liveKit.token),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Could not connect to the call. Check your LiveKit server URL and network connection.')),20000);})]);}
+    finally{if(timeout)clearTimeout(timeout);}
+    status.textContent='Connected';
+    await room.localParticipant.setMicrophoneEnabled(true);
+    if(cameraEnabled)await room.localParticipant.setCameraEnabled(true);
+    for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attach(publication.track,room.localParticipant,true);
+    updateCount();
+    overlay.querySelector('#call-microphone').disabled=false;
+    overlay.querySelector('#call-camera').disabled=false;
+  }catch(error){
+    await room.disconnect().catch(()=>{});
+    if(activeCallRoom===room)activeCallRoom=null;closeOverlay();toast(error.message||'The call could not connect.');
+    if(call.createdBy===state.user.id)await api('/calls/'+encodeURIComponent(call.id)+'/end',{method:'POST',body:'{}'}).catch(()=>{});
+    else await api('/calls/'+encodeURIComponent(call.id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});
+  }
+}
+async function renderNotifications(){
+  state.notifications=(await api('/notifications')).notifications;
+  const rows=state.notifications.map(n=>{
+    const icon=n.type==='message'?'▤':n.type==='friend'?'♧':n.type==='call'?'📞':n.type==='live'?'🔴':n.type==='reaction'?'♡':'♢';
+    let actions='';
+    if(n.type==='call'&&n.callId)actions='<div class="notice-actions"><button class="primary" type="button" data-answer-call="'+esc(n.callId)+'">Answer</button><button class="secondary" type="button" data-decline-call="'+esc(n.callId)+'">Decline</button></div>';
+    else if(n.type==='live'&&n.liveSessionId)actions='<div class="notice-actions"><button class="primary" type="button" data-watch-notified-live="'+esc(n.liveSessionId)+'">Watch LIVE</button></div>';
+    else if(n.type==='message'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-message-actor="'+esc(n.actor.id)+'">Open message</button></div>';
+    return '<article class="notice-item '+(n.read?'':'unread')+'"><div class="notice-icon">'+icon+'</div><div class="notice-content"><p>'+esc(n.text)+'</p><small>'+timeAgo(n.createdAt)+'</small>'+actions+'</div></article>';
+  }).join('');
+  setContent('<div class="page-heading"><div><h1>Notifications</h1><p class="muted">Receive LIVE, call and message alerts, including when Minglora is in the background.</p></div><div class="notice-actions"><button class="secondary" id="enable-browser-alerts">Enable device push</button><button class="text-button" id="mark-read">Mark all read</button></div></div><section class="card">'+(rows||'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>')+'</section>');
+  $('#enable-browser-alerts')?.addEventListener('click',enableMingloraPush);
+  document.querySelectorAll('[data-answer-call]').forEach(button=>button.onclick=()=>answerMingloraCall(button.dataset.answerCall));
+  document.querySelectorAll('[data-decline-call]').forEach(button=>button.onclick=()=>declineMingloraCall(button.dataset.declineCall));
+  document.querySelectorAll('[data-message-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.messageActor);if(item?.actor)openMessageWindow(item.actor);});
+  document.querySelectorAll('[data-watch-notified-live]').forEach(button=>button.onclick=async()=>{
+    try{const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.watchNotifiedLive);if(!session){toast('This LIVE session has ended.');return;}await openLiveRoom(session,'viewer');}
+    catch(error){toast(error.message);}
+  });
+  $('#mark-read').onclick=async()=>{await api('/notifications/read',{method:'POST',body:'{}'});toast('Notifications marked as read.');renderNotifications();updateNotificationDot();};
+}
+async function pollBrowserNotifications(){
+  if(!state.user)return;
+  try{
+    const items=(await api('/notifications')).notifications||[];
+    if(!browserNotificationPrimed){
+      browserNotificationSeen=new Set(items.map(item=>item.id));
+      browserNotificationPrimed=true;
+    }else{
+      const fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
+      for(const item of fresh){
+        browserNotificationSeen.add(item.id);
+        if(webPushSubscriptionActive||!['live','call','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
+        const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':'New Minglora message';
+        const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
+        notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
+      }
+    }
+    $('#notification-dot')?.classList.toggle('hidden',!items.some(item=>!item.read));
+  }catch{}
+}
+function startBrowserNotificationPolling(){
+  if(browserNotificationTimer)clearInterval(browserNotificationTimer);
+  browserNotificationPrimed=false;browserNotificationSeen=new Set();
+  pollBrowserNotifications();
+  browserNotificationTimer=setInterval(pollBrowserNotifications,12000);
+}
 async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));}catch{}}
 async function renderSearch(q){
   activateSilent('search');const data=await api('/search?q='+encodeURIComponent(q));state.searchResults=data;

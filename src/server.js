@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
@@ -24,7 +25,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (process.env.NODE_ENV === 'production' || supabaseAuthConfigured() ? 'supabase' : 'legacy')).trim().toLowerCase();
 if (!['supabase', 'legacy'].includes(AUTH_PROVIDER)) throw new Error('AUTH_PROVIDER must be supabase or legacy.');
 if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase. When Minglora Supabase credentials are missing, authentication routes fail closed with HTTP 503 instead of writing accounts to local storage.');
-const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
+const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp', '.gltf':'model/gltf+json; charset=utf-8' };
 
 let paypalAccessTokenCache=null;
 function paypalConfig(){
@@ -101,13 +102,13 @@ function safeUser(u,viewerId=null){
   if(own)result.aboutVisibility=visibility;
   return result;
 }
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
 function getUserSettings(user){const saved=user?.settings||{};return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences:{...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})}};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions'],preferences:['theme','feedSort','reducedMotion']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','feedSort','reducedMotion']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -175,7 +176,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
-    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, avatar:'', cover:'', createdAt:authUser.created_at || now() };
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), createdAt:authUser.created_at || now() };
     db.users.push(user);
   } else {
     user.name = name || user.name;
@@ -187,17 +188,63 @@ function ensureLocalUser(authUser, fallback = {}) {
     }
     if(metadata.relationship_status!==undefined||metadata.relationshipStatus!==undefined)user.relationshipStatus=String(metadata.relationship_status||metadata.relationshipStatus||'');
     if(metadata.about_visibility||metadata.aboutVisibility)user.aboutVisibility=metadata.about_visibility||metadata.aboutVisibility;
+    if(metadata.avatar_url!==undefined)user.avatar=String(metadata.avatar_url||'');
+    if(metadata.cover_url!==undefined)user.cover=String(metadata.cover_url||'');
+    if(metadata.account_status!==undefined)user.status=String(metadata.account_status||'active');
   }
   return user;
 }
-function sessionUser(req) {const session=sessionFromRequest(req);const account=session?db.users.find(item=>item.id===session.userId)||null:null;return account?.status==='suspended'?null:account;}
+function sessionUser(req) {const session=sessionFromRequest(req);const account=session?db.users.find(item=>item.id===session.userId)||null:null;return ['suspended','deactivated'].includes(account?.status)?null:account;}
 async function sessionAuth(session){if(!session?.authSealed)return null;let tokens=openSessionAuth(session.authSealed);if(!tokens?.access_token)return null;if(session.authExpiresAt&&new Date(session.authExpiresAt).getTime()<Date.now()+60000&&tokens.refresh_token){const refreshed=await supabaseRefreshSession(tokens.refresh_token);tokens={...tokens,...refreshed};session.authSealed=sealSessionAuth(tokens);session.authExpiresAt=new Date(Date.now()+Math.max(60,Number(tokens.expires_in||3600))*1000).toISOString();await saveStore();}return tokens;}
 async function body(req, maxBytes=1_000_000) {
   let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
-const notify = (userId, actorId, type, text) => {const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;const prefs=getUserSettings(recipient).notifications;if(!prefs.inApp||(type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;db.notifications.unshift({id:uid(),userId,actorId,type,text,createdAt:now(),read:false});};
+let webPushConfigKey='';
+function configureWebPush(){
+  const publicKey=String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim();
+  const privateKey=String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim();
+  if(!publicKey||!privateKey)return false;
+  const subject=String(process.env.WEB_PUSH_SUBJECT||'https://minglora-social-network.onrender.com').trim();
+  const key=publicKey+':'+privateKey+':'+subject;
+  if(webPushConfigKey!==key){webpush.setVapidDetails(subject,publicKey,privateKey);webPushConfigKey=key;}
+  return true;
+}
+async function deliverUserPush(userId,notification){
+  if(!configureWebPush())return;
+  const subscriptions=(db.pushSubscriptions||[]).filter(item=>item.userId===userId&&item.endpoint&&item.keys?.p256dh&&item.keys?.auth);
+  if(!subscriptions.length)return;
+  const stale=new Set();
+  const payload=JSON.stringify({
+    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':'Minglora notification',
+    body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
+    tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
+    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id}
+  });
+  await Promise.all(subscriptions.map(async subscription=>{
+    try{
+      await webpush.sendNotification({endpoint:subscription.endpoint,keys:subscription.keys},payload,{
+        TTL:60,urgency:notification.type==='call'||notification.type==='live'?'high':'normal',
+        topic:String(notification.id||'minglora').replace(/[^A-Za-z0-9_-]/g,'').slice(0,32)||'minglora'
+      });
+    }catch(error){
+      if(error?.statusCode===404||error?.statusCode===410)stale.add(subscription.endpoint);
+    }
+  }));
+  if(stale.size){
+    db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>!(item.userId===userId&&stale.has(item.endpoint)));
+    await saveStore().catch(()=>{});
+  }
+}
+const notify = (userId, actorId, type, text, extra = {}) => {
+  const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
+  const prefs=getUserSettings(recipient).notifications;
+  if((type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;
+  const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
+  if(prefs.inApp)db.notifications.unshift(notification);
+  if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
+};
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
@@ -406,6 +453,7 @@ async function route(req, res) {
               return json(res,200,{mfaRequired:true,challengeId:pendingId,message:'Enter the code from your authenticator app to finish signing in.'});
             }
           }
+          if(signedInUser.status==='deactivated'){signedInUser.status='active';await supabaseUpdateUserMetadata(accessToken,{account_status:'active'});await saveStore();}
           const sessionCookie=await createAppSession(signedInUser,authenticated,req);clearLoginFailures(rate.key);
           return json(res,200,{user:safeUser(signedInUser,signedInUser.id)},{'Set-Cookie':sessionCookie});
         }
@@ -415,6 +463,7 @@ async function route(req, res) {
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
+        if(found.status==='deactivated'){found.status='active';await saveStore();}
         const sessionCookie=await createAppSession(found,null,req);clearLoginFailures(rate.key);
         return json(res,200,{user:safeUser(found)},{'Set-Cookie':sessionCookie});
       }
@@ -430,6 +479,7 @@ async function route(req, res) {
         const account=db.users.find(item=>item.id===pending.userId);
         if(!account)return json(res,401,{error:'Account not found.'});
         db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
+        if(account.status==='deactivated'){account.status='active';await supabaseUpdateUserMetadata(verified.access_token,{account_status:'active'});}
         const sessionCookie=await createAppSession(account,verified,req);
         await saveStore();
         return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
@@ -463,22 +513,28 @@ async function route(req, res) {
         return json(res,200,{ok:true,phoneVerified:true,phone,message:'Phone number verified and saved to Supabase Auth.'});
       }
       if(method==='POST'&&p==='/api/media/upload/prepare'){
-        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0);
+        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0),fileName=String(input.fileName||'').trim().slice(0,255);
         const mimeKinds={
           'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
           'video/mp4':'video','video/webm':'video','video/quicktime':'video',
-          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d'
+          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d','application/pdf':'document',
+          'text/plain':'document','text/csv':'document','application/zip':'document','application/x-zip-compressed':'document',
+          'application/msword':'document','application/vnd.ms-excel':'document','application/vnd.ms-powerpoint':'document',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'document',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'document',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation':'document'
         };
         const allowedSlots={
           avatar:['image/jpeg','image/png','image/webp','image/avif'],
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
-          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime']
+          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
+          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
-        const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,status:'uploading',createdAt:now()};
+        const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
         db.mediaAssets.push(asset);await saveStore();
         return json(res,201,{assetId:asset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,bucket:prepared.bucket,path:prepared.path},mimeType,mediaType:asset.mediaType,byteSize});
       }
@@ -491,7 +547,7 @@ async function route(req, res) {
           if(typeof completed.url!=='string'||!completed.url.startsWith('https://'))return json(res,502,{error:'Minglora could not finalize this profile image.'});
           const previous=(db.mediaAssets||[]).find(item=>item.ownerId===user.id&&item.slot===asset.slot&&item.status==='attached');
           if(previous){previous.status='deleted';previous.deletedAt=now();}
-          user[asset.slot]=completed.url;asset.status='attached';asset.attachedTo='profile:'+asset.slot;asset.url=completed.url;
+          user[asset.slot]=completed.url;user[asset.slot+'AssetId']=asset.id;asset.status='attached';asset.attachedTo='profile:'+asset.slot;asset.url=completed.url;
         }else{
           asset.status='uploaded';
         }
@@ -499,6 +555,36 @@ async function route(req, res) {
         return json(res,200,{asset:{id:asset.id,slot:asset.slot,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,previewUrl:completed.signedUrl||completed.url||null,url:completed.url||null},user:(asset.slot==='avatar'||asset.slot==='cover')?safeUser(user):undefined});
       }
       if(method==='POST'&&p==='/api/media/upload')return json(res,410,{error:'Direct base64 media uploads have been retired. Use the signed resumable device-media upload flow.'});
+      if(method==='POST'&&p==='/api/account/deactivate'){
+        const confirmation=String(input.confirmation||'');
+        if(confirmation!=='DEACTIVATE')return json(res,400,{error:'Type DEACTIVATE to confirm temporary account deactivation.'});
+        const currentSession=sessionFromRequest(req);
+        if(AUTH_PROVIDER==='supabase'){
+          const auth=await sessionAuth(currentSession);
+          if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+          await supabaseUpdateUserMetadata(auth.access_token,{account_status:'deactivated'});
+        }
+        user.status='deactivated';
+        db.sessions=(db.sessions||[]).filter(item=>item.userId!==user.id);
+        db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==user.id);
+        await saveStore();
+        return json(res,200,{ok:true,message:'Your Minglora account is deactivated. Sign in again to reactivate it.'},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'});
+      }
+      if(method==='POST'&&p==='/api/account/deletion-request'){
+        const currentPassword=String(input.currentPassword||'');
+        if(currentPassword.length<10)return json(res,400,{error:'Enter your current password to confirm this deletion request.'});
+        if(AUTH_PROVIDER==='supabase'){
+          const reauthenticated=await supabaseSignIn({email:user.email,password:currentPassword});
+          if(reauthenticated.user?.id&&reauthenticated.user.id!==user.id)return json(res,401,{error:'Your current password did not authenticate this account.'});
+        }else{
+          if(!user.passwordHash)return json(res,503,{error:'Account deletion confirmation is unavailable for this account provider.'});
+          const [salt,expected]=user.passwordHash.split(':');
+          const actual=(await scrypt(currentPassword,salt,64)).toString('hex');
+          if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return json(res,401,{error:'Your current password is incorrect.'});
+        }
+        const requestResult=await requestSupabaseState('account_deletion_request',{userId:user.id});
+        return json(res,202,{ok:true,request:requestResult.request,message:'Your permanent deletion request has been recorded for review. Your account remains active until the deletion process is completed.'});
+      }
       if(method==='GET'&&p==='/api/account/export'){
         const ownedPosts=db.posts.filter(item=>item.userId===user.id);
         const ownedPostIds=new Set(ownedPosts.map(item=>item.id));
@@ -767,6 +853,10 @@ async function route(req, res) {
         db.liveParticipants = db.liveParticipants || [];
         db.liveSessions.unshift(session);
         db.liveParticipants.push({ id: uid(), sessionId: id, userId: user.id, role: 'host', joinedAt: now(), leftAt: null });
+        if(visibility==='public'){
+          const followerIds=[...new Set((db.follows||[]).filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
+          for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',user.name+' is LIVE: '+title,{liveSessionId:id});
+        }
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
       }
@@ -1085,13 +1175,14 @@ async function route(req, res) {
           const currentSession=sessionFromRequest(req),auth=await sessionAuth(currentSession);
           if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
           const metadata={
-            name:next.name,username:next.username,contact_phone:next.contactPhone||'',phone_number:next.contactPhone||'',
+            name:next.name,username:next.username,avatar_url:next.avatar||'',cover_url:next.cover||'',contact_phone:next.contactPhone||'',phone_number:next.contactPhone||'',
             bio:next.bio||'',location:next.location||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
             gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
           };
           await supabaseUpdateUserMetadata(auth.access_token,metadata);
           await supabaseUpdateProfile(auth.access_token,user.id,{
             username:next.username,display_name:next.name,bio:next.bio||'',location:next.location||'',
+            avatar_url:next.avatar||'',cover_url:next.cover||'',
             contact_phone:next.contactPhone||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
             gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
           });
@@ -1276,8 +1367,124 @@ async function route(req, res) {
         db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
         await saveStore();return json(res,200,{ok:true,id:page.id});
       }
-      if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
-      if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(u=>u.id===to);if(!recipient||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const audience=getUserSettings(recipient).privacy.messageAudience;if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);await saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
+      if(method==='POST'&&p==='/api/calls'){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        const recipientIds=[...new Set([String(input.to||''),...(Array.isArray(input.participantIds)?input.participantIds.map(String):[])].filter(Boolean))];
+        const kind=String(input.kind||'video');
+        if(!['audio','video'].includes(kind)||!recipientIds.length||recipientIds.length>7)return json(res,400,{error:'Choose audio or video and invite between one and seven other members.'});
+        const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
+        if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
+        if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
+        const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
+        const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName,canPublish:true});
+        const call={id,roomName,createdBy:user.id,kind,status:'active',createdAt:now(),endedAt:null};
+        db.calls||=[];db.callParticipants||=[];
+        db.calls.unshift(call);
+        db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'joined',joinedAt:now(),leftAt:null});
+        for(const recipient of recipients){
+          db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+          notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
+        }
+        await saveStore();
+        return json(res,201,{call,liveKit:{...liveKit,role:'host'}});
+      }
+      let callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end)$/);
+      if(callMatch&&['POST'].includes(method)){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        const call=db.calls.find(item=>item.id===callMatch[1]);
+        const participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+        const action=callMatch[2];
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(action==='join'){
+          if(call.status==='ended'||!participant||participant.status==='declined'||participant.status==='left')return json(res,404,{error:'This call invitation is no longer active.'});
+          if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
+          participant.status='joined';participant.joinedAt=participant.joinedAt||now();participant.leftAt=null;
+          const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:call.roomName,canPublish:true});
+          await saveStore();return json(res,200,{call,liveKit:{...liveKit,role:participant.role}});
+        }
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(action==='invite'){
+          if(call.status==='ended'||participant.status!=='joined')return json(res,409,{error:'Join the call before inviting more people.'});
+          const invitedIds=[...new Set((Array.isArray(input.userIds)?input.userIds:[]).map(String).filter(Boolean))];
+          if(!invitedIds.length||invitedIds.length>6)return json(res,400,{error:'Choose between one and six additional participants.'});
+          const current=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='declined'&&item.status!=='left').length;
+          if(current+invitedIds.length>8)return json(res,409,{error:'Minglora group calls support up to eight participants.'});
+          const invited=invitedIds.map(id=>db.users.find(member=>member.id===id));
+          if(invited.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          const newlyInvited=[];
+          for(const member of invited){
+            if((db.callParticipants||[]).some(item=>item.callId===call.id&&item.userId===member.id&&item.status!=='declined'&&item.status!=='left'))continue;
+            if(getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
+            db.callParticipants.push({id:uid(),callId:call.id,userId:member.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(member.id,user.id,'call',user.name+' invited you to a Minglora group call.',{callId:call.id,callKind:call.kind});
+            newlyInvited.push(safeUser(member));
+          }
+          await saveStore();return json(res,200,{invited:newlyInvited,count:newlyInvited.length});
+        }
+        if(action==='leave'){
+          participant.status='left';participant.leftAt=now();
+          const active=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='joined');
+          if(user.id===call.createdBy||active.length===0){call.status='ended';call.endedAt=now();(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status='left';item.leftAt=call.endedAt;});}
+          await saveStore();return json(res,200,{ok:true,call});
+        }
+        if(action==='end'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the call creator can end this call for everyone.'});
+          call.status='ended';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status='left';item.leftAt=call.endedAt;});
+          await saveStore();return json(res,200,{ok:true,call});
+        }
+      }
+      if(method==='GET'&&p==='/api/messages'){
+        const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
+        const conversations=await Promise.all(peers.map(async id=>{
+          const messages=await Promise.all(db.messages.filter(item=>(item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(async item=>{
+            const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+              const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+              if(!asset)return null;
+              try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+            }));
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from))};
+          }));
+          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages};
+        }));
+        return json(res,200,{conversations});
+      }
+      if(method==='POST'&&p==='/api/messages'){
+        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message or attach up to five files.'});
+        const audience=getUserSettings(recipient).privacy.messageAudience;
+        if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const msg={id:uid(),from:user.id,to,text,attachmentIds,createdAt:now(),read:false};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user)}});
+      }
+      if(method==='GET'&&p==='/api/push/public-key'){
+        if(!configureWebPush())return json(res,503,{error:'Minglora device push is not configured yet.'});
+        return json(res,200,{publicKey:String(process.env.WEB_PUSH_PUBLIC_KEY).trim()});
+      }
+      if(method==='POST'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim(),p256dh=String(input.keys?.p256dh||''),auth=String(input.keys?.auth||'');
+        let parsed;
+        try{parsed=new URL(endpoint);}catch{return json(res,400,{error:'Choose a valid browser push subscription.'});}
+        if(parsed.protocol!=='https:'||endpoint.length>2048||p256dh.length<20||p256dh.length>256||auth.length<8||auth.length>128)return json(res,400,{error:'The browser push subscription is invalid.'});
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>item.endpoint!==endpoint);
+        db.pushSubscriptions.push({id:uid(),userId:user.id,endpoint,keys:{p256dh,auth},expirationTime:input.expirationTime||null,userAgent:String(req.headers['user-agent']||'').slice(0,240),createdAt:now(),updatedAt:now()});
+        await saveStore();
+        return json(res,201,{ok:true,subscriptions:(db.pushSubscriptions||[]).filter(item=>item.userId===user.id).length});
+      }
+      if(method==='DELETE'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim();
+        const before=(db.pushSubscriptions||[]).length;
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>!(item.userId===user.id&&item.endpoint===endpoint));
+        await saveStore();
+        return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
+      }
       if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id))),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}

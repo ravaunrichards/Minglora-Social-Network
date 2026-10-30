@@ -75,7 +75,8 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
-    "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow"
+    "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
+    "account_deletion_request"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -85,6 +86,22 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "account_deletion_request") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid account deletion request."});
+    const {data:existing,error:lookupError}=await admin.from("data_rights_requests")
+      .select("id,user_id,request_type,status,requested_at")
+      .eq("user_id",userId).eq("request_type","deletion")
+      .in("status",["requested","processing"]).order("requested_at",{ascending:false}).limit(1).maybeSingle();
+    if(lookupError)return json(503,{error:"Minglora could not check existing deletion requests."});
+    if(existing)return json(200,{request:existing,alreadyRequested:true});
+    const {data,error}=await admin.from("data_rights_requests")
+      .insert({user_id:userId,request_type:"deletion",status:"requested"})
+      .select("id,user_id,request_type,status,requested_at").single();
+    if(error)return fail(error,"Minglora could not record the deletion request.");
+    return json(201,{request:data});
+  }
 
   if (action === "economy_payout_webhook") {
     const batchId = String(input.paypalBatchId || "");
@@ -131,7 +148,7 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_catalog") {
     const [packagesResult, giftsResult] = await Promise.all([
       admin.from("coin_packages").select("code,name,coin_amount,price_minor,currency").eq("active", true).order("sort_order"),
-      admin.from("live_gift_catalog").select("code,name,category,emoji,animation_key,coin_price").eq("active", true).order("sort_order")
+      admin.from("live_gift_catalog").select("code,name,category,emoji,animation_key,coin_price,model_url,animation_preset").eq("active", true).order("sort_order")
     ]);
     if (packagesResult.error || giftsResult.error) return json(503, { error: "Minglora coin and gift catalogue is unavailable." });
     return json(200, { packages: packagesResult.data || [], gifts: giftsResult.data || [], currency: "USD", coinName: "Minglora Coins" });
@@ -337,13 +354,14 @@ Deno.serve(async (req: Request) => {
     const image={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
     const post={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","model/gltf-binary":"glb"};
     const story={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"};
-    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:{};
-    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":"";
-    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="post"?500*1024*1024:0;
+    const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","application/pdf":"pdf","text/plain":"txt","text/csv":"csv","application/zip":"zip","application/x-zip-compressed":"zip","application/msword":"doc","application/vnd.ms-excel":"xls","application/vnd.ms-powerpoint":"ppt","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"xlsx","application/vnd.openxmlformats-officedocument.presentationml.presentation":"pptx"};
+    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="message"?message:{};
+    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="message"?"minglora-message-attachments":"";
+    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="message"?100*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
-    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const objectPath=`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
     const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(objectPath,{upsert:false});
     if(error||!data?.token)return json(502,{error:"Minglora could not prepare a secure upload."});
@@ -364,6 +382,7 @@ Deno.serve(async (req: Request) => {
       "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-post-media":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime","audio/mpeg","audio/mp4","audio/ogg","audio/webm","model/gltf-binary"],
+      "minglora-message-attachments":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/mp4","audio/ogg","application/pdf","text/plain","text/csv","application/zip","application/x-zip-compressed","application/msword","application/vnd.ms-excel","application/vnd.ms-powerpoint","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.openxmlformats-officedocument.presentationml.presentation"],
       "minglora-stories":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime"]
     };
     const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
@@ -395,12 +414,16 @@ Deno.serve(async (req: Request) => {
       (["video/webm","audio/webm"].includes(mimeType)&&starts([0x1a,0x45,0xdf,0xa3]))||
       (mimeType==="audio/mpeg"&&(ascii(0,3)==="ID3"||(prefix[0]===0xff&&(prefix[1]&0xe0)===0xe0)))||
       (mimeType==="audio/ogg"&&ascii(0,4)==="OggS")||
-      (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF");
+      (mimeType==="model/gltf-binary"&&ascii(0,4)==="glTF")||
+      (mimeType==="application/pdf"&&ascii(0,4)==="%PDF")||
+      (["application/zip","application/x-zip-compressed","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.openxmlformats-officedocument.presentationml.presentation"].includes(mimeType)&&(starts([0x50,0x4b,0x03,0x04])||starts([0x50,0x4b,0x05,0x06])||starts([0x50,0x4b,0x07,0x08])))||
+      (["application/msword","application/vnd.ms-excel","application/vnd.ms-powerpoint"].includes(mimeType)&&starts([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1]))||
+      (["text/plain","text/csv"].includes(mimeType)&&prefix.length>0&&prefix.every(value=>value===9||value===10||value===13||value>=32));
     if(!validSignature){
       await admin.storage.from(bucket).remove([objectPath]);
       return json(415,{error:"The uploaded file contents do not match the selected media type. The file was removed."});
     }
-    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
       const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);result.url=data.publicUrl;
@@ -417,7 +440,7 @@ Deno.serve(async (req: Request) => {
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
     const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
+    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers","minglora-message-attachments"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
       return json(400,{error:"Invalid media reference."});
     }
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
