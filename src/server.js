@@ -31,8 +31,9 @@ function paypalConfig(){
   const clientId=String(process.env.PAYPAL_CLIENT_ID||'').trim();
   const clientSecret=String(process.env.PAYPAL_CLIENT_SECRET||'').trim();
   const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||(process.env.NODE_ENV==='production'?'live':'sandbox')).trim().toLowerCase();
-  const base=String(process.env.PAYPAL_API_BASE_URL||'').trim().replace(/\\/+$/,'')||
-    (mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com');
+  let base=String(process.env.PAYPAL_API_BASE_URL||'').trim();
+  while(base.endsWith('/'))base=base.slice(0,-1);
+  if(!base)base=mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com';
   return {clientId,clientSecret,webhookId:String(process.env.PAYPAL_WEBHOOK_ID||'').trim(),base,configured:Boolean(clientId&&clientSecret)};
 }
 async function paypalToken(){
