@@ -85,7 +85,7 @@ function stripLegacyDemoData(state) {
   return true;
 }
 
-async function requestSupabaseState(action, extra = {}) {
+export async function requestSupabaseState(action, extra = {}) {
   if (!stateApiUrl || !stateApiKey || !publishableKey) {
     throw new Error('Supabase persistence requires SUPABASE_STATE_API_URL, SUPABASE_STATE_API_KEY and SUPABASE_PUBLISHABLE_KEY.');
   }
