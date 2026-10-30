@@ -110,6 +110,7 @@ All application API endpoints use the `/api` prefix.
 - `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
 - `GET /api/messages`, `POST /api/messages`
 - `GET /api/notifications`, `GET /api/search?q=...`
+- `GET/PATCH /api/settings`, `POST /api/media/upload` (member profile avatar and cover uploads)
 - `/api/live/*` session/status routes documented in [LiveKit integration](backend/modules/live/README.md)
 
 See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must not be treated as implemented.
