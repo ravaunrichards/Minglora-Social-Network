@@ -376,16 +376,7 @@ async function transformMediaImage(file,zoom=1,rotation=0){
   const base=(file.name||'minglora-image').replace(/\.[^.]+$/,'');
   return new File([blob],base+'-edited.jpg',{type:'image/jpeg',lastModified:Date.now()});
 }
-async function uploadMediaFile(slot,file,zoom=1,rotation=0){
-  let prepared=file;
-  if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
-  let mimeType=prepared.type;
-  if(!mimeType&&prepared.name?.toLowerCase().endsWith('.glb'))mimeType='model/gltf-binary';
-  const base64=await fileAsBase64(prepared);
-  const result=await api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType,base64})});
-  if(!result.asset?.id)throw new Error('Minglora did not return a saved media record.');
-  return result.asset;
-}
+
 function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
