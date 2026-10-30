@@ -5,7 +5,7 @@ This document distinguishes working code from unfinished product requirements. A
 | Area | Implemented now | Not implemented / limitation |
 |---|---|---|
 | Account access | Registration, login, logout, salted scrypt password hashes, signed HttpOnly session cookie | Email verification, password reset, MFA, login rate limiting, account recovery |
-| Feed | Authenticated All/Following/Friends scopes, optional cursor pagination, post create/edit/delete by owner, text and HTTPS image URL, saved posts UI/API, recent/oldest ordering | Media upload/storage, personalized ranking, post audience controls, reporting |
+| Feed | Authenticated All/Following/Friends scopes, optional cursor pagination, post create/edit/delete by owner, text and HTTPS image URL, saved posts UI/API, recent/oldest ordering | Native post-media uploads, personalized ranking, post audience controls, reporting |
 | Reactions | Like toggle in browser; API accepts like, love, care, haha, wow, sad and angry | Full reaction picker and reaction analytics |
 | Comments | Add comments and delete comments as the comment author or post author | Edit, threaded replies, reaction lifecycle, moderation and reporting |
 | Profiles | View profiles/posts, edit name/bio/location, select avatar and cover images from the device gallery or file browser, preview before saving, upload to Supabase Storage with MIME/signature validation and an 8 MB limit; public/friends-only/private visibility is enforced for profile discovery, feed, search and profile reads | Verified accounts, granular per-post audiences, albums and privacy-aware follower/following management |
