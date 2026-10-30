@@ -103,17 +103,19 @@ function bindFeed(){
 }
 function openEditPost(post){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML=`<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="edit-post-title"><div class="modal-head"><h2 id="edit-post-title">Edit post</h2><button class="modal-close" aria-label="Close">×</button></div>
-    <form class="modal-body" id="edit-post-form"><div class="field"><label for="edit-post-text">Post text</label><textarea id="edit-post-text" name="text" maxlength="5000">${esc(post.text||'')}</textarea></div>
-    <div class="field"><label for="edit-post-image">Image URL (HTTPS, optional)</label><input id="edit-post-image" name="imageUrl" type="url" maxlength="2000" value="${esc(post.imageUrl||'')}"></div>
-    <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>`;
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="edit-post-title"><div class="modal-head"><h2 id="edit-post-title">Edit post</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="edit-post-form"><div class="field"><label for="edit-post-text">Post text</label><textarea id="edit-post-text" name="text" maxlength="5000">'+esc(post.text||'')+'</textarea></div><div class="field"><label>Photos, videos, audio and 3D files</label><div id="edit-post-media-picker"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>';
   document.body.append(modal);
-  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=()=>modal.remove());
-  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
-  modal.querySelector('form').onsubmit=async e=>{
-    e.preventDefault();
-    try{await api(`/posts/${post.id}`,{method:'PATCH',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();await refreshVisiblePosts();toast('Post updated.');}
-    catch(err){toast(err.message);}
+  const picker=createMediaPicker(modal.querySelector('#edit-post-media-picker'),{slot:'post',initialMedia:post.media||[]});
+  const close=()=>{picker.destroy();modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('form').onsubmit=async event=>{
+    event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
+    try{
+      const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
+      await api('/posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      close();await refreshVisiblePosts();toast('Post updated.');
+    }catch(error){toast(error.message);button.disabled=false;}
   };
 }
 function openPostOptions(post){
