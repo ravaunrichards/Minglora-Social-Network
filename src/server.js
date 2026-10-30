@@ -68,6 +68,7 @@ function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-f
 function checkLoginRateLimit(req,email){const key=loginRateLimitKey(req,email),entry=loginFailures.get(key);if(!entry)return {allowed:true,key};if(entry.resetAt<Date.now()){loginFailures.delete(key);return {allowed:true,key};}return {allowed:entry.count<5,key,retryAfterMs:Math.max(0,entry.resetAt-Date.now())};}
 function recordLoginFailure(key){const current=loginFailures.get(key);if(!current||current.resetAt<Date.now())loginFailures.set(key,{count:1,resetAt:Date.now()+15*60*1000});else current.count++;}
 function clearLoginFailures(key){loginFailures.delete(key);}
+function tokenAal(accessToken){try{const segment=String(accessToken).split('.')[1];const claims=JSON.parse(Buffer.from(segment,'base64url').toString('utf8'));return claims.aal||'aal1';}catch{return 'aal1';}}
 function isSameOriginApiWrite(req) {
   if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') return false;
   const suppliedOrigin = req.headers.origin;
@@ -197,35 +198,82 @@ async function route(req, res) {
         const sessionCookie = await createAppSession(created);
         return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
       }
-      if (method==='POST' && p==='/api/auth/login') {
-        const email=normalizeEmail(input.email), password=String(input.password||'');
-        if (AUTH_PROVIDER === 'supabase') {
-          let authUser;
-          try {
-            const authenticated = await supabaseSignIn({ email, password });
-            authUser = authenticated.user;
-          } catch (authError) {
-            const legacyUser = db.users.find(u=>normalizeEmail(u.email)===email);
-            if (!/invalid login credentials|invalid email or password/i.test(authError.message) || !legacyUser?.passwordHash) throw authError;
-            const [salt, expected] = legacyUser.passwordHash.split(':');
-            const actual = (await scrypt(password, salt, 64)).toString('hex');
-            if (actual.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected))) {
-              return json(res,401,{error:'Email or password is incorrect.'});
+      if(method==='POST'&&p==='/api/auth/password/reset/request'){
+        const email=normalizeEmail(input.email);
+        if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid email address.'});
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
+        const origin=String(process.env.APP_ORIGIN||process.env.SUPABASE_AUTH_REDIRECT_URL||'').trim();
+        const redirectTo=origin?new URL('/?password-recovery=1',origin).toString():undefined;
+        try{await supabaseRequestPasswordReset(email,redirectTo);}catch(error){if(error.status===429)return json(res,429,{error:'Too many recovery requests. Please wait before trying again.'});}
+        return json(res,200,{ok:true,message:'If that account exists, Minglora has requested a password recovery email.'});
+      }
+      if(method==='POST'&&p==='/api/auth/password/reset/complete'){
+        const accessToken=String(input.accessToken||''),password=String(input.password||'');
+        if(password.length<10||password.length>1024)return json(res,400,{error:'Your new password must contain at least 10 characters.'});
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
+        await supabaseCompletePasswordReset(accessToken,password);
+        return json(res,200,{ok:true,message:'Your password has been updated. Please log in.'});
+      }
+      if(method==='POST'&&p==='/api/auth/login'){
+        const email=normalizeEmail(input.email),password=String(input.password||''),rate=checkLoginRateLimit(req,email);
+        if(!validateEmail(email).valid||!password)return json(res,400,{error:'Enter your email address and password.'});
+        if(!rate.allowed)return json(res,429,{error:'Too many unsuccessful login attempts. Try again in 15 minutes.'},{'Retry-After':String(Math.ceil(rate.retryAfterMs/1000))});
+        if(AUTH_PROVIDER==='supabase'){
+          let authenticated=null;
+          try{
+            authenticated=await supabaseSignIn({email,password});
+          }catch(authError){
+            const legacyUser=db.users.find(item=>normalizeEmail(item.email)===email);
+            if(/invalid login credentials|invalid email or password/i.test(authError.message)&&legacyUser?.passwordHash){
+              const [salt,expected]=legacyUser.passwordHash.split(':');
+              const actual=(await scrypt(password,salt,64)).toString('hex');
+              if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
+              const migrated=await supabaseSignUp({email,password,name:legacyUser.name,username:legacyUser.username});
+              if(!migrated.user)return json(res,502,{error:'Minglora could not migrate this account into Supabase Auth.'});
+              authenticated=migrated;
+            }else{
+              if(/invalid login credentials|invalid email or password/i.test(authError.message))recordLoginFailure(rate.key);
+              throw authError;
             }
-            // Preserve the existing Minglora account and social ID while creating its Supabase Auth identity.
-            const migrated = await supabaseSignUp({ email, password, name:legacyUser.name, username:legacyUser.username });
-            authUser = migrated.user;
-            if (!authUser) return json(res,502,{error:'Minglora could not migrate this legacy account into Supabase Auth.'});
           }
-          const signedInUser = ensureLocalUser(authUser);
-          const sessionCookie = await createAppSession(signedInUser);
+          const signedInUser=ensureLocalUser(authenticated.user);
+          const accessToken=authenticated.access_token;
+          if(accessToken){
+            const factors=await supabaseListFactors(accessToken).catch(()=>({factors:[]}));
+            const verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified');
+            if(verifiedTotp&&tokenAal(accessToken)!=='aal2'){
+              const pendingId=uid();
+              db.pendingAuth.push({id:pendingId,userId:signedInUser.id,factorId:verifiedTotp.id,authSealed:sealSessionAuth(authenticated),createdAt:now(),expiresAt:new Date(Date.now()+5*60*1000).toISOString(),userAgent:String(req.headers['user-agent']||'').slice(0,240)});
+              await saveStore();clearLoginFailures(rate.key);
+              return json(res,200,{mfaRequired:true,challengeId:pendingId,message:'Enter the code from your authenticator app to finish signing in.'});
+            }
+          }
+          const sessionCookie=await createAppSession(signedInUser,authenticated,req);clearLoginFailures(rate.key);
           return json(res,200,{user:safeUser(signedInUser)},{'Set-Cookie':sessionCookie});
         }
-        const found=db.users.find(u=>normalizeEmail(u.email)===email);
-        if (!found?.passwordHash) return json(res,401,{error:'Email or password is incorrect.'});
-        const [salt, expected]=found.passwordHash.split(':'); const actual=(await scrypt(password,salt,64)).toString('hex'); if (actual.length!==expected.length || !crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))) return json(res,401,{error:'Email or password is incorrect.'});
-        const sessionCookie = await createAppSession(found);
+        const found=db.users.find(item=>normalizeEmail(item.email)===email);
+        if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
+        const [salt,expected]=found.passwordHash.split(':');
+        const actual=(await scrypt(password,salt,64)).toString('hex');
+        if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
+        const sessionCookie=await createAppSession(found,null,req);clearLoginFailures(rate.key);
         return json(res,200,{user:safeUser(found)},{'Set-Cookie':sessionCookie});
+      }
+      if(method==='POST'&&p==='/api/auth/mfa/login'){
+        const pending=(db.pendingAuth||[]).find(item=>item.id===String(input.challengeId||'')&&new Date(item.expiresAt)>new Date());
+        const code=String(input.code||'').replace(/\s/g,'');
+        if(!pending)return json(res,401,{error:'Your sign-in verification expired. Please log in again.'});
+        if(!/^\d{6,8}$/.test(code))return json(res,400,{error:'Enter the current code from your authenticator app.'});
+        const tokens=openSessionAuth(pending.authSealed);
+        if(!tokens?.access_token)return json(res,401,{error:'Your sign-in verification expired. Please log in again.'});
+        const challenge=await supabaseChallengeFactor(tokens.access_token,pending.factorId);
+        const verified=await supabaseVerifyFactor(tokens.access_token,pending.factorId,challenge.id,code);
+        const account=db.users.find(item=>item.id===pending.userId);
+        if(!account)return json(res,401,{error:'Account not found.'});
+        db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
+        const sessionCookie=await createAppSession(account,verified,req);
+        await saveStore();
+        return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
