@@ -446,13 +446,26 @@ function createMediaPicker(root,options={}){
 }
 
 function openEditProfile(u){
+  const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML=`<section class="modal profile-editor-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
     <div class="modal-head"><h2 id="edit-profile-title">Edit profile</h2><button class="modal-close" aria-label="Close">×</button></div>
     <form class="modal-body" id="edit-profile-form">
       <div class="field"><label for="edit-profile-name">Display name</label><input id="edit-profile-name" name="name" maxlength="120" value="${esc(u.name)}" required></div><div class="field"><label for="edit-profile-username">Username</label><input id="edit-profile-username" name="username" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" value="${esc(u.username)}" required><small class="muted">3–30 letters, numbers or underscores. Usernames are case-insensitive.</small></div>
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
-      <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"></div>
+      <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"><label class="about-toggle"><input type="checkbox" name="show_location" ${aboutVisibility.location?'checked':''}> Display location on my profile</label></div>
+      <section class="about-editor-section"><h3>About details</h3><p class="muted">Choose what people can see. Hidden details remain saved privately.</p>
+        <div class="field"><label for="edit-contact-phone">Contact phone</label><input id="edit-contact-phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" pattern="\\+[1-9][0-9]{7,14}" maxlength="24" value="${esc(u.contactPhone||'')}" placeholder="+18765551234"><label class="about-toggle"><input type="checkbox" name="show_contactPhone" ${aboutVisibility.contactPhone?'checked':''}> Display contact phone on my profile</label></div>
+        <div class="about-editor-grid">
+          <div class="field"><label for="edit-country">Country</label><input id="edit-country" name="country" maxlength="120" value="${esc(u.country||'')}"><label class="about-toggle"><input type="checkbox" name="show_country" ${aboutVisibility.country?'checked':''}> Display</label></div>
+          <div class="field"><label for="edit-county">County</label><input id="edit-county" name="county" maxlength="120" value="${esc(u.county||'')}"><label class="about-toggle"><input type="checkbox" name="show_county" ${aboutVisibility.county?'checked':''}> Display</label></div>
+          <div class="field"><label for="edit-parish">Parish</label><input id="edit-parish" name="parish" maxlength="120" value="${esc(u.parish||'')}"><label class="about-toggle"><input type="checkbox" name="show_parish" ${aboutVisibility.parish?'checked':''}> Display</label></div>
+          <div class="field"><label for="edit-city">City / Town</label><input id="edit-city" name="city" maxlength="120" value="${esc(u.city||'')}"><label class="about-toggle"><input type="checkbox" name="show_city" ${aboutVisibility.city?'checked':''}> Display</label></div>
+          <div class="field"><label for="edit-gender">Gender</label><input id="edit-gender" name="gender" maxlength="60" value="${esc(u.gender||'')}"><label class="about-toggle"><input type="checkbox" name="show_gender" ${aboutVisibility.gender?'checked':''}> Display</label></div>
+          <div class="field"><label for="edit-relationship-status">Relationship status</label><input id="edit-relationship-status" name="relationshipStatus" maxlength="80" value="${esc(u.relationshipStatus||'')}"><label class="about-toggle"><input type="checkbox" name="show_relationshipStatus" ${aboutVisibility.relationshipStatus?'checked':''}> Display</label></div>
+        </div>
+        <div class="field"><label class="about-toggle"><input type="checkbox" name="show_bio" ${aboutVisibility.bio?'checked':''}> Display my bio on my profile</label></div>
+      </section>
       <div class="profile-upload-section">
         <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif"><input id="edit-avatar-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-avatar-zoom"></label><button class="secondary" type="button" id="edit-avatar-rotate">Rotate 90°</button><small>Choose from your phone gallery, files or use the camera. Adjust zoom and crop before saving.</small></div></div>
       </div>
@@ -499,7 +512,19 @@ function openEditProfile(u){
   modal.querySelector('form').onsubmit=async event=>{
     event.preventDefault();const form=event.currentTarget,button=modal.querySelector('#save-profile-button'),status=modal.querySelector('#profile-upload-status');
     const values=new FormData(form);
-    const payload={name:values.get('name'),bio:values.get('bio'),location:values.get('location')};
+    const payload={
+      name:values.get('name'),bio:values.get('bio'),location:values.get('location'),
+      contactPhone:values.get('contactPhone'),country:values.get('country'),county:values.get('county'),
+      parish:values.get('parish'),city:values.get('city'),gender:values.get('gender'),
+      relationshipStatus:values.get('relationshipStatus'),
+      aboutVisibility:{
+        bio:form.elements.show_bio.checked,location:form.elements.show_location.checked,
+        contactPhone:form.elements.show_contactPhone.checked,country:form.elements.show_country.checked,
+        county:form.elements.show_county.checked,parish:form.elements.show_parish.checked,
+        city:form.elements.show_city.checked,gender:form.elements.show_gender.checked,
+        relationshipStatus:form.elements.show_relationshipStatus.checked
+      }
+    };
     button.disabled=true;
     try{
       if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});}
