@@ -13,13 +13,17 @@ const COLLECTIONS = [
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'messages', 'notifications', 'sessions', 'liveSessions', 'liveParticipants'
 ];
+
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
-const persistenceDriver = requestedDriver || (process.env.DATABASE_URL ? 'postgres' : 'json');
-if (!['json', 'postgres'].includes(persistenceDriver)) {
-  throw new Error('PERSISTENCE_DRIVER must be either "json" or "postgres".');
+const persistenceDriver = requestedDriver || (process.env.NODE_ENV === 'production' ? 'supabase' : 'json');
+if (!['json', 'supabase'].includes(persistenceDriver)) {
+  throw new Error('PERSISTENCE_DRIVER must be either "json" or "supabase".');
 }
 
-let pool = null;
+const stateApiUrl = String(process.env.SUPABASE_STATE_API_URL || '').trim().replace(/\/+$/, '');
+const stateApiKey = String(process.env.SUPABASE_STATE_API_KEY || '').trim();
+const publishableKey = String(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+let supabaseRevision = null;
 let saveQueue = Promise.resolve();
 
 export function initialState() {
@@ -80,51 +84,59 @@ function stripLegacyDemoData(state) {
   return true;
 }
 
-async function connectPostgres() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('PERSISTENCE_DRIVER=postgres requires DATABASE_URL. Configure a private PostgreSQL connection string before deployment.');
+async function requestSupabaseState(action, extra = {}) {
+  if (!stateApiUrl || !stateApiKey || !publishableKey) {
+    throw new Error('Supabase persistence requires SUPABASE_STATE_API_URL, SUPABASE_STATE_API_KEY and SUPABASE_PUBLISHABLE_KEY.');
   }
-  const pg = await import('pg');
-  const Pool = pg.Pool || pg.default?.Pool;
-  if (!Pool) throw new Error('The pg package did not expose a PostgreSQL Pool constructor.');
-  const sslMode = String(process.env.PGSSLMODE || '').toLowerCase();
-  const ssl = sslMode === 'disable'
-    ? false
-    : (sslMode === 'require' || process.env.NODE_ENV === 'production')
-      ? { rejectUnauthorized: true }
-      : undefined;
 
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: Math.max(1, Math.min(10, Number(process.env.PG_POOL_MAX || 5))),
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-    ...(ssl === undefined ? {} : { ssl })
-  });
-  pool.on('error', error => console.error('Minglora PostgreSQL pool error:', error.message));
+  let response;
+  try {
+    response = await fetch(stateApiUrl, {
+      method: 'POST',
+      headers: {
+        apikey: publishableKey,
+        'x-minglora-api-key': stateApiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action, ...extra })
+    });
+  } catch {
+    throw new Error('Could not reach the Minglora Supabase runtime gateway.');
+  }
 
-  // Schema and privileges are provisioned by versioned Supabase migrations.
-  // The runtime role is deliberately not a table owner and cannot run DDL.
-  await pool.query(
-    `INSERT INTO public.minglora_runtime_state (state_key, state)
-     VALUES ('primary', $1::jsonb)
-     ON CONFLICT (state_key) DO NOTHING`,
-    [JSON.stringify(initialState())]
-  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error || 'Minglora Supabase persistence request failed.');
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
 }
 
-async function persistPostgresState(state) {
-  const snapshot = JSON.stringify(state);
-  const write = () => pool.query(
-    `UPDATE public.minglora_runtime_state
-     SET state = $1::jsonb, revision = revision + 1, updated_at = now()
-     WHERE state_key = 'primary'`,
-    [snapshot]
-  ).then(result => {
-    if (result.rowCount !== 1) throw new Error('Minglora PostgreSQL state row is missing.');
+async function persistSupabaseState(state) {
+  if (!Number.isSafeInteger(supabaseRevision)) {
+    throw new Error('Supabase state revision is unavailable; reload the store before saving.');
+  }
+  const payload = await requestSupabaseState('save', {
+    state,
+    expectedRevision: supabaseRevision
   });
-  saveQueue = saveQueue.then(write, write);
-  await saveQueue;
+  if (!Number.isSafeInteger(Number(payload.revision))) {
+    throw new Error('Supabase did not return a valid state revision.');
+  }
+  supabaseRevision = Number(payload.revision);
+}
+
+async function loadSupabaseStore() {
+  const payload = await requestSupabaseState('load');
+  if (!payload.state || !Number.isSafeInteger(Number(payload.revision))) {
+    throw new Error('Minglora Supabase state row is missing or invalid.');
+  }
+  supabaseRevision = Number(payload.revision);
+  const normalized = normalizeState(payload.state);
+  const cleaned = stripLegacyDemoData(normalized.state);
+  if (normalized.changed || cleaned) await persistSupabaseState(normalized.state);
+  return normalized.state;
 }
 
 function loadJsonStore() {
@@ -146,27 +158,18 @@ function loadJsonStore() {
   return normalized.state;
 }
 
-async function loadPostgresStore() {
-  await connectPostgres();
-  const result = await pool.query(
-    `SELECT state FROM public.minglora_runtime_state WHERE state_key = 'primary' LIMIT 1`
-  );
-  if (!result.rows[0]) throw new Error('Minglora PostgreSQL state row was not initialized.');
-  const normalized = normalizeState(result.rows[0].state);
-  const cleaned = stripLegacyDemoData(normalized.state);
-  if (normalized.changed || cleaned) await persistPostgresState(normalized.state);
-  return normalized.state;
-}
-
 async function loadStore() {
-  return persistenceDriver === 'postgres' ? loadPostgresStore() : loadJsonStore();
+  if (persistenceDriver === 'supabase') return loadSupabaseStore();
+  return loadJsonStore();
 }
 
 export const db = await loadStore();
 
 export async function saveStore() {
-  if (persistenceDriver === 'postgres') {
-    await persistPostgresState(db);
+  if (persistenceDriver === 'supabase') {
+    const write = () => persistSupabaseState(db);
+    saveQueue = saveQueue.then(write, write);
+    await saveQueue;
     return;
   }
   fs.mkdirSync(dataDir, { recursive: true });
@@ -174,19 +177,25 @@ export async function saveStore() {
 }
 
 export async function persistenceHealth() {
-  if (!pool) {
-    return { driver: 'json', durable: false, ready: process.env.NODE_ENV !== 'production' };
+  if (persistenceDriver === 'json') {
+    return { driver: 'json', provider: 'local-file', durable: false, ready: process.env.NODE_ENV !== 'production' };
   }
   try {
-    await pool.query('SELECT 1');
-    return { driver: 'postgres', durable: true, ready: true };
+    const payload = await requestSupabaseState('health');
+    const revision = Number(payload.revision);
+    return {
+      driver: 'supabase',
+      provider: 'minglora-supabase',
+      durable: true,
+      ready: payload.ok === true && Number.isSafeInteger(revision)
+    };
   } catch {
-    return { driver: 'postgres', durable: true, ready: false };
+    return { driver: 'supabase', provider: 'minglora-supabase', durable: true, ready: false };
   }
 }
 
 export async function closeStore() {
-  if (pool) await pool.end();
+  // Supabase persistence uses HTTPS; there is no app-managed PostgreSQL pool.
 }
 
 export { uid, now };
