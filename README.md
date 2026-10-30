@@ -36,8 +36,10 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 - `backend/modules/`: domain boundaries for posts, profiles, relationships, Groups, Pages, Stories, messaging, notifications, search, media, Live, Video, Marketplace, Ads, privacy, moderation, Reels, albums, calls, Memories, Events and data rights. Groups, Pages and Stories have imported service modules with unit tests; other module documents are not proof of implementation.
 - `apps/`: documented boundaries for web, Android, iOS, desktop, TV, admin and Creator Studio clients. Only the browser client is currently implemented.
 - `frontend/`: target component, layout, page, navigation and theme organization; current UI remains in `public/`.
-- `database/migrations/001_social_core.sql` and `002_extended_social_domains.sql`: normalized relational schema design foundations; the current API does not yet use those tables.
-- `database/migrations/003_runtime_state_store.sql`: runtime PostgreSQL state table used by the current compatibility adapter.
+- `database/migrations/005_minglora_supabase_relational_platform.sql`: consolidated Supabase-native relational schema using `auth.users` as the identity source, with RLS, storage and Realtime configuration.
+- `database/migrations/006_minglora_database_hardening.sql`: foreign-key indexes, missing primary-key repair and function privilege hardening.
+- `database/types/database.types.ts`: generated types for the deployed Minglora Supabase schema.
+- `database/migrations/001`–`004`: historical design/setup artifacts; do not apply these separately to a clean Supabase project.
 - `packages/`: planned shared API contracts, validation and platform-neutral helpers.
 - `tests/`: current API integration tests plus unit tests and test plans for security, accessibility, performance and browser flows.
 - `docs/`: architecture map, feature catalog, roadmap, API, security and deployment guides.
@@ -110,13 +112,13 @@ See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must 
 
 ## Production limitations
 
-The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Migrations 001 and 002 remain design foundations; migration 003 creates the runtime store table.
+The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter currently provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Minglora's Supabase-native relational schema and hardening migrations 005 and 006 are installed; application routes still need their normalized repository adapter.
 
 Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, implement rate limiting, CSRF safeguards, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
 
 ## Supabase Auth integration
 
-New registrations are sent to Minglora Supabase Auth. The browser never receives a service-role key. When email confirmation is enabled in Supabase, Minglora displays a confirmation message and waits for the user to verify the email before login. A database trigger creates the matching profile row. Existing accounts created by the legacy local password store are migrated lazily on their next successful legacy-password login; the old password is verified locally before a Supabase Auth user is created. Apply migration `004_supabase_auth_profiles.sql` before enabling Supabase Auth in production. Production startup refuses a legacy-only or placeholder Supabase configuration.
+New registrations are sent to Minglora Supabase Auth. The browser never receives a service-role key. When email confirmation is enabled in Supabase, Minglora displays a confirmation message and waits for the user to verify the email before login. A database trigger creates the matching profile row. Existing accounts created by the legacy local password store are migrated lazily on their next successful legacy-password login; the old password is verified locally before a Supabase Auth user is created. Minglora's consolidated Supabase migrations 005 and 006 are applied to its dedicated project. Supabase Auth is the identity source and the database creates a matching profile automatically. The server still needs its Minglora project URL and matching publishable key configured in the private hosting environment. Production startup refuses a legacy-only or placeholder Supabase configuration.
 
 Copy `.env.example` to a private environment file and replace each `YOUR_PROJECT_REF` / `REPLACE_ME` value with credentials from Minglora's own services.
 
