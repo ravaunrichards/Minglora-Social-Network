@@ -397,10 +397,10 @@ function openEditProfile(u){
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
       <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"></div>
       <div class="profile-upload-section">
-        <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from device</label><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Choose from your phone gallery, photos, files or folders. Maximum 8 MB.</small></div></div>
+        <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"><input id="edit-avatar-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-avatar-zoom"></label><button class="secondary" type="button" id="edit-avatar-rotate">Rotate 90°</button><small>Choose from your phone gallery, files or use the camera. Adjust zoom and crop before saving.</small></div></div>
       </div>
       <div class="profile-upload-section">
-        <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-cover-file">Choose cover photo</label><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Browse your device gallery or folders. Maximum 8 MB.</small></div>
+        <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"><input id="edit-cover-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-cover-zoom"></label><button class="secondary" type="button" id="edit-cover-rotate">Rotate 90°</button><small>Use gallery, files or the device camera. Adjust zoom and crop before saving.</small></div>
       </div>
       <p class="profile-upload-status muted" id="profile-upload-status" role="status">Your selected images upload securely to Minglora when you save.</p>
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
@@ -408,6 +408,9 @@ function openEditProfile(u){
   document.body.append(modal);
   const avatarInput=modal.querySelector('#edit-avatar-file');
   const coverInput=modal.querySelector('#edit-cover-file');
+  const avatarCamera=modal.querySelector('#edit-avatar-camera');
+  const coverCamera=modal.querySelector('#edit-cover-camera');
+  const avatarEdit={zoom:1,rotation:0},coverEdit={zoom:1,rotation:0};
   const avatarPreview=modal.querySelector('#edit-avatar-preview');
   const coverPreview=modal.querySelector('#edit-cover-preview');
   if(u.cover)coverPreview.style.backgroundImage='url("'+String(u.cover).replace(/["\\]/g,'')+'")';
@@ -418,8 +421,21 @@ function openEditProfile(u){
     if(file.size>8*1024*1024){toast('Images must be 8 MB or smaller.');input.value='';return;}
     const url=URL.createObjectURL(file);previewUrls.push(url);if(target.tagName==='IMG')target.src=url;else target.style.backgroundImage='url("'+url+'")';target.classList.add('has-preview');
   }
-  avatarInput.addEventListener('change',()=>previewFile(avatarInput,avatarPreview));
-  coverInput.addEventListener('change',()=>previewFile(coverInput,coverPreview));
+  avatarInput.addEventListener('change',()=>{avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';previewFile(avatarInput,avatarPreview);});
+  coverInput.addEventListener('change',()=>{coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';previewFile(coverInput,coverPreview);});
+  function assignCameraFile(cameraInput,targetInput,targetPreview,editState,zoomInput){
+    const file=cameraInput.files?.[0];if(!file)return;
+    const transfer=new DataTransfer();transfer.items.add(file);targetInput.files=transfer.files;
+    editState.zoom=1;editState.rotation=0;zoomInput.value='1';previewFile(targetInput,targetPreview);
+  }
+  modal.querySelector('#edit-avatar-camera-button').onclick=()=>avatarCamera.click();
+  modal.querySelector('#edit-cover-camera-button').onclick=()=>coverCamera.click();
+  avatarCamera.addEventListener('change',()=>assignCameraFile(avatarCamera,avatarInput,avatarPreview,avatarEdit,modal.querySelector('#edit-avatar-zoom')));
+  coverCamera.addEventListener('change',()=>assignCameraFile(coverCamera,coverInput,coverPreview,coverEdit,modal.querySelector('#edit-cover-zoom')));
+  modal.querySelector('#edit-avatar-zoom').addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);});
+  modal.querySelector('#edit-cover-zoom').addEventListener('input',event=>{coverEdit.zoom=Number(event.target.value);});
+  modal.querySelector('#edit-avatar-rotate').onclick=()=>{avatarEdit.rotation=(avatarEdit.rotation+90)%360;};
+  modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;};
   const close=()=>{previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
@@ -429,8 +445,8 @@ function openEditProfile(u){
     const payload={name:values.get('name'),bio:values.get('bio'),location:values.get('location')};
     button.disabled=true;
     try{
-      if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';await uploadProfileImage('avatar',avatarInput.files[0]);}
-      if(coverInput.files?.[0]){status.textContent='Uploading cover photo…';await uploadProfileImage('cover',coverInput.files[0]);}
+      if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);await uploadProfileImage('avatar',edited);}
+      if(coverInput.files?.[0]){status.textContent='Uploading cover photo…';const edited=await transformMediaImage(coverInput.files[0],coverEdit.zoom,coverEdit.rotation);await uploadProfileImage('cover',edited);}
       status.textContent='Saving profile details…';
       const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(payload)});
       state.user=result.user;close();showApp();await openProfile(state.user.id);toast('Profile updated.');
