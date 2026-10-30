@@ -606,31 +606,44 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!mimeType&&prepared.name?.toLowerCase().endsWith('.glb'))mimeType='model/gltf-binary';
   if(!mimeType)throw new Error('Minglora could not detect the selected file type. Choose a supported photo, video, audio or GLB file.');
   if(prepared.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
-  if(!window.tus?.Upload)throw new Error('The secure upload component did not load. Refresh Minglora and try again.');
   const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size,fileName:prepared.name||'Attachment'})});
   const uploadInfo=preparedUpload.upload||{};
-  if(!preparedUpload.assetId||!uploadInfo.endpoint||!uploadInfo.token||!uploadInfo.bucket||!uploadInfo.path)throw new Error('Minglora could not prepare this secure upload.');
-  await new Promise((resolve,reject)=>{
-    try{
-      const upload=new window.tus.Upload(prepared,{
-        endpoint:uploadInfo.endpoint,
-        retryDelays:[0,3000,5000,10000,20000],
-        headers:{'x-signature':uploadInfo.token},
-        uploadDataDuringCreation:true,
-        removeFingerprintOnSuccess:true,
-        storeFingerprintForResuming:false,
-        chunkSize:6*1024*1024,
-        metadata:{bucketName:uploadInfo.bucket,objectName:uploadInfo.path,contentType:mimeType,cacheControl:'3600'},
-        onProgress:(bytesUploaded,bytesTotal)=>{
-          const percentage=bytesTotal?Math.min(100,Math.round(bytesUploaded/bytesTotal*100)):0;
-          onProgress({bytesUploaded,bytesTotal,percentage});
-        },
-        onError:error=>reject(new Error('Upload failed: '+(error?.message||'The connection was interrupted. Try again.'))),
-        onSuccess:()=>resolve()
-      });
-      upload.start();
-    }catch(error){reject(error);}
-  });
+  if(!preparedUpload.assetId||!uploadInfo.bucket||!uploadInfo.path)throw new Error('Minglora could not prepare this secure upload.');
+  const canUseSignedStandard=Boolean(uploadInfo.signedUrl)&&prepared.size<=6*1024*1024;
+  if(canUseSignedStandard){
+    const formData=new FormData();
+    formData.append('cacheControl','3600');
+    formData.append('',prepared,prepared.name||'minglora-upload');
+    const response=await fetch(uploadInfo.signedUrl,{method:'PUT',headers:{'x-upsert':'false'},body:formData});
+    if(!response.ok){
+      const result=await response.json().catch(()=>({}));
+      throw new Error(result.message||result.error||'Supabase could not accept this photo or file. Please retry.');
+    }
+    onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
+  }else{
+    if(!window.tus?.Upload||!uploadInfo.endpoint||!uploadInfo.token)throw new Error('The secure resumable upload component did not load. Refresh Minglora and try again.');
+    await new Promise((resolve,reject)=>{
+      try{
+        const upload=new window.tus.Upload(prepared,{
+          endpoint:uploadInfo.endpoint,
+          retryDelays:[0,3000,5000,10000,20000],
+          headers:{'x-signature':uploadInfo.token},
+          uploadDataDuringCreation:true,
+          removeFingerprintOnSuccess:true,
+          storeFingerprintForResuming:false,
+          chunkSize:6*1024*1024,
+          metadata:{bucketName:uploadInfo.bucket,objectName:uploadInfo.path,contentType:mimeType,cacheControl:'3600'},
+          onProgress:(bytesUploaded,bytesTotal)=>{
+            const percentage=bytesTotal?Math.min(100,Math.round(bytesUploaded/bytesTotal*100)):0;
+            onProgress({bytesUploaded,bytesTotal,percentage});
+          },
+          onError:error=>reject(new Error('Upload failed: '+(error?.message||'The connection was interrupted. Try again.'))),
+          onSuccess:()=>resolve()
+        });
+        upload.start();
+      }catch(error){reject(error);}
+    });
+  }
   onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
   const completed=await api('/media/upload/complete',{method:'POST',body:JSON.stringify({assetId:preparedUpload.assetId})});
   if(!completed.asset?.id)throw new Error('The file uploaded but Minglora could not register it.');
@@ -1008,13 +1021,17 @@ let messageRefreshInFlight=false;
 function renderMessageContent(messages=[]){
   if(!messages.length)return '<div class="message-window-empty">No messages yet. Say hello to start this chat.</div>';
   return messages.map(message=>{
-    const receipt=message.from===state.user.id?(message.read?'Seen':'Sent'):'';
-    const content=message.stickerId?'<div class="message-window-sticker">'+esc(message.text||'')+'</div>':(message.text?'<p>'+esc(message.text)+'</p>':'');
-    const gif=message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'';
-    return '<article class="message-window-bubble '+(message.from===state.user.id?'mine':'')+(message.stickerId?' is-sticker':'')+'">'+content+gif+messageAttachmentHtml(message.attachments)+'<small>'+timeAgo(message.createdAt)+(receipt?' · '+receipt:'')+'</small></article>';
+    const mine=message.from===state.user.id;
+    const receipt=mine?(message.read?'Seen':'Sent'):'';
+    const content=message.unsent?'<p class="message-unsent-label">This message was unsent.</p>':(message.stickerId?'<div class="message-window-sticker">'+esc(message.text||'')+'</div>':(message.text?'<p>'+esc(message.text)+'</p>':''));
+    const gif=message.unsent?'':(message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'');
+    const attachments=message.unsent?'':messageAttachmentHtml(message.attachments);
+    const editable=mine&&!message.unsent&&!message.stickerId&&!message.gifUrl&&Boolean(message.text);
+    const actions='<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+(editable?'<button type="button" data-message-edit="'+esc(message.id)+'">Edit message</button>':'')+'<button type="button" data-message-delete-me="'+esc(message.id)+'">Delete for me</button>'+(mine&&!message.unsent?'<button type="button" class="danger" data-message-unsend="'+esc(message.id)+'">Unsend for everyone</button>':'')+'</div></details>';
+    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+content+gif+attachments+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
   }).join('');
 }
-function messageSignature(messages=[]){return messages.map(message=>String(message.id)+':'+(message.read?'1':'0')).join('|');}
+function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(',')].join(':')).join('|');}
 function syncMessageRefreshPolling(){
   const enabled=Boolean(state.user)&&(state.view==='messages'||state.messageWindows.length>0);
   if(enabled&&!messageRefreshTimer)messageRefreshTimer=setInterval(refreshMessageConversations,5000);
@@ -1077,6 +1094,42 @@ async function sendGifMessage(userId,gifUrl){
   try{await api('/messages',{method:'POST',body:JSON.stringify({to:userId,gifUrl})});await reloadMessageWindows();}
   catch(error){toast(error.message);}
 }
+function openEditMessage(message){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal message-edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-message-title"><div class="modal-head"><h2 id="edit-message-title">Edit message</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body" id="edit-message-form"><label class="field"><span>Message</span><textarea name="text" maxlength="3000" required></textarea></label><p class="auth-error" role="status"></p><div class="modal-actions"><button class="secondary modal-cancel" type="button">Cancel</button><button class="primary" type="submit">Save changes</button></div></form></section>';
+  document.body.append(modal);
+  const form=modal.querySelector('#edit-message-form');form.elements.text.value=message.text||'';
+  const close=()=>modal.remove();
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const button=form.querySelector('button[type="submit"]'),status=form.querySelector('.auth-error');button.disabled=true;
+    try{
+      await api('/messages/'+encodeURIComponent(message.id),{method:'PATCH',body:JSON.stringify({text:form.elements.text.value})});
+      close();await reloadMessageWindows();toast('Message updated.');
+    }catch(error){status.textContent=error.message;button.disabled=false;}
+  });
+}
+async function removeMessageForMe(messageId){
+  try{await api('/messages/'+encodeURIComponent(messageId),{method:'DELETE',body:JSON.stringify({scope:'me'})});await reloadMessageWindows();toast('Message deleted from your chat.');}
+  catch(error){toast(error.message);}
+}
+async function unsendMessageForEveryone(messageId){
+  if(!window.confirm('Unsend this message for everyone in the conversation?'))return;
+  try{await api('/messages/'+encodeURIComponent(messageId),{method:'DELETE',body:JSON.stringify({scope:'everyone'})});await reloadMessageWindows();toast('Message unsent.');}
+  catch(error){toast(error.message);}
+}
+async function removeMessageConversation(peerId){
+  if(!peerId||!window.confirm('Remove this conversation from your inbox? The other person keeps their copy. New messages can make it appear again.'))return;
+  try{
+    await api('/messages/'+encodeURIComponent(peerId),{method:'DELETE',body:'{}'});
+    cancelMessageVoiceRecording(peerId);
+    state.messageWindows=state.messageWindows.filter(item=>item.user.id!==peerId);
+    await reloadMessageWindows();
+    toast('Conversation removed from your inbox.');
+  }catch(error){toast(error.message);}
+}
 function cancelMessageVoiceRecording(userId){
   const recording=activeMessageRecordings.get(userId);
   if(!recording)return;
@@ -1126,7 +1179,7 @@ function renderMessageWindows(){
   }
   if(!dock){dock=document.createElement('div');dock.id='message-window-dock';document.body.append(dock);}
   messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();
-  dock.innerHTML=state.messageWindows.map(win=>{
+  dock.innerHTML=state.messageWindows.slice().reverse().map(win=>{
     const conversation=state.conversations.find(item=>item.user.id===win.user.id),messages=conversation?.messages||[];
     const stickerButtons=MESSAGE_STICKERS.map(sticker=>'<button type="button" class="message-sticker-choice" data-message-sticker="'+sticker.id+'" aria-label="'+sticker.label+'">'+sticker.emoji+'</button>').join('');
     const emojiButtons=MESSAGE_QUICK_EMOJIS.map(emoji=>'<button type="button" class="message-emoji-choice" data-message-emoji="'+emoji+'" aria-label="Insert '+emoji+'">'+emoji+'</button>').join('');
@@ -1138,15 +1191,24 @@ function renderMessageWindows(){
         '<div class="message-window-emoji-panel" data-message-emoji-panel="'+esc(win.user.id)+'" hidden>'+emojiButtons+'</div>'+
         '<div class="message-window-gif-panel" data-message-gif-panel="'+esc(win.user.id)+'" hidden><form class="message-gif-search" data-message-gif-search="'+esc(win.user.id)+'"><input name="query" maxlength="80" placeholder="Search GIFs…" aria-label="Search GIFs"><button type="submit">Search</button></form><div class="message-gif-results" data-message-gif-results="'+esc(win.user.id)+'"><span>Search Tenor GIFs to send one.</span></div></div>'+
         '<div class="message-window-record-status" data-message-record-status="'+esc(win.user.id)+'" role="status" hidden>Recording voice note…</div>'+
-        '<div class="message-window-toolbar"><button type="button" data-message-attach="'+esc(win.user.id)+'" title="Photo, video or file" aria-label="Attach photo, video or file">🖼</button><button type="button" data-message-voice="'+esc(win.user.id)+'" title="Record voice message" aria-label="Record voice message">🎤</button><button type="button" data-message-open-stickers="'+esc(win.user.id)+'" title="Stickers" aria-label="Open stickers">✳</button><button type="button" data-message-open-gifs="'+esc(win.user.id)+'" title="GIFs" aria-label="Open GIF search">GIF</button></div>'+
+        '<div class="message-window-toolbar"><button type="button" data-message-attach="'+esc(win.user.id)+'" title="Photos, videos and files" aria-label="Attach photos, videos and files">🖼</button><button type="button" data-message-voice="'+esc(win.user.id)+'" title="Voice note — record and send" aria-label="Record a voice note"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button type="button" data-message-open-stickers="'+esc(win.user.id)+'" title="Stickers" aria-label="Open stickers">✳</button><button type="button" data-message-open-gifs="'+esc(win.user.id)+'" title="GIFs" aria-label="Open GIF search">GIF</button></div>'+
         '<form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Aa" autocomplete="off" aria-label="Write a message"><button type="button" class="message-emoji-toggle" data-message-open-emoji="'+esc(win.user.id)+'" aria-label="Choose emoji" title="Emoji">😊</button><button class="message-send-button" type="submit" aria-label="Send message" title="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.2 21 12 3.4 3.8l-.1 6.4 12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>'+
       '</div></div>'
     );
-    return '<section class="message-window '+(win.minimized?'is-minimized':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header"><button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small>@'+esc(win.user.username||'member')+'</small></span></button><div class="message-window-controls"><button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Voice call" title="Voice call">☎</button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call">▣</button><button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
+    return '<section class="message-window '+(win.minimized?'is-minimized':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header"><button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small>@'+esc(win.user.username||'member')+'</small></span></button><div class="message-window-controls"><button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button><button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
   }).join('');
   dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{const id=button.dataset.messageClose;cancelMessageVoiceRecording(id);state.messageWindows=state.messageWindows.filter(item=>item.user.id!==id);renderMessageWindows();syncMessageRefreshPolling();});
   dock.querySelectorAll('[data-message-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.messageProfile));
+  dock.querySelectorAll('[data-message-remove]').forEach(button=>button.onclick=()=>removeMessageConversation(button.dataset.messageRemove));
+  dock.querySelectorAll('[data-message-edit]').forEach(button=>button.onclick=()=>{
+    const messageId=button.dataset.messageEdit;
+    const message=state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===messageId);
+    if(message)openEditMessage(message);
+  });
+  dock.querySelectorAll('[data-message-delete-me]').forEach(button=>button.onclick=()=>removeMessageForMe(button.dataset.messageDeleteMe));
+  dock.querySelectorAll('[data-message-unsend]').forEach(button=>button.onclick=()=>unsendMessageForEveryone(button.dataset.messageUnsend));
+  dock.querySelectorAll('.message-bubble-actions-menu button').forEach(button=>button.onclick=()=>button.closest('details')?.removeAttribute('open'));
   dock.querySelectorAll('[data-message-audio]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageAudio);if(win)startMingloraCall(win.user,'audio');});
   dock.querySelectorAll('[data-message-video]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageVideo);if(win)startMingloraCall(win.user,'video');});
   dock.querySelectorAll('[data-message-attach]').forEach(button=>button.onclick=()=>{const drawer=dock.querySelector('[data-message-attachment-drawer="'+CSS.escape(button.dataset.messageAttach)+'"]');if(drawer)drawer.hidden=!drawer.hidden;});
@@ -1215,13 +1277,14 @@ async function renderMessages(){
   state.conversations=messageData.conversations||[];
   const conversationRows=state.conversations.length?state.conversations.map(conversation=>{
     const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':'Open chat');
-    return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button></div>';
+    return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><div class="message-inbox-row-actions"><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button><button class="secondary" type="button" data-remove-inbox-chat="'+esc(conversation.user.id)+'">Remove</button></div></div>';
   }).join(''):'<div class="message-inbox-empty"><div class="empty-icon">✉</div><h3>No conversations yet</h3><p>Open another member’s profile and select Message to start a private chat.</p></div>';
   setContent('<div class="page-heading"><div><h1>Messages</h1><p class="muted">Your conversations appear here after you send or receive a message.</p></div><span class="eyebrow">'+state.conversations.length+' conversations</span></div><section class="card"><div class="inbox-people-list">'+conversationRows+'</div></section>');
   document.querySelectorAll('[data-open-inbox-chat]').forEach(button=>button.onclick=()=>{
     const conversation=state.conversations.find(item=>item.user.id===button.dataset.openInboxChat);
     if(conversation)openMessageWindow(conversation.user);
   });
+  document.querySelectorAll('[data-remove-inbox-chat]').forEach(button=>button.onclick=()=>removeMessageConversation(button.dataset.removeInboxChat));
   renderMessageWindows();
 }
 

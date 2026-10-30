@@ -577,6 +577,62 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const unconfiguredGifSearch = await request('/api/messages/gifs?q=funny');
   assert.equal(unconfiguredGifSearch.status, 503);
 
+  // A recipient cannot change the sender's text.
+  const forbiddenMessageEdit = await request('/api/messages/' + sentDirectMessage.body.message.id, {
+    method: 'PATCH', body: JSON.stringify({ text: 'Edited by the wrong member' })
+  });
+  assert.equal(forbiddenMessageEdit.status, 403);
+
+  cookie = firstCookie;
+  const editedMessage = await request('/api/messages/' + sentDirectMessage.body.message.id, {
+    method: 'PATCH', body: JSON.stringify({ text: 'Edited by the original sender' })
+  });
+  assert.equal(editedMessage.status, 200);
+  assert.equal(editedMessage.body.message.text, 'Edited by the original sender');
+  assert.ok(editedMessage.body.message.editedAt);
+
+  cookie = secondCookie;
+  const deleteForMe = await request('/api/messages/' + sentDirectMessage.body.message.id, {
+    method: 'DELETE', body: JSON.stringify({ scope: 'me' })
+  });
+  assert.equal(deleteForMe.status, 200);
+  const recipientAfterDeleteForMe = await request('/api/messages');
+  const recipientThreadAfterDeleteForMe = recipientAfterDeleteForMe.body.conversations.find(item => item.user.id === firstUserId);
+  assert.equal(recipientThreadAfterDeleteForMe.messages.some(item => item.id === sentDirectMessage.body.message.id), false);
+
+  cookie = firstCookie;
+  const senderStillHasMessage = await request('/api/messages');
+  const senderThreadStillHasMessage = senderStillHasMessage.body.conversations.find(item => item.user.id === secondUserId);
+  assert.equal(senderThreadStillHasMessage.messages.some(item => item.id === sentDirectMessage.body.message.id), true);
+
+  const hiddenThread = await request('/api/messages/' + secondUserId, { method: 'DELETE', body: '{}' });
+  assert.equal(hiddenThread.status, 200);
+  assert.equal(hiddenThread.body.removed, true);
+  assert.equal((await request('/api/messages')).body.conversations.some(item => item.user.id === secondUserId), false);
+
+  cookie = secondCookie;
+  assert.equal((await request('/api/messages')).body.conversations.some(item => item.user.id === firstUserId), true);
+  const replyAfterHide = await request('/api/messages', {
+    method: 'POST', body: JSON.stringify({ to: firstUserId, text: 'A new message brings the inbox thread back.' })
+  });
+  assert.equal(replyAfterHide.status, 201);
+  cookie = firstCookie;
+  assert.equal((await request('/api/messages')).body.conversations.some(item => item.user.id === secondUserId), true);
+
+  const messageToUnsend = await request('/api/messages', {
+    method: 'POST', body: JSON.stringify({ to: secondUserId, text: 'This message will be unsent.' })
+  });
+  assert.equal(messageToUnsend.status, 201);
+  const unsend = await request('/api/messages/' + messageToUnsend.body.message.id, {
+    method: 'DELETE', body: JSON.stringify({ scope: 'everyone' })
+  });
+  assert.equal(unsend.status, 200);
+  assert.equal(unsend.body.unsent, true);
+  cookie = secondCookie;
+  const recipientSeesUnsent = await request('/api/messages');
+  const recipientUnsentThread = recipientSeesUnsent.body.conversations.find(item => item.user.id === firstUserId);
+  assert.equal(recipientUnsentThread.messages.some(item => item.id === messageToUnsend.body.message.id && item.unsent === true), true);
+
   cookie = firstCookie;
   const mutualFriends = await request('/api/friends');
   assert.equal(mutualFriends.body.friends.some(member => member.id === secondUserId), true);

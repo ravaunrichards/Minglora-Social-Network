@@ -365,11 +365,23 @@ Deno.serve(async (req: Request) => {
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const objectPath=`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
     const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(objectPath,{upsert:false});
-    if(error||!data?.token)return json(502,{error:"Minglora could not prepare a secure upload."});
+    if(error||!data?.signedUrl)return json(502,{error:"Minglora could not prepare a secure upload."});
     const supabaseHost=new URL(SUPABASE_URL);
     const projectRef=supabaseHost.hostname.split(".")[0];
     const endpoint=`${supabaseHost.protocol}//${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
-    return json(201,{bucket,path:objectPath,mimeType,mediaType,byteSize,token:data.token,endpoint});
+    let signedUrl="";
+    let token="";
+    try{
+      const parsedSignedUrl=new URL(data.signedUrl,new URL("/storage/v1",SUPABASE_URL));
+      signedUrl=parsedSignedUrl.toString();
+      token=String(parsedSignedUrl.searchParams.get("token")||"").trim();
+    }catch{
+      return json(502,{error:"Minglora received an invalid signed upload URL from Storage."});
+    }
+    if(!token||token.split(".").length!==3){
+      return json(502,{error:"Minglora received an invalid upload authorization from Storage. Retry the upload."});
+    }
+    return json(201,{bucket,path:objectPath,mimeType,mediaType,byteSize,token,signedUrl,endpoint});
   }
 
   if (action === "media_upload_complete") {

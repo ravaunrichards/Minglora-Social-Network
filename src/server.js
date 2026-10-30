@@ -567,7 +567,7 @@ async function route(req, res) {
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
         db.mediaAssets.push(asset);await saveStore();
-        return json(res,201,{assetId:asset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,bucket:prepared.bucket,path:prepared.path},mimeType,mediaType:asset.mediaType,byteSize});
+        return json(res,201,{assetId:asset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,signedUrl:prepared.signedUrl||null,bucket:prepared.bucket,path:prepared.path},mimeType,mediaType:asset.mediaType,byteSize});
       }
       if(method==='POST'&&p==='/api/media/upload/complete'){
         const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id);
@@ -1501,7 +1501,14 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/messages'){
         const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
         const conversations=await Promise.all(peers.map(async id=>{
-          const messages=await Promise.all(db.messages.filter(item=>(item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(async item=>{
+          const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
+          const visibleMessages=db.messages.filter(item=>
+            ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
+            !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
+            (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
+          ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+          if(!visibleMessages.length)return null;
+          const messages=await Promise.all(visibleMessages.map(async item=>{
             const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
               const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
               if(!asset)return null;
@@ -1509,10 +1516,68 @@ async function route(req, res) {
             }));
             return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from))};
           }));
-          const unreadCount=db.messages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
+          const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
           return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount};
         }));
-        return json(res,200,{conversations});
+        return json(res,200,{conversations:conversations.filter(Boolean)});
+      }
+      const messageActionMatch=p.match(/^\\/api\\/messages\\/([^/]+)$/);
+      if(method==='DELETE'&&messageActionMatch){
+        let target;
+        try{target=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message or conversation identifier is invalid.'});}
+        if(!target)return json(res,400,{error:'The message or conversation identifier is invalid.'});
+        const message=db.messages.find(item=>item.id===target&&(item.from===user.id||item.to===user.id));
+        if(message){
+          const scope=String(input.scope||'me');
+          if(scope==='everyone'){
+            if(message.from!==user.id)return json(res,403,{error:'Only the sender can unsend a message for everyone.'});
+            if(message.unsent)return json(res,200,{ok:true,unsent:true});
+            const attachmentIds=[...(message.attachmentIds||[])];
+            message.unsent=true;
+            message.text='';
+            message.stickerId=null;
+            message.gifUrl=null;
+            message.attachmentIds=[];
+            message.unsentAt=now();
+            for(const assetId of attachmentIds){
+              const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='message'&&item.attachedTo==='message:'+message.id);
+              if(asset){asset.status='deleted';asset.deletedAt=now();}
+            }
+            await saveStore();
+            return json(res,200,{ok:true,unsent:true});
+          }
+          if(scope!=='me')return json(res,400,{error:'Choose delete for me or unsend for everyone.'});
+          const deletedFor=new Set(Array.isArray(message.deletedFor)?message.deletedFor:[]);
+          deletedFor.add(user.id);
+          message.deletedFor=[...deletedFor];
+          await saveStore();
+          return json(res,200,{ok:true,deletedForMe:true});
+        }
+        const peerId=target;
+        const peer=db.users.find(member=>member.id===peerId);
+        const hasConversation=peer&&db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+        if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+        const latest=db.messages.filter(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+        const hideAt=new Date(Date.now()-1).toISOString();
+        let hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
+        if(!hide){hide={userId:user.id,peerId,hiddenAt:hideAt};db.messageConversationHides.push(hide);}
+        else hide.hiddenAt=hideAt;
+        await saveStore();
+        return json(res,200,{ok:true,removed:true,hiddenBefore:latest?.createdAt||null});
+      }
+      if(method==='PATCH'&&messageActionMatch){
+        let messageId;
+        try{messageId=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message identifier is invalid.'});}
+        const message=db.messages.find(item=>item.id===messageId);
+        if(!message||(message.from!==user.id&&message.to!==user.id))return json(res,404,{error:'Message not found.'});
+        if(message.from!==user.id)return json(res,403,{error:'Only the sender can edit this message.'});
+        if(message.unsent||message.stickerId||message.gifUrl)return json(res,409,{error:'This type of message cannot be edited.'});
+        const text=String(input.text||'').trim();
+        if(!text||text.length>3000)return json(res,400,{error:'Edited messages must contain 1–3000 characters.'});
+        message.text=text;
+        message.editedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,message:{id:message.id,text:message.text,editedAt:message.editedAt}});
       }
       const messageReadMatch=p.match(/^\/api\/messages\/([^/]+)\/read$/);
       if(method==='POST'&&messageReadMatch){
@@ -1550,6 +1615,7 @@ async function route(req, res) {
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
         const messageText=stickerEmoji||text;
         const msg={id:uid(),from:user.id,to,text:messageText,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,createdAt:now(),read:false};
+        db.messageConversationHides=(db.messageConversationHides||[]).filter(item=>!(item.userId===user.id&&item.peerId===to));
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
         db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
         await saveStore();
