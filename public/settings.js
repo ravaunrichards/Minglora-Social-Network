@@ -36,7 +36,8 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const result = await api('/settings');
+      const [result, blockedResult] = await Promise.all([api('/settings'), api('/blocks')]);
+      const blockedUsers = blockedResult.users || [];
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
@@ -51,7 +52,7 @@
         </div>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings categories">
-            <a href="#settings-account">Account</a><a href="#settings-privacy">Privacy &amp; audience</a>
+            <a href="#settings-account">Account</a><a href="#settings-privacy">Privacy &amp; audience</a><a href="#settings-blocking">Blocking</a>
             <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Preferences</a>
             <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a>
           </nav>
@@ -74,6 +75,12 @@
               <label class="settings-field"><span><strong>Who can message you?</strong><small>Choose who can start a new direct conversation.</small></span>
                 <select name="messageAudience"><option value="everyone" ${settings.privacy.messageAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.messageAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.messageAudience === 'nobody' ? 'selected' : ''}>Nobody new</option></select>
               </label>
+            </section>
+            <section class="card settings-card" id="settings-blocking">
+              ${sectionHeading('⊘', 'Blocking', 'Review people you have blocked and remove a block when you are ready.')}
+              <div class="settings-blocked-list">
+                ${blockedUsers.length ? blockedUsers.map(member => `<div class="settings-blocked-person"><img src="${escapeHtml(member.avatar || '')}" alt=""><div><strong>${escapeHtml(member.name || 'Minglora member')}</strong><small>@${escapeHtml(member.username || '')}</small></div><button class="secondary" type="button" data-unblock-user="${escapeHtml(member.id)}">Unblock</button></div>`).join('') : '<p class="settings-empty">You have not blocked anyone.</p>'}
+              </div>
             </section>
             <section class="card settings-card" id="settings-notifications">
               ${sectionHeading('♢', 'Notifications', 'Choose which activity appears in the Minglora notification centre.')}
@@ -107,6 +114,18 @@
       document.querySelectorAll('.settings-nav a').forEach(link => link.addEventListener('click', event => {
         event.preventDefault();
         document.querySelector(link.getAttribute('href'))?.scrollIntoView({ behavior: settings.preferences.reducedMotion ? 'auto' : 'smooth', block: 'start' });
+      }));
+
+      document.querySelectorAll('[data-unblock-user]').forEach(button => button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          await api('/users/' + encodeURIComponent(button.dataset.unblockUser) + '/block', { method: 'DELETE', body: '{}' });
+          window.alert('Member unblocked.');
+          await openSettings();
+        } catch (error) {
+          button.disabled = false;
+          window.alert(error.message);
+        }
       }));
 
       document.querySelector('#settings-form')?.addEventListener('submit', async event => {
