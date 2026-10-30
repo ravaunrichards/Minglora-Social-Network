@@ -34,6 +34,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST/DELETE | `/api/users/:id/follow` | Follow or unfollow a member |
 | GET | `/api/users/:id/followers` | List that member's followers |
 | GET | `/api/users/:id/following` | List that member's follows |
+| GET | `/api/users/:id/friends` | List that member's accepted friends; reciprocal follows create an accepted friendship |
 | POST | `/api/media/upload/prepare` | Allocate a member-owned media asset and return a signed TUS upload token |
 | POST | `/api/media/upload/complete` | Verify the stored object and finalize the member-owned media asset after TUS upload |
 | POST/DELETE | `/api/users/:id/block` | Block or unblock a member |
