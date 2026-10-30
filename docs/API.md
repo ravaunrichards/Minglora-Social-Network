@@ -51,6 +51,17 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST | `/api/groups/:id/posts` | Publish a text post as a group member |
 | DELETE | `/api/groups/:id/posts/:postId` | Delete a group post as author or group owner |
 
+## Stories
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/stories` | List active stories the current account may view |
+| POST | `/api/stories` | Create a text and/or HTTPS-image story with an audience |
+| POST | `/api/stories/:id/view` | Record a story view; author can inspect viewer list |
+| DELETE | `/api/stories/:id` | Delete own story |
+
+Stories expire after 24 hours; expired records and their view records are removed when story endpoints are accessed. Audience values are `public`, `friends`, `followers`, and `private`. Story image uploads/video processing are not implemented; stories can reference HTTPS image URLs or contain text.
+
 ## Messages, notifications and search
 
 | Method | Path | Purpose |
