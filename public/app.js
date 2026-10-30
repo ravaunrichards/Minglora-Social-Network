@@ -190,17 +190,13 @@ function openComposer(){
 
 async function loadPeople(){state.people=(await api('/users')).users;}
 function peopleCard(p){
-  const label=p.friendship==='accepted'?'Friends':p.friendship==='pending'?'Request sent':p.friendship==='incoming'?'Respond':'Add friend';
+  const mutual=p.friendship==='accepted';
   return `<article class="card person-card"><div class="person-cover"></div><div class="person-card-content"><img class="avatar" src="${avatar(p)}" alt=""><h3>${esc(p.name)}</h3><p>${esc(p.bio||'Connect and get to know each other.')}</p>
-    <button class="mini-btn" data-add-friend="${esc(p.id)}" ${p.friendship==='accepted'||p.friendship==='pending'?'disabled':''}>${label}</button>
-    <button class="mini-btn" data-toggle-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button>
+    <button class="mini-btn" data-toggle-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?(mutual?'Friends · Following':'Following'):(mutual?'Friends':'Follow')}</button>
+    <button class="mini-btn" data-profile="${esc(p.id)}">View profile</button>
     <button class="mini-btn" data-block-user="${esc(p.id)}">Block</button></div></article>`;
 }
 function bindPeople(){
-  document.querySelectorAll('[data-add-friend]').forEach(btn=>btn.addEventListener('click',async()=>{
-    try{await api(`/friends/${btn.dataset.addFriend}/request`,{method:'POST',body:'{}'});toast('Friend request sent.');await loadPeople();renderFriends();}
-    catch(e){toast(e.message);}
-  }));
   document.querySelectorAll('[data-toggle-follow]').forEach(btn=>btn.addEventListener('click',async()=>{
     const following=btn.dataset.following==='true';
     try{await api(`/users/${btn.dataset.toggleFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(following?'Unfollowed member.':'Now following member.');await loadPeople();renderFriends();}
@@ -215,17 +211,13 @@ function bindPeople(){
 }
 async function renderFriends(){
   activateSilent('friends');await loadPeople();
-  let f={friends:[],incoming:[]};try{f=await api('/friends')}catch{}
-  const incoming=f.incoming.map(p=>({...p,friendship:'incoming'}));
-  const others=state.people.filter(p=>p.friendship!=='accepted'&&p.friendship!=='declined');
-  setContent(`<div class="page-heading"><div><h1>Friends</h1><p class="muted">When two members follow each other, Minglora automatically makes them friends.</p></div><span class="text-button">People you may know</span></div>
-    ${incoming.length?`<section class="card"><h3>Friend requests</h3><div class="people-grid">${incoming.map(p=>`<article class="card person-card"><div class="person-cover"></div><div class="person-card-content"><img class="avatar" src="${avatar(p)}" alt=""><h3>${esc(p.name)}</h3><p>Wants to connect with you</p><div class="person-actions"><button class="primary full" data-accept-friend="${esc(p.id)}">Confirm</button><button class="secondary full" data-decline-friend="${esc(p.id)}">Decline</button></div></div></article>`).join('')}</div></section>`:''}
+  const result=await api('/friends');
+  const friends=result.friends||[];
+  const others=state.people.filter(member=>member.friendship!=='accepted');
+  setContent(`<div class="page-heading"><div><h1>Friends</h1><p class="muted">Friends are created automatically when two members follow each other.</p></div></div>
     <div class="feed-header"><h2>People you may know</h2></div><div class="people-grid">${others.length?others.map(peopleCard).join(''):`<section class="card empty-state"><h3>You're all caught up</h3><p>There are no new people to suggest right now.</p></section>`}</div>
-    <section class="card friends-list"><h2>Friends (${f.friends.length})</h2>${f.friends.length?f.friends.map(p=>`<div class="person-row" style="margin:12px 0"><img class="avatar" src="${avatar(p)}" alt=""><div class="person-meta"><strong>${esc(p.name)}</strong><small>@${esc(p.username)}</small></div><button class="mini-btn" data-profile="${esc(p.id)}">View profile</button><button class="mini-btn" data-remove-friend="${esc(p.id)}">Unfriend</button></div>`).join(''):'<p class="muted">Your confirmed friends will appear here.</p>'}</section>`);
+    <section class="card friends-list"><h2>Friends (${friends.length})</h2>${friends.length?friends.map(member=>`<div class="person-row" style="margin:12px 0"><img class="avatar" src="${avatar(member)}" alt=""><div class="person-meta"><strong>${esc(member.name)}</strong><small>@${esc(member.username)}</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="${esc(member.id)}">View profile</button></div>`).join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>'}</section>`);
   bindPeople();
-  document.querySelectorAll('[data-accept-friend]').forEach(btn=>btn.addEventListener('click',async()=>{try{await api(`/friends/${btn.dataset.acceptFriend}/accept`,{method:'POST',body:'{}'});toast('Friend request accepted.');await renderFriends();}catch(e){toast(e.message)}}));
-  document.querySelectorAll('[data-decline-friend]').forEach(btn=>btn.addEventListener('click',async()=>{try{await api(`/friends/${btn.dataset.declineFriend}/decline`,{method:'POST',body:'{}'});toast('Friend request declined.');await renderFriends();}catch(e){toast(e.message)}}));
-  document.querySelectorAll('[data-remove-friend]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Remove this friend?'))return;try{await api(`/friends/${btn.dataset.removeFriend}`,{method:'DELETE',body:'{}'});toast('Friend removed.');await renderFriends();}catch(e){toast(e.message)}}));
 }
 function activateSilent(view){state.view=view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
@@ -293,15 +285,28 @@ async function renderConnections(profileId,kind){
 
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
-  const friendLabel=data.friendship==='accepted'?'✓ Friends':data.friendship==='pending'?'Request sent':'Add friend';
   const relationshipActions=isMe
     ? '<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
-    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-add-friend" ${data.friendship==='pending'?'disabled':''}>${friendLabel}</button><button class="secondary profile-edit" id="profile-follow">${data.following?'Following':'Follow'}</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
-  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover" style="${u.cover?`background-image:url('${esc(u.cover)}')`:''}"></div><div class="profile-info"><img class="avatar" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p>${esc(u.bio||'')}</p><p>${esc(u.location||'')}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p></div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><h3>About</h3><p>⌖ &nbsp; ${esc(u.location||'Location not added')}</p><p>✎ &nbsp; ${esc(u.bio||'No bio yet.')}</p><p>◷ &nbsp; Joined ${new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})}</p></div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
+    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
+  const aboutRows=[
+    ['About',u.bio],['Location',u.location],['Country',u.country],['County',u.county],
+    ['Parish',u.parish],['City',u.city],['Gender',u.gender],
+    ['Relationship status',u.relationshipStatus],['Contact phone',u.contactPhone]
+  ].filter(([,value])=>String(value||'').trim());
+  aboutRows.push(['Joined',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})]);
+  const aboutHtml=aboutRows.map(([label,value])=>`<div class="about-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
+  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover" style="${u.cover?`background-image:url('${esc(u.cover)}')`:''}"></div><div class="profile-info"><img class="avatar" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p>${esc(u.bio||'')}</p><p>${esc(u.location||'')}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p></div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>About</h3>${isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':''}</div>${aboutHtml||'<p class="muted">No About details have been added yet.</p>'}</div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
   bindFeed();
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
-  $('#profile-add-friend')?.addEventListener('click',async()=>{try{await api(`/friends/${u.id}/request`,{method:'POST',body:'{}'});toast('Friend request sent.');openProfile(u.id)}catch(e){toast(e.message)}});
-  $('#profile-follow')?.addEventListener('click',async()=>{try{await api(`/users/${u.id}/follow`,{method:data.following?'DELETE':'POST',body:'{}'});toast(data.following?'Unfollowed member.':'Now following member.');await openProfile(u.id)}catch(e){toast(e.message)}});
+  $('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(u));
+  $('#profile-follow')?.addEventListener('click',async()=>{
+    const following=$('#profile-follow')?.dataset.following==='true';
+    try{
+      const result=await api(`/users/${u.id}/follow`,{method:following?'DELETE':'POST',body:'{}'});
+      toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));
+      await openProfile(u.id);
+    }catch(e){toast(e.message);}
+  });
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
   $('#profile-block')?.addEventListener('click',async()=>{if(!window.confirm(`Block ${u.name}? You will no longer see each other’s profile, posts or messages.`))return;try{await api(`/users/${u.id}/block`,{method:'POST',body:'{}'});toast('Member blocked.');state.profile=null;state.view='feed';await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar()}catch(e){toast(e.message)}});
   $('#profile-composer')?.addEventListener('click',()=>openComposer());
