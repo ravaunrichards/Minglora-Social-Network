@@ -185,9 +185,44 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/friends'){const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)&&!blockedBetween(user.id,f.from===user.id?f.to:f.from)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending'&&!blockedBetween(user.id,f.from)).map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));return json(res,200,{friends:list,incoming});}
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
-      if(method==='POST'&&p==='/api/groups'){const name=String(input.name||'').trim(),description=String(input.description||'').trim();if(name.length<3||name.length>80||description.length>500)return json(res,400,{error:'Group name must be 3–80 characters; description max 500.'});const g={id:uid(),name,description,ownerId:user.id,members:[user.id],createdAt:now()};db.groups.unshift(g);saveStore();return json(res,201,{group:g});}
+      if(method==='POST'&&p==='/api/groups'){
+        const name=String(input.name||'').trim(),description=String(input.description||'').trim();
+        if(name.length<3||name.length>80||description.length>500)return json(res,400,{error:'Group name must be 3–80 characters; description max 500.'});
+        const g={id:uid(),name,description,ownerId:user.id,members:[user.id],createdAt:now()};db.groups.unshift(g);saveStore();return json(res,201,{group:g});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        if(!group.members.includes(user.id))return json(res,403,{error:'Join this group before posting.'});
+        const text=String(input.text||'').trim();
+        if(!text||text.length>5000)return json(res,400,{error:'Group post must contain 1–5000 characters.'});
+        const post={id:uid(),groupId:group.id,userId:user.id,text,createdAt:now(),updatedAt:now()};
+        db.groupPosts.push(post);saveStore();return json(res,201,{post:{...post,author:safeUser(user)}});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        const post=(db.groupPosts||[]).find(x=>x.groupId===group.id&&x.id===m[2]);
+        if(!post)return json(res,404,{error:'Group post not found.'});
+        if(post.userId!==user.id&&group.ownerId!==user.id)return json(res,403,{error:'Only the post author or group owner can delete this post.'});
+        db.groupPosts=db.groupPosts.filter(x=>x.id!==post.id);saveStore();return json(res,200,{ok:true,id:post.id});
+      }
       m=p.match(/^\/api\/groups\/([^/]+)\/join$/);
-      if(method==='POST'&&m){const g=db.groups.find(g=>g.id===m[1]);if(!g)return json(res,404,{error:'Group not found.'});if(!g.members.includes(user.id))g.members.push(user.id);saveStore();return json(res,200,{group:{...g,isMember:true}});}
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        if(!group.members.includes(user.id))group.members.push(user.id);saveStore();return json(res,200,{group:{...group,isMember:true}});
+      }
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        if(group.ownerId===user.id)return json(res,409,{error:'The group owner cannot leave without transferring ownership or deleting the group.'});
+        group.members=group.members.filter(id=>id!==user.id);saveStore();return json(res,200,{left:!group.members.includes(user.id)});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        const posts=(db.groupPosts||[]).filter(post=>post.groupId===group.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>({...post,author:safeUser(db.users.find(u=>u.id===post.userId))}));
+        return json(res,200,{group:{...group,owner:safeUser(db.users.find(u=>u.id===group.ownerId)),members:group.members.map(id=>safeUser(db.users.find(u=>u.id===id))).filter(Boolean),memberCount:group.members.length,isMember:group.members.includes(user.id)},posts});
+      }
       if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
       if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim();if(!db.users.some(u=>u.id===to)||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
       if(method==='GET'&&p==='/api/notifications')return json(res,200,{notifications:db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))}))});
