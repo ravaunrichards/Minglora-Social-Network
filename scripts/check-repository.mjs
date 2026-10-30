@@ -58,6 +58,7 @@ async function inspectDirectory(directory, relative = '') {
     const absolute = path.join(directory, entry.name);
     const child = relative ? path.join(relative, entry.name) : entry.name;
     if (entry.isDirectory()) {
+      if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === 'coverage') continue;
       await inspectDirectory(absolute, child);
       continue;
     }
