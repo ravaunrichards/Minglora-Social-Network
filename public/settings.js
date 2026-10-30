@@ -149,6 +149,7 @@
               </div>
               <div class="settings-security-form"><h3>Your reports</h3><div id="member-reports-list">${reports.map(report=>'<div class="settings-session-row"><div><strong>'+escapeHtml(report.targetType)+' · '+escapeHtml(report.category)+'</strong><small>'+escapeHtml(report.createdAt)+' · '+escapeHtml(report.status)+'</small></div></div>').join('')||'<p class="settings-empty">You have not submitted any reports.</p>'}</div></div>
               ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
+              ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
             <div class="settings-save-bar"><span class="muted">Changes are saved to your Minglora account.</span><button class="primary" type="submit">Save changes</button></div>
           </form>
@@ -251,6 +252,23 @@
         try{await api('/support/tickets/'+encodeURIComponent(form.dataset.replyTicket)+'/messages',{method:'POST',body:JSON.stringify({message:values.get('message')})});await openSettings();}
         catch(error){window.alert(error.message);button.disabled=false;}
       }));
+      async function loadModeratorSupportInbox(){
+        const panel=document.querySelector('#moderator-support-tickets');if(!panel)return;panel.textContent='Loading support tickets…';
+        try{
+          const result=await api('/support/tickets?scope=all');
+          panel.innerHTML=(result.tickets||[]).map(ticket=>'<article class="settings-ticket"><div class="settings-inline-heading"><div><strong>'+escapeHtml(ticket.subject)+'</strong><small>'+escapeHtml(ticket.requester?.name||ticket.userId)+' · '+escapeHtml(ticket.category)+'</small></div><span class="settings-status-pill">'+escapeHtml(ticket.status)+'</span></div><div class="settings-ticket-messages">'+(ticket.messages||[]).map(message=>'<p><strong>'+escapeHtml(message.sender?.name||message.senderId)+':</strong> '+escapeHtml(message.message)+'</p>').join('')+'</div>'+(ticket.status==='closed'?'':'<form class="moderator-ticket-reply" data-moderator-reply="'+escapeHtml(ticket.id)+'"><textarea name="message" maxlength="5000" rows="2" required placeholder="Reply to this member"></textarea><select name="status"><option value="waiting_for_member">Waiting for member</option><option value="in_progress">In progress</option><option value="closed">Close ticket</option></select><button class="primary" type="submit">Reply</button></form>')+'</article>').join('')||'<p class="settings-empty">The support inbox is empty.</p>';
+          panel.querySelectorAll('[data-moderator-reply]').forEach(form=>form.addEventListener('submit',async event=>{
+            event.preventDefault();const values=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+            try{
+              const message=String(values.get('message')||'').trim();
+              if(message)await api('/support/tickets/'+encodeURIComponent(form.dataset.moderatorReply)+'/messages',{method:'POST',body:JSON.stringify({message})});
+              await api('/support/tickets/'+encodeURIComponent(form.dataset.moderatorReply),{method:'PATCH',body:JSON.stringify({status:values.get('status')})});
+              await loadModeratorSupportInbox();
+            }catch(error){window.alert(error.message);button.disabled=false;}
+          }));
+        }catch(error){panel.textContent=error.message;}
+      }
+      document.querySelector('#refresh-support-inbox')?.addEventListener('click',loadModeratorSupportInbox);
       async function loadModerationQueue(){
         const panel=document.querySelector('#moderation-reports-list');if(!panel)return;panel.textContent='Loading reports…';
         try{
@@ -267,7 +285,7 @@
         }catch(error){panel.textContent=error.message;}
       }
       document.querySelector('#refresh-moderation')?.addEventListener('click',loadModerationQueue);
-      if(canModerate)loadModerationQueue();
+      if(canModerate){loadModerationQueue();loadModeratorSupportInbox();}
       
       document.querySelector('#settings-form')?.addEventListener('submit', async event => {
         event.preventDefault();
