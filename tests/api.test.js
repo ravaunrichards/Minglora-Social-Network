@@ -98,6 +98,23 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.deepEqual(feedPage.body.posts.map(item => item.id), [post.body.post.id]);
   assert.equal(feedPage.body.hasMore, false);
 
+  const publicStory = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'Public story from the integration test', audience: 'public' })
+  });
+  assert.equal(publicStory.status, 201);
+  assert.ok(Date.parse(publicStory.body.story.expiresAt) > Date.now());
+  const friendsStory = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'Friends-only story from the integration test', audience: 'friends' })
+  });
+  assert.equal(friendsStory.status, 201);
+  const invalidStory = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ imageUrl: 'http://example.test/story.jpg' })
+  });
+  assert.equal(invalidStory.status, 400);
+
   const editedPost = await request(`/api/posts/${post.body.post.id}`, {
     method: 'PATCH',
     body: JSON.stringify({ text: 'Edited integration post' })
@@ -150,6 +167,24 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(secondRegistration.status, 201);
   const secondUserId = secondRegistration.body.user.id;
   const secondCookie = cookie;
+
+  const secondStories = await request('/api/stories');
+  assert.equal(secondStories.status, 200);
+  assert.equal(secondStories.body.stories.some(story => story.id === publicStory.body.story.id), true);
+  assert.equal(secondStories.body.stories.some(story => story.id === friendsStory.body.story.id), false);
+  const deniedStoryView = await request(`/api/stories/${friendsStory.body.story.id}/view`, { method: 'POST', body: '{}' });
+  assert.equal(deniedStoryView.status, 404);
+  const publicStoryView = await request(`/api/stories/${publicStory.body.story.id}/view`, { method: 'POST', body: '{}' });
+  assert.equal(publicStoryView.status, 200);
+  assert.equal(publicStoryView.body.story.viewCount, 1);
+  assert.equal(publicStoryView.body.story.viewedByMe, true);
+  const deleteOtherStory = await request(`/api/stories/${publicStory.body.story.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteOtherStory.status, 403);
+  cookie = firstCookie;
+  const ownStoryViews = await request(`/api/stories/${publicStory.body.story.id}/view`, { method: 'POST', body: '{}' });
+  assert.equal(ownStoryViews.body.story.viewCount, 1);
+  assert.equal(ownStoryViews.body.story.viewers[0].user.id, secondUserId);
+  cookie = secondCookie;
 
   const joinGroup = await request(`/api/groups/${group.body.group.id}/join`, { method: 'POST', body: '{}' });
   assert.equal(joinGroup.status, 200);
@@ -234,6 +269,14 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   cookie = firstCookie;
   const acceptRequest = await request(`/api/friends/${secondUserId}/accept`, { method: 'POST', body: '{}' });
   assert.equal(acceptRequest.status, 200);
+  cookie = secondCookie;
+  const friendsStoryAfterAcceptance = await request('/api/stories');
+  assert.equal(friendsStoryAfterAcceptance.body.stories.some(story => story.id === friendsStory.body.story.id), true);
+  const friendStoryView = await request(`/api/stories/${friendsStory.body.story.id}/view`, { method: 'POST', body: '{}' });
+  assert.equal(friendStoryView.status, 200);
+  cookie = firstCookie;
+  const deleteOwnStory = await request(`/api/stories/${friendsStory.body.story.id}`, { method: 'DELETE', body: '{}' });
+  assert.equal(deleteOwnStory.status, 200);
   cookie = secondCookie;
   const friendsFeedAfterAcceptance = await request('/api/feed?scope=friends');
   assert.deepEqual(friendsFeedAfterAcceptance.body.posts.map(item => item.id), [post.body.post.id]);
