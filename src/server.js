@@ -11,6 +11,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -20,6 +21,10 @@ if (process.env.NODE_ENV === 'production' &&
   throw new Error('Production startup requires SESSION_SECRET to contain at least 32 characters.');
 }
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (supabaseAuthConfigured() ? 'supabase' : 'legacy')).trim().toLowerCase();
+if (!['supabase', 'legacy'].includes(AUTH_PROVIDER)) throw new Error('AUTH_PROVIDER must be supabase or legacy.');
+if (AUTH_PROVIDER === 'supabase' && !supabaseAuthConfigured()) throw new Error('Supabase Auth is enabled but SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are missing or placeholders.');
+if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase and a real Minglora Supabase configuration.');
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -46,6 +51,35 @@ function isSameOriginApiWrite(req) {
   } catch {
     return false;
   }
+}
+function appSessionCookie(sid) {
+  return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`;
+}
+async function createAppSession(user) {
+  const sid = uid();
+  db.sessions.push({ id:sid, userId:user.id, expiresAt:new Date(Date.now()+7*86400000).toISOString() });
+  await saveStore();
+  return appSessionCookie(sid);
+}
+function ensureLocalUser(authUser, fallback = {}) {
+  if (!authUser?.id || !authUser?.email) throw Object.assign(new Error('Supabase Auth returned an incomplete user record.'), { status:502 });
+  const metadata = authUser.user_metadata || authUser.raw_user_meta_data || {};
+  const email = normalizeEmail(authUser.email);
+  const name = String(metadata.name || metadata.full_name || fallback.name || email.split('@')[0] || 'Minglora Member').trim();
+  const username = normalizeUsername(metadata.username || fallback.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
+  if (!validateUsername(username).valid) throw Object.assign(new Error('The username on this account is invalid. Contact Minglora support.'), { status:409 });
+  let user = db.users.find(item => item.id === authUser.id) || db.users.find(item => normalizeEmail(item.email) === email);
+  const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
+  if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
+  if (!user) {
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:'', location:'', avatar:'', cover:'', createdAt:authUser.created_at || now() };
+    db.users.push(user);
+  } else {
+    user.name = name || user.name;
+    user.username = username || user.username;
+    user.email = email;
+  }
+  return user;
 }
 function sessionUser(req) {
   const raw = cookie(req, 'sid');
@@ -114,15 +148,55 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
-        if (db.users.some(u=>u.email===email || u.username===username)) return json(res,409,{error:'That email or username is already registered.'});
+        if (db.users.some(u=>normalizeEmail(u.email)===email || u.username===username)) return json(res,409,{error:'That email or username is already registered. Log in instead.'});
+        if (AUTH_PROVIDER === 'supabase') {
+          const result = await supabaseSignUp({ email, password, name, username });
+          if (!result.user) return json(res,502,{error:'Minglora Supabase Auth did not return a user record.'});
+          const hasIdentity = !Array.isArray(result.user.identities) || result.user.identities.length > 0;
+          if (!result.session) {
+            if (hasIdentity) {
+              ensureLocalUser(result.user, { name, username });
+              await saveStore();
+            }
+            return json(res,202,{confirmationRequired:true,message:'Check your email for a confirmation link. After confirming your address, return here and log in.'});
+          }
+          const created = ensureLocalUser(result.user, { name, username });
+          const sessionCookie = await createAppSession(created);
+          return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
+        }
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',avatar:'',cover:'',createdAt:now()}; db.users.push(created);
-        const sid=uid(); db.sessions.push({id:sid,userId:created.id,expiresAt:new Date(Date.now()+7*86400000).toISOString()}); await saveStore(); return json(res,201,{user:safeUser(created)},{'Set-Cookie':`sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`});
+        const sessionCookie = await createAppSession(created);
+        return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/login') {
-        const email=String(input.email||'').trim().toLowerCase(), password=String(input.password||''); const found=db.users.find(u=>u.email===email);
+        const email=normalizeEmail(input.email), password=String(input.password||'');
+        if (AUTH_PROVIDER === 'supabase') {
+          let authUser;
+          try {
+            const authenticated = await supabaseSignIn({ email, password });
+            authUser = authenticated.user;
+          } catch (authError) {
+            const legacyUser = db.users.find(u=>normalizeEmail(u.email)===email);
+            if (!/invalid login credentials|invalid email or password/i.test(authError.message) || !legacyUser?.passwordHash) throw authError;
+            const [salt, expected] = legacyUser.passwordHash.split(':');
+            const actual = (await scrypt(password, salt, 64)).toString('hex');
+            if (actual.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected))) {
+              return json(res,401,{error:'Email or password is incorrect.'});
+            }
+            // Preserve the existing Minglora account and social ID while creating its Supabase Auth identity.
+            const migrated = await supabaseSignUp({ email, password, name:legacyUser.name, username:legacyUser.username });
+            authUser = migrated.user;
+            if (!authUser) return json(res,502,{error:'Minglora could not migrate this legacy account into Supabase Auth.'});
+          }
+          const signedInUser = ensureLocalUser(authUser);
+          const sessionCookie = await createAppSession(signedInUser);
+          return json(res,200,{user:safeUser(signedInUser)},{'Set-Cookie':sessionCookie});
+        }
+        const found=db.users.find(u=>normalizeEmail(u.email)===email);
         if (!found?.passwordHash) return json(res,401,{error:'Email or password is incorrect.'});
         const [salt, expected]=found.passwordHash.split(':'); const actual=(await scrypt(password,salt,64)).toString('hex'); if (actual.length!==expected.length || !crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))) return json(res,401,{error:'Email or password is incorrect.'});
-        const sid=uid(); db.sessions.push({id:sid,userId:found.id,expiresAt:new Date(Date.now()+7*86400000).toISOString()}); await saveStore(); return json(res,200,{user:safeUser(found)},{'Set-Cookie':`sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`});
+        const sessionCookie = await createAppSession(found);
+        return json(res,200,{user:safeUser(found)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
