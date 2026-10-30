@@ -515,8 +515,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const noLongerFriends = await request('/api/users');
   assert.equal(noLongerFriends.body.users.find(member => member.id === firstUserId)?.friendship, null);
 
-  cookie = firstCookie;
-  const mutualFollowAgain = await request(`/api/users/${secondUserId}/follow`, { method: 'POST', body: '{}' });
+  cookie = secondCookie;
+  const mutualFollowAgain = await request(`/api/users/${firstUserId}/follow`, { method: 'POST', body: '{}' });
   assert.equal(mutualFollowAgain.status, 200);
   assert.equal(mutualFollowAgain.body.friends, true);
   cookie = secondCookie;
