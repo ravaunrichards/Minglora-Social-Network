@@ -25,7 +25,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Events | Not implemented |
 | Marketplace | Not implemented |
 | Live video | Not implemented |
-| Account recovery/verification | Not implemented |
+| Account recovery/verification | Supabase password recovery link flow and email-change verification request; recovery password update; TOTP login challenge | Email verification onboarding, identity recovery support and passkeys |
 | Notification preferences | Persisted in-app, friend-request, message and interaction controls; push/email/device delivery not implemented |
 | Account settings | Dedicated Settings & Privacy page with saved privacy, notification and appearance preferences, blocked-member management and account export; account email/username shown read-only | Password updates, MFA, session management, email change and account recovery are not yet implemented |
 | Data export/deletion | Authenticated JSON download of the member's profile, content, relationships and account activity; secrets and sessions excluded | Verified deletion requests and coordinated erasure/retention workflows are not implemented |
