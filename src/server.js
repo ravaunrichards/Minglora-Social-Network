@@ -1521,7 +1521,7 @@ async function route(req, res) {
         }));
         return json(res,200,{conversations:conversations.filter(Boolean)});
       }
-      const messageActionMatch=p.match(/^\\/api\\/messages\\/([^/]+)$/);
+      const messageActionMatch=p.match(/^\/api\/messages\/([^/]+)$/);
       if(method==='DELETE'&&messageActionMatch){
         let target;
         try{target=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message or conversation identifier is invalid.'});}
@@ -1533,6 +1533,7 @@ async function route(req, res) {
             if(message.from!==user.id)return json(res,403,{error:'Only the sender can unsend a message for everyone.'});
             if(message.unsent)return json(res,200,{ok:true,unsent:true});
             const attachmentIds=[...(message.attachmentIds||[])];
+            const attachmentAssets=attachmentIds.map(assetId=>(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='message'&&item.attachedTo==='message:'+message.id)).filter(Boolean);
             message.unsent=true;
             message.text='';
             message.stickerId=null;
@@ -1540,10 +1541,11 @@ async function route(req, res) {
             message.attachmentIds=[];
             message.unsentAt=now();
             for(const assetId of attachmentIds){
-              const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='message'&&item.attachedTo==='message:'+message.id);
+              const asset=attachmentAssets.find(item=>item.id===assetId);
               if(asset){asset.status='deleted';asset.deletedAt=now();}
             }
             await saveStore();
+            await Promise.allSettled(attachmentAssets.map(asset=>mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path})));
             return json(res,200,{ok:true,unsent:true});
           }
           if(scope!=='me')return json(res,400,{error:'Choose delete for me or unsend for everyone.'});

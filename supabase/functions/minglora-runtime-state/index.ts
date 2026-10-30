@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
 
   const action = input.action;
   const supportedActions = [
-    "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete",
+    "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
@@ -448,6 +448,19 @@ Deno.serve(async (req: Request) => {
       result.signedUrl=data.signedUrl;
     }
     return json(200,result);
+  }
+
+  if (action === "media_delete") {
+    const ownerId=String(input.ownerId||"");
+    const bucket=String(input.bucket||"");
+    const objectPath=String(input.path||"");
+    const allowedBuckets=["minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-marketplace-media","minglora-live-thumbnails","minglora-data-exports"];
+    if(!validUuid(ownerId)||!allowedBuckets.includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")||objectPath.includes("\\\\")){
+      return json(400,{error:"Invalid media deletion reference."});
+    }
+    const {error}=await admin.storage.from(bucket).remove([objectPath]);
+    if(error)return json(502,{error:"Minglora could not remove the stored file."});
+    return json(200,{ok:true});
   }
 
   if (action === "media_sign") {

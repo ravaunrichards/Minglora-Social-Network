@@ -1201,14 +1201,23 @@ function renderMessageWindows(){
   dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{const id=button.dataset.messageClose;cancelMessageVoiceRecording(id);state.messageWindows=state.messageWindows.filter(item=>item.user.id!==id);renderMessageWindows();syncMessageRefreshPolling();});
   dock.querySelectorAll('[data-message-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.messageProfile));
   dock.querySelectorAll('[data-message-remove]').forEach(button=>button.onclick=()=>removeMessageConversation(button.dataset.messageRemove));
-  dock.querySelectorAll('[data-message-edit]').forEach(button=>button.onclick=()=>{
-    const messageId=button.dataset.messageEdit;
-    const message=state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===messageId);
-    if(message)openEditMessage(message);
-  });
-  dock.querySelectorAll('[data-message-delete-me]').forEach(button=>button.onclick=()=>removeMessageForMe(button.dataset.messageDeleteMe));
-  dock.querySelectorAll('[data-message-unsend]').forEach(button=>button.onclick=()=>unsendMessageForEveryone(button.dataset.messageUnsend));
-  dock.querySelectorAll('.message-bubble-actions-menu button').forEach(button=>button.onclick=()=>button.closest('details')?.removeAttribute('open'));
+  if(dock.dataset.messageActionsDelegated!=='true'){
+    dock.dataset.messageActionsDelegated='true';
+    dock.addEventListener('click',event=>{
+      const button=event.target.closest('[data-message-edit],[data-message-delete-me],[data-message-unsend]');
+      if(!button||!dock.contains(button))return;
+      button.closest('details')?.removeAttribute('open');
+      if(button.hasAttribute('data-message-edit')){
+        const messageId=button.dataset.messageEdit;
+        const message=state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===messageId);
+        if(message)openEditMessage(message);
+      }else if(button.hasAttribute('data-message-delete-me')){
+        removeMessageForMe(button.dataset.messageDeleteMe);
+      }else if(button.hasAttribute('data-message-unsend')){
+        unsendMessageForEveryone(button.dataset.messageUnsend);
+      }
+    });
+  }
   dock.querySelectorAll('[data-message-audio]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageAudio);if(win)startMingloraCall(win.user,'audio');});
   dock.querySelectorAll('[data-message-video]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageVideo);if(win)startMingloraCall(win.user,'video');});
   dock.querySelectorAll('[data-message-attach]').forEach(button=>button.onclick=()=>{const drawer=dock.querySelector('[data-message-attachment-drawer="'+CSS.escape(button.dataset.messageAttach)+'"]');if(drawer)drawer.hidden=!drawer.hidden;});
