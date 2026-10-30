@@ -220,6 +220,8 @@ async function renderFriends(){
   bindPeople();
 }
 
+let activeCallRoom=null;
+let activeCallOverlay=null;
 let activeLiveRoom=null;
 let activeLiveSession=null;
 let activeLiveRole=null;
@@ -970,6 +972,94 @@ async function renderMessages(){
   renderMessageWindows();
 }
 
+async function startMingloraCall(member,kind='video'){
+  if(!member?.id||member.id===state.user.id)return;
+  if(activeCallRoom){toast('Finish your current call before starting another.');return;}
+  try{
+    const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});
+    await openMingloraCall(created.call,created.liveKit);
+  }catch(error){toast(error.message);}
+}
+async function answerMingloraCall(callId){
+  try{
+    const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});
+    await openMingloraCall(joined.call,joined.liveKit);
+  }catch(error){toast(error.message);}
+}
+async function declineMingloraCall(callId){
+  try{await api('/calls/'+encodeURIComponent(callId)+'/leave',{method:'POST',body:'{}'});toast('Call declined.');await renderNotifications();}
+  catch(error){toast(error.message);}
+}
+async function openMingloraCall(call,liveKit){
+  if(activeCallRoom){toast('A call is already open.');return;}
+  const client=window.LivekitClient;
+  if(!client?.Room||!client?.RoomEvent){toast('The call player could not load. Refresh Minglora and try again.');return;}
+  const overlay=document.createElement('div');overlay.className='call-overlay';
+  overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">End call</button></footer></section>';
+  document.body.append(overlay);activeCallOverlay=overlay;
+  const room=new client.Room({adaptiveStream:true,dynacast:true});activeCallRoom=room;
+  let microphoneEnabled=true,cameraEnabled=call.kind==='video';
+  const status=overlay.querySelector('#call-connection-status'),count=overlay.querySelector('#call-participant-count'),stage=overlay.querySelector('#call-video-stage');
+  const attach=(track,participant,local=false)=>{
+    if(!track)return;
+    const element=track.attach();
+    if(track.kind==='video'){element.autoplay=true;element.playsInline=true;element.className='call-video-element';if(local)element.muted=true;element.dataset.identity=participant?.identity||'local';stage.querySelector('.call-empty-stage')?.remove();stage.append(element);}
+    else{element.autoplay=true;element.playsInline=true;element.className='call-audio-element';overlay.querySelector('#call-audio-root').append(element);}
+  };
+  const updateCount=()=>{count.textContent=(Number(room.remoteParticipants?.size||0)+1)+' in call';};
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attach(track,participant,false));
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
+  room.on(client.RoomEvent.ParticipantConnected,updateCount);
+  room.on(client.RoomEvent.ParticipantDisconnected,updateCount);
+  const closeOverlay=()=>{if(activeCallOverlay===overlay)activeCallOverlay=null;overlay.remove();};
+  overlay.querySelector('#call-leave').onclick=async()=>{
+    const button=overlay.querySelector('#call-leave');button.disabled=true;
+    try{
+      const action=call.createdBy===state.user.id?'end':'leave';
+      await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'});
+    }catch(error){toast(error.message);}
+    await room.disconnect();if(activeCallRoom===room)activeCallRoom=null;closeOverlay();
+  };
+  overlay.querySelector('#call-microphone').onclick=async()=>{
+    try{microphoneEnabled=!microphoneEnabled;await room.localParticipant.setMicrophoneEnabled(microphoneEnabled);overlay.querySelector('#call-microphone').textContent=microphoneEnabled?'Mute microphone':'Unmute microphone';}
+    catch(error){toast(error.message);}
+  };
+  overlay.querySelector('#call-camera').onclick=async()=>{
+    try{cameraEnabled=!cameraEnabled;await room.localParticipant.setCameraEnabled(cameraEnabled);overlay.querySelector('#call-camera').textContent=cameraEnabled?'Turn camera off':'Turn video on';}
+    catch(error){cameraEnabled=!cameraEnabled;toast(error.message);}
+  };
+  overlay.querySelector('#call-add-people').onclick=async()=>{
+    try{
+      const visible=(await api('/users')).users||[];
+      const usernames=window.prompt('Enter usernames to add, separated by commas. Up to six people can be invited.');
+      if(!usernames)return;
+      const wanted=usernames.split(',').map(value=>value.trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
+      const userIds=visible.filter(member=>wanted.includes(String(member.username||'').toLowerCase())).map(member=>member.id);
+      if(!userIds.length){toast('No matching members were found.');return;}
+      const result=await api('/calls/'+encodeURIComponent(call.id)+'/invite',{method:'POST',body:JSON.stringify({userIds})});
+      toast(result.count+' call invitation(s) sent.');
+    }catch(error){toast(error.message);}
+  };
+  room.on(client.RoomEvent.Disconnected,()=>{if(activeCallRoom===room){activeCallRoom=null;closeOverlay();toast('The call connection ended.');}});
+  try{
+    status.textContent='Connecting securely…';
+    let timeout;
+    try{await Promise.race([room.connect(liveKit.url,liveKit.token),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Could not connect to the call. Check your LiveKit server URL and network connection.')),20000);})]);}
+    finally{if(timeout)clearTimeout(timeout);}
+    status.textContent='Connected';
+    await room.localParticipant.setMicrophoneEnabled(true);
+    if(cameraEnabled)await room.localParticipant.setCameraEnabled(true);
+    for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attach(publication.track,room.localParticipant,true);
+    updateCount();
+    overlay.querySelector('#call-microphone').disabled=false;
+    overlay.querySelector('#call-camera').disabled=false;
+  }catch(error){
+    await room.disconnect().catch(()=>{});
+    if(activeCallRoom===room)activeCallRoom=null;closeOverlay();toast(error.message||'The call could not connect.');
+    if(call.createdBy===state.user.id)await api('/calls/'+encodeURIComponent(call.id)+'/end',{method:'POST',body:'{}'}).catch(()=>{});
+    else await api('/calls/'+encodeURIComponent(call.id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});
+  }
+}
 async function renderNotifications(){state.notifications=(await api('/notifications')).notifications;setContent(`<div class="page-heading"><h1>Notifications</h1><button class="text-button" id="mark-read">Mark all read</button></div><section class="card">${state.notifications.length?state.notifications.map(n=>`<div class="notice-item ${n.read?'':'unread'}"><div class="notice-icon">${n.type==='message'?'▤':n.type==='friend'?'♧':n.type==='reaction'?'♡':'♢'}</div><div><p>${esc(n.text)}</p><small>${timeAgo(n.createdAt)}</small></div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>'}</section>`);$('#mark-read').onclick=async()=>{await api('/notifications/read',{method:'POST',body:'{}'});toast('Notifications marked as read.');renderNotifications();updateNotificationDot()};}
 async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));}catch{}}
 async function renderSearch(q){
