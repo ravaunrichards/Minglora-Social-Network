@@ -38,6 +38,8 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 - `frontend/`: target component, layout, page, navigation and theme organization; current UI remains in `public/`.
 - `database/migrations/005_minglora_supabase_relational_platform.sql`: consolidated Supabase-native relational schema using `auth.users` as the identity source, with RLS, storage and Realtime configuration.
 - `database/migrations/006_minglora_database_hardening.sql`: foreign-key indexes, missing primary-key repair and function privilege hardening.
+- `database/migrations/007_minglora_authorization_and_live_integrity.sql`: corrects group/Page access scope and reserves Live/call lifecycle changes for trusted server flows.
+- `database/migrations/008_minglora_live_policy_consolidation.sql`: consolidates Live participant RLS policies.
 - `database/types/database.types.ts`: generated types for the deployed Minglora Supabase schema.
 - `database/migrations/001`–`004`: historical design/setup artifacts; do not apply these separately to a clean Supabase project.
 - `packages/`: planned shared API contracts, validation and platform-neutral helpers.
@@ -112,9 +114,9 @@ See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must 
 
 ## Production limitations
 
-The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter currently provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Minglora's Supabase-native relational schema and hardening migrations 005 and 006 are installed; application routes still need their normalized repository adapter.
+The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter currently provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Minglora's Supabase-native relational schema and hardening migrations 005–008 are installed; application routes still need their normalized repository adapter.
 
-Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, implement rate limiting, CSRF safeguards, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
+Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, wire Supabase Auth URL and SMTP settings, implement rate limiting, CSRF safeguards, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
 
 ## Supabase Auth integration
 
