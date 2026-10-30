@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
-import { createLiveKitToken, isLiveKitConfigured } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, isLiveKitConfigured, listLiveKitParticipants } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
@@ -30,7 +30,7 @@ let paypalAccessTokenCache=null;
 function paypalConfig(){
   const clientId=String(process.env.PAYPAL_CLIENT_ID||'').trim();
   const clientSecret=String(process.env.PAYPAL_CLIENT_SECRET||'').trim();
-  const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||'sandbox').trim().toLowerCase();
+  const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||(process.env.NODE_ENV==='production'?'live':'sandbox')).trim().toLowerCase();
   const base=String(process.env.PAYPAL_API_BASE_URL||'').trim().replace(/\\/+$/,'')||
     (mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com');
   return {clientId,clientSecret,base,configured:Boolean(clientId&&clientSecret)};
@@ -668,16 +668,25 @@ async function route(req, res) {
              (friendship.to === user.id && friendship.from === session.hostId))
           );
         };
-        const sessions = (db.liveSessions || [])
+        const activeSessions = (db.liveSessions || [])
           .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .map(session => ({
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const sessions = await Promise.all(activeSessions.map(async session => {
+          let participants = [];
+          let viewerCountVerified = false;
+          try {
+            participants = await listLiveKitParticipants(session.roomName);
+            viewerCountVerified = true;
+          } catch {
+            // Never substitute app-side presence rows for authoritative room presence.
+          }
+          return {
             ...session,
-            host: safeUser(db.users.find(member => member.id === session.hostId)),
-            viewerCount: (db.liveParticipants || []).filter(participant =>
-              participant.sessionId === session.id && !participant.leftAt
-            ).length
-          }));
+            host: safeUser(db.users.find(member => member.id === session.hostId),user.id),
+            viewerCount: viewerCountVerified ? participants.filter(participant => participant.identity !== session.hostId).length : 0,
+            viewerCountVerified
+          };
+        }));
         return json(res, 200, { sessions });
       }
       if (method === 'POST' && p === '/api/live/sessions') {
@@ -971,8 +980,12 @@ async function route(req, res) {
         if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
         if(blockedBetween(user.id,target.id))return json(res,403,{error:'This relationship is unavailable.'});
         const exists=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id);
-        if(method==='POST'&&!exists){db.follows.push({id:uid(),followerId:user.id,followedId:target.id,createdAt:now()});notify(target.id,user.id,'follow',`${user.name} started following you.`);}
-        if(method==='DELETE'&&exists)db.follows=db.follows.filter(f=>!(f.followerId===user.id&&f.followedId===target.id));
+        if(method==='POST'&&!exists){
+          await requestSupabaseState('relationship_follow',{followerId:user.id,followedId:target.id});db.follows.push({id:uid(),followerId:user.id,followedId:target.id,createdAt:now()});notify(target.id,user.id,'follow',`${user.name} started following you.`);}
+        if(method==='DELETE'&&exists){
+          await requestSupabaseState('relationship_unfollow',{followerId:user.id,followedId:target.id});
+          db.follows=db.follows.filter(f=>!(f.followerId===user.id&&f.followedId===target.id));
+        }
         const mutual=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id)&&(db.follows||[]).some(f=>f.followerId===target.id&&f.followedId===user.id);
         let friendship=db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id));
         if(mutual&&!friendship){friendship={id:uid(),from:user.id,to:target.id,status:'accepted',source:'mutual_follow',createdAt:now(),updatedAt:now()};db.friendships.push(friendship);notify(target.id,user.id,'friend',`You and ${user.name} are now friends because you follow each other.`);notify(user.id,target.id,'friend',`You and ${target.name} are now friends because you follow each other.`);}
@@ -1026,7 +1039,9 @@ async function route(req, res) {
         }
         Object.assign(user,next);await saveStore();return json(res,200,{user:safeUser(user,user.id)});
       }
-      m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
+      m=p.match(/^\\/api\\/friends\\/([^/]+)\\/(request|accept|decline)$/);
+      if(method==='POST'&&m)return json(res,409,{error:'Minglora friendships are automatic. Follow each other to become friends.'});
+      m=p.match(/^\\/api\\/friends\\/([^/]+)\\/request$/);
       if(method==='POST'&&m){const recipient=db.users.find(u=>u.id===m[1]);if(m[1]===user.id||!recipient)return json(res,400,{error:'Invalid friend.'});if(getUserSettings(recipient).privacy.allowFriendRequests===false)return json(res,403,{error:'This member is not accepting friend requests.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}await saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/accept$/);
       if(method==='POST'&&m){const f=db.friendships.find(x=>x.from===m[1]&&x.to===user.id&&x.status==='pending');if(!f)return json(res,404,{error:'Pending request not found.'});f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);await saveStore();return json(res,200,{friendship:f});}
@@ -1057,9 +1072,8 @@ async function route(req, res) {
           else if(friendship.status!=='accepted'&&friendship.source!=='manual_request'){friendship.status='accepted';friendship.source='mutual_follow';friendship.updatedAt=now();}
         }
         await saveStore();
-        const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)&&!blockedBetween(user.id,f.from===user.id?f.to:f.from)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));
-        const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending'&&!blockedBetween(user.id,f.from)).map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));
-        return json(res,200,{friends:list,incoming});
+        const list=[...new Set(followed.filter(targetId=>(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)&&!blockedBetween(user.id,targetId)))].map(targetId=>safeUser(db.users.find(u=>u.id===targetId),user.id)).filter(Boolean);
+        return json(res,200,{friends:list,incoming:[]});
       }
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
       if(method==='POST'&&p==='/api/groups'){
