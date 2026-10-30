@@ -323,12 +323,12 @@ function findReportedPost(targetId){
   return null;
 }
 async function publicGroupPost(post) {
-  const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.userId&&item.slot==='post');if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
+  const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.userId&&(item.slot==='group'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   const {imageUrl,...cleanPost}=post;
   return {...cleanPost,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.userId))};
 }
 async function publicPagePost(post) {
-  const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&item.slot==='post');if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
+  const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&(item.slot==='page'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   return {...post,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.publishedBy))};
 }
 async function publicStory(story,viewerId,includeViews=false) {
@@ -558,9 +558,11 @@ async function route(req, res) {
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
+          group:['image/jpeg','image/png','image/webp','video/mp4'],
+          page:['image/jpeg','image/png','image/webp','video/mp4'],
           message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
@@ -1278,7 +1280,7 @@ async function route(req, res) {
         if(!canPublishGroupPost(group,user.id))return json(res,403,{error:'Join this group before posting.'});
         const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
-        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
+        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='group'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected group media files are unavailable.'});
         const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
@@ -1375,7 +1377,7 @@ async function route(req, res) {
         if(!canManagePage(page.id,user.id))return json(res,403,{error:'Only Page owners, admins or editors can publish.'});
         const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
-        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
+        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='page'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected Page media files are unavailable.'});
         const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now(),status:'published'};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});

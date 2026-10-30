@@ -45,7 +45,17 @@ The migration created these 11 buckets:
 - Public delivery: `minglora-avatars`, `minglora-covers`.
 - Private: `minglora-post-media`, `minglora-stories`, `minglora-short-videos`, `minglora-message-attachments`, `minglora-group-media`, `minglora-page-media`, `minglora-marketplace-media`, `minglora-live-thumbnails`, `minglora-data-exports`.
 
-Authenticated object paths are owner-scoped: the first folder segment must be the uploader's Auth UUID. Private asset delivery should use authenticated download or signed URLs.
+Active upload routing uses the dedicated bucket for each surface:
+
+- `avatar` and `cover` → their public image buckets (10 MB and 20 MB).
+- `post` → private `minglora-post-media` (up to 500 MB; photo, video, audio and GLB).
+- `story` → private `minglora-stories` (up to 200 MB; photo and video).
+- `group` and `page` → their separate private media buckets (up to 250 MB; JPEG/PNG/WEBP and MP4).
+- `message` → private `minglora-message-attachments` (up to 100 MB; photos, video, voice notes including `audio/webm`, and supported documents).
+
+`minglora-short-videos`, `minglora-marketplace-media`, `minglora-live-thumbnails`, and `minglora-data-exports` are provisioned with private access policies, but are not yet connected to dedicated upload screens/endpoints in the current web application. A bucket's existence alone does not mean a feature is wired to it.
+
+Authenticated object paths are owner-scoped: the first folder segment must be the uploader's Auth UUID. Public delivery is limited to avatars and covers. Private media is delivered with short-lived signed URLs after application authorization; raw private object access remains blocked without the appropriate owner policy.
 
 ## Verification
 
