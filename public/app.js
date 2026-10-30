@@ -259,7 +259,7 @@ function openEditProfile(u){
         <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from device</label><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Choose from your phone gallery, photos, files or folders. Maximum 8 MB.</small></div></div>
       </div>
       <div class="profile-upload-section">
-        <h3>Cover photo</h3><img id="edit-cover-preview" class="profile-cover-upload-preview" src="${esc(u.cover||'')}" alt="Cover photo preview"><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-cover-file">Choose cover photo</label><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Browse your device gallery or folders. Maximum 8 MB.</small></div>
+        <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-cover-file">Choose cover photo</label><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Browse your device gallery or folders. Maximum 8 MB.</small></div>
       </div>
       <p class="profile-upload-status muted" id="profile-upload-status" role="status">Your selected images upload securely to Minglora when you save.</p>
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
@@ -269,12 +269,13 @@ function openEditProfile(u){
   const coverInput=modal.querySelector('#edit-cover-file');
   const avatarPreview=modal.querySelector('#edit-avatar-preview');
   const coverPreview=modal.querySelector('#edit-cover-preview');
+  if(u.cover)coverPreview.style.backgroundImage='url("'+String(u.cover).replace(/["\\]/g,'')+'")';
   const previewUrls=[];
   function previewFile(input,target){
     const file=input.files?.[0];if(!file)return;
     if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)){toast('Choose a JPG, PNG, WEBP or AVIF image.');input.value='';return;}
     if(file.size>8*1024*1024){toast('Images must be 8 MB or smaller.');input.value='';return;}
-    const url=URL.createObjectURL(file);previewUrls.push(url);target.src=url;target.classList.add('has-preview');
+    const url=URL.createObjectURL(file);previewUrls.push(url);if(target.tagName==='IMG')target.src=url;else target.style.backgroundImage='url("'+url+'")';target.classList.add('has-preview');
   }
   avatarInput.addEventListener('change',()=>previewFile(avatarInput,avatarPreview));
   coverInput.addEventListener('change',()=>previewFile(coverInput,coverPreview));
