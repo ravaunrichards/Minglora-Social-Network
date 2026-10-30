@@ -10,7 +10,8 @@ This document distinguishes working code from unfinished product requirements. A
 | Comments | Add comments and delete comments as the comment author or post author | Edit, threaded replies, reaction lifecycle, moderation and reporting |
 | Profiles | View profiles/posts, edit name/bio/location/avatar/cover, see real follower/following/post counts, follow/unfollow and block/unblock from profile UI | Profile privacy, verified accounts, themes, and granular audience settings |
 | Friends and follows | Send/accept/decline/retry friend requests, accepted friend lists, unfriend/cancel request, directed follow/unfollow, block/unblock and followers/following lists | Mute/restrict, report flows and advanced relationship controls |
-| Groups | Create/browse public groups, join/leave, open group detail pages, member-only text discussions, post deletion by author/group owner | Group roles, private groups, invitations, group event integration, rich media and moderation queue |
+| Groups | Create/browse public groups, join/leave, group detail pages, member-only text discussions, post deletion by author/group owner | Group roles, private groups, invitations, group event integration, rich media and moderation queue |
+| Stories | Create text/HTTPS-image stories, public/friends/followers/private audiences, 24-hour expiry, unique view tracking and author-only deletion | Media uploads, video processing, reports/moderation, mute controls, and scheduled cleanup independent of requests |
 | Messages | Direct text messages and conversation history; blocked pairs cannot start messages and are filtered from conversation lists | Real-time delivery, attachments, read receipts, message deletion and full conversation authorization lifecycle |
 | Notifications | In-app notifications for supported reactions, comments, friend requests and messages; mark all read | Push/email delivery, per-notification read state and notification preferences |
 | Search | Basic substring search across users, posts and groups; block-aware filtering for people/posts | Search indexing, relevance ranking, advanced filters and complete privacy-aware discovery |
@@ -23,5 +24,5 @@ This document distinguishes working code from unfinished product requirements. A
 - No user cards or counts are fabricated to fill empty panels.
 - Groups appear only after a real account creates them.
 - Conversation lists appear only after real messages exist.
-- No story feature is displayed as available until story storage, publishing, viewing, expiry and moderation are implemented.
+- Stories are shown only from real stored records. Story reporting/moderation and media upload validation are still not implemented.
 - Any future test fixture must use a temporary test database and be removed when the test finishes.
