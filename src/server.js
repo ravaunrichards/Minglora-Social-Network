@@ -102,13 +102,13 @@ function safeUser(u,viewerId=null){
   if(own)result.aboutVisibility=visibility;
   return result;
 }
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
 function getUserSettings(user){const saved=user?.settings||{};return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences:{...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})}};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions'],preferences:['theme','feedSort','reducedMotion']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','feedSort','reducedMotion']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -201,7 +201,50 @@ async function body(req, maxBytes=1_000_000) {
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
-const notify = (userId, actorId, type, text, extra = {}) => {const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;const prefs=getUserSettings(recipient).notifications;if(!prefs.inApp||(type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;db.notifications.unshift({id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false});};
+let webPushConfigKey='';
+function configureWebPush(){
+  const publicKey=String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim();
+  const privateKey=String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim();
+  if(!publicKey||!privateKey)return false;
+  const subject=String(process.env.WEB_PUSH_SUBJECT||'https://minglora-social-network.onrender.com').trim();
+  const key=publicKey+':'+privateKey+':'+subject;
+  if(webPushConfigKey!==key){webpush.setVapidDetails(subject,publicKey,privateKey);webPushConfigKey=key;}
+  return true;
+}
+async function deliverUserPush(userId,notification){
+  if(!configureWebPush())return;
+  const subscriptions=(db.pushSubscriptions||[]).filter(item=>item.userId===userId&&item.endpoint&&item.keys?.p256dh&&item.keys?.auth);
+  if(!subscriptions.length)return;
+  const stale=new Set();
+  const payload=JSON.stringify({
+    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':'Minglora notification',
+    body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
+    tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
+    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id}
+  });
+  await Promise.all(subscriptions.map(async subscription=>{
+    try{
+      await webpush.sendNotification({endpoint:subscription.endpoint,keys:subscription.keys},payload,{
+        TTL:60,urgency:notification.type==='call'||notification.type==='live'?'high':'normal',
+        topic:String(notification.id||'minglora').replace(/[^A-Za-z0-9_-]/g,'').slice(0,32)||'minglora'
+      });
+    }catch(error){
+      if(error?.statusCode===404||error?.statusCode===410)stale.add(subscription.endpoint);
+    }
+  }));
+  if(stale.size){
+    db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>!(item.userId===userId&&stale.has(item.endpoint)));
+    await saveStore().catch(()=>{});
+  }
+}
+const notify = (userId, actorId, type, text, extra = {}) => {
+  const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
+  const prefs=getUserSettings(recipient).notifications;
+  if((type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;
+  const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
+  if(prefs.inApp)db.notifications.unshift(notification);
+  if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
+};
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
@@ -1415,6 +1458,27 @@ async function route(req, res) {
         await saveStore();
         const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
         return json(res,201,{message:{...msg,attachments,author:safeUser(user)}});
+      }
+      if(method==='GET'&&p==='/api/push/public-key'){
+        if(!configureWebPush())return json(res,503,{error:'Minglora device push is not configured yet.'});
+        return json(res,200,{publicKey:String(process.env.WEB_PUSH_PUBLIC_KEY).trim()});
+      }
+      if(method==='POST'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim(),p256dh=String(input.keys?.p256dh||''),auth=String(input.keys?.auth||'');
+        let parsed;
+        try{parsed=new URL(endpoint);}catch{return json(res,400,{error:'Choose a valid browser push subscription.'});}
+        if(parsed.protocol!=='https:'||endpoint.length>2048||p256dh.length<20||p256dh.length>256||auth.length<8||auth.length>128)return json(res,400,{error:'The browser push subscription is invalid.'});
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>item.endpoint!==endpoint);
+        db.pushSubscriptions.push({id:uid(),userId:user.id,endpoint,keys:{p256dh,auth},expirationTime:input.expirationTime||null,userAgent:String(req.headers['user-agent']||'').slice(0,240),createdAt:now(),updatedAt:now()});
+        await saveStore();
+        return json(res,201,{ok:true,subscriptions:(db.pushSubscriptions||[]).filter(item=>item.userId===user.id).length});
+      }
+      if(method==='DELETE'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim();
+        const before=(db.pushSubscriptions||[]).length;
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>!(item.userId===user.id&&item.endpoint===endpoint));
+        await saveStore();
+        return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
       }
       if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
