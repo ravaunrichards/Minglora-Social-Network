@@ -45,7 +45,11 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | DELETE | `/api/friends/:id` | Cancel own pending request or remove an accepted friendship |
 | GET | `/api/groups` | List groups and membership state |
 | POST | `/api/groups` | Create a group |
+| GET | `/api/groups/:id` | Read public group details and discussion posts |
 | POST | `/api/groups/:id/join` | Join a group |
+| DELETE | `/api/groups/:id/join` | Leave a group (owner cannot leave without transfer/deletion) |
+| POST | `/api/groups/:id/posts` | Publish a text post as a group member |
+| DELETE | `/api/groups/:id/posts/:postId` | Delete a group post as author or group owner |
 
 ## Messages, notifications and search
 
