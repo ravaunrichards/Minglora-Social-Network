@@ -749,10 +749,10 @@ async function route(req, res) {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured for Minglora.' });
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
-        const isFriend = isFriendMutual(user.id, session.hostId);
+        const friendAccess = isFriend(user.id, session.hostId);
         const allowed = session.hostId === user.id ||
           session.visibility === 'public' ||
-          (session.visibility === 'friends' && isFriend);
+          (session.visibility === 'friends' && friendAccess);
         if (!allowed) return json(res, 404, { error: 'Live session not found.' });
         const role = session.hostId === user.id ? 'host' : 'viewer';
         const liveKit = await createLiveKitToken({
@@ -1007,7 +1007,8 @@ async function route(req, res) {
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
         if(blockedBetween(user.id,target.id))return json(res,403,{error:'This relationship is unavailable.'});
-        const exists=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id);
+        db.follows ||= [];db.friendships ||= [];
+        const exists=db.follows.some(f=>f.followerId===user.id&&f.followedId===target.id);
         if(method==='POST'&&!exists){
           await requestSupabaseState('relationship_follow',{followerId:user.id,followedId:target.id});db.follows.push({id:uid(),followerId:user.id,followedId:target.id,createdAt:now()});notify(target.id,user.id,'follow',`${user.name} started following you.`);}
         if(method==='DELETE'&&exists){
@@ -1028,6 +1029,10 @@ async function route(req, res) {
         const exists=(db.blocks||[]).some(b=>b.blockerId===user.id&&b.blockedId===target.id);
         if(method==='POST'&&!exists){
           db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
+          const outgoingFollow=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id);
+          const incomingFollow=(db.follows||[]).some(f=>f.followerId===target.id&&f.followedId===user.id);
+          if(outgoingFollow)await requestSupabaseState('relationship_unfollow',{followerId:user.id,followedId:target.id});
+          if(incomingFollow)await requestSupabaseState('relationship_unfollow',{followerId:target.id,followedId:user.id});
           db.follows=(db.follows||[]).filter(f=>!((f.followerId===user.id&&f.followedId===target.id)||(f.followerId===target.id&&f.followedId===user.id)));
           db.friendships=db.friendships.filter(f=>!((f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id)));
         }
@@ -1039,8 +1044,8 @@ async function route(req, res) {
       if(method==='GET'&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
-        const rows=m[2]==='friends'?(db.friendships||[]).filter(f=>f.status==='accepted'&&(f.from===target.id||f.to===target.id)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
-        const ids=rows.map(edge=>m[2]==='friends'?(edge.from===target.id?edge.to:edge.from):(m[2]==='followers'?edge.followerId:edge.followedId));
+        const rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
+        const ids=rows.map(edge=>m[2]==='following'?edge.followedId:edge.followerId);
         const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
         return json(res,200,{users,count:users.length});
       }
