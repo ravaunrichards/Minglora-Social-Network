@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth } from './store.js';
 import { createLiveKitToken, isLiveKitConfigured } from '../backend/modules/live/livekit.js';
-import { normalizeEmail, normalizeUsername, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
+import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -31,7 +31,19 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()'
 };
-const safeUser = u => u && ({ id:u.id, name:u.name, username:u.username, bio:u.bio || '', location:u.location || '', avatar:u.avatar || '', cover:u.cover || '', createdAt:u.createdAt });
+const DEFAULT_ABOUT_VISIBILITY={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false};
+function safeUser(u,viewerId=null){
+  if(!u)return null;
+  const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
+  const own=viewerId===u.id;
+  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt};
+  const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
+  for(const key of fields){
+    if(own||visibility[key]===true)result[key]=u[key]||'';
+  }
+  if(own)result.aboutVisibility=visibility;
+  return result;
+}
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
 function getUserSettings(user){const saved=user?.settings||{};return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences:{...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})}};}
 function isFriend(firstId,secondId){return (db.friendships||[]).some(item=>item.status==='accepted'&&((item.from===firstId&&item.to===secondId)||(item.from===secondId&&item.to===firstId)));}
@@ -99,17 +111,25 @@ function ensureLocalUser(authUser, fallback = {}) {
   const email = normalizeEmail(authUser.email);
   const name = String(metadata.name || metadata.full_name || fallback.name || email.split('@')[0] || 'Minglora Member').trim();
   const username = normalizeUsername(metadata.username || fallback.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
+  const contactPhone=normalizeContactPhone(metadata.contact_phone||metadata.phone_number||fallback.phoneNumber||'');
   if (!validateUsername(username).valid) throw Object.assign(new Error('The username on this account is invalid. Contact Minglora support.'), { status:409 });
+  if(!validateContactPhone(contactPhone).valid)throw Object.assign(new Error('The contact phone stored on this account is invalid. Update it in your Minglora profile.'),{status:409});
   let user = db.users.find(item => item.id === authUser.id) || db.users.find(item => normalizeEmail(item.email) === email);
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
-    user = { id:authUser.id, name, username, email, passwordHash:null, bio:'', location:'', avatar:'', cover:'', createdAt:authUser.created_at || now() };
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, avatar:'', cover:'', createdAt:authUser.created_at || now() };
     db.users.push(user);
   } else {
     user.name = name || user.name;
     user.username = username || user.username;
     user.email = email;
+    user.contactPhone=contactPhone;
+    for(const [key,metaKey] of [['country','country'],['county','county'],['parish','parish'],['city','city'],['gender','gender'],['bio','bio'],['location','location']]){
+      if(metadata[metaKey]!==undefined)user[key]=String(metadata[metaKey]||'');
+    }
+    if(metadata.relationship_status!==undefined||metadata.relationshipStatus!==undefined)user.relationshipStatus=String(metadata.relationship_status||metadata.relationshipStatus||'');
+    if(metadata.about_visibility||metadata.aboutVisibility)user.aboutVisibility=metadata.about_visibility||metadata.aboutVisibility;
   }
   return user;
 }
@@ -220,25 +240,26 @@ async function route(req, res) {
     const user = sessionUser(req);
     try {
       if (method==='POST' && p==='/api/auth/register') {
-        const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||'');
+        const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
+        if(!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter your contact phone in international format, including + and country code.'});
         if (db.users.some(u=>normalizeEmail(u.email)===email || u.username===username)) return json(res,409,{error:'That email or username is already registered. Log in instead.'});
         if (AUTH_PROVIDER === 'supabase') {
-          const result = await supabaseSignUp({ email, password, name, username });
+          const result = await supabaseSignUp({ email, password, name, username, phoneNumber });
           if (!result.user) return json(res,502,{error:'Minglora Supabase Auth did not return a user record.'});
           const hasIdentity = !Array.isArray(result.user.identities) || result.user.identities.length > 0;
           if (!result.session) {
             if (hasIdentity) {
-              ensureLocalUser(result.user, { name, username });
+              ensureLocalUser(result.user, { name, username, phoneNumber });
               await saveStore();
             }
             return json(res,202,{confirmationRequired:true,message:'Check your email for a confirmation link. After confirming your address, return here and log in.'});
           }
-          const created = ensureLocalUser(result.user, { name, username });
+          const created = ensureLocalUser(result.user, { name, username, phoneNumber });
           const sessionCookie = await createAppSession(created,result.session,req);
-          return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
+          return json(res,201,{user:safeUser(created,created.id)},{'Set-Cookie':sessionCookie});
         }
-        const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',avatar:'',cover:'',createdAt:now()}; db.users.push(created);
+        const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',contactPhone:phoneNumber,country:'',county:'',parish:'',city:'',gender:'',relationshipStatus:'',aboutVisibility:DEFAULT_ABOUT_VISIBILITY,avatar:'',cover:'',createdAt:now()}; db.users.push(created);
         const sessionCookie = await createAppSession(created);
         return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
       }
@@ -294,7 +315,7 @@ async function route(req, res) {
             }
           }
           const sessionCookie=await createAppSession(signedInUser,authenticated,req);clearLoginFailures(rate.key);
-          return json(res,200,{user:safeUser(signedInUser)},{'Set-Cookie':sessionCookie});
+          return json(res,200,{user:safeUser(signedInUser,signedInUser.id)},{'Set-Cookie':sessionCookie});
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -322,7 +343,7 @@ async function route(req, res) {
         return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
-      if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
+      if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
       requireAuth(user);
       if(method==='POST'&&p==='/api/media/upload/prepare'){
         const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0);
@@ -760,7 +781,7 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
-      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
@@ -800,11 +821,27 @@ async function route(req, res) {
         return json(res,200,{users,count:users.length});
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
-      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id))),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,friendsCount:[...new Set((db.friendships||[]).filter(f=>f.status==='accepted'&&(f.from===target.id||f.to===target.id)).map(f=>f.from===target.id?f.to:f.from).filter(id=>!blockedBetween(user.id,id)))].length}); }
+      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target,user.id),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id))),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,friendsCount:[...new Set((db.friendships||[]).filter(f=>f.status==='accepted'&&(f.from===target.id||f.to===target.id)).map(f=>f.from===target.id?f.to:f.from).filter(id=>!blockedBetween(user.id,id)))].length}); }
       if(method==='PATCH'&&p==='/api/users/me'){
         const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         if(validation.value.username&&db.users.some(item=>item.id!==user.id&&normalizeUsername(item.username)===validation.value.username))return json(res,409,{error:'That username is already in use.'});
-        Object.assign(user,validation.value);await saveStore();return json(res,200,{user:safeUser(user)});
+        const next={...user,...validation.value,aboutVisibility:{...DEFAULT_ABOUT_VISIBILITY,...(user.aboutVisibility||{}),...(validation.value.aboutVisibility||{})}};
+        if(AUTH_PROVIDER==='supabase'){
+          const currentSession=sessionFromRequest(req),auth=await sessionAuth(currentSession);
+          if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+          const metadata={
+            name:next.name,username:next.username,contact_phone:next.contactPhone||'',phone_number:next.contactPhone||'',
+            bio:next.bio||'',location:next.location||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
+            gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
+          };
+          await supabaseUpdateUserMetadata(auth.access_token,metadata);
+          await supabaseUpdateProfile(auth.access_token,user.id,{
+            username:next.username,display_name:next.name,bio:next.bio||'',location:next.location||'',
+            contact_phone:next.contactPhone||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
+            gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
+          });
+        }
+        Object.assign(user,next);await saveStore();return json(res,200,{user:safeUser(user,user.id)});
       }
       m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&m){const recipient=db.users.find(u=>u.id===m[1]);if(m[1]===user.id||!recipient)return json(res,400,{error:'Invalid friend.'});if(getUserSettings(recipient).privacy.allowFriendRequests===false)return json(res,403,{error:'This member is not accepting friend requests.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}await saveStore();return json(res,200,{friendship:f});}
