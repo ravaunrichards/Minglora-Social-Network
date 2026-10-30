@@ -121,6 +121,30 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const invalidProfile = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ avatar: 'javascript:alert(1)' }) });
   assert.equal(invalidProfile.status, 400);
 
+  const defaultSettings = await request('/api/settings');
+  assert.equal(defaultSettings.status, 200);
+  assert.equal(defaultSettings.body.settings.privacy.profileVisibility, 'public');
+  assert.equal(defaultSettings.body.settings.notifications.inApp, true);
+  const savedSettings = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      privacy: { profileVisibility: 'friends', allowFriendRequests: false, messageAudience: 'friends' },
+      notifications: { inApp: true, messages: false },
+      preferences: { theme: 'dark', feedSort: 'oldest', reducedMotion: true }
+    })
+  });
+  assert.equal(savedSettings.status, 200);
+  assert.equal(savedSettings.body.settings.privacy.profileVisibility, 'friends');
+  assert.equal(savedSettings.body.settings.preferences.theme, 'dark');
+  const reloadedSettings = await request('/api/settings');
+  assert.equal(reloadedSettings.body.settings.privacy.allowFriendRequests, false);
+  assert.equal(reloadedSettings.body.settings.notifications.messages, false);
+  const invalidSettings = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ privacy: { profileVisibility: 'worldwide' } })
+  });
+  assert.equal(invalidSettings.status, 400);
+
   const feed = await request('/api/feed');
   assert.equal(feed.status, 200);
   assert.equal(feed.body.posts.length, 0);
