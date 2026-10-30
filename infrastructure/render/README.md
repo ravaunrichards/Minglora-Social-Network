@@ -2,9 +2,9 @@
 
 ## Existing service
 
-The connected Render resource is the existing `Minglora-Social-Network` web service in Virginia, linked to `ravaunrichards/Minglora-Social-Network` on branch `main`. Its current build and start commands are `npm install` and `npm start`. It is on the Free plan and currently has no configured health-check path.
+The connected Render resource is the existing `minglora-social-network` web service in Virginia, linked to `ravaunrichards/Minglora-Social-Network` on branch `main`. Its current build and start commands are `npm install` and `npm start`. It is on the Free plan and currently has no configured health-check path. Its public URL is `https://minglora-social-network.onrender.com`.
 
-This guide configures that service. It does not create duplicates or provision a database.
+This guide configures that service. It does not create duplicates or provision a database. The API's liveness route is `/api/health`; its production readiness route is `/api/ready`. Set the Render health-check path to `/api/ready` after the required PostgreSQL and Supabase settings are installed.
 
 ## Required environment settings
 
@@ -18,8 +18,8 @@ Add these in the existing Render service:
 - `AUTH_PROVIDER=supabase`
 - `SUPABASE_URL` — Minglora's own project URL, such as `https://<minglora-project-ref>.supabase.co`
 - `SUPABASE_PUBLISHABLE_KEY` — the matching `sb_publishable_...` key for that same Minglora project
-- `SUPABASE_AUTH_REDIRECT_URL=https://facebook-inspired-social.onrender.com`
-- `APP_ORIGIN=https://facebook-inspired-social.onrender.com`
+- `SUPABASE_AUTH_REDIRECT_URL=https://minglora-social-network.onrender.com`
+- `APP_ORIGIN=https://minglora-social-network.onrender.com`
 - `SESSION_SECRET` — newly generated random secret of at least 32 characters, stored only in Render
 - `LIVEKIT_URL` — Minglora LiveKit Cloud WebSocket URL
 - `LIVEKIT_API_KEY` — Minglora-only LiveKit API key
