@@ -116,8 +116,9 @@ Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with a
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/messages` | Current account's direct conversations |
-| POST | `/api/messages` | Send a direct text message |
+| GET | `/api/messages` | Current account's direct conversations, message history and unread counts |
+| POST | `/api/messages` | Send a direct text message or up to five authorized attachments |
+| POST | `/api/messages/:peerId/read` | Mark incoming messages from the selected conversation member as read; returns the number updated |
 | GET | `/api/notifications` | Current account's notifications |
 | POST | `/api/notifications/read` | Mark all current account notifications as read |
 | GET | `/api/search?q=...` | Search accounts, posts, groups and active Pages; blocked accounts/Pages are filtered |
