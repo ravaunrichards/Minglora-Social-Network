@@ -317,7 +317,7 @@ async function fileAsBase64(file){
 }
 async function uploadProfileImage(slot,file){
   if(!file)return null;
-  const allowed=['image/jpeg','image/png','image/webp','image/avif'];
+  const allowed=['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'];
   if(!allowed.includes(file.type))throw new Error('Choose a JPG, PNG, WEBP or AVIF image.');
   if(file.size>8*1024*1024)throw new Error('Profile and cover images must be 8 MB or smaller.');
   const base64=await fileAsBase64(file);
@@ -326,11 +326,12 @@ async function uploadProfileImage(slot,file){
 
 let mediaPickerSequence=0;
 function mediaAccept(slot){
-  return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime': 'image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/webm,model/gltf-binary,.glb';
+  return slot==='story'?'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime': 'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/webm,model/gltf-binary,.glb';
 }
-function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif'].includes(file.type);}
+function imageMime(file){return ['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\\.hei[cf]$/i.test(file.name||'');}
 async function transformMediaImage(file,zoom=1,rotation=0){
-  if(zoom<=1.001&&rotation===0)return file;
+  const needsConversion=['image/heic','image/heif','image/heic-sequence','image/heif-sequence'].includes(file.type)||/\\.hei[cf]$/i.test(file.name||'');
+  if(zoom<=1.001&&rotation===0&&!needsConversion)return file;
   const bitmap=await createImageBitmap(file);
   const swap=Math.abs(rotation%180)===90;
   const width=swap?bitmap.height:bitmap.width,height=swap?bitmap.width:bitmap.height;
@@ -420,10 +421,10 @@ function openEditProfile(u){
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
       <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"></div>
       <div class="profile-upload-section">
-        <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"><input id="edit-avatar-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-avatar-zoom"></label><button class="secondary" type="button" id="edit-avatar-rotate">Rotate 90°</button><small>Choose from your phone gallery, files or use the camera. Adjust zoom and crop before saving.</small></div></div>
+        <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif"><input id="edit-avatar-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-avatar-zoom"></label><button class="secondary" type="button" id="edit-avatar-rotate">Rotate 90°</button><small>Choose from your phone gallery, files or use the camera. Adjust zoom and crop before saving.</small></div></div>
       </div>
       <div class="profile-upload-section">
-        <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"><input id="edit-cover-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-cover-zoom"></label><button class="secondary" type="button" id="edit-cover-rotate">Rotate 90°</button><small>Use gallery, files or the device camera. Adjust zoom and crop before saving.</small></div>
+        <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif"><input id="edit-cover-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-cover-zoom"></label><button class="secondary" type="button" id="edit-cover-rotate">Rotate 90°</button><small>Use gallery, files or the device camera. Adjust zoom and crop before saving.</small></div>
       </div>
       <p class="profile-upload-status muted" id="profile-upload-status" role="status">Your selected images upload securely to Minglora when you save.</p>
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
@@ -440,7 +441,7 @@ function openEditProfile(u){
   const previewUrls=[];
   function previewFile(input,target){
     const file=input.files?.[0];if(!file)return;
-    if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)){toast('Choose a JPG, PNG, WEBP or AVIF image.');input.value='';return;}
+    if(!imageMime(file)){toast('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');input.value='';return;}
     if(file.size>8*1024*1024){toast('Images must be 8 MB or smaller.');input.value='';return;}
     const url=URL.createObjectURL(file);previewUrls.push(url);if(target.tagName==='IMG')target.src=url;else{target.style.backgroundImage='url("'+url+'")';target.style.backgroundSize='cover';}target.classList.add('has-preview');
   }
