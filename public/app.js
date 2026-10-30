@@ -126,12 +126,22 @@ function openEditPost(post){
     }catch(error){toast(error.message);button.disabled=false;}
   };
 }
+function openReportComposer(targetType,targetId){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="report-title"><div class="modal-head"><h2 id="report-title">Report '+esc(targetType)+'</h2><button class="modal-close" aria-label="Close">×</button></div><form id="report-form" class="modal-body"><p class="muted">Reports are reviewed by Minglora moderators. Reporting does not automatically remove content.</p><label class="field"><span>Reason</span><select name="category" required><option value="spam">Spam</option><option value="harassment">Harassment or bullying</option><option value="hate">Hate or discrimination</option><option value="nudity">Nudity or sexual content</option><option value="violence">Violence or threats</option><option value="scam">Scam or fraud</option><option value="impersonation">Impersonation</option><option value="copyright">Copyright</option><option value="privacy">Privacy concern</option><option value="other">Other</option></select></label><label class="field"><span>Additional details (optional)</span><textarea name="details" rows="4" maxlength="2000" placeholder="Tell the moderator what happened."></textarea></label><p class="auth-error" id="report-status" role="status"></p><button class="primary full" type="submit">Submit report</button></form></section>';
+  document.body.append(modal);modal.querySelector('.modal-close').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove();});
+  modal.querySelector('form').addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,values=new FormData(form),button=form.querySelector('button[type="submit"]'),status=modal.querySelector('#report-status');button.disabled=true;
+    try{await api('/reports',{method:'POST',body:JSON.stringify({targetType,targetId,category:values.get('category'),details:values.get('details')})});modal.remove();toast('Report submitted to Minglora moderation.');}
+    catch(error){status.textContent=error.message;button.disabled=false;}
+  });
+}
 function openPostOptions(post){
   const owner=post.userId===state.user.id, author=post.author||{};
   const modal=document.createElement('div');modal.className='modal-backdrop';
   const actions=owner
     ? '<button class="secondary full" data-post-action="edit">Edit post</button><button class="secondary full" data-post-action="delete">Delete post</button>'
-    : `<button class="secondary full" data-post-action="block">Block ${esc(author.name||'this member')}</button>`;
+    : `<button class="secondary full" data-post-action="report-post">Report this post</button><button class="secondary full" data-post-action="report-user">Report ${esc(author.name||'this member')}</button><button class="secondary full" data-post-action="block">Block ${esc(author.name||'this member')}</button>`;
   modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-labelledby="post-options-title"><div class="modal-head"><h2 id="post-options-title">Post options</h2><button class="modal-close" aria-label="Close">×</button></div><div class="modal-body">${actions}<button type="button" class="secondary full modal-cancel">Cancel</button></div></section>`;
   document.body.append(modal);
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=()=>modal.remove());
@@ -142,6 +152,8 @@ function openPostOptions(post){
     try{await api(`/posts/${post.id}`,{method:'DELETE',body:'{}'});modal.remove();await refreshVisiblePosts();toast('Post deleted.');}
     catch(err){toast(err.message);}
   });
+  modal.querySelector('[data-post-action="report-post"]')?.addEventListener('click',()=>{modal.remove();openReportComposer('post',post.id);});
+  modal.querySelector('[data-post-action="report-user"]')?.addEventListener('click',()=>{modal.remove();openReportComposer('user',post.userId);});
   modal.querySelector('[data-post-action="block"]')?.addEventListener('click',async()=>{
     if(!window.confirm(`Block ${author.name||'this member'}? You will no longer see each other’s profile, posts or messages.`))return;
     try{await api(`/users/${post.userId}/block`,{method:'POST',body:'{}'});modal.remove();await refreshVisiblePosts();toast('Member blocked.');}
