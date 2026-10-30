@@ -163,6 +163,11 @@ async function publicPost(p,viewerId) {
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
+async function publicGroupPost(post) {
+  const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.userId&&item.slot==='post');if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
+  const {imageUrl,...cleanPost}=post;
+  return {...cleanPost,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.userId))};
+}
 async function publicPagePost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&item.slot==='post');if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   return {...post,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.publishedBy))};
@@ -830,10 +835,13 @@ async function route(req, res) {
       if(method==='POST'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
         if(!canPublishGroupPost(group,user.id))return json(res,403,{error:'Join this group before posting.'});
-        const text=String(input.text||'').trim();
-        if(!text||text.length>5000)return json(res,400,{error:'Group post must contain 1–5000 characters.'});
-        const post={id:uid(),groupId:group.id,userId:user.id,text,createdAt:now(),updatedAt:now()};
-        db.groupPosts.push(post);await saveStore();return json(res,201,{post:{...post,author:safeUser(user)}});
+        const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected group media files are unavailable.'});
+        const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now()};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
+        db.groupPosts.push(post);await saveStore();return json(res,201,{post:await publicGroupPost(post)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -841,7 +849,7 @@ async function route(req, res) {
         const post=(db.groupPosts||[]).find(x=>x.groupId===group.id&&x.id===m[2]);
         if(!post)return json(res,404,{error:'Group post not found.'});
         if(!canDeleteGroupPost(group,post,user.id))return json(res,403,{error:'Only the post author or group owner can delete this post.'});
-        db.groupPosts=db.groupPosts.filter(x=>x.id!==post.id);await saveStore();return json(res,200,{ok:true,id:post.id});
+        db.groupPosts=db.groupPosts.filter(x=>x.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/join$/);
       if(method==='POST'&&m){
@@ -856,7 +864,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/groups\/([^/]+)$/);
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        const posts=(db.groupPosts||[]).filter(post=>post.groupId===group.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>({...post,author:safeUser(db.users.find(u=>u.id===post.userId))}));
+        const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post)));
         return json(res,200,{group:{...group,owner:safeUser(db.users.find(u=>u.id===group.ownerId)),members:group.members.map(id=>safeUser(db.users.find(u=>u.id===id))).filter(Boolean),memberCount:group.members.length,isMember:group.members.includes(user.id)},posts});
       }
       if(method==='GET'&&p==='/api/stories'){
