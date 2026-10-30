@@ -130,11 +130,16 @@ async function route(req, res) {
   if (method === 'GET' && p === '/api/health') return json(res,200,{ok:true,service:'minglora-social-network',timestamp:now()});
   if (method === 'GET' && p === '/api/ready') {
     const persistence = await persistenceHealth();
-    return json(res, persistence.ready ? 200 : 503, {
-      ok: persistence.ready,
+    const auth = {
+      provider: AUTH_PROVIDER,
+      configured: AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured()
+    };
+    const ready = persistence.ready && auth.configured;
+    return json(res, ready ? 200 : 503, {
+      ok: ready,
       service: 'minglora-social-network',
       timestamp: now(),
-      persistence
+      components: { persistence, auth }
     });
   }
   if (p.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
