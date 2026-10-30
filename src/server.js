@@ -696,6 +696,7 @@ async function route(req, res) {
           canPublish: true
         });
         const session = { id, roomName, hostId: user.id, title, visibility, status: 'live', createdAt: now(), endedAt: null };
+        await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
         db.liveSessions = db.liveSessions || [];
         db.liveParticipants = db.liveParticipants || [];
         db.liveSessions.unshift(session);
@@ -755,6 +756,7 @@ async function route(req, res) {
         if (!session) return json(res, 404, { error: 'Live session not found.' });
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the host can end this live session.' });
         if (session.status !== 'ended') {
+          await requestSupabaseState('live_broadcast_end',{id:session.id,hostId:user.id});
           session.status = 'ended';
           session.endedAt = now();
           (db.liveParticipants || []).filter(item => item.sessionId === session.id && !item.leftAt)
@@ -762,6 +764,131 @@ async function route(req, res) {
           await saveStore();
         }
         return json(res, 200, { ok: true, session });
+      }
+      if(method==='GET'&&p==='/api/coins/catalog'){
+        return json(res,200,await requestSupabaseState('economy_catalog'));
+      }
+      if(method==='GET'&&p==='/api/coins/wallet'){
+        return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
+      }
+      if(method==='POST'&&p==='/api/coins/purchase'){
+        const catalogue=await requestSupabaseState('economy_catalog');
+        let coinAmount,amountMinor,packageName='Custom Minglora Coins';
+        const packageCode=String(input.packageCode||'').trim();
+        if(packageCode){
+          const selected=(catalogue.packages||[]).find(item=>item.code===packageCode);
+          if(!selected)return json(res,400,{error:'Choose an available Minglora coin package.'});
+          coinAmount=Number(selected.coin_amount);amountMinor=Number(selected.price_minor);packageName=selected.name;
+        }else{
+          coinAmount=Number(input.coinAmount);
+          if(!Number.isSafeInteger(coinAmount)||coinAmount<100||coinAmount>100000||coinAmount%2!==0){
+            return json(res,400,{error:'Enter an even custom amount from 100 to 100,000 Minglora Coins.'});
+          }
+          amountMinor=coinAmount;
+        }
+        if(!Number.isSafeInteger(coinAmount)||coinAmount<100||!Number.isSafeInteger(amountMinor)||amountMinor<100){
+          return json(res,400,{error:'The selected Minglora coin package is not valid.'});
+        }
+        const origin=appOrigin(req);
+        const order=await paypalRequest('/v2/checkout/orders','POST',{
+          intent:'CAPTURE',
+          purchase_units:[{
+            reference_id:uid(),custom_id:user.id,description:packageName+' · '+coinAmount+' Minglora Coins',
+            amount:{currency_code:'USD',value:(amountMinor/100).toFixed(2)}
+          }],
+          application_context:{
+            brand_name:'Minglora',landing_page:'NO_PREFERENCE',user_action:'PAY_NOW',
+            shipping_preference:'NO_SHIPPING',
+            return_url:origin+'/?paypal=coins',cancel_url:origin+'/?paypal=cancel'
+          }
+        },'minglora-order-'+uid());
+        const approveUrl=(order.links||[]).find(link=>link.rel==='approve')?.href;
+        if(!order.id||!approveUrl)return json(res,502,{error:'PayPal did not return a payment approval link.'});
+        await requestSupabaseState('economy_purchase_create',{userId:user.id,paypalOrderId:order.id,coinAmount});
+        return json(res,201,{orderId:order.id,approveUrl,coinAmount,amountMinor,currency:'USD',coinName:'Minglora Coins'});
+      }
+      if(method==='POST'&&p==='/api/coins/purchase/capture'){
+        const orderId=String(input.orderId||'').trim();
+        if(!orderId||orderId.length>160)return json(res,400,{error:'A PayPal order reference is required.'});
+        const stored=await requestSupabaseState('economy_purchase_get',{userId:user.id,paypalOrderId:orderId});
+        const purchase=stored.purchase;
+        if(purchase.status==='captured')return json(res,200,{ok:true,alreadyCaptured:true,coins:purchase.coin_amount,wallet:await requestSupabaseState('economy_wallet',{userId:user.id})});
+        if(purchase.status!=='created')return json(res,409,{error:'This Minglora coin purchase cannot be captured.'});
+        const captured=await paypalRequest('/v2/checkout/orders/'+encodeURIComponent(orderId)+'/capture','POST',{},'minglora-capture-'+orderId);
+        const capture=(captured.purchase_units||[]).flatMap(unit=>unit.payments?.captures||[]).find(item=>item.status==='COMPLETED');
+        const paidMinor=Math.round(Number(capture?.amount?.value||0)*100);
+        if(!capture?.id||capture.amount?.currency_code!=='USD'||paidMinor!==Number(purchase.amount_minor)){
+          return json(res,409,{error:'PayPal has not confirmed the exact USD amount for this coin purchase. No coins were credited.'});
+        }
+        const settlement=await requestSupabaseState('economy_purchase_settle',{userId:user.id,paypalOrderId:orderId,paypalCaptureId:capture.id});
+        const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
+        return json(res,200,{ok:true,settlement:settlement.settlement,wallet});
+      }
+      if(method==='GET'&&p==='/api/creator/earnings'){
+        return json(res,200,await requestSupabaseState('economy_creator_earnings',{creatorId:user.id}));
+      }
+      if(method==='GET'&&p==='/api/creator/payout-account'){
+        return json(res,200,await requestSupabaseState('economy_get_payout_account',{userId:user.id}));
+      }
+      if(method==='PUT'&&p==='/api/creator/payout-account'){
+        const paypalEmail=String(input.paypalEmail||'').trim().toLowerCase();
+        const saved=await requestSupabaseState('economy_set_payout_account',{userId:user.id,paypalEmail});
+        return json(res,200,saved);
+      }
+      if(method==='POST'&&p==='/api/creator/payouts'){
+        const earnings=await requestSupabaseState('economy_creator_earnings',{creatorId:user.id});
+        const payoutEmail=earnings.payoutAccount?.paypal_email;
+        if(!payoutEmail)return json(res,400,{error:'Add your PayPal payout email before requesting a withdrawal.'});
+        const amountMinor=input.amountMinor===undefined?Number(earnings.availableMinor):Number(input.amountMinor);
+        if(!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>Number(earnings.availableMinor)){
+          return json(res,400,{error:'Enter an amount up to your available creator earnings (minimum USD 1.00).'});
+        }
+        const requested=await requestSupabaseState('economy_request_payout',{creatorId:user.id,amountMinor});
+        const payoutId=requested.payoutId;
+        try{
+          const payout=await paypalRequest('/v1/payments/payouts','POST',{
+            sender_batch_header:{
+              sender_batch_id:'MINGLORA'+String(payoutId).replace(/-/g,'').slice(0,22),
+              email_subject:'Your Minglora creator earnings',
+              email_message:'Your Minglora creator earnings payout has been submitted.'
+            },
+            items:[{
+              recipient_type:'EMAIL',amount:{value:(amountMinor/100).toFixed(2),currency:'USD'},
+              receiver:payoutEmail,note:'Minglora creator earnings · 50% creator share',
+              sender_item_id:String(payoutId).replace(/-/g,'').slice(0,30)
+            }]
+          },'minglora-payout-'+payoutId);
+          const batchId=payout.batch_header?.payout_batch_id;
+          if(!batchId)throw Object.assign(new Error('PayPal did not return a payout batch reference.'),{status:502});
+          await requestSupabaseState('economy_update_payout',{creatorId:user.id,payoutId,status:'processing',paypalBatchId:batchId});
+          return json(res,202,{ok:true,payoutId,batchId,status:'processing',amountMinor,currency:'USD'});
+        }catch(error){
+          try{await requestSupabaseState('economy_update_payout',{creatorId:user.id,payoutId,status:'failed'});}catch{}
+          throw error;
+        }
+      }
+      let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
+      if(method==='POST'&&liveAction){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
+        if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available for gifting.'});
+        const friends=(db.friendships||[]).some(f=>f.status==='accepted'&&((f.from===user.id&&f.to===session.hostId)||(f.to===user.id&&f.from===session.hostId)));
+        const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
+        if(!canView)return json(res,404,{error:'LIVE session is not available for gifting.'});
+        const result=await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
+        notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
+        await saveStore();
+        return json(res,200,{gift:result.gift});
+      }
+      let liveChat=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat$/);
+      if(liveChat&&['GET','POST'].includes(method)){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
+        if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
+        const friends=(db.friendships||[]).some(f=>f.status==='accepted'&&((f.from===user.id&&f.to===session.hostId)||(f.to===user.id&&f.from===session.hostId)));
+        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
+        if(!canView)return json(res,404,{error:'LIVE session not found.'});
+        if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
+        const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
+        return json(res,201,sent);
       }
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
