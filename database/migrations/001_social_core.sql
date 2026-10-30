@@ -180,6 +180,29 @@ CREATE TABLE IF NOT EXISTS page_roles (
   PRIMARY KEY (page_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS page_follows (
+  page_id uuid NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (page_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS page_follows_user_idx ON page_follows (user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS page_posts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  page_id uuid NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  published_by uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  body text NOT NULL DEFAULT '' CHECK (length(body) <= 5000),
+  image_url text NOT NULL DEFAULT '' CHECK (length(image_url) <= 2000),
+  status text NOT NULL DEFAULT 'published' CHECK (status IN ('published','hidden','deleted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (body <> '' OR image_url <> ''),
+  CHECK (image_url = '' OR image_url LIKE 'https://%')
+);
+CREATE INDEX IF NOT EXISTS page_posts_page_created_idx ON page_posts (page_id, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS page_posts_publisher_idx ON page_posts (published_by, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS stories (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   author_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
