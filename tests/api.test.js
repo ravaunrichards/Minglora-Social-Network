@@ -75,6 +75,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       name: 'Minglora Test User',
       username: 'mingloratest',
       email: 'test-user@example.test',
+      phoneNumber: '+18765550123',
       password: 'TestPassword123!'
     })
   });
@@ -143,7 +144,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const firstAccountCookie = cookie;
   const privacyTestRegistration = await request('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ name: 'Privacy Test User', username: 'privacytestuser', email: 'privacy-user@example.test', password: 'PrivacyTestPassword123!' })
+    body: JSON.stringify({ name: 'Privacy Test User', username: 'privacytestuser', email: 'privacy-user@example.test', phoneNumber: '+18765550124', password: 'PrivacyTestPassword123!' })
   });
   assert.equal(privacyTestRegistration.status, 201);
   const hiddenProfile = await request(`/api/users/${registration.body.user.id}`);
@@ -335,6 +336,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       name: 'Second Test User',
       username: 'secondtest',
       email: 'second-user@example.test',
+      phoneNumber: '+18765550125',
       password: 'AnotherPassword123!'
     })
   });

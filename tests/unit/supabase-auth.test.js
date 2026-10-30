@@ -43,13 +43,14 @@ test('Supabase signup sends metadata and uses only the publishable key', async (
       email: 'member@example.test',
       password: 'StrongPass123!',
       name: 'Test Member',
-      username: 'test_member'
+      username: 'test_member',
+      phoneNumber: '+18765550123'
     });
     assert.equal(result.user.id, 'auth-user-id');
     assert.equal(observed.url, 'https://minglora-unit-test.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fminglora.example%2Fauth%2Fcallback');
     assert.equal(observed.options.headers.apikey, 'sb_publishable_test-key');
     assert.equal(observed.options.headers.Authorization, 'Bearer sb_publishable_test-key');
-    assert.deepEqual(JSON.parse(observed.options.body).data, { name: 'Test Member', username: 'test_member' });
+    assert.deepEqual(JSON.parse(observed.options.body).data, { name: 'Test Member', username: 'test_member', contact_phone: '+18765550123', phone_number: '+18765550123' });
   } finally {
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
     if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
