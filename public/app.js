@@ -578,6 +578,66 @@ async function transformMediaImage(file,zoom=1,rotation=0){
   return new File([blob],base+'-edited.jpg',{type:'image/jpeg',lastModified:Date.now()});
 }
 
+async function openDeviceCapture({mode='both',onCapture}={}){
+  if(!navigator.mediaDevices?.getUserMedia){toast('Camera access is unavailable. Open Minglora over HTTPS in a browser that supports device camera access.');return;}
+  const modal=document.createElement('div');modal.className='modal-backdrop device-camera-backdrop';
+  modal.innerHTML='<section class="device-camera-modal" role="dialog" aria-modal="true" aria-label="Device camera"><div class="device-camera-header"><strong>Minglora camera</strong><button type="button" class="device-camera-close" aria-label="Close camera">×</button></div><video class="device-camera-preview" autoplay muted playsinline></video><p class="device-camera-status" role="status">Requesting camera permission…</p><div class="device-camera-controls"><button type="button" class="secondary" data-camera-switch>Switch camera</button><button type="button" class="secondary" data-camera-photo>Take photo</button><button type="button" class="primary" data-camera-record>Record video</button><button type="button" class="danger" data-camera-stop hidden>Stop recording</button></div></section>';
+  document.body.append(modal);
+  const video=modal.querySelector('.device-camera-preview'),status=modal.querySelector('.device-camera-status');
+  const photoButton=modal.querySelector('[data-camera-photo]'),recordButton=modal.querySelector('[data-camera-record]'),stopButton=modal.querySelector('[data-camera-stop]');
+  let stream=null,recorder=null,chunks=[],facingMode='environment',recording=false,closed=false;
+  const stopTracks=()=>{if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}video.srcObject=null;};
+  const close=()=>{if(closed)return;closed=true;try{if(recorder&&recorder.state!=='inactive')recorder.stop();}catch{}stopTracks();modal.remove();};
+  const setControls=()=>{photoButton.hidden=mode==='video';recordButton.hidden=mode==='photo'||recording;stopButton.hidden=!recording;};
+  const openStream=async()=>{
+    stopTracks();
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}},audio:mode!=='photo'});
+    video.srcObject=stream;await video.play();
+    status.textContent='Camera ready. Take a photo or record a video.';
+  };
+  const finishCapture=async(file)=>{
+    if(!file||closed)return;
+    close();
+    try{await onCapture?.(file);}catch(error){toast(error.message||'The captured media could not be added.');}
+  };
+  modal.querySelector('.device-camera-close').onclick=close;
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('[data-camera-switch]').onclick=async()=>{
+    facingMode=facingMode==='environment'?'user':'environment';status.textContent='Switching camera…';
+    try{await openStream();}catch(error){status.textContent=error.message||'Could not switch cameras.';toast(status.textContent);}
+  };
+  photoButton.onclick=async()=>{
+    if(!video.videoWidth||!video.videoHeight){toast('The camera is still starting.');return;}
+    const scale=Math.min(1,1920/video.videoWidth),canvas=document.createElement('canvas');
+    canvas.width=Math.round(video.videoWidth*scale);canvas.height=Math.round(video.videoHeight*scale);
+    const context=canvas.getContext('2d');if(!context){toast('Photo capture is not supported by this browser.');return;}
+    context.drawImage(video,0,0,canvas.width,canvas.height);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));
+    if(!blob){toast('Minglora could not capture this photo.');return;}
+    await finishCapture(new File([blob],'minglora-photo-'+Date.now()+'.jpg',{type:'image/jpeg',lastModified:Date.now()}));
+  };
+  recordButton.onclick=()=>{
+    if(!stream||typeof MediaRecorder==='undefined'){toast('Video recording is not supported by this browser.');return;}
+    const candidates=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+    const mimeType=candidates.find(type=>MediaRecorder.isTypeSupported?.(type));
+    try{
+      recorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);chunks=[];
+      recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data);};
+      recorder.onerror=()=>{recording=false;setControls();status.textContent='Video recording failed.';};
+      recorder.onstop=async()=>{
+        recording=false;setControls();
+        const type=recorder.mimeType||mimeType||'video/webm',extension=type.includes('mp4')?'mp4':'webm';
+        const blob=new Blob(chunks,{type});
+        if(blob.size)await finishCapture(new File([blob],'minglora-video-'+Date.now()+'.'+extension,{type,lastModified:Date.now()}));
+        else status.textContent='No video was recorded.';
+      };
+      recorder.start(500);recording=true;setControls();status.textContent='Recording video… press Stop recording when finished.';
+    }catch(error){toast(error.message||'Could not start video recording.');}
+  };
+  stopButton.onclick=()=>{if(recorder&&recorder.state!=='inactive')recorder.stop();};
+  setControls();
+  try{await openStream();}catch(error){status.textContent=error.message||'Camera permission was denied.';toast(status.textContent);photoButton.disabled=true;recordButton.disabled=true;}
+}
 function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
@@ -617,7 +677,7 @@ function createMediaPicker(root,options={}){
   gallery.addEventListener('change',()=>{addFiles(gallery.files);gallery.value='';});
   camera.addEventListener('change',()=>{addFiles(camera.files);camera.value='';});
   root.querySelector('[data-media-gallery]').addEventListener('click',()=>gallery.click());
-  root.querySelector('[data-media-camera]').addEventListener('click',()=>camera.click());
+  root.querySelector('[data-media-camera]').addEventListener('click',()=>openDeviceCapture({mode:'both',onCapture:file=>addFiles([file])}));
   render();
   return {
     hasSelection:()=>entries.length>0,
@@ -717,8 +777,8 @@ function openEditProfile(u){
     const transfer=new DataTransfer();transfer.items.add(file);targetInput.files=transfer.files;
     editState.zoom=1;editState.rotation=0;zoomInput.value='1';previewFile(targetInput,targetPreview);
   }
-  modal.querySelector('#edit-avatar-camera-button').onclick=()=>avatarCamera.click();
-  modal.querySelector('#edit-cover-camera-button').onclick=()=>coverCamera.click();
+  modal.querySelector('#edit-avatar-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{const transfer=new DataTransfer();transfer.items.add(file);avatarInput.files=transfer.files;avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';previewFile(avatarInput,avatarPreview);}});
+  modal.querySelector('#edit-cover-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{const transfer=new DataTransfer();transfer.items.add(file);coverInput.files=transfer.files;coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';previewFile(coverInput,coverPreview);}});
   avatarCamera.addEventListener('change',()=>assignCameraFile(avatarCamera,avatarInput,avatarPreview,avatarEdit,modal.querySelector('#edit-avatar-zoom')));
   coverCamera.addEventListener('change',()=>assignCameraFile(coverCamera,coverInput,coverPreview,coverEdit,modal.querySelector('#edit-cover-zoom')));
   modal.querySelector('#edit-avatar-zoom').addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);avatarPreview.style.transform='scale('+avatarEdit.zoom+') rotate('+avatarEdit.rotation+'deg)';});
