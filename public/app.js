@@ -478,7 +478,7 @@ function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
     ? '<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
-    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
+    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
   const aboutRows=[
     ['About',u.bio],['Location',u.location],['Country',u.country],['County',u.county],
     ['Parish',u.parish],['City',u.city],['Gender',u.gender],
@@ -498,6 +498,8 @@ function renderProfile(data){
       await openProfile(u.id);
     }catch(e){toast(e.message);}
   });
+  $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
+  document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
   $('#profile-block')?.addEventListener('click',async()=>{if(!window.confirm(`Block ${u.name}? You will no longer see each other’s profile, posts or messages.`))return;try{await api(`/users/${u.id}/block`,{method:'POST',body:'{}'});toast('Member blocked.');state.profile=null;state.view='feed';await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar()}catch(e){toast(e.message)}});
   $('#profile-composer')?.addEventListener('click',()=>openComposer());
@@ -521,7 +523,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!mimeType)throw new Error('Minglora could not detect the selected file type. Choose a supported photo, video, audio or GLB file.');
   if(prepared.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
   if(!window.tus?.Upload)throw new Error('The secure upload component did not load. Refresh Minglora and try again.');
-  const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size})});
+  const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size,fileName:prepared.name||'Attachment'})});
   const uploadInfo=preparedUpload.upload||{};
   if(!preparedUpload.assetId||!uploadInfo.endpoint||!uploadInfo.token||!uploadInfo.bucket||!uploadInfo.path)throw new Error('Minglora could not prepare this secure upload.');
   await new Promise((resolve,reject)=>{
