@@ -20,6 +20,7 @@ export function initialState() {
     blocks: [],
     savedPosts: [],
     groups: [],
+    groupPosts: [],
     messages: [],
     notifications: [],
     sessions: []
@@ -50,9 +51,11 @@ function stripLegacyDemoData(state) {
   state.follows = (state.follows || []).filter(follow => !demoUsers.has(follow.followerId) && !demoUsers.has(follow.followedId));
   state.blocks = (state.blocks || []).filter(block => !demoUsers.has(block.blockerId) && !demoUsers.has(block.blockedId));
   state.savedPosts = (state.savedPosts || []).filter(saved => !demoUsers.has(saved.userId) && !demoPostIds.has(saved.postId));
+  const removedGroupIds = new Set((state.groups || []).filter(group => !demoUsers.has(group.ownerId) && group.id === 'group-creators').map(group => group.id));
   state.groups = (state.groups || [])
     .filter(group => !demoUsers.has(group.ownerId) && group.id !== 'group-creators')
     .map(group => ({ ...group, members: (group.members || []).filter(id => !demoUsers.has(id)) }));
+  state.groupPosts = (state.groupPosts || []).filter(post => !demoUsers.has(post.userId) && !removedGroupIds.has(post.groupId));
   state.messages = (state.messages || []).filter(message =>
     !demoUsers.has(message.from) && !demoUsers.has(message.to));
   state.notifications = (state.notifications || []).filter(notification =>
@@ -76,7 +79,7 @@ export function loadStore() {
     throw new Error(`Data store at ${dbPath} must contain a JSON object.`);
   }
   let changed = false;
-  for (const key of ['users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'groups', 'messages', 'notifications', 'sessions']) {
+  for (const key of ['users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'groups', 'groupPosts', 'messages', 'notifications', 'sessions']) {
     if (!Array.isArray(state[key])) {
       state[key] = [];
       changed = true;
