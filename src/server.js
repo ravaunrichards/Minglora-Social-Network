@@ -734,24 +734,24 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       if(method==='GET'&&p==='/api/saved-posts'){
-        const posts=await Promise.all((db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        const posts=await Promise.all((db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&post.status!=='hidden'&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
         return json(res,200,{posts});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/save$/);
       if((method==='POST'||method==='DELETE')&&m){
         const post=db.posts.find(x=>x.id===m[1]);
-        if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        if(!post||post.status==='hidden'||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
         const exists=(db.savedPosts||[]).some(saved=>saved.userId===user.id&&saved.postId===post.id);
         if(method==='POST'&&!exists)db.savedPosts.push({id:uid(),userId:user.id,postId:post.id,createdAt:now()});
         if(method==='DELETE'&&exists)db.savedPosts=db.savedPosts.filter(saved=>!(saved.userId===user.id&&saved.postId===post.id));
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||post.status==='hidden'||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
       m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
-        if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        if(!post||post.status==='hidden'||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
         const comment=(post.comments||[]).find(x=>x.id===m[2]);
         if(!comment)return json(res,404,{error:'Comment not found.'});
         if(comment.userId!==user.id&&post.userId!==user.id)return json(res,403,{error:'Only the comment author or post author can delete this comment.'});
@@ -759,7 +759,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:comment.id});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===u.id)||(f.to===user.id&&f.from===u.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
