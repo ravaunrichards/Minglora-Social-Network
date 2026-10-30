@@ -115,8 +115,65 @@ export function supabaseUpdatePassword(accessToken,password) {
 export function supabaseUpdateEmail(accessToken,email) {
   return authenticatedRequest('user',accessToken,'PUT',{email});
 }
-export function supabaseListFactors(accessToken) {
-  return authenticatedRequest('factors',accessToken,'GET');
+async function rpcRequest(functionName,accessToken,payload={}) {
+  requireConfig();
+  requireAccessToken(accessToken);
+  const {url:baseUrl,key:apiKey}=supabaseConfig();
+  const target=baseUrl+'/rest/v1/rpc/'+encodeURIComponent(functionName);
+  let response;
+  try {
+    response=await fetch(target,{
+      method:'POST',
+      headers:{apikey:apiKey,Authorization:'Bearer '+accessToken,'Content-Type':'application/json',Accept:'application/json'},
+      body:JSON.stringify(payload)
+    });
+  } catch {
+    throw Object.assign(new Error('Could not reach Minglora Supabase data API.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const error=new Error(String(data.message||data.details||data.hint||data.error||'Minglora Supabase request failed.'));
+    error.status=response.status===429?429:response.status>=500?503:response.status;
+    error.code=data.code||null;
+    throw error;
+  }
+  return data;
+}
+
+// Supabase Auth deliberately has no GET /auth/v1/factors collection route.
+// Query only the current user's factors through Minglora's SECURITY DEFINER RPC.
+export async function supabaseListFactors(accessToken) {
+  const result=await rpcRequest('minglora_list_my_mfa_factors',accessToken,{});
+  return {factors:Array.isArray(result)?result:Array.isArray(result?.factors)?result.factors:[]};
+}
+export function supabaseUpdateUserMetadata(accessToken,metadata) {
+  return authenticatedRequest('user',accessToken,'PUT',{data:metadata});
+}
+export async function supabaseUpdateProfile(accessToken,userId,profile) {
+  requireConfig();
+  requireAccessToken(accessToken);
+  if(!/^[0-9a-f-]{36}$/i.test(String(userId||''))) throw Object.assign(new Error('Invalid Minglora profile identifier.'),{status:400});
+  const {url:baseUrl,key:apiKey}=supabaseConfig();
+  const target=new URL(baseUrl+'/rest/v1/profiles');
+  target.searchParams.set('id','eq.'+userId);
+  let response;
+  try {
+    response=await fetch(target,{
+      method:'PATCH',
+      headers:{apikey:apiKey,Authorization:'Bearer '+accessToken,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify(profile)
+    });
+  } catch {
+    throw Object.assign(new Error('Could not reach Minglora profile storage.'),{status:503});
+  }
+  const data=await response.json().catch(()=>null);
+  if(!response.ok){
+    const error=new Error(String(data?.message||data?.details||data?.hint||data?.error||'Minglora profile could not be saved.'));
+    error.status=response.status===429?429:response.status>=500?503:response.status;
+    error.code=data?.code||null;
+    throw error;
+  }
+  return {ok:true};
 }
 export function supabaseEnrollTotp(accessToken,friendlyName='Minglora authenticator') {
   return authenticatedRequest('factors',accessToken,'POST',{factor_type:'totp',friendly_name:friendlyName});
