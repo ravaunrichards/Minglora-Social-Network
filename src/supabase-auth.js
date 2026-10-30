@@ -116,6 +116,12 @@ export function supabaseUpdatePassword(accessToken,password) {
 export function supabaseUpdateEmail(accessToken,email) {
   return authenticatedRequest('user',accessToken,'PUT',{email});
 }
+export function supabaseRequestPhoneChange(accessToken,phone) {
+  return authenticatedRequest('user',accessToken,'PUT',{phone});
+}
+export function supabaseVerifyPhoneChange(accessToken,phone,token) {
+  return authenticatedRequest('verify',accessToken,'POST',{type:'phone_change',phone,token});
+}
 async function rpcRequest(functionName,accessToken,payload={}) {
   requireConfig();
   requireAccessToken(accessToken);

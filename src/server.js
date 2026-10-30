@@ -11,7 +11,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -437,6 +437,31 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
       requireAuth(user);
+      if(method==='POST'&&p==='/api/auth/phone/change'){
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Verified phone authentication requires Supabase Auth.'});
+        const phone=normalizeContactPhone(input.phone||'');
+        if(!phone||!validateContactPhone(phone).valid)return json(res,400,{error:'Enter a valid international phone number, including + and country code.'});
+        const session=sessionFromRequest(req),auth=await sessionAuth(session);
+        if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        await supabaseRequestPhoneChange(auth.access_token,phone);
+        return json(res,202,{verificationRequired:true,phone,message:'A verification code was requested. Enter the code sent to this phone.'});
+      }
+      if(method==='POST'&&p==='/api/auth/phone/verify'){
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Verified phone authentication requires Supabase Auth.'});
+        const phone=normalizeContactPhone(input.phone||''),token=String(input.token||'').replace(/\s/g,'');
+        if(!phone||!validateContactPhone(phone).valid)return json(res,400,{error:'Enter a valid international phone number, including + and country code.'});
+        if(!/^\d{6}$/.test(token))return json(res,400,{error:'Enter the six-digit SMS verification code.'});
+        const session=sessionFromRequest(req),auth=await sessionAuth(session);
+        if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        const verified=await supabaseVerifyPhoneChange(auth.access_token,phone,token);
+        if(verified.access_token&&verified.refresh_token){
+          session.authSealed=sealSessionAuth(verified);
+          session.authExpiresAt=new Date(Date.now()+Math.max(60,Number(verified.expires_in||3600))*1000).toISOString();
+        }
+        user.contactPhone=phone;
+        await saveStore();
+        return json(res,200,{ok:true,phoneVerified:true,phone,message:'Phone number verified and saved to Supabase Auth.'});
+      }
       if(method==='POST'&&p==='/api/media/upload/prepare'){
         const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0);
         const mimeKinds={
