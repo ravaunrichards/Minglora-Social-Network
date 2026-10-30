@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
     if(lookupError)return json(503,{error:"Minglora could not check existing deletion requests."});
     if(existing)return json(200,{request:existing,alreadyRequested:true});
     const {data,error}=await admin.from("data_rights_requests")
-      .insert({user_id:userId,request_type:"delete_account",status:"requested"})
+      .insert({user_id:userId,request_type:"deletion",status:"requested"})
       .select("id,user_id,request_type,status,requested_at").single();
     if(error)return fail(error,"Minglora could not record the deletion request.");
     return json(201,{request:data});
