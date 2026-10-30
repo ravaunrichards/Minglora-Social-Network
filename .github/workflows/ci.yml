@@ -14,6 +14,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
       - name: Check repository structure
         run: npm run check:repo
       - name: Check JavaScript syntax
@@ -21,6 +23,8 @@ jobs:
           node --check public/app.js
           node --check src/server.js
           node --check src/store.js
+          node --check backend/modules/live/livekit.js
+          node --check tests/unit/livekit.test.js
           node --check src/domain/validation.js
           node --check src/domain/pagination.js
           node --check src/domain/relationships.js
