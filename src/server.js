@@ -457,10 +457,10 @@ async function route(req, res) {
         currentSession.mfaVerified=true;await saveStore();
         return json(res,200,{ok:true,factor:{id:verified.id,status:verified.status||'verified'}});
       }
-      m=p.match(/^\/api\/security\/mfa\/factors\/([^/]+)$/);
-      if(method==='DELETE'&&m){
+      const securityFactorMatch=p.match(/^\/api\/security\/mfa\/factors\/([^/]+)$/);
+      if(method==='DELETE'&&securityFactorMatch){
         const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
-        await supabaseUnenrollFactor(auth.access_token,m[1]);return json(res,200,{ok:true});
+        await supabaseUnenrollFactor(auth.access_token,securityFactorMatch[1]);return json(res,200,{ok:true});
       }
       if(method==='POST'&&p==='/api/reports'){
         const targetType=String(input.targetType||''),targetId=String(input.targetId||''),category=String(input.category||''),details=String(input.details||'').trim();
@@ -494,10 +494,10 @@ async function route(req, res) {
         }));
         return json(res,200,{reports});
       }
-      m=p.match(/^\/api\/moderation\/reports\/([^/]+)$/);
-      if((method==='PATCH'||method==='DELETE')&&m){
+      const moderationReportMatch=p.match(/^\/api\/moderation\/reports\/([^/]+)$/);
+      if((method==='PATCH'||method==='DELETE')&&moderationReportMatch){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
-        const report=(db.reports||[]).find(item=>item.id===m[1]);if(!report)return json(res,404,{error:'Report not found.'});
+        const report=(db.reports||[]).find(item=>item.id===moderationReportMatch[1]);if(!report)return json(res,404,{error:'Report not found.'});
         if(method==='DELETE')report.status='dismissed';
         else{
           const status=String(input.status||''),allowed=['open','triaged','actioned','dismissed','appealed'];
@@ -532,9 +532,9 @@ async function route(req, res) {
         db.supportTickets.unshift(ticket);db.supportMessages.push(first);await saveStore();
         return json(res,201,{ticket:{...ticket,messages:[first]}});
       }
-      m=p.match(/^\/api\/support\/tickets\/([^/]+)\/messages$/);
-      if(method==='POST'&&m){
-        const ticket=(db.supportTickets||[]).find(item=>item.id===m[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
+      const supportMessageMatch=p.match(/^\/api\/support\/tickets\/([^/]+)\/messages$/);
+      if(method==='POST'&&supportMessageMatch){
+        const ticket=(db.supportTickets||[]).find(item=>item.id===supportMessageMatch[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
         if(ticket.userId!==user.id&&!isModerator(user))return json(res,403,{error:'This support conversation belongs to another member.'});
         const message=String(input.message||'').trim();if(message.length<1||message.length>5000)return json(res,400,{error:'Support message must contain 1–5000 characters.'});
         if(ticket.status==='closed'&&!isModerator(user))return json(res,409,{error:'This ticket is closed. Create a new ticket to contact support.'});
@@ -542,9 +542,9 @@ async function route(req, res) {
         db.supportMessages.push(item);ticket.updatedAt=now();if(isModerator(user))ticket.status='waiting_for_member';else ticket.status='open';await saveStore();
         return json(res,201,{message:item,ticket});
       }
-      m=p.match(/^\/api\/support\/tickets\/([^/]+)$/);
-      if(method==='PATCH'&&m){
-        const ticket=(db.supportTickets||[]).find(item=>item.id===m[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
+      const supportTicketMatch=p.match(/^\/api\/support\/tickets\/([^/]+)$/);
+      if(method==='PATCH'&&supportTicketMatch){
+        const ticket=(db.supportTickets||[]).find(item=>item.id===supportTicketMatch[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
         if(ticket.userId!==user.id&&!isModerator(user))return json(res,403,{error:'This support ticket belongs to another member.'});
         const status=String(input.status||'');
         if(isModerator(user)&&['open','waiting_for_member','in_progress','closed'].includes(status))ticket.status=status;
