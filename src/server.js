@@ -479,7 +479,7 @@ async function route(req, res) {
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
-          message:['image/jpeg','image/png','image/webp','video/mp4','audio/mpeg','audio/mp4','audio/ogg','application/pdf']
+          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','application/pdf']
         };
         const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
