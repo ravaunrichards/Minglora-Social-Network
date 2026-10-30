@@ -168,3 +168,6 @@
 
 .message-report{display:block;margin:5px 0 0 auto;border:0;background:transparent;color:var(--muted);font-size:10px;text-decoration:underline;padding:2px 0}.message-report:hover{color:var(--blue)}
 .connection-row{gap:12px}.connection-row button{flex-shrink:0}
+
+.media-upload-progress{display:block;width:100%;height:8px;margin:8px 0 0;border:0;border-radius:999px;overflow:hidden;accent-color:var(--blue)}
+.media-upload-progress[hidden]{display:none}
