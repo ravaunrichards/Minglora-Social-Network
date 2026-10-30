@@ -165,6 +165,42 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const invalidImageUpload = await request('/api/media/upload', { method: 'POST', body: JSON.stringify({ slot: 'avatar', mimeType: 'image/gif', base64: 'R0lGODlh' }) });
   assert.equal(invalidImageUpload.status, 400);
 
+  const activeSessions = await request('/api/security/sessions');
+  assert.equal(activeSessions.status, 200);
+  assert.equal(activeSessions.body.sessions.some(session => session.current), true);
+  const unavailableMfa = await request('/api/security/mfa');
+  assert.equal(unavailableMfa.status, 200);
+  assert.equal(unavailableMfa.body.available, false);
+  const passwordChange = await request('/api/security/password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword: 'TestPassword123!', newPassword: 'NewTestPassword456!' })
+  });
+  assert.equal(passwordChange.status, 200);
+  const invalidPasswordChange = await request('/api/security/password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword: 'wrong-password', newPassword: 'AnotherTestPassword456!' })
+  });
+  assert.equal(invalidPasswordChange.status, 401);
+
+  const supportTicket = await request('/api/support/tickets', {
+    method: 'POST',
+    body: JSON.stringify({ category: 'account', subject: 'Help with my account', message: 'I need help with my account settings.' })
+  });
+  assert.equal(supportTicket.status, 201);
+  const supportReply = await request('/api/support/tickets/' + supportTicket.body.ticket.id + '/messages', {
+    method: 'POST',
+    body: JSON.stringify({ message: 'Here is additional information.' })
+  });
+  assert.equal(supportReply.status, 201);
+  const supportList = await request('/api/support/tickets');
+  assert.equal(supportList.status, 200);
+  assert.equal(supportList.body.tickets[0].messages.length, 2);
+  const supportStatus = await request('/api/support/tickets/' + supportTicket.body.ticket.id, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'closed' })
+  });
+  assert.equal(supportStatus.status, 200);
+
   const feed = await request('/api/feed');
   assert.equal(feed.status, 200);
   assert.equal(feed.body.posts.length, 0);
@@ -179,6 +215,17 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(post.status, 201);
   assert.equal(post.body.post.text, 'Automated integration test post');
+
+  const postReport = await request('/api/reports', {
+    method: 'POST',
+    body: JSON.stringify({ targetType: 'post', targetId: post.body.post.id, category: 'spam', details: 'Test report from automated integration.' })
+  });
+  assert.equal(postReport.status, 201);
+  const myReports = await request('/api/reports/mine');
+  assert.equal(myReports.status, 200);
+  assert.equal(myReports.body.reports.some(report => report.id === postReport.body.report.id), true);
+  const forbiddenModeratorQueue = await request('/api/moderation/reports');
+  assert.equal(forbiddenModeratorQueue.status, 403);
 
   const accountExport = await request('/api/account/export');
   assert.equal(accountExport.status, 200);
