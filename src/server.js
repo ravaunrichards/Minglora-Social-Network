@@ -1457,9 +1457,30 @@ async function route(req, res) {
             }));
             return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from))};
           }));
-          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages};
+          const unreadCount=db.messages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
+          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount};
         }));
         return json(res,200,{conversations});
+      }
+      const messageReadMatch=p.match(/^\\/api\\/messages\\/([^/]+)\\/read$/);
+      if(method==='POST'&&messageReadMatch){
+        let peerId;
+        try{peerId=decodeURIComponent(messageReadMatch[1]);}
+        catch{return json(res,400,{error:'The conversation member identifier is invalid.'});}
+        if(!peerId||peerId===user.id)return json(res,400,{error:'Choose another member to mark this conversation as read.'});
+        const peer=db.users.find(member=>member.id===peerId);
+        if(!peer||blockedBetween(user.id,peerId))return json(res,404,{error:'Conversation not found.'});
+        const readAt=now();
+        let updated=0;
+        for(const message of db.messages){
+          if(message.from===peerId&&message.to===user.id&&message.read!==true){
+            message.read=true;
+            message.readAt=readAt;
+            updated++;
+          }
+        }
+        if(updated)await saveStore();
+        return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
       }
       if(method==='POST'&&p==='/api/messages'){
         const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
