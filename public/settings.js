@@ -43,6 +43,7 @@
         preferences: { ...defaults.preferences, ...(result.settings?.preferences || {}) }
       };
       applyPreferences(settings);
+      window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: settings }));
       main.innerHTML = `
         <div class="settings-heading">
           <div><p class="settings-eyebrow">YOUR ACCOUNT</p><h1>Settings &amp; privacy</h1>
@@ -134,7 +135,7 @@
         try {
           const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(payload) });
           applyPreferences(saved.settings);
-          window.dispatchEvent(new CustomEvent('minglora:settings-saved', { detail: saved.settings }));
+          window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: saved.settings }));
           button.textContent = 'Saved';
           const status = document.createElement('p');
           status.className = 'settings-save-status';
@@ -159,5 +160,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#settings-btn')?.addEventListener('click', openSettings);
     document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
+    window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });
   });
 })();
