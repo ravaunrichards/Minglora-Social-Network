@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
-    "economy_update_payout", "relationship_follow", "relationship_unfollow"
+    "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -85,6 +85,22 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "economy_payout_webhook") {
+    const batchId = String(input.paypalBatchId || "");
+    const status = String(input.status || "");
+    if (batchId.length < 5 || batchId.length > 160 || !["paid", "failed"].includes(status)) {
+      return json(400, { error: "Invalid PayPal payout event." });
+    }
+    const patch: Record<string, unknown> = { status };
+    if (status === "paid") patch.paid_at = new Date().toISOString();
+    const { data, error } = await admin.from("creator_payouts").update(patch)
+      .eq("paypal_batch_id", batchId)
+      .in("status", ["requested", "processing"])
+      .select("id,creator_id,status,amount_minor");
+    if (error) return json(503, { error: "Minglora could not update the payout from PayPal's event." });
+    return json(200, { updated: (data || []).length });
+  }
 
   if (action === "relationship_follow" || action === "relationship_unfollow") {
     const followerId = String(input.followerId || ""), followedId = String(input.followedId || "");
