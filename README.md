@@ -10,7 +10,7 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 
 ## What works in the current application
 
-- Responsive browser interface and account registration/sign-in/sign-out
+- Responsive browser interface and account registration/sign-in/sign-out (Supabase Auth when configured)
 - Salted scrypt password hashes and signed HttpOnly session cookies
 - Basic profile viewing/editing
 - All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination
@@ -106,6 +106,12 @@ See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must 
 The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Migrations 001 and 002 remain design foundations; migration 003 creates the runtime store table.
 
 Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, implement rate limiting, CSRF safeguards, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
+
+## Supabase Auth integration
+
+New registrations are sent to Minglora Supabase Auth. The browser never receives a service-role key. When email confirmation is enabled in Supabase, Minglora displays a confirmation message and waits for the user to verify the email before login. A database trigger creates the matching profile row. Existing accounts created by the legacy local password store are migrated lazily on their next successful legacy-password login; the old password is verified locally before a Supabase Auth user is created. Apply migration `004_supabase_auth_profiles.sql` before enabling Supabase Auth in production. Production startup refuses a legacy-only or placeholder Supabase configuration.
+
+Copy `.env.example` to a private environment file and replace each `YOUR_PROJECT_REF` / `REPLACE_ME` value with credentials from Minglora's own services.
 
 ## Project identity
 
