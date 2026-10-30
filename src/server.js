@@ -11,7 +11,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -113,7 +113,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   }
   return user;
 }
-function sessionUser(req) {const session=sessionFromRequest(req);return session?db.users.find(item=>item.id===session.userId)||null:null;}
+function sessionUser(req) {const session=sessionFromRequest(req);const account=session?db.users.find(item=>item.id===session.userId)||null:null;return account?.status==='suspended'?null:account;}
 async function sessionAuth(session){if(!session?.authSealed)return null;let tokens=openSessionAuth(session.authSealed);if(!tokens?.access_token)return null;if(session.authExpiresAt&&new Date(session.authExpiresAt).getTime()<Date.now()+60000&&tokens.refresh_token){const refreshed=await supabaseRefreshSession(tokens.refresh_token);tokens={...tokens,...refreshed};session.authSealed=sealSessionAuth(tokens);session.authExpiresAt=new Date(Date.now()+Math.max(60,Number(tokens.expires_in||3600))*1000).toISOString();await saveStore();}return tokens;}
 async function body(req, maxBytes=1_000_000) {
   let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
@@ -269,6 +269,7 @@ async function route(req, res) {
             }
           }
           const signedInUser=ensureLocalUser(authenticated.user);
+          if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
           if(accessToken){
             const factors=await supabaseListFactors(accessToken).catch(()=>({factors:[]}));
@@ -285,6 +286,7 @@ async function route(req, res) {
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
+        if(found.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -387,6 +389,17 @@ async function route(req, res) {
         user.settings=validation.settings;await saveStore();return json(res,200,{settings:getUserSettings(user)});
       }
       const currentSession=sessionFromRequest(req);
+      if(method==='POST'&&p==='/api/security/email'){
+        const email=normalizeEmail(input.email);
+        if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid new email address.'});
+        if(db.users.some(item=>item.id!==user.id&&normalizeEmail(item.email)===email))return json(res,409,{error:'That email address is already registered.'});
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Email changes require the authenticated email provider.'});
+        const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        const result=await supabaseUpdateEmail(auth.access_token,email);
+        currentSession.pendingEmail=email;await saveStore();
+        return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
+      }
+      if(method==='GET'&&p==='/api/moderation/access')return json(res,200,{canModerate:isModerator(user)});
       if(method==='GET'&&p==='/api/security/sessions'){
         const sessions=(db.sessions||[]).filter(item=>item.userId===user.id&&new Date(item.expiresAt)>new Date()).map(item=>({
           id:item.id,current:item.id===currentSession?.id,createdAt:item.createdAt||item.expiresAt,lastSeenAt:item.lastSeenAt||item.createdAt||item.expiresAt,expiresAt:item.expiresAt,userAgent:item.userAgent||'Unknown device'
@@ -790,7 +803,19 @@ async function route(req, res) {
         db.friendships=db.friendships.filter(f=>f.id!==friendship.id);
         await saveStore();return json(res,200,{removed:true,wasAccepted});
       }
-      if(method==='GET'&&p==='/api/friends'){const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)&&!blockedBetween(user.id,f.from===user.id?f.to:f.from)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending'&&!blockedBetween(user.id,f.from)).map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));return json(res,200,{friends:list,incoming});}
+      if(method==='GET'&&p==='/api/friends'){
+        const followed=(db.follows||[]).filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId);
+        for(const targetId of followed){
+          if(!(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)||blockedBetween(user.id,targetId))continue;
+          let friendship=db.friendships.find(item=>(item.from===user.id&&item.to===targetId)||(item.to===user.id&&item.from===targetId));
+          if(!friendship){friendship={id:uid(),from:user.id,to:targetId,status:'accepted',source:'mutual_follow',createdAt:now(),updatedAt:now()};db.friendships.push(friendship);}
+          else if(friendship.status!=='accepted'&&friendship.source!=='manual_request'){friendship.status='accepted';friendship.source='mutual_follow';friendship.updatedAt=now();}
+        }
+        await saveStore();
+        const list=db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)&&!blockedBetween(user.id,f.from===user.id?f.to:f.from)).map(f=>safeUser(db.users.find(u=>u.id===(f.from===user.id?f.to:f.from))));
+        const incoming=db.friendships.filter(f=>f.to===user.id&&f.status==='pending'&&!blockedBetween(user.id,f.from)).map(f=>({...safeUser(db.users.find(u=>u.id===f.from)),requestId:f.id}));
+        return json(res,200,{friends:list,incoming});
+      }
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
       if(method==='POST'&&p==='/api/groups'){
         const name=String(input.name||'').trim(),description=String(input.description||'').trim();
