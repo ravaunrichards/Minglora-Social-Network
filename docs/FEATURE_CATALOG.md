@@ -15,7 +15,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Short video/video streaming | Not implemented |
 | Messaging | Basic direct text messaging; realtime, attachments and read receipts incomplete |
 | Notifications | Basic in-app notifications; preference and external delivery incomplete |
-| Search | Basic substring search; indexing and advanced privacy-aware discovery incomplete |
+| Search | Basic substring search across people, posts, groups and Pages; indexing and advanced privacy-aware discovery incomplete |
 | Events/Marketplace/Live | Not implemented |
 | Safety/privacy | Complete reporting, moderation, export/deletion and audience enforcement not implemented |
 | Operations | Node, JSON store, basic tests, Docker and CI exist; durable database and production operations incomplete |
