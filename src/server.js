@@ -463,7 +463,7 @@ async function route(req, res) {
         return json(res,200,{ok:true,phoneVerified:true,phone,message:'Phone number verified and saved to Supabase Auth.'});
       }
       if(method==='POST'&&p==='/api/media/upload/prepare'){
-        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0);
+        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),byteSize=Number(input.byteSize||0),fileName=String(input.fileName||'').trim().slice(0,255);
         const mimeKinds={
           'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
           'video/mp4':'video','video/webm':'video','video/quicktime':'video',
@@ -479,7 +479,7 @@ async function route(req, res) {
         const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
-        const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,status:'uploading',createdAt:now()};
+        const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
         db.mediaAssets.push(asset);await saveStore();
         return json(res,201,{assetId:asset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,bucket:prepared.bucket,path:prepared.path},mimeType,mediaType:asset.mediaType,byteSize});
       }
@@ -1281,6 +1281,73 @@ async function route(req, res) {
         db.pageFollows=db.pageFollows.filter(f=>f.pageId!==page.id);
         db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
         await saveStore();return json(res,200,{ok:true,id:page.id});
+      }
+      if(method==='POST'&&p==='/api/calls'){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        const recipientIds=[...new Set([String(input.to||''),...(Array.isArray(input.participantIds)?input.participantIds.map(String):[])].filter(Boolean))];
+        const kind=String(input.kind||'video');
+        if(!['audio','video'].includes(kind)||!recipientIds.length||recipientIds.length>7)return json(res,400,{error:'Choose audio or video and invite between one and seven other members.'});
+        const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
+        if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
+        if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
+        const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
+        const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName,canPublish:true});
+        const call={id,roomName,createdBy:user.id,kind,status:'active',createdAt:now(),endedAt:null};
+        db.calls||=[];db.callParticipants||=[];
+        db.calls.unshift(call);
+        db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'joined',joinedAt:now(),leftAt:null});
+        for(const recipient of recipients){
+          db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+          notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
+        }
+        await saveStore();
+        return json(res,201,{call,liveKit:{...liveKit,role:'host'}});
+      }
+      let callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end)$/);
+      if(callMatch&&['POST'].includes(method)){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        const call=db.calls.find(item=>item.id===callMatch[1]);
+        const participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+        const action=callMatch[2];
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(action==='join'){
+          if(call.status==='ended'||!participant||participant.status==='declined'||participant.status==='left')return json(res,404,{error:'This call invitation is no longer active.'});
+          if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
+          participant.status='joined';participant.joinedAt=participant.joinedAt||now();participant.leftAt=null;
+          const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:call.roomName,canPublish:true});
+          await saveStore();return json(res,200,{call,liveKit:{...liveKit,role:participant.role}});
+        }
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(action==='invite'){
+          if(call.status==='ended'||participant.status!=='joined')return json(res,409,{error:'Join the call before inviting more people.'});
+          const invitedIds=[...new Set((Array.isArray(input.userIds)?input.userIds:[]).map(String).filter(Boolean))];
+          if(!invitedIds.length||invitedIds.length>6)return json(res,400,{error:'Choose between one and six additional participants.'});
+          const current=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='declined'&&item.status!=='left').length;
+          if(current+invitedIds.length>8)return json(res,409,{error:'Minglora group calls support up to eight participants.'});
+          const invited=invitedIds.map(id=>db.users.find(member=>member.id===id));
+          if(invited.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          const newlyInvited=[];
+          for(const member of invited){
+            if((db.callParticipants||[]).some(item=>item.callId===call.id&&item.userId===member.id&&item.status!=='declined'&&item.status!=='left'))continue;
+            if(getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
+            db.callParticipants.push({id:uid(),callId:call.id,userId:member.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(member.id,user.id,'call',user.name+' invited you to a Minglora group call.',{callId:call.id,callKind:call.kind});
+            newlyInvited.push(safeUser(member));
+          }
+          await saveStore();return json(res,200,{invited:newlyInvited,count:newlyInvited.length});
+        }
+        if(action==='leave'){
+          participant.status='left';participant.leftAt=now();
+          const active=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='joined');
+          if(user.id===call.createdBy||active.length===0){call.status='ended';call.endedAt=now();(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status='left';item.leftAt=call.endedAt;});}
+          await saveStore();return json(res,200,{ok:true,call});
+        }
+        if(action==='end'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the call creator can end this call for everyone.'});
+          call.status='ended';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status='left';item.leftAt=call.endedAt;});
+          await saveStore();return json(res,200,{ok:true,call});
+        }
       }
       if(method==='GET'&&p==='/api/messages'){
         const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
