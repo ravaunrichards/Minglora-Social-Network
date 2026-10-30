@@ -27,7 +27,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Live video | Not implemented |
 | Account recovery/verification | Not implemented |
 | Notification preferences | Persisted in-app, friend-request, message and interaction controls; push/email/device delivery not implemented |
-| Account settings | Dedicated Settings & Privacy page with saved privacy and appearance preferences; account email/username shown read-only | Password updates, MFA, session management, email change and account recovery are not yet implemented |
+| Account settings | Dedicated Settings & Privacy page with saved privacy, notification and appearance preferences, blocked-member management and account export; account email/username shown read-only | Password updates, MFA, session management, email change and account recovery are not yet implemented |
 | Data export/deletion | Authenticated JSON download of the member's profile, content, relationships and account activity; secrets and sessions excluded | Verified deletion requests and coordinated erasure/retention workflows are not implemented |
 | Safety/privacy | Complete reporting, moderation, export/deletion and audience enforcement not implemented |
 | Operations | Node, JSON store, basic tests, Docker and CI exist; durable database and production operations incomplete |
