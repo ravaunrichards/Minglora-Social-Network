@@ -55,7 +55,7 @@ See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATF
 
 Local development defaults to the empty-first-run JSON store. For hosted persistence, set `PERSISTENCE_DRIVER=postgres`, `DATABASE_URL`, and `PGSSLMODE=require`. The application creates `public.minglora_runtime_state` on startup. See [PostgreSQL setup](docs/POSTGRES_SETUP.md) and [Render configuration](infrastructure/render/README.md).
 
-The PostgreSQL adapter stores application state in one JSONB document to preserve compatibility with current routes. It is durable but remains single-instance and is not a normalized, high-scale relational adapter. Do not scale horizontally until transaction-oriented repositories replace it.
+The live Supabase project contains the normalized relational schema, Auth-linked profiles, RLS, Storage buckets and Realtime publication. The current Node API still stores route state in one JSONB compatibility document; it does not yet use the normalized tables as its active repository layer. That adapter is durable but single-instance only. Do not scale horizontally until transaction-oriented repositories replace it.
 
 ## Run locally
 
