@@ -170,7 +170,7 @@ function appSessionCookie(sid) {
 }
 async function createAppSession(user,authTokens=null,req=null) {
   const sid=uid();const createdAt=now();
-  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240),mfaVerified:true});
+  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240),mfaVerified:true});
   await saveStore();return appSessionCookie(sid);
 }
 function ensureLocalUser(authUser, fallback = {}) {
@@ -579,6 +579,7 @@ async function route(req, res) {
         if(!tokens?.access_token)return json(res,401,{error:'Your sign-in verification expired. Please log in again.'});
         const challenge=await supabaseChallengeFactor(tokens.access_token,pending.factorId);
         const verified=await supabaseVerifyFactor(tokens.access_token,pending.factorId,challenge.id,code);
+        if(!verified?.access_token||tokenAal(verified.access_token)!=='aal2')return json(res,502,{error:'Supabase did not return a verified multi-factor session. Try the authenticator code again.'});
         const account=db.users.find(item=>item.id===pending.userId);
         if(!account)return json(res,401,{error:'Account not found.'});
         db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
@@ -797,7 +798,7 @@ async function route(req, res) {
         const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
         const result=await supabaseListFactors(auth.access_token);
         const factors=(result.factors||[]).map(factor=>({id:factor.id,type:factor.factor_type,status:factor.status,friendlyName:factor.friendly_name,createdAt:factor.created_at,updatedAt:factor.updated_at}));
-        return json(res,200,{enabled:factors.some(item=>item.type==='totp'&&item.status==='verified'),available:true,factors});
+        return json(res,200,{enabled:factors.some(item=>item.type==='totp'&&item.status==='verified'),available:true,aal:tokenAal(auth.access_token),factors});
       }
       if(method==='POST'&&p==='/api/security/mfa/totp/enroll'){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Authenticator-based MFA requires Minglora Supabase Auth.'});
@@ -809,15 +810,51 @@ async function route(req, res) {
         const factorId=String(input.factorId||''),code=String(input.code||'').replace(/\s/g,'');
         if(!factorId||! /^\d{6,8}$/.test(code))return json(res,400,{error:'Enter the authenticator code.'});
         const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
+        const enrolled=await supabaseListFactors(auth.access_token);
+        const factor=(enrolled.factors||[]).find(item=>item.id===factorId&&item.factor_type==='totp'&&item.status==='unverified');
+        if(!factor)return json(res,404,{error:'This pending authenticator enrollment was not found for your account. Start setup again.'});
         const challenge=await supabaseChallengeFactor(auth.access_token,factorId);
         const verified=await supabaseVerifyFactor(auth.access_token,factorId,challenge.id,code);
-        currentSession.mfaVerified=true;await saveStore();
-        return json(res,200,{ok:true,factor:{id:verified.id,status:verified.status||'verified'}});
+        if(!verified?.access_token||tokenAal(verified.access_token)!=='aal2')return json(res,502,{error:'Supabase verified the authenticator but did not return an elevated sign-in session. Sign in again and retry.'});
+        currentSession.authSealed=sealSessionAuth(verified);
+        currentSession.authExpiresAt=new Date(getAuthTokenExpiresAt(verified)).toISOString();
+        currentSession.authInvalidatedAt=null;
+        currentSession.mfaVerified=true;
+        await saveStore();
+        return json(res,200,{ok:true,aal:'aal2',factor:{id:verified.id,status:verified.status||'verified'}});
       }
       const securityFactorMatch=p.match(/^\/api\/security\/mfa\/factors\/([^/]+)$/);
       if(method==='DELETE'&&securityFactorMatch){
         const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
-        await supabaseUnenrollFactor(auth.access_token,securityFactorMatch[1]);return json(res,200,{ok:true});
+        const factorId=securityFactorMatch[1];
+        const enrolled=await supabaseListFactors(auth.access_token);
+        const factor=(enrolled.factors||[]).find(item=>item.id===factorId&&item.factor_type==='totp'&&['verified','unverified'].includes(item.status));
+        if(!factor)return json(res,404,{error:'Authenticator not found for this account.'});
+        let removalTokens=auth;
+        if(factor.status==='verified'&&tokenAal(auth.access_token)!=='aal2'){
+          const code=String(input.code||'').replace(/\s/g,'');
+          if(!/^\d{6,8}$/.test(code))return json(res,400,{error:'Enter the current authenticator code to confirm removal.'});
+          const challenge=await supabaseChallengeFactor(auth.access_token,factorId);
+          removalTokens=await supabaseVerifyFactor(auth.access_token,factorId,challenge.id,code);
+          if(!removalTokens?.access_token||tokenAal(removalTokens.access_token)!=='aal2')return json(res,401,{error:'The authenticator code could not establish a verified session.'});
+        }
+        await supabaseUnenrollFactor(removalTokens.access_token,factorId);
+        const refreshToken=removalTokens.refresh_token||auth.refresh_token;
+        try{
+          if(!refreshToken)throw new Error('No refresh token is available.');
+          const refreshed=await supabaseRefreshSession(refreshToken);
+          if(!refreshed?.access_token)throw new Error('The provider did not return a refreshed session.');
+          currentSession.authSealed=sealSessionAuth(refreshed);
+          currentSession.authExpiresAt=new Date(getAuthTokenExpiresAt(refreshed)).toISOString();
+          currentSession.authInvalidatedAt=null;
+          currentSession.mfaVerified=tokenAal(refreshed.access_token)==='aal2';
+          await saveStore();
+          return json(res,200,{ok:true,reauthenticationRequired:false,aal:tokenAal(refreshed.access_token)});
+        }catch{
+          currentSession.authSealed=null;currentSession.authExpiresAt=null;currentSession.authInvalidatedAt=now();currentSession.mfaVerified=false;
+          await saveStore();
+          return json(res,200,{ok:true,reauthenticationRequired:true,message:'Authenticator removed. Sign in again to renew your security session.'},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'});
+        }
       }
       if(method==='POST'&&p==='/api/reports'){
         const targetType=String(input.targetType||''),targetId=String(input.targetId||''),category=String(input.category||''),details=String(input.details||'').trim();

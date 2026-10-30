@@ -58,7 +58,7 @@
         </div>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings categories">
-            <a href="#settings-account">Account</a><a href="#settings-privacy">Privacy &amp; audience</a><a href="#settings-blocking">Blocking</a>
+            <a href="#settings-account">Account</a><a href="#settings-privacy">Profile visibility</a><a href="#settings-blocking">Blocking</a>
             <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Preferences</a><a href="#settings-data">Your information</a>
             <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a>
           </nav>
@@ -70,7 +70,8 @@
                 <div><small>Username</small><strong>@${escapeHtml(result.account?.username || '')}</strong></div>
                 <div><small>Email address</small><strong>${escapeHtml(result.account?.email || 'Not available')}</strong></div>
               </div>
-              <p class="settings-note">Edit your public name, biography and location from your profile's Edit profile control. Email changes require a secure authentication-provider flow and are not enabled here.</p>
+              <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
+              <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
             </section>
             <section class="card settings-card" id="settings-privacy">
               ${sectionHeading('◈', 'Privacy &amp; audience', 'Control who can discover your profile and contact you.')}
@@ -136,9 +137,9 @@
               </form>
               <div class="settings-security-form">
                 <div class="settings-inline-heading"><h3>Authenticator app (two-factor authentication)</h3><span class="settings-status-pill">${mfaResult.enabled?'Enabled':mfaResult.available?'Not enabled':'Unavailable'}</span></div>
-                <p class="muted">Use an authenticator app such as Google Authenticator, Microsoft Authenticator or another TOTP app. Sign-in will ask for its current code.</p>
+                <p class="muted">Connect an authenticator app to your Supabase account. Minglora requires a current code at sign-in once enabled, and confirms the provider's AAL2 session before marking setup complete.</p>
                 <div id="mfa-enrollment-panel"></div>
-                <div id="mfa-factors-list">${factors.length?factors.map(factor=>'<div class="settings-blocked-person"><div><strong>'+escapeHtml(factor.friendlyName||'Authenticator')+'</strong><small>'+escapeHtml(factor.type||'TOTP')+' · '+escapeHtml(factor.status||'unknown')+'</small></div><button class="secondary" type="button" data-remove-factor="'+escapeHtml(factor.id)+'">Remove</button></div>').join(''):'<p class="settings-empty">No authenticator factors enrolled.</p>'}</div>
+                <div id="mfa-factors-list">${factors.length?factors.map(factor=>'<div class="settings-blocked-person"><div><strong>'+escapeHtml(factor.friendlyName||'Authenticator')+'</strong><small>'+escapeHtml(factor.type||'TOTP')+' · '+escapeHtml(factor.status||'unknown')+'</small></div><button class="secondary" type="button" data-remove-factor="'+escapeHtml(factor.id)+'" data-factor-status="'+escapeHtml(factor.status||'')+'">Remove</button></div>').join(''):'<p class="settings-empty">No authenticator factors enrolled.</p>'}</div>
                 <button class="secondary" type="button" id="enroll-totp" ${mfaResult.available?'':'disabled'}>Set up authenticator</button>
                 <p class="settings-form-status" id="mfa-status" role="status">${escapeHtml(mfaResult.error||'')}</p>
               </div>
@@ -165,6 +166,9 @@
             <div class="settings-save-bar"><span class="muted">Changes are saved to your Minglora account.</span><button class="primary" type="submit">Save changes</button></div>
           </form>
         </div>`;
+
+      document.querySelector('#edit-profile-from-settings')?.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('minglora:open-profile-editor')));
+      document.querySelector('#profile-privacy-from-settings')?.addEventListener('click',()=>document.querySelector('#settings-privacy')?.scrollIntoView({behavior:settings.preferences.reducedMotion?'auto':'smooth',block:'start'}));
 
       document.querySelectorAll('.settings-nav a').forEach(link => link.addEventListener('click', event => {
         event.preventDefault();
@@ -261,9 +265,17 @@
       });
       document.querySelectorAll('[data-remove-factor]').forEach(button=>button.addEventListener('click',async()=>{
         if(!window.confirm('Remove this authenticator factor? This reduces your sign-in protection.'))return;
+        let code='';
+        if(button.dataset.factorStatus==='verified'&&mfaResult.aal!=='aal2'){
+          code=String(window.prompt('Enter the current code from this authenticator app to confirm removal.')||'').replace(/\s/g,'');
+          if(!/^\d{6,8}$/.test(code)){if(code)window.alert('Enter the current 6–8 digit authenticator code.');return;}
+        }
         button.disabled=true;
-        try{await api('/security/mfa/factors/'+encodeURIComponent(button.dataset.removeFactor),{method:'DELETE',body:'{}'});await openSettings();}
-        catch(error){window.alert(error.message);button.disabled=false;}
+        try{
+          const result=await api('/security/mfa/factors/'+encodeURIComponent(button.dataset.removeFactor),{method:'DELETE',body:JSON.stringify({code})});
+          if(result.reauthenticationRequired){window.alert(result.message||'Sign in again to renew your security session.');window.location.reload();return;}
+          await openSettings();
+        }catch(error){window.alert(error.message);button.disabled=false;}
       }));
       document.querySelector('#revoke-other-sessions')?.addEventListener('click',async buttonEvent=>{
         const button=buttonEvent.currentTarget;if(!window.confirm('Log out all Minglora sessions except this device?'))return;button.disabled=true;

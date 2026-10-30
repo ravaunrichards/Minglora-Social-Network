@@ -373,7 +373,21 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const usernameEdit = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ username: 'minglora_member', name: 'Minglora Member' }) });
   assert.equal(usernameEdit.status, 200);
   assert.equal(usernameEdit.body.user.username, 'minglora_member');
+  const profileEdit = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({
+    bio: 'A private profile biography', location: 'Private town', country: 'Jamaica',
+    aboutVisibility: { bio: false, location: false, country: false }
+  }) });
+  assert.equal(profileEdit.status, 200);
+  assert.equal(profileEdit.body.user.bio, 'A private profile biography');
+  const publicAudience = await request('/api/settings', { method: 'PATCH', body: JSON.stringify({ privacy: { profileVisibility: 'public' } }) });
+  assert.equal(publicAudience.status, 200);
   cookie = secondCookie;
+  const otherMemberProfile = await request('/api/users/' + firstUserId);
+  assert.equal(otherMemberProfile.status, 200);
+  assert.equal(otherMemberProfile.body.user.bio, '');
+  assert.equal(otherMemberProfile.body.user.location, '');
+  assert.equal('country' in otherMemberProfile.body.user, false);
+  cookie = firstCookie;
 
   const pages = await request('/api/pages');
   assert.equal(pages.status, 200);

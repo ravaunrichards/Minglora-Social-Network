@@ -548,7 +548,8 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id){try{const data=await api(`/users/${id}`);state.profile=data;renderProfile(data)}catch(e){toast(e.message)}}
+async function openProfile(id,openEditor=false){try{const data=await api(`/users/${id}`);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 
 async function renderConnections(profileId,kind){
   if(!['followers','following','friends'].includes(kind))return;
@@ -579,7 +580,7 @@ function renderProfile(data){
     ? '<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
     : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
   const aboutRows=[
-    ['About',u.bio],['Location',u.location],['Country',u.country],['County',u.county],
+    ['Country',u.country],['County',u.county],
     ['Parish',u.parish],['City',u.city],['Gender',u.gender],
     ['Relationship status',u.relationshipStatus],['Contact phone',u.contactPhone]
   ].filter(([,value])=>String(value||'').trim());
@@ -832,7 +833,7 @@ function createMediaPicker(root,options={}){
 
 function openEditProfile(u){
   const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
-  const modal=document.createElement('div');modal.className='modal-backdrop';
+  const modal=document.createElement('div');modal.className='modal-backdrop profile-editor-backdrop';
   modal.innerHTML=`<section class="modal profile-editor-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
     <div class="modal-head"><h2 id="edit-profile-title">Edit profile</h2><button class="modal-close" aria-label="Close">×</button></div>
     <form class="modal-body" id="edit-profile-form">
@@ -879,8 +880,6 @@ function openEditProfile(u){
     const phone=String(phoneInput.value||'').trim();
     phoneRequest.disabled=true;phoneStatus.textContent='Requesting a verification code…';
     try{
-      const saved=await api('/users/me',{method:'PATCH',body:JSON.stringify({contactPhone:phone})});
-      state.user.contactPhone=saved.user.contactPhone;
       await api('/auth/phone/change',{method:'POST',body:JSON.stringify({phone})});
       phonePanel.hidden=false;phoneStatus.textContent='Code sent. Check your SMS messages and enter the six-digit code.';
       modal.querySelector('#phone-verification-code').focus();
@@ -892,6 +891,8 @@ function openEditProfile(u){
     phoneVerify.disabled=true;phoneStatus.textContent='Verifying phone number…';
     try{
       await api('/auth/phone/verify',{method:'POST',body:JSON.stringify({phone,token})});
+      const saved=await api('/users/me',{method:'PATCH',body:JSON.stringify({contactPhone:phone})});
+      state.user.contactPhone=saved.user.contactPhone;
       phoneStatus.textContent='Phone verified in Supabase Auth. The private contact number is saved.';
       phoneVerify.textContent='Verified';phoneVerify.disabled=true;
       state.user.contactPhone=phone;
