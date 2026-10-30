@@ -230,6 +230,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(myReports.body.reports.some(report => report.id === postReport.body.report.id), true);
   const forbiddenModeratorQueue = await request('/api/moderation/reports');
   assert.equal(forbiddenModeratorQueue.status, 403);
+  const myGroupPageReports=await request('/api/reports/mine');
+  assert.equal(myGroupPageReports.status,200);
+  assert.equal(myGroupPageReports.body.reports.some(report=>report.id===pagePostReport.body.report.id),true);
+  assert.equal(myGroupPageReports.body.reports.some(report=>report.id===groupPostReport.body.report.id),true);
 
   const accountExport = await request('/api/account/export');
   assert.equal(accountExport.status, 200);
@@ -321,6 +325,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ text: 'A genuine Page update' })
   });
   assert.equal(pagePost.status, 201);
+  const pagePostReport=await request('/api/reports',{method:'POST',body:JSON.stringify({targetType:'post',targetId:pagePost.body.post.id,category:'spam',details:'Automated Page post moderation test.'})});
+  assert.equal(pagePostReport.status,201);
 
   const firstCookie = cookie;
   const firstUserId = registration.body.user.id;
@@ -404,6 +410,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ text: 'A real group discussion post' })
   });
   assert.equal(groupPost.status, 201);
+  const groupPostReport=await request('/api/reports',{method:'POST',body:JSON.stringify({targetType:'post',targetId:groupPost.body.post.id,category:'spam',details:'Automated group post moderation test.'})});
+  assert.equal(groupPostReport.status,201);
   assert.equal((await request(`/api/groups/${group.body.group.id}`)).body.posts.length, 1);
   const deleteOwnGroupPost = await request(`/api/groups/${group.body.group.id}/posts/${groupPost.body.post.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(deleteOwnGroupPost.status, 200);
