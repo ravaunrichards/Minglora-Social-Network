@@ -590,20 +590,20 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   cookie = '';
   const reactivateLogin = await request('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: 'test-user@example.test', password: 'TestPassword123!' })
+    body: JSON.stringify({ email: 'test-user@example.test', password: 'NewTestPassword456!' })
   });
   assert.equal(reactivateLogin.status, 200, JSON.stringify(reactivateLogin.body));
   assert.equal((await request('/api/feed')).status, 200);
 
   const deletionRequest = await request('/api/account/deletion-request', {
     method: 'POST',
-    body: JSON.stringify({ currentPassword: 'TestPassword123!' })
+    body: JSON.stringify({ currentPassword: 'NewTestPassword456!' })
   });
   assert.equal(deletionRequest.status, 202);
   assert.equal(deletionRequest.body.request.requestType, 'deletion');
   const duplicateDeletionRequest = await request('/api/account/deletion-request', {
     method: 'POST',
-    body: JSON.stringify({ currentPassword: 'TestPassword123!' })
+    body: JSON.stringify({ currentPassword: 'NewTestPassword456!' })
   });
   assert.equal(duplicateDeletionRequest.status, 202);
   assert.equal(duplicateDeletionRequest.body.request.id, deletionRequest.body.request.id);
