@@ -22,7 +22,7 @@ The JSON store includes narrowly scoped cleanup for explicitly identified legacy
 - Direct text messages and conversation history
 - In-app notifications for supported actions
 - Basic substring search across people, posts, groups and Pages
-- JSON-backed persistence for one running application instance
+- JSON-file persistence for local development and PostgreSQL-backed durable storage for one running API instance
 - Node test runner, integration tests, Docker packaging and GitHub Actions CI
 
 These are the capabilities in the **current runtime**, not a claim of Facebook feature parity.
@@ -30,12 +30,12 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 ## Expanded repository layout
 
 - `public/`: current browser UI and client code.
-- `src/server.js` and `src/store.js`: current HTTP/API and JSON persistence implementation.
+- `src/server.js` and `src/store.js`: current HTTP/API and JSON/PostgreSQL persistence adapters.
 - `src/domain/`: reusable, unit-tested validation, cursor-pagination and relationship-policy helpers. Validation is integrated into registration, post creation and profile editing; optional cursor pagination is integrated into the feed. The relationship visibility helper still needs to be applied consistently to every privacy-sensitive route.
 - `backend/modules/`: domain boundaries for posts, profiles, relationships, Groups, Pages, Stories, messaging, notifications, search, media, Live, Video, Marketplace, Ads, privacy, moderation, Reels, albums, calls, Memories, Events and data rights. Groups, Pages and Stories have imported service modules with unit tests; other module documents are not proof of implementation.
 - `apps/`: documented boundaries for web, Android, iOS, desktop, TV, admin and Creator Studio clients. Only the browser client is currently implemented.
 - `frontend/`: target component, layout, page, navigation and theme organization; current UI remains in `public/`.
-- `database/migrations/001_social_core.sql`: relational schema foundation for future database-backed persistence. The current app does **not** execute this migration or use this schema.
+- `database/migrations/001_social_core.sql` and `002_extended_social_domains.sql`: normalized relational schema design foundations; the current API does not yet use those tables.\n- `database/migrations/003_runtime_state_store.sql`: runtime PostgreSQL state table used by the current compatibility adapter.
 - `packages/`: planned shared API contracts, validation and platform-neutral helpers.
 - `tests/`: current API integration tests plus unit tests and test plans for security, accessibility, performance and browser flows.
 - `docs/`: architecture map, feature catalog, roadmap, API, security and deployment guides.
@@ -47,7 +47,7 @@ See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATF
 - Node.js 20 or newer
 - Docker and Docker Compose are optional for containerized local running
 
-## Run locally
+## Persistence modes\n\nLocal development defaults to the empty-first-run JSON store. For hosted persistence, set `PERSISTENCE_DRIVER=postgres`, `DATABASE_URL`, and `PGSSLMODE=require`. The application creates `public.minglora_runtime_state` on startup. See [PostgreSQL setup](docs/POSTGRES_SETUP.md) and [Render configuration](infrastructure/render/README.md).\n\nThe PostgreSQL adapter stores application state in one JSONB document to preserve compatibility with current routes. It is durable but remains single-instance and is not a normalized, high-scale relational adapter. Do not scale horizontally until transaction-oriented repositories replace it.\n\n## Run locally
 
 ```bash
 npm start
@@ -85,7 +85,7 @@ The Compose service mounts a named volume at `/app/data` to persist application 
 
 All application API endpoints use the `/api` prefix.
 
-- `GET /api/health`
+- `GET /api/health`, `GET /api/ready` (persistence readiness)
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `GET /api/feed` (optional `?limit=20&cursor=...` pagination), `POST /api/posts`
 - `POST /api/posts/:id/reactions`, `POST /api/posts/:id/comments`
@@ -101,9 +101,9 @@ See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must 
 
 ## Production limitations
 
-The current JSON store is intended for a single application instance. It does not provide relational transactions, schema migrations or production-grade multi-instance safety. The SQL migration is a design foundation only and is not applied automatically.
+The local JSON store is for development only. Hosted production must use PostgreSQL; JSON mode reports production readiness as unavailable because ephemeral filesystems are not durable. The PostgreSQL adapter provides durable single-instance storage through one JSONB row, but not normalized relational transactions or multi-instance concurrency. Migrations 001 and 002 remain design foundations; migration 003 creates the runtime store table.
 
-Before opening public registration at scale, implement durable database access, migration and backup/restore procedures, rate limiting, CSRF review, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
+Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, implement rate limiting, CSRF safeguards, email verification/recovery, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
 
 ## Project identity
 

@@ -1,6 +1,6 @@
 {
   "name": "minglora-social-network",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Minglora — an independent social networking application with a responsive web interface and Node.js API.",
   "type": "module",
@@ -12,5 +12,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
   }
 }

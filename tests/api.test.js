@@ -37,6 +37,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       ...process.env,
       PORT: String(port),
       NODE_ENV: 'test',
+      PERSISTENCE_DRIVER: 'json',
       DATA_DIR: testDataDir,
       SESSION_SECRET: 'test-secret-with-enough-entropy-for-isolated-tests'
     },
@@ -58,6 +59,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(health?.status, 200);
   assert.equal(health.body.ok, true);
   assert.equal(health.body.service, 'minglora-social-network');
+  const readiness = await request('/api/ready');
+  assert.equal(readiness.status, 200);
+  assert.equal(readiness.body.persistence.driver, 'json');
+  assert.equal(readiness.body.persistence.durable, false);
 
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
