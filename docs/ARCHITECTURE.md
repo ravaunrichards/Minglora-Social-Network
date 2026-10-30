@@ -38,14 +38,15 @@ This is the runtime that actually serves requests today. The expanded module/dat
 
 ## Expanded source organization
 
-- `apps/`: boundaries for future web, mobile and admin client projects. The live browser client remains in `public/` until it is deliberately extracted.
-- `backend/modules/`: ownership, authorization expectations, current implementation status and acceptance rules for social-network domains. These are module contracts, not route-mounted services yet.
+- `apps/`: documented boundaries for browser, Android, iOS, desktop, TV, admin and Creator Studio clients. The live browser client remains in `public/` until deliberately extracted.
+- `frontend/`: target components, layouts, pages, navigation and themes. Current UI source remains in `public/`.
+- `backend/modules/`: ownership, authorization expectations and acceptance rules for social-network domains. Groups, Pages and Stories now have service modules imported by `src/server.js` and dedicated unit tests; other domain documents remain planned contracts until integrated end-to-end.
 - `backend/realtime/` and `backend/workers/`: planned boundaries for realtime transport and durable background jobs.
 - `src/domain/`: pure, tested helpers for validation, cursor pagination and relationship visibility. Validation is now used by registration, post creation and profile edits. Optional cursor pagination is used by `GET /api/feed` when `limit` or `cursor` is supplied. Relationship visibility is not yet integrated across profile, feed, search and other privacy-sensitive routes.
 - `packages/`: shared API contracts, validation and platform-neutral helpers. These package boundaries are documented but not independently built or published.
 - `database/migrations/001_social_core.sql`: relational schema foundation for users, profiles, relationships, media assets, posts, reactions, comments, saved posts, groups, Pages, Stories, messaging, notifications, events, reports, Marketplace listings and audit history.
 - `database/policies/`, `database/functions/`, and `database/schemas/`: policy/function design boundaries and schema documentation.
-- `docs/REPOSITORY_MAP.md`, `docs/FEATURE_CATALOG.md`, `docs/ROADMAP.md`: map, domain coverage and ordered implementation plan.
+- `docs/REPOSITORY_MAP.md`, `docs/FEATURE_CATALOG.md`, `docs/PLATFORM_COVERAGE.md`, `docs/ROADMAP.md`: map, platform/domain coverage and ordered implementation plan.
 
 The current server does **not** execute SQL migrations or use the new relational schema. The database migration must be tested on a disposable PostgreSQL instance, and a real data adapter plus a verified migration/rollback plan must be implemented before the schema is adopted. Do not treat creating a SQL file as migration completion.
 
