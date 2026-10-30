@@ -36,8 +36,14 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult] = await Promise.all([api('/settings'), api('/blocks')]);
-      const blockedUsers = blockedResult.users || [];
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess] = await Promise.all([
+        api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
+        api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
+        api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
+        api('/reports/mine').catch(error=>({error:error.message,reports:[]})),
+        api('/moderation/access').catch(()=>({canModerate:false}))
+      ]);
+      const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],canModerate=moderationAccess.canModerate===true;
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
@@ -106,12 +112,43 @@
               <p class="settings-data-status" id="account-export-status" role="status"></p>
             </section>
             <section class="card settings-card" id="settings-security">
-              ${sectionHeading('▣', 'Security and login', 'Account protection controls.')}
-              <div class="settings-unavailable"><strong>Additional security controls are not connected yet.</strong><p>Password changes, two-factor authentication, active-session management and account recovery must be implemented through the authenticated account provider before they can safely be enabled here.</p></div>
+              ${sectionHeading('▣', 'Security and login', 'Protect your password, sign-in email, authenticator and active sessions.')}
+              <form id="security-email-form" class="settings-security-form">
+                <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label>
+                <button class="secondary" type="submit">Request email change</button><p class="settings-form-status" id="security-email-status" role="status"></p>
+              </form>
+              <form id="security-password-form" class="settings-security-form">
+                <h3>Change password</h3><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" required minlength="10"></label>
+                <label class="field"><span>New password</span><input name="newPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="1024"></label>
+                <label class="field"><span>Confirm new password</span><input name="confirmPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="1024"></label>
+                <button class="primary" type="submit">Update password</button><p class="settings-form-status" id="security-password-status" role="status"></p>
+              </form>
+              <div class="settings-security-form">
+                <div class="settings-inline-heading"><h3>Authenticator app (two-factor authentication)</h3><span class="settings-status-pill">${mfaResult.enabled?'Enabled':mfaResult.available?'Not enabled':'Unavailable'}</span></div>
+                <p class="muted">Use an authenticator app such as Google Authenticator, Microsoft Authenticator or another TOTP app. Sign-in will ask for its current code.</p>
+                <div id="mfa-enrollment-panel"></div>
+                <div id="mfa-factors-list">${factors.length?factors.map(factor=>'<div class="settings-blocked-person"><div><strong>'+escapeHtml(factor.friendlyName||'Authenticator')+'</strong><small>'+escapeHtml(factor.type||'TOTP')+' · '+escapeHtml(factor.status||'unknown')+'</small></div><button class="secondary" type="button" data-remove-factor="'+escapeHtml(factor.id)+'">Remove</button></div>').join(''):'<p class="settings-empty">No authenticator factors enrolled.</p>'}</div>
+                <button class="secondary" type="button" id="enroll-totp" ${mfaResult.available?'':'disabled'}>Set up authenticator</button>
+                <p class="settings-form-status" id="mfa-status" role="status">${escapeHtml(mfaResult.error||'')}</p>
+              </div>
+              <div class="settings-security-form">
+                <div class="settings-inline-heading"><h3>Active sessions</h3><button type="button" class="secondary" id="revoke-other-sessions">Log out other devices</button></div>
+                <div id="active-sessions-list">${sessions.map(session=>'<div class="settings-session-row"><div><strong>'+escapeHtml(session.userAgent||'Unknown device')+(session.current?' · This device':'')+'</strong><small>Last active '+escapeHtml(session.lastSeenAt||'')+' · Expires '+escapeHtml(session.expiresAt||'')+'</small></div>'+(session.current?'<span class="settings-current-session">Current</span>':'<button type="button" class="secondary" data-revoke-session="'+escapeHtml(session.id)+'">Revoke</button>')+'</div>').join('')||'<p class="settings-empty">'+escapeHtml(sessionResult.error||'No active sessions found.')+'</p>'}</div>
+              </div>
             </section>
             <section class="card settings-card" id="settings-help">
-              ${sectionHeading('?', 'Help &amp; support', 'Support and safety resources.')}
-              <div class="settings-unavailable"><strong>Support centre integration is still pending.</strong><p>Reporting, appeals, help articles and support requests need their own working service and moderation workflows.</p></div>
+              ${sectionHeading('?', 'Help &amp; support', 'Get help from Minglora and track your existing support conversations.')}
+              <form id="support-ticket-form" class="settings-security-form">
+                <h3>Contact support</h3>
+                <label class="field"><span>What do you need help with?</span><select name="category"><option value="general">General question</option><option value="account">Account</option><option value="security">Security</option><option value="bug">Report a bug</option><option value="abuse">Safety / abuse</option><option value="billing">Billing</option><option value="privacy">Privacy</option></select></label>
+                <label class="field"><span>Subject</span><input name="subject" minlength="4" maxlength="120" required></label>
+                <label class="field"><span>Message</span><textarea name="message" rows="4" maxlength="5000" required placeholder="Describe what happened and how we can help."></textarea></label>
+                <button class="primary" type="submit">Send to support</button><p class="settings-form-status" id="support-create-status" role="status">${escapeHtml(supportResult.error||'')}</p>
+              </form>
+              <div class="settings-security-form"><h3>Your support conversations</h3><div id="support-tickets-list">${tickets.map(ticket=>'<article class="settings-ticket" data-ticket="'+escapeHtml(ticket.id)+'"><div class="settings-inline-heading"><strong>'+escapeHtml(ticket.subject)+'</strong><span class="settings-status-pill">'+escapeHtml(ticket.status)+'</span></div><small>'+escapeHtml(ticket.category)+' · '+escapeHtml(ticket.createdAt)+'</small><div class="settings-ticket-messages">'+(ticket.messages||[]).map(message=>'<p><strong>'+escapeHtml(message.sender?.name||'Minglora support')+':</strong> '+escapeHtml(message.message)+'</p>').join('')+'</div>'+(ticket.status==='closed'?'':'<form class="support-reply-form" data-reply-ticket="'+escapeHtml(ticket.id)+'"><input name="message" maxlength="5000" required placeholder="Reply to support"><button class="secondary" type="submit">Reply</button></form>')+'</article>').join('')||'<p class="settings-empty">No support tickets yet.</p>'}</div>
+              </div>
+              <div class="settings-security-form"><h3>Your reports</h3><div id="member-reports-list">${reports.map(report=>'<div class="settings-session-row"><div><strong>'+escapeHtml(report.targetType)+' · '+escapeHtml(report.category)+'</strong><small>'+escapeHtml(report.createdAt)+' · '+escapeHtml(report.status)+'</small></div></div>').join('')||'<p class="settings-empty">You have not submitted any reports.</p>'}</div></div>
+              ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
             </section>
             <div class="settings-save-bar"><span class="muted">Changes are saved to your Minglora account.</span><button class="primary" type="submit">Save changes</button></div>
           </form>
