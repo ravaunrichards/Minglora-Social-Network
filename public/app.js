@@ -231,7 +231,71 @@ function renderProfile(data){
   $('#profile-about-tab')?.addEventListener('click',()=>document.querySelector('.profile-about')?.scrollIntoView({behavior:'smooth'}));
   $('#profile-friends-tab')?.addEventListener('click',()=>activateNav('friends'));
 }
-function openEditProfile(u){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Edit profile</h2><button class="modal-close">×</button></div><form class="modal-body" id="edit-profile-form"><div class="field"><label>Name</label><input name="name" maxlength="120" value="${esc(u.name)}" required></div><div class="field"><label>Bio</label><textarea name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div><div class="field"><label>Location</label><input name="location" maxlength="120" value="${esc(u.location||'')}"></div><div class="field"><label>Avatar image URL (HTTPS)</label><input name="avatar" type="url" value="${esc(u.avatar||'')}" placeholder="https://..."></div><div class="field"><label>Cover image URL (HTTPS)</label><input name="cover" type="url" value="${esc(u.cover||'')}" placeholder="https://..."></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{const data=await api('/users/me',{method:'PATCH',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});state.user=data.user;modal.remove();showApp();await openProfile(state.user.id);toast('Profile updated.')}catch(err){toast(err.message)}};}
+async function fileAsBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Could not read the selected image.'));
+    reader.onload=()=>{const result=String(reader.result||'');const comma=result.indexOf(',');if(comma<0)return reject(new Error('The selected image could not be decoded.'));resolve(result.slice(comma+1));};
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadProfileImage(slot,file){
+  if(!file)return null;
+  const allowed=['image/jpeg','image/png','image/webp','image/avif'];
+  if(!allowed.includes(file.type))throw new Error('Choose a JPG, PNG, WEBP or AVIF image.');
+  if(file.size>8*1024*1024)throw new Error('Profile and cover images must be 8 MB or smaller.');
+  const base64=await fileAsBase64(file);
+  return api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType:file.type,base64})});
+}
+function openEditProfile(u){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML=`<section class="modal profile-editor-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
+    <div class="modal-head"><h2 id="edit-profile-title">Edit profile</h2><button class="modal-close" aria-label="Close">×</button></div>
+    <form class="modal-body" id="edit-profile-form">
+      <div class="field"><label for="edit-profile-name">Name</label><input id="edit-profile-name" name="name" maxlength="120" value="${esc(u.name)}" required></div>
+      <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
+      <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"></div>
+      <div class="profile-upload-section">
+        <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from device</label><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Choose from your phone gallery, photos, files or folders. Maximum 8 MB.</small></div></div>
+      </div>
+      <div class="profile-upload-section">
+        <h3>Cover photo</h3><img id="edit-cover-preview" class="profile-cover-upload-preview" src="${esc(u.cover||'')}" alt="Cover photo preview"><div class="profile-upload-controls"><label class="secondary profile-file-button" for="edit-cover-file">Choose cover photo</label><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"><small>Browse your device gallery or folders. Maximum 8 MB.</small></div>
+      </div>
+      <p class="profile-upload-status muted" id="profile-upload-status" role="status">Your selected images upload securely to Minglora when you save.</p>
+      <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
+    </form></section>`;
+  document.body.append(modal);
+  const avatarInput=modal.querySelector('#edit-avatar-file');
+  const coverInput=modal.querySelector('#edit-cover-file');
+  const avatarPreview=modal.querySelector('#edit-avatar-preview');
+  const coverPreview=modal.querySelector('#edit-cover-preview');
+  const previewUrls=[];
+  function previewFile(input,target){
+    const file=input.files?.[0];if(!file)return;
+    if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)){toast('Choose a JPG, PNG, WEBP or AVIF image.');input.value='';return;}
+    if(file.size>8*1024*1024){toast('Images must be 8 MB or smaller.');input.value='';return;}
+    const url=URL.createObjectURL(file);previewUrls.push(url);target.src=url;target.classList.add('has-preview');
+  }
+  avatarInput.addEventListener('change',()=>previewFile(avatarInput,avatarPreview));
+  coverInput.addEventListener('change',()=>previewFile(coverInput,coverPreview));
+  const close=()=>{previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('form').onsubmit=async event=>{
+    event.preventDefault();const form=event.currentTarget,button=modal.querySelector('#save-profile-button'),status=modal.querySelector('#profile-upload-status');
+    const values=new FormData(form);
+    const payload={name:values.get('name'),bio:values.get('bio'),location:values.get('location')};
+    button.disabled=true;
+    try{
+      if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';await uploadProfileImage('avatar',avatarInput.files[0]);}
+      if(coverInput.files?.[0]){status.textContent='Uploading cover photo…';await uploadProfileImage('cover',coverInput.files[0]);}
+      status.textContent='Saving profile details…';
+      const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(payload)});
+      state.user=result.user;close();showApp();await openProfile(state.user.id);toast('Profile updated.');
+    }catch(error){status.textContent=error.message;toast(error.message);}
+    finally{button.disabled=false;}
+  };
+}
 function openStoryComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label for="story-image">Image URL (HTTPS, optional)</label><input id="story-image" name="imageUrl" type="url" maxlength="2000" placeholder="https://example.com/image.jpg"></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Publish story</button></div></form></section>';
