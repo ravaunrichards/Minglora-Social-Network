@@ -15,9 +15,63 @@ let toastTimer;
 let browserNotificationTimer=null;
 let browserNotificationSeen=new Set();
 let browserNotificationPrimed=false;
+let webPushSubscriptionActive=false;
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
 function showAuth(){ $('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
-function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startBrowserNotificationPolling(); }
+function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startBrowserNotificationPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
+function base64UrlToBytes(value){
+  const base64=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
+  const padded=base64+'='.repeat((4-base64.length%4)%4);
+  return Uint8Array.from(atob(padded),character=>character.charCodeAt(0));
+}
+async function prepareMingloraServiceWorker(){
+  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
+  try{
+    const registration=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+    const subscription=await registration.pushManager.getSubscription();
+    if(subscription){
+      webPushSubscriptionActive=true;
+      await api('/push/subscriptions',{method:'POST',body:JSON.stringify(subscription.toJSON())}).catch(()=>{});
+    }
+  }catch(error){console.warn('Minglora background push setup:',error.message);}
+}
+async function enableMingloraPush(){
+  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){toast('This browser does not support device push notifications.');return;}
+  try{
+    const permission=Notification.permission==='granted'? 'granted':await Notification.requestPermission();
+    if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
+    const [keyData,registration]=await Promise.all([
+      api('/push/public-key'),
+      navigator.serviceWorker.register('/sw.js',{scope:'/'})
+    ]);
+    if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
+    let subscription=await registration.pushManager.getSubscription();
+    if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(keyData.publicKey)});
+    await api('/push/subscriptions',{method:'POST',body:JSON.stringify(subscription.toJSON())});
+    webPushSubscriptionActive=true;
+    toast('Minglora push notifications are enabled on this device.');
+    return true;
+  }catch(error){toast(error.message||'Could not enable device push.');return false;}
+}
+async function handleMingloraPushNavigation(){
+  const params=new URLSearchParams(window.location.search),type=params.get('minglora-push');
+  if(!type||!state.user)return;
+  const callId=params.get('callId'),liveSessionId=params.get('liveSessionId'),actorId=params.get('actorId');
+  window.history.replaceState({},'',window.location.pathname+window.location.hash);
+  try{
+    if(type==='call'&&callId){await answerMingloraCall(callId);return;}
+    if(type==='live'&&liveSessionId){
+      const sessions=(await api('/live/sessions')).sessions||[],session=sessions.find(item=>item.id===liveSessionId);
+      if(session){await openLiveRoom(session,'viewer');return;}
+      toast('This LIVE session has ended.');
+    }
+    if(type==='message'&&actorId){
+      const member=(await api('/users')).users?.find(item=>item.id===actorId);
+      if(member){await openMessageWindow(member);return;}
+    }
+    await renderNotifications();
+  }catch(error){toast(error.message);}
+}
 function activateNav(view){state.view=view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
@@ -1097,8 +1151,8 @@ async function renderNotifications(){
     else if(n.type==='message'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-message-actor="'+esc(n.actor.id)+'">Open message</button></div>';
     return '<article class="notice-item '+(n.read?'':'unread')+'"><div class="notice-icon">'+icon+'</div><div class="notice-content"><p>'+esc(n.text)+'</p><small>'+timeAgo(n.createdAt)+'</small>'+actions+'</div></article>';
   }).join('');
-  setContent('<div class="page-heading"><div><h1>Notifications</h1><p class="muted">Get alerts for LIVE sessions, calls and messages.</p></div><div class="notice-actions">'+(('Notification' in window&&Notification.permission!=='granted')?'<button class="secondary" id="enable-browser-alerts">Enable browser alerts</button>':'')+'<button class="text-button" id="mark-read">Mark all read</button></div></div><section class="card">'+(rows||'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>')+'</section>');
-  $('#enable-browser-alerts')?.addEventListener('click',async()=>{try{const permission=await Notification.requestPermission();toast(permission==='granted'?'Browser alerts enabled. Keep Minglora open to receive instant alerts.':'Browser alert permission was not granted.');}catch(error){toast(error.message);}});
+  setContent('<div class="page-heading"><div><h1>Notifications</h1><p class="muted">Receive LIVE, call and message alerts, including when Minglora is in the background.</p></div><div class="notice-actions"><button class="secondary" id="enable-browser-alerts">Enable device push</button><button class="text-button" id="mark-read">Mark all read</button></div></div><section class="card">'+(rows||'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>')+'</section>');
+  $('#enable-browser-alerts')?.addEventListener('click',enableMingloraPush);
   document.querySelectorAll('[data-answer-call]').forEach(button=>button.onclick=()=>answerMingloraCall(button.dataset.answerCall));
   document.querySelectorAll('[data-decline-call]').forEach(button=>button.onclick=()=>declineMingloraCall(button.dataset.declineCall));
   document.querySelectorAll('[data-message-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.messageActor);if(item?.actor)openMessageWindow(item.actor);});
@@ -1119,7 +1173,7 @@ async function pollBrowserNotifications(){
       const fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
-        if(!['live','call','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
+        if(webPushSubscriptionActive||!['live','call','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':'New Minglora message';
         const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-notification.png'});
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
