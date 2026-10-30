@@ -53,7 +53,7 @@
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings categories">
             <a href="#settings-account">Account</a><a href="#settings-privacy">Privacy &amp; audience</a><a href="#settings-blocking">Blocking</a>
-            <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Preferences</a>
+            <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Preferences</a><a href="#settings-data">Your information</a>
             <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a>
           </nav>
           <form id="settings-form" class="settings-panels">
@@ -99,6 +99,12 @@
               </label>
               <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
             </section>
+            <section class="card settings-card" id="settings-data">
+              ${sectionHeading('⇩', 'Your information', 'Download a copy of the information associated with your Minglora account.')}
+              <div class="settings-data-export"><div><strong>Download your information</strong><p>Creates a JSON file with your profile, settings, posts, comments, relationships, groups, Pages, Stories, messages and in-app notifications. Passwords, authentication tokens and active session secrets are not included.</p></div><button class="primary" type="button" id="download-account-data">Download information</button></div>
+              <div class="settings-unavailable"><strong>Account deletion is not enabled yet.</strong><p>Permanent account deletion needs a verified re-authentication and a coordinated removal process across posts, media, messages, provider identity and retention obligations. Minglora will not pretend to delete an account before that process is implemented.</p></div>
+              <p class="settings-data-status" id="account-export-status" role="status"></p>
+            </section>
             <section class="card settings-card" id="settings-security">
               ${sectionHeading('▣', 'Security and login', 'Account protection controls.')}
               <div class="settings-unavailable"><strong>Additional security controls are not connected yet.</strong><p>Password changes, two-factor authentication, active-session management and account recovery must be implemented through the authenticated account provider before they can safely be enabled here.</p></div>
@@ -115,6 +121,31 @@
         event.preventDefault();
         document.querySelector(link.getAttribute('href'))?.scrollIntoView({ behavior: settings.preferences.reducedMotion ? 'auto' : 'smooth', block: 'start' });
       }));
+
+      document.querySelector('#download-account-data')?.addEventListener('click', async buttonEvent => {
+        const button = buttonEvent.currentTarget;
+        const status = document.querySelector('#account-export-status');
+        button.disabled = true;
+        status.textContent = 'Preparing your account export…';
+        try {
+          const archive = await api('/account/export');
+          const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const date = new Date().toISOString().slice(0, 10);
+          link.href = url;
+          link.download = `minglora-account-export-${date}.json`;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+          status.textContent = 'Your account export has been prepared.';
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
 
       document.querySelectorAll('[data-unblock-user]').forEach(button => button.addEventListener('click', async () => {
         button.disabled = true;
