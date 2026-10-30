@@ -20,7 +20,8 @@ The local JSON store includes narrowly scoped cleanup for explicitly identified 
 - Public Pages with unique handles, Page follows, Page details, owner publishing and deletion
 - Text/HTTPS-image Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Direct text messages and conversation history
-- In-app notifications for supported actions
+- In-app notifications for supported actions, with persisted account-level notification controls
+- Dedicated Settings & Privacy hub with server-persisted visibility, friend-request, message, theme, feed-order and reduced-motion preferences
 - Basic substring search across people, posts, groups and Pages
 - Server-side LiveKit session and token API foundation with host publishing permissions and subscriber-only viewer tokens (requires a separate Minglora LiveKit Cloud project and server credentials)
 - Local JSON-file persistence for development and durable Supabase-backed persistence for the hosted API
