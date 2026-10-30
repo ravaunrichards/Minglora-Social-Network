@@ -65,6 +65,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(readiness.status, 200);
   assert.equal(readiness.body.components.persistence.driver, 'json');
   assert.equal(readiness.body.components.persistence.durable, false);
+  assert.equal(readiness.body.components.live.provider, 'livekit');
+  assert.equal(readiness.body.components.live.configured, false);
 
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
