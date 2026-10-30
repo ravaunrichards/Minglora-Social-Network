@@ -75,7 +75,8 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
-    "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow"
+    "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
+    "account_deletion_request"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -85,6 +86,22 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "account_deletion_request") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid account deletion request."});
+    const {data:existing,error:lookupError}=await admin.from("data_rights_requests")
+      .select("id,user_id,request_type,status,requested_at")
+      .eq("user_id",userId).eq("request_type","delete_account")
+      .in("status",["requested","processing"]).order("requested_at",{ascending:false}).limit(1).maybeSingle();
+    if(lookupError)return json(503,{error:"Minglora could not check existing deletion requests."});
+    if(existing)return json(200,{request:existing,alreadyRequested:true});
+    const {data,error}=await admin.from("data_rights_requests")
+      .insert({user_id:userId,request_type:"delete_account",status:"requested"})
+      .select("id,user_id,request_type,status,requested_at").single();
+    if(error)return fail(error,"Minglora could not record the deletion request.");
+    return json(201,{request:data});
+  }
 
   if (action === "economy_payout_webhook") {
     const batchId = String(input.paypalBatchId || "");
