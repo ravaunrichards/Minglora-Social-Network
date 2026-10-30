@@ -17,6 +17,7 @@ The service uses Supabase for Auth and durable application persistence. There is
 - `SUPABASE_PUBLISHABLE_KEY` — matching Minglora publishable key
 - `SUPABASE_AUTH_REDIRECT_URL=https://minglora-social-network.onrender.com/`
 - `APP_ORIGIN=https://minglora-social-network.onrender.com`
+- `MODERATOR_USER_IDS` — comma-separated UUIDs of trusted moderator accounts; configure only after verifying each account ID.
 - `SESSION_SECRET` — random secret of at least 32 characters, stored only in Render
 - `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` — Minglora-only credentials, only when LiveKit is configured
 
