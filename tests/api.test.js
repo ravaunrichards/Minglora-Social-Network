@@ -473,6 +473,13 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(unfriend.status, 200);
   assert.equal(unfriend.body.wasAccepted, true);
   assert.equal((await request('/api/feed?scope=friends')).body.posts.length, 0);
+  cookie = firstCookie;
+  const reciprocalFollow = await request(`/api/users/${secondUserId}/follow`, { method: 'POST', body: '{}' });
+  assert.equal(reciprocalFollow.status, 200);
+  assert.equal(reciprocalFollow.body.friends, true);
+  const mutualFriends = await request('/api/friends');
+  assert.equal(mutualFriends.body.friends.some(member => member.id === secondUserId), true);
+  cookie = secondCookie;
 
   const forbiddenEdit = await request(`/api/posts/${post.body.post.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'Not the owner' }) });
   assert.equal(forbiddenEdit.status, 403);
