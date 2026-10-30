@@ -36,8 +36,8 @@ self.addEventListener('push',event=>{
   event.waitUntil(self.registration.showNotification(payload.title||'Minglora', {
     body:payload.body||'You have a new notification.',
     tag:payload.tag||'minglora-notification',
-    icon:'/favicon.svg',
-    badge:'/favicon.svg',
+    icon:'/assets/icons/minglora-push.svg',
+    badge:'/assets/icons/minglora-push.svg',
     renotify:false,
     data:{url,type,...data},
     actions
