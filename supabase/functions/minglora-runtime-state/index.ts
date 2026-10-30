@@ -50,14 +50,17 @@ Deno.serve(async (req: Request) => {
   }
 
   const length = Number(req.headers.get("content-length") || 0);
-  if (length > 1_000_000) return json(413, { error: "Request is too large." });
+  const maxBodyBytes = 12 * 1024 * 1024;
+  if (length > maxBodyBytes) return json(413, { error: "Request is too large." });
   let input: Record<string, unknown>;
   try {
     const raw = await req.text();
-    if (new TextEncoder().encode(raw).byteLength > 1_000_000) {
+    const rawBytes = new TextEncoder().encode(raw).byteLength;
+    if (rawBytes > maxBodyBytes) return json(413, { error: "Request is too large." });
+    input = JSON.parse(raw);
+    if (input?.action !== "media_upload" && rawBytes > 1_000_000) {
       return json(413, { error: "Request is too large." });
     }
-    input = JSON.parse(raw);
     if (!input || typeof input !== "object" || Array.isArray(input)) {
       return json(400, { error: "Invalid request." });
     }
@@ -66,8 +69,59 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = input.action;
-  if (!["load", "save", "health"].includes(String(action))) {
+  if (!["load", "save", "health", "media_upload"].includes(String(action))) {
     return json(400, { error: "Unsupported action." });
+  }
+
+  if (action === "media_upload") {
+    const ownerId = String(input.ownerId || "");
+    const slot = String(input.slot || "");
+    const mimeType = String(input.mimeType || "").toLowerCase();
+    const base64 = String(input.base64 || "");
+    const isAvatar = slot === "avatar";
+    const isCover = slot === "cover";
+    const bucket = isAvatar ? "minglora-avatars" : isCover ? "minglora-covers" : "";
+    const maxBytes = 8 * 1024 * 1024;
+    const extensionByMime: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/avif": "avif"
+    };
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId) ||
+        !bucket || !extensionByMime[mimeType] ||
+        !base64 || base64.length > Math.ceil(maxBytes * 4 / 3) + 8 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+      return json(400, { error: "Choose a supported profile image or cover photo." });
+    }
+    let binary: string;
+    try {
+      binary = atob(base64);
+    } catch {
+      return json(400, { error: "The selected image could not be decoded." });
+    }
+    if (!binary.length || binary.length > maxBytes) {
+      return json(413, { error: "Images must be 8 MB or smaller." });
+    }
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    const hasPrefix = (prefix: number[]) => prefix.every((value, index) => bytes[index] === value);
+    const ascii = (start: number, end: number) => String.fromCharCode(...bytes.slice(start, end));
+    const signatureValid =
+      (mimeType === "image/jpeg" && hasPrefix([0xff, 0xd8, 0xff])) ||
+      (mimeType === "image/png" && hasPrefix([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ||
+      (mimeType === "image/webp" && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") ||
+      (mimeType === "image/avif" && ascii(4, 8) === "ftyp" && ["avif", "avis", "mif1"].includes(ascii(8, 12)));
+    if (!signatureValid) return json(415, { error: "The image contents do not match the selected file type." });
+
+    const objectPath = `${ownerId}/${crypto.randomUUID()}.${extensionByMime[mimeType]}`;
+    const { error: uploadError } = await admin.storage.from(bucket).upload(objectPath, bytes, {
+      contentType: mimeType,
+      cacheControl: "31536000",
+      upsert: false
+    });
+    if (uploadError) return json(502, { error: "Minglora could not store the selected image." });
+    const { data: publicData } = admin.storage.from(bucket).getPublicUrl(objectPath);
+    return json(201, { url: publicData.publicUrl, path: objectPath, bucket, byteSize: bytes.byteLength });
   }
 
   if (action === "load" || action === "health") {
