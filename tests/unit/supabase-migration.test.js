@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sql = fs.readFileSync(path.join(root, 'database/migrations/004_supabase_auth_profiles.sql'), 'utf8');
 
 test('Minglora Supabase profile migration has one complete transaction', () => {
