@@ -12,11 +12,21 @@ This is a scope checklist, not a claim of Facebook parity.
 | Groups | Public groups with join/leave, details and member discussion posts; roles/private groups/moderation incomplete |
 | Pages | Create, follow, detail and owner publishing workflows; role management and insights incomplete |
 | Stories | Text/HTTPS-image stories with audiences, 24-hour expiry and view tracking; moderation/media uploads incomplete |
-| Short video/video streaming | Not implemented |
+| Photos and albums | Not implemented |
+| Reels/short-form video | Not implemented |
+| Watch/long-form video | Not implemented |
+| Voice/video calls | Not implemented |
+| Check-ins/places | Not implemented |
+| Memories/fundraisers | Not implemented |
 | Messaging | Basic direct text messaging; realtime, attachments and read receipts incomplete |
 | Notifications | Basic in-app notifications; preference and external delivery incomplete |
 | Search | Basic substring search across people, posts, groups and Pages; indexing and advanced privacy-aware discovery incomplete |
-| Events/Marketplace/Live | Not implemented |
+| Events | Not implemented |
+| Marketplace | Not implemented |
+| Live video | Not implemented |
+| Account recovery/verification | Not implemented |
+| Notification preferences | Not implemented |
+| Data export/deletion | Not implemented |
 | Safety/privacy | Complete reporting, moderation, export/deletion and audience enforcement not implemented |
 | Operations | Node, JSON store, basic tests, Docker and CI exist; durable database and production operations incomplete |
 
