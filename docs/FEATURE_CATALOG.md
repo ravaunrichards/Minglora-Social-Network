@@ -6,7 +6,7 @@ This is a scope checklist, not a claim of Facebook parity.
 |---|---|
 | Accounts | Supabase Auth sign-up/sign-in; login rate limiting, password reset/change, email-change verification, server-sealed auth tokens, session revoke and TOTP MFA when provider configured | Passkeys, push login alerts and account deletion |
 | Profiles | Edit display name, unique username, bio and location; avatar/cover from gallery, folders or camera with image zoom/crop/rotation and Supabase Storage upload | Verified profiles, themes, albums and tagging |
-| Feed/posts | Chronological feed, text and HTTPS image URL posts; ranking, audience controls, edits/deletes and uploads incomplete |
+| Feed/posts | Posts accept device-uploaded photos, videos, audio and GLB 3D attachments; zoom/crop/rotation tools for images; edit and delete own posts | Automated video transcoding, chunked large uploads, personalized ranking and per-post audiences |
 | Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
 | Relationships | Friend requests/acceptance; follow/unfollow, block, mute and restrict incomplete |
 | Groups | Public groups with join/leave, details and member discussion posts; roles/private groups/moderation incomplete |
