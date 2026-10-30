@@ -124,11 +124,19 @@ test('Supabase password sign-in uses the Auth password grant endpoint', async ()
 
 
 test('Minglora skips stale placeholder Supabase credentials when another valid pair exists', () => {
-  withCleanSupabaseEnv(() => {
+  const names = ['SUPABASE_URL','SUPABASE_PUBLISHABLE_KEY','SUPABASE_ANON_KEY','VITE_SUPABASE_URL','VITE_SUPABASE_PUBLISHABLE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY','PUBLIC_SUPABASE_URL','PUBLIC_SUPABASE_PUBLISHABLE_KEY'];
+  const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  try {
+    for (const name of names) delete process.env[name];
     process.env.SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
     process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_REPLACE_ME';
     process.env.VITE_SUPABASE_URL = 'https://minglora-project.supabase.co';
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_valid_test';
     assert.equal(supabaseAuthConfigured(), true);
-  });
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  }
 });
