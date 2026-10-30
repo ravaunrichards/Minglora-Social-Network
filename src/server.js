@@ -777,16 +777,17 @@ async function route(req, res) {
         await saveStore();return json(res,200,{blocked:method==='POST'});
       }
       if(method==='GET'&&p==='/api/blocks')return json(res,200,{users:(db.blocks||[]).filter(b=>b.blockerId===user.id).map(b=>safeUser(db.users.find(u=>u.id===b.blockedId))).filter(Boolean)});
-      m=p.match(/^\/api\/users\/([^/]+)\/(followers|following)$/);
+      m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|friends)$/);
       if(method==='GET'&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
-        const rows=m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id);
-        const users=rows.map(f=>db.users.find(u=>u.id===(m[2]==='followers'?f.followerId:f.followedId))).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
+        const rows=m[2]==='friends'?(db.friendships||[]).filter(f=>f.status==='accepted'&&(f.from===target.id||f.to===target.id)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
+        const ids=rows.map(edge=>m[2]==='friends'?(edge.from===target.id?edge.to:edge.from):(m[2]==='followers'?edge.followerId:edge.followedId));
+        const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
         return json(res,200,{users,count:users.length});
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
-      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:await Promise.all(db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id))),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length}); }
+      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target),posts:await Promise.all(db.posts.filter(x=>x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id))),friendship:db.friendships.find(f=>(f.from===user.id&&f.to===target.id)||(f.to===user.id&&f.from===target.id))?.status||null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,friendsCount:[...new Set((db.friendships||[]).filter(f=>f.status==='accepted'&&(f.from===target.id||f.to===target.id)).map(f=>f.from===target.id?f.to:f.from).filter(id=>!blockedBetween(user.id,id)))].length}); }
       if(method==='PATCH'&&p==='/api/users/me'){
         const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         if(validation.value.username&&db.users.some(item=>item.id!==user.id&&normalizeUsername(item.username)===validation.value.username))return json(res,409,{error:'That username is already in use.'});
