@@ -307,21 +307,54 @@ function renderProfile(data){
   $('#profile-friends-tab')?.addEventListener('click',()=>activateNav('friends'));
   document.querySelectorAll('[data-open-connections]').forEach(button=>button.addEventListener('click',()=>renderConnections(u.id,button.dataset.openConnections)));
 }
-async function fileAsBase64(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onerror=()=>reject(new Error('Could not read the selected image.'));
-    reader.onload=()=>{const result=String(reader.result||'');const comma=result.indexOf(',');if(comma<0)return reject(new Error('The selected image could not be decoded.'));resolve(result.slice(comma+1));};
-    reader.readAsDataURL(file);
-  });
+function mediaMaxBytes(slot){
+  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:500*1024*1024;
 }
-async function uploadProfileImage(slot,file){
+function mediaMaxLabel(slot){
+  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':'500 MB';
+}
+async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
+  let prepared=file;
+  if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
+  let mimeType=prepared.type;
+  if(!mimeType&&prepared.name?.toLowerCase().endsWith('.glb'))mimeType='model/gltf-binary';
+  if(!mimeType)throw new Error('Minglora could not detect the selected file type. Choose a supported photo, video, audio or GLB file.');
+  if(prepared.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
+  if(!window.tus?.Upload)throw new Error('The secure upload component did not load. Refresh Minglora and try again.');
+  const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size})});
+  const uploadInfo=preparedUpload.upload||{};
+  if(!preparedUpload.assetId||!uploadInfo.endpoint||!uploadInfo.token||!uploadInfo.bucket||!uploadInfo.path)throw new Error('Minglora could not prepare this secure upload.');
+  await new Promise((resolve,reject)=>{
+    try{
+      const upload=new window.tus.Upload(prepared,{
+        endpoint:uploadInfo.endpoint,
+        retryDelays:[0,3000,5000,10000,20000],
+        headers:{'x-signature':uploadInfo.token},
+        uploadDataDuringCreation:true,
+        removeFingerprintOnSuccess:true,
+        storeFingerprintForResuming:false,
+        chunkSize:6*1024*1024,
+        metadata:{bucketName:uploadInfo.bucket,objectName:uploadInfo.path,contentType:mimeType,cacheControl:'3600'},
+        onProgress:(bytesUploaded,bytesTotal)=>{
+          const percentage=bytesTotal?Math.min(100,Math.round(bytesUploaded/bytesTotal*100)):0;
+          onProgress({bytesUploaded,bytesTotal,percentage});
+        },
+        onError:error=>reject(new Error('Upload failed: '+(error?.message||'The connection was interrupted. Try again.'))),
+        onSuccess:()=>resolve()
+      });
+      upload.start();
+    }catch(error){reject(error);}
+  });
+  onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
+  const completed=await api('/media/upload/complete',{method:'POST',body:JSON.stringify({assetId:preparedUpload.assetId})});
+  if(!completed.asset?.id)throw new Error('The file uploaded but Minglora could not register it.');
+  return {...completed.asset,user:completed.user||null};
+}
+async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!file)return null;
   const allowed=['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif','image/heic-sequence','image/heif-sequence'];
-  if(!allowed.includes(file.type))throw new Error('Choose a JPG, PNG, WEBP or AVIF image.');
-  if(file.size>8*1024*1024)throw new Error('Profile and cover images must be 8 MB or smaller.');
-  const base64=await fileAsBase64(file);
-  return api('/media/upload',{method:'POST',body:JSON.stringify({slot,mimeType:file.type,base64})});
+  if(!allowed.includes(file.type)&&!/\.(jpe?g|png|webp|avif|heic|heif)$/i.test(file.name||''))throw new Error('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');
+  return uploadMediaFile(slot,file,zoom,rotation,onProgress);
 }
 
 let mediaPickerSequence=0;
@@ -357,8 +390,8 @@ function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
   initialMedia.forEach(item=>entries.push({existing:true,id:item.id,url:item.url,mimeType:item.mimeType||'image/jpeg',mediaType:item.mediaType||'image',name:'Attached media',zoom:1,rotation:0}));
-  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>Take photo / video</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your device. Gallery, folders and the camera are available where your browser supports them. Up to '+maxFiles+' files; 8 MB each.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p></div>';
-  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]');
+  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>Take photo / video</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
+  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress');
   function mediaCard(entry,index){
     let preview='';
     if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
@@ -381,7 +414,7 @@ function createMediaPicker(root,options={}){
   function addFiles(fileList){
     for(const file of Array.from(fileList||[])){
       if(entries.length>=maxFiles){status.textContent='You can select up to '+maxFiles+' files.';break;}
-      if(file.size>8*1024*1024){status.textContent=file.name+' is over the 8 MB limit.';continue;}
+      if(file.size>mediaMaxBytes(slot)){status.textContent=file.name+' is over the '+mediaMaxLabel(slot)+' limit for this media area.';continue;}
       const allowed=accept.split(',').some(pattern=>pattern.trim().startsWith('.')?file.name.toLowerCase().endsWith(pattern.trim().toLowerCase()):pattern.trim().endsWith('/*')?file.type.startsWith(pattern.trim().slice(0,-1)):file.type===pattern.trim());
       if(!allowed){status.textContent=file.name+' has an unsupported file type.';continue;}
       const previewUrl=URL.createObjectURL(file);objectUrls.push(previewUrl);
@@ -400,12 +433,12 @@ function createMediaPicker(root,options={}){
       const ids=[];
       for(const entry of entries){
         if(entry.existing){ids.push(entry.id);continue;}
-        status.textContent='Uploading '+(entry.file?.name||'media')+'…';
-        const saved=await uploadMediaFile(slot,entry.file,entry.zoom,entry.rotation);
+        status.textContent='Preparing '+(entry.file?.name||'media')+'…';progress.hidden=false;progress.value=0;
+        const saved=await uploadMediaFile(slot,entry.file,entry.zoom,entry.rotation,update=>{progress.value=update.percentage;status.textContent=update.finalizing?'Upload complete. Saving media record…':'Uploading '+(entry.file?.name||'media')+' · '+update.percentage+'%';});
         ids.push(saved.id);
         entry.existing=true;entry.id=saved.id;entry.url=saved.previewUrl||null;entry.mediaType=saved.mediaType;entry.mimeType=saved.mimeType;entry.byteSize=saved.byteSize;entry.name=entry.file.name;entry.file=null;
       }
-      status.textContent=ids.length?'Media uploaded and ready.':'No media selected.';
+      status.textContent=ids.length?'Media uploaded and ready.':'No media selected.';progress.hidden=true;
       return ids;
     },
     destroy(){objectUrls.forEach(url=>URL.revokeObjectURL(url));root.innerHTML='';}
