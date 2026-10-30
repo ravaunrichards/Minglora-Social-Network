@@ -12,7 +12,7 @@ The local JSON store includes narrowly scoped cleanup for explicitly identified 
 
 - Responsive browser interface and account registration/sign-in/sign-out (Supabase Auth when configured)
 - Signed HttpOnly application session cookies; Supabase Auth owns production passwords, while salted scrypt hashes remain only for legacy-account migration
-- Basic profile viewing/editing
+- Profile viewing/editing with device gallery and file-picker uploads for avatar and cover photos; image previews, MIME/signature checks, 8 MB limit and Supabase Storage delivery
 - All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination
 - Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, block/unblock, follower/following lists and profile counts
