@@ -52,7 +52,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | GET | `/api/groups/:id` | Read public group details and discussion posts |
 | POST | `/api/groups/:id/join` | Join a group |
 | DELETE | `/api/groups/:id/join` | Leave a group (owner cannot leave without transfer/deletion) |
-| POST | `/api/groups/:id/posts` | Publish a text post as a group member |
+| POST | `/api/groups/:id/posts` | Publish a post as a group member using text and uploaded mediaIds; pasted image URLs are rejected |
 | DELETE | `/api/groups/:id/posts/:postId` | Delete a group post as author or group owner |
 
 ## Pages
@@ -64,7 +64,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | GET | `/api/pages/:id` | Read a Page and its published posts |
 | DELETE | `/api/pages/:id` | Delete a Page as its owner, including its posts and follows |
 | POST/DELETE | `/api/pages/:id/follow` | Follow or unfollow a Page |
-| POST | `/api/pages/:id/posts` | Publish a Page post with uploaded media references as a Page owner/admin/editor |
+| POST | `/api/pages/:id/posts` | Publish a Page post with text and uploaded media references as a Page owner/admin/editor; pasted image URLs are rejected |
 | DELETE | `/api/pages/:id/posts/:postId` | Delete a Page post as its publisher or Page owner/admin |
 
 The current UI assigns only the creator/owner role; an interface for appointing additional Page admins/editors is not implemented.
