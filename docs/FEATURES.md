@@ -9,7 +9,7 @@ This document distinguishes working code from unfinished product requirements. A
 | Reactions | Like toggle in browser; API accepts like, love, care, haha, wow, sad and angry | Full reaction picker and reaction analytics |
 | Comments | Add comments and delete comments as the comment author or post author | Edit, threaded replies, reaction lifecycle, moderation and reporting |
 | Profiles | View profiles/posts, edit name/bio/location/avatar/cover, see real follower/following/post counts, follow/unfollow and block/unblock from profile UI | Profile privacy, verified accounts, themes, and granular audience settings |
-| Friends and follows | Send/accept friend requests, accepted friend lists, directed follow/unfollow, block/unblock and followers/following lists | Unfriend lifecycle beyond blocking, mute/restrict, report flows and request cancellation |
+| Friends and follows | Send/accept/decline/retry friend requests, accepted friend lists, unfriend/cancel request, directed follow/unfollow, block/unblock and followers/following lists | Mute/restrict, report flows and advanced relationship controls |
 | Groups | Create, browse and join groups | Group posts, roles, events, invitations, private groups and moderation |
 | Messages | Direct text messages and conversation history; blocked pairs cannot start messages and are filtered from conversation lists | Real-time delivery, attachments, read receipts, message deletion and full conversation authorization lifecycle |
 | Notifications | In-app notifications for supported reactions, comments, friend requests and messages; mark all read | Push/email delivery, per-notification read state and notification preferences |
