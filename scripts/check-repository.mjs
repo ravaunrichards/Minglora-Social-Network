@@ -17,7 +17,11 @@ const requiredFiles = [
 ];
 const requiredDirectories = [
   'apps/web', 'apps/android', 'apps/ios', 'apps/desktop', 'apps/tv', 'apps/admin', 'apps/creator-studio',
-  'frontend/components', 'frontend/layouts', 'frontend/pages', 'frontend/navigation', 'frontend/themes',
+  'frontend/components', 'frontend/components/feed', 'frontend/components/profile', 'frontend/components/messaging', 'frontend/components/media', 'frontend/components/forms', 'frontend/components/dialogs', 'frontend/components/navigation',
+  'frontend/layouts', 'frontend/pages', 'frontend/pages/feed', 'frontend/pages/profile', 'frontend/pages/friends', 'frontend/pages/groups', 'frontend/pages/pages', 'frontend/pages/stories', 'frontend/pages/messages', 'frontend/pages/notifications', 'frontend/pages/search', 'frontend/pages/events', 'frontend/pages/marketplace', 'frontend/pages/live', 'frontend/pages/settings',
+  'frontend/navigation', 'frontend/themes',
+  'assets/icons', 'assets/images', 'assets/fonts', 'assets/animations', 'assets/manifests',
+  'scripts',
   'backend/modules/groups', 'backend/modules/pages', 'backend/modules/stories',
   'backend/modules/albums', 'backend/modules/reels', 'backend/modules/watch', 'backend/modules/calls',
   'backend/modules/events', 'backend/modules/marketplace', 'backend/modules/live',
