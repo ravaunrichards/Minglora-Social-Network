@@ -2,7 +2,7 @@
 
 ## Supabase project
 
-Minglora uses its own Supabase project: `gzycobgbasnqqhnympkr` (US East, PostgreSQL 17). The canonical Supabase migrations `005_minglora_supabase_relational_platform` and `006_minglora_database_hardening` are already applied there.
+Minglora uses its own Supabase project: `gzycobgbasnqqhnympkr` (US East, PostgreSQL 17). The canonical Supabase migrations `005`–`013` are already applied there. They establish Auth-linked profiles, the normalized domain schema, RLS and write privileges, Storage buckets, Realtime publication, private authorization helpers, and a restricted runtime-state login role.
 
 The schema contains Auth-linked profiles and normalized relational domains for social relationships, posts, media metadata, reactions, comments, Groups, Pages, Stories, messaging, notifications, events, moderation reports, Marketplace, short videos, Live sessions, calls, check-ins, creator fundraisers, privacy/data-rights requests and video watch history. All 47 public tables have RLS enabled. See [database/README.md](../database/README.md) and [Supabase setup](SUPABASE_SETUP.md).
 
@@ -17,7 +17,7 @@ A clean project starts empty. Existing local JSON data is not automatically impo
 | Variable | Value |
 | --- | --- |
 | `PERSISTENCE_DRIVER` | `postgres` |
-| `DATABASE_URL` | Private Minglora PostgreSQL connection string, stored as a secret |
+| `DATABASE_URL` | Private Minglora Session Pooler connection string for `minglora_runtime`, stored as a secret |
 | `PGSSLMODE` | `require` |
 | `PG_POOL_MAX` | `5` |
 | `SESSION_SECRET` | Random secret of at least 32 characters |
@@ -34,7 +34,7 @@ Never put `DATABASE_URL`, `SESSION_SECRET`, or a service-role/secret key in GitH
 - Production JSON-file mode is not ready.
 - PostgreSQL mode is ready only when the database accepts a health query and Supabase Auth has a valid URL/key configuration.
 
-Set the hosting service health-check path to `/api/ready` only after its environment has been configured.
+Set the hosting service health-check path to `/api/ready` after its PostgreSQL environment is configured. Supabase Auth URL and publishable key are currently configured on the Render service; its `DATABASE_URL` and `PERSISTENCE_DRIVER=postgres` are still pending the private runtime-role password.
 
 ## Next architecture step
 
