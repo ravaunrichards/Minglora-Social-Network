@@ -236,6 +236,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal('passwordHash' in accountExport.body.profile, false);
   const invalidPost = await request('/api/posts', { method: 'POST', body: JSON.stringify({ imageUrl: 'http://example.test/not-secure.jpg' }) });
   assert.equal(invalidPost.status, 400);
+  const pastedHttpsImagePost = await request('/api/posts', { method: 'POST', body: JSON.stringify({ text: 'URL media is no longer allowed', imageUrl: 'https://example.test/photo.jpg' }) });
+  assert.equal(pastedHttpsImagePost.status, 400);
   const feedPage = await request('/api/feed?limit=1');
   assert.equal(feedPage.status, 200);
   assert.deepEqual(feedPage.body.posts.map(item => item.id), [post.body.post.id]);
@@ -257,6 +259,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ imageUrl: 'http://example.test/story.jpg' })
   });
   assert.equal(invalidStory.status, 400);
+  const pastedHttpsStory = await request('/api/stories', { method: 'POST', body: JSON.stringify({ imageUrl: 'https://example.test/story.jpg' }) });
+  assert.equal(pastedHttpsStory.status, 400);
 
   const editedPost = await request(`/api/posts/${post.body.post.id}`, {
     method: 'PATCH',
@@ -306,6 +310,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ handle: 'MINGLORA-LABS', title: 'Duplicate Page', description: '' })
   });
   assert.equal(duplicatePage.status, 409);
+  const rejectedPageImageUrl = await request(`/api/pages/${page.body.page.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'URL media must be blocked', imageUrl: 'https://example.test/page.jpg' }) });
+  assert.equal(rejectedPageImageUrl.status, 400);
   const pagePost = await request(`/api/pages/${page.body.page.id}/posts`, {
     method: 'POST',
     body: JSON.stringify({ text: 'A genuine Page update' })
@@ -380,6 +386,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(groupDetail.status, 200);
   assert.equal(groupDetail.body.group.memberCount, 2);
   assert.equal(groupDetail.body.group.isMember, true);
+  const rejectedGroupImageUrl = await request(`/api/groups/${group.body.group.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'URL media must be blocked', imageUrl: 'https://example.test/group.jpg' }) });
+  assert.equal(rejectedGroupImageUrl.status, 400);
   const groupPost = await request(`/api/groups/${group.body.group.id}/posts`, {
     method: 'POST',
     body: JSON.stringify({ text: 'A real group discussion post' })
