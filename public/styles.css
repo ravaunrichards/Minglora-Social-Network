@@ -359,3 +359,12 @@
   .call-controls button{flex:1;min-width:0}
   .settings-account-action{align-items:flex-start;flex-direction:column}
 }
+
+
+/* Original low-poly glTF gift models */
+.live-gift-button{min-height:106px;justify-content:center;overflow:hidden}
+.live-gift-model-slot{display:flex;align-items:center;justify-content:center;width:66px;height:62px;max-width:100%}
+.live-gift-model-slot model-viewer{width:66px;height:62px;background:transparent;--poster-color:transparent}
+.live-gift-effect-3d{top:42%;width:clamp(160px,32vw,340px);height:clamp(160px,32vw,340px);font-size:0;filter:drop-shadow(0 8px 30px rgba(255,205,87,.45));animation:minglora-gift-3d-entry 2.6s cubic-bezier(.15,.8,.25,1) forwards}
+.live-gift-effect-3d model-viewer{width:100%;height:100%;background:transparent;--poster-color:transparent}
+@keyframes minglora-gift-3d-entry{0%{opacity:0;transform:translate(-50%,-40%) scale(.12) rotate(-18deg)}22%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(4deg)}65%{opacity:1;transform:translate(-50%,-54%) scale(1) rotate(0)}100%{opacity:0;transform:translate(-50%,-82%) scale(.78) rotate(12deg)}}
