@@ -60,6 +60,7 @@ async function handleMingloraPushNavigation(){
   window.history.replaceState({},'',window.location.pathname+window.location.hash);
   try{
     if(type==='call'&&callId){await answerMingloraCall(callId);return;}
+    if(type==='decline-call'&&callId){await declineMingloraCall(callId);return;}
     if(type==='live'&&liveSessionId){
       const sessions=(await api('/live/sessions')).sessions||[],session=sessions.find(item=>item.id===liveSessionId);
       if(session){await openLiveRoom(session,'viewer');return;}
