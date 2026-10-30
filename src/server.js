@@ -34,6 +34,24 @@ async function body(req) {
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
 const notify = (userId, actorId, type, text) => db.notifications.unshift({ id:uid(), userId, actorId, type, text, createdAt:now(), read:false });
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
+const canViewStory = (viewerId, story) => {
+  if (!viewerId || !story?.userId) return false;
+  if (viewerId === story.userId) return true;
+  if (blockedBetween(viewerId, story.userId)) return false;
+  if (story.audience === 'public') return true;
+  if (story.audience === 'friends') return db.friendships.some(f => f.status === 'accepted' && ((f.from === viewerId && f.to === story.userId) || (f.from === story.userId && f.to === viewerId)));
+  if (story.audience === 'followers') return (db.follows || []).some(f => f.followerId === viewerId && f.followedId === story.userId);
+  return false;
+};
+function pruneExpiredStories() {
+  const current = Date.now();
+  const expired = (db.stories || []).filter(story => !Number.isFinite(Date.parse(story.expiresAt)) || Date.parse(story.expiresAt) <= current);
+  if (!expired.length) return;
+  const expiredIds = new Set(expired.map(story => story.id));
+  db.stories = (db.stories || []).filter(story => !expiredIds.has(story.id));
+  db.storyViews = (db.storyViews || []).filter(view => !expiredIds.has(view.storyId));
+  saveStore();
+}
 function publicPost(p, viewerId) {
   const author = db.users.find(u=>u.id===p.userId);
   return { ...p, author:safeUser(author), reactions:p.reactions || {}, reactionCount:Object.values(p.reactions || {}).length, myReaction:(p.reactions || {})[viewerId] || null,
@@ -222,6 +240,41 @@ async function route(req, res) {
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
         const posts=(db.groupPosts||[]).filter(post=>post.groupId===group.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>({...post,author:safeUser(db.users.find(u=>u.id===post.userId))}));
         return json(res,200,{group:{...group,owner:safeUser(db.users.find(u=>u.id===group.ownerId)),members:group.members.map(id=>safeUser(db.users.find(u=>u.id===id))).filter(Boolean),memberCount:group.members.length,isMember:group.members.includes(user.id)},posts});
+      }
+      if(method==='GET'&&p==='/api/stories'){
+        pruneExpiredStories();
+        const stories=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(story=>({...story,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)}));
+        return json(res,200,{stories});
+      }
+      if(method==='POST'&&p==='/api/stories'){
+        const text=String(input.text||'').trim(),imageUrl=String(input.imageUrl||'').trim(),audience=String(input.audience||'public');
+        if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!text&&!imageUrl)return json(res,400,{error:'Add text or an HTTPS image URL to create a story.'});
+        if(text.length>1000||imageUrl.length>2000)return json(res,400,{error:'Story text or image URL is too long.'});
+        if(imageUrl){try{if(new URL(imageUrl).protocol!=='https:')return json(res,400,{error:'Story image URL must use HTTPS.'});}catch{return json(res,400,{error:'Story image URL must be a valid absolute URL.'});}}
+        const createdAt=now();
+        const story={id:uid(),userId:user.id,text,imageUrl,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        db.stories.push(story);saveStore();return json(res,201,{story:{...story,author:safeUser(user),viewCount:0,viewedByMe:false}});
+      }
+      m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
+      if(method==='POST'&&m){
+        pruneExpiredStories();
+        const story=db.stories.find(x=>x.id===m[1]);
+        if(!story||!canViewStory(user.id,story))return json(res,404,{error:'Story not found.'});
+        if(story.userId!==user.id&&!(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)){
+          db.storyViews.push({storyId:story.id,viewerId:user.id,viewedAt:now()});saveStore();
+        }
+        const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
+        return json(res,200,{story:{...story,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===user.id||views.some(view=>view.viewerId===user.id),viewCount:views.length,viewers:story.userId===user.id?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined}});
+      }
+      m=p.match(/^\/api\/stories\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        pruneExpiredStories();
+        const story=db.stories.find(x=>x.id===m[1]);
+        if(!story)return json(res,404,{error:'Story not found.'});
+        if(story.userId!==user.id)return json(res,403,{error:'Only the story author can delete this story.'});
+        db.stories=db.stories.filter(x=>x.id!==story.id);db.storyViews=(db.storyViews||[]).filter(view=>view.storyId!==story.id);
+        saveStore();return json(res,200,{ok:true,id:story.id});
       }
       if(method==='GET'&&p==='/api/messages'){const peers=[...new Set(db.messages.filter(x=>x.from===user.id||x.to===user.id).map(x=>x.from===user.id?x.to:x.from))].filter(id=>!blockedBetween(user.id,id));return json(res,200,{conversations:peers.map(id=>({user:safeUser(db.users.find(u=>u.id===id)),messages:db.messages.filter(x=>(x.from===user.id&&x.to===id)||(x.from===id&&x.to===user.id)).map(x=>({...x,author:safeUser(db.users.find(u=>u.id===x.from))})).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}))});}
       if(method==='POST'&&p==='/api/messages'){const to=String(input.to||''),text=String(input.text||'').trim();if(!db.users.some(u=>u.id===to)||to===user.id||blockedBetween(user.id,to)||!text||text.length>3000)return json(res,400,{error:'Choose a recipient and enter a message (max 3000 characters).'});const msg={id:uid(),from:user.id,to,text,createdAt:now(),read:false};db.messages.push(msg);notify(to,user.id,'message',`${user.name} sent you a message.`);saveStore();return json(res,201,{message:{...msg,author:safeUser(user)}});}
