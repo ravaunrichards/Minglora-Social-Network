@@ -26,6 +26,52 @@ export function isLiveKitConfigured() {
   return Boolean(settings.serverUrl && settings.clientUrl && settings.apiKey && settings.apiSecret);
 }
 
+
+let connectionHealth = { configured: false, connected: false, checkedAt: null, checkedAtMs: 0, error: null };
+
+export async function verifyLiveKitConnection({ force = false } = {}) {
+  const settings = config();
+  const configured = Boolean(settings.serverUrl && settings.clientUrl && settings.apiKey && settings.apiSecret);
+  if (!configured) {
+    connectionHealth = {
+      configured: false,
+      connected: false,
+      checkedAt: null,
+      checkedAtMs: Date.now(),
+      error: 'LiveKit server credentials are not configured.'
+    };
+    return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
+  }
+
+  const cacheTtl = connectionHealth.connected ? 30000 : 5000;
+  if (!force && connectionHealth.configured && Date.now() - connectionHealth.checkedAtMs < cacheTtl) {
+    return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
+  }
+
+  try {
+    const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+    await service.listRooms();
+    connectionHealth = { configured: true, connected: true, checkedAt: new Date().toISOString(), checkedAtMs: Date.now(), error: null };
+  } catch (error) {
+    const status = Number(error?.statusCode || error?.status || error?.response?.status || 0);
+    const message = String(error?.message || '');
+    const rejected = status === 401 || status === 403 || /unauthenticated|unauthorized|invalid.*(key|secret)|signature/i.test(message);
+    connectionHealth = {
+      configured: true,
+      connected: false,
+      checkedAt: new Date().toISOString(),
+      checkedAtMs: Date.now(),
+      error: rejected
+        ? 'LiveKit rejected the API key or API secret.'
+        : status
+          ? 'LiveKit API returned HTTP ' + status + '.'
+          : 'Could not reach LiveKit. Check LIVEKIT_URL and network access.'
+    };
+  }
+
+  return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
+}
+
 export async function createLiveKitToken({ identity, name, roomName, canPublish = false }) {
   const settings = config();
   if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {

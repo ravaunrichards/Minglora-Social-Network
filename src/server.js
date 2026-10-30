@@ -6,7 +6,7 @@ import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
-import { createLiveKitToken, isLiveKitConfigured, listLiveKitParticipants } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -846,7 +846,8 @@ async function route(req, res) {
         return json(res,200,{categories:['general','account','security','bug','abuse','billing','privacy']});
       }
       if (method === 'GET' && p === '/api/live/status') {
-        return json(res, 200, { provider: 'livekit', configured: isLiveKitConfigured() });
+        const health = await verifyLiveKitConnection();
+        return json(res, 200, { provider: 'livekit', ...health });
       }
       if (method === 'GET' && p === '/api/live/sessions') {
         const canView = session => {
@@ -877,6 +878,8 @@ async function route(req, res) {
       }
       if (method === 'POST' && p === '/api/live/sessions') {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured. Add Minglora LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET to the server environment.' });
+        const liveHealth = await verifyLiveKitConnection();
+        if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const title = String(input.title || '').trim();
         const visibility = String(input.visibility || 'public');
         if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(visibility)) {
@@ -906,6 +909,8 @@ async function route(req, res) {
       let liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/join$/);
       if (method === 'POST' && liveMatch) {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured for Minglora.' });
+        const liveHealth = await verifyLiveKitConnection();
+        if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
         const friendAccess = isFriend(user.id, session.hostId);
@@ -1668,4 +1673,6 @@ server.listen(PORT,'0.0.0.0',async()=>{
     liveProvider: 'livekit',
     liveConfigured: isLiveKitConfigured()
   }));
+  const liveHealth = await verifyLiveKitConnection({ force: true });
+  console.info('[Minglora LiveKit verification]', JSON.stringify(liveHealth));
 });

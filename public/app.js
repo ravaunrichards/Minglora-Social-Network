@@ -293,6 +293,8 @@ function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRe
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function renderLiveDirectory(sessions,status,catalog,wallet){
+  const liveReady=Boolean(status.configured&&status.connected===true);
+  const liveStatusText=!status.configured?"Live provider not configured":liveReady?"Live video ready":"Live provider connection failed";
   const cards=sessions.length?sessions.map(session=>
     "<article class='live-room-card'><div class='live-room-preview'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
     (session.viewerCountVerified?"◉ "+Number(session.viewerCount||0).toLocaleString()+" watching":"Viewers unavailable")+
@@ -301,9 +303,9 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     "</small><button class='primary' data-watch-live='"+esc(session.id)+"'>Watch LIVE</button></div></article>"
   ).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
   const packages=(catalog.packages||[]).slice(0,4);
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, creator chat and animated gifts.</p></div><span class='live-status-pill "+(status.configured?"ready":"unavailable")+"'>"+(status.configured?"Live video ready":"Live provider not configured")+"</span></div>"+
-    "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose a title and who can watch. Your camera and microphone are requested after you start.</p></div><form id='live-create-form' class='live-create-form'><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(status.configured?"":"disabled")+">🔴 Start LIVE</button></form>"+
-    (status.configured?"":"<p class='form-hint'>LiveKit server credentials are required before anyone can broadcast.</p>")+"</section>"+
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, creator chat and animated gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+    "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose a title and who can watch. Your camera and microphone are requested after you start.</p></div><form id='live-create-form' class='live-create-form'><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
+    (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div><div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+

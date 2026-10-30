@@ -133,6 +133,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(liveStatus.status, 200);
   assert.equal(liveStatus.body.provider, 'livekit');
   assert.equal(liveStatus.body.configured, false);
+  assert.equal(liveStatus.body.connected, false);
   const unconfiguredLiveStart = await request('/api/live/sessions', {
     method: 'POST',
     body: JSON.stringify({ title: 'This must not create a fake live room', visibility: 'public' })
