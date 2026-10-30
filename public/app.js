@@ -355,7 +355,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
     if(state.view==='live'){
       setContent("<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE connection failed</h3><p>"+esc(error.message||'Minglora could not connect to the LIVE room.')+"</p><button class='primary' id='retry-live-connection'>Try again</button><button class='secondary' id='back-live-directory'>Back to LIVE</button></section>");
-      $('#retry-live-connection')?.addEventListener('click',()=>openLiveRoom(session,role,issuedLiveKit).catch(err=>toast(err.message)));
+      $('#retry-live-connection')?.addEventListener('click',()=>{
+        if(role==='host'){renderLive();return;}
+        openLiveRoom(session,'viewer').catch(err=>toast(err.message));
+      });
       $('#back-live-directory')?.addEventListener('click',()=>renderLive());
     }
     throw error;
