@@ -1,4 +1,4 @@
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 
 function config() {
   return {
@@ -43,4 +43,25 @@ export async function createLiveKitToken({ identity, name, roomName, canPublish 
     url: settings.url,
     token: await accessToken.toJwt()
   };
+}
+
+export async function listLiveKitParticipants(roomName) {
+  const settings = config();
+  if (!settings.url || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid LIVE room name is required.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.url, settings.apiKey, settings.apiSecret);
+  const participants = await service.listParticipants(roomName);
+  return participants.map(participant => ({
+    identity: participant.identity,
+    name: participant.name || participant.identity,
+    joinedAt: participant.joinedAt ? new Date(Number(participant.joinedAt) * 1000).toISOString() : null
+  }));
 }
