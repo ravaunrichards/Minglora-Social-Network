@@ -1,4 +1,4 @@
-const trimSlash = value => String(value || '').trim().replace(/\\/+$/, '');
+const trimSlash = value => String(value || '').trim().replace(/\/+$/, '');
 
 export function supabaseAuthConfigured() {
   const rawUrl = trimSlash(process.env.SUPABASE_URL);
