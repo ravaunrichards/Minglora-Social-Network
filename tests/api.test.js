@@ -65,6 +65,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(readiness.status, 200);
   assert.equal(readiness.body.components.persistence.driver, 'json');
   assert.equal(readiness.body.components.persistence.durable, false);
+  assert.equal(readiness.body.components.live.provider, 'livekit');
+  assert.equal(readiness.body.components.live.configured, false);
 
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
@@ -579,6 +581,34 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(deletePage.status, 200);
   cookie = secondCookie;
   assert.equal((await request(`/api/pages/${page.body.page.id}`)).status, 404);
+
+  cookie = firstCookie;
+  const deactivate = await request('/api/account/deactivate', {
+    method: 'POST',
+    body: JSON.stringify({ confirmation: 'DEACTIVATE' })
+  });
+  assert.equal(deactivate.status, 200);
+  assert.equal((await request('/api/feed')).status, 401);
+  cookie = '';
+  const reactivateLogin = await request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'test-user@example.test', password: 'NewTestPassword456!' })
+  });
+  assert.equal(reactivateLogin.status, 200, JSON.stringify(reactivateLogin.body));
+  assert.equal((await request('/api/feed')).status, 200);
+
+  const deletionRequest = await request('/api/account/deletion-request', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword: 'NewTestPassword456!' })
+  });
+  assert.equal(deletionRequest.status, 202);
+  assert.equal(deletionRequest.body.request.requestType, 'deletion');
+  const duplicateDeletionRequest = await request('/api/account/deletion-request', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword: 'NewTestPassword456!' })
+  });
+  assert.equal(duplicateDeletionRequest.status, 202);
+  assert.equal(duplicateDeletionRequest.body.request.id, deletionRequest.body.request.id);
 
   const logout = await request('/api/auth/logout', { method: 'POST', body: '{}' });
   assert.equal(logout.status, 200);
