@@ -163,6 +163,12 @@ async function publicPost(p,viewerId) {
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
+function findReportedPost(targetId){
+  const post=(db.posts||[]).find(item=>item.id===targetId);if(post)return {collection:'posts',post,ownerId:post.userId};
+  const groupPost=(db.groupPosts||[]).find(item=>item.id===targetId);if(groupPost)return {collection:'groupPosts',post:groupPost,ownerId:groupPost.userId};
+  const pagePost=(db.pagePosts||[]).find(item=>item.id===targetId);if(pagePost)return {collection:'pagePosts',post:pagePost,ownerId:pagePost.publishedBy};
+  return null;
+}
 async function publicGroupPost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.userId&&item.slot==='post');if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   const {imageUrl,...cleanPost}=post;
@@ -479,7 +485,7 @@ async function route(req, res) {
         if(!allowedTypes.includes(targetType)||!targetId||!allowedCategories.includes(category)||details.length>2000)return json(res,400,{error:'Choose a report type, reason and optional details (maximum 2000 characters).'});
         let exists=false;
         if(targetType==='user')exists=db.users.some(item=>item.id===targetId&&item.id!==user.id);
-        if(targetType==='post')exists=db.posts.some(item=>item.id===targetId);
+        if(targetType==='post')exists=Boolean(findReportedPost(targetId));
         if(targetType==='comment')exists=db.posts.some(post=>(post.comments||[]).some(comment=>comment.id===targetId));
         if(targetType==='story')exists=(db.stories||[]).some(item=>item.id===targetId);
         if(targetType==='group')exists=(db.groups||[]).some(item=>item.id===targetId);
@@ -500,7 +506,7 @@ async function route(req, res) {
         const status=String(url.searchParams.get('status')||'open');
         const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>({
           ...item,reporter:safeUser(db.users.find(u=>u.id===item.reporterId)),
-          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===db.posts.find(post=>post.id===item.targetId)?.userId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null))
+          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null))
         }));
         return json(res,200,{reports});
       }
@@ -517,8 +523,15 @@ async function route(req, res) {
         report.reviewedAt=now();report.reviewedBy=user.id;
         if(input.action&&['hide_post','remove_post','remove_story','suspend_account'].includes(input.action)){
           const action=String(input.action);
-          if(action==='hide_post'&&report.targetType==='post'){const post=db.posts.find(item=>item.id===report.targetId);if(post){post.status='hidden';post.hiddenAt=now();}}
-          if(action==='remove_post'&&report.targetType==='post'){const post=db.posts.find(item=>item.id===report.targetId);if(post){db.posts=db.posts.filter(item=>item.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});}}
+          if(action==='hide_post'&&report.targetType==='post'){const found=findReportedPost(report.targetId);if(found){found.post.status='hidden';found.post.hiddenAt=now();}}
+          if(action==='remove_post'&&report.targetType==='post'){
+            const found=findReportedPost(report.targetId);
+            if(found){
+              db[found.collection]=db[found.collection].filter(item=>item.id!==found.post.id);
+              (found.post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
+              db.savedPosts=(db.savedPosts||[]).filter(item=>item.postId!==found.post.id);
+            }
+          }
           if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}}}
           if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);}}
           (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,reportId:report.id,action,targetType:report.targetType,targetId:report.targetId,createdAt:now()});
