@@ -122,8 +122,8 @@ function sessionUser(req) {
   const session = db.sessions.find(s => s.id === id && new Date(s.expiresAt) > new Date());
   return session ? db.users.find(u => u.id === session.userId) || null : null;
 }
-async function body(req) {
-  let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > 1_000_000) throw Object.assign(new Error('Request body too large'), {status:413}); }
+async function body(req, maxBytes=1_000_000) {
+  let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
@@ -179,7 +179,7 @@ async function route(req, res) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
   if (p.startsWith('/api/')) {
-    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,p==='/api/media/upload'?12*1024*1024:1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
       if (method==='POST' && p==='/api/auth/register') {
@@ -238,6 +238,36 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user)});
       requireAuth(user);
+      if(method==='POST'&&p==='/api/media/upload'){
+        const slot=String(input.slot||'');
+        const mimeType=String(input.mimeType||'').toLowerCase();
+        const base64=String(input.base64||'');
+        const maxBytes=8*1024*1024;
+        const extensions={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
+        if(!['avatar','cover'].includes(slot)||!extensions[mimeType]||!base64||base64.length>Math.ceil(maxBytes*4/3)+8||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))return json(res,400,{error:'Choose a supported profile image or cover photo.'});
+        const bytes=Buffer.from(base64,'base64');
+        if(!bytes.length||bytes.length>maxBytes||bytes.toString('base64')!==base64)return json(res,413,{error:'Images must be valid and 8 MB or smaller.'});
+        const ascii=(start,end)=>bytes.toString('ascii',start,end);
+        const signatureValid=
+          (mimeType==='image/jpeg'&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)||
+          (mimeType==='image/png'&&bytes.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])))||
+          (mimeType==='image/webp'&&ascii(0,4)==='RIFF'&&ascii(8,12)==='WEBP')||
+          (mimeType==='image/avif'&&ascii(4,8)==='ftyp'&&['avif','avis','mif1'].includes(ascii(8,12)));
+        if(!signatureValid)return json(res,415,{error:'The image contents do not match the selected file type.'});
+        const stateApiUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim();
+        const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
+        const publishableKey=String(process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'').trim();
+        if(!stateApiUrl||!stateApiKey||!publishableKey)return json(res,503,{error:'Minglora image storage is not configured.'});
+        let uploadResponse;
+        try{
+          uploadResponse=await fetch(stateApiUrl,{method:'POST',headers:{apikey:publishableKey,'x-minglora-api-key':stateApiKey,'Content-Type':'application/json'},body:JSON.stringify({action:'media_upload',ownerId:user.id,slot,mimeType,base64})});
+        }catch{return json(res,503,{error:'Minglora could not reach image storage.'});}
+        const uploaded=await uploadResponse.json().catch(()=>({}));
+        if(!uploadResponse.ok||typeof uploaded.url!=='string'||!uploaded.url.startsWith('https://'))return json(res,502,{error:uploaded.error||'Minglora could not store the selected image.'});
+        user[slot]=uploaded.url;
+        await saveStore();
+        return json(res,201,{slot,url:uploaded.url,user:safeUser(user),byteSize:bytes.length});
+      }
       if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{name:user.name,username:user.username,email:user.email||''}});
       if(method==='PATCH'&&p==='/api/settings'){
         const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
