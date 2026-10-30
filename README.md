@@ -105,14 +105,15 @@ All application API endpoints use the `/api` prefix.
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `GET /api/feed` (optional `?limit=20&cursor=...` pagination), `POST /api/posts`
 - `POST /api/posts/:id/reactions`, `POST /api/posts/:id/comments`
-- `GET /api/users`, `GET /api/users/:id`, `PATCH /api/users/me`
+- `GET /api/users`, `GET /api/users/:id`, `GET /api/users/:id/followers|following|friends`, `PATCH /api/users/me`
 - `POST /api/friends/:id/request`, `POST /api/friends/:id/accept`
 - `GET /api/groups`, `POST /api/groups`, group detail and discussion routes under `/api/groups/:id`
 - `GET /api/pages`, `POST /api/pages`, Page detail/follow/post routes under `/api/pages/:id`
 - `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
 - `GET /api/messages`, `POST /api/messages`
 - `GET /api/notifications`, `GET /api/search?q=...`
-- `GET/PATCH /api/settings`, `POST /api/media/upload` (member profile avatar and cover uploads), `GET /api/account/export`
+- `GET/PATCH /api/settings`, `POST /api/media/upload/prepare`, `POST /api/media/upload/complete`, `GET /api/account/export`
+- `/api/security/*` password, email, MFA and session controls; `/api/reports/*`, `/api/moderation/*` and `/api/support/*` reporting, review and support workflows
 - `/api/live/*` session/status routes documented in [LiveKit integration](backend/modules/live/README.md)
 
 See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must not be treated as implemented.
@@ -123,7 +124,7 @@ Hosted persistence now uses Supabase's PostgreSQL database through the Supabase 
 
 The single-row JSONB compatibility adapter is durable but does not provide normalized relational transactions or multi-instance concurrency. Minglora's Supabase relational schema and hardening migrations 005–014 are installed. Application routes still need to move to the normalized tables before the system can be considered a high-concurrency social-network data layer.
 
-Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, wire Supabase Auth URL and SMTP settings, implement rate limiting, CSRF safeguards, complete privacy enforcement, media upload safety, content reporting/moderation, observability and a security review. Story media uploads/moderation, realtime messaging, Live video, short-form video playback, Marketplace and Ads are not currently implemented.
+Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, complete Supabase Auth email templates and redirect allow-lists, move login throttling to a distributed rate limiter, add malware/media scanning and appeals policy automation, complete route-by-route privacy/accessibility audits, observability and a security review. Device-based media upload, Story photo/video, member reporting, the initial moderator queue and support tickets are implemented. Automated video transcoding, real-time messaging, Live video, short-form video playback, Marketplace and Ads remain unfinished.
 
 ## Supabase Auth integration
 
