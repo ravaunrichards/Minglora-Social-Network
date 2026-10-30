@@ -162,6 +162,10 @@ async function publicPost(p,viewerId) {
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
+async function publicPagePost(post) {
+  const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&item.slot==='post');if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
+  return {...post,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.publishedBy))};
+}
 async function publicStory(story,viewerId,includeViews=false) {
   const asset=story.mediaId?(db.mediaAssets||[]).find(item=>item.id===story.mediaId&&item.ownerId===story.userId&&item.slot==='story'):null;
   let media=null;if(asset){try{media={mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset)};}catch{}}
@@ -672,18 +676,22 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/stories'){
         await pruneExpiredStories();
-        const stories=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(story=>({...story,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)}));
+        const visible=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const stories=await Promise.all(visible.map(story=>publicStory(story,user.id)));
         return json(res,200,{stories});
       }
       if(method==='POST'&&p==='/api/stories'){
-        const text=String(input.text||'').trim(),imageUrl=String(input.imageUrl||'').trim(),audience=String(input.audience||'public');
+        const text=String(input.text||'').trim(),mediaId=String(input.mediaId||''),audience=String(input.audience||'public');
+        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose a photo or video from your device.'});
         if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
-        if(!text&&!imageUrl)return json(res,400,{error:'Add text or an HTTPS image URL to create a story.'});
-        if(text.length>1000||imageUrl.length>2000)return json(res,400,{error:'Story text or image URL is too long.'});
-        if(imageUrl){try{if(new URL(imageUrl).protocol!=='https:')return json(res,400,{error:'Story image URL must use HTTPS.'});}catch{return json(res,400,{error:'Story image URL must be a valid absolute URL.'});}}
+        if(!text&&!mediaId)return json(res,400,{error:'Add text or select a photo/video from your device.'});
+        if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
+        let asset=null;
+        if(mediaId){asset=(db.mediaAssets||[]).find(item=>item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded');if(!asset)return json(res,400,{error:'The selected story media is unavailable. Select it again.'});}
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,imageUrl,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
-        db.stories.push(story);await saveStore();return json(res,201,{story:{...story,author:safeUser(user),viewCount:0,viewedByMe:false}});
+        const story={id:uid(),userId:user.id,text,mediaId:asset?.id||null,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        if(asset){asset.status='attached';asset.attachedTo=story.id;}
+        db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
       if(method==='POST'&&m){
@@ -693,8 +701,7 @@ async function route(req, res) {
         if(story.userId!==user.id&&!(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)){
           db.storyViews.push({storyId:story.id,viewerId:user.id,viewedAt:now()});await saveStore();
         }
-        const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
-        return json(res,200,{story:{...story,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===user.id||views.some(view=>view.viewerId===user.id),viewCount:views.length,viewers:story.userId===user.id?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined}});
+        return json(res,200,{story:await publicStory(story,user.id,true)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -702,7 +709,7 @@ async function route(req, res) {
         const story=db.stories.find(x=>x.id===m[1]);
         if(!story)return json(res,404,{error:'Story not found.'});
         if(story.userId!==user.id)return json(res,403,{error:'Only the story author can delete this story.'});
-        db.stories=db.stories.filter(x=>x.id!==story.id);db.storyViews=(db.storyViews||[]).filter(view=>view.storyId!==story.id);
+        db.stories=db.stories.filter(x=>x.id!==story.id);db.storyViews=(db.storyViews||[]).filter(view=>view.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}
         await saveStore();return json(res,200,{ok:true,id:story.id});
       }
       if(method==='GET'&&p==='/api/pages'){
@@ -732,10 +739,13 @@ async function route(req, res) {
         const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
         if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
         if(!canManagePage(page.id,user.id))return json(res,403,{error:'Only Page owners, admins or editors can publish.'});
-        const validation=validatePostInput({text:input.text,imageUrl:input.imageUrl});
+        const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
-        const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,imageUrl:validation.value.imageUrl,createdAt:now(),updatedAt:now(),status:'published'};
-        db.pagePosts.push(post);await saveStore();return json(res,201,{post:{...post,author:safeUser(user),page:{id:page.id,title:page.title,handle:page.handle}}});
+        const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected Page media files are unavailable.'});
+        const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now(),status:'published'};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
+        db.pagePosts.push(post);await saveStore();return json(res,201,{post:{...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}}});
       }
       m=p.match(/^\/api\/pages\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -743,13 +753,13 @@ async function route(req, res) {
         const post=(db.pagePosts||[]).find(item=>item.id===m[2]&&item.pageId===page.id);
         if(!post)return json(res,404,{error:'Page post not found.'});
         if(!canDeletePagePost(db.pageRoles || [],post,user.id))return json(res,403,{error:'Only the publisher or Page owner/admin can delete this post.'});
-        db.pagePosts=db.pagePosts.filter(item=>item.id!==post.id);await saveStore();return json(res,200,{ok:true,id:post.id});
+        db.pagePosts=db.pagePosts.filter(item=>item.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       m=p.match(/^\/api\/pages\/([^/]+)$/);
       if(method==='GET'&&m){
         const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
         if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
-        const posts=(db.pagePosts||[]).filter(post=>post.pageId===page.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>({...post,author:safeUser(db.users.find(u=>u.id===post.publishedBy)),page:{id:page.id,title:page.title,handle:page.handle}}));
+        const posts=await Promise.all((db.pagePosts||[]).filter(post=>post.pageId===page.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async post=>({...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}})));
         return json(res,200,{page:{...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)},posts});
       }
       m=p.match(/^\/api\/pages\/([^/]+)$/);
