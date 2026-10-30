@@ -51,7 +51,7 @@ function stripLegacyDemoData(state) {
   state.follows = (state.follows || []).filter(follow => !demoUsers.has(follow.followerId) && !demoUsers.has(follow.followedId));
   state.blocks = (state.blocks || []).filter(block => !demoUsers.has(block.blockerId) && !demoUsers.has(block.blockedId));
   state.savedPosts = (state.savedPosts || []).filter(saved => !demoUsers.has(saved.userId) && !demoPostIds.has(saved.postId));
-  const removedGroupIds = new Set((state.groups || []).filter(group => !demoUsers.has(group.ownerId) && group.id === 'group-creators').map(group => group.id));
+  const removedGroupIds = new Set((state.groups || []).filter(group => group.id === 'group-creators').map(group => group.id));
   state.groups = (state.groups || [])
     .filter(group => !demoUsers.has(group.ownerId) && group.id !== 'group-creators')
     .map(group => ({ ...group, members: (group.members || []).filter(id => !demoUsers.has(id)) }));
