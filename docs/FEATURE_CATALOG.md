@@ -5,7 +5,7 @@ This is a scope checklist, not a claim of Facebook parity.
 | Domain | Current state |
 |---|---|
 | Accounts | Basic registration/login/logout; verification, recovery, MFA and throttling incomplete |
-| Profiles | Basic fields editable; privacy controls incomplete |
+| Profiles | Basic fields editable; public/friends-only/private visibility enforcement and contact controls available in Settings |
 | Feed/posts | Chronological feed, text and HTTPS image URL posts; ranking, audience controls, edits/deletes and uploads incomplete |
 | Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
 | Relationships | Friend requests/acceptance; follow/unfollow, block, mute and restrict incomplete |
