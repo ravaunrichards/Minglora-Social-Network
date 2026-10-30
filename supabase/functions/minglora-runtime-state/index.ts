@@ -69,8 +69,70 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = input.action;
-  if (!["load", "save", "health", "media_upload", "media_sign"].includes(String(action))) {
+  if (!["load", "save", "health", "media_upload", "media_sign", "media_upload_prepare", "media_upload_complete"].includes(String(action))) {
     return json(400, { error: "Unsupported action." });
+  }
+
+  if (action === "media_upload_prepare") {
+    const ownerId=String(input.ownerId||"");
+    const slot=String(input.slot||"");
+    const mimeType=String(input.mimeType||"").toLowerCase();
+    const byteSize=Number(input.byteSize||0);
+    const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const image={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
+    const post={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","model/gltf-binary":"glb"};
+    const story={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"};
+    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:{};
+    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":"";
+    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="post"?500*1024*1024:0;
+    if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
+      return json(400,{error:"The selected file type or size is not allowed for this media area."});
+    }
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const objectPath=`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
+    const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(objectPath,{upsert:false});
+    if(error||!data?.token)return json(502,{error:"Minglora could not prepare a secure upload."});
+    const supabaseHost=new URL(SUPABASE_URL);
+    const projectRef=supabaseHost.hostname.split(".")[0];
+    const endpoint=`${supabaseHost.protocol}//${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
+    return json(201,{bucket,path:objectPath,mimeType,mediaType,byteSize,token:data.token,endpoint});
+  }
+
+  if (action === "media_upload_complete") {
+    const ownerId=String(input.ownerId||"");
+    const bucket=String(input.bucket||"");
+    const objectPath=String(input.path||"");
+    const mimeType=String(input.mimeType||"").toLowerCase();
+    const byteSize=Number(input.byteSize||0);
+    const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const bucketSlots:Record<string,string[]>={
+      "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
+      "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
+      "minglora-post-media":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime","audio/mpeg","audio/mp4","audio/ogg","audio/webm","model/gltf-binary"],
+      "minglora-stories":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime"]
+    };
+    const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
+    const objectName=objectPath.slice(objectPath.lastIndexOf("/")+1);
+    if(!uuidPattern.test(ownerId)||!bucketSlots[bucket]?.includes(mimeType)||folder!==ownerId||!objectName||objectName.includes("..")||!Number.isSafeInteger(byteSize)||byteSize<1){
+      return json(400,{error:"Invalid media completion reference."});
+    }
+    const {data:objects,error:listError}=await admin.storage.from(bucket).list(folder,{search:objectName,limit:10});
+    const found=(objects||[]).find((item:any)=>item.name===objectName);
+    if(listError||!found)return json(409,{error:"The upload is not complete. Please retry the upload."});
+    const meta=found.metadata||{};
+    const storedSize=Number(meta.size??meta.contentLength??byteSize);
+    const storedType=String(meta.mimetype||meta.contentType||mimeType).toLowerCase();
+    if(storedSize!==byteSize||storedType!==mimeType)return json(409,{error:"The uploaded file did not match the expected size or type."});
+    const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":"model3d";
+    const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
+    if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
+      const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);result.url=data.publicUrl;
+    }else{
+      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
+      if(error||!data?.signedUrl)return json(502,{error:"The upload completed but Minglora could not prepare a preview."});
+      result.signedUrl=data.signedUrl;
+    }
+    return json(200,result);
   }
 
   if (action === "media_upload") {
