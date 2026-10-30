@@ -210,7 +210,7 @@ async function route(req, res) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
   if (p.startsWith('/api/')) {
-    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,p==='/api/media/upload'?12*1024*1024:1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
       if (method==='POST' && p==='/api/auth/register') {
@@ -354,45 +354,7 @@ async function route(req, res) {
         asset.completedAt=now();await saveStore();
         return json(res,200,{asset:{id:asset.id,slot:asset.slot,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,previewUrl:completed.signedUrl||completed.url||null,url:completed.url||null},user:(asset.slot==='avatar'||asset.slot==='cover')?safeUser(user):undefined});
       }
-      if(method==='POST'&&p==='/api/media/upload'){
-        const slot=String(input.slot||''),mimeType=String(input.mimeType||'').toLowerCase(),base64=String(input.base64||'');
-        const maxBytes=8*1024*1024;
-        const mimeKinds={
-          'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
-          'video/mp4':'video','video/webm':'video','video/quicktime':'video','audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d'
-        };
-        const allowedSlots={
-          avatar:['image/jpeg','image/png','image/webp','image/avif'],
-          cover:['image/jpeg','image/png','image/webp','image/avif'],
-          post:Object.keys(mimeKinds),
-          story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime']
-        };
-        if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!base64||base64.length>Math.ceil(maxBytes*4/3)+8||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))return json(res,400,{error:'Choose a supported image, video, audio or GLB file.'});
-        const bytes=Buffer.from(base64,'base64');
-        if(!bytes.length||bytes.length>maxBytes||bytes.toString('base64')!==base64)return json(res,413,{error:'Each media file must be valid and 8 MB or smaller.'});
-        const ascii=(start,end)=>bytes.toString('ascii',start,end);
-        const signatureValid=
-          (mimeType==='image/jpeg'&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)||
-          (mimeType==='image/png'&&bytes.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])))||
-          (mimeType==='image/webp'&&ascii(0,4)==='RIFF'&&ascii(8,12)==='WEBP')||
-          (mimeType==='image/avif'&&ascii(4,8)==='ftyp'&&['avif','avis','mif1'].includes(ascii(8,12)))||
-          (['video/mp4','video/quicktime'].includes(mimeType)&&ascii(4,8)==='ftyp')||
-          (mimeType==='video/webm'&&bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])))||
-          (mimeType==='audio/mpeg'&&ascii(0,3)==='ID3')||
-          (mimeType==='audio/mp4'&&ascii(4,8)==='ftyp')||
-          (mimeType==='audio/ogg'&&ascii(0,4)==='OggS')||
-          (mimeType==='audio/webm'&&bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])))||
-          (mimeType==='model/gltf-binary'&&ascii(0,4)==='glTF');
-        if(!signatureValid)return json(res,415,{error:'The selected file contents do not match its media type.'});
-        const uploaded=await mediaGateway('media_upload',{ownerId:user.id,slot,mimeType,base64});
-        if(slot==='avatar'||slot==='cover'){
-          if(typeof uploaded.url!=='string'||!uploaded.url.startsWith('https://'))return json(res,502,{error:'Minglora could not store this profile image.'});
-          user[slot]=uploaded.url;await saveStore();return json(res,201,{slot,url:uploaded.url,user:safeUser(user),byteSize:bytes.length});
-        }
-        const asset={id:uid(),ownerId:user.id,slot,bucket:uploaded.bucket,path:uploaded.path,mimeType,mediaType:mimeKinds[mimeType],byteSize:bytes.length,status:'uploaded',createdAt:now()};
-        db.mediaAssets.push(asset);await saveStore();
-        return json(res,201,{asset:{id:asset.id,slot,mediaType:asset.mediaType,mimeType,byteSize:asset.byteSize,previewUrl:uploaded.signedUrl||uploaded.url}});
-      }
+      if(method==='POST'&&p==='/api/media/upload')return json(res,410,{error:'Direct base64 media uploads have been retired. Use the signed resumable device-media upload flow.'});
       if(method==='GET'&&p==='/api/account/export'){
         const ownedPosts=db.posts.filter(item=>item.userId===user.id);
         const ownedPostIds=new Set(ownedPosts.map(item=>item.id));
