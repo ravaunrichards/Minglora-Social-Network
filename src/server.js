@@ -1469,7 +1469,8 @@ async function route(req, res) {
         catch{return json(res,400,{error:'The conversation member identifier is invalid.'});}
         if(!peerId||peerId===user.id)return json(res,400,{error:'Choose another member to mark this conversation as read.'});
         const peer=db.users.find(member=>member.id===peerId);
-        if(!peer||blockedBetween(user.id,peerId))return json(res,404,{error:'Conversation not found.'});
+        const hasConversation=db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+        if(!peer||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
         const readAt=now();
         let updated=0;
         for(const message of db.messages){
