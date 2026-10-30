@@ -1462,7 +1462,7 @@ async function route(req, res) {
         }));
         return json(res,200,{conversations});
       }
-      const messageReadMatch=p.match(/^\\/api\\/messages\\/([^/]+)\\/read$/);
+      const messageReadMatch=p.match(/^\/api\/messages\/([^/]+)\/read$/);
       if(method==='POST'&&messageReadMatch){
         let peerId;
         try{peerId=decodeURIComponent(messageReadMatch[1]);}
