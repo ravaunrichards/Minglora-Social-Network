@@ -55,6 +55,21 @@ test('desktop navigation is centred in the available lane between search and not
   assert.ok(html.indexOf('class="top-nav"') < html.indexOf('id="notifications-btn"'));
 });
 
+test('Settings page navigation and save controls stay in normal flow without overlays', async () => {
+  const css = await read('public/styles.css');
+  const settings = await read('public/settings.js');
+  const settingsLayout = css.slice(css.lastIndexOf('/* Settings must remain a normal-flow page'));
+  assert.match(settingsLayout, /\.settings-nav\{[\s\S]*?position:static!important/);
+  assert.match(settingsLayout, /\.settings-save-bar\{[\s\S]*?position:static!important/);
+  assert.match(settingsLayout, /scroll-margin-top:calc\(var\(--minglora-header-height,66px\) \+ 18px\)/);
+  assert.match(settingsLayout, /\.settings-ticket-messages\{[\s\S]*?max-height:none!important/);
+  assert.match(settingsLayout, /body:has\(\.settings-layout\) #message-window-dock\{[\s\S]*?position:static!important/);
+  assert.match(settingsLayout, /\.settings-nav\{[\s\S]*?grid-template-columns:repeat\(auto-fit/);
+  assert.doesNotMatch(settingsLayout, /\.settings-nav\{[^}]*overflow-x:auto/);
+  assert.match(settings, /<nav class="settings-nav"/);
+  assert.match(settings, /scrollIntoView\(\{ behavior: settings\.preferences\.reducedMotion \? 'auto' : 'smooth', block: 'start' \}\)/);
+});
+ 
 test('dialogs can scroll on short screens instead of being cut off', async () => {
   const css = await read('public/styles.css');
   assert.ok(ruleFor(css, '.modal-backdrop').includes('overflow-y:auto'));
@@ -64,7 +79,7 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261031-centered-header-tabs-1'));
-  assert.ok(worker.includes('minglora-shell-v27-centered-header-tabs'));
-  assert.ok(worker.includes('styles.css?v=20261031-centered-header-tabs-1'));
+  assert.ok(html.includes('styles.css?v=20261031-settings-flow-no-overlays-1'));
+  assert.ok(worker.includes('minglora-shell-v28-settings-flow-no-overlays'));
+  assert.ok(worker.includes('styles.css?v=20261031-settings-flow-no-overlays-1'));
 });
