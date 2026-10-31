@@ -12,7 +12,7 @@ const [html, css, sprite, serviceWorker] = await Promise.all([
   read('public/sw.js')
 ]);
 
-const useIcon = id => `<use href="/assets/icons/navigation-3d.svg#${id}"></use>`;
+const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-1#${id}"></use>`;
 
 test('desktop navigation keeps its existing destinations and uses 3D icons', () => {
   const nav = html.match(/<nav class="top-nav"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -38,6 +38,7 @@ test('mobile navigation uses the same 3D icon artwork and keeps all five destina
   for (const [view, icon] of [
     ['feed', 'home'],
     ['live', 'live'],
+    ['creator', 'creator'],
     ['friends', 'friends'],
     ['messages', 'messages'],
     ['coins', 'coins']
@@ -57,7 +58,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile']) {
+  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);
