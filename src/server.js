@@ -1532,7 +1532,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
 
-      m=p.match(/^\\/api\\/users\\/([^/]+)\\/(followers|following)$/);
+      m=p.match(/^\/api\/users\/([^/]+)\/(followers|following)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
