@@ -42,9 +42,9 @@ test('browser reloads the corrected profile script and replaces the old service-
   const indexHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
   const serverSource = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
-  assert.match(indexHtml, /src="\/app\.js\?v=20261031-profile-about-only-1"/);
-  assert.match(serviceWorker, /minglora-shell-v4-profile-about/);
-  assert.match(serviceWorker, /\/app\.js\?v=20261031-profile-about-only-1/);
+  assert.match(indexHtml, /src="\/app\.js\?v=20261031-responsive-logout-1"/);
+  assert.match(serviceWorker, /minglora-shell-v6-responsive-logout/);
+  assert.match(serviceWorker, /\/app\.js\?v=20261031-responsive-logout-1/);
   assert.match(serverSource, /'Cache-Control':'no-store'/);
   assert.match(serverSource, /'Cache-Control':'no-cache, max-age=0, must-revalidate'/);
 });
