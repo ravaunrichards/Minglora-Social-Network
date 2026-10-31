@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
-    "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
+    "live_participant_mark_connected", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
@@ -352,7 +352,38 @@ Deno.serve(async (req: Request) => {
     }).eq("id", broadcastId).eq("host_id", hostId).eq("status", "live")
       .select("id,status,ended_at").maybeSingle();
     if (error) return json(503, { error: "Minglora could not close the LIVE session." });
+    const endedAt=data?.ended_at||new Date().toISOString();
+    const {error:participantError}=await admin.from("live_participants").update({
+      status:"left",left_at:endedAt
+    }).eq("broadcast_id",broadcastId).in("status",["requested","invited","accepted","connected"]);
+    if(participantError)return json(503,{error:"The broadcast ended, but participant presence could not be finalized."});
     return json(200, { broadcast: data || { id: broadcastId, status: "ended" } });
+  }
+
+  if (action === "live_participant_mark_connected") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||""), role=String(input.role||"");
+    if(!validUuid(broadcastId)||!validUuid(userId)||!["host","guest","viewer"].includes(role))
+      return json(400,{error:"Invalid LIVE participant connection."});
+    const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
+    if(broadcastError||!broadcast||broadcast.status!=="live")
+      return json(404,{error:"LIVE session not found."});
+    if(role==="host"&&broadcast.host_id!==userId)
+      return json(403,{error:"Only the broadcast host can connect as host."});
+    if(role!=="host"&&broadcast.host_id===userId)
+      return json(400,{error:"The host must connect with the host role."});
+    if(role==="guest"){
+      const {data:approval,error:approvalError}=await admin.from("live_participants")
+        .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
+      if(approvalError||!approval||approval.role!=="guest"||!["accepted","connected"].includes(approval.status))
+        return json(403,{error:"Host approval is required before joining the speaker stage."});
+    }
+    const connectedAt=new Date().toISOString();
+    const {data,error}=await admin.from("live_participants").upsert({
+      broadcast_id:broadcastId,user_id:userId,role,status:"connected",joined_at:connectedAt,left_at:null
+    },{onConflict:"broadcast_id,user_id"}).select("broadcast_id,user_id,role,status,joined_at").single();
+    if(error)return fail(error,"Minglora could not save the connected LIVE participant.");
+    return json(200,{participant:data});
   }
 
   if (action === "live_speaker_request") {
