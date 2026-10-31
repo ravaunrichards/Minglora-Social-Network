@@ -2,8 +2,42 @@
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone' },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true },
-    preferences: { theme: 'system', feedSort: 'recent', reducedMotion: false }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false }
   };
+
+  const APP_THEMES = [
+    { value: 'minglora', name: 'Minglora Blue', description: 'The familiar signature look' },
+    { value: 'ocean', name: 'Ocean Breeze', description: 'Teal and sea-glass blue' },
+    { value: 'tropical', name: 'Tropical Pulse', description: 'Coral, aqua and citrus' },
+    { value: 'royal', name: 'Royal Amethyst', description: 'Violet and rich plum' },
+    { value: 'emerald', name: 'Emerald Garden', description: 'Leaf green and jade' },
+    { value: 'rose', name: 'Rose Bloom', description: 'Berry and soft rose' },
+    { value: 'golden', name: 'Golden Hour', description: 'Amber and warm sand' },
+    { value: 'lavender', name: 'Lavender Cloud', description: 'Lavender and cool mint' },
+    { value: 'midnight', name: 'Midnight Neon', description: 'Navy with electric cyan' },
+    { value: 'graphite', name: 'Graphite Studio', description: 'Charcoal and cool silver' }
+  ];
+  const LIVE_THEMES = [
+    { value: 'studio', name: 'Creator Studio', description: 'Neutral dark surfaces keep the video centre stage' },
+    { value: 'ocean', name: 'Ocean Stage', description: 'Deep blue panels with clear aqua accents' },
+    { value: 'tropical', name: 'Tropical Party', description: 'Coral and turquoise for social, high-energy streams' },
+    { value: 'royal', name: 'Royal Lounge', description: 'Plum and champagne accents for a premium room' },
+    { value: 'neon', name: 'Neon Arena', description: 'Electric cyan and violet for gaming and tech streams' },
+    { value: 'sunset', name: 'Sunset Spotlight', description: 'Warm amber and copper for music and conversation' },
+    { value: 'garden', name: 'Garden Glow', description: 'Emerald and mint for relaxed community sessions' },
+    { value: 'social', name: 'Soft Social', description: 'Muted berry and lavender for a softer room' }
+  ];
+
+  function renderThemeChoices(name, themes, selected, kind) {
+    return `<div class="theme-choice-grid ${kind}-theme-grid" role="radiogroup" aria-label="${kind === 'app' ? 'App colour themes' : 'LIVE room themes'}">${themes.map(theme => `
+      <label class="theme-choice ${kind}-theme-choice">
+        <input type="radio" name="${name}" value="${theme.value}" ${selected === theme.value ? 'checked' : ''}>
+        ${kind === 'app'
+          ? `<span class="theme-choice-art app-theme-art app-theme-art-${theme.value}" aria-hidden="true"><i></i><i></i><i></i></span>`
+          : `<span class="theme-choice-art live-theme-art live-theme-art-${theme.value}" aria-hidden="true"><i class="theme-art-live">LIVE</i><i class="theme-art-stage"></i><i class="theme-art-chat"></i></span>`}
+        <span class="theme-choice-copy"><strong>${theme.name}</strong><small>${theme.description}</small></span>
+      </label>`).join('')}</div>`;
+  }
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -22,9 +56,15 @@
 
   function applyPreferences(settings) {
     const preferences = settings?.preferences || defaults.preferences;
-    document.body.classList.toggle('theme-dark', preferences.theme === 'dark');
-    document.body.classList.toggle('theme-system', preferences.theme === 'system');
+    const mode = ['light', 'dark', 'system'].includes(preferences.theme) ? preferences.theme : 'system';
+    const colorTheme = APP_THEMES.some(theme => theme.value === preferences.colorTheme) ? preferences.colorTheme : 'minglora';
+    document.body.classList.toggle('theme-dark', mode === 'dark');
+    document.body.classList.toggle('theme-system', mode === 'system');
     document.body.classList.toggle('reduce-motion', preferences.reducedMotion === true);
+    document.body.dataset.colorTheme = colorTheme;
+    document.body.style.colorScheme = mode === 'system' ? 'light dark' : mode;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', ({ minglora:'#1769e0', ocean:'#0f766e', tropical:'#e45b4d', royal:'#7146c7', emerald:'#16834f', rose:'#be315f', golden:'#a16207', lavender:'#7864c8', midnight:'#172033', graphite:'#475569' })[colorTheme]);
   }
 
   function sectionHeading(icon, title, description) {
@@ -59,7 +99,7 @@
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings categories">
             <a href="#settings-account">Account</a><a href="#settings-privacy">Profile visibility</a><a href="#settings-blocking">Blocking</a>
-            <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Preferences</a><a href="#settings-data">Your information</a>
+            <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Themes &amp; preferences</a><a href="#settings-data">Your information</a>
             <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a>
           </nav>
           <form id="settings-form" class="settings-panels">
@@ -97,15 +137,27 @@
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
             </section>
-            <section class="card settings-card" id="settings-preferences">
-              ${sectionHeading('☼', 'Preferences', 'Personalize the appearance and default feed order on your account.')}
-              <label class="settings-field"><span><strong>Appearance</strong><small>Choose the theme used by Minglora.</small></span>
-                <select name="theme"><option value="system" ${settings.preferences.theme === 'system' ? 'selected' : ''}>Use device setting</option><option value="light" ${settings.preferences.theme === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${settings.preferences.theme === 'dark' ? 'selected' : ''}>Dark</option></select>
-              </label>
-              <label class="settings-field"><span><strong>Default feed order</strong><small>Choose which posts appear first when you open the feed.</small></span>
-                <select name="feedSort"><option value="recent" ${settings.preferences.feedSort === 'recent' ? 'selected' : ''}>Most recent</option><option value="oldest" ${settings.preferences.feedSort === 'oldest' ? 'selected' : ''}>Oldest first</option></select>
-              </label>
-              <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
+            <section class="card settings-card theme-centre-card" id="settings-preferences">
+              ${sectionHeading('◐', 'Theme Centre', 'Make Minglora feel like your space. Change either theme whenever you like; your choices are saved to your account.')}
+              <div class="theme-centre-section">
+                <div class="theme-centre-heading"><div><h3>App appearance</h3><p>Choose the overall colour identity used across your feed, profile, messages and navigation.</p></div></div>
+                <label class="settings-field"><span><strong>Light or dark mode</strong><small>Use your device setting, or choose a fixed mode.</small></span>
+                  <select name="theme"><option value="system" ${settings.preferences.theme === 'system' ? 'selected' : ''}>Use device setting</option><option value="light" ${settings.preferences.theme === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${settings.preferences.theme === 'dark' ? 'selected' : ''}>Dark</option></select>
+                </label>
+                <h4 class="theme-choice-heading">Choose an app theme</h4>
+                <p class="theme-choice-help">These palettes use the same layout and controls, with coordinated accents and surfaces.</p>
+                ${renderThemeChoices('colorTheme', APP_THEMES, settings.preferences.colorTheme, 'app')}
+              </div>
+              <div class="theme-centre-section live-theme-centre-section">
+                <div class="theme-centre-heading"><div><h3>Your LIVE room style</h3><p>This is your default broadcast look. It changes the room frame, panels and accents—not your camera feed or video quality. Viewers see the host's selected style.</p></div></div>
+                ${renderThemeChoices('liveRoomTheme', LIVE_THEMES, settings.preferences.liveRoomTheme, 'live')}
+              </div>
+              <div class="theme-centre-section theme-extra-preferences">
+                <label class="settings-field"><span><strong>Default feed order</strong><small>Choose which posts appear first when you open the feed.</small></span>
+                  <select name="feedSort"><option value="recent" ${settings.preferences.feedSort === 'recent' ? 'selected' : ''}>Most recent</option><option value="oldest" ${settings.preferences.feedSort === 'oldest' ? 'selected' : ''}>Oldest first</option></select>
+                </label>
+                <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
+              </div>
             </section>
             <section class="card settings-card" id="settings-data">
               ${sectionHeading('⇩', 'Your information', 'Download a copy of the information associated with your Minglora account.')}
@@ -354,6 +406,8 @@
           },
           preferences: {
             theme: formData.get('theme'),
+            colorTheme: formData.get('colorTheme') || 'minglora',
+            liveRoomTheme: formData.get('liveRoomTheme') || 'studio',
             feedSort: formData.get('feedSort'),
             reducedMotion: formData.has('reducedMotion')
           }
@@ -383,6 +437,15 @@
         }, 450);
       }
 
+      settingsForm?.addEventListener('change', event => {
+        if (event.target?.name !== 'theme' && event.target?.name !== 'colorTheme') return;
+        const formData = new FormData(settingsForm);
+        applyPreferences({ preferences: {
+          ...settings.preferences,
+          theme: formData.get('theme'),
+          colorTheme: formData.get('colorTheme') || 'minglora'
+        }});
+      });
       settingsForm?.addEventListener('change', queueSettingsSave);
       settingsForm?.addEventListener('submit', async event => {
         event.preventDefault();
