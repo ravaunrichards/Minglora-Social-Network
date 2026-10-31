@@ -467,3 +467,14 @@
 .profile-about{position:static;min-width:0;overflow:visible}
 .live-gift-host-note{padding:14px;border-top:1px solid rgba(255,255,255,.1);color:#fff;font-size:12px}
 .live-gift-host-note p{margin:5px 0 0;color:#aeb7c7;line-height:1.5}
+
+
+/* Whole-page flow: headers, side rails, settings, and editor controls do not pin over content. */
+.topbar{position:static;top:auto;z-index:auto}
+.left-rail,.right-rail{position:static;top:auto;max-height:none;overflow:visible}
+.auth-foot{position:static;bottom:auto;align-self:center;margin:0;text-align:center;flex-basis:100%}
+.auth-note{margin:8px 0;color:var(--muted);font-size:11px;line-height:1.45;text-align:center}
+@media(max-width:760px){
+  body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+  .mobile-nav{height:calc(60px + env(safe-area-inset-bottom))}
+}
