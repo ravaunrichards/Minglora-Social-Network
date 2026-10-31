@@ -1,6 +1,6 @@
 /* Minglora service worker: versioned shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v27-centered-header-tabs';
-const SHELL=['/','/styles.css?v=20261031-centered-header-tabs-1','/app.js?v=20261031-centered-header-tabs-1','/settings.js?v=20261031-logout-in-settings-1','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
+const CACHE_NAME='minglora-shell-v28-settings-flow-no-overlays';
+const SHELL=['/','/styles.css?v=20261031-settings-flow-no-overlays-1','/app.js?v=20261031-settings-flow-no-overlays-1','/settings.js?v=20261031-logout-in-settings-1','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
