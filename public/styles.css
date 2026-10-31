@@ -2469,3 +2469,235 @@ body:has(#settings-form) #message-window-dock{
   .settings-save-bar{align-items:stretch;flex-direction:column}
   .settings-save-bar button{width:100%}
 }
+
+
+/* Full-size Facebook-style entry layout for Minglora, with separate login and sign-up views. */
+body.auth-mode{
+  padding-bottom:0!important;
+  background:#f0f2f5!important;
+}
+body.auth-mode .auth-screen{
+  width:100%;
+  min-height:100vh;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:34px;
+  padding:42px 24px 22px;
+  background:#f0f2f5;
+}
+.auth-shell{
+  width:min(100%,980px);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 432px;
+  align-items:center;
+  gap:70px;
+  margin:auto;
+}
+.auth-brand{
+  max-width:560px;
+  margin:0;
+}
+.auth-brand .brand-mark{
+  width:56px;
+  height:56px;
+  border-radius:16px;
+  font-size:42px;
+}
+.auth-brand h1{
+  margin:14px 0 10px;
+  color:#1877f2;
+  font-size:clamp(48px,5.2vw,60px);
+  line-height:1.04;
+  letter-spacing:-2.4px;
+  font-weight:850;
+}
+.auth-brand p{
+  max-width:520px;
+  margin:0;
+  color:#1c1e21;
+  font-size:clamp(21px,2.25vw,28px);
+  line-height:1.3;
+}
+.auth-content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:100%;
+  min-width:0;
+}
+.auth-card{
+  width:100%;
+  max-width:432px;
+  padding:18px 16px 16px;
+  border:1px solid #dddfe2;
+  border-radius:9px;
+  background:#fff;
+  color:#1c1e21;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.auth-login-card{max-width:396px}
+.auth-card h2{
+  margin:0 0 16px;
+  color:#1c1e21;
+  font-size:19px;
+  line-height:1.3;
+  font-weight:650;
+  text-align:center;
+}
+.auth-card label{
+  display:block;
+  margin:12px 0;
+  color:#606770;
+  font-size:14px;
+  font-weight:500;
+}
+.auth-card input{
+  display:block;
+  width:100%;
+  height:52px;
+  margin-top:6px;
+  padding:0 15px;
+  border:1px solid #dddfe2;
+  border-radius:6px;
+  background:#fff;
+  color:#1c1e21;
+  font-size:17px;
+}
+.auth-card input::placeholder{color:#8a8d91}
+.auth-card .primary,
+.auth-card .success{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  padding:0 16px;
+  border:0;
+  border-radius:6px;
+  color:#fff;
+  font-size:18px;
+  font-weight:750;
+}
+.auth-card .primary{
+  margin-top:6px;
+  background:#1877f2;
+  font-size:20px;
+}
+.auth-card .success{background:#42b72a}
+.auth-card .primary.full,
+.auth-card .success.full{width:100%}
+.auth-card .forgot-password{
+  display:block;
+  width:100%;
+  margin:0;
+  padding:14px 0 13px;
+  color:#1877f2;
+  font-size:14px;
+  text-align:center;
+}
+.auth-login-card .auth-divider{
+  margin:2px 0 18px;
+  border-top:1px solid #dadde1;
+}
+.auth-login-card #show-register{
+  display:flex;
+  width:max-content;
+  min-width:190px;
+  margin:0 auto;
+  padding:0 18px;
+  font-size:17px;
+}
+.auth-card .auth-error{
+  min-height:0;
+  margin:8px 0 0;
+  color:#d93025;
+  font-size:13px;
+  line-height:1.4;
+  text-align:center;
+}
+.auth-form-heading{
+  margin:0 0 8px;
+  padding:0 0 13px;
+  border-bottom:1px solid #dadde1;
+}
+.auth-register-card .auth-form-heading h2{
+  margin:0 0 4px;
+  font-size:25px;
+  font-weight:750;
+  text-align:left;
+}
+.auth-form-heading p{
+  margin:0;
+  color:#606770;
+  font-size:15px;
+}
+.auth-register-card label{margin:10px 0}
+.auth-register-card input{height:46px;font-size:16px}
+.auth-register-card label small{
+  display:block;
+  margin-top:5px;
+  color:#606770;
+  font-size:11px;
+  font-weight:400;
+}
+.auth-register-card .auth-note{
+  margin:10px 0;
+  color:#606770;
+  font-size:12px;
+  line-height:1.45;
+  text-align:left;
+}
+.auth-back-login{
+  display:block;
+  margin:14px auto 0;
+  color:#1877f2;
+  font-size:14px;
+}
+.auth-foot{
+  position:static;
+  width:min(100%,980px);
+  margin:0;
+  padding:0 10px;
+  color:#8a8d91;
+  font-size:12px;
+  text-align:center;
+}
+@media(max-width:900px){
+  body.auth-mode .auth-screen{
+    justify-content:flex-start;
+    gap:24px;
+    padding:28px 16px 22px;
+  }
+  .auth-shell{
+    width:min(100%,432px);
+    grid-template-columns:minmax(0,1fr);
+    gap:22px;
+  }
+  .auth-brand{
+    max-width:none;
+    text-align:center;
+  }
+  .auth-brand .brand-mark{margin:0 auto}
+  .auth-brand h1{
+    margin:8px 0 5px;
+    font-size:43px;
+    letter-spacing:-1.8px;
+  }
+  .auth-brand p{
+    max-width:420px;
+    margin:0 auto;
+    font-size:18px;
+  }
+  .auth-content{width:100%}
+  .auth-foot{width:100%}
+}
+@media(max-width:420px){
+  body.auth-mode .auth-screen{padding:22px 12px 18px;gap:18px}
+  .auth-brand h1{font-size:39px}
+  .auth-brand p{font-size:16px}
+  .auth-card{padding:15px 13px 14px}
+  .auth-card input{height:49px;font-size:16px}
+  .auth-register-card input{height:45px}
+}

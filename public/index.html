@@ -3,14 +3,49 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1769e0"><meta name="description" content="Connect with friends, share moments, and find your community.">
-  <title>Minglora — Your people, your world</title><link rel="stylesheet" href="/styles.css?v=20261031-settings-flat-2">
+  <title>Minglora — Your people, your world</title><link rel="stylesheet" href="/styles.css?v=20261031-facebook-auth-1">
 </head>
 <body>
   <div id="auth-screen" class="auth-screen hidden">
-    <section class="auth-brand"><div class="brand-mark">m</div><h1>Minglora</h1><p>Your people. Your world. Your conversations.</p></section>
-    <section class="auth-card"><form id="login-form"><h2>Welcome back</h2><label>Email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="Your password"></label><button class="primary full" type="submit">Log in</button><button class="text-button forgot-password" type="button" id="forgot-password">Forgot password?</button><p class="auth-error" id="login-error"></p><div class="auth-divider"><span>or create an account</span></div></form>
-      <form id="register-form" class="register-form"><label>Your name<input name="name" required minlength="2" placeholder="Full name"></label><label>Username<input name="username" required minlength="3" pattern="[A-Za-z0-9_]+" placeholder="yourname"></label><label>Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label><label>Contact phone (optional)<input name="phoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+18765551234" pattern="\+[1-9][0-9]{7,14}"><small>You can add or change this later in About.</small></label><label>Password<input name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters"></label><p class="auth-note">No email confirmation is needed. Sign in as soon as your account is created.</p><button class="success full" type="submit">Create new account</button><p class="auth-error" id="register-error"></p></form>
-    </section><p class="auth-foot">An independent social networking project.</p>
+    <div class="auth-shell">
+      <section class="auth-brand" aria-label="Minglora">
+        <div class="brand-mark">m</div>
+        <h1>Minglora</h1>
+        <p>Your people. Your world. Your conversations.</p>
+      </section>
+      <div class="auth-content">
+        <section id="login-panel" class="auth-card auth-login-card" aria-hidden="false">
+          <form id="login-form">
+            <h2>Log in to Minglora</h2>
+            <label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="Your password"></label>
+            <button class="primary full" type="submit">Log in</button>
+            <button class="text-button forgot-password" type="button" id="forgot-password">Forgot password?</button>
+            <p class="auth-error" id="login-error" role="alert"></p>
+            <div class="auth-divider" aria-hidden="true"></div>
+            <button class="success" type="button" id="show-register" data-auth-mode="register">Create new account</button>
+          </form>
+        </section>
+        <section id="register-panel" class="auth-card auth-register-card hidden" aria-hidden="true">
+          <header class="auth-form-heading">
+            <h2>Create an account</h2>
+            <p>It's quick and easy.</p>
+          </header>
+          <form id="register-form">
+            <label>Your name<input name="name" required minlength="2" autocomplete="name" placeholder="Full name"></label>
+            <label>Username<input name="username" required minlength="3" pattern="[A-Za-z0-9_]+" autocomplete="username" placeholder="yourname"></label>
+            <label>Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+            <label>Contact phone (optional)<input name="phoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+18765551234" pattern="[+][1-9][0-9]{7,14}"><small>You can add or change this later in About.</small></label>
+            <label>Password<input name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters"></label>
+            <p class="auth-note">No email confirmation is needed. Sign in as soon as your account is created.</p>
+            <button class="success full" type="submit">Create account</button>
+            <p class="auth-error" id="register-error" role="alert"></p>
+          </form>
+          <button class="text-button auth-back-login" type="button" id="show-login" data-auth-mode="login">Already have an account? Log in</button>
+        </section>
+      </div>
+    </div>
+    <p class="auth-foot">An independent social networking project.</p>
   </div>
   <div id="app" class="hidden">
     <header class="topbar">
@@ -26,5 +61,5 @@
     </main>
     <div id="toast" class="toast" role="status"></div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.min.js" defer></script><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script><script src="/app.js?v=20261031-settings-flat-2" defer></script><script src="/settings.js?v=20261031-settings-flat-2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.min.js" defer></script><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script><script src="/auth-screen.js?v=20261031-facebook-auth-1" defer></script><script src="/app.js?v=20261031-settings-flat-2" defer></script><script src="/settings.js?v=20261031-settings-flat-2" defer></script>
 </body></html>

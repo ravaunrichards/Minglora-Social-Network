@@ -82,7 +82,22 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261031-settings-flat-2'));
-  assert.ok(worker.includes('minglora-shell-v30-settings-flat-2'));
-  assert.ok(worker.includes('styles.css?v=20261031-settings-flat-2'));
+  assert.ok(html.includes('styles.css?v=20261031-facebook-auth-1'));
+  assert.ok(worker.includes('minglora-shell-v31-facebook-auth-1'));
+  assert.ok(worker.includes('styles.css?v=20261031-facebook-auth-1'));
+});
+
+
+test('login and account creation have separate full-size responsive entry panels', async () => {
+  const html = await read('public/index.html');
+  const css = await read('public/styles.css');
+  const authScript = await read('public/auth-screen.js');
+  assert.ok(html.includes('id="login-panel" class="auth-card auth-login-card"'));
+  assert.ok(html.includes('id="register-panel" class="auth-card auth-register-card hidden"'));
+  assert.ok(html.includes('id="show-register" data-auth-mode="register"'));
+  assert.ok(html.includes('id="show-login" data-auth-mode="login"'));
+  assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 432px'));
+  assert.ok(css.includes('@media(max-width:900px)'));
+  assert.ok(authScript.includes('new MutationObserver'));
+  assert.ok(authScript.includes('[data-auth-mode]'));
 });
