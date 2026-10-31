@@ -568,9 +568,11 @@ async function route(req, res) {
               const [salt,expected]=legacyUser.passwordHash.split(':');
               const actual=(await scrypt(password,salt,64)).toString('hex');
               if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
-              const migrated=await supabaseSignUp({email,password,name:legacyUser.name,username:legacyUser.username});
-              if(!migrated.user)return json(res,502,{error:'Minglora could not migrate this account into Supabase Auth.'});
-              authenticated=migrated;
+              const migrated=await requestSupabaseState('auth_register_user',{
+                email,password,name:legacyUser.name,username:legacyUser.username,phoneNumber:legacyUser.contactPhone||''
+              });
+              if(!migrated.user?.id||!migrated.emailConfirmed)return json(res,502,{error:'Minglora could not migrate this account into Supabase Auth.'});
+              authenticated=await supabaseSignIn({email,password});
             }else{
               if(/invalid login credentials|invalid email or password/i.test(authError.message))recordLoginFailure(rate.key);
               throw authError;
