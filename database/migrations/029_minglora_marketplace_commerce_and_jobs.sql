@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS public.marketplace_webhook_events (
 CREATE TABLE IF NOT EXISTS public.marketplace_ledger_accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_user_id uuid REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  account_code text NOT NULL CHECK (account_code IN ('processor_clearing','seller_payable','marketplace_commission_revenue','payment_processing_expense','refund_payable','tax_payable')),
+  account_code text NOT NULL CHECK (account_code IN ('processor_clearing','processor_fee_payable','seller_payable','marketplace_commission_revenue','payment_processing_expense','refund_payable','tax_payable')),
   currency char(3) NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (owner_user_id,account_code,currency)
