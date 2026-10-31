@@ -1531,6 +1531,28 @@ async function route(req, res) {
         return json(res,200,{users});
       }
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+
+      m=p.match(/^\\/api\\/users\\/([^/]+)\\/(followers|following)$/);
+      if(method==='GET'&&m){
+        const target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const relationshipType=m[2];
+        const sourceField=relationshipType==='followers'?'followedId':'followerId';
+        const resultField=relationshipType==='followers'?'followerId':'followedId';
+        const ordered=(db.follows||[])
+          .filter(edge=>edge[sourceField]===target.id)
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        const seen=new Set(),users=[];
+        for(const edge of ordered){
+          const id=edge[resultField];
+          if(!id||seen.has(id))continue;
+          seen.add(id);
+          const member=db.users.find(item=>item.id===id);
+          if(!member||blockedBetween(user.id,member.id)||!canViewProfile(user.id,member))continue;
+          users.push(safeUser(member,user.id));
+        }
+        return json(res,200,{users,count:users.length,relationship:relationshipType});
+      }
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
