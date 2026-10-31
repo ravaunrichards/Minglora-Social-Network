@@ -56,7 +56,7 @@ test('outside-profile cards provide dimensional responsive styling and respect r
 test('static shell cache is versioned for the upgraded discovery cards', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.match(html, /audio-speaker-connection-5/);
-  assert.match(html, /audio-speaker-connection-5/);
-  assert.match(worker, /minglora-shell-v22-audio-speaker-connection/);
+  assert.match(html, /20261031-creator-stage-sticky-fallback-2/);
+  assert.match(html, /20261031-creator-stage-sticky-fallback-2/);
+  assert.match(worker, /minglora-shell-v25-creator-stage-sticky-fallback/);
 });
