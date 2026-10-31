@@ -81,6 +81,7 @@ Deno.serve(async (req: Request) => {
     "auth_register_user", "account_deletion_request",
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
+    "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
     "marketplace_job_update", "marketplace_job_apply", "marketplace_job_applications_for_job",
@@ -987,6 +988,122 @@ Deno.serve(async (req: Request) => {
     return json(200,{enabled:Boolean(data.checkout_enabled&&data.marketplace_approval_status==="approved"&&data.provider&&data.tax_calculation_enabled),
       orderCreationEnabled:false,payoutsEnabled:Boolean(data.payouts_enabled&&data.marketplace_approval_status==="approved"),
       provider:data.provider||null,blockers});
+  }
+
+
+  if (action === "marketplace_order_create") {
+    const buyerId=String(input.buyerId||""),quoteId=String(input.quoteId||""),idempotencyKey=String(input.idempotencyKey||"");
+    if(!validUuid(buyerId)||!validUuid(quoteId)||idempotencyKey.length<8||idempotencyKey.length>128){
+      return json(400,{error:"A valid checkout quote and idempotency key are required."});
+    }
+    const {data,error}=await admin.rpc("create_marketplace_order_from_quote",{
+      p_buyer_id:buyerId,p_quote_id:quoteId,p_idempotency_key:idempotencyKey
+    });
+    if(error)return fail(error,"Marketplace order could not be created.");
+    return json(201,{order:data,notice:"Order created. Payment is not confirmed until the approved payment provider verifies capture."});
+  }
+
+  if (action === "marketplace_orders_list") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid account."});
+    const [buyerOrders,sellerOrders]=await Promise.all([
+      admin.from("marketplace_orders").select("id,buyer_id,currency,status,payment_status,item_subtotal_minor,fulfillment_minor,tax_minor,total_minor,created_at,updated_at")
+        .eq("buyer_id",userId).order("created_at",{ascending:false}).limit(100),
+      admin.from("marketplace_seller_orders").select("id,order_id,seller_id,status,gross_minor,commission_minor,seller_net_minor,payout_status,created_at,updated_at")
+        .eq("seller_id",userId).order("created_at",{ascending:false}).limit(100)
+    ]);
+    if(buyerOrders.error||sellerOrders.error)return json(503,{error:"Marketplace orders could not be loaded."});
+    const sellerByOrder=new Map((sellerOrders.data||[]).map((row:any)=>[row.order_id,row]));
+    const ids=[...new Set([...(buyerOrders.data||[]).map((row:any)=>row.id),...(sellerOrders.data||[]).map((row:any)=>row.order_id)])];
+    const headers=new Map((buyerOrders.data||[]).map((row:any)=>[row.id,row]));
+    if(ids.length){
+      const {data,error}=await admin.from("marketplace_orders")
+        .select("id,buyer_id,currency,status,payment_status,item_subtotal_minor,fulfillment_minor,tax_minor,total_minor,created_at,updated_at")
+        .in("id",ids);
+      if(error)return json(503,{error:"Marketplace order details could not be loaded."});
+      for(const row of data||[])headers.set(row.id,row);
+    }
+    const orders=[...headers.values()].map((row:any)=>{
+      const seller=sellerByOrder.get(row.id);
+      return {
+        id:row.id,buyerId:row.buyer_id,currency:row.currency,status:row.status,paymentStatus:row.payment_status,
+        itemSubtotalMinor:row.item_subtotal_minor,fulfillmentMinor:row.fulfillment_minor,taxMinor:row.tax_minor,
+        totalMinor:row.total_minor,createdAt:row.created_at,updatedAt:row.updated_at,
+        role:row.buyer_id===userId?"buyer":"seller",
+        sellerOrder:seller?{id:seller.id,status:seller.status,grossMinor:seller.gross_minor,
+          commissionMinor:seller.commission_minor,sellerNetMinor:seller.seller_net_minor,
+          payoutStatus:seller.payout_status}:null
+      };
+    }).sort((a:any,b:any)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
+    return json(200,{orders});
+  }
+
+  if (action === "marketplace_order_get") {
+    const userId=String(input.userId||""),orderId=String(input.orderId||"");
+    if(!validUuid(userId)||!validUuid(orderId))return json(400,{error:"Invalid order reference."});
+    const {data:order,error:orderError}=await admin.from("marketplace_orders")
+      .select("id,buyer_id,currency,status,payment_status,item_subtotal_minor,fulfillment_minor,tax_minor,total_minor,discount_minor,refunded_minor,created_at,updated_at")
+      .eq("id",orderId).maybeSingle();
+    if(orderError)return json(503,{error:"Order could not be loaded."});
+    if(!order)return json(404,{error:"Order not found."});
+    const isBuyer=order.buyer_id===userId;
+    const {data:sellerOrders,error:sellerError}=await admin.from("marketplace_seller_orders")
+      .select("id,order_id,seller_id,status,gross_minor,commission_minor,processor_fee_minor,seller_net_minor,refunded_minor,payout_status,created_at,updated_at")
+      .eq("order_id",orderId).eq(isBuyer?"order_id":"seller_id",isBuyer?orderId:userId);
+    if(sellerError)return json(503,{error:"Seller order details could not be loaded."});
+    if(!isBuyer&&!(sellerOrders||[]).length)return json(403,{error:"You are not a participant in this order."});
+    const sellerOrderIds=(sellerOrders||[]).map((row:any)=>row.id);
+    const [itemsResult,fulfilmentResult,eventsResult]=await Promise.all([
+      sellerOrderIds.length?admin.from("marketplace_order_items").select("id,seller_order_id,listing_id,title_snapshot,quantity,unit_price_minor,line_total_minor").in("seller_order_id",sellerOrderIds):Promise.resolve({data:[],error:null}),
+      sellerOrderIds.length?admin.from("marketplace_fulfillments").select("id,seller_order_id,method,status,carrier,tracking_reference,tracking_url,dispatched_at,delivered_at,created_at,updated_at").in("seller_order_id",sellerOrderIds):Promise.resolve({data:[],error:null}),
+      admin.from("marketplace_order_events").select("id,event_type,from_status,to_status,note,created_at").eq("order_id",orderId).order("created_at",{ascending:true}).limit(200)
+    ]);
+    if(itemsResult.error||fulfilmentResult.error||eventsResult.error)return json(503,{error:"Order activity could not be loaded."});
+    const itemMap=new Map<string,any[]>();
+    for(const item of itemsResult.data||[]){const items=itemMap.get(item.seller_order_id)||[];items.push({
+      id:item.id,listingId:item.listing_id,title:item.title_snapshot,quantity:item.quantity,
+      unitPriceMinor:item.unit_price_minor,lineTotalMinor:item.line_total_minor
+    });itemMap.set(item.seller_order_id,items);}
+    const fulfillMap=new Map<string,any[]>();
+    for(const row of fulfilmentResult.data||[]){const items=fulfillMap.get(row.seller_order_id)||[];items.push({
+      id:row.id,method:row.method,status:row.status,carrier:row.carrier,trackingReference:row.tracking_reference,
+      trackingUrl:row.tracking_url,dispatchedAt:row.dispatched_at,deliveredAt:row.delivered_at
+    });fulfillMap.set(row.seller_order_id,items);}
+    const ownSellerOrders=(sellerOrders||[]).map((row:any)=>({
+      id:row.id,sellerId:row.seller_id,status:row.status,grossMinor:row.gross_minor,
+      commissionMinor:row.commission_minor,processorFeeMinor:row.processor_fee_minor,
+      sellerNetMinor:row.seller_net_minor,refundedMinor:row.refunded_minor,payoutStatus:row.payout_status,
+      items:itemMap.get(row.id)||[],fulfillments:fulfillMap.get(row.id)||[]
+    }));
+    return json(200,{order:{id:order.id,buyerId:order.buyer_id,currency:order.currency,status:order.status,
+      paymentStatus:order.payment_status,itemSubtotalMinor:order.item_subtotal_minor,
+      fulfillmentMinor:order.fulfillment_minor,taxMinor:order.tax_minor,discountMinor:order.discount_minor,
+      totalMinor:order.total_minor,refundedMinor:order.refunded_minor,createdAt:order.created_at,
+      updatedAt:order.updated_at,sellerOrders:ownSellerOrders,
+      events:(eventsResult.data||[]).map((row:any)=>({id:row.id,type:row.event_type,fromStatus:row.from_status,toStatus:row.to_status,note:row.note,createdAt:row.created_at}))}});
+  }
+
+  if (action === "marketplace_order_cancel") {
+    const userId=String(input.userId||""),orderId=String(input.orderId||"");
+    if(!validUuid(userId)||!validUuid(orderId))return json(400,{error:"Invalid order cancellation."});
+    const {data:order,error}=await admin.from("marketplace_orders")
+      .select("id,buyer_id,status,payment_status").eq("id",orderId).maybeSingle();
+    if(error)return json(503,{error:"Order could not be loaded."});
+    if(!order||order.buyer_id!==userId)return json(404,{error:"Order not found."});
+    if(order.status!=="awaiting_payment"||!["not_started","pending","failed"].includes(order.payment_status)){
+      return json(409,{error:"This order can no longer be cancelled through this action."});
+    }
+    const {data,count,error:releaseError}=await admin.rpc("release_marketplace_order_inventory",{
+      p_order_id:orderId,p_reason:"buyer_cancelled_before_payment"
+    });
+    if(releaseError)return fail(releaseError,"Order inventory could not be released.");
+    return json(200,{ok:true,releasedReservations:data||0,status:"cancelled",message:"Order cancelled and reserved stock released. No payment was taken."});
+  }
+
+  if (action === "marketplace_inventory_expire") {
+    const {data,error}=await admin.rpc("expire_marketplace_inventory_reservations");
+    if(error)return fail(error,"Expired Marketplace stock reservations could not be released.");
+    return json(200,{ok:true,releasedReservations:data||0});
   }
 
   if (action === "marketplace_bookings_list") {
