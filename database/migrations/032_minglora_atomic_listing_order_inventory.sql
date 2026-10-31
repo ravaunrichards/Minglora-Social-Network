@@ -35,7 +35,7 @@ BEGIN
     RAISE EXCEPTION 'Invalid seller or listing payload';
   END IF;
   v_id:=nullif(p_listing->>'id','')::uuid;
-  IF v_id IS NULL OR nullif(p_listing->>'sellerId','')::uuid<>p_seller_id THEN
+  IF v_id IS NULL OR nullif(p_listing->>'sellerId','')::uuid IS DISTINCT FROM p_seller_id THEN
     RAISE EXCEPTION 'Listing ID or seller ownership is invalid';
   END IF;
   SELECT * INTO v_seller FROM public.marketplace_seller_profiles
@@ -203,6 +203,9 @@ BEGIN
     IF v_listing.price_minor IS NULL OR v_listing.price_minor<=0 OR v_listing.currency IS NULL THEN
       RAISE EXCEPTION 'A product has an invalid price or currency';
     END IF;
+    IF NOT (v_listing.fulfillment_options @> ARRAY[v_line->>'fulfillment']::text[]) THEN
+      RAISE EXCEPTION 'A selected fulfilment option is no longer available';
+    END IF;
     IF v_listing.quantity-v_listing.reserved_quantity<v_quantity THEN
       RAISE EXCEPTION 'Requested quantity exceeds available stock for %',v_listing.title;
     END IF;
@@ -345,6 +348,12 @@ BEGIN
   END IF;
   IF v_quote.blockers<>'[]'::jsonb THEN RAISE EXCEPTION 'Checkout quote contains unresolved blockers'; END IF;
 
+  IF EXISTS(
+    SELECT 1 FROM unnest(v_quote.seller_ids) seller_id
+    LEFT JOIN public.marketplace_seller_profiles seller ON seller.user_id=seller_id
+    WHERE seller.user_id IS NULL OR seller.status<>'approved'
+      OR seller.identity_status<>'verified' OR seller.payout_status<>'verified'
+  ) THEN RAISE EXCEPTION 'A seller is no longer approved, identity-verified and payout-onboarded'; END IF;
   v_currency:=v_quote.currency;
   v_expires:=now()+interval '15 minutes';
   INSERT INTO public.marketplace_orders(
@@ -463,6 +472,8 @@ BEGIN
       SET status='released',updated_at=now() WHERE id=v_reservation.id;
     v_count:=v_count+1;
   END LOOP;
+  UPDATE public.marketplace_seller_orders SET status='cancelled',updated_at=now()
+    WHERE order_id=p_order_id AND status='awaiting_seller';
   UPDATE public.marketplace_orders SET status='cancelled',payment_status='failed',updated_at=now()
     WHERE id=p_order_id AND status='awaiting_payment' AND payment_status IN ('not_started','pending','failed');
   INSERT INTO public.marketplace_order_events(order_id,event_type,from_status,to_status,note)
@@ -484,10 +495,9 @@ DECLARE
   v_count integer:=0;
 BEGIN
   FOR v_order_id IN
-    SELECT DISTINCT order_id FROM public.marketplace_inventory_reservations
+    SELECT order_id FROM public.marketplace_inventory_reservations
     WHERE status='reserved' AND expires_at<=now()
-    ORDER BY order_id
-    FOR UPDATE SKIP LOCKED
+    GROUP BY order_id ORDER BY order_id
   LOOP
     v_count:=v_count+public.release_marketplace_order_inventory(v_order_id,'inventory_reservation_expired');
   END LOOP;
