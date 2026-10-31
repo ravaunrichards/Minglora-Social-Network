@@ -688,7 +688,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
   ).join("");
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
   role=liveKit?.role==="host"?"host":liveKit?.role==="guest"?"guest":"viewer";
