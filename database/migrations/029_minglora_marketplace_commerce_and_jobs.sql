@@ -188,8 +188,8 @@ CREATE OR REPLACE FUNCTION public.post_marketplace_journal(
   p_entries jsonb
 ) RETURNS uuid
 LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path=public,pg_temp
+SECURITY INVOKER
+SET search_path=''
 AS $$
 DECLARE
   v_journal_id uuid;
@@ -402,8 +402,7 @@ ALTER TABLE public.marketplace_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.marketplace_job_postings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.marketplace_job_applications ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY marketplace_seller_profiles_read ON public.marketplace_seller_profiles FOR SELECT TO authenticated USING (user_id=(select auth.uid()) OR status='approved');
-CREATE POLICY marketplace_seller_profiles_apply ON public.marketplace_seller_profiles FOR INSERT TO authenticated WITH CHECK (user_id=(select auth.uid()) AND status='pending' AND identity_status='not_started' AND payout_status='not_connected');
+CREATE POLICY marketplace_seller_profiles_read ON public.marketplace_seller_profiles FOR SELECT TO authenticated USING (user_id=(select auth.uid()));
 CREATE POLICY marketplace_seller_events_read ON public.marketplace_seller_verification_events FOR SELECT TO authenticated USING (seller_id=(select auth.uid()));
 CREATE POLICY marketplace_carts_owner_read ON public.marketplace_carts FOR SELECT TO authenticated USING (buyer_id=(select auth.uid()));
 CREATE POLICY marketplace_cart_items_owner_read ON public.marketplace_cart_items FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.marketplace_carts c WHERE c.id=cart_id AND c.buyer_id=(select auth.uid())));
@@ -462,7 +461,7 @@ REVOKE ALL ON public.marketplace_seller_verification_events,public.marketplace_p
 REVOKE INSERT,UPDATE,DELETE ON public.marketplace_orders,public.marketplace_seller_orders,public.marketplace_order_items,public.marketplace_fulfillments,public.marketplace_service_bookings,public.marketplace_cases,public.marketplace_case_messages,public.marketplace_payouts,public.marketplace_seller_profiles FROM anon,authenticated;
 GRANT SELECT ON public.marketplace_seller_profiles,public.marketplace_carts,public.marketplace_cart_items,public.marketplace_orders,public.marketplace_seller_orders,public.marketplace_order_items,public.marketplace_fulfillments,public.marketplace_service_bookings,public.marketplace_cases,public.marketplace_case_messages,public.marketplace_payouts,public.marketplace_reviews,public.marketplace_job_postings,public.marketplace_job_applications TO authenticated;
 GRANT SELECT ON public.marketplace_reviews,public.marketplace_job_postings TO anon;
-GRANT INSERT ON public.marketplace_seller_profiles,public.marketplace_reviews,public.marketplace_job_postings,public.marketplace_job_applications TO authenticated;
+GRANT INSERT ON public.marketplace_reviews,public.marketplace_job_postings,public.marketplace_job_applications TO authenticated;
 GRANT UPDATE(status) ON public.marketplace_job_applications TO authenticated;
 GRANT ALL ON public.marketplace_seller_profiles,public.marketplace_seller_verification_events,public.marketplace_carts,public.marketplace_cart_items,public.marketplace_orders,public.marketplace_seller_orders,public.marketplace_order_items,public.marketplace_payment_attempts,public.marketplace_webhook_events,public.marketplace_ledger_accounts,public.marketplace_journals,public.marketplace_ledger_entries,public.marketplace_fulfillments,public.marketplace_service_bookings,public.marketplace_cases,public.marketplace_case_messages,public.marketplace_returns,public.marketplace_payouts,public.marketplace_reviews,public.marketplace_job_postings,public.marketplace_job_applications TO service_role;
 
