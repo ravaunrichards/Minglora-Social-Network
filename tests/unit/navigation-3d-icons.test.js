@@ -21,6 +21,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
   for (const [view, icon, label] of [
     ['feed', 'home', 'Home'],
     ['live', 'live', 'LIVE'],
+    ['creator', 'creator', 'Studio'],
     ['friends', 'friends', 'Friends'],
     ['messages', 'messages', 'Messages'],
     ['coins', 'coins', 'Coins']
@@ -31,7 +32,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
   }
 });
 
-test('mobile navigation uses the same 3D icon artwork and keeps all five destinations', () => {
+test('mobile navigation uses the same 3D icon artwork and keeps all six destinations', () => {
   const nav = html.match(/<div class="mobile-nav"[\s\S]*?<\/div>/)?.[0] || '';
   assert.ok(nav, 'mobile navigation exists');
 
@@ -78,7 +79,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the new icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v22-audio-speaker-connection/);
+  assert.match(serviceWorker, /minglora-shell-v24-creator-stage-sticky-fallback/);
   assert.match(serviceWorker, /styles\.css\?v=20261031-audio-speaker-connection-5/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
