@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1769e0"><meta name="description" content="Connect with friends, share moments, and find your community.">
-  <title>Minglora — Your people, your world</title><link rel="stylesheet" href="/styles.css?v=20261030-profile-security-1">
+  <title>Minglora — Your people, your world</title><link rel="stylesheet" href="/styles.css?v=20261031-auth-live-layout-2">
 </head>
 <body>
   <div id="auth-screen" class="auth-screen hidden">
     <section class="auth-brand"><div class="brand-mark">m</div><h1>Minglora</h1><p>Your people. Your world. Your conversations.</p></section>
     <section class="auth-card"><form id="login-form"><h2>Welcome back</h2><label>Email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="Your password"></label><button class="primary full" type="submit">Log in</button><button class="text-button forgot-password" type="button" id="forgot-password">Forgot password?</button><p class="auth-error" id="login-error"></p><div class="auth-divider"><span>or create an account</span></div></form>
-      <form id="register-form" class="register-form"><label>Your name<input name="name" required minlength="2" placeholder="Full name"></label><label>Username<input name="username" required minlength="3" pattern="[A-Za-z0-9_]+" placeholder="yourname"></label><label>Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label><label>Contact phone<input name="phoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+18765551234" pattern="\+[1-9][0-9]{7,14}" required><small>Include + and your country code. You can change this later in About.</small></label><label>Password<input name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters"></label><button class="success full" type="submit">Create new account</button><p class="auth-error" id="register-error"></p></form>
+      <form id="register-form" class="register-form"><label>Your name<input name="name" required minlength="2" placeholder="Full name"></label><label>Username<input name="username" required minlength="3" pattern="[A-Za-z0-9_]+" placeholder="yourname"></label><label>Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label><label>Contact phone (optional)<input name="phoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+18765551234" pattern="\+[1-9][0-9]{7,14}"><small>You can add or change this later in About.</small></label><label>Password<input name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters"></label><p class="auth-note">No email confirmation is needed. Sign in as soon as your account is created.</p><button class="success full" type="submit">Create new account</button><p class="auth-error" id="register-error"></p></form>
     </section><p class="auth-foot">An independent social networking project.</p>
   </div>
   <div id="app" class="hidden">
@@ -26,5 +26,5 @@
     </main>
     <div id="toast" class="toast" role="status"></div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.min.js" defer></script><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script><script src="/app.js?v=20261030-live-lifecycle-1" defer></script><script src="/settings.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.min.js" defer></script><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script><script src="/app.js?v=20261031-auth-live-layout-2" defer></script><script src="/settings.js?v=20261031-auth-live-layout-2" defer></script>
 </body></html>
