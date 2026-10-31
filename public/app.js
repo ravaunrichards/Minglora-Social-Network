@@ -1,8 +1,6 @@
 const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
-function renderLiveThemeOptions(selected='studio'){return LIVE_ROOM_THEME_OPTIONS.map(theme=>`<option value="${theme.value}"${theme.value===selected?' selected':''}>${theme.label}</option>`).join('');}
-function applyLiveRoomTheme(theme){if(!LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===theme))return;const shell=$('.live-player-shell');if(!shell)return;LIVE_ROOM_THEME_OPTIONS.forEach(option=>shell.classList.remove('live-theme-'+option.value));shell.classList.add('live-theme-'+theme);}
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}});
 const fallbackAvatar = name => {
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2)
@@ -416,8 +414,7 @@ let liveCameraEnabled=true;
 let liveMicrophoneEnabled=true;
 let liveGiftCatalogue=[];
 
-let liveThemeRefreshTimer=null;
-function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}if(liveThemeRefreshTimer){clearInterval(liveThemeRefreshTimer);liveThemeRefreshTimer=null;}}
+function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function renderLiveDirectory(sessions,status,catalog,wallet){
@@ -431,9 +428,8 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     "</small><button class='primary' data-watch-live='"+esc(session.id)+"'>Watch LIVE</button></div></article>"
   ).join(""):status.liveDirectoryError?"<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE directory unavailable</h3><p>"+esc(status.liveDirectoryError)+"</p></section>":"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
   const packages=Array.isArray(catalog?.packages)?catalog.packages.slice(0,4):[];
-  const preferredLiveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===state.settings?.preferences?.liveRoomTheme)?state.settings.preferences.liveRoomTheme:'studio';
   setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, creator chat and animated gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
-    "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose a title, audience and room style. Your camera and microphone are requested after you start.</p></div><form id='live-create-form' class='live-create-form'><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><label class='live-style-field'><span>Room style</span><select name='liveTheme' aria-label='LIVE room style'>"+renderLiveThemeOptions(preferredLiveTheme)+"</select></label><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
+    "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Add a title and choose who can watch. Your camera and microphone are requested after you start.</p></div><form id='live-create-form' class='live-create-form'><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div><div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
@@ -441,7 +437,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     (packages.length?"<div class='live-package-preview'>"+packages.map(p=>"<span>"+Number(p.coin_amount).toLocaleString()+" Coins · "+liveMoney(p.price_minor)+"</span>").join("")+"</div>":"")+"</section>");
   $("#live-create-form")?.addEventListener("submit",async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector("button[type='submit']");button.disabled=true;
-    try{const values=new FormData(form);const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({title:String(values.get("title")||"").trim(),visibility:values.get("visibility"),liveTheme:values.get("liveTheme")})});await openLiveRoom(result.session,"host",result.liveKit);}
+    try{const values=new FormData(form);const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({title:String(values.get("title")||"").trim(),visibility:values.get("visibility")})});await openLiveRoom(result.session,"host",result.liveKit);}
     catch(error){toast(error.message);button.disabled=false;}
   });
   $("#refresh-live")?.addEventListener("click",renderLive);
@@ -543,7 +539,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
   activeLiveSession={...session,liveTheme};activeLiveRole=role;liveCameraEnabled=true;liveMicrophoneEnabled=true;
-  setContent("<section class='live-player-shell live-theme-"+liveTheme+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span>"+(role==="host"?"<label class='live-room-theme-control'><span>Room style</span><select id='live-room-theme-select' aria-label='Change LIVE room style'>"+renderLiveThemeOptions(liveTheme)+"</select></label>":"")+"</div>"+
+  setContent("<section class='live-player-shell live-theme-"+liveTheme+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+
     "<div class='live-player-layout'><div class='live-video-column'><div id='live-video-stage' class='live-video-stage'><div class='live-video-placeholder'>Connecting to LIVE…</div></div><div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls'><button id='live-mic-toggle' class='secondary'>"+(role==="host"?"Mute microphone":"Microphone unavailable")+"</button><button id='live-camera-toggle' class='secondary'>"+(role==="host"?"Turn camera off":"Camera unavailable")+"</button><button id='live-leave' class='danger'>"+(role==="host"?"End LIVE":"Leave LIVE")+"</button></div></div>"+
     "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
@@ -554,17 +550,6 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "</aside></div></section>");
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="host"?1:0);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
-  if(role==="host"){
-    const themeSelect=$("#live-room-theme-select");
-    themeSelect?.addEventListener("change",async()=>{
-      const nextTheme=themeSelect.value;themeSelect.disabled=true;
-      try{
-        await api("/live/sessions/"+encodeURIComponent(session.id)+"/theme",{method:"PATCH",body:JSON.stringify({liveTheme:nextTheme})});
-        activeLiveSession.liveTheme=nextTheme;applyLiveRoomTheme(nextTheme);toast("LIVE room style updated for everyone.");
-      }catch(error){themeSelect.value=activeLiveSession.liveTheme||liveTheme;toast(error.message);}
-      finally{themeSelect.disabled=false;}
-    });
-  }
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attachLiveTrack(track,participant,false));
   room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
   room.on(client.RoomEvent.ParticipantConnected,updatePresence);room.on(client.RoomEvent.ParticipantDisconnected,updatePresence);
@@ -583,10 +568,6 @@ async function openLiveRoom(session,role,issuedLiveKit){
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
     }
     updatePresence();
-    if(role!=="host")liveThemeRefreshTimer=setInterval(async()=>{
-      try{const result=await api("/live/sessions/"+encodeURIComponent(session.id)+"/theme");if(result.liveTheme!==activeLiveSession?.liveTheme){activeLiveSession.liveTheme=result.liveTheme;applyLiveRoomTheme(result.liveTheme);}}
-      catch{}
-    },8000);
     $("#live-mic-toggle").disabled=role!=="host";$("#live-camera-toggle").disabled=role!=="host";
     $("#live-mic-toggle")?.addEventListener("click",async()=>{try{liveMicrophoneEnabled=!liveMicrophoneEnabled;await room.localParticipant.setMicrophoneEnabled(liveMicrophoneEnabled);$("#live-mic-toggle").textContent=liveMicrophoneEnabled?"Mute microphone":"Unmute microphone";}catch(error){toast(error.message);}});
     $("#live-camera-toggle")?.addEventListener("click",async()=>{try{liveCameraEnabled=!liveCameraEnabled;await room.localParticipant.setCameraEnabled(liveCameraEnabled);$("#live-camera-toggle").textContent=liveCameraEnabled?"Turn camera off":"Turn camera on";}catch(error){toast(error.message);}});
