@@ -707,7 +707,7 @@ async function route(req, res) {
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
       if(method==='GET'&&p==='/api/marketplace/bookings'){
-        const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt));
+        const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(item=>{const listing=(db.marketplaceListings||[]).find(entry=>entry.id===item.listingId);const otherId=item.buyerId===user.id?item.sellerId:item.buyerId;const other=db.users.find(entry=>entry.id===otherId);return {...item,listingTitle:listing?.title||'Service appointment',otherName:other?.name||'Minglora member'};});
         return json(res,200,{bookings});
       }
       if(method==='POST'&&p==='/api/marketplace/bookings'){
@@ -736,6 +736,10 @@ async function route(req, res) {
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120);
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(!query||(item.title+' '+item.companyName+' '+item.description).toLowerCase().includes(query))&&(!category||item.category===category)&&(!location||String(item.location||'').toLowerCase().includes(location))).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         return json(res,200,{jobs});
+      }
+      if(method==='GET'&&p==='/api/jobs/applications/mine'){
+        const applications=(db.jobApplications||[]).filter(item=>item.applicantId===user.id).map(item=>({...item,job:(db.jobPostings||[]).find(job=>job.id===item.jobId)||null}));
+        return json(res,200,{applications});
       }
       if(method==='GET'&&p==='/api/jobs/mine'){
         return json(res,200,{jobs:(db.jobPostings||[]).filter(item=>item.employerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))});
