@@ -78,7 +78,14 @@ Deno.serve(async (req: Request) => {
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
-    "auth_register_user", "account_deletion_request"
+    "auth_register_user", "account_deletion_request",
+    "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue",
+    "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_checkout_quote", "marketplace_checkout_status",
+    "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
+    "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
+    "marketplace_job_update", "marketplace_job_apply", "marketplace_job_applications_for_job",
+    "marketplace_job_applications_mine", "marketplace_job_application_update",
+    "marketplace_saved_listings_list", "marketplace_listing_save"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -675,6 +682,469 @@ Deno.serve(async (req: Request) => {
     const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
     if(error||!data?.signedUrl)return json(404,{error:"Media is unavailable."});
     return json(200,{url:data.signedUrl});
+  }
+
+
+  if (action === "marketplace_seller_get") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid seller account."});
+    const {data,error}=await admin.from("marketplace_seller_profiles")
+      .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,terms_version,terms_accepted_at,created_at,updated_at")
+      .eq("user_id",userId).maybeSingle();
+    if(error)return json(503,{error:"Seller profile could not be loaded."});
+    return json(200,{seller:data?{
+      userId:data.user_id,sellerType:data.seller_type,storeName:data.store_name,description:data.description,
+      countryCode:data.country_code,contactEmail:data.contact_email,status:data.status,
+      identityStatus:data.identity_status,payoutStatus:data.payout_status,termsVersion:data.terms_version,
+      termsAcceptedAt:data.terms_accepted_at,createdAt:data.created_at,updatedAt:data.updated_at
+    }:null});
+  }
+
+  if (action === "marketplace_seller_apply") {
+    const userId=String(input.userId||"");
+    const sellerType=String(input.sellerType||"");
+    const storeName=String(input.storeName||"").trim().slice(0,100);
+    const description=String(input.description||"").trim().slice(0,1000);
+    const countryCode=String(input.countryCode||"").trim().toUpperCase();
+    const contactEmail=String(input.contactEmail||"").trim().toLowerCase();
+    const termsVersion=String(input.termsVersion||"").trim().slice(0,40);
+    if(!validUuid(userId)||!["individual","business"].includes(sellerType)||storeName.length<2||
+       description.length<20||!/^[A-Z]{2}$/.test(countryCode)||
+       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||input.acceptTerms!==true||!termsVersion){
+      return json(400,{error:"Complete every seller application field and accept the current terms."});
+    }
+    const {data:existing,error:lookupError}=await admin.from("marketplace_seller_profiles")
+      .select("user_id,status").eq("user_id",userId).maybeSingle();
+    if(lookupError)return json(503,{error:"Seller application could not be checked."});
+    if(existing&&existing.status!=="rejected")return json(409,{error:"A seller application already exists for this account.",status:existing.status});
+    const values={
+      seller_type:sellerType,store_name:storeName,description,country_code:countryCode,
+      contact_email:contactEmail,status:"pending",identity_status:"not_started",
+      payout_status:"not_connected",terms_version:termsVersion,terms_accepted_at:new Date().toISOString(),
+      reviewed_at:null,reviewed_by:null,review_reason:"",updated_at:new Date().toISOString()
+    };
+    let result;
+    if(existing){
+      result=await admin.from("marketplace_seller_profiles").update(values).eq("user_id",userId)
+        .select("user_id,status,identity_status,payout_status,store_name,created_at,updated_at").single();
+    }else{
+      result=await admin.from("marketplace_seller_profiles").insert({...values,user_id:userId})
+        .select("user_id,status,identity_status,payout_status,store_name,created_at,updated_at").single();
+    }
+    if(result.error)return fail(result.error,"Seller application could not be submitted.");
+    const {error:eventError}=await admin.from("marketplace_seller_verification_events").insert({
+      seller_id:userId,actor_id:userId,event_type:"submitted",
+      reason:existing?"Resubmitted after rejection":"New application"
+    });
+    if(eventError)return json(503,{error:"Seller application was saved but its verification audit event could not be written."});
+    await admin.from("marketplace_seller_public_profiles").upsert({
+      user_id:userId,store_name:storeName,description,country_code:countryCode,status:"inactive",updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+    return json(201,{seller:{
+      userId:result.data.user_id,status:result.data.status,identityStatus:result.data.identity_status,
+      payoutStatus:result.data.payout_status,storeName:result.data.store_name,
+      createdAt:result.data.created_at,updatedAt:result.data.updated_at
+    }});
+  }
+
+  if (action === "marketplace_seller_review") {
+    const actorId=String(input.actorId||""),sellerId=String(input.sellerId||"");
+    const status=String(input.status||""),identityStatus=String(input.identityStatus||"");
+    const reason=String(input.reason||"").trim().slice(0,1000);
+    if(!validUuid(actorId)||!validUuid(sellerId)||!["approved","rejected","suspended","pending"].includes(status)||
+       !["not_started","pending","verified","rejected"].includes(identityStatus)||!reason){
+      return json(400,{error:"A valid seller review decision and audit reason are required."});
+    }
+    if(status==="approved"&&identityStatus!=="verified")return json(409,{error:"Identity or business verification must be completed before approval."});
+    const {data:seller,error:lookupError}=await admin.from("marketplace_seller_profiles")
+      .select("user_id,store_name,description,country_code,status").eq("user_id",sellerId).maybeSingle();
+    if(lookupError)return json(503,{error:"Seller application could not be loaded."});
+    if(!seller)return json(404,{error:"Seller application not found."});
+    const stamp=new Date().toISOString();
+    const {data,error}=await admin.from("marketplace_seller_profiles").update({
+      status,identity_status:identityStatus,reviewed_at:stamp,reviewed_by:actorId,
+      review_reason:reason,updated_at:stamp
+    }).eq("user_id",sellerId)
+      .select("user_id,status,identity_status,payout_status,store_name").single();
+    if(error)return fail(error,"Seller review could not be saved.");
+    const eventType=identityStatus==="verified"?"identity_verified":status;
+    const {error:eventError}=await admin.from("marketplace_seller_verification_events").insert({
+      seller_id:sellerId,actor_id:actorId,event_type:eventType,reason
+    });
+    if(eventError)return json(503,{error:"Seller review saved but audit event recording failed."});
+    const publicStatus=status==="approved"&&identityStatus==="verified"?"active":"inactive";
+    const {error:publicError}=await admin.from("marketplace_seller_public_profiles").upsert({
+      user_id:sellerId,store_name:seller.store_name,description:seller.description,
+      country_code:seller.country_code,status:publicStatus,updated_at:stamp
+    },{onConflict:"user_id"});
+    if(publicError)return json(503,{error:"Seller review saved but public storefront status could not be synchronized."});
+    await admin.from("audit_log").insert({
+      actor_id:actorId,action:"marketplace_seller_reviewed",target_type:"marketplace_seller",
+      target_id:sellerId,metadata:{status,identityStatus,reason}
+    });
+    return json(200,{seller:{userId:data.user_id,status:data.status,identityStatus:data.identity_status,payoutStatus:data.payout_status,storeName:data.store_name}});
+  }
+
+  if (action === "marketplace_seller_queue") {
+    const [sellerResult,jobResult]=await Promise.all([
+      admin.from("marketplace_seller_profiles")
+        .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,created_at")
+        .eq("status","pending").order("created_at",{ascending:true}).limit(200),
+      admin.from("marketplace_job_postings")
+        .select("id,employer_id,title,company_name,description,category,employment_type,workplace_type,location_label,created_at")
+        .eq("status","pending_review").order("created_at",{ascending:true}).limit(200)
+    ]);
+    if(sellerResult.error||jobResult.error)return json(503,{error:"Marketplace moderation queue is unavailable."});
+    const cfg=await admin.from("marketplace_payment_configuration")
+      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled")
+      .eq("singleton",true).maybeSingle();
+    const blockers=[];
+    if(!cfg.data?.checkout_enabled||cfg.data?.marketplace_approval_status!=="approved")blockers.push("Marketplace provider approval and buyer payment processing are not enabled.");
+    if(!cfg.data?.payouts_enabled)blockers.push("Marketplace seller payouts are not enabled.");
+    if(!cfg.data?.tax_calculation_enabled)blockers.push("Tax and customs calculations are not configured.");
+    return json(200,{
+      sellers:(sellerResult.data||[]).map(row=>({
+        userId:row.user_id,sellerType:row.seller_type,storeName:row.store_name,description:row.description,
+        countryCode:row.country_code,contactEmail:row.contact_email,status:row.status,
+        identityStatus:row.identity_status,payoutStatus:row.payout_status,submittedAt:row.created_at
+      })),
+      jobs:(jobResult.data||[]).map(row=>({
+        id:row.id,employerId:row.employer_id,title:row.title,companyName:row.company_name,
+        description:row.description,category:row.category,employmentType:row.employment_type,
+        workplaceType:row.workplace_type,location:row.location_label,createdAt:row.created_at
+      })),
+      commerce:{enabled:Boolean(cfg.data?.checkout_enabled&&cfg.data?.marketplace_approval_status==="approved"),blockers}
+    });
+  }
+
+  if (action === "marketplace_listing_sync") {
+    const userId=String(input.userId||""),listing=input.listing||{};
+    if(!validUuid(userId)||!validUuid(listing.id)||String(listing.sellerId||"")!==userId)return json(400,{error:"Invalid Marketplace listing owner or ID."});
+    const {data:seller,error:sellerError}=await admin.from("marketplace_seller_profiles")
+      .select("status,identity_status").eq("user_id",userId).maybeSingle();
+    if(sellerError)return json(503,{error:"Seller verification could not be checked."});
+    if(seller?.status!=="approved"||seller?.identity_status!=="verified")return json(403,{error:"A verified and approved seller account is required to publish listings."});
+    const kind=String(listing.kind||"product"),priceType=String(listing.priceType||"fixed");
+    const currency=String(listing.currency||"JMD").toUpperCase();
+    const status=String(listing.status||"active");
+    if(!["product","service"].includes(kind)||!["fixed","from","hourly","quote"].includes(priceType)||
+       !["JMD","USD","CAD","GBP","EUR","TTD","BBD","GYD"].includes(currency)||
+       !["active","paused","sold","removed","archived","draft"].includes(status)){
+      return json(400,{error:"Marketplace listing configuration is invalid."});
+    }
+    const priceMinor=listing.priceMinor==null?null:Number(listing.priceMinor);
+    const quantity=kind==="product"?Number(listing.quantity):1;
+    const fulfillment=Array.isArray(listing.fulfillment)?listing.fulfillment.map(String):[];
+    if(kind==="product"&&(!Number.isSafeInteger(priceMinor)||priceMinor<=0||!Number.isSafeInteger(quantity)||quantity<0||quantity>1000000||!fulfillment.length)){
+      return json(400,{error:"Product price, stock or fulfilment settings are invalid."});
+    }
+    if(kind==="service"&&((priceType==="quote"&&priceMinor!==null)||(priceType!=="quote"&&(!Number.isSafeInteger(priceMinor)||priceMinor<=0)))){
+      return json(400,{error:"Service pricing details are invalid."});
+    }
+    const dbStatus=status==="paused"?"archived":status;
+    const row={
+      id:listing.id,seller_id:userId,title:String(listing.title||"").trim().slice(0,180),
+      description:String(listing.description||"").slice(0,5000),price_minor:priceMinor,currency,
+      category:String(listing.category||"other"),condition:String(listing.condition||"unspecified"),
+      location_label:String(listing.location||"").slice(0,160),status:dbStatus,kind,price_type:priceType,
+      quantity,fulfillment_options:fulfillment,service_mode:listing.serviceMode||null,
+      tags:Array.isArray(listing.tags)?listing.tags.map((tag:string)=>String(tag).slice(0,24)).slice(0,8):[]
+    };
+    if(row.title.length<5)return json(400,{error:"Listing title is too short."});
+    const {data:existing,error:existingError}=await admin.from("marketplace_listings")
+      .select("id,seller_id").eq("id",listing.id).maybeSingle();
+    if(existingError)return json(503,{error:"Marketplace listing could not be checked."});
+    if(existing&&existing.seller_id!==userId)return json(409,{error:"Listing ownership conflict."});
+    const {data:saved,error}=await admin.from("marketplace_listings").upsert(row,{onConflict:"id"}).select("*").single();
+    if(error)return fail(error,"Marketplace listing could not be saved to the commerce database.");
+    const mediaIds=[...new Set((Array.isArray(listing.mediaIds)?listing.mediaIds:[]).map(String))];
+    if(mediaIds.length>8)return json(400,{error:"A listing may contain no more than eight photos."});
+    if(mediaIds.length){
+      const {data:assets,error:assetError}=await admin.from("media_assets").select("id,owner_id").in("id",mediaIds);
+      if(assetError||(assets||[]).length!==mediaIds.length||(assets||[]).some((asset:any)=>asset.owner_id!==userId)){
+        return json(400,{error:"One or more listing photos are not owned by this seller."});
+      }
+    }
+    const {error:deleteError}=await admin.from("listing_media").delete().eq("listing_id",listing.id);
+    if(deleteError)return json(503,{error:"Listing saved but photo associations could not be refreshed."});
+    if(mediaIds.length){
+      const {error:mediaError}=await admin.from("listing_media").insert(mediaIds.map((assetId:string,index:number)=>({listing_id:listing.id,asset_id:assetId,sort_order:index})));
+      if(mediaError)return json(503,{error:"Listing saved but photo associations could not be refreshed."});
+    }
+    return json(200,{listing:saved});
+  }
+
+  if (action === "marketplace_listing_set_status") {
+    const userId=String(input.userId||""),listingId=String(input.listingId||""),status=String(input.status||"");
+    if(!validUuid(userId)||!validUuid(listingId)||!["active","paused","sold","removed"].includes(status))return json(400,{error:"Invalid listing status change."});
+    const {data:listing,error:lookupError}=await admin.from("marketplace_listings").select("id,seller_id,kind,quantity")
+      .eq("id",listingId).maybeSingle();
+    if(lookupError)return json(503,{error:"Marketplace listing could not be loaded."});
+    if(!listing)return json(404,{error:"Marketplace listing not found."});
+    if(listing.seller_id!==userId)return json(403,{error:"Only the seller can manage this listing."});
+    if(status==="active"&&listing.kind==="product"&&Number(listing.quantity)<1)return json(409,{error:"Add available stock before reactivating this product."});
+    const dbStatus=status==="paused"?"archived":status;
+    const {data,error}=await admin.from("marketplace_listings").update({
+      status:dbStatus,quantity:status==="sold"?0:listing.quantity,updated_at:new Date().toISOString()
+    }).eq("id",listingId).select("*").single();
+    if(error)return fail(error,"Marketplace listing status could not be updated.");
+    return json(200,{listing:data});
+  }
+
+  if (action === "marketplace_checkout_quote") {
+    const buyerId=String(input.buyerId||"");
+    if(!validUuid(buyerId))return json(400,{error:"Sign in before preparing a checkout quote."});
+    const {data,error}=await admin.rpc("create_marketplace_checkout_quote",{
+      p_buyer_id:buyerId,p_items:input.items,p_fulfillment_by_listing:input.fulfillmentByListing||{}
+    });
+    if(error)return fail(error,"A checkout quote could not be calculated.");
+    return json(200,{quote:data,notice:"This is an informational quote only. No stock is reserved and no payment has been taken."});
+  }
+
+  if (action === "marketplace_checkout_status") {
+    const {data,error}=await admin.from("marketplace_payment_configuration")
+      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled")
+      .eq("singleton",true).maybeSingle();
+    if(error||!data)return json(503,{error:"Marketplace payment configuration is unavailable."});
+    const blockers=[];
+    if(data.marketplace_approval_status!=="approved")blockers.push("Marketplace provider approval has not been confirmed.");
+    if(!data.checkout_enabled)blockers.push("Buyer checkout is disabled.");
+    if(!data.payouts_enabled)blockers.push("Seller payouts are disabled.");
+    if(!data.tax_calculation_enabled)blockers.push("Tax and customs calculation is not configured.");
+    if(!data.provider)blockers.push("No marketplace payment provider is configured.");
+    return json(200,{enabled:Boolean(data.checkout_enabled&&data.marketplace_approval_status==="approved"&&data.provider&&data.tax_calculation_enabled),
+      orderCreationEnabled:false,payoutsEnabled:Boolean(data.payouts_enabled&&data.marketplace_approval_status==="approved"),
+      provider:data.provider||null,blockers});
+  }
+
+  if (action === "marketplace_bookings_list") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid user."});
+    const {data:rows,error}=await admin.from("marketplace_service_bookings").select("*")
+      .or("buyer_id.eq."+userId+",seller_id.eq."+userId).order("starts_at",{ascending:true}).limit(200);
+    if(error)return json(503,{error:"Service bookings could not be loaded."});
+    const listingIds=[...new Set((rows||[]).map((row:any)=>row.listing_id))];
+    const otherIds=[...new Set((rows||[]).map((row:any)=>row.buyer_id===userId?row.seller_id:row.buyer_id))];
+    const [listingsResult,peopleResult]=await Promise.all([
+      listingIds.length?admin.from("marketplace_listings").select("id,title").in("id",listingIds):Promise.resolve({data:[],error:null}),
+      otherIds.length?admin.from("profiles").select("id,display_name").in("id",otherIds):Promise.resolve({data:[],error:null})
+    ]);
+    if(listingsResult.error||peopleResult.error)return json(503,{error:"Booking details could not be loaded."});
+    const listingMap=new Map((listingsResult.data||[]).map((item:any)=>[item.id,item.title]));
+    const personMap=new Map((peopleResult.data||[]).map((item:any)=>[item.id,item.display_name]));
+    return json(200,{bookings:(rows||[]).map((row:any)=>({
+      id:row.id,listingId:row.listing_id,buyerId:row.buyer_id,sellerId:row.seller_id,
+      status:row.status,startAt:row.starts_at,endAt:row.ends_at,durationMinutes:row.duration_minutes,
+      priceMinor:row.price_minor,currency:row.currency,message:row.buyer_message,
+      completionConfirmedAt:row.completion_confirmed_at,createdAt:row.created_at,updatedAt:row.updated_at,
+      listingTitle:listingMap.get(row.listing_id)||"Service appointment",
+      otherName:personMap.get(row.buyer_id===userId?row.seller_id:row.buyer_id)||"Minglora member"
+    }))});
+  }
+
+  if (action === "marketplace_booking_create") {
+    const buyerId=String(input.buyerId||"");
+    if(!validUuid(buyerId))return json(400,{error:"Sign in before requesting an appointment."});
+    const {data,error}=await admin.rpc("create_marketplace_service_booking",{
+      p_buyer_id:buyerId,p_listing_id:input.listingId,p_start_at:input.startAt,
+      p_duration_minutes:input.durationMinutes,p_message:String(input.message||"")
+    });
+    if(error)return fail(error,"Service appointment could not be requested.");
+    return json(201,{booking:data});
+  }
+
+  if (action === "marketplace_booking_update") {
+    const actorId=String(input.actorId||"");
+    if(!validUuid(actorId)||!validUuid(String(input.bookingId||"")))return json(400,{error:"Invalid booking update."});
+    const {data,error}=await admin.rpc("transition_marketplace_service_booking",{
+      p_booking_id:input.bookingId,p_actor_id:actorId,p_next_status:input.status
+    });
+    if(error)return fail(error,"Service appointment could not be updated.");
+    return json(200,{booking:data});
+  }
+
+  if (action === "marketplace_jobs_list" || action === "marketplace_jobs_mine") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid user."});
+    let query=admin.from("marketplace_job_postings").select("*");
+    if(action==="marketplace_jobs_mine")query=query.eq("employer_id",userId);
+    else query=query.eq("status","open").gt("application_deadline",new Date().toISOString());
+    const q=String(input.q||"").trim().slice(0,100);
+    if(q&&action==="marketplace_jobs_list"){
+      const safeQ=q.replace(/[%_,]/g," ").trim();
+      if(safeQ)query=query.or("title.ilike.%"+safeQ+"%,company_name.ilike.%"+safeQ+"%,description.ilike.%"+safeQ+"%");
+    }
+    if(input.category&&action==="marketplace_jobs_list")query=query.eq("category",String(input.category));
+    if(input.location&&action==="marketplace_jobs_list")query=query.ilike("location_label","%"+String(input.location).slice(0,120)+"%");
+    const {data,error}=await query.order("created_at",{ascending:false}).limit(100);
+    if(error)return json(503,{error:"Job vacancies could not be loaded."});
+    return json(200,{jobs:(data||[]).map((row:any)=>({
+      id:row.id,employerId:row.employer_id,companyName:row.company_name,title:row.title,
+      description:row.description,category:row.category,employmentType:row.employment_type,
+      workplaceType:row.workplace_type,location:row.location_label,currency:row.currency,
+      salaryMinMinor:row.salary_min_minor,salaryMaxMinor:row.salary_max_minor,
+      applicationDeadline:row.application_deadline,status:row.status,createdAt:row.created_at,updatedAt:row.updated_at
+    }))});
+  }
+
+  if (action === "marketplace_jobs_create") {
+    const employerId=String(input.employerId||"");
+    if(!validUuid(employerId))return json(400,{error:"Invalid employer."});
+    const job=input.job||{};
+    const title=String(job.title||"").trim(),companyName=String(job.companyName||"").trim();
+    const description=String(job.description||"").trim(),deadline=new Date(job.applicationDeadline);
+    if(title.length<5||companyName.length<2||description.length<50||description.length>6000||
+       !Number.isFinite(deadline.getTime())||deadline<=new Date())return json(400,{error:"Job posting details or application deadline are invalid."});
+    const {data,error}=await admin.from("marketplace_job_postings").insert({
+      employer_id:employerId,company_name:companyName,title,description,category:job.category,
+      employment_type:job.employmentType,workplace_type:job.workplaceType,location_label:job.location||"",
+      currency:job.currency||"JMD",salary_min_minor:job.salaryMinMinor,salary_max_minor:job.salaryMaxMinor,
+      application_deadline:deadline.toISOString(),status:"pending_review"
+    }).select("*").single();
+    if(error)return fail(error,"Job vacancy could not be submitted.");
+    return json(201,{job:{id:data.id,employerId:data.employer_id,companyName:data.company_name,title:data.title,
+      description:data.description,category:data.category,employmentType:data.employment_type,workplaceType:data.workplace_type,
+      location:data.location_label,currency:data.currency,salaryMinMinor:data.salary_min_minor,salaryMaxMinor:data.salary_max_minor,
+      applicationDeadline:data.application_deadline,status:data.status,createdAt:data.created_at}});
+  }
+
+  if (action === "marketplace_job_review") {
+    const actorId=String(input.actorId||"");
+    if(!validUuid(actorId)||!validUuid(String(input.jobId||""))||!["open","rejected"].includes(String(input.status||""))||!String(input.reason||"").trim()){
+      return json(400,{error:"A valid vacancy moderation decision and reason are required."});
+    }
+    const {data,error}=await admin.from("marketplace_job_postings").update({
+      status:input.status,reviewed_by:actorId,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq("id",input.jobId).eq("status","pending_review").select("*").maybeSingle();
+    if(error)return fail(error,"Job moderation decision could not be saved.");
+    if(!data)return json(404,{error:"Pending job vacancy not found."});
+    await admin.from("audit_log").insert({
+      actor_id:actorId,action:"job_posting_"+String(input.status),target_type:"job_posting",
+      target_id:String(input.jobId),metadata:{reason:String(input.reason).slice(0,1000)}
+    });
+    return json(200,{job:{id:data.id,employerId:data.employer_id,title:data.title,status:data.status,reviewedAt:data.reviewed_at}});
+  }
+
+  if (action === "marketplace_job_update") {
+    const userId=String(input.userId||""),jobId=String(input.jobId||""),status=String(input.status||"");
+    if(!validUuid(userId)||!validUuid(jobId)||!["paused","closed"].includes(status))return json(400,{error:"Invalid job status update."});
+    const {data,error}=await admin.from("marketplace_job_postings").update({status,updated_at:new Date().toISOString()})
+      .eq("id",jobId).eq("employer_id",userId).in("status",["open","paused"]).select("id,status").maybeSingle();
+    if(error)return fail(error,"Job vacancy could not be updated.");
+    if(!data)return json(404,{error:"Open vacancy not found."});
+    return json(200,{job:{id:data.id,status:data.status}});
+  }
+
+  if (action === "marketplace_job_apply") {
+    const applicantId=String(input.applicantId||""),jobId=String(input.jobId||"");
+    const coverLetter=String(input.coverLetter||"").trim().slice(0,5000);
+    if(!validUuid(applicantId)||!validUuid(jobId)||coverLetter.length<30)return json(400,{error:"Add a valid cover letter to apply."});
+    const {data:job,error:jobError}=await admin.from("marketplace_job_postings")
+      .select("id,employer_id,status,application_deadline").eq("id",jobId).maybeSingle();
+    if(jobError)return json(503,{error:"Vacancy details could not be loaded."});
+    if(!job||job.status!=="open"||new Date(job.application_deadline)<=new Date()||job.employer_id===applicantId){
+      return json(404,{error:"This vacancy is unavailable for applications."});
+    }
+    const {data,error}=await admin.from("marketplace_job_applications")
+      .insert({job_id:jobId,applicant_id:applicantId,cover_letter:coverLetter,status:"submitted"})
+      .select("id,job_id,applicant_id,status,cover_letter,created_at").single();
+    if(error){
+      if(error.code==="23505")return json(409,{error:"You have already applied for this vacancy."});
+      return fail(error,"Job application could not be submitted.");
+    }
+    return json(201,{application:{id:data.id,jobId:data.job_id,applicantId:data.applicant_id,status:data.status,coverLetter:data.cover_letter,createdAt:data.created_at}});
+  }
+
+  if (action === "marketplace_job_applications_for_job") {
+    const viewerId=String(input.viewerId||""),jobId=String(input.jobId||"");
+    if(!validUuid(viewerId)||!validUuid(jobId))return json(400,{error:"Invalid job application request."});
+    const {data:job,error:jobError}=await admin.from("marketplace_job_postings")
+      .select("id,employer_id").eq("id",jobId).maybeSingle();
+    if(jobError)return json(503,{error:"Vacancy could not be loaded."});
+    if(!job||job.employer_id!==viewerId)return json(403,{error:"Only the employer can review applicants."});
+    const {data:rows,error}=await admin.from("marketplace_job_applications")
+      .select("id,job_id,applicant_id,status,cover_letter,created_at,updated_at")
+      .eq("job_id",jobId).order("created_at",{ascending:false}).limit(200);
+    if(error)return json(503,{error:"Job applications could not be loaded."});
+    const ids=[...new Set((rows||[]).map((row:any)=>row.applicant_id))];
+    const {data:people,error:peopleError}=ids.length
+      ?await admin.from("profiles").select("id,display_name,username").in("id",ids)
+      :{data:[],error:null};
+    if(peopleError)return json(503,{error:"Candidate profiles could not be loaded."});
+    const profiles=new Map((people||[]).map((row:any)=>[row.id,{id:row.id,name:row.display_name,username:row.username}]));
+    return json(200,{applications:(rows||[]).map((row:any)=>({
+      id:row.id,jobId:row.job_id,applicantId:row.applicant_id,status:row.status,
+      coverLetter:row.cover_letter,createdAt:row.created_at,updatedAt:row.updated_at,
+      candidate:profiles.get(row.applicant_id)||null
+    }))});
+  }
+
+  if (action === "marketplace_job_applications_mine") {
+    const applicantId=String(input.applicantId||"");
+    if(!validUuid(applicantId))return json(400,{error:"Invalid candidate."});
+    const {data:rows,error}=await admin.from("marketplace_job_applications")
+      .select("id,job_id,applicant_id,status,cover_letter,created_at,updated_at")
+      .eq("applicant_id",applicantId).order("created_at",{ascending:false}).limit(200);
+    if(error)return json(503,{error:"Your job applications could not be loaded."});
+    const ids=[...new Set((rows||[]).map((row:any)=>row.job_id))];
+    const {data:jobs,error:jobsError}=ids.length
+      ?await admin.from("marketplace_job_postings").select("id,title,company_name,location_label,employment_type").in("id",ids)
+      :{data:[],error:null};
+    if(jobsError)return json(503,{error:"Job details could not be loaded."});
+    const jobMap=new Map((jobs||[]).map((row:any)=>[row.id,{id:row.id,title:row.title,companyName:row.company_name,location:row.location_label,employmentType:row.employment_type}]));
+    return json(200,{applications:(rows||[]).map((row:any)=>({
+      id:row.id,jobId:row.job_id,applicantId:row.applicant_id,status:row.status,
+      coverLetter:row.cover_letter,createdAt:row.created_at,updatedAt:row.updated_at,job:jobMap.get(row.job_id)||null
+    }))});
+  }
+
+  if (action === "marketplace_job_application_update") {
+    const actorId=String(input.actorId||""),applicationId=String(input.applicationId||""),nextStatus=String(input.status||"");
+    if(!validUuid(actorId)||!validUuid(applicationId)||!["reviewed","shortlisted","rejected","hired","withdrawn"].includes(nextStatus)){
+      return json(400,{error:"Invalid application status update."});
+    }
+    const {data:application,error:appError}=await admin.from("marketplace_job_applications")
+      .select("id,job_id,applicant_id,status").eq("id",applicationId).maybeSingle();
+    if(appError)return json(503,{error:"Job application could not be loaded."});
+    if(!application)return json(404,{error:"Application not found."});
+    const {data:job,error:jobError}=await admin.from("marketplace_job_postings")
+      .select("id,employer_id").eq("id",application.job_id).maybeSingle();
+    if(jobError)return json(503,{error:"Vacancy could not be loaded."});
+    const isApplicant=application.applicant_id===actorId,isEmployer=job?.employer_id===actorId;
+    if(!isApplicant&&!isEmployer)return json(403,{error:"You are not permitted to manage this application."});
+    const allowed:Record<string,string[]>={submitted:["reviewed","shortlisted","rejected","withdrawn"],reviewed:["shortlisted","rejected","withdrawn"],shortlisted:["hired","rejected","withdrawn"],rejected:[],hired:[],withdrawn:[]};
+    if(!(allowed[application.status]||[]).includes(nextStatus))return json(409,{error:"This application status transition is not permitted."});
+    if(nextStatus==="withdrawn"&&!isApplicant)return json(403,{error:"Only the applicant can withdraw this application."});
+    if(nextStatus!=="withdrawn"&&!isEmployer)return json(403,{error:"Only the employer can update hiring status."});
+    const {data,error}=await admin.from("marketplace_job_applications").update({
+      status:nextStatus,updated_at:new Date().toISOString()
+    }).eq("id",applicationId).eq("status",application.status)
+      .select("id,job_id,applicant_id,status,updated_at").maybeSingle();
+    if(error)return fail(error,"Application status could not be updated.");
+    if(!data)return json(409,{error:"This application was updated by another request. Refresh and try again."});
+    return json(200,{application:{id:data.id,jobId:data.job_id,applicantId:data.applicant_id,status:data.status,updatedAt:data.updated_at}});
+  }
+
+  if (action === "marketplace_saved_listings_list") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid user."});
+    const {data,error}=await admin.from("marketplace_saved_listings")
+      .select("listing_id,created_at").eq("user_id",userId).order("created_at",{ascending:false}).limit(500);
+    if(error)return json(503,{error:"Saved Marketplace listings could not be loaded."});
+    return json(200,{saved:(data||[]).map((row:any)=>({listingId:row.listing_id,createdAt:row.created_at}))});
+  }
+
+  if (action === "marketplace_listing_save") {
+    const userId=String(input.userId||""),listingId=String(input.listingId||""),save=input.save===true;
+    if(!validUuid(userId)||!validUuid(listingId))return json(400,{error:"Invalid saved listing."});
+    if(save){
+      const {error}=await admin.from("marketplace_saved_listings").upsert({user_id:userId,listing_id:listingId},{onConflict:"user_id,listing_id",ignoreDuplicates:true});
+      if(error)return fail(error,"Marketplace listing could not be saved.");
+    }else{
+      const {error}=await admin.from("marketplace_saved_listings").delete().eq("user_id",userId).eq("listing_id",listingId);
+      if(error)return fail(error,"Marketplace listing could not be removed from Saved.");
+    }
+    return json(200,{saved:save});
   }
 
   if (action === "load" || action === "health") {
