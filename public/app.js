@@ -429,15 +429,15 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     "</span><div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div></div><div class='live-room-details'><strong>"+
     esc(session.title)+"</strong><span>"+esc(session.host?.name||"Minglora creator")+"</span><small>@"+esc(session.host?.username||"member")+
     "</small><button class='primary' data-watch-live='"+esc(session.id)+"'>Watch LIVE</button></div></article>"
-  ).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
-  const packages=(catalog.packages||[]).slice(0,4);
+  ).join(""):status.liveDirectoryError?"<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE directory unavailable</h3><p>"+esc(status.liveDirectoryError)+"</p></section>":"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
+  const packages=Array.isArray(catalog?.packages)?catalog.packages.slice(0,4):[];
   const preferredLiveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===state.settings?.preferences?.liveRoomTheme)?state.settings.preferences.liveRoomTheme:'studio';
   setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, creator chat and animated gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose a title, audience and room style. Your camera and microphone are requested after you start.</p></div><form id='live-create-form' class='live-create-form'><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><label class='live-style-field'><span>Room style</span><select name='liveTheme' aria-label='LIVE room style'>"+renderLiveThemeOptions(preferredLiveTheme)+"</select></label><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div><div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
-    Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
+    (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
     (packages.length?"<div class='live-package-preview'>"+packages.map(p=>"<span>"+Number(p.coin_amount).toLocaleString()+" Coins · "+liveMoney(p.price_minor)+"</span>").join("")+"</div>":"")+"</section>");
   $("#live-create-form")?.addEventListener("submit",async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector("button[type='submit']");button.disabled=true;
@@ -470,8 +470,22 @@ async function refreshLiveDirectorySessions(){
 }
 async function renderLive(){
   activateSilent("live");stopLiveChatRefresh();stopLiveDirectoryRefresh();
-  const result=await Promise.all([api("/live/status"),api("/live/sessions"),api("/coins/catalog"),api("/coins/wallet")]);
-  liveGiftCatalogue=result[2].gifts||[];renderLiveDirectory(result[1].sessions||[],result[0],result[2],result[3]);
+  const results=await Promise.allSettled([
+    api("/live/status"),
+    api("/live/sessions"),
+    api("/coins/catalog"),
+    api("/coins/wallet")
+  ]);
+  const status=results[0].status==="fulfilled"
+    ? results[0].value
+    : {provider:"livekit",configured:false,connected:false,error:results[0].reason?.message||"Minglora could not check the LiveKit connection."};
+  const sessionResult=results[1].status==="fulfilled"?results[1].value:null;
+  const sessions=Array.isArray(sessionResult?.sessions)?sessionResult.sessions:[];
+  if(!sessionResult)status.liveDirectoryError=results[1].reason?.message||"Minglora could not load the LIVE directory.";
+  const catalog=results[2].status==="fulfilled"?results[2].value:{gifts:[],packages:[]};
+  const wallet=results[3].status==="fulfilled"?results[3].value:{wallet:null,ledger:[]};
+  liveGiftCatalogue=Array.isArray(catalog.gifts)?catalog.gifts:[];
+  renderLiveDirectory(sessions,status,catalog,wallet);
   liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,12000);
 }
 function attachLiveTrack(track,participant,local){
@@ -600,16 +614,32 @@ async function openLiveRoom(session,role,issuedLiveKit){
       catch(error){toast(error.message);}finally{button.disabled=false;}
     });
     if(role!=="host"){
-      const results=await Promise.all([api("/coins/catalog"),api("/coins/wallet")]);liveGiftCatalogue=results[0].gifts||[];
-      $("#live-wallet-balance").textContent=Number(results[1].wallet?.balance_coins||0).toLocaleString()+" Coins";
-      $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
+      const economyResults=await Promise.allSettled([api("/coins/catalog"),api("/coins/wallet")]);
+      const catalog=economyResults[0].status==="fulfilled"?economyResults[0].value:{gifts:[]};
+      const wallet=economyResults[1].status==="fulfilled"?economyResults[1].value:{wallet:null};
+      liveGiftCatalogue=Array.isArray(catalog.gifts)?catalog.gifts:[];
+      const walletBalance=$("#live-wallet-balance");
+      if(walletBalance)walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null
+        ?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+      const giftGrid=$("#live-gift-grid");
+      if(giftGrid)giftGrid.innerHTML=liveGiftCatalogue.length?liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join(""):"<p class='muted'>Gifts are temporarily unavailable. You can keep watching the LIVE stream.</p>";
       document.querySelectorAll("[data-live-gift]").forEach(button=>button.addEventListener("click",async()=>{
         button.disabled=true;
         try{
           const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})}),gift=sent.gift;
           toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
-          const wallet=await api("/coins/wallet");$("#live-wallet-balance").textContent=Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins";
-          const stage=$("#live-video-stage"),catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift)||{};if(stage){const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";effect.dataset.animationPreset=catalogGift.animation_preset||catalogGift.animation_key||"gift-float";if(catalogGift.model_url){effect.innerHTML="<model-viewer src='"+esc(catalogGift.model_url)+"' alt='"+esc(catalogGift.name||gift.giftName||"Minglora gift")+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";}else effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),2600);}
+          const walletResult=await api("/coins/wallet").catch(()=>null);
+          const balanceElement=$("#live-wallet-balance");
+          if(balanceElement)balanceElement.textContent=walletResult?.wallet&&walletResult.wallet.balance_coins!=null
+            ?Number(walletResult.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+          const stage=$("#live-video-stage"),catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift)||{};
+          if(stage){
+            const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";
+            effect.dataset.animationPreset=catalogGift.animation_preset||catalogGift.animation_key||"gift-float";
+            if(catalogGift.model_url)effect.innerHTML="<model-viewer src='"+esc(catalogGift.model_url)+"' alt='"+esc(catalogGift.name||gift.giftName||"Minglora gift")+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";
+            else effect.textContent=gift.emoji||"🎁";
+            stage.append(effect);setTimeout(()=>effect.remove(),2600);
+          }
         }catch(error){toast(error.message);}finally{button.disabled=false;}
       }));
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
