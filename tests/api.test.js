@@ -172,6 +172,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ name: 'Privacy Test User', username: 'privacytestuser', email: 'privacy-user@example.test', phoneNumber: '+18765550124', password: 'PrivacyTestPassword123!' })
   });
   assert.equal(privacyTestRegistration.status, 201);
+  const secondAccountCookie = cookie;
   const hiddenProfile = await request(`/api/users/${registration.body.user.id}`);
   assert.equal(hiddenProfile.status, 404);
   const hiddenFromDiscovery = await request('/api/users');
@@ -181,19 +182,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.match(deniedFriendRequest.body.error, /follow each other to become friends/i);
   const deniedMessage = await request('/api/messages', { method: 'POST', body: JSON.stringify({ to: registration.body.user.id, text: 'Should be blocked' }) });
   assert.equal(deniedMessage.status, 403);
-  const discoveryPost = await request('/api/posts', {
-    method: 'POST',
-    body: JSON.stringify({ text: 'A genuine public preview post from this member.' })
-  });
-  assert.equal(discoveryPost.status, 201);
   cookie = firstAccountCookie;
-  const memberDiscovery = await request('/api/discovery/people');
-  assert.equal(memberDiscovery.status, 200);
-  const suggestedMember = memberDiscovery.body.users.find(item => item.id === privacyTestRegistration.body.user.id);
-  assert.ok(suggestedMember, 'a real public member appears in discovery');
-  assert.equal(suggestedMember.recentPosts[0].text, 'A genuine public preview post from this member.');
-  assert.equal(suggestedMember.postsCount, 1);
-  assert.equal(memberDiscovery.body.users.some(item => item.id === registration.body.user.id), false, 'friends-only profiles remain hidden from non-friends');
 
   const invalidSettings = await request('/api/settings', {
     method: 'PATCH',
@@ -251,6 +240,21 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(emptyPage.status, 200);
   assert.equal(emptyPage.body.posts.length, 0);
   assert.equal(emptyPage.body.hasMore, false);
+
+  cookie = secondAccountCookie;
+  const discoveryPost = await request('/api/posts', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A genuine public preview post from this member.' })
+  });
+  assert.equal(discoveryPost.status, 201);
+  cookie = firstAccountCookie;
+  const memberDiscovery = await request('/api/discovery/people');
+  assert.equal(memberDiscovery.status, 200);
+  const suggestedMember = memberDiscovery.body.users.find(item => item.id === privacyTestRegistration.body.user.id);
+  assert.ok(suggestedMember, 'a real public member appears in discovery');
+  assert.equal(suggestedMember.recentPosts[0].text, 'A genuine public preview post from this member.');
+  assert.equal(suggestedMember.postsCount, 1);
+  assert.equal(memberDiscovery.body.users.some(item => item.id === registration.body.user.id), false, 'friends-only profiles remain hidden from non-friends');
 
   const post = await request('/api/posts', {
     method: 'POST',
