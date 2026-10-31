@@ -6,7 +6,7 @@ import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
-import { createLiveKitToken, deleteLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, deleteLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -1075,7 +1075,7 @@ async function route(req, res) {
         }
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
-        const publishSources = broadcastType === 'audio_only' ? ['microphone'] : ['microphone', 'camera'];
+        const publishSources = broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA];
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
@@ -1187,8 +1187,8 @@ async function route(req, res) {
         );
         const role = session.hostId === user.id ? 'host' : speakerRequest?.status === 'accepted' ? 'guest' : 'viewer';
         const publishSources = role === 'host'
-          ? (session.broadcastType === 'audio_only' ? ['microphone'] : ['microphone', 'camera'])
-          : role === 'guest' ? ['microphone'] : null;
+          ? (session.broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA])
+          : role === 'guest' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : null;
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
