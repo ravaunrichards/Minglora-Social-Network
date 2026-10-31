@@ -1308,6 +1308,7 @@ async function renderCreatorSection(section){
     section="overview";
   }
   setContent(creatorStudioChrome(section,content));
+  window.scrollTo({top:0,behavior:"auto"});
   document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
   document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
@@ -1510,8 +1511,8 @@ function initCreatorStudio3D(canvas){
     const onMove=event=>{if(!dragging)return;yaw=Math.max(-38,Math.min(38,yaw+(event.clientX-lastX)*.32));pitch=Math.max(-18,Math.min(22,pitch+(event.clientY-lastY)*.22));lastX=event.clientX;lastY=event.clientY;applyOrbit();};
     const onUp=()=>{dragging=false;svgFallback?.classList.remove("is-dragging");};
     const onReset=()=>{yaw=-12;pitch=0;applyOrbit();};
-    const onPause=()=>{paused=!paused;visual?.classList.toggle("is-paused",paused);const button=document.getElementById("creator-stage-pause");if(button)button.textContent=paused?"▶":"Ⅱ";};
-    const onVisibility=()=>{if(document.hidden){visual?.classList.add("is-paused");}else if(!paused){visual?.classList.remove("is-paused");}};
+    const onPause=()=>{paused=!paused;visual?.classList.toggle("is-paused",paused||document.hidden);const button=document.getElementById("creator-stage-pause");if(button)button.textContent=paused?"▶":"Ⅱ";};
+    const onVisibility=()=>{visual?.classList.toggle("is-paused",paused||document.hidden);};
     svgFallback?.addEventListener("pointerdown",onDown);
     svgFallback?.addEventListener("pointermove",onMove);
     svgFallback?.addEventListener("pointerup",onUp);
@@ -1689,10 +1690,7 @@ function initCreatorStudio3D(canvas){
     }
     }catch(error){
       if(disposed)return;
-      disposed=true;cancelAnimationFrame(frame);observer?.disconnect();
-      document.removeEventListener("visibilitychange",onVisibility);
-      canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);
-      canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+      const cleanup=creatorStudioStageCleanup;creatorStudioStageCleanup=null;cleanup?.();
       showCompatibilityScene(error.message||"The WebGL renderer stopped unexpectedly.");
     }
   }
