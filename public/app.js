@@ -691,7 +691,7 @@ async function renderCreator(){
     ?"LIVE is not configured"
     :liveReady?"LIVE is ready":"LIVE connection unavailable";
   const liveStatusDetail=liveReady
-    ?"Your title, audience and room style are ready. Camera and microphone access are requested when you start."
+    ?"Your LIVE title and audience are ready. Camera and microphone access are requested when you start."
     :String(liveStatusResult.error?.message||liveStatusResult.error||"Check the Minglora LiveKit server connection.");
   setContent(
     "<div class='page-heading creator-studio-heading'><div><span class='eyebrow'>Creator workspace</span><h1>Creator Studio</h1><p class='muted'>Start a real broadcast, connect with your audience and manage your creator earnings.</p></div></div>"+
@@ -701,7 +701,6 @@ async function renderCreator(){
       "<form id='creator-live-start-form' class='creator-live-start-form'>"+
         "<label class='creator-live-title-field' for='creator-live-title'><span>LIVE title</span><input id='creator-live-title' name='title' type='text' maxlength='120' minlength='1' required autocomplete='off' placeholder='What are you going LIVE about?'></label>"+
         "<label class='creator-live-visibility-field'><span>Audience</span><select name='visibility' aria-label='LIVE audience'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select></label>"+
-        "<label class='creator-live-theme-field'><span>Room style</span><select name='liveTheme' aria-label='LIVE room style'>"+renderLiveThemeOptions(LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===state.settings?.preferences?.liveRoomTheme)?state.settings.preferences.liveRoomTheme:'studio')+"</select></label>"+
         "<button class='primary creator-live-start-button' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button>"+
       "</form>"+
       "<p class='creator-live-help "+(liveReady?"":"warning")+"'>"+esc(liveStatusDetail)+"</p>"+
@@ -726,7 +725,7 @@ async function renderCreator(){
     button.disabled=true;button.textContent="Starting LIVE…";
     try{
       const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({
-        title,visibility:form.elements.visibility.value,liveTheme:form.elements.liveTheme.value
+        title,visibility:form.elements.visibility.value
       })});
       await openLiveRoom(result.session,"host",result.liveKit);
     }catch(error){
