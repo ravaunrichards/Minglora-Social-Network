@@ -24,7 +24,7 @@ test('app palettes and LIVE room styles are explicit allow-lists with sensible d
 test('Theme Centre previews and persists app and LIVE preferences separately', () => {
   assert.match(settings, /id="settings-preferences"/);
   assert.match(settings, /Theme Centre/);
-  assert.match(settings, /name="\\$\\{name\\}"/);
+  assert.ok(settings.includes('name="${name}"'), 'theme radio helper applies the supplied preference name');
   assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings, /renderThemeChoices\('colorTheme', APP_THEMES/);
   assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
