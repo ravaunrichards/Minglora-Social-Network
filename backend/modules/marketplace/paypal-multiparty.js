@@ -91,7 +91,7 @@ export function buildMarketplacePayPalReferralPayload({
           integration_method: 'PAYPAL',
           integration_type: 'THIRD_PARTY',
           third_party_details: {
-            features: ['PAYMENT', 'REFUND', 'PARTNER_FEE']
+            features: ['PAYMENT', 'REFUND']
           }
         }
       }
