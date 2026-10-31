@@ -5,7 +5,7 @@ const clean = (value, max) => String(value ?? '').trim().slice(0, max);
 const CURRENCIES = new Set(['JMD','USD','CAD','GBP','EUR','TTD','BBD','GYD']);
 function parseMoney(value) {
   const raw = String(value).trim();
-  if (!/^\\d{1,9}(?:\\.\\d{1,2})?$/.test(raw)) return null;
+  if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(raw)) return null;
   const parts = raw.split('.');
   const result = Number(parts[0]) * 100 + Number((parts[1] || '').padEnd(2, '0'));
   return Number.isSafeInteger(result) && result >= 0 ? result : null;
