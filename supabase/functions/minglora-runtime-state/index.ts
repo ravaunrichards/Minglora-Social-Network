@@ -807,7 +807,7 @@ Deno.serve(async (req: Request) => {
     if(error)return fail(error,"Verified PayPal seller connection could not be saved.");
     await admin.from("marketplace_seller_profiles").update({payout_status:"verified",updated_at:stamp}).eq("user_id",userId);
     await admin.from("marketplace_seller_verification_events").insert({
-      seller_id:userId,actor_id:userId,event_type:"identity_verified",
+      seller_id:userId,actor_id:userId,event_type:"paypal_connected",
       reason:"PayPal Business merchant connection verified by PayPal merchant-integrations API."
     });
     return json(200,{paypal:{status:data.onboarding_status,accountType:data.account_type,
