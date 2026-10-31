@@ -849,71 +849,18 @@ Deno.serve(async (req: Request) => {
 
   if (action === "marketplace_listing_sync") {
     const userId=String(input.userId||""),listing=input.listing||{};
-    if(!validUuid(userId)||!validUuid(listing.id)||String(listing.sellerId||"")!==userId)return json(400,{error:"Invalid Marketplace listing owner or ID."});
-    const {data:seller,error:sellerError}=await admin.from("marketplace_seller_profiles")
-      .select("status,identity_status").eq("user_id",userId).maybeSingle();
-    if(sellerError)return json(503,{error:"Seller verification could not be checked."});
-    if(seller?.status!=="approved"||seller?.identity_status!=="verified")return json(403,{error:"A verified and approved seller account is required to publish listings."});
-    const kind=String(listing.kind||"product"),priceType=String(listing.priceType||"fixed");
-    const currency=String(listing.currency||"JMD").toUpperCase();
-    const status=String(listing.status||"active");
-    if(!["product","service"].includes(kind)||!["fixed","from","hourly","quote"].includes(priceType)||
-       !["JMD","USD","CAD","GBP","EUR","TTD","BBD","GYD"].includes(currency)||
-       !["active","paused","sold","removed","archived","draft"].includes(status)){
-      return json(400,{error:"Marketplace listing configuration is invalid."});
+    if(!validUuid(userId)||!validUuid(listing.id)||String(listing.sellerId||"")!==userId){
+      return json(400,{error:"Invalid Marketplace listing owner or ID."});
     }
-    const priceMinor=listing.priceMinor==null?null:Number(listing.priceMinor);
-    const quantity=kind==="product"?Number(listing.quantity):1;
-    const fulfillment=Array.isArray(listing.fulfillment)?listing.fulfillment.map(String):[];
-    if(kind==="product"&&(!Number.isSafeInteger(priceMinor)||priceMinor<=0||!Number.isSafeInteger(quantity)||quantity<0||quantity>1000000||!fulfillment.length)){
-      return json(400,{error:"Product price, stock or fulfilment settings are invalid."});
-    }
-    if(kind==="service"&&((priceType==="quote"&&priceMinor!==null)||(priceType!=="quote"&&(!Number.isSafeInteger(priceMinor)||priceMinor<=0)))){
-      return json(400,{error:"Service pricing details are invalid."});
-    }
-    const dbStatus=status==="paused"?"archived":status;
-    const row={
-      id:listing.id,seller_id:userId,title:String(listing.title||"").trim().slice(0,180),
-      description:String(listing.description||"").slice(0,5000),price_minor:priceMinor,currency,
-      category:String(listing.category||"other"),condition:String(listing.condition||"unspecified"),
-      location_label:String(listing.location||"").slice(0,160),status:dbStatus,kind,price_type:priceType,
-      quantity,fulfillment_options:fulfillment,service_mode:listing.serviceMode||null,
-      tags:Array.isArray(listing.tags)?listing.tags.map((tag:string)=>String(tag).slice(0,24)).slice(0,8):[]
-    };
-    if(row.title.length<5)return json(400,{error:"Listing title is too short."});
-    const {data:existing,error:existingError}=await admin.from("marketplace_listings")
-      .select("id,seller_id").eq("id",listing.id).maybeSingle();
-    if(existingError)return json(503,{error:"Marketplace listing could not be checked."});
-    if(existing&&existing.seller_id!==userId)return json(409,{error:"Listing ownership conflict."});
     const mediaIds=[...new Set((Array.isArray(listing.mediaIds)?listing.mediaIds:[]).map(String))];
-    if(mediaIds.length>8)return json(400,{error:"A listing may contain no more than eight photos."});
-    if(mediaIds.length){
-      const {data:assets,error:assetError}=await admin.from("media_assets")
-        .select("id,owner_id,slot,asset_status,media_type,storage_bucket,storage_key").in("id",mediaIds);
-      if(assetError||(assets||[]).length!==mediaIds.length||(assets||[]).some((asset:any)=>
-        asset.owner_id!==userId||asset.slot!=="marketplace"||asset.asset_status!=="uploaded"||
-        asset.media_type!=="image"||!asset.storage_bucket||!asset.storage_key
-      ))return json(400,{error:"One or more listing photos are not completed Marketplace images owned by this seller."});
+    if(mediaIds.length>8||mediaIds.some((id:string)=>!validUuid(id))){
+      return json(400,{error:"A listing may contain up to eight valid Marketplace photo IDs."});
     }
-    const {data:existing,error:existingError}=await admin.from("marketplace_listings")
-      .select("id,seller_id").eq("id",listing.id).maybeSingle();
-    if(existingError)return json(503,{error:"Marketplace listing could not be checked."});
-    if(existing&&existing.seller_id!==userId)return json(409,{error:"Listing ownership conflict."});
-    const {data:saved,error}=await admin.from("marketplace_listings").upsert(row,{onConflict:"id"}).select("*").single();
-    if(error)return fail(error,"Marketplace listing could not be saved to the commerce database.");
-    const {error:deleteError}=await admin.from("listing_media").delete().eq("listing_id",listing.id);
-    if(deleteError)return json(503,{error:"Listing saved but photo associations could not be refreshed."});
-    if(mediaIds.length){
-      const {error:mediaError}=await admin.from("listing_media").insert(mediaIds.map((assetId:string,index:number)=>({listing_id:listing.id,asset_id:assetId,sort_order:index})));
-      if(mediaError)return json(503,{error:"Listing saved but photo associations could not be refreshed."});
-      const {error:attachError}=await admin.from("media_assets").update({asset_status:"attached",attached_to:"marketplace:"+listing.id}).in("id",mediaIds).eq("owner_id",userId);
-      if(attachError)return json(503,{error:"Listing photos were linked but their asset state could not be updated."});
-    }
-    return json(200,{listing:{id:saved.id,sellerId:saved.seller_id,title:saved.title,description:saved.description,
-      priceMinor:saved.price_minor,currency:saved.currency,category:saved.category,condition:saved.condition,
-      location:saved.location_label,status:saved.status==="archived"?"paused":saved.status,kind:saved.kind,
-      priceType:saved.price_type,quantity:saved.quantity,fulfillment:saved.fulfillment_options,
-      serviceMode:saved.service_mode,tags:saved.tags,mediaIds,createdAt:saved.created_at,updatedAt:saved.updated_at}});
+    const {data,error}=await admin.rpc("sync_marketplace_listing",{
+      p_seller_id:userId,p_listing:listing,p_media_ids:mediaIds
+    });
+    if(error)return fail(error,"Marketplace listing could not be saved.");
+    return json(200,{listing:data});
   }
 
   if (action === "marketplace_listing_set_status") {
