@@ -665,6 +665,7 @@ async function route(req, res) {
       }
       if(method==='POST'&&p==='/api/marketplace/seller'){
         const validation=validateMarketplaceSellerApplication(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_apply',{userId:user.id,...validation.value,acceptTerms:input.acceptTerms===true});return json(res,201,result);}
         db.marketplaceSellers||=[];let seller=db.marketplaceSellers.find(item=>item.userId===user.id);
         if(seller&&seller.status!=='rejected')return json(res,409,{error:'A seller application already exists for this account.',status:seller.status});
         const previousStatus=seller?.status||null,values=validation.value,stamp=now();
@@ -678,11 +679,13 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/marketplace/admin/sellers'){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
         const status=String(url.searchParams.get('status')||'pending');
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_admin_list',{status});return json(res,200,result);}
         const sellers=(db.marketplaceSellers||[]).filter(item=>!status||item.status===status).map(item=>({userId:item.userId,sellerType:item.sellerType,storeName:item.storeName,description:item.description,countryCode:item.countryCode,contactEmail:item.contactEmail,status:item.status,identityStatus:item.identityStatus,payoutStatus:item.payoutStatus,submittedAt:item.submittedAt}));
         return json(res,200,{sellers});
       }
       if(method==='GET'&&p==='/api/marketplace/admin/queue'){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_queue');return json(res,200,result);}
         const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
         return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
@@ -690,6 +693,7 @@ async function route(req, res) {
       const sellerReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/review$/);
       if(method==='PATCH'&&sellerReviewMatch){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(isSupabasePersistence()){const status=String(input.status||''),identityStatus=String(input.identityStatus||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['pending','approved','rejected','suspended'].includes(status)||!['not_started','pending','verified','rejected'].includes(identityStatus)||!reason)return json(res,400,{error:'A valid seller review decision and audit reason are required.'});const result=await requestSupabaseState('marketplace_seller_review',{actorId:user.id,sellerId:sellerReviewMatch[1],status,identityStatus,reason});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===sellerReviewMatch[1]);if(!seller)return json(res,404,{error:'Seller application not found.'});
         const identityStatus=String(input.identityStatus||seller.identityStatus),status=String(input.status||seller.status);
         const reason=String(input.reason||'').trim().slice(0,1000);
@@ -761,6 +765,7 @@ async function route(req, res) {
       }
       if(method==='POST'&&p==='/api/jobs'){
         const validation=validateJobPostingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_create',{employerId:user.id,job:validation.value});return json(res,201,{...result,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});}
         const job={id:uid(),employerId:user.id,...validation.value,status:'pending_review',createdAt:now(),updatedAt:now()};
         db.jobPostings||=[];db.jobPostings.unshift(job);db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'job_posting_submitted',targetType:'job_posting',targetId:job.id,createdAt:now()});
         await saveStore();return json(res,201,{job,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});
@@ -768,6 +773,7 @@ async function route(req, res) {
       const jobReviewMatch=p.match(/^\/api\/jobs\/([^/]+)\/review$/);
       if(method==='PATCH'&&jobReviewMatch){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(isSupabasePersistence()){const status=String(input.status||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['open','rejected'].includes(status)||!reason)return json(res,400,{error:'A valid vacancy moderation decision and reason are required.'});const result=await requestSupabaseState('marketplace_job_review',{actorId:user.id,jobId:jobReviewMatch[1],status,reason});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobReviewMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         const status=String(input.status||'');if(!['open','rejected'].includes(status))return json(res,400,{error:'Choose open or rejected.'});
         if(status==='open'&&new Date(job.applicationDeadline)<=new Date())return json(res,409,{error:'The application deadline has passed.'});
