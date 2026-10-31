@@ -14,6 +14,32 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<
 const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { const res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
+let profilePresenceTimer=null;
+let profilePresenceBusy=false;
+function stopProfilePresence(){if(profilePresenceTimer){clearInterval(profilePresenceTimer);profilePresenceTimer=null;}profilePresenceBusy=false;}
+function updateProfileInsights(insights){
+  const views=$('#profile-views-count'),active=$('#profile-active-viewers-count');
+  if(views)views.textContent=Number(insights?.profileViews30d||0).toLocaleString();
+  if(active)active.textContent=Number(insights?.activeViewersCount||0).toLocaleString();
+}
+async function refreshProfilePresence(profileId){
+  if(profilePresenceBusy||document.visibilityState!=='visible'||state.view!=='profile'||state.profile?.user?.id!==profileId)return;
+  profilePresenceBusy=true;
+  try{
+    const result=await api(`/users/${encodeURIComponent(profileId)}/profile-presence`,{method:'POST',body:'{}'});
+    if(result.profileInsights&&state.view==='profile'&&state.profile?.user?.id===profileId)updateProfileInsights(result.profileInsights);
+  }catch(error){
+    console.warn('Profile presence refresh failed:',error.message);
+  }finally{profilePresenceBusy=false;}
+}
+function startProfilePresence(profileId){
+  stopProfilePresence();
+  void refreshProfilePresence(profileId);
+  profilePresenceTimer=setInterval(()=>void refreshProfilePresence(profileId),20000);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&state.view==='profile'&&state.profile?.user?.id)void refreshProfilePresence(state.profile.user.id);
+});
 let toastTimer;
 let browserNotificationTimer=null;
 let browserNotificationSeen=new Set();
@@ -76,7 +102,7 @@ async function handleMingloraPushNavigation(){
     await renderNotifications();
   }catch(error){toast(error.message);}
 }
-function activateNav(view){state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
+function activateNav(view){if(view!=='profile')stopProfilePresence();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
 function renderSingleMedia(media,className='post-media-viewer'){
@@ -548,7 +574,7 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function activateSilent(view){state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
+function activateSilent(view){if(view!=='profile')stopProfilePresence();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
   activateSilent('groups');await loadGroups();
@@ -597,7 +623,7 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){try{const data=await api(`/users/${id}`);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+async function openProfile(id,openEditor=false){stopProfilePresence();try{const data=await api(`/users/${id}`);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 
 async function renderConnections(profileId,kind){
@@ -636,7 +662,7 @@ function renderProfile(data){
   ].filter(([,value])=>String(value||'').trim());
   aboutRows.push(['Joined',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})]);
   const aboutHtml=aboutRows.map(([label,value])=>`<div class="about-row${label==='Bio'?' about-row-bio':''}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
-  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover" data-view-image="${esc(u.cover||'')}" data-image-label="${esc(u.name)} cover photo" style="${u.cover?`background-image:url('${esc(u.cover)}')`:''}"></div><div class="profile-info"><img class="avatar" data-view-image="${esc(u.avatar||'')}" data-image-label="${esc(u.name)} profile picture" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p></div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>About</h3>${isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':''}</div>${aboutHtml||'<p class="muted">No About details have been added yet.</p>'}</div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
+  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover" data-view-image="${esc(u.cover||'')}" data-image-label="${esc(u.name)} cover photo" style="${u.cover?`background-image:url('${esc(u.cover)}')`:''}"></div><div class="profile-info"><img class="avatar" data-view-image="${esc(u.avatar||'')}" data-image-label="${esc(u.name)} profile picture" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p>${isMe?`<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">${Number(data.profileInsights?.profileViews30d||0).toLocaleString()}</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">${Number(data.profileInsights?.activeViewersCount||0).toLocaleString()}</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>`:''}</div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>About</h3>${isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':''}</div>${aboutHtml||'<p class="muted">No About details have been added yet.</p>'}</div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
   bindFeed();
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
   $('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(u));
@@ -657,6 +683,7 @@ function renderProfile(data){
   $('#profile-friends-tab')?.addEventListener('click',()=>renderConnections(u.id,'friends'));
   document.querySelectorAll('[data-open-connections]').forEach(button=>button.addEventListener('click',()=>renderConnections(u.id,button.dataset.openConnections)));
   document.querySelectorAll('[data-view-image]').forEach(image=>image.addEventListener('click',()=>{const url=image.dataset.viewImage;if(url)openImageViewer(url,image.dataset.imageLabel||'Profile image');}));
+  startProfilePresence(u.id);
 }
 function mediaMaxBytes(slot){
   return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:500*1024*1024;
