@@ -659,6 +659,7 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
       requireAuth(user);
       if(method==='GET'&&p==='/api/marketplace/seller'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
         return json(res,200,{seller:seller?{sellerType:seller.sellerType,storeName:seller.storeName,description:seller.description,countryCode:seller.countryCode,contactEmail:seller.contactEmail,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,createdAt:seller.createdAt,updatedAt:seller.updatedAt}:null});
       }
@@ -703,6 +704,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{seller:{userId:seller.userId,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus}});
       }
       if(method==='POST'&&p==='/api/marketplace/checkout/quote'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_quote',{buyerId:user.id,items:input.items,fulfillmentByListing:input.fulfillmentByListing||{}});return json(res,200,result);}
         const bps=Number(process.env.MARKETPLACE_COMMISSION_BPS||0),quoteId=uid(),created=now(),expires=new Date(Date.now()+10*60*1000).toISOString();
         const result=calculateMarketplaceCheckoutQuote({buyerId:user.id,items:input.items,listings:db.marketplaceListings||[],sellerProfiles:db.marketplaceSellers||[],commissionBps:bps,fulfillmentByListing:input.fulfillmentByListing||{},quoteId,createdAt:created,expiresAt:expires});
         if(!result.valid)return json(res,400,{error:result.error});
@@ -710,13 +712,16 @@ async function route(req, res) {
         await saveStore();return json(res,200,{quote:result.value,notice:'This is an informational quote only. No stock is reserved and no payment has been taken.'});
       }
       if(method==='GET'&&p==='/api/marketplace/checkout/status'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_status');return json(res,200,result);}
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
       if(method==='GET'&&p==='/api/marketplace/bookings'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_bookings_list',{userId:user.id});return json(res,200,result);}
         const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(item=>{const listing=(db.marketplaceListings||[]).find(entry=>entry.id===item.listingId);const otherId=item.buyerId===user.id?item.sellerId:item.buyerId;const other=db.users.find(entry=>entry.id===otherId);return {...item,listingTitle:listing?.title||'Service appointment',otherName:other?.name||'Minglora member'};});
         return json(res,200,{bookings});
       }
       if(method==='POST'&&p==='/api/marketplace/bookings'){
+        if(isSupabasePersistence()){const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});const result=await requestSupabaseState('marketplace_booking_create',{buyerId:user.id,...validation.value});return json(res,201,result);}
         const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
         const listing=(db.marketplaceListings||[]).find(item=>item.id===validation.value.listingId&&item.kind==='service'&&isMarketplaceListingActive(item));
         if(!listing||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This service is not available for booking.'});
@@ -731,6 +736,7 @@ async function route(req, res) {
       }
       const bookingMatch=p.match(/^\/api\/marketplace\/bookings\/([^/]+)$/);
       if(method==='PATCH'&&bookingMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_booking_update',{actorId:user.id,bookingId:bookingMatch[1],status:String(input.status||'')});return json(res,200,result);}
         const booking=(db.marketplaceBookings||[]).find(item=>item.id===bookingMatch[1]);if(!booking)return json(res,404,{error:'Booking not found.'});
         const transition=transitionMarketplaceBooking(booking,user.id,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
         Object.assign(booking,transition.value);
@@ -739,15 +745,18 @@ async function route(req, res) {
         await saveStore();return json(res,200,{booking});
       }
       if(method==='GET'&&p==='/api/jobs'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_list',{userId:user.id,q:url.searchParams.get('q')||'',category:url.searchParams.get('category')||'',location:url.searchParams.get('location')||''});return json(res,200,result);}
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120);
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(!query||(item.title+' '+item.companyName+' '+item.description).toLowerCase().includes(query))&&(!category||item.category===category)&&(!location||String(item.location||'').toLowerCase().includes(location))).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         return json(res,200,{jobs});
       }
       if(method==='GET'&&p==='/api/jobs/applications/mine'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_mine',{applicantId:user.id});return json(res,200,result);}
         const applications=(db.jobApplications||[]).filter(item=>item.applicantId===user.id).map(item=>({...item,job:(db.jobPostings||[]).find(job=>job.id===item.jobId)||null}));
         return json(res,200,{applications});
       }
       if(method==='GET'&&p==='/api/jobs/mine'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_mine',{userId:user.id});return json(res,200,result);}
         return json(res,200,{jobs:(db.jobPostings||[]).filter(item=>item.employerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))});
       }
       if(method==='POST'&&p==='/api/jobs'){
@@ -769,6 +778,7 @@ async function route(req, res) {
       }
       const jobMatch=p.match(/^\/api\/jobs\/([^/]+)$/);
       if(jobMatch&&method==='PATCH'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_update',{userId:user.id,jobId:jobMatch[1],status:String(input.status||'')});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         if(job.employerId!==user.id)return json(res,403,{error:'Only the employer can manage this posting.'});
         const status=String(input.status||'');if(!['paused','closed'].includes(status)||!['open','paused'].includes(job.status))return json(res,400,{error:'Open job postings can be paused or closed.'});
@@ -776,6 +786,7 @@ async function route(req, res) {
       }
       const jobApplyMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
       if(method==='POST'&&jobApplyMatch){
+        if(isSupabasePersistence()){const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});const result=await requestSupabaseState('marketplace_job_apply',{applicantId:user.id,jobId:jobApplyMatch[1],coverLetter:validation.value.coverLetter});return json(res,201,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobApplyMatch[1]&&item.status==='open'&&new Date(item.applicationDeadline)>new Date());
         if(!job||job.employerId===user.id)return json(res,404,{error:'This vacancy is unavailable for applications.'});
         const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
@@ -786,12 +797,14 @@ async function route(req, res) {
       }
       const jobApplicationsMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
       if(jobApplicationsMatch&&method==='GET'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_for_job',{viewerId:user.id,jobId:jobApplicationsMatch[1]});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobApplicationsMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         if(job.employerId!==user.id&&!isModerator(user))return json(res,403,{error:'Only the employer can review applications.'});
         return json(res,200,{applications:(db.jobApplications||[]).filter(item=>item.jobId===job.id).map(item=>({...item,candidate:safeUser(db.users.find(member=>member.id===item.applicantId),user.id)}))});
       }
       const jobApplicationMatch=p.match(/^\/api\/jobs\/applications\/([^/]+)$/);
       if(method==='PATCH'&&jobApplicationMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_application_update',{actorId:user.id,applicationId:jobApplicationMatch[1],status:String(input.status||'')});return json(res,200,result);}
         const application=(db.jobApplications||[]).find(item=>item.id===jobApplicationMatch[1]);if(!application)return json(res,404,{error:'Application not found.'});
         const job=(db.jobPostings||[]).find(item=>item.id===application.jobId);
         const transition=transitionJobApplication(application,user.id,job,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
