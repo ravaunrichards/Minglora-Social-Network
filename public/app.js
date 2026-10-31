@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 function renderLiveThemeOptions(selected='studio'){return LIVE_ROOM_THEME_OPTIONS.map(theme=>`<option value="${theme.value}"${theme.value===selected?' selected':''}>${theme.label}</option>`).join('');}
 function applyLiveRoomTheme(theme){if(!LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===theme))return;const shell=$('.live-player-shell');if(!shell)return;LIVE_ROOM_THEME_OPTIONS.forEach(option=>shell.classList.remove('live-theme-'+option.value));shell.classList.add('live-theme-'+theme);}
@@ -102,7 +102,7 @@ async function handleMingloraPushNavigation(){
     await renderNotifications();
   }catch(error){toast(error.message);}
 }
-function activateNav(view){if(view!=='profile')stopProfilePresence();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
+function activateNav(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
 function renderSingleMedia(media,className='post-media-viewer'){
@@ -276,37 +276,135 @@ function openComposer(){
 }
 
 async function loadPeople(){state.people=(await api('/users')).users;}
+async function loadPeopleDiscovery(){
+  const result=await api('/discovery/people');
+  state.people=result.users||[];
+}
+function discoveryMediaTile(media){
+  if(!media?.url)return '';
+  const url=esc(media.url);
+  if(media.mediaType==='video')return '<span class="person-media-tile"><video muted playsinline loop autoplay preload="none" src="'+url+'" aria-label="Recent video shared by this member"></video><i aria-hidden="true">▶</i></span>';
+  if(media.mediaType==='image')return '<span class="person-media-tile"><img loading="lazy" src="'+url+'" alt="Recent photo shared by this member"></span>';
+  if(media.mediaType==='model3d')return '<span class="person-media-tile person-media-kind"><strong>3D</strong><small>3D post</small></span>';
+  if(media.mediaType==='audio')return '<span class="person-media-tile person-media-kind"><strong>♫</strong><small>Audio post</small></span>';
+  return '';
+}
+function discoveryPostPreview(post,profileId){
+  const media=(post.media||[]).slice(0,3);
+  const mediaHtml=media.length?'<div class="person-post-media">'+media.map(discoveryMediaTile).join('')+'</div>':'';
+  const copy=String(post.text||'').trim();
+  return '<article class="person-post-preview"><div class="person-post-meta"><span>RECENT POST</span><time>'+esc(timeAgo(post.createdAt))+'</time></div><button type="button" class="person-post-open" data-profile="'+esc(profileId)+'" aria-label="Open member profile">'+
+    (copy?'<span class="person-post-copy">'+esc(copy.slice(0,112))+(copy.length>112?'…':'')+'</span>':'')+mediaHtml+
+    (!copy&&!media.length?'<span class="person-post-empty">A post was shared.</span>':'')+
+    '<span class="person-post-reactions">♡ '+Number(post.reactionCount||0).toLocaleString()+'</span></button></article>';
+}
 function peopleCard(p){
   const mutual=p.friendship==='accepted';
-  return `<article class="card person-card"><div class="person-cover"></div><div class="person-card-content"><img class="avatar" src="${avatar(p)}" alt=""><h3>${esc(p.name)}</h3><p>${esc(p.bio||'Connect and get to know each other.')}</p>
-    <button class="mini-btn" data-toggle-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?(mutual?'Friends · Following':'Following'):(mutual?'Friends':'Follow')}</button>
-    <button class="mini-btn" data-profile="${esc(p.id)}">View profile</button>
-    <button class="mini-btn" data-block-user="${esc(p.id)}">Block</button></div></article>`;
+  const liveSession=(state.discoveryLiveSessions||[]).find(session=>session.hostId===p.id&&session.viewerCountVerified===true)||null;
+  const story=p.latestStory;
+  const cover=p.cover?'<img class="person-cover-image" loading="lazy" src="'+esc(p.cover)+'" alt="">':'';
+  const storyPreview=story
+    ?'<button type="button" class="person-story-preview" data-open-profile-story="'+esc(story.id)+'" aria-label="View '+esc(p.name)+'’s current story">'+
+      (story.media?.url?renderStoryPreview(story.media):'<span class="person-story-text">'+esc((story.text||'').slice(0,100)||'A new story')+'</span>')+
+      '<span class="person-story-overlay"><strong>STORY</strong><small>'+esc(timeAgo(story.createdAt))+'</small></span></button>'
+    :'';
+  const recent=(p.recentPosts||[]).map(post=>discoveryPostPreview(post,p.id)).join('');
+  const hasActivity=Boolean(storyPreview||recent);
+  const followerCount=Number(p.followersCount||0).toLocaleString();
+  const friendCount=Number(p.friendsCount||0).toLocaleString();
+  const postCount=Number(p.postsCount||0).toLocaleString();
+  const following=Boolean(p.following);
+  const followLabel=following?(mutual?'Friends · Following':'Following'):(mutual?'Friends':'Follow');
+  return '<article class="card person-card person-card--immersive">'+
+    '<button type="button" class="person-cover'+(p.cover?' has-cover':'')+'" data-profile="'+esc(p.id)+'" aria-label="Open '+esc(p.name)+'’s profile">'+cover+
+      (liveSession?'<span class="person-live-badge"><i></i> LIVE NOW</span>':story?'<span class="person-story-badge">STORY AVAILABLE</span>':'')+
+      '<span class="person-cover-caption">MINGLORA MEMBER</span></button>'+
+    '<div class="person-card-content">'+
+      '<div class="person-identity"><div class="person-avatar-wrap'+(story?' has-story':'')+'"><button type="button" data-profile="'+esc(p.id)+'" aria-label="View '+esc(p.name)+'’s profile"><img class="avatar" src="'+avatar(p)+'" alt=""></button></div>'+
+      '<div class="person-title-group"><h3>'+esc(p.name)+'</h3><span>@'+esc(p.username)+'</span></div>'+
+      (liveSession?'<span class="person-live-mini"><i></i> LIVE</span>':'')+'</div>'+
+      '<p class="person-bio">'+(p.bio?esc(p.bio):'<span>No bio added yet.</span>')+'</p>'+
+      '<div class="person-stat-row"><span><strong>'+followerCount+'</strong><small>Followers</small></span><span><strong>'+friendCount+'</strong><small>Friends</small></span><span><strong>'+postCount+'</strong><small>Posts</small></span></div>'+
+      '<div class="person-mutual-context"><span class="person-mutual-glyph" aria-hidden="true">✦</span><span>'+(Number(p.mutualFriendsCount||0)>0?'<strong>'+Number(p.mutualFriendsCount).toLocaleString()+' mutual '+(Number(p.mutualFriendsCount)===1?'connection':'connections')+'</strong>':'No mutual connections yet')+'</span></div>'+
+      (liveSession?'<div class="person-live-strip"><span><i></i><strong>'+Number(liveSession.viewerCount||0).toLocaleString()+'</strong> watching now</span><button type="button" data-watch-live="'+esc(liveSession.id)+'">Watch LIVE <b>↗</b></button></div>':'')+
+      (hasActivity?'<div class="person-activity">'+storyPreview+recent+'</div>':'<div class="person-no-activity"><span class="person-no-activity-icon">✧</span><span><strong>No recent public activity</strong><small>New shared moments will appear here.</small></span></div>')+
+      '<div class="person-card-actions"><button type="button" class="person-connect-btn" data-toggle-follow="'+esc(p.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'<span>✓</span> ':'＋ ')+esc(followLabel)+'</button><button type="button" class="person-view-btn" data-profile="'+esc(p.id)+'">View profile <span>↗</span></button></div>'+
+      '<button type="button" class="person-block-link" data-block-user="'+esc(p.id)+'">Block member</button>'+
+    '</div></article>';
 }
-function bindPeople(){
-  document.querySelectorAll('[data-toggle-follow]').forEach(btn=>btn.addEventListener('click',async()=>{
-    const following=btn.dataset.following==='true';
-    try{await api(`/users/${btn.dataset.toggleFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(following?'Unfollowed member.':'Now following member.');await loadPeople();renderFriends();}
-    catch(e){toast(e.message);}
-  }));
-  document.querySelectorAll('[data-block-user]').forEach(btn=>btn.addEventListener('click',async()=>{
-    if(!window.confirm('Block this member? You will no longer see each other’s profile, posts or messages.'))return;
-    try{await api(`/users/${btn.dataset.blockUser}/block`,{method:'POST',body:'{}'});toast('Member blocked.');await loadPeople();renderFriends();await renderSidebar();}
-    catch(e){toast(e.message);}
-  }));
-  document.querySelectorAll('[data-profile]').forEach(el=>el.addEventListener('click',()=>openProfile(el.dataset.profile)));
-}
-async function renderFriends(){
-  activateSilent('friends');await loadPeople();
-  const result=await api('/friends');
-  const friends=result.friends||[];
+function peopleGridMarkup(){
   const others=state.people.filter(member=>member.friendship!=='accepted');
-  setContent(`<div class="page-heading"><div><h1>Friends</h1><p class="muted">Friends are created automatically when two members follow each other.</p></div></div>
-    <div class="feed-header"><h2>People you may know</h2></div><div class="people-grid">${others.length?others.map(peopleCard).join(''):`<section class="card empty-state"><h3>You're all caught up</h3><p>There are no new people to suggest right now.</p></section>`}</div>
-    <section class="card friends-list"><h2>Friends (${friends.length})</h2>${friends.length?friends.map(member=>`<div class="person-row" style="margin:12px 0"><img class="avatar" src="${avatar(member)}" alt=""><div class="person-meta"><strong>${esc(member.name)}</strong><small>@${esc(member.username)}</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="${esc(member.id)}">View profile</button></div>`).join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>'}</section>`);
-  bindPeople();
+  return others.length?others.map(peopleCard).join(''):'<section class="card empty-state"><h3>You’re all caught up</h3><p>There are no new people to suggest right now.</p></section>';
 }
-
+function bindPeople(root=document){
+  root.querySelectorAll('[data-toggle-follow]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const following=btn.dataset.following==='true';
+    btn.disabled=true;
+    try{
+      const result=await api('/users/'+encodeURIComponent(btn.dataset.toggleFollow)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
+      toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));
+      await renderFriends();
+    }catch(e){toast(e.message);btn.disabled=false;}
+  }));
+  root.querySelectorAll('[data-block-user]').forEach(btn=>btn.addEventListener('click',async()=>{
+    if(!window.confirm('Block this member? You will no longer see each other’s profile, posts or messages.'))return;
+    try{
+      await api('/users/'+encodeURIComponent(btn.dataset.blockUser)+'/block',{method:'POST',body:'{}'});
+      toast('Member blocked.');await renderFriends();await renderSidebar();
+    }catch(e){toast(e.message);}
+  }));
+  root.querySelectorAll('[data-profile]').forEach(el=>el.addEventListener('click',()=>openProfile(el.dataset.profile)));
+  root.querySelectorAll('[data-open-profile-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openProfileStory)));
+  root.querySelectorAll('[data-watch-live]').forEach(el=>el.addEventListener('click',()=>{
+    const session=(state.discoveryLiveSessions||[]).find(item=>item.id===el.dataset.watchLive);
+    if(session)openLiveRoom(session,'viewer').catch(error=>toast(error.message));
+  }));
+}
+let peopleDiscoveryRefreshTimer=null;
+let peopleDiscoveryRefreshBusy=false;
+function stopPeopleDiscoveryRefresh(){
+  if(peopleDiscoveryRefreshTimer){clearInterval(peopleDiscoveryRefreshTimer);peopleDiscoveryRefreshTimer=null;}
+}
+async function refreshPeopleDiscovery(){
+  if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
+  if(!$('#people-discovery-grid'))return;
+  peopleDiscoveryRefreshBusy=true;
+  try{
+    const [peopleResult,liveResult]=await Promise.all([
+      api('/discovery/people'),
+      api('/live/sessions').catch(()=>({sessions:[]}))
+    ]);
+    state.people=peopleResult.users||[];
+    state.discoveryLiveSessions=liveResult.sessions||[];
+    const grid=$('#people-discovery-grid');
+    if(grid){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
+  }catch(error){console.warn('People discovery refresh failed:',error.message);}
+  finally{peopleDiscoveryRefreshBusy=false;}
+}
+function startPeopleDiscoveryRefresh(){
+  stopPeopleDiscoveryRefresh();
+  peopleDiscoveryRefreshTimer=setInterval(()=>void refreshPeopleDiscovery(),20000);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&state.view==='friends')void refreshPeopleDiscovery();
+});
+async function renderFriends(){
+  activateSilent('friends');stopPeopleDiscoveryRefresh();
+  await loadPeopleDiscovery();
+  const [result,liveResult]=await Promise.all([
+    api('/friends'),
+    api('/live/sessions').catch(()=>({sessions:[]}))
+  ]);
+  state.discoveryLiveSessions=liveResult.sessions||[];
+  const friends=result.friends||[];
+  setContent('<div class="page-heading"><div><h1>Friends</h1><p class="muted">Discover members through the moments they choose to share.</p></div></div>'+
+    '<div class="feed-header"><h2>People you may know</h2><span class="people-refresh-note">Live member previews · refresh automatically</span></div>'+
+    '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
+    '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
+    (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="person-meta"><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
+  bindPeople(document);
+  startPeopleDiscoveryRefresh();
+}
 let activeCallRoom=null;
 let activeCallOverlay=null;
 let activeLiveRoom=null;
@@ -574,7 +672,7 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function activateSilent(view){if(view!=='profile')stopProfilePresence();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
+function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
   activateSilent('groups');await loadGroups();
