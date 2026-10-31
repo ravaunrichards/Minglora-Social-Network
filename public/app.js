@@ -153,6 +153,7 @@ function findVisiblePost(id){
   return [...state.feed,...state.savedPosts,...(state.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
 }
 async function refreshVisiblePosts(){
+  if(state.view==='creator'&&state.creatorStudio){state.creatorStudio.profile=await api('/users/'+encodeURIComponent(state.user.id));await renderCreatorSection(state.creatorStudio.section||'content');return;}
   if(state.view==='group'&&state.activeGroup){await renderGroup(state.activeGroup);return;}
   if(state.view==='saved'){await renderSavedPosts();return;}
   if(state.view==='profile'&&state.profile?.user?.id){await openProfile(state.profile.user.id);return;}
@@ -858,66 +859,634 @@ async function startCoinPurchase(selection){
 }
 async function renderCreator(){
   activateSilent("creator");
-  const [data,liveStatusResult]=await Promise.all([
-    api("/creator/earnings"),
-    api("/live/status").catch(error=>({configured:false,connected:false,error:{message:error.message||"LIVE service status is unavailable."}}))
-  ]);
-  const account=data.payoutAccount||null;
-  const platformTotal=(data.ledger||[]).reduce((sum,row)=>sum+Number(row.platform_share_minor||0),0);
-  const liveReady=Boolean(liveStatusResult.configured&&liveStatusResult.connected===true);
-  const liveStatusText=!liveStatusResult.configured
-    ?"LIVE is not configured"
-    :liveReady?"LIVE is ready":"LIVE connection unavailable";
-  const liveStatusDetail=liveReady
-    ?"Choose Video + Audio or Audio Only. Audio Only never requests camera access."
-    :String(liveStatusResult.error?.message||liveStatusResult.error||"Check the Minglora LiveKit server connection.");
-  setContent(
-    "<div class='page-heading creator-studio-heading'><div><span class='eyebrow'>Creator workspace</span><h1>Creator Studio</h1><p class='muted'>Start a real broadcast, connect with your audience and manage your creator earnings.</p></div></div>"+
-    "<section class='card creator-live-launch-card'>"+
-      "<div class='creator-live-launch-heading'><div><span class='eyebrow'>Minglora LIVE</span><h2>Go LIVE from Creator Studio</h2><p class='muted'>Your broadcast starts here. Add a title and press Start LIVE.</p></div>"+
-      "<span class='creator-live-status "+(liveReady?"ready":"unavailable")+"'>"+(liveReady?"● "+liveStatusText:"○ "+liveStatusText)+"</span></div>"+
-      "<form id='creator-live-start-form' class='creator-live-start-form'>"+
-        "<label class='creator-live-title-field' for='creator-live-title'><span>LIVE title</span><input id='creator-live-title' name='title' type='text' maxlength='120' minlength='1' required autocomplete='off' placeholder='What are you going LIVE about?'></label>"+
-        "<label class='creator-live-visibility-field'><span>Audience</span><select name='visibility' aria-label='LIVE audience'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select></label>"+
-        "<fieldset class='live-format-picker creator-live-format-picker'><legend>Broadcast format</legend>"+
-          "<label class='live-format-card'><input type='radio' name='broadcastType' value='video_audio' checked><span class='live-format-icon'>▣</span><span><strong>Video + Audio</strong><small>Camera and microphone</small></span></label>"+
-          "<label class='live-format-card'><input type='radio' name='broadcastType' value='audio_only'><span class='live-format-icon audio'>♫</span><span><strong>Audio Only</strong><small>Independent voice room</small></span></label>"+
-        "</fieldset>"+
-        "<button class='primary creator-live-start-button' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button>"+
-      "</form>"+
-      "<p class='creator-live-help "+(liveReady?"":"warning")+"'>"+esc(liveStatusDetail)+"</p>"+
-    "</section>"+
-    "<div class='creator-earnings-section-heading'><div><span class='eyebrow'>Your performance</span><h2>Creator earnings</h2></div><span class='muted'>Eligible LIVE gifts · 50/50 split</span></div>"+
-    "<div class='creator-earnings-grid'>"+
-      "<article class='card earnings-stat'><small>Your share · 50%</small><strong>"+liveMoney(data.earnedMinor)+"</strong><span>Creator earnings</span></article>"+
-      "<article class='card earnings-stat'><small>Available to withdraw</small><strong>"+liveMoney(data.availableMinor)+"</strong><span>After existing payouts</span></article>"+
-      "<article class='card earnings-stat'><small>Minglora platform share · 50%</small><strong>"+liveMoney(platformTotal)+"</strong><span>Platform share from gifts</span></article></div>"+
-    "<section class='card'><h2>PayPal payout details</h2><p class='muted'>Add the PayPal email address where you receive creator payouts.</p><form id='creator-payout-account-form' class='creator-payout-form'><input type='email' name='paypalEmail' required maxlength='254' placeholder='your-paypal@example.com' value='"+esc(account?.paypal_email||"")+"'><button class='primary' type='submit'>Save payout email</button></form>"+
-    "<form id='creator-withdraw-form' class='creator-payout-form'><label for='creator-payout-amount'>Withdraw amount (USD)</label><input id='creator-payout-amount' name='amount' type='number' min='1' step='0.01' max='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' value='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' required><button class='primary' type='submit' "+(account&&Number(data.availableMinor)>=100?"":"disabled")+">Withdraw with PayPal</button></form><small class='muted'>Minimum withdrawal USD $1.00. Payout status is updated after the provider confirms processing.</small></section>"+
-    "<section class='card'><div class='feed-header'><h2>Earnings history</h2><span class='muted'>Your share and Minglora’s share are recorded separately</span></div>"+
-    ((data.ledger||[]).length?data.ledger.map(item=>"<div class='coin-ledger-row'><div><strong>LIVE gift earnings</strong><small>"+timeAgo(item.created_at)+"</small></div><b class='positive'>"+liveMoney(item.creator_share_minor)+"</b></div>").join(""):"<p class='muted'>Eligible LIVE gift earnings will appear here.</p>")+"</section>"+
-    "<section class='card'><h2>PayPal withdrawals</h2>"+((data.payouts||[]).length?data.payouts.map(item=>"<div class='coin-ledger-row'><div><strong>"+esc(String(item.status).toUpperCase())+"</strong><small>"+timeAgo(item.created_at)+"</small></div><b>"+liveMoney(item.amount_minor)+"</b></div>").join(""):"<p class='muted'>Your withdrawals will appear here.</p>")+"</section>"
-  );
-  $("#creator-live-start-form")?.addEventListener("submit",async event=>{
-    event.preventDefault();
-    const form=event.currentTarget,button=form.querySelector(".creator-live-start-button");
-    const title=String(form.elements.title.value||"").trim();
-    if(!title){form.elements.title.focus();toast("Enter a title for your LIVE session.");return;}
-    if(!liveReady){toast(liveStatusDetail);return;}
-    button.disabled=true;button.textContent="Starting LIVE…";
-    try{
-      const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({
-        title,visibility:form.elements.visibility.value,broadcastType:form.elements.broadcastType.value||"video_audio"
-      })});
-      await openLiveRoom(result.session,"host",result.liveKit);
-    }catch(error){
-      toast(error.message||"Minglora could not start your LIVE session.");
-      button.disabled=false;button.textContent="🔴 Start LIVE";
-    }
-  });
-  $("#creator-payout-account-form")?.addEventListener("submit",async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector("button");button.disabled=true;try{await api("/creator/payout-account",{method:"PUT",body:JSON.stringify({paypalEmail:form.elements.paypalEmail.value})});toast("PayPal payout details saved.");await renderCreator();}catch(error){toast(error.message);button.disabled=false;}});
-  $("#creator-withdraw-form")?.addEventListener("submit",async event=>{event.preventDefault();const amount=Number(event.currentTarget.elements.amount.value);if(!Number.isFinite(amount)||amount<1){toast("The minimum payout is USD $1.00.");return;}const button=event.currentTarget.querySelector("button");button.disabled=true;try{const result=await api("/creator/payouts",{method:"POST",body:JSON.stringify({amountMinor:Math.round(amount*100)})});toast("PayPal payout submitted. Status: "+result.status+".");await renderCreator();}catch(error){toast(error.message);button.disabled=false;}});
+  disposeCreatorStudioStage();
+  creatorStudioDestroyPagePickers();
+  const main=$("#main-content");
+  setContent("<section class='creator-studio-shell'><div class='creator-loading'><span class='creator-loading-mark'>M</span><strong>Opening your creator workspace</strong><small>Loading your Minglora account data…</small></div></section>");
+  try{
+    const userId=state.user?.id;
+    if(!userId)throw new Error("Sign in to open Creator Studio.");
+    const results=await Promise.allSettled([
+      api("/users/"+encodeURIComponent(userId)),
+      api("/creator/earnings"),
+      api("/pages")
+    ]);
+    if(results[0].status==="rejected")throw results[0].reason;
+    const pageResult=results[2].status==="fulfilled"?results[2].value:{pages:[],unavailable:true,error:results[2].reason?.message||"Pages are unavailable."};
+    state.creatorStudio={
+      profile:results[0].value,
+      earnings:results[1].status==="fulfilled"?results[1].value:null,
+      earningsError:results[1].status==="rejected"?results[1].reason?.message||"Creator earnings are unavailable.":null,
+      pages:Array.isArray(pageResult.pages)?pageResult.pages.filter(page=>["owner","admin","editor"].includes(page.myRole)):[],
+      pagesError:pageResult.unavailable?pageResult.error||"Pages are unavailable.":null,
+      pageDetails:{},
+      followers:[],
+      following:[],
+      settings:null,
+      contentTab:"posts",
+      section:"overview",
+      pagePickers:[]
+    };
+    await renderCreatorSection("overview");
+  }catch(error){
+    setContent("<section class='creator-studio-shell'><div class='creator-load-error'><span>!</span><h2>Creator Studio could not load</h2><p>"+esc(error.message||"Minglora could not load your creator workspace.")+"</p><button class='primary' id='creator-retry-load'>Try again</button></div></section>");
+    $("#creator-retry-load")?.addEventListener("click",renderCreator);
+  }
 }
+
+let creatorStudioStageCleanup=null;
+function creatorStudioDestroyPagePickers(){
+  const pickers=state.creatorStudio?.pagePickers||[];
+  pickers.forEach(picker=>{try{picker.destroy();}catch{}});
+  if(state.creatorStudio)state.creatorStudio.pagePickers=[];
+}
+function creatorMoney(minor,currency="USD"){
+  const value=Number(minor);
+  if(!Number.isFinite(value))return "Unavailable";
+  try{return new Intl.NumberFormat(undefined,{style:"currency",currency}).format(value/100);}
+  catch{return "$"+(value/100).toFixed(2);}
+}
+function creatorNumber(value){
+  const n=Number(value);
+  return Number.isFinite(n)?new Intl.NumberFormat().format(n):"—";
+}
+function creatorIcon(name){
+  return "<svg class='creator-ico' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg#"+esc(name)+"'></use></svg>";
+}
+function creatorProfileName(){
+  const profile=state.creatorStudio?.profile?.user||state.user||{};
+  return profile.name||profile.username||"Creator";
+}
+function creatorOwnPages(){
+  return state.creatorStudio?.pages||[];
+}
+function creatorPostCard(post){
+  const media=Array.isArray(post.media)?post.media:[];
+  const kind=media.length?media.map(item=>String(item.mediaType||"media").toUpperCase()).join(" · "):"TEXT POST";
+  const date=post.createdAt?new Date(post.createdAt).toLocaleString():"Date unavailable";
+  return "<article class='creator-post-card'>"+
+    "<div class='creator-post-card-head'><span class='creator-post-type'>"+esc(kind)+"</span><span class='creator-post-date'>"+esc(date)+"</span></div>"+
+    (post.text?"<p class='creator-post-copy'>"+esc(post.text)+"</p>":"")+
+    (media.length?renderPostMedia(post):"<div class='creator-post-no-media'>Text publication · no attached media</div>")+
+    "<div class='creator-post-footer'><span>♡ "+creatorNumber(post.reactionCount||0)+" reactions</span><span>"+creatorNumber((post.comments||[]).length)+" comments</span><div><button type='button' class='secondary' data-creator-edit-post='"+esc(post.id)+"'>Edit</button><button type='button' class='secondary creator-danger-action' data-creator-delete-post='"+esc(post.id)+"'>Delete</button></div></div>"+
+    "</article>";
+}
+function creatorMetric(label,value,caption,icon){
+  return "<article class='creator-metric-card'><div class='creator-metric-top'><span>"+esc(label)+"</span><span class='creator-metric-icon'>"+creatorIcon(icon)+"</span></div><strong>"+esc(value)+"</strong><small>"+esc(caption)+"</small></article>";
+}
+function creatorEmpty(title,description,icon){
+  return "<section class='creator-empty-state'><span>"+creatorIcon(icon||"create")+"</span><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p></section>";
+}
+function creatorStudioChrome(section,content){
+  const s=state.creatorStudio||{};
+  const name=creatorProfileName();
+  const sections=[
+    ["overview","Overview","creator"],
+    ["content","Content library","saved"],
+    ["publish","Create & publish","create"],
+    ["audience","Audience","friends"],
+    ["analytics","Analytics","explore"],
+    ["pages","Pages & channels","pages"],
+    ["monetization","Monetization","coins"],
+    ["settings","Studio settings","settings"]
+  ];
+  const nav=sections.map(([id,label,icon])=>"<button type='button' class='creator-studio-nav-item "+(id===section?"active":"")+"' data-creator-section='"+id+"'>"+creatorIcon(icon)+"<span>"+label+"</span>"+(id==="monetization"?"<small>PAYMENTS</small>":"")+"</button>").join("");
+  return "<div class='creator-studio-shell' data-creator-section-active='"+section+"'>"+
+    "<header class='creator-studio-topline'><div class='creator-studio-brand'><span class='creator-studio-brand-mark'>M</span><div><strong>Minglora</strong><small>CREATOR STUDIO</small></div></div><div class='creator-studio-top-meta'><span class='creator-studio-account-dot'></span><span>"+esc(name)+"</span><button type='button' class='secondary' data-creator-edit-profile>Edit profile</button></div></header>"+
+    "<section class='creator-studio-heading'><div><span class='creator-eyebrow'>YOUR CREATOR COMMAND CENTER</span><h1>Creator <em>Studio</em></h1><p>Build your audience, publish your work and manage your creator business—all in one place.</p></div><div class='creator-studio-heading-actions'><span class='creator-data-badge'><i></i> Real Minglora account data</span><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create content</button></div></section>"+
+    "<div class='creator-studio-layout'><nav class='creator-studio-nav' aria-label='Creator Studio sections'><span class='creator-studio-nav-heading'>WORKSPACE</span>"+nav+"<div class='creator-studio-nav-divider'></div><button type='button' class='creator-studio-live-handoff' data-creator-open-live>"+creatorIcon("live")+"<span><strong>Open LIVE</strong><small>Broadcast in the separate LIVE experience</small></span><span class='creator-handoff-arrow'>↗</span></button></nav>"+
+    "<div class='creator-studio-content'>"+content+"</div></div>"+
+    "<footer class='creator-studio-footer'><span>Minglora Creator Studio</span><span>Account-backed data · No invented activity or earnings</span></footer></div>";
+}
+function creatorOverviewMarkup(){
+  const s=state.creatorStudio,profile=s.profile||{},insights=profile.profileInsights||{},user=profile.user||{};
+  const posts=Array.isArray(profile.posts)?profile.posts:[];
+  const pages=creatorOwnPages(),earnings=s.earnings||{};
+  const totalViews=insights.profileViews30d;
+  const activeViewers=insights.activeViewersCount;
+  const preview=posts.slice(0,2).map(creatorPostCard).join("");
+  return "<section class='creator-stage-card'><div class='creator-stage-copy'><span class='creator-stage-label'><i></i> MINGLORA CREATIVE WORKSPACE</span><h2>Make your next<br><em>moment matter.</em></h2><p>Plan your content, publish to your community and turn real audience activity into creator growth.</p><div class='creator-stage-actions'><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create a post</button><button type='button' class='secondary' data-creator-section='content'>Explore your content ↗</button></div><div class='creator-stage-note'>Your creator space is separate from the live broadcast room.</div></div>"+
+    "<div class='creator-stage-visual'><canvas id='creator-stage-canvas' aria-label='Interactive real-time 3D Minglora creator production studio'></canvas><div class='creator-stage-caption'><span></span> LIVE WEBGL 3D SCENE <small>Drag to orbit</small></div><div class='creator-stage-controls'><button type='button' id='creator-stage-reset' aria-label='Reset 3D studio view'>↻</button><button type='button' id='creator-stage-pause' aria-label='Pause 3D studio animation'>Ⅱ</button></div><p class='creator-stage-fallback' id='creator-stage-fallback' hidden>WebGL is unavailable in this browser. The 3D studio scene cannot be displayed.</p></div></section>"+
+    "<div class='creator-section-title'><div><span class='creator-eyebrow'>CHANNEL OVERVIEW</span><h2>Your performance, at a glance</h2></div><button type='button' class='creator-inline-link' data-creator-section='analytics'>View analytics ↗</button></div>"+
+    "<div class='creator-metrics-grid'>"+
+      creatorMetric("Followers",creatorNumber(profile.followersCount),"Current profile audience","friends")+
+      creatorMetric("Profile views · 30 days",totalViews==null?"Unavailable":creatorNumber(totalViews),"Recorded profile visits","explore")+
+      creatorMetric("Active profile viewers",activeViewers==null?"Unavailable":creatorNumber(activeViewers),"Current recorded profile presence","activity")+
+      creatorMetric("Published posts",creatorNumber(posts.length),"Your published personal posts","saved")+
+    "</div>"+
+    "<div class='creator-overview-lower'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR LATEST WORK</span><h3>Recent publications</h3></div><button type='button' class='creator-inline-link' data-creator-section='content'>View all ↗</button></div>"+(preview||creatorEmpty("Your content starts here","Publish a post and your real content will appear in this workspace.","create"))+"</section>"+
+    "<section class='creator-studio-panel creator-shortcuts-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>CREATOR TOOLS</span><h3>Your workspace</h3></div></div>"+
+      "<button type='button' class='creator-shortcut-row' data-creator-section='content'>"+creatorIcon("saved")+"<span><strong>Content library</strong><small>Manage your posts and media</small></span><b>↗</b></button>"+
+      "<button type='button' class='creator-shortcut-row' data-creator-section='audience'>"+creatorIcon("friends")+"<span><strong>Audience</strong><small>Followers and real profile activity</small></span><b>↗</b></button>"+
+      "<button type='button' class='creator-shortcut-row' data-creator-section='pages'>"+creatorIcon("pages")+"<span><strong>Pages & channels</strong><small>Manage your Minglora Pages</small></span><b>↗</b></button>"+
+      "<button type='button' class='creator-shortcut-row' data-creator-section='monetization'>"+creatorIcon("coins")+"<span><strong>Monetization</strong><small>Creator earnings and PayPal</small></span><b>↗</b></button>"+
+      "<div class='creator-live-handoff-note'><span class='creator-live-handoff-icon'>"+creatorIcon("live")+"</span><div><strong>Ready to broadcast?</strong><small>Camera, microphone, guests and real-time chat belong in the LIVE room.</small><button type='button' data-creator-open-live>Open LIVE experience ↗</button></div></div>"+
+    "</section></div>";
+}
+function creatorContentMarkup(){
+  const s=state.creatorStudio,profile=s.profile||{},posts=Array.isArray(profile.posts)?profile.posts:[];
+  const media=posts.flatMap(post=>(Array.isArray(post.media)?post.media:[]).map(item=>({...item,postId:post.id,postText:post.text||"",createdAt:post.createdAt})));
+  const mediaHtml=media.length?media.map(item=>"<article class='creator-media-item'>"+
+    (item.mediaType==="video"&&item.url?"<video controls playsinline preload='metadata' src='"+esc(item.url)+"'></video>":item.mediaType==="audio"&&item.url?"<audio controls preload='metadata' src='"+esc(item.url)+"'></audio>":item.mediaType==="model3d"&&item.url?"<model-viewer src='"+esc(item.url)+"' alt='Published 3D media' camera-controls auto-rotate></model-viewer>":item.url?"<img loading='lazy' src='"+esc(item.url)+"' alt='Published creator media'>":"<div class='creator-media-no-preview'>"+esc(String(item.mediaType||"MEDIA").toUpperCase())+"</div>")+
+    "<div><strong>"+esc(item.postText||"Published media")+"</strong><small>"+esc(item.mediaType||"Media")+" · "+esc(item.createdAt?new Date(item.createdAt).toLocaleDateString():"Date unavailable")+"</small></div></article>").join(""):creatorEmpty("No published media yet","Images, videos, audio and 3D files attached to your posts will appear here.","saved");
+  const postsHtml=posts.length?posts.map(creatorPostCard).join(""):creatorEmpty("No posts published yet","Create a post with text, photo, video, audio or a 3D file. Your posts will be stored on your Minglora account.","create");
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR PUBLISHED WORK</span><h2>Content library</h2><p>Manage your own publications and review media attached to them.</p></div><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create content</button></div>"+
+    "<div class='creator-content-tabs'><button type='button' class='active' data-creator-content-tab='posts'>Published posts <span>"+posts.length+"</span></button><button type='button' data-creator-content-tab='media'>Published media <span>"+media.length+"</span></button></div>"+
+    "<section class='creator-library-panel' id='creator-post-library'>"+postsHtml+"</section>"+
+    "<section class='creator-library-panel' id='creator-media-library' hidden><div class='creator-media-grid'>"+mediaHtml+"</div></section>";
+}
+function creatorPublishMarkup(){
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CONTENT PRODUCTION</span><h2>Create & publish</h2><p>Publish directly to your Minglora profile with the existing authenticated media pipeline.</p></div></div>"+
+    "<div class='creator-publish-layout'><section class='creator-studio-panel creator-composer-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>POST COMPOSER</span><h3>Build your next post</h3></div><span class='creator-draft-tag'>MINGLORA POST</span></div>"+
+    "<form id='creator-publish-form'><div class='creator-publish-author'><span class='creator-publish-avatar'>"+esc(String(creatorProfileName()).charAt(0).toUpperCase())+"</span><span><strong>"+esc(creatorProfileName())+"</strong><small>Publishing to your Minglora profile</small></span></div>"+
+    "<label class='creator-field-label' for='creator-post-text'>Caption or message</label><textarea id='creator-post-text' name='text' rows='5' maxlength='5000' placeholder='Share an update, an idea or a moment with your audience…'></textarea>"+
+    "<label class='creator-field-label'>Attach media</label><div id='creator-post-media-picker'></div>"+
+    "<div class='creator-publish-foot'><span>Text · Photo · Video · Audio · 3D GLB</span><button type='submit' class='primary' id='creator-publish-submit'>Publish to Minglora ↗</button></div><p class='creator-inline-status' id='creator-publish-status' role='status'>Files are uploaded through Minglora’s secure media endpoint before the post is published.</p></form></section>"+
+    "<aside class='creator-studio-panel creator-publish-guidance'><span class='creator-eyebrow'>PUBLISHING WORKFLOW</span><h3>From creation to publication</h3><ol><li><i>01</i><span><strong>Create your post</strong><small>Write a caption or message.</small></span></li><li><i>02</i><span><strong>Add your media</strong><small>Choose gallery, files or device camera.</small></span></li><li><i>03</i><span><strong>Secure upload</strong><small>Minglora validates and stores your media.</small></span></li><li><i>04</i><span><strong>Publish</strong><small>Your post is saved through the Minglora API.</small></span></li></ol><p>Scheduled publishing is not enabled in the current Minglora backend, so this screen only offers confirmed immediate publishing.</p></aside></div>";
+}
+function creatorAudienceMarkup(){
+  const s=state.creatorStudio,p=s.profile||{},ins=p.profileInsights||{};
+  const followers=s.followers||[],following=s.following||[];
+  const rows=(items)=>items.length?items.map(person=>"<article class='creator-audience-row'><img src='"+avatar(person)+"' alt=''><span><strong>"+esc(person.name||"Minglora member")+"</strong><small>@"+esc(person.username||"member")+"</small></span><button type='button' class='secondary' data-creator-view-profile='"+esc(person.id)+"'>View profile</button></article>").join(""):creatorEmpty("No members to show","This list is empty. Minglora does not add sample users or follower records.","friends");
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h2>Audience</h2><p>Real follower relationships and the profile activity Minglora currently records.</p></div><button type='button' class='secondary' id='creator-refresh-audience'>↻ Refresh audience</button></div>"+
+    "<div class='creator-audience-summary'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Members following your profile","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Profiles you follow","profile")+creatorMetric("Profile views · 30 days",ins.profileViews30d==null?"Unavailable":creatorNumber(ins.profileViews30d),"Recorded profile views","explore")+creatorMetric("Active profile viewers",ins.activeViewersCount==null?"Unavailable":creatorNumber(ins.activeViewersCount),"Current recorded visitors","activity")+"</div>"+
+    "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following)+"</div></section></div>";
+}
+function creatorAnalyticsMarkup(){
+  const s=state.creatorStudio,p=s.profile||{},i=p.profileInsights||{};
+  const posts=Array.isArray(p.posts)?p.posts:[];
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Only metrics returned by Minglora’s existing profile insights API are displayed here.</p></div><button type='button' class='secondary' id='creator-refresh-analytics'>↻ Refresh</button></div>"+
+    "<div class='creator-analytics-source'><span>✓</span><div><strong>Account-backed profile insights</strong><small>Counts below are recorded by Minglora. The current API does not yet expose watch time, post reach, click-through or daily growth series.</small></div></div>"+
+    "<div class='creator-analytics-grid'>"+creatorMetric("Profile views · 30 days",i.profileViews30d==null?"Unavailable":creatorNumber(i.profileViews30d),"Recorded profile visits","explore")+creatorMetric("Active profile viewers",i.activeViewersCount==null?"Unavailable":creatorNumber(i.activeViewersCount),"Current profile presence records","activity")+creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Published posts",creatorNumber(posts.length),"Personal posts visible on your profile","saved")+"</div>"+
+    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Profile views in the last 30 days, active profile visitors, follower count, following count, published posts.</span></p><p><b>Not yet available</b><span>Per-post impressions, watch time, retention, completion, audience demographics, conversion funnels and time-series charts.</span></p></div></section>";
+}
+function creatorPageCard(page,details){
+  const posts=details?.posts||[],canDelete=page.myRole==="owner";
+  const pagePosts=posts.length?posts.slice(0,3).map(post=>"<article class='creator-page-post-row'><div><strong>"+esc(post.text||"Page publication")+"</strong><small>"+esc(post.createdAt?new Date(post.createdAt).toLocaleDateString():"Date unavailable")+"</small></div><button type='button' class='secondary creator-danger-action' data-creator-delete-page-post='"+esc(page.id)+"|"+esc(post.id)+"'>Delete</button></article>").join(""): "<p class='creator-page-no-posts'>No posts on this Page yet.</p>";
+  return "<article class='creator-page-card'><div class='creator-page-card-head'><span class='creator-page-avatar'>"+esc(String(page.title||"P").charAt(0).toUpperCase())+"</span><div><strong>"+esc(page.title)+"</strong><small>@"+esc(page.handle)+" · "+esc(page.myRole||"manager")+"</small></div><span class='creator-page-followers'>"+creatorNumber(page.followerCount)+" followers</span></div>"+
+    (page.description?"<p class='creator-page-description'>"+esc(page.description)+"</p>":"")+
+    "<div class='creator-page-posts-heading'><strong>Recent Page posts</strong><small>"+posts.length+" loaded</small></div>"+pagePosts+
+    "<details class='creator-page-publish'><summary>Publish to this Page</summary><form data-creator-page-form='"+esc(page.id)+"'><label class='creator-field-label'>Page post text</label><textarea name='text' maxlength='5000' rows='3' placeholder='Share a Page update…'></textarea><div data-creator-page-picker='"+esc(page.id)+"'></div><button type='submit' class='primary'>Publish Page post</button><p class='creator-inline-status' role='status'></p></form></details>"+
+    (canDelete?"<button type='button' class='secondary creator-danger-action creator-delete-page' data-creator-delete-page='"+esc(page.id)+"'>Delete this Page</button>":"")+
+    "</article>";
+}
+async function creatorPagesMarkup(){
+  const s=state.creatorStudio;
+  if(s.pagesError)return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR MINGLORA PAGES</span><h2>Pages & channels</h2><p>Manage Pages you own or have permission to publish to.</p></div></div><div class='creator-studio-panel'>"+creatorEmpty("Pages unavailable",s.pagesError,"pages")+"</div>";
+  const details=await Promise.all(s.pages.map(async page=>{
+    try{return [page.id,(await api("/pages/"+encodeURIComponent(page.id)))];}
+    catch(error){return [page.id,{unavailable:true,error:error.message}];}
+  }));
+  s.pageDetails=Object.fromEntries(details);
+  const cards=s.pages.map(page=>{
+    const detail=s.pageDetails[page.id];
+    return detail?.unavailable?"<article class='creator-page-card'><strong>"+esc(page.title)+"</strong><p>"+esc(detail.error||"Page details unavailable.")+"</p></article>":creatorPageCard(page,detail);
+  }).join("");
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR MINGLORA PAGES</span><h2>Pages & channels</h2><p>Create and manage public Pages, publish Page updates and review actual follower totals.</p></div></div>"+
+    "<section class='creator-studio-panel creator-create-page-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>CREATE A CHANNEL</span><h3>Start a Minglora Page</h3></div>"+creatorIcon("pages")+"</div><form id='creator-create-page-form' class='creator-page-create-form'><div><label class='creator-field-label' for='creator-page-title'>Page name</label><input id='creator-page-title' name='title' maxlength='160' minlength='3' required placeholder='Your brand, community or public identity'></div><div><label class='creator-field-label' for='creator-page-handle'>Unique Page handle</label><input id='creator-page-handle' name='handle' minlength='3' maxlength='30' pattern='[a-zA-Z0-9_-]{3,30}' required placeholder='yourpage'></div><div><label class='creator-field-label' for='creator-page-category'>Category</label><input id='creator-page-category' name='category' maxlength='60' placeholder='Creator, music, business…'></div><div><label class='creator-field-label' for='creator-page-description'>Description</label><textarea id='creator-page-description' name='description' rows='3' maxlength='2000' placeholder='What is this Page about?'></textarea></div><button type='submit' class='primary'>Create Page</button><p class='creator-inline-status' id='creator-page-create-status' role='status'>Page handles must contain 3–30 lowercase letters, numbers, underscores or hyphens.</p></form></section>"+
+    "<div class='creator-pages-list-heading'><h3>Your managed Pages</h3><span>"+s.pages.length+" Pages</span></div>"+
+    (cards? "<div class='creator-pages-grid'>"+cards+"</div>":creatorEmpty("No managed Pages yet","Create your first Page to establish a public brand or community identity.","pages"));
+}
+function creatorMonetizationMarkup(){
+  const s=state.creatorStudio,data=s.earnings;
+  if(s.earningsError||!data)return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CREATOR BUSINESS</span><h2>Monetization</h2><p>Creator earnings and PayPal withdrawals.</p></div></div><div class='creator-studio-panel'>"+creatorEmpty("Earnings unavailable",s.earningsError||"Minglora could not load creator earnings.","coins")+"</div>";
+  const account=data.payoutAccount||null,ledger=Array.isArray(data.ledger)?data.ledger:[],payouts=Array.isArray(data.payouts)?data.payouts:[];
+  const platformTotal=ledger.reduce((sum,row)=>sum+Number(row.platform_share_minor||0),0);
+  const history=ledger.length?ledger.map(item=>"<article class='creator-ledger-row'><div><strong>LIVE gift earnings</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span class='creator-ledger-share'>Creator share "+creatorMoney(item.creator_share_minor)+"</span><strong>"+creatorMoney(item.creator_share_minor)+"</strong></article>").join(""):creatorEmpty("No creator earnings yet","Eligible gift earnings will appear here after real LIVE gift transactions are settled.","coins");
+  const payoutHistory=payouts.length?payouts.map(item=>"<article class='creator-ledger-row'><div><strong>"+esc(String(item.status||"unknown").replace(/_/g," ").toUpperCase())+"</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span class='creator-ledger-share'>PayPal payout</span><strong>"+creatorMoney(item.amount_minor)+"</strong></article>").join(""):creatorEmpty("No withdrawals yet","Confirmed payout requests will appear in this history.","coins");
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CREATOR BUSINESS</span><h2>Monetization</h2><p>Manage actual creator gift earnings and PayPal withdrawal details.</p></div><span class='creator-finance-lock'>"+creatorIcon("settings")+" Server-authoritative amounts</span></div>"+
+    "<div class='creator-earning-metrics'>"+creatorMetric("Your eligible share",creatorMoney(data.earnedMinor),"50% creator share from eligible LIVE gifts","coins")+creatorMetric("Available to withdraw",creatorMoney(data.availableMinor),"Current server-calculated amount","saved")+creatorMetric("Minglora platform share",creatorMoney(platformTotal),"Recorded platform share from the ledger","profile")+"</div>"+
+    "<div class='creator-monetization-grid'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PAYOUT SETTINGS</span><h3>PayPal recipient</h3></div></div><p class='creator-settings-note'>Add or update the PayPal email used for creator withdrawals. Minglora sends a request only after checking the current available balance.</p><form id='creator-payout-account-form' class='creator-payout-form'><label class='creator-field-label' for='creator-paypal-email'>PayPal account email</label><input id='creator-paypal-email' name='paypalEmail' type='email' autocomplete='email' maxlength='254' required placeholder='your-paypal@example.com' value='"+esc(account?.paypal_email||"")+"'><button type='submit' class='primary'>Save payout email</button><p class='creator-inline-status' id='creator-payout-account-status' role='status'></p></form>"+
+    "<form id='creator-withdraw-form' class='creator-payout-form creator-withdraw-form'><label class='creator-field-label' for='creator-payout-amount'>Withdrawal amount (USD)</label><input id='creator-payout-amount' name='amount' type='number' min='1' step='0.01' max='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' value='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' required><button type='submit' class='primary' "+(account&&Number(data.availableMinor)>=100?"":"disabled")+">Request PayPal withdrawal</button><small>Minimum withdrawal: USD $1.00. A submitted request is not the same as a completed payout.</small><p class='creator-inline-status' id='creator-withdraw-status' role='status'></p></form></section>"+
+    "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PAYOUT TRACKING</span><h3>Withdrawal history</h3></div></div>"+payoutHistory+"</section></div>"+
+    "<section class='creator-studio-panel creator-ledger-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>EARNINGS LEDGER</span><h3>Gift earnings history</h3></div><small>Creator and platform shares are settled separately.</small></div>"+history+"</section>";
+}
+async function creatorSettingsMarkup(){
+  const result=await api("/settings");
+  const s=result.settings||{},privacy=s.privacy||{},notifications=s.notifications||{},preferences=s.preferences||{};
+  state.creatorStudio.settings=result;
+  const themes=["minglora","ocean","tropical","royal","emerald","rose","golden","lavender","midnight","graphite"];
+  const themeOptions=themes.map(value=>"<option value='"+value+"' "+(preferences.colorTheme===value?"selected":"")+">"+value.charAt(0).toUpperCase()+value.slice(1)+"</option>").join("");
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2><p>These settings are saved through Minglora’s authenticated account settings API.</p></div><button type='button' class='secondary' id='creator-edit-profile-button'>Edit profile details</button></div>"+
+    "<form id='creator-settings-form' class='creator-settings-grid'>"+
+    "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PRIVACY</span><h3>Who can reach you?</h3></div></div>"+
+    "<label class='creator-field-label' for='creator-privacy-visibility'>Profile visibility</label><select id='creator-privacy-visibility' name='profileVisibility' class='creator-select'><option value='public' "+(privacy.profileVisibility==="public"?"selected":"")+">Public</option><option value='friends' "+(privacy.profileVisibility==="friends"?"selected":"")+">Friends only</option><option value='private' "+(privacy.profileVisibility==="private"?"selected":"")+">Private</option></select>"+
+    "<label class='creator-field-label' for='creator-message-audience'>Who can message you?</label><select id='creator-message-audience' name='messageAudience' class='creator-select'><option value='everyone' "+(privacy.messageAudience==="everyone"?"selected":"")+">Everyone</option><option value='friends' "+(privacy.messageAudience==="friends"?"selected":"")+">Friends only</option><option value='nobody' "+(privacy.messageAudience==="nobody"?"selected":"")+">Nobody</option></select>"+
+    "<label class='creator-toggle-row'><span><strong>Friend requests</strong><small>Allow members to send you friend requests.</small></span><input type='checkbox' name='allowFriendRequests' "+(privacy.allowFriendRequests?"checked":"")+"></label></section>"+
+    "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>NOTIFICATIONS</span><h3>Stay informed</h3></div></div>"+
+    [["inApp","In-app notifications","Notifications inside Minglora."],["friendRequests","Friend requests","Requests and friendship updates."],["messages","Messages","New direct messages."],["interactions","Post interactions","Reactions and comments."],["push","Browser push","Push delivery when configured on this device."]].map(([key,label,help])=>"<label class='creator-toggle-row'><span><strong>"+label+"</strong><small>"+help+"</small></span><input type='checkbox' name='notification-"+key+"' "+(notifications[key]?"checked":"")+"></label>").join("")+"</section>"+
+    "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>APPEARANCE</span><h3>Studio & app appearance</h3></div></div>"+
+    "<label class='creator-field-label' for='creator-theme'>Theme mode</label><select id='creator-theme' class='creator-select' name='theme'><option value='system' "+(preferences.theme==="system"?"selected":"")+">System default</option><option value='light' "+(preferences.theme==="light"?"selected":"")+">Light</option><option value='dark' "+(preferences.theme==="dark"?"selected":"")+">Dark</option></select>"+
+    "<label class='creator-field-label' for='creator-color-theme'>Color theme</label><select id='creator-color-theme' class='creator-select' name='colorTheme'>"+themeOptions+"</select>"+
+    "<label class='creator-toggle-row'><span><strong>Reduce motion</strong><small>Reduce decorative transitions and motion effects.</small></span><input type='checkbox' name='reducedMotion' "+(preferences.reducedMotion?"checked":"")+"></label></section>"+
+    "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>FEED PREFERENCES</span><h3>Content preferences</h3></div></div>"+
+    "<label class='creator-field-label' for='creator-feed-sort'>Default feed order</label><select id='creator-feed-sort' class='creator-select' name='feedSort'><option value='recent' "+(preferences.feedSort==="recent"?"selected":"")+">Newest first</option><option value='oldest' "+(preferences.feedSort==="oldest"?"selected":"")+">Oldest first</option></select>"+
+    "<p class='creator-settings-note'>LIVE room design remains managed in the separate LIVE experience. Creator Studio does not duplicate broadcast-room controls.</p></section>"+
+    "<div class='creator-settings-savebar'><p class='creator-inline-status' id='creator-settings-status' role='status'>Unsaved changes stay on this form until you save.</p><button type='submit' class='primary' id='creator-settings-save'>Save settings</button></div></form>";
+}
+async function renderCreatorSection(section){
+  const s=state.creatorStudio;
+  if(!s)return;
+  disposeCreatorStudioStage();
+  creatorStudioDestroyPagePickers();
+  s.section=section;
+  let content="";
+  if(section==="overview"){
+    content=creatorOverviewMarkup();
+  }else if(section==="content"){
+    content=creatorContentMarkup();
+  }else if(section==="publish"){
+    content=creatorPublishMarkup();
+  }else if(section==="audience"){
+    const profileId=state.user.id;
+    const [followers,following]=await Promise.allSettled([
+      api("/users/"+encodeURIComponent(profileId)+"/followers"),
+      api("/users/"+encodeURIComponent(profileId)+"/following")
+    ]);
+    s.followers=followers.status==="fulfilled"?(followers.value.users||[]):[];
+    s.following=following.status==="fulfilled"?(following.value.users||[]):[];
+    s.audienceError=followers.status==="rejected"?followers.reason?.message:null;
+    content=creatorAudienceMarkup();
+  }else if(section==="analytics"){
+    try{s.profile=await api("/users/"+encodeURIComponent(state.user.id));}
+    catch(error){s.analyticsError=error.message;}
+    content=creatorAnalyticsMarkup();
+  }else if(section==="pages"){
+    content=await creatorPagesMarkup();
+  }else if(section==="monetization"){
+    try{s.earnings=await api("/creator/earnings");s.earningsError=null;}
+    catch(error){s.earnings=null;s.earningsError=error.message;}
+    content=creatorMonetizationMarkup();
+  }else if(section==="settings"){
+    try{content=await creatorSettingsMarkup();}
+    catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
+  }else{
+    content=creatorOverviewMarkup();
+    section="overview";
+  }
+  setContent(creatorStudioChrome(section,content));
+  document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
+  document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
+  document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
+  $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
+  if(section==="overview"){
+    initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
+  }
+  if(section==="content"){
+    document.querySelectorAll("[data-creator-content-tab]").forEach(button=>button.addEventListener("click",()=>{
+      s.contentTab=button.dataset.creatorContentTab;
+      document.querySelectorAll("[data-creator-content-tab]").forEach(tab=>tab.classList.toggle("active",tab===button));
+      const posts=document.getElementById("creator-post-library"),media=document.getElementById("creator-media-library");
+      if(posts)posts.hidden=s.contentTab!=="posts";
+      if(media)media.hidden=s.contentTab!=="media";
+    }));
+    document.querySelectorAll("[data-creator-edit-post]").forEach(button=>button.addEventListener("click",()=>{
+      const post=(s.profile.posts||[]).find(item=>item.id===button.dataset.creatorEditPost);
+      if(post)openEditPost(post);
+    }));
+    document.querySelectorAll("[data-creator-delete-post]").forEach(button=>button.addEventListener("click",async()=>{
+      if(!window.confirm("Delete this Minglora post permanently?"))return;
+      button.disabled=true;
+      try{
+        await api("/posts/"+encodeURIComponent(button.dataset.creatorDeletePost),{method:"DELETE",body:"{}"});
+        s.profile=await api("/users/"+encodeURIComponent(state.user.id));
+        toast("Post deleted.");
+        await renderCreatorSection("content");
+      }catch(error){toast(error.message);button.disabled=false;}
+    }));
+  }
+  if(section==="publish"){
+    const root=document.getElementById("creator-post-media-picker");
+    const picker=root?createMediaPicker(root,{slot:"post",maxFiles:10}):null;
+    const form=document.getElementById("creator-publish-form");
+    form?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const button=document.getElementById("creator-publish-submit"),status=document.getElementById("creator-publish-status");
+      const values=new FormData(form),text=String(values.get("text")||"").trim();
+      if(!text&&!(picker&&picker.hasSelection())){toast("Write a caption or attach media before publishing.");return;}
+      button.disabled=true;
+      if(status)status.textContent="Uploading media and publishing through Minglora…";
+      try{
+        const mediaIds=picker?await picker.upload():[];
+        await api("/posts",{method:"POST",body:JSON.stringify({text,mediaIds})});
+        if(status)status.textContent="Minglora confirmed your post was published.";
+        toast("Your post is published.");
+        s.profile=await api("/users/"+encodeURIComponent(state.user.id));
+        if(picker)picker.destroy();
+        await renderCreatorSection("content");
+      }catch(error){
+        if(status)status.textContent=error.message||"Publishing failed; no success was reported.";
+        toast(error.message||"Minglora could not publish this post.");
+        button.disabled=false;
+      }
+    });
+  }
+  if(section==="pages"){
+    const createForm=document.getElementById("creator-create-page-form");
+    createForm?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const button=createForm.querySelector("button[type='submit']"),status=document.getElementById("creator-page-create-status");
+      const values=new FormData(createForm);
+      button.disabled=true;
+      try{
+        const result=await api("/pages",{method:"POST",body:JSON.stringify({
+          handle:values.get("handle"),title:values.get("title"),description:values.get("description"),category:values.get("category")
+        })});
+        if(status)status.textContent="Page created: @"+result.page.handle;
+        toast("Your Minglora Page was created.");
+        const pageList=await api("/pages");
+        s.pages=(pageList.pages||[]).filter(page=>["owner","admin","editor"].includes(page.myRole));
+        await renderCreatorSection("pages");
+      }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+    document.querySelectorAll("[data-creator-page-form]").forEach(form=>{
+      const pageId=form.dataset.creatorPageForm;
+      const pickerRoot=form.querySelector("[data-creator-page-picker]");
+      const picker=pickerRoot?createMediaPicker(pickerRoot,{slot:"page",maxFiles:10}):null;
+      if(picker)s.pagePickers.push(picker);
+      form.addEventListener("submit",async event=>{
+        event.preventDefault();
+        const button=form.querySelector("button[type='submit']"),status=form.querySelector(".creator-inline-status"),values=new FormData(form);
+        if(!String(values.get("text")||"").trim()&&!(picker&&picker.hasSelection())){toast("Add text or media before publishing to this Page.");return;}
+        button.disabled=true;
+        try{
+          const mediaIds=picker?await picker.upload():[];
+          await api("/pages/"+encodeURIComponent(pageId)+"/posts",{method:"POST",body:JSON.stringify({text:values.get("text"),mediaIds})});
+          if(status)status.textContent="Page post published.";
+          toast("Page post published.");
+          await renderCreatorSection("pages");
+        }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+      });
+    });
+    document.querySelectorAll("[data-creator-delete-page-post]").forEach(button=>button.addEventListener("click",async()=>{
+      const [pageId,postId]=button.dataset.creatorDeletePagePost.split("|");
+      if(!window.confirm("Delete this Page post?"))return;
+      button.disabled=true;
+      try{await api("/pages/"+encodeURIComponent(pageId)+"/posts/"+encodeURIComponent(postId),{method:"DELETE",body:"{}"});toast("Page post deleted.");await renderCreatorSection("pages");}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+    document.querySelectorAll("[data-creator-delete-page]").forEach(button=>button.addEventListener("click",async()=>{
+      if(!window.confirm("Delete this Page and all its Page posts? This cannot be undone."))return;
+      button.disabled=true;
+      try{await api("/pages/"+encodeURIComponent(button.dataset.creatorDeletePage),{method:"DELETE",body:"{}"});toast("Minglora Page deleted.");const result=await api("/pages");s.pages=(result.pages||[]).filter(page=>["owner","admin","editor"].includes(page.myRole));await renderCreatorSection("pages");}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+  }
+  if(section==="audience"){
+    document.querySelectorAll("[data-creator-view-profile]").forEach(button=>button.addEventListener("click",()=>openProfile(button.dataset.creatorViewProfile)));
+    $("#creator-refresh-audience")?.addEventListener("click",()=>renderCreatorSection("audience"));
+  }
+  if(section==="analytics"){
+    $("#creator-refresh-analytics")?.addEventListener("click",async()=>{
+      try{s.profile=await api("/users/"+encodeURIComponent(state.user.id));await renderCreatorSection("analytics");}
+      catch(error){toast(error.message);}
+    });
+  }
+  if(section==="monetization"){
+    $("#creator-payout-account-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=$("#creator-payout-account-status");
+      button.disabled=true;
+      try{
+        await api("/creator/payout-account",{method:"PUT",body:JSON.stringify({paypalEmail:form.elements.paypalEmail.value})});
+        if(status)status.textContent="PayPal payout email saved to Minglora.";
+        toast("PayPal payout details saved.");
+        s.earnings=await api("/creator/earnings");
+        await renderCreatorSection("monetization");
+      }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+    $("#creator-withdraw-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,amount=Number(form.elements.amount.value),button=form.querySelector("button[type='submit']"),status=$("#creator-withdraw-status");
+      if(!Number.isFinite(amount)||amount<1){toast("The minimum payout is USD $1.00.");return;}
+      button.disabled=true;
+      try{
+        const result=await api("/creator/payouts",{method:"POST",body:JSON.stringify({amountMinor:Math.round(amount*100)})});
+        if(status)status.textContent="PayPal returned payout status: "+String(result.status||"submitted")+".";
+        toast("PayPal payout submitted. Status: "+String(result.status||"submitted")+".");
+        s.earnings=await api("/creator/earnings");
+        await renderCreatorSection("monetization");
+      }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+  }
+  if(section==="settings"){
+    $("#creator-settings-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=$("#creator-settings-save"),status=$("#creator-settings-status"),values=new FormData(form);
+      button.disabled=true;
+      const checkbox=name=>form.elements[name].checked;
+      const patch={
+        privacy:{
+          profileVisibility:values.get("profileVisibility"),
+          messageAudience:values.get("messageAudience"),
+          allowFriendRequests:checkbox("allowFriendRequests")
+        },
+        notifications:{
+          inApp:checkbox("notification-inApp"),
+          friendRequests:checkbox("notification-friendRequests"),
+          messages:checkbox("notification-messages"),
+          interactions:checkbox("notification-interactions"),
+          push:checkbox("notification-push")
+        },
+        preferences:{
+          theme:values.get("theme"),
+          colorTheme:values.get("colorTheme"),
+          feedSort:values.get("feedSort"),
+          reducedMotion:checkbox("reducedMotion")
+        }
+      };
+      try{
+        const result=await api("/settings",{method:"PATCH",body:JSON.stringify(patch)});
+        s.settings=result;
+        state.settings=result.settings;
+        window.dispatchEvent(new CustomEvent("minglora:settings-loaded",{detail:result.settings}));
+        if(status)status.textContent="Your Minglora account settings have been saved.";
+        toast("Creator Studio settings saved.");
+        await renderCreatorSection("settings");
+      }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+  }
+}
+function initCreatorStudio3D(canvas){
+  if(!canvas)return;
+  const fallback=document.getElementById("creator-stage-fallback");
+  let gl;
+  try{gl=canvas.getContext("webgl",{alpha:true,antialias:true,powerPreference:"high-performance"})||canvas.getContext("experimental-webgl");}
+  catch{gl=null;}
+  if(!gl){if(fallback)fallback.hidden=false;return;}
+  const vertexSource="attribute vec3 aPosition;\nattribute vec3 aNormal;\nuniform mat4 uMvp;\nuniform mat4 uModel;\nvarying vec3 vNormal;\nvarying vec3 vPosition;\nvoid main(){ vec4 world=uModel*vec4(aPosition,1.0); vPosition=world.xyz; vNormal=normalize(mat3(uModel)*aNormal); gl_Position=uMvp*vec4(aPosition,1.0); }";
+  const fragmentSource="precision mediump float;\nuniform vec3 uColor;\nuniform float uGlow;\nvarying vec3 vNormal;\nvarying vec3 vPosition;\nvoid main(){ vec3 n=normalize(vNormal); vec3 light=normalize(vec3(-0.38,0.82,0.46)); float diffuse=max(dot(n,light),0.0); float rim=pow(1.0-max(dot(n,normalize(vec3(0.0,0.4,1.0))),0.0),2.0); vec3 color=uColor*(0.38+diffuse*0.72)+uGlow*(rim*vec3(0.4,0.55,1.0)+vec3(0.04,0.08,0.16)); gl_FragColor=vec4(color,1.0); }";
+  function shader(type,source){
+    const value=gl.createShader(type);gl.shaderSource(value,source);gl.compileShader(value);
+    if(!gl.getShaderParameter(value,gl.COMPILE_STATUS)){const message=gl.getShaderInfoLog(value);gl.deleteShader(value);throw new Error(message||"WebGL shader compilation failed.");}
+    return value;
+  }
+  let program;
+  try{
+    program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertexSource));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragmentSource));gl.linkProgram(program);
+    if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)||"WebGL program link failed.");
+  }catch(error){if(fallback){fallback.hidden=false;fallback.textContent="3D renderer could not initialize: "+String(error.message||error);}return;}
+  const attributes={position:gl.getAttribLocation(program,"aPosition"),normal:gl.getAttribLocation(program,"aNormal")};
+  const uniforms={mvp:gl.getUniformLocation(program,"uMvp"),model:gl.getUniformLocation(program,"uModel"),color:gl.getUniformLocation(program,"uColor"),glow:gl.getUniformLocation(program,"uGlow")};
+  gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.clearColor(0.028,0.045,0.082,0);
+  function geometry(positions,normals){return {positions:new Float32Array(positions),normals:new Float32Array(normals),count:positions.length/3};}
+  function boxGeometry(){
+    const p=[],n=[];
+    const faces=[
+      [[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5],[0,0,1]],
+      [[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5],[0,0,-1]],
+      [[-.5,-.5,-.5],[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5],[-1,0,0]],
+      [[.5,-.5,.5],[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5],[1,0,0]],
+      [[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5],[-.5,.5,-.5],[0,1,0]],
+      [[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,.5],[0,-1,0]]
+    ];
+    for(const f of faces){
+      const ids=[0,1,2,0,2,3];
+      for(const id of ids){p.push(...f[id]);n.push(...f[4]);}
+    }
+    return geometry(p,n);
+  }
+  function cylinderGeometry(segments=48){
+    const p=[],n=[];
+    for(let i=0;i<segments;i++){
+      const a=i/segments*Math.PI*2,b=(i+1)/segments*Math.PI*2;
+      const p1=[Math.cos(a),-.5,Math.sin(a)],p2=[Math.cos(b),-.5,Math.sin(b)];
+      const p3=[Math.cos(b),.5,Math.sin(b)],p4=[Math.cos(a),.5,Math.sin(a)];
+      const ids=[p1,p2,p3,p1,p3,p4];
+      for(const v of ids){p.push(...v);const l=Math.hypot(v[0],v[2])||1;n.push(v[0]/l,0,v[2]/l);}
+      const bottom=[[0,-.5,0],p2,p1],top=[[0,.5,0],p4,p3];
+      for(const v of bottom){p.push(...v);n.push(0,-1,0);}
+      for(const v of top){p.push(...v);n.push(0,1,0);}
+    }
+    return geometry(p,n);
+  }
+  function torusGeometry(R=1,r=.08,major=64,minor=12){
+    const p=[],n=[];
+    for(let i=0;i<major;i++){
+      const a=i/major*Math.PI*2,b=(i+1)/major*Math.PI*2;
+      for(let j=0;j<minor;j++){
+        const c=j/minor*Math.PI*2,d=(j+1)/minor*Math.PI*2;
+        const point=(u,v)=>[(R+r*Math.cos(v))*Math.cos(u),(R+r*Math.cos(v))*Math.sin(u),r*Math.sin(v)];
+        const normal=(u,v)=>[Math.cos(v)*Math.cos(u),Math.cos(v)*Math.sin(u),Math.sin(v)];
+        const coords=[[a,c],[b,c],[b,d],[a,c],[b,d],[a,d]];
+        for(const [u,v] of coords){p.push(...point(u,v));n.push(...normal(u,v));}
+      }
+    }
+    return geometry(p,n);
+  }
+  const geometries={box:boxGeometry(),cylinder:cylinderGeometry(),torus:torusGeometry()};
+  function buffer(data){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);return b;}
+  for(const geo of Object.values(geometries)){geo.positionBuffer=buffer(geo.positions);geo.normalBuffer=buffer(geo.normals);}
+  const objects=[];
+  function add(shape,x,y,z,sx,sy,sz,color,glow=0,rx=0,ry=0,rz=0){
+    objects.push({shape,x,y,z,sx,sy,sz,color,glow,rx,ry,rz});
+  }
+  add("cylinder",0,0.02,0,2.35,.18,2.35,[.12,.18,.31],.04);
+  add("torus",0,.13,0,2.13,.04,2.13,[.15,.65,.82],.58,0,0,0);
+  add("box",0,.53,.05,2.4,.16,1.05,[.2,.25,.43],.08);
+  add("box",0,.45,.59,2.2,.065,.035,[.38,.3,.82],.56);
+  add("box",-0.92,.85,-.16,.12,.55,.13,[.14,.2,.32],.02);
+  add("box",.92,.85,-.16,.12,.55,.13,[.14,.2,.32],.02);
+  add("box",0,1.33,-.22,1.78,1.12,.13,[.13,.17,.31],.1);
+  add("box",0,1.33,-.137,1.63,.94,.025,[.24,.33,.65],.58);
+  add("box",-.28,1.54,-.115,.92,.045,.012,[.36,.86,.92],.76);
+  add("box",-.49,1.36,-.115,.58,.025,.012,[.67,.56,1],.64);
+  add("box",.58,1.15,-.115,.38,.025,.012,[.4,.49,.76],.34);
+  add("cylinder",-1.45,.59,.13,.14,.82,.14,[.13,.18,.29],.02);
+  add("box",-1.45,1.05,.13,.53,.35,.38,[.24,.3,.48],.12);
+  add("cylinder",-1.45,1.05,.35,.25,.24,.25,[.18,.31,.58],.2,Math.PI/2,0,0);
+  add("torus",-1.45,1.05,.49,.16,.16,.16,[.24,.83,.88],.78);
+  add("cylinder",1.43,.58,-.52,.065,.82,.065,[.22,.28,.42],.02);
+  add("torus",1.43,1.28,-.52,.58,.58,.58,[.52,.39,.98],.7,0,0,0);
+  add("torus",1.43,1.28,-.52,.48,.48,.48,[.24,.83,.83],.43,0,0,0);
+  add("cylinder",-1.92,.55,-.72,.24,.92,.24,[.13,.2,.34],.06);
+  add("cylinder",-1.92,1.13,-.72,.31,.12,.31,[.19,.29,.48],.14);
+  add("cylinder",1.98,.44,.63,.19,.72,.19,[.13,.2,.34],.05);
+  add("cylinder",1.98,.91,.63,.27,.11,.27,[.25,.34,.51],.12);
+  add("torus",0,2.45,-.1,1.42,.025,1.42,[.22,.72,.9],.32,Math.PI/2,0,0);
+  const yawState={yaw:.55,pitch:.28,drag:false,lastX:0,lastY:0,paused:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false};
+  function matIdentity(){return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);}
+  function matMultiply(a,b){
+    const out=new Float32Array(16);
+    for(let c=0;c<4;c++)for(let r=0;r<4;r++)out[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
+    return out;
+  }
+  function matTranslate(x,y,z){const m=matIdentity();m[12]=x;m[13]=y;m[14]=z;return m;}
+  function matScale(x,y,z){const m=matIdentity();m[0]=x;m[5]=y;m[10]=z;return m;}
+  function matRotateX(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1]);}
+  function matRotateY(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1]);}
+  function matRotateZ(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,s,0,0,-s,c,0,0,0,0,1,0,0,0,0,1]);}
+  function matPerspective(fov,aspect,near,far){
+    const f=1/Math.tan(fov/2),nf=1/(near-far),m=new Float32Array(16);
+    m[0]=f/aspect;m[5]=f;m[10]=(far+near)*nf;m[11]=-1;m[14]=2*far*near*nf;return m;
+  }
+  function vNormalize(v){const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
+  function vCross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  function vDot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+  function matLookAt(eye,target,up){
+    const z=vNormalize([eye[0]-target[0],eye[1]-target[1],eye[2]-target[2]]),x=vNormalize(vCross(up,z)),y=vCross(z,x);
+    return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-vDot(x,eye),-vDot(y,eye),-vDot(z,eye),1]);
+  }
+  function modelMatrix(o,time){
+    let m=matTranslate(o.x,o.y,o.z);
+    m=matMultiply(m,matRotateY(o.ry+(o.shape==="torus"?time*.00018:0)));
+    m=matMultiply(m,matRotateX(o.rx));
+    m=matMultiply(m,matRotateZ(o.rz));
+    return matMultiply(m,matScale(o.sx,o.sy,o.sz));
+  }
+  const resize=()=>{
+    const rect=canvas.getBoundingClientRect(),width=Math.max(1,Math.floor(rect.width)),height=Math.max(1,Math.floor(rect.height));
+    const ratio=Math.min(window.devicePixelRatio||1,1.65);
+    const w=Math.floor(width*ratio),h=Math.floor(height*ratio);
+    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
+  };
+  const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(resize):null;
+  observer?.observe(canvas);resize();
+  let frame=0,disposed=false;
+  function render(now){
+    if(disposed)return;
+    frame=requestAnimationFrame(render);
+    if(yawState.paused&&now!==0){/* Render a stable frame while paused. */}
+    else{
+      objects[17].ry+=.0011;
+      objects[18].ry-=.0008;
+    }
+    resize();
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(program);
+    const aspect=canvas.width/Math.max(1,canvas.height);
+    const projection=matPerspective(.73,aspect,.1,60);
+    const radius=7.3,eye=[Math.sin(yawState.yaw)*radius,2.6+yawState.pitch*3,Math.cos(yawState.yaw)*radius],view=matLookAt(eye,[0,1,0],[0,1,0]);
+    const vp=matMultiply(projection,view);
+    for(const object of objects){
+      const geo=geometries[object.shape],model=modelMatrix(object,now),mvp=matMultiply(vp,model);
+      gl.bindBuffer(gl.ARRAY_BUFFER,geo.positionBuffer);gl.enableVertexAttribArray(attributes.position);gl.vertexAttribPointer(attributes.position,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,geo.normalBuffer);gl.enableVertexAttribArray(attributes.normal);gl.vertexAttribPointer(attributes.normal,3,gl.FLOAT,false,0,0);
+      gl.uniformMatrix4fv(uniforms.mvp,false,mvp);gl.uniformMatrix4fv(uniforms.model,false,model);
+      gl.uniform3fv(uniforms.color,object.color);gl.uniform1f(uniforms.glow,object.glow);
+      gl.drawArrays(gl.TRIANGLES,0,geo.count);
+    }
+  }
+  frame=requestAnimationFrame(render);
+  const onDown=event=>{yawState.drag=true;yawState.lastX=event.clientX;yawState.lastY=event.clientY;canvas.setPointerCapture?.(event.pointerId);};
+  const onMove=event=>{if(!yawState.drag)return;yawState.yaw+=(event.clientX-yawState.lastX)*.008;yawState.pitch=Math.max(-.35,Math.min(.6,yawState.pitch+(event.clientY-yawState.lastY)*.003));yawState.lastX=event.clientX;yawState.lastY=event.clientY;};
+  const onUp=()=>{yawState.drag=false;};
+  canvas.addEventListener("pointerdown",onDown);canvas.addEventListener("pointermove",onMove);canvas.addEventListener("pointerup",onUp);canvas.addEventListener("pointercancel",onUp);
+  const reset=document.getElementById("creator-stage-reset");
+  reset?.addEventListener("click",()=>{yawState.yaw=.55;yawState.pitch=.28;});
+  const pause=document.getElementById("creator-stage-pause");
+  pause?.addEventListener("click",()=>{yawState.paused=!yawState.paused;if(pause)pause.textContent=yawState.paused?"▶":"Ⅱ";});
+  const onVisibility=()=>{if(document.hidden)yawState.paused=true;};
+  document.addEventListener("visibilitychange",onVisibility);
+  creatorStudioStageCleanup=()=>{
+    disposed=true;cancelAnimationFrame(frame);observer?.disconnect();document.removeEventListener("visibilitychange",onVisibility);
+    canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+    Object.values(geometries).forEach(geo=>{gl.deleteBuffer(geo.positionBuffer);gl.deleteBuffer(geo.normalBuffer);});
+    gl.deleteProgram(program);
+  };
+}
+function disposeCreatorStudioStage(){if(creatorStudioStageCleanup){creatorStudioStageCleanup();creatorStudioStageCleanup=null;}}
+
 async function finishPaypalCoinReturn(){
   const params=new URLSearchParams(window.location.search),status=params.get("paypal"),orderId=params.get("token");
   if(status==="cancel"){window.history.replaceState(null,"",window.location.pathname);toast("PayPal checkout was cancelled. No Coins were added.");return;}
