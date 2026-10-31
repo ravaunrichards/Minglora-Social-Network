@@ -27,7 +27,7 @@ test('logout is kept out of mobile and tablet primary navigation and placed in S
   const sideRail = html.slice(sideRailStart, sideRailEnd);
   assert.doesNotMatch(sideRail, /data-logout|logout-rail-link|Log out/);
 
-  assert.match(html, /id="settings-btn"[^>]*aria-label="Settings &amp; privacy"/);
+  assert.ok(html.includes('id="settings-btn" aria-label="Settings & privacy"'), "Settings button is available in the top action area");
   assert.match(settings, /id="settings-signout"/);
   assert.match(settings, /id="settings-logout-btn"/);
   assert.match(settings, /Sign out of Minglora on this device/);
