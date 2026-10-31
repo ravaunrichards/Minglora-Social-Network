@@ -77,7 +77,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the new icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v12-responsive-layout-guardrails/);
-  assert.match(serviceWorker, /styles\.css\?v=20261031-responsive-layout-guardrails-1/);
+  assert.match(serviceWorker, /minglora-shell-v18-audio-live/);
+  assert.match(serviceWorker, /styles\.css\?v=20261031-audio-live-type-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
