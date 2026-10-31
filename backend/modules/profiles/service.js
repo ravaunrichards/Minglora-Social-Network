@@ -71,6 +71,7 @@ export function getProfileViewStats({ views = [], presence = [], targetUserId, a
     presence
       .filter(entry =>
         entry.targetUserId === targetUserId &&
+        entry.viewerUserId !== targetUserId &&
         new Date(entry.lastSeenAt).getTime() >= presenceCutoff
       )
       .map(entry => entry.viewerUserId)
