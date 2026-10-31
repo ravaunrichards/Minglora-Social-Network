@@ -398,9 +398,20 @@ Deno.serve(async (req: Request) => {
       .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
     if(broadcastError||!broadcast||broadcast.status!=="live")return json(404,{error:"LIVE session not found."});
     if(broadcast.host_id===userId)return json(400,{error:"The host is already on stage."});
-    const {data:existing}=await admin.from("live_participants").select("role,status")
+    const {data:existing,error:existingError}=await admin.from("live_participants").select("role,status")
       .eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
-    if(existing&&["accepted","connected"].includes(existing.status))return json(409,{error:"You already have speaker access."});
+    if(existingError)return json(503,{error:"Minglora could not check your current LIVE stage access."});
+    if(existing?.role==="guest"&&["accepted","connected"].includes(existing.status))
+      return json(409,{error:"You already have speaker access."});
+    if(existing?.role==="guest"&&existing.status==="requested"){
+      const {data:pending,error:pendingError}=await admin.from("live_participants")
+        .select("broadcast_id,user_id,role,status,joined_at").eq("broadcast_id",broadcastId).eq("user_id",userId).single();
+      if(pendingError)return json(503,{error:"Minglora could not load your pending speaker request."});
+      return json(200,{request:pending,alreadyRequested:true});
+    }
+    // A connected listener may raise a hand. Change their existing viewer row
+    // into a pending guest request instead of mistaking viewer connectivity
+    // for an already-approved speaker grant.
     const {data,error}=await admin.from("live_participants").upsert({
       broadcast_id:broadcastId,user_id:userId,role:"guest",status:"requested",joined_at:null,left_at:null
     },{onConflict:"broadcast_id,user_id"}).select("broadcast_id,user_id,role,status,joined_at").single();
