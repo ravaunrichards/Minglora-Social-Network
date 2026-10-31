@@ -764,7 +764,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     await syncLiveParticipantPresence(session);
     $("#live-mic-toggle").disabled=!(role==="host"||role==="guest");
     if($("#live-camera-toggle"))$("#live-camera-toggle").disabled=role!=="host";
-    $("#live-mic-toggle")?.addEventListener("click",async()=>{try{liveMicrophoneEnabled=!liveMicrophoneEnabled;await room.localParticipant.setMicrophoneEnabled(liveMicrophoneEnabled);$("#live-mic-toggle").textContent=liveMicrophoneEnabled?"Mute microphone":"Unmute microphone";}catch(error){toast(error.message);}});
+    $("#live-mic-toggle")?.addEventListener("click",async()=>{try{liveMicrophoneEnabled=!liveMicrophoneEnabled;await room.localParticipant.setMicrophoneEnabled(liveMicrophoneEnabled);$("#live-mic-toggle").textContent=liveMicrophoneEnabled?"Mute microphone":"Unmute microphone";refreshSpeakerRoster();}catch(error){toast(error.message);}});
     $("#live-camera-toggle")?.addEventListener("click",async()=>{try{liveCameraEnabled=!liveCameraEnabled;await room.localParticipant.setCameraEnabled(liveCameraEnabled);$("#live-camera-toggle").textContent=liveCameraEnabled?"Turn camera off":"Turn camera on";}catch(error){toast(error.message);}});
     $("#live-leave")?.addEventListener("click",async()=>{
       const button=$("#live-leave");if(button)button.disabled=true;
