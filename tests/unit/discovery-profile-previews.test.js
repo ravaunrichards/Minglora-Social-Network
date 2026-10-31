@@ -58,5 +58,5 @@ test('static shell cache is versioned for the upgraded discovery cards', async (
   const worker = await read('public/sw.js');
   assert.match(html, /audio-speaker-connection-4/);
   assert.match(html, /audio-speaker-connection-4/);
-  assert.match(worker, /minglora-shell-v21-audio-speaker-connection/);
+  assert.match(worker, /minglora-shell-v22-audio-speaker-connection/);
 });
