@@ -377,6 +377,21 @@ async function refreshLiveChat(broadcastId){
     list.scrollTop=list.scrollHeight;
   }catch(error){if($("#live-chat-list"))toast(error.message);}
 }
+async function endHostedLiveSession(session){
+  try{
+    return await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"});
+  }catch(error){
+    // Reconcile a lost response only when LiveKit is reachable and the server no longer
+    // advertises this broadcast as live. This avoids duplicate "end failed" messages.
+    try{
+      const [health,result]=await Promise.all([api("/live/status"),api("/live/sessions")]);
+      if(health.connected===true&&!(result.sessions||[]).some(item=>item.id===session.id)){
+        return {ok:true,alreadyEnded:true};
+      }
+    }catch{}
+    throw error;
+  }
+}
 async function openLiveRoom(session,role,issuedLiveKit){
   role=(session?.hostId===state.user?.id||role==="host")?"host":"viewer";
   stopLiveChatRefresh();
@@ -388,8 +403,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div class='live-player-layout'><div class='live-video-column'><div id='live-video-stage' class='live-video-stage'><div class='live-video-placeholder'>Connecting to LIVE…</div></div><div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls'><button id='live-mic-toggle' class='secondary'>"+(role==="host"?"Mute microphone":"Microphone unavailable")+"</button><button id='live-camera-toggle' class='secondary'>"+(role==="host"?"Turn camera off":"Camera unavailable")+"</button><button id='live-leave' class='danger'>"+(role==="host"?"End LIVE":"Leave LIVE")+"</button></div></div>"+
     "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
-    "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form><div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div>"+
-    "<div id='live-gift-grid' class='live-gift-grid'></div><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div></aside></div></section>");
+    "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form>"+
+    (role==="host"
+      ? "<div class='live-gift-host-note'><strong>Your LIVE is ready for gifts</strong><p>Viewers can send you gifts while you are broadcasting.</p></div>"
+      : "<div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><div id='live-gift-grid' class='live-gift-grid'></div><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
+    "</aside></div></section>");
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="host"?1:0);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attachLiveTrack(track,participant,false));
@@ -414,7 +432,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
     $("#live-camera-toggle")?.addEventListener("click",async()=>{try{liveCameraEnabled=!liveCameraEnabled;await room.localParticipant.setCameraEnabled(liveCameraEnabled);$("#live-camera-toggle").textContent=liveCameraEnabled?"Turn camera off":"Turn camera on";}catch(error){toast(error.message);}});
     $("#live-leave")?.addEventListener("click",async()=>{
       const button=$("#live-leave");if(button)button.disabled=true;
-      try{if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"});else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"});}catch(error){toast(error.message);}
+      try{
+        if(role==="host")await endHostedLiveSession(session);
+        else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"});
+      }catch(error){
+        toast(error.message);
+        if(button)button.disabled=false;
+        return;
+      }
       stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
@@ -428,19 +453,21 @@ async function openLiveRoom(session,role,issuedLiveKit){
       try{await api("/live/sessions/"+encodeURIComponent(session.id)+"/chat",{method:"POST",body:JSON.stringify({body})});form.reset();await refreshLiveChat(session.id);}
       catch(error){toast(error.message);}finally{button.disabled=false;}
     });
-    const results=await Promise.all([api("/coins/catalog"),api("/coins/wallet")]);liveGiftCatalogue=results[0].gifts||[];
-    $("#live-wallet-balance").textContent=Number(results[1].wallet?.balance_coins||0).toLocaleString()+" Coins";
-    $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
-    document.querySelectorAll("[data-live-gift]").forEach(button=>button.addEventListener("click",async()=>{
-      button.disabled=true;
-      try{
-        const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})}),gift=sent.gift;
-        toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
-        const wallet=await api("/coins/wallet");$("#live-wallet-balance").textContent=Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins";
-        const stage=$("#live-video-stage"),catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift)||{};if(stage){const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";effect.dataset.animationPreset=catalogGift.animation_preset||catalogGift.animation_key||"gift-float";if(catalogGift.model_url){effect.innerHTML="<model-viewer src='"+esc(catalogGift.model_url)+"' alt='"+esc(catalogGift.name||gift.giftName||"Minglora gift")+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";}else effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),2600);}
-      }catch(error){toast(error.message);}finally{button.disabled=false;}
-    }));
-    $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
+    if(role!=="host"){
+      const results=await Promise.all([api("/coins/catalog"),api("/coins/wallet")]);liveGiftCatalogue=results[0].gifts||[];
+      $("#live-wallet-balance").textContent=Number(results[1].wallet?.balance_coins||0).toLocaleString()+" Coins";
+      $("#live-gift-grid").innerHTML=liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join("");
+      document.querySelectorAll("[data-live-gift]").forEach(button=>button.addEventListener("click",async()=>{
+        button.disabled=true;
+        try{
+          const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})}),gift=sent.gift;
+          toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
+          const wallet=await api("/coins/wallet");$("#live-wallet-balance").textContent=Number(wallet.wallet?.balance_coins||0).toLocaleString()+" Coins";
+          const stage=$("#live-video-stage"),catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift)||{};if(stage){const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";effect.dataset.animationPreset=catalogGift.animation_preset||catalogGift.animation_key||"gift-float";if(catalogGift.model_url){effect.innerHTML="<model-viewer src='"+esc(catalogGift.model_url)+"' alt='"+esc(catalogGift.name||gift.giftName||"Minglora gift")+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";}else effect.textContent=gift.emoji||"🎁";stage.append(effect);setTimeout(()=>effect.remove(),2600);}
+        }catch(error){toast(error.message);}finally{button.disabled=false;}
+      }));
+      $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
+    }
     await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);
     if(role==="host")toast("You are LIVE. Your camera and microphone are connected.");
   }catch(error){
