@@ -43,3 +43,10 @@ The PayPal multiparty foundation is kept separate from the existing creator PayP
 **This is not yet a live buyer checkout or seller payout feature.** The Node API routes and browser Marketplace controls for PayPal onboarding, order approval/capture and webhook signature verification still need to be completed. The live checkout status remains disabled, and database provider approval is pending.
 
 Keep every `MARKETPLACE_PAYPAL_*` enable/approval flag false until PayPal approves the multiparty marketplace account and the missing server/UI, tax, webhook and end-to-end test work is complete. Do not reuse creator PayPal credentials for Marketplace.
+
+
+## PayPal integration blockers found in final source review
+
+- Seller data-sharing consent is an explicit required input to the PayPal referral payload. The service must never pre-check consent on the seller's behalf.
+- A successful PayPal merchant-integration check is recorded as `paypal_connected`, not as government/identity KYC verification. Minglora's independent identity verification remains a separate approval.
+- PayPal multi-seller capture can return HTTP 207 with an order status of `PARTIALLY_COMPLETED`, where one seller's unit is `COMPLETED` and another is `DECLINED`. Migrations 036's current capture RPC reconciles only the all-sellers-completed case. A durable partial-capture/refund/compensation and webhook recovery workflow is still required. Do not enable checkout or use that RPC for buyer-facing live captures until that work is complete. See [PayPal multi-seller capture status codes](https://developer.paypal.com/platforms/checkout/standard/customize/multiseller-payments#status-codes).
