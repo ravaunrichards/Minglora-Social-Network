@@ -69,6 +69,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(readiness.body.components.live.provider, 'livekit');
   assert.equal(readiness.body.components.live.configured, false);
 
+  const anonymousSession = await request('/api/auth/me');
+  assert.equal(anonymousSession.status, 200);
+  assert.equal(anonymousSession.body.user, null);
+
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
 
