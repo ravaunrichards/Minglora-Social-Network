@@ -1866,3 +1866,28 @@ body:has(.creator-studio-shell) .main-content{
   .creator-studio-nav-item .creator-ico{width:16px;height:16px}
   .creator-studio-live-handoff small{display:none}
 }
+
+
+/* Keep Audio LIVE directory art on the host's selected room theme. */
+.live-room-preview{--directory-accent:#c4d1e2}
+.live-room-preview.live-preview-theme-ocean{--directory-accent:#67e8f9}
+.live-room-preview.live-preview-theme-tropical{--directory-accent:#ffab91}
+.live-room-preview.live-preview-theme-royal{--directory-accent:#f2d58e}
+.live-room-preview.live-preview-theme-neon{--directory-accent:#67e8f9}
+.live-room-preview.live-preview-theme-sunset{--directory-accent:#fbbf64}
+.live-room-preview.live-preview-theme-garden{--directory-accent:#6ee7b7}
+.live-room-preview.live-preview-theme-social{--directory-accent:#e9b9e9}
+.live-directory-audio-orb{
+  border-color:color-mix(in srgb,var(--directory-accent) 68%,white);
+  background:radial-gradient(circle at 34% 25%,color-mix(in srgb,var(--directory-accent) 60%,white) 0%,var(--directory-accent) 24%,color-mix(in srgb,var(--directory-accent) 42%,#101522) 63%,#101522 100%);
+  box-shadow:inset -12px -14px 24px rgba(4,7,30,.5),inset 8px 8px 20px rgba(255,255,255,.22),0 18px 48px color-mix(in srgb,var(--directory-accent) 26%,transparent);
+}
+.live-directory-audio-orb:before,.live-directory-audio-orb:after{
+  border-color:color-mix(in srgb,var(--directory-accent) 58%,transparent);
+  box-shadow:0 0 18px color-mix(in srgb,var(--directory-accent) 20%,transparent);
+}
+.live-directory-audio-orb:after{border-color:color-mix(in srgb,var(--directory-accent) 44%,transparent)}
+.live-type-pill.audio,.live-type-pill.video{
+  border-color:color-mix(in srgb,var(--directory-accent) 55%,transparent);
+  background:color-mix(in srgb,var(--directory-accent) 15%,#080c1e);
+}
