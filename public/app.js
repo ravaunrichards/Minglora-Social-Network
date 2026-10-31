@@ -300,7 +300,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   const liveReady=Boolean(status.configured&&status.connected===true);
   const liveStatusText=!status.configured?"Live provider not configured":liveReady?"Live video ready":"Live provider connection failed";
   const cards=sessions.length?sessions.map(session=>
-    "<article class='live-room-card'><div class='live-room-preview'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
+    "<article class='live-room-card'><div class='live-room-preview live-preview-theme-"+(LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:"studio")+"'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
     (session.viewerCountVerified?"◉ "+Number(session.viewerCount||0).toLocaleString()+" watching":"Viewers unavailable")+
     "</span><div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div></div><div class='live-room-details'><strong>"+
     esc(session.title)+"</strong><span>"+esc(session.host?.name||"Minglora creator")+"</span><small>@"+esc(session.host?.username||"member")+
@@ -332,7 +332,7 @@ async function refreshLiveDirectorySessions(){
     const data=await api('/live/sessions'),sessions=data.sessions||[],container=$('.live-room-grid');
     if(!container)return;
     container.innerHTML=sessions.length?sessions.map(session=>
-      "<article class='live-room-card'><div class='live-room-preview'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
+      "<article class='live-room-card'><div class='live-room-preview live-preview-theme-"+(LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:"studio")+"'><span class='live-indicator'>LIVE</span><span class='live-room-viewers'>"+
       (session.viewerCountVerified?"◉ "+Number(session.viewerCount||0).toLocaleString()+" watching":"Viewers unavailable")+
       "</span><div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div></div><div class='live-room-details'><strong>"+
       esc(session.title)+"</strong><span>"+esc(session.host?.name||"Minglora creator")+"</span><small>@"+
