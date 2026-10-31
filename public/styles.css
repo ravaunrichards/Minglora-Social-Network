@@ -2701,3 +2701,37 @@ body.auth-mode .auth-screen{
   .auth-card input{height:49px;font-size:16px}
   .auth-register-card input{height:45px}
 }
+
+
+/* Minglora community-photo authentication showcase */
+@media(min-width:901px){
+  .auth-shell{width:min(100%,1120px);grid-template-columns:minmax(0,1fr) 432px;gap:52px}
+  .auth-brand{max-width:610px}
+}
+.auth-photo-showcase{width:100%;margin:24px 0 0}
+.auth-photo-set{display:none;grid-template-columns:1.12fr .88fr;grid-template-rows:repeat(2,minmax(92px,1fr));gap:10px;height:274px}
+.auth-screen[data-auth-mode="login"] .auth-photo-set--login,
+.auth-screen[data-auth-mode="register"] .auth-photo-set--register{display:grid}
+.auth-photo-card{position:relative;min-width:0;min-height:0;margin:0;overflow:hidden;border-radius:17px;background:#dce8f8;box-shadow:0 9px 24px rgba(21,48,88,.13)}
+.auth-photo-card:first-child{grid-row:1 / span 2}
+.auth-photo-card img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .45s ease}
+.auth-photo-card:hover img{transform:scale(1.045)}
+.auth-photo-card:after{content:"";position:absolute;inset:35% 0 0;background:linear-gradient(transparent,rgba(10,24,45,.68));pointer-events:none}
+.auth-photo-card figcaption{position:absolute;z-index:1;left:12px;right:10px;bottom:11px;color:#fff;font-size:12px;font-weight:750;line-height:1.25;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+.auth-photo-credit{margin:9px 2px 0;color:#818b9b;font-size:10px;line-height:1.5;text-align:left}
+.auth-photo-credit a{color:#64748b;text-decoration:underline;text-underline-offset:2px}
+@media(max-width:900px){
+  .auth-shell{width:min(100%,520px);gap:18px}
+  .auth-photo-showcase{margin:17px 0 0}
+  .auth-photo-set{height:205px;grid-template-rows:repeat(2,minmax(70px,1fr));gap:8px}
+  .auth-photo-credit{text-align:center}
+}
+@media(max-width:420px){
+  .auth-photo-set{height:166px;gap:7px}
+  .auth-photo-card{border-radius:12px}
+  .auth-photo-card figcaption{left:8px;right:7px;bottom:8px;font-size:10px}
+  .auth-photo-credit{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .auth-photo-card img{transition:none}
+}

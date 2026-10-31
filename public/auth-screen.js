@@ -7,6 +7,7 @@
 
   const setMode = mode => {
     const registering = mode === 'register';
+    screen.dataset.authMode = registering ? 'register' : 'login';
     loginPanel.classList.toggle('hidden', registering);
     registerPanel.classList.toggle('hidden', !registering);
     loginPanel.setAttribute('aria-hidden', String(registering));
