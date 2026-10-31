@@ -30,8 +30,9 @@ test('logout is kept out of mobile and tablet primary navigation and placed in S
   assert.ok(html.includes('id="settings-btn" aria-label="Settings & privacy"'), "Settings button is available in the top action area");
   assert.match(settings, /id="settings-signout"/);
   assert.match(settings, /id="settings-logout-btn"/);
-  assert.match(settings, /Sign out of Minglora on this device/);
-  assert.match(settings, /href="#settings-signout">Log out/);
+  assert.match(settings, /sectionHeading\('Log out'\)/);
+  assert.doesNotMatch(settings, /class="settings-nav"|href="#settings-signout"/);
+  assert.doesNotMatch(settings, /Sign out of Minglora on this device/);
   assert.match(settings, /document\.querySelector\('#logout-btn'\)\?\.click\(\)/);
 });
 
