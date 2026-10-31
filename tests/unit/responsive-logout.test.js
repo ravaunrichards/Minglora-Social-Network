@@ -42,5 +42,5 @@ test('responsive navigation exposes an alternative where the top logout button i
   assert.ok(visibleMobileNav > phoneBreakpoint, 'the phone bottom navigation is visible');
   assert.match(css, /\.logout-rail-link\{/);
   assert.match(css, /\.mobile-nav \[data-logout\]\{/);
-  assert.match(serviceWorker, /minglora-shell-v5-responsive-logout/);
+  assert.match(serviceWorker, /minglora-shell-v6-responsive-logout/);
 });
