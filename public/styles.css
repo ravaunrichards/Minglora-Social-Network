@@ -595,20 +595,12 @@ body[data-color-theme] .settings-section-title p,body[data-color-theme] .setting
 .live-gift-button:hover{border-color:var(--live-accent);box-shadow:0 0 0 1px var(--live-accent)}
 .live-player-shell .live-player-header .text-button{color:#edf3fb}
 .live-player-shell .live-viewer-count{color:#d7e0ec}
-.live-style-field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.live-style-field>span,.live-room-theme-control>span{font-size:10px;font-weight:750;color:var(--muted)}
-.live-style-field select,.live-room-theme-control select{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 10px;background:var(--card);color:var(--ink);font:inherit}
-.live-room-theme-control{display:flex;align-items:center;gap:7px;min-width:155px}
-.live-room-theme-control select{padding:7px 9px;font-size:11px}
 @media(max-width:850px){.theme-choice-grid{grid-template-columns:1fr}}
 @media(max-width:760px){
   .live-create-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end}
   .live-create-form>input{grid-column:1/-1}
-  .live-style-field{grid-column:1/-1}
   .live-create-form>button{grid-column:1/-1}
   .live-player-header{flex-wrap:wrap}
-  .live-room-theme-control{width:100%;min-width:0}
-  .live-room-theme-control select{flex:1}
 }
 
 /* Directory thumbnails preview the same room look that viewers enter. */
@@ -891,14 +883,13 @@ pre,code{max-width:100%;white-space:pre-wrap}
 @media(max-width:760px){
   .live-start-card{grid-template-columns:minmax(0,1fr);gap:14px}
   .live-create-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
-  .live-create-form>input,.live-create-form>.live-style-field,.live-create-form>button{grid-column:1/-1}
+  .live-create-form>input,.live-create-form>select,.live-create-form>button{grid-column:1/-1}
   .live-room-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .live-room-preview{height:142px}
   .live-player-shell{min-height:0;border-radius:14px}
   .live-player-header{align-items:flex-start;padding:12px;gap:9px}
   .live-player-header>div{flex:1 1 100%}
   .live-player-header>div strong{white-space:normal;overflow-wrap:anywhere}
-  .live-room-theme-control{width:100%;min-width:0}
   .live-viewer-count{margin-left:auto}
   .live-player-layout{min-height:0}
   .live-video-column{padding:9px;gap:10px}
@@ -1024,4 +1015,17 @@ pre,code{max-width:100%;white-space:pre-wrap}
   .creator-live-launch-heading{flex-direction:column}
   .creator-live-status{max-width:100%;margin-left:0}
   .creator-live-launch-card{padding:12px 10px}
+}
+
+
+/* LIVE form after removing Room style: use generous, full-width rows. */
+.live-start-card{grid-template-columns:minmax(0,1fr);align-items:stretch}
+.live-start-card>div,.live-create-form{min-width:0;width:100%;max-width:100%}
+.live-create-form{
+  display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;
+  gap:12px
+}
+.live-create-form>input,.live-create-form>select,.live-create-form>button{
+  grid-column:1/-1;display:block;width:100%;max-width:100%;min-width:0;
+  min-height:50px;height:auto;box-sizing:border-box;margin:0
 }
