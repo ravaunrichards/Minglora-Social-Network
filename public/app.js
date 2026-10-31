@@ -150,7 +150,7 @@ function postCard(post){
   </article>`;
 }
 function findVisiblePost(id){
-  return [...state.feed,...state.savedPosts,...(state.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
+  return [...state.feed,...state.savedPosts,...(state.profile?.posts||[]),...(state.creatorStudio?.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
 }
 async function refreshVisiblePosts(){
   if(state.view==='creator'&&state.creatorStudio){state.creatorStudio.profile=await api('/users/'+encodeURIComponent(state.user.id));await renderCreatorSection(state.creatorStudio.section||'content');return;}
@@ -1007,10 +1007,10 @@ function creatorPublishMarkup(){
 function creatorAudienceMarkup(){
   const s=state.creatorStudio,p=s.profile||{},ins=p.profileInsights||{};
   const followers=s.followers||[],following=s.following||[];
-  const rows=(items)=>items.length?items.map(person=>"<article class='creator-audience-row'><img src='"+avatar(person)+"' alt=''><span><strong>"+esc(person.name||"Minglora member")+"</strong><small>@"+esc(person.username||"member")+"</small></span><button type='button' class='secondary' data-creator-view-profile='"+esc(person.id)+"'>View profile</button></article>").join(""):creatorEmpty("No members to show","This list is empty. Minglora does not add sample users or follower records.","friends");
+  const rows=(items,error)=>error?creatorEmpty('Audience list unavailable',error,'friends'):items.length?items.map(person=>"<article class='creator-audience-row'><img src='"+avatar(person)+"' alt=''><span><strong>"+esc(person.name||"Minglora member")+"</strong><small>@"+esc(person.username||"member")+"</small></span><button type='button' class='secondary' data-creator-view-profile='"+esc(person.id)+"'>View profile</button></article>").join(""):creatorEmpty("No members to show","This list is empty. Minglora does not add sample users or follower records.","friends");
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h2>Audience</h2><p>Real follower relationships and the profile activity Minglora currently records.</p></div><button type='button' class='secondary' id='creator-refresh-audience'>↻ Refresh audience</button></div>"+
     "<div class='creator-audience-summary'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Members following your profile","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Profiles you follow","profile")+creatorMetric("Profile views · 30 days",ins.profileViews30d==null?"Unavailable":creatorNumber(ins.profileViews30d),"Recorded profile views","explore")+creatorMetric("Active profile viewers",ins.activeViewersCount==null?"Unavailable":creatorNumber(ins.activeViewersCount),"Current recorded visitors","activity")+"</div>"+
-    "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following)+"</div></section></div>";
+    "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers,s.audienceError)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following,s.followingError)+"</div></section></div>";
 }
 function creatorAnalyticsMarkup(){
   const s=state.creatorStudio,p=s.profile||{},i=p.profileInsights||{};
@@ -1106,6 +1106,7 @@ async function renderCreatorSection(section){
     s.followers=followers.status==="fulfilled"?(followers.value.users||[]):[];
     s.following=following.status==="fulfilled"?(following.value.users||[]):[];
     s.audienceError=followers.status==="rejected"?followers.reason?.message:null;
+    s.followingError=following.status==="rejected"?following.reason?.message:null;
     content=creatorAudienceMarkup();
   }else if(section==="analytics"){
     try{s.profile=await api("/users/"+encodeURIComponent(state.user.id));}
@@ -1352,9 +1353,9 @@ function initCreatorStudio3D(canvas){
       const a=i/segments*Math.PI*2,b=(i+1)/segments*Math.PI*2;
       const p1=[Math.cos(a),-.5,Math.sin(a)],p2=[Math.cos(b),-.5,Math.sin(b)];
       const p3=[Math.cos(b),.5,Math.sin(b)],p4=[Math.cos(a),.5,Math.sin(a)];
-      const ids=[p1,p2,p3,p1,p3,p4];
+      const ids=[p1,p3,p2,p1,p4,p3];
       for(const v of ids){p.push(...v);const l=Math.hypot(v[0],v[2])||1;n.push(v[0]/l,0,v[2]/l);}
-      const bottom=[[0,-.5,0],p2,p1],top=[[0,.5,0],p4,p3];
+      const bottom=[[0,-.5,0],p1,p2],top=[[0,.5,0],p3,p4];
       for(const v of bottom){p.push(...v);n.push(0,-1,0);}
       for(const v of top){p.push(...v);n.push(0,1,0);}
     }
@@ -1448,8 +1449,8 @@ function initCreatorStudio3D(canvas){
     frame=requestAnimationFrame(render);
     if(yawState.paused&&now!==0){/* Render a stable frame while paused. */}
     else{
-      objects[17].ry+=.0011;
-      objects[18].ry-=.0008;
+      objects[16].ry+=.0011;
+      objects[17].ry-=.0008;
     }
     resize();
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
