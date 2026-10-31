@@ -25,7 +25,7 @@ The local JSON store includes narrowly scoped cleanup for explicitly identified 
 - Basic substring search across people, posts, groups and Pages
 - Member reports, moderator review queue and supported moderation actions (moderator access requires an explicit ID allow-list)
 - Help & support ticket creation, member replies, status tracking and moderator responses
-- Server-side LiveKit session and token API foundation with host publishing permissions and subscriber-only viewer tokens (requires a separate Minglora LiveKit Cloud project and server credentials)
+- LiveKit-powered browser LIVE rooms with real host camera/microphone publishing, subscriber-only viewer access, remote track playback, provider-verified live directory and participant counts, live chat, room themes and a 3D gift catalogue (requires Minglora LiveKit Cloud credentials)
 - Local JSON-file persistence for development and durable Supabase-backed persistence for the hosted API
 - Node test runner, integration tests, Docker packaging and GitHub Actions CI
 
@@ -124,7 +124,7 @@ Hosted persistence now uses Supabase's PostgreSQL database through the Supabase 
 
 The single-row JSONB compatibility adapter is durable but does not provide normalized relational transactions or multi-instance concurrency. Minglora's Supabase relational schema and hardening migrations 005–014 are installed. Application routes still need to move to the normalized tables before the system can be considered a high-concurrency social-network data layer.
 
-Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, complete Supabase Auth email templates and redirect allow-lists, move login throttling to a distributed rate limiter, add malware/media scanning and appeals policy automation, complete route-by-route privacy/accessibility audits, observability and a security review. Device-based media upload, Story photo/video, member reporting, the initial moderator queue and support tickets are implemented. Automated video transcoding, real-time messaging, Live video, short-form video playback, Marketplace and Ads remain unfinished.
+Before opening public registration at scale, replace the JSONB compatibility adapter with normalized relational repositories and transactions, configure and test database backups/restore, complete Supabase Auth email templates and redirect allow-lists, move login throttling to a distributed rate limiter, add malware/media scanning and appeals policy automation, complete route-by-route privacy/accessibility audits, observability and a security review. Device-based media upload, Story photo/video, member reporting, the initial moderator queue and support tickets are implemented. Automated video transcoding, fully real-time messaging, short-form video playback, Marketplace and Ads remain unfinished. LIVE guest requests, co-host moderation, recording/egress and verified LiveKit webhooks also remain unfinished.
 
 ## Supabase Auth integration
 
