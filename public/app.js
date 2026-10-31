@@ -2790,12 +2790,13 @@ async function renderMarketplace(mode=state.marketplaceMode){
   if(mode==='seller')return renderMarketplaceSeller();
   if(mode==='bookings')return renderMarketplaceBookings();
   if(mode==='jobs')return renderJobs();
+  if(mode==='admin')return renderMarketplaceAdmin();
   activateSilent('marketplace');state.marketplaceMode=mode;state.activeMarketplaceListing=null;
   const query=$('#marketplace-query')?.value?.trim()||'',params=new URLSearchParams(),kind=mode==='products'?'product':mode==='services'?'service':'';
   if(kind)params.set('kind',kind);if(query)params.set('q',query);
   if(mode==='saved'||mode==='mine')state.marketplaceListings=(await api(mode==='saved'?'/marketplace/saved':'/marketplace/mine')).listings||[];
   else state.marketplaceListings=(await api('/marketplace/listings'+(params.toString()?'?'+params.toString():''))).listings||[];
-  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['bookings','Bookings'],['seller','Seller centre'],['jobs','Jobs']];
+  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['bookings','Bookings'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
   let html='<section class="marketplace-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA MARKETPLACE</span><h1>Discover more. Buy with confidence. Grow together.</h1><p>Explore real products and services from people and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="marketplace-create-listing">＋ Create a listing</button><span>Real sellers · Real listings · No fabricated inventory</span></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✦</span><span class="marketplace-art-spark">✧</span></div></section>';
   html+='<nav class="marketplace-tabs" aria-label="Marketplace sections">'+tabs.map(([key,label])=>'<button type="button" data-marketplace-mode="'+key+'" class="'+(mode===key?'active':'')+'">'+label+'</button>').join('')+'</nav>';
   if(mode!=='saved'&&mode!=='mine')html+='<form class="marketplace-search" id="marketplace-search-form"><label class="marketplace-search-field"><span>⌕</span><input id="marketplace-query" name="q" value="'+esc(query)+'" placeholder="Search products, services, shops and more" aria-label="Search Marketplace"></label><button class="primary" type="submit">Search</button></form>';
@@ -2879,6 +2880,49 @@ async function renderMarketplaceSeller(){
     try{const values=new FormData(form),payload=Object.fromEntries(values.entries());payload.acceptTerms=values.get('acceptTerms')==='true';const result=await api('/marketplace/seller',{method:'POST',body:JSON.stringify(payload)});toast('Seller application submitted for review.');await renderMarketplaceSeller();}
     catch(error){toast(error.message);button.disabled=false;}
   });
+}
+
+async function renderMarketplaceAdmin(){
+  activateSilent('marketplace');
+  try{
+    const data=await api('/marketplace/admin/queue');
+    let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="admin-back-marketplace">← Marketplace</button></div><section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">MINGLORA OPERATIONS</span><h1>Marketplace review desk</h1><p>Human review is required before a seller or vacancy is approved.</p></div></section>';
+    html+='<section class="card marketplace-admin-panel"><h2>Seller applications · '+data.sellers.length+'</h2>';
+    if(data.sellers.length){
+      html+=data.sellers.map(item=>'<article class="marketplace-review-item"><div><strong>'+esc(item.storeName)+'</strong><p>'+esc(item.sellerType)+' · '+esc(item.countryCode)+' · '+esc(item.contactEmail)+'</p><small>Identity status: '+esc(item.identityStatus)+'</small></div><div class="marketplace-card-actions"><button class="primary" data-review-seller="'+esc(item.userId)+'">Verify and approve</button><button class="secondary" data-reject-seller="'+esc(item.userId)+'">Reject</button></div></article>').join('');
+    }else html+='<p class="muted">No seller applications are awaiting review.</p>';
+    html+='</section><section class="card marketplace-admin-panel"><h2>Job vacancies · '+data.jobs.length+'</h2>';
+    if(data.jobs.length){
+      html+=data.jobs.map(item=>'<article class="marketplace-review-item"><div><strong>'+esc(item.title)+'</strong><p>'+esc(item.companyName)+' · '+esc(item.location||'Remote')+'</p><small>'+esc(item.description.slice(0,220))+'</small></div><div class="marketplace-card-actions"><button class="primary" data-approve-job="'+esc(item.id)+'">Publish vacancy</button><button class="secondary" data-reject-job="'+esc(item.id)+'">Reject</button></div></article>').join('');
+    }else html+='<p class="muted">No job vacancies are awaiting review.</p>';
+    html+='</section><section class="card marketplace-admin-panel"><h2>Commerce activation</h2><span class="marketplace-status">Live checkout disabled</span><ul>'+data.commerce.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul></section>';
+    setContent(html);
+    $('#admin-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
+    document.querySelectorAll('[data-review-seller]').forEach(button=>button.addEventListener('click',async()=>{
+      const userId=button.dataset.reviewSeller;
+      if(!window.confirm('Only continue after you have checked seller identity or business evidence through the approved secure process. Have you completed that check?'))return;
+      const reason=window.prompt('Record which identity or business evidence was reviewed. This note is retained in the audit trail.');
+      if(!reason?.trim())return;button.disabled=true;
+      try{await api('/marketplace/admin/sellers/'+encodeURIComponent(userId)+'/review',{method:'PATCH',body:JSON.stringify({status:'approved',identityStatus:'verified',reason:reason.trim()})});toast('Seller approved and audit record saved.');await renderMarketplaceAdmin();}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+    document.querySelectorAll('[data-reject-seller]').forEach(button=>button.addEventListener('click',async()=>{
+      const reason=window.prompt('Record the reason for rejecting this seller application.');
+      if(!reason?.trim())return;button.disabled=true;
+      try{await api('/marketplace/admin/sellers/'+encodeURIComponent(button.dataset.rejectSeller)+'/review',{method:'PATCH',body:JSON.stringify({status:'rejected',identityStatus:'rejected',reason:reason.trim()})});toast('Seller application rejected.');await renderMarketplaceAdmin();}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+    document.querySelectorAll('[data-approve-job],[data-reject-job]').forEach(button=>button.addEventListener('click',async()=>{
+      const status=button.hasAttribute('data-approve-job')?'open':'rejected';
+      const jobId=button.dataset.approveJob||button.dataset.rejectJob;
+      const reason=window.prompt('Record the reason for this vacancy moderation decision.');
+      if(!reason?.trim())return;button.disabled=true;
+      try{await api('/jobs/'+encodeURIComponent(jobId)+'/review',{method:'PATCH',body:JSON.stringify({status,reason:reason.trim()})});toast(status==='open'?'Vacancy published.':'Vacancy rejected.');await renderMarketplaceAdmin();}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+  }catch(error){
+    setContent('<section class="card empty-state"><h2>Review desk unavailable</h2><p>'+esc(error.message)+'</p><p>Moderator permission is required.</p></section>');
+  }
 }
 async function renderMarketplaceBookings(){
   activateSilent('marketplace');const data=await api('/marketplace/bookings'),bookings=data.bookings||[];
