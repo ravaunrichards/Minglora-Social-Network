@@ -28,7 +28,8 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | DELETE | `/api/posts/:id/comments/:commentId` | Delete a comment as its author or the post author |
 | GET | `/api/saved-posts` | List the current account's saved posts |
 | POST/DELETE | `/api/posts/:id/save` | Save or unsave a post |
-| GET | `/api/users` | List other accounts and friendship status |
+| GET | `/api/users` | Lightweight list of other accounts and friendship status |
+| GET | `/api/discovery/people` | Privacy-filtered member previews with real recent posts, currently visible stories, relationship counts and mutual-connection counts; verified LIVE presence is obtained separately from `/api/live/sessions` |
 | GET | `/api/users/:id` | Read a profile and its posts; blocked pairs return not found |
 | PATCH | `/api/users/me` | Update display name, unique username, bio and location; profile media is uploaded separately |
 | POST/DELETE | `/api/users/:id/follow` | Follow or unfollow a member |
