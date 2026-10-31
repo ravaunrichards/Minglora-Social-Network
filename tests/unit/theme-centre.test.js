@@ -27,7 +27,6 @@ test('Theme Centre previews and persists app and LIVE preferences separately', (
   assert.ok(settings.includes('name="${name}"'), 'theme radio helper applies the supplied preference name');
   assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings, /renderThemeChoices\('colorTheme', APP_THEMES/);
-  assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings, /colorTheme: formData\.get\('colorTheme'\)/);
   assert.match(settings, /liveRoomTheme: formData\.get\('liveRoomTheme'\)/);
   assert.match(settings, /document\.body\.dataset\.colorTheme = colorTheme/);
