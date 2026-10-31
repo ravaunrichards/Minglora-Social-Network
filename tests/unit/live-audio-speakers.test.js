@@ -43,3 +43,23 @@ test('Speaker connection is not marked before the LiveKit client has joined', ()
   assert.doesNotMatch(joinBlock, /live_speaker_mark_connected/);
   assert.doesNotMatch(joinBlock, /db\.liveParticipants\.push/);
 });
+
+test('Connected viewers can create a speaker request without being mistaken for approved speakers', () => {
+  const requestStart=edge.indexOf('if (action === "live_speaker_request")');
+  const requestEnd=edge.indexOf('if (action === "live_speaker_requests_list")',requestStart);
+  const requestBlock=edge.slice(requestStart,requestEnd);
+  assert.match(requestBlock,/existing\?\.role==="guest"&&\["accepted","connected"\]\.includes\(existing\.status\)/);
+  assert.match(requestBlock,/existing\?\.role==="guest"&&existing\.status==="requested"/);
+  assert.match(requestBlock,/A connected listener may raise a hand/);
+  assert.doesNotMatch(requestBlock,/if\(existing&&\["accepted","connected"\]\.includes\(existing\.status\)\)/);
+});
+
+test('The host appears in the speaker roster independently of active speech', () => {
+  const rosterStart=app.indexOf('function renderLiveSpeakerRoster(');
+  const rosterEnd=app.indexOf('async function openLiveRoom(',rosterStart);
+  const roster=app.slice(rosterStart,rosterEnd);
+  assert.match(roster,/role==="host"\|\|role==="guest"/);
+  assert.match(roster,/You · Host/);
+  assert.match(roster,/Microphone connected/);
+  assert.match(roster,/person\.speaking/);
+});
