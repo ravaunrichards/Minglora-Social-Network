@@ -656,10 +656,10 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
   ).join("");
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  role=(session?.hostId===state.user?.id||role==="host")?"host":role==="guest"?"guest":"viewer";
   stopLiveChatRefresh();stopLiveSpeakerRefresh();
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
-  if(liveKit?.role==="guest")role="guest";
+  // The server-issued token role is authoritative; never trust a caller-supplied guest role.
+  role=liveKit?.role==="host"?"host":liveKit?.role==="guest"?"guest":"viewer";
   const broadcastType=session.broadcastType==="audio_only"?"audio_only":"video_audio";
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
