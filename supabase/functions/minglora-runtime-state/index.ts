@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
-    "account_deletion_request"
+    "auth_register_user", "account_deletion_request"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -86,6 +86,48 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "auth_register_user") {
+    const email = String(input.email || "").trim().toLowerCase();
+    const password = String(input.password || "");
+    const name = String(input.name || "").trim();
+    const username = String(input.username || "").trim().toLowerCase();
+    const contactPhone = String(input.phoneNumber || input.contactPhone || "").trim();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254 ||
+        password.length < 10 || password.length > 1024 ||
+        name.length < 2 || name.length > 120 ||
+        !/^[a-z0-9_]{3,30}$/.test(username) ||
+        (contactPhone && !/^\\+[1-9][0-9]{7,14}$/.test(contactPhone))) {
+      return json(400, { error: "Enter a valid name, username, email and password. Phone number is optional." });
+    }
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        name,
+        username,
+        contact_phone: contactPhone,
+        phone_number: contactPhone
+      }
+    });
+    if (error || !data?.user?.id) {
+      const message = String(error?.message || "Minglora could not create the account.").slice(0, 240);
+      const duplicate = /already|exists|registered|duplicate/i.test(message);
+      return json(duplicate ? 409 : 503, { error: duplicate ? "An account with this email already exists. Log in instead." : message });
+    }
+    return json(201, {
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        created_at: data.user.created_at,
+        email_confirmed_at: data.user.email_confirmed_at,
+        user_metadata: data.user.user_metadata || {},
+        identities: data.user.identities || []
+      },
+      emailConfirmed: Boolean(data.user.email_confirmed_at)
+    });
+  }
 
   if (action === "account_deletion_request") {
     const userId=String(input.userId||"");
