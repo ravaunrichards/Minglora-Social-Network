@@ -1,6 +1,6 @@
 /* Minglora service worker: versioned shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v6-responsive-logout';
-const SHELL=['/','/styles.css?v=20261031-responsive-logout-1','/app.js?v=20261031-responsive-logout-1','/settings.js'];
+const CACHE_NAME='minglora-shell-v7-theme-centre';
+const SHELL=['/','/styles.css?v=20261031-theme-centre-1','/app.js?v=20261031-theme-centre-1','/settings.js?v=20261031-theme-centre-1'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
