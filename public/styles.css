@@ -2373,3 +2373,99 @@ body:has(.settings-layout) .message-window{
   .settings-security-form{min-width:0}
   .settings-inline-heading{align-items:flex-start;flex-wrap:wrap}
 }
+
+
+/* Flat Settings presentation: remove nested panels and decorative heading layers. */
+html:has(.settings-layout){scroll-padding-top:16px}
+.settings-layout{display:block!important;min-width:0;overflow:visible}
+.settings-nav{display:none!important}
+.settings-heading{margin:4px 0 8px!important}
+.settings-heading .settings-eyebrow,
+.settings-heading>div>p{display:none!important}
+.settings-panels{display:block!important;min-width:0;overflow:visible}
+.settings-card{
+  display:block;
+  position:static!important;
+  inset:auto!important;
+  z-index:auto!important;
+  margin:0!important;
+  padding:17px 0!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  scroll-margin-top:16px!important;
+}
+.settings-section-title{
+  display:block!important;
+  margin:0 0 10px!important;
+  padding:0!important;
+  border:0!important;
+}
+.settings-section-title h2{margin:0!important;font-size:17px}
+.settings-section-title p,.settings-section-title .settings-icon{display:none!important}
+.settings-readonly-grid{gap:10px;padding:2px 0}
+.settings-readonly-grid>div{padding:4px 0!important;border:0!important;border-radius:0!important;background:transparent!important}
+.settings-security-form{
+  padding:14px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.settings-security-form:first-child{border-top:0!important}
+.settings-account-action{
+  padding:14px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.settings-account-actions .settings-security-form{
+  padding:14px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.settings-save-bar{
+  position:static!important;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+  margin:14px 0 24px!important;
+  padding:12px 0!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.settings-ticket-messages{max-height:none!important;overflow:visible!important}
+body:has(.settings-layout) #message-window-dock{
+  position:static!important;
+  inset:auto!important;
+  width:min(100%,1100px)!important;
+  max-width:100%!important;
+  margin:16px auto!important;
+  overflow:visible!important;
+  z-index:auto!important;
+  flex-wrap:wrap;
+}
+@media(max-width:850px){
+  .settings-layout{display:block!important}
+  .settings-card{padding:15px 0!important}
+}
+@media(max-width:560px){
+  .settings-heading h1{font-size:23px}
+  .settings-section-title h2{font-size:16px}
+  .settings-readonly-grid{grid-template-columns:minmax(0,1fr)}
+  .settings-save-bar{align-items:stretch;flex-direction:column}
+  .settings-save-bar button{width:100%}
+}
