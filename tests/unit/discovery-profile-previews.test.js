@@ -56,7 +56,7 @@ test('outside-profile cards provide dimensional responsive styling and respect r
 test('static shell cache is versioned for the upgraded discovery cards', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.match(html, /responsive-layout-guardrails-1/);
-  assert.match(html, /discovery-profiles-1/);
-  assert.match(worker, /minglora-shell-v18-audio-live/);
+  assert.match(html, /audio-live-type-2/);
+  assert.match(html, /audio-live-type-2/);
+  assert.match(worker, /minglora-shell-v19-audio-live-3d/);
 });
