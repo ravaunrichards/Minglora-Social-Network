@@ -321,6 +321,25 @@ async function publicPost(p,viewerId) {
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
+async function publicDiscoveryPost(post) {
+  const media = await Promise.all((post.mediaIds || []).slice(0, 3).map(async id => {
+    const asset = (db.mediaAssets || []).find(item => item.id === id && item.ownerId === post.userId && item.slot === 'post');
+    if (!asset || asset.status === 'deleted') return null;
+    try {
+      return { id: asset.id, mimeType: asset.mimeType, mediaType: asset.mediaType, url: await resolveAssetUrl(asset) };
+    } catch {
+      return null;
+    }
+  }));
+  return {
+    id: post.id,
+    text: post.text || '',
+    createdAt: post.createdAt,
+    media: media.filter(item => item?.url),
+    reactionCount: Object.values(post.reactions || {}).length
+  };
+}
+
 function findReportedPost(targetId){
   const post=(db.posts||[]).find(item=>item.id===targetId);if(post)return {collection:'posts',post,ownerId:post.userId};
   const groupPost=(db.groupPosts||[]).find(item=>item.id===targetId);if(groupPost)return {collection:'groupPosts',post:groupPost,ownerId:groupPost.userId};
@@ -1359,6 +1378,42 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='GET'&&p==='/api/discovery/people'){
+        await pruneExpiredStories();
+        const follows=db.follows||[];
+        const candidates=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member));
+        const users=await Promise.all(candidates.map(async member=>{
+          const memberFriendIds=[...new Set(follows
+            .filter(edge=>edge.followedId===member.id&&follows.some(reverse=>reverse.followerId===member.id&&reverse.followedId===edge.followerId))
+            .map(edge=>edge.followerId)
+            .filter(id=>!blockedBetween(user.id,id)))];
+          const memberPosts=(db.posts||[])
+            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!blockedBetween(user.id,post.userId))
+            .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+          const recentPosts=await Promise.all(memberPosts.slice(0,2).map(publicDiscoveryPost));
+          const storyRecord=(db.stories||[])
+            .filter(story=>story.userId===member.id&&canViewStory(user.id,story))
+            .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]||null;
+          let latestStory=null;
+          if(storyRecord){
+            const story=await publicStory(storyRecord,user.id);
+            latestStory={id:story.id,createdAt:story.createdAt,expiresAt:story.expiresAt,text:story.text||'',media:story.media,viewedByMe:story.viewedByMe};
+          }
+          return {
+            ...safeUser(member,user.id),
+            friendship:isFriend(user.id,member.id)?'accepted':null,
+            following:follows.some(edge=>edge.followerId===user.id&&edge.followedId===member.id),
+            followersCount:follows.filter(edge=>edge.followedId===member.id&&!blockedBetween(user.id,edge.followerId)).length,
+            followingCount:follows.filter(edge=>edge.followerId===member.id&&!blockedBetween(user.id,edge.followedId)).length,
+            friendsCount:memberFriendIds.length,
+            mutualFriendsCount:memberFriendIds.filter(id=>isFriend(user.id,id)).length,
+            postsCount:memberPosts.length,
+            recentPosts,
+            latestStory
+          };
+        }));
+        return json(res,200,{users});
+      }
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
