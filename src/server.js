@@ -1240,8 +1240,6 @@ async function route(req, res) {
         });
       }
       liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/leave$/);
-      }
-      liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/leave$/);
       if (method === 'POST' && liveMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1]);
         if (!session) return json(res, 404, { error: 'Live session not found.' });
