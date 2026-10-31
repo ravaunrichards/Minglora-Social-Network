@@ -6,7 +6,7 @@ const BOOKING_TRANSITIONS = Object.freeze({
   declined: new Set(), cancelled: new Set(), completed: new Set(), disputed: new Set()
 });
 const clean = (value, max) => String(value ?? '').trim().slice(0, max);
-const validEmail = value => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);
+const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const safeMinor = value => Number.isSafeInteger(value) && value >= 0;
 
 export function validateMarketplaceSellerApplication(input = {}) {
