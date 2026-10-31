@@ -100,7 +100,7 @@
           <nav class="settings-nav" aria-label="Settings categories">
             <a href="#settings-account">Account</a><a href="#settings-privacy">Profile visibility</a><a href="#settings-blocking">Blocking</a>
             <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Themes &amp; preferences</a><a href="#settings-data">Your information</a>
-            <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a>
+            <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a><a href="#settings-signout">Log out</a>
           </nav>
           <form id="settings-form" class="settings-panels">
             <section class="card settings-card" id="settings-account">
@@ -215,11 +215,19 @@
               ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
               ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
+            <section class="card settings-card settings-signout-card" id="settings-signout">
+              ${sectionHeading('↪', 'Log out', 'Sign out of Minglora on this device. Your account and saved settings will remain intact.')}
+              <div class="settings-session-actions">
+                <div><strong>Finished using Minglora?</strong><p>Log out securely when you are done on this phone, tablet or computer.</p></div>
+                <button type="button" class="danger settings-logout-button" id="settings-logout-btn">Log out</button>
+              </div>
+            </section>
             <div class="settings-save-bar"><span class="muted" id="settings-save-status" role="status" aria-live="polite">Changes save automatically to your Minglora account.</span><button class="primary" type="submit">Save now</button></div>
           </form>
         </div>`;
 
       document.querySelector('#edit-profile-from-settings')?.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('minglora:open-profile-editor')));
+      document.querySelector('#settings-logout-btn')?.addEventListener('click',()=>document.querySelector('#logout-btn')?.click());
       document.querySelector('#profile-privacy-from-settings')?.addEventListener('click',()=>document.querySelector('#settings-privacy')?.scrollIntoView({behavior:settings.preferences.reducedMotion?'auto':'smooth',block:'start'}));
 
       document.querySelectorAll('.settings-nav a').forEach(link => link.addEventListener('click', event => {

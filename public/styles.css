@@ -481,13 +481,6 @@
 
 
 /* Responsive logout access: desktop top action, tablet side rail, and phone bottom navigation. */
-.logout-rail-link{margin-top:4px;color:#b42336}
-.logout-rail-link span{background:#fff0f1;color:#b42336}
-.logout-rail-link:hover{background:#fff0f1}
-.mobile-nav [data-logout]{color:#b42336}
-.mobile-nav [data-logout]:active{background:#fff0f1}
-
-
 /* Minglora Theme Centre: coordinated palettes; layout and feature behaviour remain unchanged. */
 body[data-color-theme="minglora"]{--blue:#1769e0;--blue-dark:#1054bd;--bg:#f1f3f7;--card:#fff;--ink:#172033;--muted:#6d7688;--line:#e3e7ee;--green:#1f9d61}
 body[data-color-theme="ocean"]{--blue:#0f766e;--blue-dark:#115e59;--bg:#edf7f7;--card:#fff;--ink:#123238;--muted:#58757b;--line:#d2e7e7;--green:#16835a}
@@ -629,3 +622,13 @@ body[data-color-theme] .settings-section-title p,body[data-color-theme] .setting
 .live-create-form{grid-template-columns:minmax(0,1fr) 135px minmax(145px,175px) auto;align-items:end}
 
 @media(max-width:760px){.live-create-form>select{grid-column:1/-1}}
+
+/* Account sign-out belongs in Settings, away from primary navigation. */
+.settings-signout-card{border-color:var(--line)}
+.settings-session-actions{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.settings-session-actions>div{min-width:0}
+.settings-session-actions strong{display:block;font-size:14px}
+.settings-session-actions p{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.settings-logout-button{flex:0 0 auto;min-width:130px;padding:11px 18px;border-radius:9px;font-weight:750}
+.settings-logout-button:hover{background:#b42336}
+@media(max-width:600px){.settings-session-actions{align-items:stretch;flex-direction:column}.settings-logout-button{width:100%}}
