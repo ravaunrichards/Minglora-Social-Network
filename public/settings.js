@@ -67,8 +67,8 @@
     if (meta) meta.setAttribute('content', ({ minglora:'#1769e0', ocean:'#0f766e', tropical:'#e45b4d', royal:'#7146c7', emerald:'#16834f', rose:'#be315f', golden:'#a16207', lavender:'#7864c8', midnight:'#172033', graphite:'#475569' })[colorTheme]);
   }
 
-  function sectionHeading(icon, title, description) {
-    return `<div class="settings-section-title"><span class="settings-icon">${icon}</span><div><h2>${title}</h2><p>${description}</p></div></div>`;
+  function sectionHeading(_icon, title) {
+    return `<div class="settings-section-title"><h2>${title}</h2></div>`;
   }
 
   async function openSettings() {
@@ -92,18 +92,10 @@
       applyPreferences(settings);
       window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: settings }));
       main.innerHTML = `
-        <div class="settings-heading">
-          <div><p class="settings-eyebrow">YOUR ACCOUNT</p><h1>Settings &amp; privacy</h1>
-          <p class="muted">Manage your Minglora account, audience, notifications and experience.</p></div>
-        </div>
+        <div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
         <div class="settings-layout">
-          <nav class="settings-nav" aria-label="Settings categories">
-            <a href="#settings-account">Account</a><a href="#settings-privacy">Profile visibility</a><a href="#settings-blocking">Blocking</a>
-            <a href="#settings-notifications">Notifications</a><a href="#settings-preferences">Themes &amp; preferences</a><a href="#settings-data">Your information</a>
-            <a href="#settings-security">Security</a><a href="#settings-help">Help &amp; support</a><a href="#settings-signout">Log out</a>
-          </nav>
           <form id="settings-form" class="settings-panels">
-            <section class="card settings-card" id="settings-account">
+            <section class="settings-card" id="settings-account">
               ${sectionHeading('◉', 'Account information', 'Review the account identity associated with your session.')}
               <div class="settings-readonly-grid">
                 <div><small>Display name</small><strong>${escapeHtml(result.account?.name || 'Not available')}</strong></div>
@@ -113,7 +105,7 @@
               <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
               <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
             </section>
-            <section class="card settings-card" id="settings-privacy">
+            <section class="settings-card" id="settings-privacy">
               ${sectionHeading('◈', 'Privacy &amp; audience', 'Control who can discover your profile and contact you.')}
               <label class="settings-field"><span><strong>Profile visibility</strong><small>Friends-only and private profiles are filtered by the server in profile discovery, search and feed results.</small></span>
                 <select name="profileVisibility"><option value="public" ${settings.privacy.profileVisibility === 'public' ? 'selected' : ''}>Public</option><option value="friends" ${settings.privacy.profileVisibility === 'friends' ? 'selected' : ''}>Friends only</option><option value="private" ${settings.privacy.profileVisibility === 'private' ? 'selected' : ''}>Private</option></select>
@@ -123,13 +115,13 @@
                 <select name="messageAudience"><option value="everyone" ${settings.privacy.messageAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.messageAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.messageAudience === 'nobody' ? 'selected' : ''}>Nobody new</option></select>
               </label>
             </section>
-            <section class="card settings-card" id="settings-blocking">
+            <section class="settings-card" id="settings-blocking">
               ${sectionHeading('⊘', 'Blocking', 'Review people you have blocked and remove a block when you are ready.')}
               <div class="settings-blocked-list">
                 ${blockedUsers.length ? blockedUsers.map(member => `<div class="settings-blocked-person"><img src="${escapeHtml(member.avatar || '')}" alt=""><div><strong>${escapeHtml(member.name || 'Minglora member')}</strong><small>@${escapeHtml(member.username || '')}</small></div><button class="secondary" type="button" data-unblock-user="${escapeHtml(member.id)}">Unblock</button></div>`).join('') : '<p class="settings-empty">You have not blocked anyone.</p>'}
               </div>
             </section>
-            <section class="card settings-card" id="settings-notifications">
+            <section class="settings-card" id="settings-notifications">
               ${sectionHeading('♢', 'Notifications', 'Choose which activity appears in the Minglora notification centre.')}
               <label class="settings-toggle"><span><strong>In-app notifications</strong><small>Master switch for notifications inside Minglora.</small></span><input type="checkbox" name="notificationInApp" ${settings.notifications.inApp ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
@@ -137,7 +129,7 @@
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
             </section>
-            <section class="card settings-card theme-centre-card" id="settings-preferences">
+            <section class="settings-card theme-centre-card" id="settings-preferences">
               ${sectionHeading('◐', 'Theme Centre', 'Make Minglora feel like your space. Change either theme whenever you like; your choices are saved to your account.')}
               <div class="theme-centre-section">
                 <div class="theme-centre-heading"><div><h3>App appearance</h3><p>Choose the overall colour identity used across your feed, profile, messages and navigation.</p></div></div>
@@ -159,7 +151,7 @@
                 <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
               </div>
             </section>
-            <section class="card settings-card" id="settings-data">
+            <section class="settings-card" id="settings-data">
               ${sectionHeading('⇩', 'Your information', 'Download a copy of the information associated with your Minglora account.')}
               <div class="settings-data-export"><div><strong>Download your information</strong><p>Creates a JSON file with your profile, settings, posts, comments, relationships, groups, Pages, Stories, messages and in-app notifications. Passwords, authentication tokens and active session secrets are not included.</p></div><button class="primary" type="button" id="download-account-data">Download information</button></div>
               <div class="settings-account-actions">
@@ -175,7 +167,7 @@
               </div>
               <p class="settings-data-status" id="account-export-status" role="status"></p>
             </section>
-            <section class="card settings-card" id="settings-security">
+            <section class="settings-card" id="settings-security">
               ${sectionHeading('▣', 'Security and login', 'Protect your password, sign-in email, authenticator and active sessions.')}
               <form id="security-email-form" class="settings-security-form">
                 <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
@@ -200,7 +192,7 @@
                 <div id="active-sessions-list">${sessions.map(session=>'<div class="settings-session-row"><div><strong>'+escapeHtml(session.userAgent||'Unknown device')+(session.current?' · This device':'')+'</strong><small>Last active '+escapeHtml(session.lastSeenAt||'')+' · Expires '+escapeHtml(session.expiresAt||'')+'</small></div>'+(session.current?'<span class="settings-current-session">Current</span>':'<button type="button" class="secondary" data-revoke-session="'+escapeHtml(session.id)+'">Revoke</button>')+'</div>').join('')||'<p class="settings-empty">'+escapeHtml(sessionResult.error||'No active sessions found.')+'</p>'}</div>
               </div>
             </section>
-            <section class="card settings-card" id="settings-help">
+            <section class="settings-card" id="settings-help">
               ${sectionHeading('?', 'Help &amp; support', 'Get help from Minglora and track your existing support conversations.')}
               <form id="support-ticket-form" class="settings-security-form">
                 <h3>Contact support</h3>
@@ -215,7 +207,7 @@
               ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
               ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
-            <section class="card settings-card settings-signout-card" id="settings-signout">
+            <section class="settings-card settings-signout-card" id="settings-signout">
               ${sectionHeading('↪', 'Log out', 'Sign out of Minglora on this device. Your account and saved settings will remain intact.')}
               <div class="settings-session-actions">
                 <div><strong>Finished using Minglora?</strong><p>Log out securely when you are done on this phone, tablet or computer.</p></div>
@@ -229,11 +221,6 @@
       document.querySelector('#edit-profile-from-settings')?.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('minglora:open-profile-editor')));
       document.querySelector('#settings-logout-btn')?.addEventListener('click',()=>document.querySelector('#logout-btn')?.click());
       document.querySelector('#profile-privacy-from-settings')?.addEventListener('click',()=>document.querySelector('#settings-privacy')?.scrollIntoView({behavior:settings.preferences.reducedMotion?'auto':'smooth',block:'start'}));
-
-      document.querySelectorAll('.settings-nav a').forEach(link => link.addEventListener('click', event => {
-        event.preventDefault();
-        document.querySelector(link.getAttribute('href'))?.scrollIntoView({ behavior: settings.preferences.reducedMotion ? 'auto' : 'smooth', block: 'start' });
-      }));
 
       document.querySelector('#download-account-data')?.addEventListener('click', async buttonEvent => {
         const button = buttonEvent.currentTarget;
