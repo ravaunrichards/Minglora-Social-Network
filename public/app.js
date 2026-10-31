@@ -1067,6 +1067,79 @@ function creatorStudioChrome(section,content){
     "<div class='creator-studio-content'>"+content+"</div>"+
     "<footer class='creator-studio-footer'><span>Minglora Creator Studio</span><span>Connected to your Minglora account · No invented activity or earnings</span></footer></div>";
 }
+function creatorStageSvgMarkup(){
+  return `<svg id="creator-stage-svg-fallback" class="creator-stage-svg-fallback" viewBox="0 0 760 520" role="img" aria-label="Interactive three dimensional creator workstation with monitor, desk, camera, microphone and ring light" hidden>
+    <defs>
+      <linearGradient id="cs-stage-floor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#112a4b"/><stop offset=".52" stop-color="#173c5e"/><stop offset="1" stop-color="#0b1b34"/></linearGradient>
+      <linearGradient id="cs-stage-desk" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#8db9e8"/><stop offset=".3" stop-color="#3f76b7"/><stop offset="1" stop-color="#183c6a"/></linearGradient>
+      <linearGradient id="cs-stage-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9be7f1"/><stop offset="1" stop-color="#2876ba"/></linearGradient>
+      <linearGradient id="cs-stage-screen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17385f"/><stop offset=".48" stop-color="#226c9c"/><stop offset="1" stop-color="#152b55"/></linearGradient>
+      <linearGradient id="cs-stage-metal" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#f4fbff"/><stop offset=".34" stop-color="#8eaeca"/><stop offset="1" stop-color="#385a82"/></linearGradient>
+      <linearGradient id="cs-stage-teal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c1fff5"/><stop offset=".34" stop-color="#38d2c2"/><stop offset="1" stop-color="#147c9d"/></linearGradient>
+      <linearGradient id="cs-stage-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0d8ff"/><stop offset=".4" stop-color="#9a83fa"/><stop offset="1" stop-color="#5141a4"/></linearGradient>
+      <radialGradient id="cs-stage-glow"><stop stop-color="#72daf1" stop-opacity=".5"/><stop offset="1" stop-color="#4b83d8" stop-opacity="0"/></radialGradient>
+      <filter id="cs-stage-shadow" x="-30%" y="-40%" width="160%" height="190%"><feGaussianBlur stdDeviation="13"/></filter>
+    </defs>
+    <ellipse cx="386" cy="436" rx="300" ry="54" fill="#020b1d" opacity=".48" filter="url(#cs-stage-shadow)"/>
+    <ellipse cx="390" cy="284" rx="310" ry="250" fill="url(#cs-stage-glow)" opacity=".8"/>
+    <g id="creator-stage-svg-world" class="creator-stage-svg-world">
+      <ellipse cx="390" cy="408" rx="276" ry="39" fill="#07162c" opacity=".62"/>
+      <path d="M141 365 376 255 661 348 425 466Z" fill="url(#cs-stage-floor)" stroke="#5e9ed1" stroke-opacity=".42" stroke-width="2"/>
+      <path d="M141 365 425 466 425 483 141 382Z" fill="#102b4a"/>
+      <path d="M425 466 661 348 661 365 425 483Z" fill="#0a203c"/>
+      <ellipse cx="392" cy="396" rx="232" ry="24" fill="#0a1831" opacity=".65"/>
+      <g class="creator-stage-svg-ring">
+        <ellipse cx="555" cy="170" rx="92" ry="111" fill="none" stroke="#a9d2ff" stroke-width="15" opacity=".16"/>
+        <ellipse cx="555" cy="170" rx="92" ry="111" fill="none" stroke="url(#cs-stage-violet)" stroke-width="8"/>
+        <ellipse cx="555" cy="170" rx="80" ry="99" fill="none" stroke="#c2fff5" stroke-width="2.5" opacity=".88"/>
+        <path d="M555 279v65" stroke="url(#cs-stage-metal)" stroke-width="13" stroke-linecap="round"/>
+        <path d="M555 341 520 358 592 382" fill="none" stroke="#527ba7" stroke-width="9" stroke-linecap="round"/>
+        <path d="M521 358 593 382" stroke="#b5d8ef" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <path d="M177 338 399 237 624 313 401 421Z" fill="url(#cs-stage-desk)" stroke="#a8d8fa" stroke-opacity=".65" stroke-width="2"/>
+      <path d="M177 338 401 421 401 438 177 354Z" fill="#173d69"/>
+      <path d="M401 421 624 313 624 330 401 438Z" fill="#102f57"/>
+      <path d="M210 351 400 423 591 330" fill="none" stroke="url(#cs-stage-edge)" stroke-width="4" opacity=".9"/>
+      <path d="M244 354 270 367 270 441 244 431Z" fill="#274d76"/>
+      <path d="M535 359 562 347 562 423 535 436Z" fill="#1b3b61"/>
+      <path d="M365 215 420 195 420 255 365 277Z" fill="#345b82"/>
+      <path d="M353 205 427 174 427 251 353 281Z" fill="url(#cs-stage-metal)"/>
+      <path d="M353 205 427 174 427 246 353 275Z" fill="#294c77" stroke="#b9e3ff" stroke-width="2"/>
+      <path d="M366 211 414 191 414 235 366 255Z" fill="#0d203e"/>
+      <path d="M369 214 410 197 410 231 369 248Z" fill="url(#cs-stage-teal)" opacity=".28"/>
+      <path d="M378 238 401 229 401 233 378 242Z" fill="#a6f5ec" opacity=".9"/>
+      <path d="M378 247 394 240 394 243 378 250Z" fill="#b9c8ff" opacity=".88"/>
+      <path d="M390 257 389 273 411 281 413 263Z" fill="#7b9bbd"/>
+      <path d="M369 276 431 251 444 261 381 288Z" fill="#aecce1"/>
+      <path d="M381 288 444 261 449 268 386 297Z" fill="#3d668d"/>
+      <path d="M249 284 282 270 315 281 281 296Z" fill="#25476e" stroke="#95c5e8" stroke-width="2"/>
+      <path d="M249 284 281 296 281 347 249 335Z" fill="#173557"/>
+      <path d="M281 296 315 281 315 333 281 347Z" fill="#0d2849"/>
+      <path d="M257 286 281 295 281 323 257 314Z" fill="url(#cs-stage-teal)"/>
+      <ellipse cx="269" cy="300" rx="7" ry="6" fill="#d7ffff" opacity=".8"/>
+      <path d="M266 282 266 252 276 247 276 285Z" fill="url(#cs-stage-metal)"/>
+      <path d="M253 252 281 240 300 247 272 260Z" fill="#7c9fbe"/>
+      <path d="M253 252 272 260 272 278 253 269Z" fill="#244b74"/>
+      <path d="M272 260 300 247 300 265 272 278Z" fill="#122c4c"/>
+      <ellipse cx="278" cy="258" rx="10" ry="7" fill="#0a1d39" stroke="#d0f4ff" stroke-width="2"/>
+      <ellipse cx="280" cy="257" rx="5.5" ry="4" fill="url(#cs-stage-teal)"/>
+      <path d="M487 298 502 290 502 349 487 356Z" fill="#2e527b"/>
+      <ellipse cx="495" cy="291" rx="8" ry="4" fill="#d4edff"/>
+      <path d="M479 287 495 279 512 285 496 293Z" fill="url(#cs-stage-metal)"/>
+      <rect x="477" y="268" width="29" height="28" rx="8" fill="url(#cs-stage-teal)" transform="rotate(-20 491 282)"/>
+      <path d="M482 270 501 263" stroke="#e3fff9" stroke-width="2" stroke-linecap="round"/>
+      <path d="M478 355 494 348 510 355 494 363Z" fill="#a3c8e6"/>
+      <path d="M468 363 493 374 520 361" fill="none" stroke="#294c73" stroke-width="5" stroke-linecap="round"/>
+      <path d="M338 319 364 308 386 316 360 328Z" fill="#1b3c64"/>
+      <path d="M338 319 360 328 360 356 338 346Z" fill="#0c2443"/>
+      <path d="M360 328 386 316 386 344 360 356Z" fill="#274e79"/>
+      <path d="M345 321 360 327 360 345 345 339Z" fill="url(#cs-stage-violet)"/>
+      <path d="M362 331 379 324" stroke="#b9d8ef" stroke-width="2" opacity=".7"/>
+      <path d="M333 351 363 362 391 350" fill="none" stroke="#89dfe8" stroke-width="3" opacity=".7"/>
+      <path d="M177 340 213 326 247 338" fill="none" stroke="#b5eaff" stroke-width="3" opacity=".65"/>
+    </g>
+  </svg>`;
+}
 function creatorOverviewMarkup(){
   const s=state.creatorStudio,profile=s.profile||{},insights=profile.profileInsights||{},user=profile.user||{};
   const posts=Array.isArray(profile.posts)?profile.posts:[];
@@ -1075,7 +1148,7 @@ function creatorOverviewMarkup(){
   const activeViewers=insights.activeViewersCount;
   const preview=posts.slice(0,2).map(creatorPostCard).join("");
   return "<section class='creator-stage-card'><div class='creator-stage-copy'><span class='creator-stage-label'><i></i> MINGLORA CREATIVE WORKSPACE</span><h2>Make your next<br><em>moment matter.</em></h2><p>Plan your content, publish to your community and turn real audience activity into creator growth.</p><div class='creator-stage-actions'><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create a post</button><button type='button' class='secondary' data-creator-section='content'>Explore your content ↗</button></div><div class='creator-stage-note'>Your creator space is separate from the live broadcast room.</div></div>"+
-    "<div class='creator-stage-visual'><canvas id='creator-stage-canvas' aria-label='Interactive real-time 3D Minglora creator production studio'></canvas><div class='creator-stage-caption'><span></span> LIVE WEBGL 3D SCENE <small>Drag to orbit</small></div><div class='creator-stage-controls'><button type='button' id='creator-stage-reset' aria-label='Reset 3D studio view'>↻</button><button type='button' id='creator-stage-pause' aria-label='Pause 3D studio animation'>Ⅱ</button></div><p class='creator-stage-fallback' id='creator-stage-fallback' hidden>WebGL is unavailable in this browser. The 3D studio scene cannot be displayed.</p></div></section>"+
+    "<div class='creator-stage-visual'><canvas id='creator-stage-canvas' aria-label='Interactive real-time 3D Minglora creator production studio'></canvas>"+creatorStageSvgMarkup()+"<div class='creator-stage-caption'><span></span> LIVE WEBGL 3D SCENE <small>Drag to orbit</small></div><div class='creator-stage-controls'><button type='button' id='creator-stage-reset' aria-label='Reset 3D studio view'>↻</button><button type='button' id='creator-stage-pause' aria-label='Pause 3D studio animation'>Ⅱ</button></div><p class='creator-stage-fallback' id='creator-stage-fallback' hidden>3D compatibility renderer active.</p></div></section>"+
     "<div class='creator-section-title'><div><span class='creator-eyebrow'>CHANNEL OVERVIEW</span><h2>Your performance, at a glance</h2></div><button type='button' class='creator-inline-link' data-creator-section='analytics'>View analytics ↗</button></div>"+
     "<div class='creator-metrics-grid'>"+
       creatorMetric("Followers",creatorNumber(profile.followersCount),"Current profile audience","friends")+
@@ -1421,10 +1494,46 @@ async function renderCreatorSection(section){
 function initCreatorStudio3D(canvas){
   if(!canvas)return;
   const fallback=document.getElementById("creator-stage-fallback");
+  const svgFallback=document.getElementById("creator-stage-svg-fallback");
+  const visual=canvas.closest(".creator-stage-visual");
+  const caption=visual?.querySelector(".creator-stage-caption");
+  const showCompatibilityScene=reason=>{
+    canvas.hidden=true;
+    if(svgFallback){svgFallback.hidden=false;svgFallback.setAttribute("aria-hidden","false");}
+    visual?.classList.add("creator-stage-compatibility");
+    if(caption)caption.innerHTML="<span></span> COMPATIBILITY 3D SCENE <small>Drag to orbit</small>";
+    if(fallback){fallback.hidden=false;fallback.textContent="Your 3D production scene is displayed using the browser-compatible renderer.";fallback.title=String(reason||"");}
+    const world=svgFallback?.querySelector("#creator-stage-svg-world");
+    let yaw=-12,pitch=0,dragging=false,lastX=0,lastY=0,paused=false;
+    const applyOrbit=()=>{if(world)world.style.transform="perspective(900px) rotateX("+(pitch+8)+"deg) rotateY("+(yaw-12)+"deg)";};
+    const onDown=event=>{dragging=true;lastX=event.clientX;lastY=event.clientY;svgFallback?.classList.add("is-dragging");svgFallback?.setPointerCapture?.(event.pointerId);};
+    const onMove=event=>{if(!dragging)return;yaw=Math.max(-38,Math.min(38,yaw+(event.clientX-lastX)*.32));pitch=Math.max(-18,Math.min(22,pitch+(event.clientY-lastY)*.22));lastX=event.clientX;lastY=event.clientY;applyOrbit();};
+    const onUp=()=>{dragging=false;svgFallback?.classList.remove("is-dragging");};
+    const onReset=()=>{yaw=-12;pitch=0;applyOrbit();};
+    const onPause=()=>{paused=!paused;visual?.classList.toggle("is-paused",paused);const button=document.getElementById("creator-stage-pause");if(button)button.textContent=paused?"▶":"Ⅱ";};
+    const onVisibility=()=>{if(document.hidden){visual?.classList.add("is-paused");}else if(!paused){visual?.classList.remove("is-paused");}};
+    svgFallback?.addEventListener("pointerdown",onDown);
+    svgFallback?.addEventListener("pointermove",onMove);
+    svgFallback?.addEventListener("pointerup",onUp);
+    svgFallback?.addEventListener("pointercancel",onUp);
+    document.getElementById("creator-stage-reset")?.addEventListener("click",onReset);
+    document.getElementById("creator-stage-pause")?.addEventListener("click",onPause);
+    document.addEventListener("visibilitychange",onVisibility);
+    applyOrbit();
+    creatorStudioStageCleanup=()=>{
+      svgFallback?.removeEventListener("pointerdown",onDown);svgFallback?.removeEventListener("pointermove",onMove);
+      svgFallback?.removeEventListener("pointerup",onUp);svgFallback?.removeEventListener("pointercancel",onUp);
+      document.getElementById("creator-stage-reset")?.removeEventListener("click",onReset);
+      document.getElementById("creator-stage-pause")?.removeEventListener("click",onPause);
+      document.removeEventListener("visibilitychange",onVisibility);
+    };
+  };
   let gl;
-  try{gl=canvas.getContext("webgl",{alpha:true,antialias:true,powerPreference:"high-performance"})||canvas.getContext("experimental-webgl");}
-  catch{gl=null;}
-  if(!gl){if(fallback)fallback.hidden=false;return;}
+  try{gl=canvas.getContext("webgl",{alpha:true,antialias:true,powerPreference:"high-performance",preserveDrawingBuffer:false})||canvas.getContext("experimental-webgl");}
+  catch(error){gl=null;}
+  if(!gl){showCompatibilityScene("This browser or device did not provide a WebGL context.");return;}
+  canvas.hidden=false;
+  try{
   const vertexSource="attribute vec3 aPosition;\nattribute vec3 aNormal;\nuniform mat4 uMvp;\nuniform mat4 uModel;\nvarying vec3 vNormal;\nvarying vec3 vPosition;\nvoid main(){ vec4 world=uModel*vec4(aPosition,1.0); vPosition=world.xyz; vNormal=normalize(mat3(uModel)*aNormal); gl_Position=uMvp*vec4(aPosition,1.0); }";
   const fragmentSource="precision mediump float;\nuniform vec3 uColor;\nuniform float uGlow;\nvarying vec3 vNormal;\nvarying vec3 vPosition;\nvoid main(){ vec3 n=normalize(vNormal); vec3 light=normalize(vec3(-0.38,0.82,0.46)); float diffuse=max(dot(n,light),0.0); float rim=pow(1.0-max(dot(n,normalize(vec3(0.0,0.4,1.0))),0.0),2.0); vec3 color=uColor*(0.38+diffuse*0.72)+uGlow*(rim*vec3(0.4,0.55,1.0)+vec3(0.04,0.08,0.16)); gl_FragColor=vec4(color,1.0); }";
   function shader(type,source){
@@ -1436,7 +1545,7 @@ function initCreatorStudio3D(canvas){
   try{
     program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertexSource));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragmentSource));gl.linkProgram(program);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program)||"WebGL program link failed.");
-  }catch(error){if(fallback){fallback.hidden=false;fallback.textContent="3D renderer could not initialize: "+String(error.message||error);}return;}
+  }catch(error){showCompatibilityScene(error.message||"The WebGL shaders could not initialize.");return;}
   const attributes={position:gl.getAttribLocation(program,"aPosition"),normal:gl.getAttribLocation(program,"aNormal")};
   const uniforms={mvp:gl.getUniformLocation(program,"uMvp"),model:gl.getUniformLocation(program,"uModel"),color:gl.getUniformLocation(program,"uColor"),glow:gl.getUniformLocation(program,"uGlow")};
   gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.clearColor(0.028,0.045,0.082,0);
@@ -1589,12 +1698,21 @@ function initCreatorStudio3D(canvas){
   pause?.addEventListener("click",()=>{yawState.paused=!yawState.paused;if(pause)pause.textContent=yawState.paused?"▶":"Ⅱ";});
   const onVisibility=()=>{if(document.hidden)yawState.paused=true;};
   document.addEventListener("visibilitychange",onVisibility);
+  const onContextLost=event=>{
+    event.preventDefault();disposed=true;cancelAnimationFrame(frame);observer?.disconnect();
+    document.removeEventListener("visibilitychange",onVisibility);
+    canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+    showCompatibilityScene("The browser released the WebGL context; the compatibility renderer is now active.");
+  };
+  canvas.addEventListener("webglcontextlost",onContextLost,false);
   creatorStudioStageCleanup=()=>{
     disposed=true;cancelAnimationFrame(frame);observer?.disconnect();document.removeEventListener("visibilitychange",onVisibility);
     canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+    canvas.removeEventListener("webglcontextlost",onContextLost);
     Object.values(geometries).forEach(geo=>{gl.deleteBuffer(geo.positionBuffer);gl.deleteBuffer(geo.normalBuffer);});
     gl.deleteProgram(program);
   };
+  }catch(error){showCompatibilityScene(error.message||"The WebGL renderer could not initialize.");}
 }
 function disposeCreatorStudioStage(){if(creatorStudioStageCleanup){creatorStudioStageCleanup();creatorStudioStageCleanup=null;}}
 
