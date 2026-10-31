@@ -82,9 +82,9 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261101-marketplace-core-1'));
-  assert.ok(worker.includes('minglora-shell-v32-marketplace-core-1'));
-  assert.ok(worker.includes('styles.css?v=20261101-marketplace-core-1'));
+  assert.ok(html.includes('styles.css?v=20261031-marketplace-commerce-2'));
+  assert.ok(worker.includes('minglora-shell-v33-marketplace-commerce-2'));
+  assert.ok(worker.includes('styles.css?v=20261031-marketplace-commerce-2'));
 });
 
 
