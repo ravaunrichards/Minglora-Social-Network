@@ -31,3 +31,15 @@ The latest application does not yet perform production Marketplace payment captu
 The repository contains Marketplace migrations 029–034, including seller and checkout configuration, quote/order data, seller sub-orders, immutable financial evidence, inventory reservations, idempotency, fulfilment, bookings, returns, payouts, reviews and job applications. Marketplace-specific server actions use the Supabase Edge Function and normalized Postgres/RPC path. Verify these migrations and the matching Edge Function are deployed to the active Supabase project; a migration file in GitHub alone does not prove deployment.
 
 General social-domain persistence still has a durable single-row JSONB compatibility adapter and remains a separate scaling constraint. Marketplace's relational path does not make every Minglora data domain horizontally scalable.
+
+## PayPal Marketplace integration status
+
+The PayPal multiparty foundation is kept separate from the existing creator PayPal integration:
+
+- `backend/modules/marketplace/paypal-multiparty.js` validates partner configuration, seller referral payloads, multi-seller purchase units and capture reconciliation.
+- Migrations 035–036 add the private seller merchant registry, per-seller payment transactions and guarded capture-reconciliation function.
+- The Supabase Edge Function contains internal actions for seller onboarding state, checkout preparation, per-seller capture records and signature-verified webhook receipt.
+
+**This is not yet a live buyer checkout or seller payout feature.** The Node API routes and browser Marketplace controls for PayPal onboarding, order approval/capture and webhook signature verification still need to be completed. The live checkout status remains disabled, and database provider approval is pending.
+
+Keep every `MARKETPLACE_PAYPAL_*` enable/approval flag false until PayPal approves the multiparty marketplace account and the missing server/UI, tax, webhook and end-to-end test work is complete. Do not reuse creator PayPal credentials for Marketplace.
