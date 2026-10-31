@@ -8,7 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFile(resolve(root, path), 'utf8');
 
 function ruleFor(css, selector) {
-  const blocks = css.split('}');
+  const blocks = css.replace(/\/\*[\s\S]*?\*\//g, '').split('}');
   for (let index = blocks.length - 1; index >= 0; index -= 1) {
     const open = blocks[index].lastIndexOf('{');
     if (open < 0) continue;
