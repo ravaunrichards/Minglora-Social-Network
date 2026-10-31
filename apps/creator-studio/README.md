@@ -39,3 +39,10 @@ The production-stage canvas is rendered with WebGL geometry, lighting and camera
 - Route inventory: `docs/API.md`
 
 Run the repository's normal checks before deploying changes. A code commit is not itself proof that the hosted application or external provider environment has been deployed and verified.
+
+
+## Scroll and 3D compatibility
+
+Creator Studio's section navigation remains pinned below the global application header on desktop and mobile. The shared header, desktop navigation rails, Settings category navigation, profile tabs and mobile bottom navigation also stay anchored while the user scrolls.
+
+The creator workstation attempts the interactive WebGL renderer first. When WebGL is unavailable, a shader/program fails, the context is lost or the render loop fails, Minglora displays an interactive SVG-based 3D compatibility scene instead of a blank scene or an unavailable message. The user can still orbit, reset and pause its presentation.
