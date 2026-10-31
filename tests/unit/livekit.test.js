@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLiveKitToken, isLiveKitConfigured } from '../../backend/modules/live/livekit.js';
+import { createLiveKitToken, isLiveKitConfigured, LIVEKIT_TRACK_SOURCE } from '../../backend/modules/live/livekit.js';
 
 function restoreEnv(original) {
   if (original.url === undefined) delete process.env.LIVEKIT_URL; else process.env.LIVEKIT_URL = original.url;
@@ -64,7 +64,7 @@ test('audio-only host tokens are restricted to microphone publishing', async () 
   try {
     const result = await createLiveKitToken({
       identity: 'audio-host-test', name: 'Audio Host', roomName: 'minglora-audio-test-room',
-      canPublish: true, publishSources: ['microphone']
+      canPublish: true, publishSources: [LIVEKIT_TRACK_SOURCE.MICROPHONE]
     });
     const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString('utf8'));
     assert.equal(payload.video.canPublish, true);
@@ -83,7 +83,7 @@ test('approved guest speaker tokens can publish microphone but not camera', asyn
   try {
     const result = await createLiveKitToken({
       identity: 'audio-guest-test', name: 'Audio Guest', roomName: 'minglora-audio-guest-test',
-      canPublish: true, publishSources: ['microphone']
+      canPublish: true, publishSources: [LIVEKIT_TRACK_SOURCE.MICROPHONE]
     });
     const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString('utf8'));
     assert.deepEqual(payload.video.canPublishSources, ['microphone']);
