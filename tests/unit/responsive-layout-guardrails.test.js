@@ -47,7 +47,7 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261031-creator-stage-sticky-fallback-2'));
-  assert.ok(worker.includes('minglora-shell-v25-creator-stage-sticky-fallback'));
-  assert.ok(worker.includes('styles.css?v=20261031-creator-stage-sticky-fallback-2'));
+  assert.ok(html.includes('styles.css?v=20261031-creator-nav-fixed-1'));
+  assert.ok(worker.includes('minglora-shell-v26-creator-nav-fixed'));
+  assert.ok(worker.includes('styles.css?v=20261031-creator-nav-fixed-1'));
 });
