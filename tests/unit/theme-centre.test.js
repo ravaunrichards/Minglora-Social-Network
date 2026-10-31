@@ -32,16 +32,14 @@ test('Theme Centre previews and persists app and LIVE preferences separately', (
   assert.match(settings, /document\.body\.dataset\.colorTheme = colorTheme/);
 });
 
-test('host LIVE style is stored on each broadcast and is controlled by the host', () => {
-  assert.match(server, /const session = \{ id, roomName, hostId: user\.id, title, visibility, liveTheme, status: 'live'/);
-  assert.match(server, /if \(method === 'PATCH' && liveThemeMatch\)/);
-  assert.match(server, /Only the LIVE host can change this room theme/);
-  assert.match(server, /if \(method === 'GET' && liveThemeMatch\)/);
-  assert.match(app, /liveTheme:values\.get\("liveTheme"\)/);
-  assert.match(app, /id='live-room-theme-select'/);
-  assert.match(app, /\/theme.*method:"PATCH"/);
-  assert.ok(app.includes('liveThemeRefreshTimer=setInterval') && app.includes('},8000);'), 'viewers periodically refresh the broadcast theme');
-  assert.match(app, /applyLiveRoomTheme\(result\.liveTheme\)/);
+test('saved LIVE room style remains in Settings and is applied to newly created broadcasts', () => {
+  assert.match(settings, /renderThemeChoices\\('liveRoomTheme', LIVE_THEMES/);
+  assert.match(settings, /liveRoomTheme: formData\\.get\\('liveRoomTheme'\\)/);
+  assert.match(server, /getUserSettings\\(user\\)\\.preferences\\.liveRoomTheme/);
+  assert.match(server, /broadcastType, liveTheme, status: 'live'/);
+  assert.doesNotMatch(app, /live-room-theme-select|live-style-field|live-room-theme-control/);
+  assert.doesNotMatch(css, /\\.live-style-field|\\.live-room-theme-control/);
+  assert.doesNotMatch(app, /liveTheme:values\\.get\\(["']liveTheme["']\\)/);
 });
 
 test('all advertised themes have previews and responsive visual treatment', () => {
@@ -53,9 +51,9 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261031-responsive-layout-guardrails-1/);
-  assert.match(html, /app\.js\?v=20261031-discovery-profiles-1/);
+  assert.match(html, /styles\.css\?v=20261031-audio-live-type-1/);
+  assert.match(html, /app\.js\?v=20261031-audio-live-type-1/);
   assert.match(html, /settings\.js\?v=20261031-logout-in-settings-1/);
-  assert.match(sw, /minglora-shell-v12-responsive-layout-guardrails/);
+  assert.match(sw, /minglora-shell-v18-audio-live/);
   assert.match(sw, /settings\.js\?v=20261031-logout-in-settings-1/);
 });
