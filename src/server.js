@@ -359,12 +359,30 @@ async function endLiveSession(session, { deleteRoom = false } = {}) {
     if (wasLive) {
       session.status = 'ended';
       session.endedAt = endedAt;
+      session.broadcastEndSynced = false;
       (db.liveParticipants || []).filter(item => item.sessionId === session.id && !item.leftAt)
         .forEach(item => { item.leftAt = endedAt; });
       await saveStore();
     }
-    if (session.hostId) {
-      await requestSupabaseState('live_broadcast_end', { id: session.id, hostId: session.hostId });
+    if (session.hostId && session.broadcastEndSynced === false) {
+      try {
+        await requestSupabaseState('live_broadcast_end', { id: session.id, hostId: session.hostId });
+        session.broadcastEndSynced = true;
+        await saveStore();
+      } catch (error) {
+        // The local LIVE state is already durably ended. Keep provider sync pending
+        // and retry during startup; never turn a successful end action into a client error.
+        console.warn('[Minglora LIVE] Broadcast is ended locally; provider sync will be retried.', {
+          sessionId: session.id,
+          message: String(error?.message || 'provider sync failed').slice(0, 180)
+        });
+        try { await saveStore(); } catch (saveError) {
+          console.error('[Minglora LIVE] Could not persist the pending end-sync marker.', {
+            sessionId: session.id,
+            message: String(saveError?.message || 'save failed').slice(0, 180)
+          });
+        }
+      }
     }
     if (deleteRoom && session.roomName) {
       try { await deleteLiveKitRoom(session.roomName); }
@@ -382,6 +400,20 @@ async function endLiveSession(session, { deleteRoom = false } = {}) {
 }
 
 async function cleanupPersistedLiveSessions() {
+  for (const endedSession of (db.liveSessions || []).filter(session =>
+    session.status === 'ended' && session.broadcastEndSynced === false
+  )) {
+    try {
+      await requestSupabaseState('live_broadcast_end', { id: endedSession.id, hostId: endedSession.hostId });
+      endedSession.broadcastEndSynced = true;
+      await saveStore();
+    } catch (error) {
+      console.warn('[Minglora LIVE cleanup] A previously ended broadcast still needs provider sync.', {
+        sessionId: endedSession.id,
+        message: String(error?.message || 'provider sync failed').slice(0, 180)
+      });
+    }
+  }
   const pending = (db.liveSessions || []).filter(session => session.status === 'live');
   if (!pending.length) return { ended: 0, preserved: 0, verified: true };
   const health = await verifyLiveKitConnection({ force: true });
@@ -484,21 +516,22 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
-        if(!phoneNumber||!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter your contact phone in international format, including + and country code.'});
+        if(phoneNumber&&!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter a valid international phone number, including + and country code.'});
         if (db.users.some(u=>normalizeEmail(u.email)===email || u.username===username)) return json(res,409,{error:'That email or username is already registered. Log in instead.'});
         if (AUTH_PROVIDER === 'supabase') {
-          const result = await supabaseSignUp({ email, password, name, username, phoneNumber });
-          if (!result.user) return json(res,502,{error:'Minglora Supabase Auth did not return a user record.'});
-          const hasIdentity = !Array.isArray(result.user.identities) || result.user.identities.length > 0;
-          if (!result.session) {
-            if (hasIdentity) {
-              ensureLocalUser(result.user, { name, username, phoneNumber });
-              await saveStore();
-            }
-            return json(res,202,{confirmationRequired:true,message:'Check your email for a confirmation link. After confirming your address, return here and log in.'});
+          const registration = await requestSupabaseState('auth_register_user', {
+            email, password, name, username, phoneNumber
+          });
+          const authUser = registration.user;
+          if (!authUser?.id || !registration.emailConfirmed) {
+            return json(res,502,{error:'Minglora could not confirm the new account with its private Auth service.'});
           }
-          const created = ensureLocalUser(result.user, { name, username, phoneNumber });
-          const sessionCookie = await createAppSession(created,result.session,req);
+          const authenticated = await supabaseSignIn({ email, password });
+          if (!authenticated.user?.id || !authenticated.access_token) {
+            return json(res,502,{error:'Your account was created, but Minglora could not start your sign-in session. Please log in with the same email and password.'});
+          }
+          const created = ensureLocalUser(authenticated.user, { name, username, phoneNumber });
+          const sessionCookie = await createAppSession(created,authenticated,req);
           return json(res,201,{user:safeUser(created,created.id)},{'Set-Cookie':sessionCookie});
         }
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',contactPhone:phoneNumber,country:'',county:'',parish:'',city:'',gender:'',relationshipStatus:'',aboutVisibility:DEFAULT_ABOUT_VISIBILITY,avatar:'',cover:'',createdAt:now()}; db.users.push(created);
@@ -1200,6 +1233,14 @@ async function route(req, res) {
         const friends=isFriend(user.id,session.hostId);
         const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
         if(!canView)return json(res,404,{error:'LIVE session is not available for gifting.'});
+        let hostIsPresent=false;
+        try {
+          const participants=await listLiveKitParticipants(session.roomName);
+          hostIsPresent=participants.some(participant=>participant.identity===session.hostId);
+        } catch {
+          return json(res,503,{error:'Minglora could not verify that the host is currently LIVE. Try again shortly.'});
+        }
+        if(!hostIsPresent)return json(res,409,{error:'This host is no longer LIVE. Refresh the LIVE directory.'});
         const result=await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
         notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
         await saveStore();
