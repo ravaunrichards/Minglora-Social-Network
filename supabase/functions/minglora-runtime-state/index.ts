@@ -372,12 +372,17 @@ Deno.serve(async (req: Request) => {
       return json(403,{error:"Only the broadcast host can connect as host."});
     if(role!=="host"&&broadcast.host_id===userId)
       return json(400,{error:"The host must connect with the host role."});
-    if(role==="guest"){
-      const {data:approval,error:approvalError}=await admin.from("live_participants")
-        .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
-      if(approvalError||!approval||approval.role!=="guest"||!["accepted","connected"].includes(approval.status))
-        return json(403,{error:"Host approval is required before joining the speaker stage."});
-    }
+    const {data:existing,error:existingError}=await admin.from("live_participants")
+      .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
+    if(existingError)return json(503,{error:"Minglora could not verify the participant's current stage status."});
+    if(role==="guest"&&(!existing||existing.role!=="guest"||!["accepted","connected"].includes(existing.status)))
+      return json(403,{error:"Host approval is required before joining the speaker stage."});
+    // A listener who has a pending hand-raise must keep that request row intact.
+    // The same relational row stores speaker-request and participant status.
+    if(role==="viewer"&&existing?.role==="guest"&&existing.status==="requested")
+      return json(200,{participant:existing,requestPending:true});
+    if(role==="viewer"&&existing?.role==="guest"&&["accepted","connected"].includes(existing.status))
+      return json(409,{error:"Your speaker request is approved. Rejoin with the speaker-stage token."});
     const connectedAt=new Date().toISOString();
     const {data,error}=await admin.from("live_participants").upsert({
       broadcast_id:broadcastId,user_id:userId,role,status:"connected",joined_at:connectedAt,left_at:null
