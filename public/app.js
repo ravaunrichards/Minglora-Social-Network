@@ -540,7 +540,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
     try{
       const data=await api(root+"/speaker-requests"),requests=data.requests||[];
       list.innerHTML=requests.length?requests.map(request=>{
-        const label=request.status==="requested"?"Pending":"Approved";
+        const label=request.status==="requested"?"Pending":request.status==="connected"?"On stage":"Approved";
         const actions=request.status==="requested"
           ?"<span class='live-speaker-actions'><button type='button' data-speaker-accept='"+esc(request.userId)+"'>Accept</button><button type='button' data-speaker-reject='"+esc(request.userId)+"'>Decline</button></span>"
           :"<span class='live-speaker-approved'>"+(request.connectedAt?"On stage":"Approved · waiting to join")+"</span>";
@@ -605,6 +605,56 @@ async function endHostedLiveSession(session){
     throw error;
   }
 }
+function participantHasLiveAudio(participant){
+  const publications=participant?.audioTrackPublications;
+  if(publications&&typeof publications.values==="function"){
+    for(const publication of publications.values())if(publication&&!publication.isMuted)return true;
+  }
+  const tracks=participant?.trackPublications;
+  if(tracks&&typeof tracks.values==="function"){
+    for(const publication of tracks.values()){
+      const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
+      const source=String(publication?.source||"").toLowerCase();
+      if((kind==="audio"||source==="microphone")&&!publication?.isMuted)return true;
+    }
+  }
+  return false;
+}
+function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
+  const root=$("#live-speaker-list");if(!root||!room)return;
+  const speakers=[];
+  const local=room.localParticipant;
+  if(role==="host"||role==="guest"){
+    speakers.push({
+      identity:local?.identity||state.user?.id,
+      name:local?.name||state.user?.name||"You",
+      label:role==="host"?"You · Host":"You · Guest speaker",
+      connected:participantHasLiveAudio(local),
+      speaking:activeSpeakerIds.has(local?.identity)
+    });
+  }
+  const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
+  for(const person of remotes){
+    const isHost=person.identity===session?.hostId;
+    const hasAudio=participantHasLiveAudio(person);
+    if(!isHost&&!hasAudio)continue;
+    speakers.push({
+      identity:person.identity,
+      name:person.name||person.identity||"Minglora member",
+      label:isHost?"Host": "Guest speaker",
+      connected:hasAudio,
+      speaking:activeSpeakerIds.has(person.identity)
+    });
+  }
+  if(!speakers.length){
+    root.innerHTML="<span class='muted'>You're connected to the room. Waiting for the host microphone to publish…</span>";
+    return;
+  }
+  root.innerHTML=speakers.map(person=>
+    "<span class='live-speaker-chip "+(person.speaking?"active ":"")+(person.connected?"connected":"connecting")+"' title='"+esc(person.label)+"'>"+
+      esc(person.name)+"<small>"+(person.speaking?"Speaking":person.connected?"Microphone connected": "Connected · microphone starting")+"</small></span>"
+  ).join("");
+}
 async function openLiveRoom(session,role,issuedLiveKit){
   role=(session?.hostId===state.user?.id||role==="host")?"host":role==="guest"?"guest":"viewer";
   stopLiveChatRefresh();stopLiveSpeakerRefresh();
@@ -636,14 +686,19 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "</aside></div></section>");
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
-  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attachLiveTrack(track,participant,false));
-  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
-  room.on(client.RoomEvent.ParticipantConnected,updatePresence);room.on(client.RoomEvent.ParticipantDisconnected,updatePresence);
+  const activeLiveSpeakerIds=new Set();
+  const refreshSpeakerRoster=()=>renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false);refreshSpeakerRoster();});
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>element.remove());refreshSpeakerRoster();});
+  room.on(client.RoomEvent.ParticipantConnected,()=>{updatePresence();refreshSpeakerRoster();});
+  room.on(client.RoomEvent.ParticipantDisconnected,()=>{updatePresence();refreshSpeakerRoster();});
+  if(client.RoomEvent.TrackPublished)room.on(client.RoomEvent.TrackPublished,refreshSpeakerRoster);
+  if(client.RoomEvent.TrackUnpublished)room.on(client.RoomEvent.TrackUnpublished,refreshSpeakerRoster);
   if(client.RoomEvent.ActiveSpeakersChanged)room.on(client.RoomEvent.ActiveSpeakersChanged,speakers=>{
-    const list=$("#live-speaker-list");if(!list)return;
-    const active=Array.isArray(speakers)?speakers:[];
-    $("#live-audio-waveform")?.classList.toggle("is-active",active.length>0);
-    list.innerHTML=active.length?active.map(person=>"<span class='live-speaker-chip active'>"+esc(person.name||person.identity||"Speaker")+"</span>").join(""):"<span class='muted'>Waiting for voices…</span>";
+    activeLiveSpeakerIds.clear();
+    (Array.isArray(speakers)?speakers:[]).forEach(person=>activeLiveSpeakerIds.add(person.identity));
+    $("#live-audio-waveform")?.classList.toggle("is-active",activeLiveSpeakerIds.size>0);
+    refreshSpeakerRoster();
   });
   room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room)toast("Your LIVE connection was disconnected.");});
   try{
@@ -660,8 +715,18 @@ async function openLiveRoom(session,role,issuedLiveKit){
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
     }else if(role==="host"||role==="guest"){
       await room.localParticipant.setMicrophoneEnabled(true);
+      if(!participantHasLiveAudio(room.localParticipant)){
+        throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check microphone permission and try again.");
+      }
     }
     updatePresence();
+    refreshSpeakerRoster();
+    try{
+      await api("/live/sessions/"+encodeURIComponent(session.id)+"/connected",{method:"POST",body:"{}"});
+    }catch(connectionStateError){
+      console.error("[Minglora LIVE] The provider room connected but participant status could not be synchronized.",connectionStateError);
+      toast("Your LIVE connection is active. Minglora is retrying participant status synchronization.");
+    }
     $("#live-mic-toggle").disabled=!(role==="host"||role==="guest");
     if($("#live-camera-toggle"))$("#live-camera-toggle").disabled=role!=="host";
     $("#live-mic-toggle")?.addEventListener("click",async()=>{try{liveMicrophoneEnabled=!liveMicrophoneEnabled;await room.localParticipant.setMicrophoneEnabled(liveMicrophoneEnabled);$("#live-mic-toggle").textContent=liveMicrophoneEnabled?"Mute microphone":"Unmute microphone";}catch(error){toast(error.message);}});
