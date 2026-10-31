@@ -21,6 +21,9 @@ Creator Studio is part of Minglora's shared application experience, not a separa
 
 ## Honest implementation boundaries
 
+- Creator Studio's section navigation is pinned below the global app header while scrolling on desktop and mobile. The global header, desktop rails, Settings category rail, profile tabs and mobile bottom navigation retain their anchored positions.
+- The production-stage scene prefers WebGL, but includes an interactive SVG-based 3D compatibility renderer for browsers or devices where WebGL cannot be created or is lost. The scene remains visible instead of showing an unavailable message.
+
 The current backend does not expose scheduled publishing, creator membership tier management, post-level impression/watch-time/retention analytics, audience demographics, Page analytics, campaign/brand-deal management or Page admin/editor assignment UI. These are not presented as working tools in the current studio.
 
 An empty account remains empty. Counts, audience members, earnings, uploads and publication records are read from Minglora's APIs; no sample or generated activity is inserted to fill the workspace.
