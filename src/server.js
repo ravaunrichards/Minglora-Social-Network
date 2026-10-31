@@ -723,7 +723,8 @@ async function route(req, res) {
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_orders_list',{userId:user.id});return json(res,200,result);}
         return json(res,200,{orders:[]});
       }
-      const marketplaceOrderMatch=new RegExp('^/api/marketplace/orders/([^/]+)
+      const orderPathParts=p.split('/');
+      const marketplaceOrderMatch=orderPathParts.length===5&&orderPathParts[1]==='api'&&orderPathParts[2]==='marketplace'&&orderPathParts[3]==='orders'&&orderPathParts[4]?[p,orderPathParts[4]]:null;
       if(method==='GET'&&marketplaceOrderMatch){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_get',{userId:user.id,orderId:marketplaceOrderMatch[1]});return json(res,200,result);}
         return json(res,404,{error:'Order not found.'});
@@ -734,7 +735,8 @@ async function route(req, res) {
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_create',{buyerId:user.id,quoteId,idempotencyKey});return json(res,201,result);}
         return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
       }
-      const marketplaceOrderCancelMatch=new RegExp('^/api/marketplace/orders/([^/]+)/cancel
+      const cancelPathParts=p.split('/');
+      const marketplaceOrderCancelMatch=cancelPathParts.length===6&&cancelPathParts[1]==='api'&&cancelPathParts[2]==='marketplace'&&cancelPathParts[3]==='orders'&&cancelPathParts[4]&&cancelPathParts[5]==='cancel'?[p,cancelPathParts[4]]:null;
       if(method==='POST'&&marketplaceOrderCancelMatch){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_cancel',{userId:user.id,orderId:marketplaceOrderCancelMatch[1]});return json(res,200,result);}
         return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
