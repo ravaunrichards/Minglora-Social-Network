@@ -12,7 +12,7 @@ const [html, css, sprite, serviceWorker] = await Promise.all([
   read('public/sw.js')
 ]);
 
-const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-1#${id}"></use>`;
+const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2#${id}"></use>`;
 
 test('desktop navigation keeps its existing destinations and uses 3D icons', () => {
   const nav = html.match(/<nav class="top-nav"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -79,7 +79,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the new icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v24-creator-stage-sticky-fallback/);
-  assert.match(serviceWorker, /styles\.css\?v=20261031-audio-speaker-connection-5/);
+  assert.match(serviceWorker, /minglora-shell-v25-creator-stage-sticky-fallback/);
+  assert.match(serviceWorker, /styles\.css\?v=20261031-creator-stage-sticky-fallback-2/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
