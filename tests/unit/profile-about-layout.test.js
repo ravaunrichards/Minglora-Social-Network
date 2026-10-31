@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const appSource = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const renderProfileStart = appSource.indexOf('function renderProfile(data){');
-const renderProfileEnd = appSource.indexOf('\nfunction renderConnections', renderProfileStart);
+const renderProfileEnd = appSource.indexOf('\nasync function renderConnections', renderProfileStart);
 const renderProfile = appSource.slice(renderProfileStart, renderProfileEnd);
 
 test('profile bio and location are displayed in About, not beside the profile photo', () => {
