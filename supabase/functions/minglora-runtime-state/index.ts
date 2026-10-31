@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
-    "live_participant_mark_connected", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
+    "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
@@ -471,6 +471,18 @@ Deno.serve(async (req: Request) => {
       .select("user_id,status").maybeSingle();
     if(error||!data)return json(409,{error:"Your speaker access is no longer active. Request to speak again."});
     return json(200,{participant:data});
+  }
+
+  if (action === "live_participant_mark_left") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(userId))return json(400,{error:"Invalid LIVE participant departure."});
+    const {data,error}=await admin.from("live_participants").update({
+      status:"left",left_at:new Date().toISOString()
+    }).eq("broadcast_id",broadcastId).eq("user_id",userId)
+      .in("status",["requested","invited","accepted","connected"])
+      .select("broadcast_id,user_id,role,status,left_at").maybeSingle();
+    if(error)return json(503,{error:"Minglora could not update LIVE participant presence."});
+    return json(200,{participant:data||null});
   }
 
   if (action === "live_speaker_mark_left") {
