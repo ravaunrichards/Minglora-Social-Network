@@ -33,13 +33,13 @@ test('Theme Centre previews and persists app and LIVE preferences separately', (
 });
 
 test('saved LIVE room style remains in Settings and is applied to newly created broadcasts', () => {
-  assert.match(settings, /renderThemeChoices\\('liveRoomTheme', LIVE_THEMES/);
-  assert.match(settings, /liveRoomTheme: formData\\.get\\('liveRoomTheme'\\)/);
-  assert.match(server, /getUserSettings\\(user\\)\\.preferences\\.liveRoomTheme/);
+  assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
+  assert.match(settings, /liveRoomTheme: formData\.get\('liveRoomTheme'\)/);
+  assert.match(server, /getUserSettings\(user\)\.preferences\.liveRoomTheme/);
   assert.match(server, /broadcastType, liveTheme, status: 'live'/);
   assert.doesNotMatch(app, /live-room-theme-select|live-style-field|live-room-theme-control/);
-  assert.doesNotMatch(css, /\\.live-style-field|\\.live-room-theme-control/);
-  assert.doesNotMatch(app, /liveTheme:values\\.get\\(["']liveTheme["']\\)/);
+  assert.doesNotMatch(css, /\.live-style-field|\.live-room-theme-control/);
+  assert.doesNotMatch(app, /liveTheme:values\.get\(["']liveTheme["']\)/);
 });
 
 test('all advertised themes have previews and responsive visual treatment', () => {
