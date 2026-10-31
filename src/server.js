@@ -680,6 +680,12 @@ async function route(req, res) {
         const sellers=(db.marketplaceSellers||[]).filter(item=>!status||item.status===status).map(item=>({userId:item.userId,sellerType:item.sellerType,storeName:item.storeName,description:item.description,countryCode:item.countryCode,contactEmail:item.contactEmail,status:item.status,identityStatus:item.identityStatus,payoutStatus:item.payoutStatus,submittedAt:item.submittedAt}));
         return json(res,200,{sellers});
       }
+      if(method==='GET'&&p==='/api/marketplace/admin/queue'){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
+        const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
+        return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
+      }
       const sellerReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/review$/);
       if(method==='PATCH'&&sellerReviewMatch){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
