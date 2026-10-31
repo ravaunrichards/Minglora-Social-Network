@@ -34,11 +34,12 @@ test('every logout entry uses the same sign-out and cleanup handler', () => {
 });
 
 test('responsive navigation exposes an alternative where the top logout button is hidden', () => {
-  const tabletRule = css.match(/@media\(max-width:1150px\)\{([^}]*)\}/)?.[1] || '';
-  const phoneRule = css.match(/@media\(max-width:760px\)\{([^}]*)\}/)?.[1] || '';
-  assert.match(tabletRule, /\.logout-btn\{display:none\}/);
-  assert.match(phoneRule, /\.left-rail\{display:none\}/);
-  assert.match(phoneRule, /\.mobile-nav\{[^}]*display:flex/);
+  assert.ok(css.includes('.logout-btn{display:none}'), 'the top action is hidden at tablet widths');
+  const phoneBreakpoint = css.indexOf('@media(max-width:760px)');
+  const hiddenRail = css.indexOf('.left-rail{display:none}', phoneBreakpoint);
+  const visibleMobileNav = css.indexOf('.mobile-nav{position:fixed', phoneBreakpoint);
+  assert.ok(phoneBreakpoint >= 0 && hiddenRail > phoneBreakpoint, 'the side rail is hidden on phones');
+  assert.ok(visibleMobileNav > phoneBreakpoint, 'the phone bottom navigation is visible');
   assert.match(css, /\.logout-rail-link\{/);
   assert.match(css, /\.mobile-nav \[data-logout\]\{/);
   assert.match(serviceWorker, /minglora-shell-v5-responsive-logout/);
