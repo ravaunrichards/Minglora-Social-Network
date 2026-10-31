@@ -414,6 +414,8 @@ let liveCameraEnabled=true;
 let liveMicrophoneEnabled=true;
 let liveGiftCatalogue=[];
 let liveSpeakerRefreshTimer=null;
+let liveParticipantSyncTimer=null;
+let liveParticipantSyncBusy=false;
 let liveDirectoryFilter='all';
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
@@ -532,6 +534,36 @@ function endHostedLiveOnPageHide(){
 }
 window.addEventListener("pagehide",endHostedLiveOnPageHide);
 
+function stopLiveParticipantSync(){
+  if(liveParticipantSyncTimer){clearInterval(liveParticipantSyncTimer);liveParticipantSyncTimer=null;}
+  liveParticipantSyncBusy=false;
+}
+async function syncLiveParticipantPresence(session){
+  stopLiveParticipantSync();
+  const path="/live/sessions/"+encodeURIComponent(session.id)+"/connected";
+  const send=()=>api(path,{method:"POST",body:"{}"});
+  for(let attempt=0;attempt<4;attempt++){
+    try{await send();return true;}
+    catch(error){
+      if(attempt===3)console.warn("[Minglora LIVE] Participant presence is not confirmed yet; background retries will continue.",error);
+      else await new Promise(resolve=>setTimeout(resolve,350*(attempt+1)));
+    }
+  }
+  toast("Your microphone is connected. Minglora is still confirming your LIVE presence.");
+  liveParticipantSyncTimer=setInterval(async()=>{
+    if(liveParticipantSyncBusy)return;
+    if(!activeLiveRoom||activeLiveSession?.id!==session.id){stopLiveParticipantSync();return;}
+    liveParticipantSyncBusy=true;
+    try{
+      await send();
+      stopLiveParticipantSync();
+      console.info("[Minglora LIVE] Participant presence confirmed after retry.",{sessionId:session.id});
+    }catch(error){
+      console.warn("[Minglora LIVE] Participant presence retry failed.",error?.message||error);
+    }finally{liveParticipantSyncBusy=false;}
+  },3000);
+  return false;
+}
 function stopLiveSpeakerRefresh(){if(liveSpeakerRefreshTimer){clearInterval(liveSpeakerRefreshTimer);liveSpeakerRefreshTimer=null;}}
 async function refreshLiveSpeakerPanel(session,role,room){
   const root="/live/sessions/"+encodeURIComponent(session.id);
@@ -701,6 +733,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     refreshSpeakerRoster();
   });
   room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room)toast("Your LIVE connection was disconnected.");});
+  // Render the host/speaker seat immediately; the connection label upgrades when
+  // the microphone publication is confirmed, so the stage never waits for speech.
+  refreshSpeakerRoster();
   try{
     let connectTimeout;
     try{
@@ -715,18 +750,18 @@ async function openLiveRoom(session,role,issuedLiveKit){
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
     }else if(role==="host"||role==="guest"){
       await room.localParticipant.setMicrophoneEnabled(true);
-      if(!participantHasLiveAudio(room.localParticipant)){
-        throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check microphone permission and try again.");
+      let microphonePublished=participantHasLiveAudio(room.localParticipant);
+      for(let attempt=0;attempt<5&&!microphonePublished;attempt++){
+        await new Promise(resolve=>setTimeout(resolve,250));
+        microphonePublished=participantHasLiveAudio(room.localParticipant);
+      }
+      if(!microphonePublished){
+        throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check browser microphone permission and try again.");
       }
     }
     updatePresence();
     refreshSpeakerRoster();
-    try{
-      await api("/live/sessions/"+encodeURIComponent(session.id)+"/connected",{method:"POST",body:"{}"});
-    }catch(connectionStateError){
-      console.error("[Minglora LIVE] The provider room connected but participant status could not be synchronized.",connectionStateError);
-      toast("Your LIVE connection is active. Minglora is retrying participant status synchronization.");
-    }
+    await syncLiveParticipantPresence(session);
     $("#live-mic-toggle").disabled=!(role==="host"||role==="guest");
     if($("#live-camera-toggle"))$("#live-camera-toggle").disabled=role!=="host";
     $("#live-mic-toggle")?.addEventListener("click",async()=>{try{liveMicrophoneEnabled=!liveMicrophoneEnabled;await room.localParticipant.setMicrophoneEnabled(liveMicrophoneEnabled);$("#live-mic-toggle").textContent=liveMicrophoneEnabled?"Mute microphone":"Unmute microphone";}catch(error){toast(error.message);}});
@@ -741,12 +776,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
         if(button)button.disabled=false;
         return;
       }
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
@@ -790,7 +825,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast("You're on stage. Your microphone is connected; camera publishing is disabled.");
   }catch(error){
-    stopLiveChatRefresh();stopLiveSpeakerRefresh();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
+    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
     if(state.view==='live'){
