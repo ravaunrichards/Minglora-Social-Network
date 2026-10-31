@@ -95,7 +95,7 @@
         <div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
         <form id="settings-form" class="settings-panels">
             <section class="settings-card" id="settings-account">
-              ${sectionHeading('Account information', 'Review the account identity associated with your session.')}
+              ${sectionHeading('Account information')}
               <div class="settings-readonly-grid">
                 <div><small>Display name</small><strong>${escapeHtml(result.account?.name || 'Not available')}</strong></div>
                 <div><small>Username</small><strong>@${escapeHtml(result.account?.username || '')}</strong></div>
@@ -105,7 +105,7 @@
               <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
             </section>
             <section class="settings-card" id="settings-privacy">
-              ${sectionHeading('Privacy &amp; audience', 'Control who can discover your profile and contact you.')}
+              ${sectionHeading('Privacy &amp; audience')}
               <label class="settings-field"><span><strong>Profile visibility</strong><small>Friends-only and private profiles are filtered by the server in profile discovery, search and feed results.</small></span>
                 <select name="profileVisibility"><option value="public" ${settings.privacy.profileVisibility === 'public' ? 'selected' : ''}>Public</option><option value="friends" ${settings.privacy.profileVisibility === 'friends' ? 'selected' : ''}>Friends only</option><option value="private" ${settings.privacy.profileVisibility === 'private' ? 'selected' : ''}>Private</option></select>
               </label>
@@ -115,13 +115,13 @@
               </label>
             </section>
             <section class="settings-card" id="settings-blocking">
-              ${sectionHeading('Blocking', 'Review people you have blocked and remove a block when you are ready.')}
+              ${sectionHeading('Blocking')}
               <div class="settings-blocked-list">
                 ${blockedUsers.length ? blockedUsers.map(member => `<div class="settings-blocked-person"><img src="${escapeHtml(member.avatar || '')}" alt=""><div><strong>${escapeHtml(member.name || 'Minglora member')}</strong><small>@${escapeHtml(member.username || '')}</small></div><button class="secondary" type="button" data-unblock-user="${escapeHtml(member.id)}">Unblock</button></div>`).join('') : '<p class="settings-empty">You have not blocked anyone.</p>'}
               </div>
             </section>
             <section class="settings-card" id="settings-notifications">
-              ${sectionHeading('Notifications', 'Choose which activity appears in the Minglora notification centre.')}
+              ${sectionHeading('Notifications')}
               <label class="settings-toggle"><span><strong>In-app notifications</strong><small>Master switch for notifications inside Minglora.</small></span><input type="checkbox" name="notificationInApp" ${settings.notifications.inApp ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
@@ -129,7 +129,7 @@
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
             </section>
             <section class="settings-card theme-centre-card" id="settings-preferences">
-              ${sectionHeading('Theme Centre', 'Make Minglora feel like your space. Change either theme whenever you like; your choices are saved to your account.')}
+              ${sectionHeading('Theme Centre')}
               <div class="theme-centre-section">
                 <div class="theme-centre-heading"><div><h3>App appearance</h3><p>Choose the overall colour identity used across your feed, profile, messages and navigation.</p></div></div>
                 <label class="settings-field"><span><strong>Light or dark mode</strong><small>Use your device setting, or choose a fixed mode.</small></span>
@@ -151,7 +151,7 @@
               </div>
             </section>
             <section class="settings-card" id="settings-data">
-              ${sectionHeading('Your information', 'Download a copy of the information associated with your Minglora account.')}
+              ${sectionHeading('Your information')}
               <div class="settings-data-export"><div><strong>Download your information</strong><p>Creates a JSON file with your profile, settings, posts, comments, relationships, groups, Pages, Stories, messages and in-app notifications. Passwords, authentication tokens and active session secrets are not included.</p></div><button class="primary" type="button" id="download-account-data">Download information</button></div>
               <div class="settings-account-actions">
                 <div class="settings-account-action"><div><strong>Temporarily deactivate your account</strong><p>Sign out all devices and hide your account. Signing in again reactivates it.</p></div><button class="secondary" type="button" id="deactivate-account">Deactivate account</button></div>
@@ -167,7 +167,7 @@
               <p class="settings-data-status" id="account-export-status" role="status"></p>
             </section>
             <section class="settings-card" id="settings-security">
-              ${sectionHeading('Security and login', 'Protect your password, sign-in email, authenticator and active sessions.')}
+              ${sectionHeading('Security and login')}
               <form id="security-email-form" class="settings-security-form">
                 <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
                 <button class="secondary" type="submit">Request email change</button><p class="settings-form-status" id="security-email-status" role="status"></p>
@@ -192,7 +192,7 @@
               </div>
             </section>
             <section class="settings-card" id="settings-help">
-              ${sectionHeading('?', 'Help &amp; support', 'Get help from Minglora and track your existing support conversations.')}
+              ${sectionHeading('Help &amp; support')}
               <form id="support-ticket-form" class="settings-security-form">
                 <h3>Contact support</h3>
                 <label class="field"><span>What do you need help with?</span><select name="category"><option value="general">General question</option><option value="account">Account</option><option value="security">Security</option><option value="bug">Report a bug</option><option value="abuse">Safety / abuse</option><option value="billing">Billing</option><option value="privacy">Privacy</option></select></label>
@@ -207,7 +207,7 @@
               ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
             <section class="settings-card settings-signout-card" id="settings-signout">
-              ${sectionHeading('Log out', 'Sign out of Minglora on this device. Your account and saved settings will remain intact.')}
+              ${sectionHeading('Log out')}
               <div class="settings-session-actions">
                 <div><strong>Finished using Minglora?</strong><p>Log out securely when you are done on this phone, tablet or computer.</p></div>
                 <button type="button" class="danger settings-logout-button" id="settings-logout-btn">Log out</button>
