@@ -2132,3 +2132,5 @@ body:has(.creator-studio-shell) .creator-studio-nav.live-format-picker{
 @media(prefers-reduced-motion:reduce){
   .creator-stage-svg-ring,.creator-stage-svg-world{animation:none!important;transition:none!important}
 }
+
+#creator-stage-canvas[hidden],.creator-stage-fallback[hidden],.creator-stage-svg-fallback[hidden]{display:none!important}
