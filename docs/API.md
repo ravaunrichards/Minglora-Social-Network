@@ -54,8 +54,36 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | GET | `/api/marketplace/saved` | List saved active listings |
 | GET | `/api/marketplace/mine` | List the signed-in seller's listings and statuses |
 | POST | `/api/marketplace/listings/:id/enquiries` | Send an enquiry to the seller through Minglora Inbox |
+| GET/POST | `/api/marketplace/seller` | Read or submit the signed-in member's seller application |
+| GET | `/api/marketplace/admin/sellers?status=pending` | Moderator-only seller application list |
+| GET | `/api/marketplace/admin/queue` | Moderator-only seller and job-posting review queue |
+| PATCH | `/api/marketplace/admin/sellers/:userId/review` | Moderator seller decision with identity status and audit reason |
+| POST | `/api/marketplace/checkout/quote` | Calculate a short-lived informational quote from server-held listing prices and fulfilment rates |
+| GET | `/api/marketplace/checkout/status` | Return provider, payout, tax and checkout blockers; order creation is currently reported disabled |
+| GET | `/api/marketplace/orders` | List orders where the member is buyer or seller (Supabase-backed path) |
+| POST | `/api/marketplace/orders` | Request idempotent order creation from a valid quote; database gates require provider approval, checkout/payout enablement, verified sellers and a completed tax calculation |
+| GET | `/api/marketplace/orders/:id` | Read an order visible to the buyer or participating seller |
+| POST | `/api/marketplace/orders/:id/cancel` | Request cancellation under the order state rules |
+| GET/POST | `/api/marketplace/bookings` | List participant bookings or request a service appointment from a verified seller |
+| PATCH | `/api/marketplace/bookings/:id` | Seller accepts/declines or marks provider completion; buyer may cancel or confirm completion |
 
-Marketplace photos use signed upload endpoints with `slot=marketplace`. Checkout, orders, refunds, escrow, seller payouts, shipping, tax and appointment booking are not yet implemented.
+Marketplace photos use signed upload endpoints with `slot=marketplace`. Checkout quotes are informational; they do not reserve stock or take payment. The SQL order path includes idempotency and atomic inventory reservations, but the public checkout-status response currently reports `orderCreationEnabled: false`. Live payment capture, seller settlement/payouts, refunds, tax/customs and buyer protection remain disabled or unfinished. Service booking requests do not collect payment. Local JSON development mode does not provide the normalized transactional Marketplace store.
+
+## Jobs
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/jobs?q=...&category=...&location=...` | Search published, non-expired vacancies |
+| GET | `/api/jobs/mine` | List the signed-in employer's vacancies |
+| GET | `/api/jobs/applications/mine` | List the signed-in candidate's applications |
+| POST | `/api/jobs` | Submit an employer vacancy for moderator review |
+| PATCH | `/api/jobs/:id/review` | Moderator publishes or rejects a pending vacancy with a reason |
+| PATCH | `/api/jobs/:id` | Employer pauses or closes an open vacancy |
+| POST | `/api/jobs/:id/applications` | Candidate submits an application and cover letter |
+| GET | `/api/jobs/:id/applications` | Employer reviews applications for their vacancy |
+| PATCH | `/api/jobs/applications/:id` | Employer reviews, shortlists, rejects or hires; candidate may withdraw |
+
+Jobs are separate from Marketplace payments and the commerce ledger. Resume upload, employer verification, interview scheduling, offer documents and payroll are not implemented.
 
 ## Friends and groups
 
