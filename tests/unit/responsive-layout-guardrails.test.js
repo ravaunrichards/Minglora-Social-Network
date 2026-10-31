@@ -38,6 +38,23 @@ test('phone overlays stay clear of the fixed bottom navigation and device safe a
   assert.ok(css.includes('@media(max-width:760px){.mobile-nav{height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}}'));
 });
 
+test('desktop navigation is centred in the available lane between search and notifications', async () => {
+  const css = await read('public/styles.css');
+  const html = await read('public/index.html');
+  const desktopLayout = css.slice(css.lastIndexOf('/* Desktop header: reserve the true middle lane'));
+  assert.match(desktopLayout, /\.topbar\{\s*display:flex!important/);
+  assert.match(desktopLayout, /\.top-left\{\s*flex:0 1 410px/);
+  assert.match(desktopLayout, /\.search-box\{\s*flex:1 1 180px/);
+  assert.match(desktopLayout, /\.top-nav\{\s*flex:1 1 0/);
+  assert.match(desktopLayout, /justify-content:safe center/);
+  assert.match(desktopLayout, /overflow-x:auto/);
+  assert.match(desktopLayout, /\.top-nav \.nav-item\{\s*flex:1 1 72px/);
+  assert.match(desktopLayout, /min-width:52px/);
+  assert.match(desktopLayout, /\.top-actions\{\s*flex:0 0 auto/);
+  assert.ok(html.indexOf('id="search-form"') < html.indexOf('class="top-nav"'));
+  assert.ok(html.indexOf('class="top-nav"') < html.indexOf('id="notifications-btn"'));
+});
+
 test('dialogs can scroll on short screens instead of being cut off', async () => {
   const css = await read('public/styles.css');
   assert.ok(ruleFor(css, '.modal-backdrop').includes('overflow-y:auto'));
@@ -47,7 +64,7 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261031-creator-nav-fixed-1'));
-  assert.ok(worker.includes('minglora-shell-v26-creator-nav-fixed'));
-  assert.ok(worker.includes('styles.css?v=20261031-creator-nav-fixed-1'));
+  assert.ok(html.includes('styles.css?v=20261031-centered-header-tabs-1'));
+  assert.ok(worker.includes('minglora-shell-v27-centered-header-tabs'));
+  assert.ok(worker.includes('styles.css?v=20261031-centered-header-tabs-1'));
 });
