@@ -4,6 +4,8 @@ The active Creator Studio is implemented in the main Minglora browser client at 
 
 ## Active workspace
 
+Creator Studio is part of Minglora's shared application experience, not a separate visual product. It keeps the global desktop navigation and app sidebar, uses the account's Theme Centre palette for its workspace surfaces and controls, and exposes its creator sections through an in-app workspace bar. Audio LIVE and Video LIVE remain separate broadcast formats inside the same LIVE player and use one selected room-theme system.
+
 - Overview with creator profile metrics, recent publications, creator tool shortcuts and a real WebGL-rendered 3D production-stage scene.
 - Content library for the member's actual profile posts and media attached to those posts, including edit and delete through authenticated post APIs.
 - Create and publish using the existing secure media picker, resumable upload preparation/completion flow and `POST /api/posts`.
