@@ -59,7 +59,7 @@ test('PayPal partner auth assertion follows the required two-part JWT format',()
   assert.throws(()=>buildMarketplacePayPalAuthAssertion('','merchant-123'));
 });
 
-test('seller referral requests business marketplace payment, refund and platform-fee capabilities',()=>{
+test('seller referral requests business marketplace payment and refund capabilities',()=>{
   const payload=buildMarketplacePayPalReferralPayload({
     trackingId:'seller-123',
     returnUrl:'https://minglora-social-network.onrender.com/?marketplace=paypal-onboarding',
@@ -81,7 +81,7 @@ test('only PayPal REST transaction currencies and supported two-decimal amounts 
   assert.equal(isMarketplacePayPalCurrencySupported('JPY'),false);
   assert.equal(marketplaceMinorToPayPalValue(1250,'USD'),'12.50');
   assert.throws(()=>marketplaceMinorToPayPalValue(1250,'JMD'),/FX quote/);
-  assert.throws(()=>marketplaceMinorToPayPalValue(1,'USD'));
+  assert.throws(()=>marketplaceMinorToPayPalValue(1.5,'USD'),/positive integer/);
 });
 
 test('multi-seller checkout creates one PayPal purchase unit and platform fee per seller',()=>{
@@ -89,6 +89,8 @@ test('multi-seller checkout creates one PayPal purchase unit and platform fee pe
     orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     currency:'USD',
     attributionId:'MINGLORA_BN',
+    returnUrl:'https://minglora-social-network.onrender.com/?marketplace=order-return',
+    cancelUrl:'https://minglora-social-network.onrender.com/?marketplace=order-cancel',
     sellerOrders:[sellerOrder1,sellerOrder2]
   });
   assert.equal(result.intent,'CAPTURE');
