@@ -357,7 +357,7 @@ async function publicGroupPost(post) {
 async function publicMarketplaceListing(listing,viewerId){
   const media=await Promise.all((listing.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===listing.sellerId&&item.slot==='marketplace'&&item.status!=='deleted');if(!asset)return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   const {mediaIds,...safeListing}=listing;
-  return {...safeListing,media:media.filter(Boolean),seller:safeUser(db.users.find(member=>member.id===listing.sellerId),viewerId),isSaved:(db.marketplaceSaved||[]).some(item=>item.userId===viewerId&&item.listingId===listing.id)};
+  return {...safeListing,media:media.filter(Boolean),seller:listing.seller||safeUser(db.users.find(member=>member.id===listing.sellerId),viewerId),isSaved:typeof listing.isSaved==='boolean'?listing.isSaved:(db.marketplaceSaved||[]).some(item=>item.userId===viewerId&&item.listingId===listing.id)};
 }
 async function publicPagePost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&(item.slot==='page'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
@@ -819,6 +819,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/marketplace/categories')return json(res,200,{productCategories:MARKETPLACE_PRODUCT_CATEGORIES,serviceCategories:MARKETPLACE_SERVICE_CATEGORIES,currencies:MARKETPLACE_CURRENCIES});
       if(method==='GET'&&p==='/api/marketplace/listings'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'browse',q:url.searchParams.get('q')||'',kind:url.searchParams.get('kind')||'',category:url.searchParams.get('category')||'',location:url.searchParams.get('location')||'',sort:url.searchParams.get('sort')||'recent',limit:Math.min(60,Math.max(1,Number(url.searchParams.get('limit')||36)||36))});const listings=await Promise.all((result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId)).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings,total:listings.length});}
         const q=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),kind=String(url.searchParams.get('kind')||''),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120),sort=String(url.searchParams.get('sort')||'recent');
         let listings=(db.marketplaceListings||[]).filter(item=>isMarketplaceListingActive(item)&&!blockedBetween(user.id,item.sellerId));
         if(kind==='product'||kind==='service')listings=listings.filter(item=>item.kind===kind);
@@ -832,16 +833,18 @@ async function route(req, res) {
         return json(res,200,{listings:await Promise.all(listings.slice(0,limit).map(item=>publicMarketplaceListing(item,user.id))),total});
       }
       if(method==='GET'&&p==='/api/marketplace/mine'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'mine',limit:60});const listings=await Promise.all((result.listings||[]).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings});}
         const listings=(db.marketplaceListings||[]).filter(item=>item.sellerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         return json(res,200,{listings:await Promise.all(listings.map(item=>publicMarketplaceListing(item,user.id)))});
       }
       if(method==='GET'&&p==='/api/marketplace/saved'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'saved',limit:60});const listings=await Promise.all((result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId)).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings});}
         const saved=(db.marketplaceSaved||[]).filter(item=>item.userId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const listings=await Promise.all(saved.map(async item=>{const listing=(db.marketplaceListings||[]).find(candidate=>candidate.id===item.listingId);if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return null;return {...await publicMarketplaceListing(listing,user.id),savedAt:item.createdAt};}));
         return json(res,200,{listings:listings.filter(Boolean)});
       }
       if(method==='POST'&&p==='/api/marketplace/listings'){
-        const sellerApproval=(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
+        const sellerApproval=isSupabasePersistence()?(await requestSupabaseState('marketplace_seller_get',{userId:user.id})).seller:(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
         const testBypass=process.env.NODE_ENV==='test'&&process.env.MARKETPLACE_ALLOW_UNVERIFIED_SELLERS==='true';
         if(!testBypass&&(sellerApproval?.status!=='approved'||sellerApproval?.identityStatus!=='verified'))return json(res,403,{error:'Complete the Minglora seller application and identity or business verification before publishing listings.'});
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'External image URLs are not accepted. Upload listing photos from your device.'});
@@ -851,6 +854,7 @@ async function route(req, res) {
         const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='marketplace'&&asset.status==='uploaded'&&asset.mediaType==='image'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more listing photos are unavailable. Upload them again.'});
         const listing={id:uid(),sellerId:user.id,...validation.value,mediaIds,status:'active',views:0,createdAt:now(),updatedAt:now()};
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_sync',{userId:user.id,listing});const synced=result.listing||listing;return json(res,201,{listing:await publicMarketplaceListing(synced,user.id)});}
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo='marketplace:'+listing.id;});
         db.marketplaceListings||=[];db.marketplaceListings.unshift(listing);await saveStore();
         return json(res,201,{listing:await publicMarketplaceListing(listing,user.id)});
