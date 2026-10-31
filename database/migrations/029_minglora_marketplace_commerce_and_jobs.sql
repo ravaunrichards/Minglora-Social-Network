@@ -230,10 +230,10 @@ GRANT EXECUTE ON FUNCTION public.post_marketplace_journal(uuid,text,text,char,te
 CREATE OR REPLACE FUNCTION public.prevent_marketplace_ledger_entry_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $marketplace_immutable$
 BEGIN
   RAISE EXCEPTION 'Marketplace ledger entries are immutable; post a reversing journal instead';
-END $;
+END $marketplace_immutable$;
 DROP TRIGGER IF EXISTS marketplace_ledger_entries_immutable ON public.marketplace_ledger_entries;
 CREATE TRIGGER marketplace_ledger_entries_immutable
 BEFORE UPDATE OR DELETE ON public.marketplace_ledger_entries
