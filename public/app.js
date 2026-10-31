@@ -938,7 +938,6 @@ function creatorEmpty(title,description,icon){
   return "<section class='creator-empty-state'><span>"+creatorIcon(icon||"create")+"</span><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p></section>";
 }
 function creatorStudioChrome(section,content){
-  const s=state.creatorStudio||{};
   const name=creatorProfileName();
   const sections=[
     ["overview","Overview","creator"],
@@ -952,11 +951,10 @@ function creatorStudioChrome(section,content){
   ];
   const nav=sections.map(([id,label,icon])=>"<button type='button' class='creator-studio-nav-item "+(id===section?"active":"")+"' data-creator-section='"+id+"'>"+creatorIcon(icon)+"<span>"+label+"</span>"+(id==="monetization"?"<small>PAYMENTS</small>":"")+"</button>").join("");
   return "<div class='creator-studio-shell' data-creator-section-active='"+section+"'>"+
-    "<header class='creator-studio-topline'><div class='creator-studio-brand'><span class='creator-studio-brand-mark'>M</span><div><strong>Minglora</strong><small>CREATOR STUDIO</small></div></div><div class='creator-studio-top-meta'><span class='creator-studio-account-dot'></span><span>"+esc(name)+"</span><button type='button' class='secondary' data-creator-edit-profile>Edit profile</button></div></header>"+
-    "<section class='creator-studio-heading'><div><span class='creator-eyebrow'>YOUR CREATOR COMMAND CENTER</span><h1>Creator <em>Studio</em></h1><p>Build your audience, publish your work and manage your creator business—all in one place.</p></div><div class='creator-studio-heading-actions'><span class='creator-data-badge'><i></i> Real Minglora account data</span><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create content</button></div></section>"+
-    "<div class='creator-studio-layout'><nav class='creator-studio-nav' aria-label='Creator Studio sections'><span class='creator-studio-nav-heading'>WORKSPACE</span>"+nav+"<div class='creator-studio-nav-divider'></div><button type='button' class='creator-studio-live-handoff' data-creator-open-live>"+creatorIcon("live")+"<span><strong>Open LIVE</strong><small>Broadcast in the separate LIVE experience</small></span><span class='creator-handoff-arrow'>↗</span></button></nav>"+
-    "<div class='creator-studio-content'>"+content+"</div></div>"+
-    "<footer class='creator-studio-footer'><span>Minglora Creator Studio</span><span>Account-backed data · No invented activity or earnings</span></footer></div>";
+    "<section class='creator-studio-heading'><div><span class='creator-eyebrow'>MINGLORA CREATOR WORKSPACE</span><h1>Creator Studio</h1><p>One connected Minglora workspace for creating, publishing, understanding your audience and managing creator activity.</p></div><div class='creator-studio-heading-actions'><span class='creator-account-chip'><i class='creator-studio-account-dot'></i><strong>"+esc(name)+"</strong></span><button type='button' class='secondary' data-creator-edit-profile>Edit profile</button><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create content</button></div></section>"+
+    "<nav class='creator-studio-nav' aria-label='Creator Studio sections'>"+nav+"<span class='creator-studio-nav-spacer'></span><button type='button' class='creator-studio-live-handoff' data-creator-open-live>"+creatorIcon("live")+"<span><strong>Open LIVE</strong><small>Go to your real broadcast room</small></span><span class='creator-handoff-arrow'>↗</span></button></nav>"+
+    "<div class='creator-studio-content'>"+content+"</div>"+
+    "<footer class='creator-studio-footer'><span>Minglora Creator Studio</span><span>Connected to your Minglora account · No invented activity or earnings</span></footer></div>";
 }
 function creatorOverviewMarkup(){
   const s=state.creatorStudio,profile=s.profile||{},insights=profile.profileInsights||{},user=profile.user||{};
