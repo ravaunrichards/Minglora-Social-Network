@@ -920,6 +920,88 @@ Deno.serve(async (req: Request) => {
     return json(200,{listing:{id:data.id,sellerId:data.seller_id,title:data.title,description:data.description,priceMinor:data.price_minor,currency:data.currency,category:data.category,condition:data.condition,location:data.location_label,status:data.status==="archived"?"paused":data.status,kind:data.kind,priceType:data.price_type,quantity:data.quantity,fulfillment:data.fulfillment_options,serviceMode:data.service_mode,tags:data.tags,updatedAt:data.updated_at}});
   }
 
+
+  if (action === "marketplace_listings_list" || action === "marketplace_listing_get") {
+    const userId=String(input.userId||""),mode=String(input.mode||"browse");
+    if(!validUuid(userId))return json(400,{error:"Invalid Marketplace viewer."});
+    if(action==="marketplace_listing_get"&&!validUuid(String(input.listingId||"")))return json(400,{error:"Invalid Marketplace listing ID."});
+    const limit=Math.max(1,Math.min(60,Number(input.limit)||36));
+    const offset=Math.max(0,Math.min(10000,Number(input.offset)||0));
+    let savedRows:any[]=[];
+    let query=admin.from("marketplace_listings").select("*",{count:"exact"});
+    if(action==="marketplace_listing_get"){
+      query=query.eq("id",input.listingId);
+    }else if(mode==="mine"){
+      query=query.eq("seller_id",userId);
+    }else if(mode==="saved"){
+      const {data,error}=await admin.from("marketplace_saved_listings").select("listing_id,created_at")
+        .eq("user_id",userId).order("created_at",{ascending:false}).limit(500);
+      if(error)return json(503,{error:"Saved Marketplace listings could not be loaded."});
+      savedRows=data||[];
+      const ids=savedRows.map((row:any)=>row.listing_id);
+      if(!ids.length)return json(200,{listings:[],total:0});
+      query=query.in("id",ids).eq("status","active");
+    }else{
+      query=query.eq("status","active");
+    }
+    const kind=String(input.kind||"");
+    if(kind==="product"||kind==="service")query=query.eq("kind",kind);
+    if(input.category)query=query.eq("category",String(input.category));
+    const location=String(input.location||"").trim().slice(0,120).replace(/[%_,()]/g," ");
+    if(location)query=query.ilike("location_label","%"+location+"%");
+    const q=String(input.q||"").trim().slice(0,100).replace(/[^\p{L}\p{N}\s-]/gu," ");
+    if(q)query=query.or("title.ilike.%"+q+"%,description.ilike.%"+q+"%,category.ilike.%"+q+"%");
+    const sort=String(input.sort||"recent");
+    if(sort==="price_low")query=query.order("price_minor",{ascending:true,nullsFirst:false});
+    else if(sort==="price_high")query=query.order("price_minor",{ascending:false,nullsFirst:false});
+    else query=query.order("created_at",{ascending:false});
+    if(action==="marketplace_listing_get")query=query.limit(1);
+    else query=query.range(offset,offset+limit-1);
+    const {data:rows,count,error}=await query;
+    if(error)return json(503,{error:"Marketplace listings could not be loaded."});
+    const listings=rows||[];
+    if(action==="marketplace_listing_get"&&!listings.length)return json(404,{error:"Marketplace listing not found."});
+    if(action==="marketplace_listing_get"&&listings[0].status!=="active"&&listings[0].seller_id!==userId){
+      return json(404,{error:"Marketplace listing not found."});
+    }
+    const listingIds=listings.map((row:any)=>row.id);
+    const sellerIds=[...new Set(listings.map((row:any)=>row.seller_id))];
+    const [mediaResult,storeResult,profileResult,savedResult]=await Promise.all([
+      listingIds.length?admin.from("listing_media").select("listing_id,asset_id,sort_order").in("listing_id",listingIds).order("sort_order",{ascending:true}):Promise.resolve({data:[],error:null}),
+      sellerIds.length?admin.from("marketplace_seller_public_profiles").select("user_id,store_name,status").in("user_id",sellerIds):Promise.resolve({data:[],error:null}),
+      sellerIds.length?admin.from("profiles").select("id,display_name,username").in("id",sellerIds):Promise.resolve({data:[],error:null}),
+      listingIds.length?admin.from("marketplace_saved_listings").select("listing_id").eq("user_id",userId).in("listing_id",listingIds):Promise.resolve({data:[],error:null})
+    ]);
+    if(mediaResult.error||storeResult.error||profileResult.error||savedResult.error)return json(503,{error:"Marketplace listing details could not be loaded."});
+    const mediaMap=new Map<string,string[]>();
+    for(const media of mediaResult.data||[]){
+      const current=mediaMap.get(media.listing_id)||[];
+      current.push(media.asset_id);mediaMap.set(media.listing_id,current);
+    }
+    const storeMap=new Map((storeResult.data||[]).map((row:any)=>[row.user_id,row]));
+    const profileMap=new Map((profileResult.data||[]).map((row:any)=>[row.id,row]));
+    const savedSet=new Set((savedResult.data||[]).map((row:any)=>row.listing_id));
+    const savedAtMap=new Map(savedRows.map((row:any)=>[row.listing_id,row.created_at]));
+    const mapped=listings.map((row:any)=>{
+      const profile=profileMap.get(row.seller_id),store=storeMap.get(row.seller_id);
+      return {
+        id:row.id,sellerId:row.seller_id,title:row.title,description:row.description,
+        priceMinor:row.price_minor,currency:row.currency,category:row.category,condition:row.condition,
+        location:row.location_label,status:row.status==="archived"?"paused":row.status,
+        kind:row.kind,priceType:row.price_type,quantity:row.quantity,
+        fulfillment:row.fulfillment_options,serviceMode:row.service_mode,tags:row.tags||[],
+        mediaIds:mediaMap.get(row.id)||[],seller:{
+          id:row.seller_id,name:profile?.display_name||store?.store_name||"Minglora seller",
+          username:profile?.username||"",storeName:store?.store_name||null
+        },
+        isSaved:savedSet.has(row.id),savedAt:savedAtMap.get(row.id)||null,
+        createdAt:row.created_at,updatedAt:row.updated_at
+      };
+    });
+    if(action==="marketplace_listing_get")return json(200,{listing:mapped[0]});
+    return json(200,{listings:mapped,total:count??mapped.length});
+  }
+
   if (action === "marketplace_checkout_quote") {
     const buyerId=String(input.buyerId||"");
     if(!validUuid(buyerId))return json(400,{error:"Sign in before preparing a checkout quote."});
