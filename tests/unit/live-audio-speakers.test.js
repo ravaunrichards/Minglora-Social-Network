@@ -70,3 +70,17 @@ test('LIVE participant leave records an ended connection for viewers and speaker
   assert.match(edge,/status:"left",left_at:new Date\(\)\.toISOString\(\)/);
   assert.match(edge,/\.in\("status",\["requested","invited","accepted","connected"\]\)/);
 });
+
+test('Audio LIVE roster appears before speech and reflects microphone publication and mute state', () => {
+  assert.match(app,/refreshSpeakerRoster\(\);\s*try\{/);
+  assert.match(app,/for\(let attempt=0;attempt<5&&!microphonePublished;attempt\+\+\)/);
+  assert.match(app,/refreshSpeakerRoster\(\);\}catch\(error\)\{toast\(error\.message\);\}\}\);/);
+});
+
+test('LIVE participant confirmation retries until the server verifies LiveKit presence', () => {
+  assert.match(app,/async function syncLiveParticipantPresence\(session\)/);
+  assert.match(app,/for\(let attempt=0;attempt<4;attempt\+\+\)/);
+  assert.match(app,/liveParticipantSyncTimer=setInterval/);
+  assert.match(app,/await syncLiveParticipantPresence\(session\)/);
+  assert.match(app,/function stopLiveParticipantSync\(\)/);
+});
