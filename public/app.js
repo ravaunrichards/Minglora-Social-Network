@@ -2945,11 +2945,12 @@ async function renderMarketplaceBookings(){
 }
 const JOB_CATEGORY_OPTIONS=[['technology','Technology'],['administration','Administration'],['customer_service','Customer service'],['sales_marketing','Sales & marketing'],['finance','Finance'],['healthcare','Healthcare'],['education','Education'],['construction_trades','Construction & trades'],['transport_logistics','Transport & logistics'],['hospitality','Hospitality'],['creative_media','Creative & media'],['other','Other']];
 async function renderJobs(mode='browse'){
+  if(mode==='applications')return renderMyJobApplications();
   activateSilent('jobs');
   const query=$('#jobs-query')?.value?.trim()||'',params=new URLSearchParams();if(query)params.set('q',query);
   const data=mode==='mine'?(await api('/jobs/mine')):(await api('/jobs'+(params.toString()?'?'+params.toString():'')));
   const jobs=data.jobs||[];
-  let html='<section class="marketplace-hero marketplace-jobs-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA CAREERS</span><h1>Find your next opportunity.</h1><p>Discover vacancies shared by employers and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="jobs-create">＋ Post a vacancy</button></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✧</span></div></section><nav class="marketplace-tabs" aria-label="Jobs sections"><button type="button" data-jobs-mode="browse" class="'+(mode==='browse'?'active':'')+'">Find jobs</button><button type="button" data-jobs-mode="mine" class="'+(mode==='mine'?'active':'')+'">My vacancies</button><button type="button" id="jobs-back-marketplace">Marketplace</button></nav>';
+  let html='<section class="marketplace-hero marketplace-jobs-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA CAREERS</span><h1>Find your next opportunity.</h1><p>Discover vacancies shared by employers and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="jobs-create">＋ Post a vacancy</button></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✧</span></div></section><nav class="marketplace-tabs" aria-label="Jobs sections"><button type="button" data-jobs-mode="browse" class="'+(mode==='browse'?'active':'')+'">Find jobs</button><button type="button" data-jobs-mode="mine" class="'+(mode==='mine'?'active':'')+'">My vacancies</button><button type="button" data-jobs-mode="applications">My applications</button><button type="button" id="jobs-back-marketplace">Marketplace</button></nav>';
   if(mode==='browse')html+='<form class="marketplace-search" id="jobs-search-form"><label class="marketplace-search-field"><span>⌕</span><input id="jobs-query" name="q" value="'+esc(query)+'" placeholder="Search roles, companies and skills"></label><button type="submit" class="primary">Search jobs</button></form>';
   html+='<div class="marketplace-section-heading"><div><span class="marketplace-eyebrow">CAREER OPPORTUNITIES</span><h2>'+(mode==='mine'?'Your vacancies':'Open positions')+'</h2></div><span class="marketplace-results-count">'+jobs.length+' roles</span></div>';
   if(!jobs.length)html+='<section class="card empty-state"><h3>'+(mode==='mine'?'You have not posted a vacancy yet':'No matching jobs yet')+'</h3><p>'+(mode==='mine'?'Post a clear vacancy with responsibilities, location, work arrangement and application deadline.':'Try a different search or check back after employers publish vacancies.')+'</p>'+(mode==='mine'?'<button class="primary" id="jobs-create-empty">Post a vacancy</button>':'')+'</section>';
@@ -2964,6 +2965,28 @@ async function renderJobs(mode='browse'){
   $('#jobs-search-form')?.addEventListener('submit',event=>{event.preventDefault();renderJobs('browse');});
   document.querySelectorAll('[data-job-apply]').forEach(button=>button.addEventListener('click',()=>openJobApplication(button.dataset.jobApply)));
   document.querySelectorAll('[data-job-applications]').forEach(button=>button.addEventListener('click',()=>openJobApplications(button.dataset.jobApplications)));
+}
+
+async function renderMyJobApplications(){
+  activateSilent('jobs');
+  const data=await api('/jobs/applications/mine'),applications=data.applications||[];
+  let html='<section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">CAREER ACTIVITY</span><h1>My applications</h1></div></section>';
+  html+='<nav class="marketplace-tabs"><button type="button" data-jobs-mode="browse">Find jobs</button><button type="button" data-jobs-mode="mine">My vacancies</button><button type="button" data-jobs-mode="applications" class="active">My applications</button><button type="button" id="jobs-back-marketplace">Marketplace</button></nav>';
+  if(!applications.length)html+='<section class="card empty-state"><h3>No applications submitted</h3><p>Apply for an open Minglora vacancy to track its status here.</p><button class="primary" id="applications-find-jobs">Find jobs</button></section>';
+  else html+='<div class="marketplace-jobs-list">'+applications.map(item=>{
+    const job=item.job||{},canWithdraw=['submitted','reviewed','shortlisted'].includes(item.status);
+    return '<article class="card marketplace-job-card"><span class="marketplace-status">'+esc(item.status.replaceAll('_',' '))+'</span><h3>'+esc(job.title||'Vacancy no longer available')+'</h3><strong>'+esc(job.companyName||'')+'</strong><p>'+esc(job.location||'Remote')+' · '+esc(job.employmentType||'')+'</p><small>Submitted '+new Date(item.createdAt).toLocaleDateString()+'</small>'+(canWithdraw?'<div class="marketplace-card-actions"><button class="secondary" data-withdraw-application="'+esc(item.id)+'">Withdraw application</button></div>':'')+'</article>';
+  }).join('')+'</div>';
+  setContent(html);
+  document.querySelectorAll('[data-jobs-mode]').forEach(button=>button.addEventListener('click',()=>renderJobs(button.dataset.jobsMode)));
+  $('#jobs-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
+  $('#applications-find-jobs')?.addEventListener('click',()=>renderJobs('browse'));
+  document.querySelectorAll('[data-withdraw-application]').forEach(button=>button.addEventListener('click',async()=>{
+    if(!window.confirm('Withdraw this job application?'))return;
+    button.disabled=true;
+    try{await api('/jobs/applications/'+encodeURIComponent(button.dataset.withdrawApplication),{method:'PATCH',body:JSON.stringify({status:'withdrawn'})});toast('Application withdrawn.');await renderMyJobApplications();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
 }
 function openJobComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
