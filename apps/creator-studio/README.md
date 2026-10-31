@@ -4,6 +4,9 @@ The active Creator Studio is implemented in the main Minglora browser client at 
 
 ## Active workspace
 
+- The Creator Studio section navigation reuses the same LIVE broadcast-format card structure and dimensional icon treatment; the Studio also offers direct Video LIVE and Audio LIVE handoffs using the same controls as the LIVE start screen.
+- A global header palette switcher gives members immediate access to all supported app colour palettes and LIVE room palettes. Changes are persisted through the authenticated settings API; a host can also update the active room through the host-only LIVE theme endpoint.
+
 Creator Studio is part of Minglora's shared application experience, not a separate visual product. It keeps the global desktop navigation and app sidebar, uses the account's Theme Centre palette for its workspace surfaces and controls, and exposes its creator sections through an in-app workspace bar. Audio LIVE and Video LIVE remain separate broadcast formats inside the same LIVE player and use one selected room-theme system.
 
 - Overview with creator profile metrics, recent publications, creator tool shortcuts and a real WebGL-rendered 3D production-stage scene.
