@@ -72,6 +72,8 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
+    "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
+    "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
@@ -326,16 +328,18 @@ Deno.serve(async (req: Request) => {
     const broadcastId = String(input.id || ""), hostId = String(input.hostId || "");
     const title = String(input.title || "").trim(), description = String(input.description || "");
     const audience = String(input.audience || "public"), roomRef = String(input.roomRef || "");
+    const broadcastType = String(input.broadcastType || "video_audio");
     if (!validUuid(broadcastId) || !validUuid(hostId) || !title || title.length > 180 ||
         description.length > 2000 || roomRef.length < 1 || roomRef.length > 200 ||
-        !["public", "friends", "followers", "private", "subscribers"].includes(audience)) {
+        !["public", "friends", "followers", "private", "subscribers"].includes(audience) ||
+        !["video_audio", "audio_only"].includes(broadcastType)) {
       return json(400, { error: "Invalid Minglora LIVE broadcast details." });
     }
     const startedAt = new Date().toISOString();
     const { data, error } = await admin.from("live_broadcasts").insert({
-      id: broadcastId, host_id: hostId, title, description, audience,
+      id: broadcastId, host_id: hostId, title, description, audience, broadcast_type: broadcastType,
       room_ref: roomRef, status: "live", started_at: startedAt
-    }).select("id,host_id,title,description,audience,room_ref,status,started_at").single();
+    }).select("id,host_id,title,description,audience,broadcast_type,room_ref,status,started_at").single();
     if (error) return fail(error, "Minglora could not save this LIVE session.");
     return json(201, { broadcast: data });
   }
@@ -349,6 +353,98 @@ Deno.serve(async (req: Request) => {
       .select("id,status,ended_at").maybeSingle();
     if (error) return json(503, { error: "Minglora could not close the LIVE session." });
     return json(200, { broadcast: data || { id: broadcastId, status: "ended" } });
+  }
+
+  if (action === "live_speaker_request") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(userId))return json(400,{error:"Invalid LIVE speaker request."});
+    const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
+    if(broadcastError||!broadcast||broadcast.status!=="live")return json(404,{error:"LIVE session not found."});
+    if(broadcast.host_id===userId)return json(400,{error:"The host is already on stage."});
+    const {data:existing}=await admin.from("live_participants").select("role,status")
+      .eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
+    if(existing&&["accepted","connected"].includes(existing.status))return json(409,{error:"You already have speaker access."});
+    const {data,error}=await admin.from("live_participants").upsert({
+      broadcast_id:broadcastId,user_id:userId,role:"guest",status:"requested",joined_at:null,left_at:null
+    },{onConflict:"broadcast_id,user_id"}).select("broadcast_id,user_id,role,status,joined_at").single();
+    if(error)return fail(error,"Minglora could not save your speaker request.");
+    return json(201,{request:data});
+  }
+
+  if (action === "live_speaker_requests_list") {
+    const broadcastId=String(input.broadcastId||""), hostId=String(input.hostId||"");
+    if(!validUuid(broadcastId)||!validUuid(hostId))return json(400,{error:"Invalid LIVE speaker request lookup."});
+    const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
+    if(broadcastError||!broadcast||broadcast.host_id!==hostId)return json(404,{error:"LIVE session not found."});
+    const {data:rows,error}=await admin.from("live_participants")
+      .select("broadcast_id,user_id,role,status,joined_at,left_at")
+      .eq("broadcast_id",broadcastId).eq("role","guest")
+      .in("status",["requested","accepted","connected"])
+      .order("joined_at",{ascending:true});
+    if(error)return json(503,{error:"Speaker requests could not be loaded."});
+    const ids=(rows||[]).map(row=>row.user_id);
+    const {data:profiles}=ids.length
+      ?await admin.from("profiles").select("id,display_name,username,avatar_url").in("id",ids)
+      :{data:[]};
+    const profileMap=new Map((profiles||[]).map(profile=>[profile.id,profile]));
+    return json(200,{requests:(rows||[]).map(row=>({...row,user:profileMap.get(row.user_id)||null}))});
+  }
+
+  if (action === "live_speaker_request_status") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(userId))return json(400,{error:"Invalid LIVE speaker request status lookup."});
+    const {data,error}=await admin.from("live_participants")
+      .select("broadcast_id,user_id,role,status,joined_at,left_at")
+      .eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
+    if(error)return json(503,{error:"Speaker request status is unavailable."});
+    return json(200,{request:data||null});
+  }
+
+  if (action === "live_speaker_request_review") {
+    const broadcastId=String(input.broadcastId||""), hostId=String(input.hostId||"");
+    const speakerId=String(input.speakerId||""), decision=String(input.decision||"");
+    if(!validUuid(broadcastId)||!validUuid(hostId)||!validUuid(speakerId)||!["accept","reject"].includes(decision))
+      return json(400,{error:"Choose a valid speaker request decision."});
+    const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
+    if(broadcastError||!broadcast||broadcast.host_id!==hostId||broadcast.status!=="live")
+      return json(404,{error:"LIVE session not found."});
+    const {data:pending,error:pendingError}=await admin.from("live_participants")
+      .select("user_id,status").eq("broadcast_id",broadcastId).eq("user_id",speakerId).eq("status","requested").maybeSingle();
+    if(pendingError||!pending)return json(409,{error:"This speaker request is no longer pending."});
+    if(decision==="accept"){
+      const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
+        .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["accepted","connected"]);
+      if(countError)return json(503,{error:"Minglora could not verify the stage capacity."});
+      if(Number(count||0)>=8)return json(409,{error:"The eight guest speaker places are full."});
+    }
+    const status=decision==="accept"?"accepted":"rejected";
+    const {data,error}=await admin.from("live_participants").update({role:"guest",status})
+      .eq("broadcast_id",broadcastId).eq("user_id",speakerId).select("broadcast_id,user_id,role,status").single();
+    if(error)return fail(error,"Minglora could not update this speaker request.");
+    return json(200,{request:data});
+  }
+
+  if (action === "live_speaker_mark_connected") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(userId))return json(400,{error:"Invalid LIVE speaker connection."});
+    const {data,error}=await admin.from("live_participants").update({status:"connected",joined_at:new Date().toISOString(),left_at:null})
+      .eq("broadcast_id",broadcastId).eq("user_id",userId).eq("role","guest").eq("status","accepted")
+      .select("user_id,status").maybeSingle();
+    if(error||!data)return json(409,{error:"Your speaker access is no longer active. Request to speak again."});
+    return json(200,{participant:data});
+  }
+
+  if (action === "live_speaker_mark_left") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(userId))return json(400,{error:"Invalid LIVE speaker departure."});
+    const {data,error}=await admin.from("live_participants").update({status:"left",left_at:new Date().toISOString()})
+      .eq("broadcast_id",broadcastId).eq("user_id",userId).eq("role","guest")
+      .in("status",["accepted","connected"]).select("user_id,status").maybeSingle();
+    if(error)return json(503,{error:"Minglora could not update the speaker connection."});
+    return json(200,{participant:data||null});
   }
 
   if (action === "live_chat_send") {
