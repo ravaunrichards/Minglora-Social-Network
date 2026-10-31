@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue",
-    "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_checkout_quote", "marketplace_checkout_status",
+    "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
     "marketplace_job_update", "marketplace_job_apply", "marketplace_job_applications_for_job",
@@ -560,9 +560,9 @@ Deno.serve(async (req: Request) => {
     const story={...image,"video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov"};
     const communityMedia={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4"};
     const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","application/pdf":"pdf","text/plain":"txt","text/csv":"csv","application/zip":"zip","application/x-zip-compressed":"zip","application/msword":"doc","application/vnd.ms-excel":"xls","application/vnd.ms-powerpoint":"ppt","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"xlsx","application/vnd.openxmlformats-officedocument.presentationml.presentation":"pptx"};
-    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="message"?message:{};
-    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":"";
-    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="post"?500*1024*1024:0;
+    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="marketplace"?image:slot==="message"?message:{};
+    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"||slot==="marketplace"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":"";
+    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="marketplace"?15*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
@@ -651,6 +651,20 @@ Deno.serve(async (req: Request) => {
       if(error||!data?.signedUrl)return json(502,{error:"The upload completed but Minglora could not prepare a preview."});
       result.signedUrl=data.signedUrl;
     }
+    const assetId=String(input.assetId||"");
+    const slot=String(input.slot||"");
+    const originalName=String(input.originalName||"").trim().slice(0,255);
+    if(!uuidPattern.test(assetId)||!["avatar","cover","post","story","group","page","message","marketplace"].includes(slot)){
+      return json(400,{error:"A valid upload asset ID and media slot are required."});
+    }
+    const assetStatus=slot==="avatar"||slot==="cover"?"attached":"uploaded";
+    const {error:assetError}=await admin.from("media_assets").upsert({
+      id:assetId,owner_id:ownerId,storage_key:objectPath,storage_bucket:bucket,
+      media_type:mediaType,mime_type:mimeType,byte_size:byteSize,
+      processing_status:"ready",slot,asset_status:assetStatus,original_name:originalName,
+      attached_to:assetStatus==="attached"?"profile:"+slot:null,completed_at:new Date().toISOString()
+    },{onConflict:"id"});
+    if(assetError)return json(503,{error:"Upload completed in Storage but media metadata could not be registered. Retry completion."});
     return json(200,result);
   }
 
@@ -664,6 +678,8 @@ Deno.serve(async (req: Request) => {
     }
     const {error}=await admin.storage.from(bucket).remove([objectPath]);
     if(error)return json(502,{error:"Minglora could not remove the stored file."});
+    const {error:assetError}=await admin.from("media_assets").update({asset_status:"deleted",processing_status:"deleted"}).eq("owner_id",ownerId).eq("storage_bucket",bucket).eq("storage_key",objectPath);
+    if(assetError)return json(503,{error:"File was removed from Storage but its media record could not be retired."});
     return json(200,{ok:true});
   }
 
@@ -855,40 +871,53 @@ Deno.serve(async (req: Request) => {
       .select("id,seller_id").eq("id",listing.id).maybeSingle();
     if(existingError)return json(503,{error:"Marketplace listing could not be checked."});
     if(existing&&existing.seller_id!==userId)return json(409,{error:"Listing ownership conflict."});
-    const {data:saved,error}=await admin.from("marketplace_listings").upsert(row,{onConflict:"id"}).select("*").single();
-    if(error)return fail(error,"Marketplace listing could not be saved to the commerce database.");
     const mediaIds=[...new Set((Array.isArray(listing.mediaIds)?listing.mediaIds:[]).map(String))];
     if(mediaIds.length>8)return json(400,{error:"A listing may contain no more than eight photos."});
     if(mediaIds.length){
-      const {data:assets,error:assetError}=await admin.from("media_assets").select("id,owner_id").in("id",mediaIds);
-      if(assetError||(assets||[]).length!==mediaIds.length||(assets||[]).some((asset:any)=>asset.owner_id!==userId)){
-        return json(400,{error:"One or more listing photos are not owned by this seller."});
-      }
+      const {data:assets,error:assetError}=await admin.from("media_assets")
+        .select("id,owner_id,slot,asset_status,media_type,storage_bucket,storage_key").in("id",mediaIds);
+      if(assetError||(assets||[]).length!==mediaIds.length||(assets||[]).some((asset:any)=>
+        asset.owner_id!==userId||asset.slot!=="marketplace"||asset.asset_status!=="uploaded"||
+        asset.media_type!=="image"||!asset.storage_bucket||!asset.storage_key
+      ))return json(400,{error:"One or more listing photos are not completed Marketplace images owned by this seller."});
     }
+    const {data:existing,error:existingError}=await admin.from("marketplace_listings")
+      .select("id,seller_id").eq("id",listing.id).maybeSingle();
+    if(existingError)return json(503,{error:"Marketplace listing could not be checked."});
+    if(existing&&existing.seller_id!==userId)return json(409,{error:"Listing ownership conflict."});
+    const {data:saved,error}=await admin.from("marketplace_listings").upsert(row,{onConflict:"id"}).select("*").single();
+    if(error)return fail(error,"Marketplace listing could not be saved to the commerce database.");
     const {error:deleteError}=await admin.from("listing_media").delete().eq("listing_id",listing.id);
     if(deleteError)return json(503,{error:"Listing saved but photo associations could not be refreshed."});
     if(mediaIds.length){
       const {error:mediaError}=await admin.from("listing_media").insert(mediaIds.map((assetId:string,index:number)=>({listing_id:listing.id,asset_id:assetId,sort_order:index})));
       if(mediaError)return json(503,{error:"Listing saved but photo associations could not be refreshed."});
+      const {error:attachError}=await admin.from("media_assets").update({asset_status:"attached",attached_to:"marketplace:"+listing.id}).in("id",mediaIds).eq("owner_id",userId);
+      if(attachError)return json(503,{error:"Listing photos were linked but their asset state could not be updated."});
     }
-    return json(200,{listing:saved});
+    return json(200,{listing:{id:saved.id,sellerId:saved.seller_id,title:saved.title,description:saved.description,
+      priceMinor:saved.price_minor,currency:saved.currency,category:saved.category,condition:saved.condition,
+      location:saved.location_label,status:saved.status==="archived"?"paused":saved.status,kind:saved.kind,
+      priceType:saved.price_type,quantity:saved.quantity,fulfillment:saved.fulfillment_options,
+      serviceMode:saved.service_mode,tags:saved.tags,mediaIds,createdAt:saved.created_at,updatedAt:saved.updated_at}});
   }
 
   if (action === "marketplace_listing_set_status") {
     const userId=String(input.userId||""),listingId=String(input.listingId||""),status=String(input.status||"");
     if(!validUuid(userId)||!validUuid(listingId)||!["active","paused","sold","removed"].includes(status))return json(400,{error:"Invalid listing status change."});
-    const {data:listing,error:lookupError}=await admin.from("marketplace_listings").select("id,seller_id,kind,quantity")
+    const {data:listing,error:lookupError}=await admin.from("marketplace_listings").select("id,seller_id,kind,quantity,reserved_quantity")
       .eq("id",listingId).maybeSingle();
     if(lookupError)return json(503,{error:"Marketplace listing could not be loaded."});
     if(!listing)return json(404,{error:"Marketplace listing not found."});
     if(listing.seller_id!==userId)return json(403,{error:"Only the seller can manage this listing."});
     if(status==="active"&&listing.kind==="product"&&Number(listing.quantity)<1)return json(409,{error:"Add available stock before reactivating this product."});
+    if(status==="sold"&&Number(listing.reserved_quantity||0)>0)return json(409,{error:"This product has stock reserved by a pending order. Resolve that order before marking it sold."});
     const dbStatus=status==="paused"?"archived":status;
     const {data,error}=await admin.from("marketplace_listings").update({
       status:dbStatus,quantity:status==="sold"?0:listing.quantity,updated_at:new Date().toISOString()
     }).eq("id",listingId).select("*").single();
     if(error)return fail(error,"Marketplace listing status could not be updated.");
-    return json(200,{listing:data});
+    return json(200,{listing:{id:data.id,sellerId:data.seller_id,title:data.title,description:data.description,priceMinor:data.price_minor,currency:data.currency,category:data.category,condition:data.condition,location:data.location_label,status:data.status==="archived"?"paused":data.status,kind:data.kind,priceType:data.price_type,quantity:data.quantity,fulfillment:data.fulfillment_options,serviceMode:data.service_mode,tags:data.tags,updatedAt:data.updated_at}});
   }
 
   if (action === "marketplace_checkout_quote") {
@@ -1138,6 +1167,9 @@ Deno.serve(async (req: Request) => {
     const userId=String(input.userId||""),listingId=String(input.listingId||""),save=input.save===true;
     if(!validUuid(userId)||!validUuid(listingId))return json(400,{error:"Invalid saved listing."});
     if(save){
+      const {data:listing,error:listingError}=await admin.from("marketplace_listings").select("id,status").eq("id",listingId).maybeSingle();
+      if(listingError)return json(503,{error:"Marketplace listing could not be checked."});
+      if(!listing||listing.status!=="active")return json(404,{error:"Marketplace listing not found."});
       const {error}=await admin.from("marketplace_saved_listings").upsert({user_id:userId,listing_id:listingId},{onConflict:"user_id,listing_id",ignoreDuplicates:true});
       if(error)return fail(error,"Marketplace listing could not be saved.");
     }else{
