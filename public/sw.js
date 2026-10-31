@@ -1,6 +1,6 @@
 /* Minglora service worker: versioned shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v3-profile-security';
-const SHELL=['/','/styles.css','/app.js','/settings.js'];
+const CACHE_NAME='minglora-shell-v4-profile-about';
+const SHELL=['/','/styles.css','/app.js?v=20261031-profile-about-only-1','/settings.js'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
