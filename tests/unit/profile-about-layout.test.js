@@ -42,9 +42,9 @@ test('browser reloads the corrected profile script and replaces the old service-
   const indexHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
   const serverSource = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
-  assert.match(indexHtml, /src="\/app\.js\?v=20261031-audio-speaker-connection-4"/);
-  assert.match(serviceWorker, /minglora-shell-v21-audio-speaker-connection/);
-  assert.match(serviceWorker, /\/app\.js\?v=20261031-audio-speaker-connection-4/);
+  assert.match(indexHtml, /src="\/app\.js\?v=20261031-audio-speaker-connection-5"/);
+  assert.match(serviceWorker, /minglora-shell-v22-audio-speaker-connection/);
+  assert.match(serviceWorker, /\/app\.js\?v=20261031-audio-speaker-connection-5/);
   assert.match(serverSource, /'Cache-Control':'no-store'/);
   assert.match(serverSource, /'Cache-Control':'no-cache, max-age=0, must-revalidate'/);
 });
