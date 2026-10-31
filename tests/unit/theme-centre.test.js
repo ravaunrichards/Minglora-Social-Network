@@ -51,7 +51,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261031-marketplace-commerce-2/);
+  assert.match(html, /styles\.css\?v=20261101-marketplace-core-1/);
   assert.match(html, /app\.js\?v=20261031-marketplace-commerce-2/);
   assert.match(html, /settings\.js\?v=20261031-settings-flat-2/);
   assert.match(sw, /minglora-shell-v33-marketplace-commerce-2/);
