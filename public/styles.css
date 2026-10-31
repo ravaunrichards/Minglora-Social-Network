@@ -1985,3 +1985,14 @@ body:has(.creator-studio-shell) .main-content{
   .creator-live-format-card .live-format-icon{flex-basis:38px;width:38px;height:38px;border-radius:11px}
   .creator-live-format-card .live-format-3d-icon{width:30px;height:30px}
 }
+
+/* Match the Studio workspace tabs to LIVE's exact broadcast card treatment. */
+.creator-studio-nav .creator-studio-nav-item.live-format-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  border:1px solid var(--border,rgba(150,160,180,.22));
+}
+.creator-studio-nav .creator-studio-nav-item.live-format-card.active{
+  border-color:rgba(139,124,255,.95);
+  background:linear-gradient(140deg,rgba(114,93,255,.18),rgba(46,187,209,.07));
+  box-shadow:inset 0 0 0 1px rgba(139,124,255,.23),0 12px 30px rgba(46,34,120,.12);
+}
