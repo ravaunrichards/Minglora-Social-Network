@@ -3,6 +3,11 @@ BEGIN;
 -- Preserve the storage metadata currently maintained by the signed-upload gateway.
 -- The JSONB state remains untouched; this migration copies metadata only.
 ALTER TABLE public.media_assets
+  DROP CONSTRAINT IF EXISTS media_assets_media_type_check;
+ALTER TABLE public.media_assets
+  ADD CONSTRAINT media_assets_media_type_check CHECK (media_type IN ('image','video','audio','document','model3d'));
+
+ALTER TABLE public.media_assets
   ADD COLUMN IF NOT EXISTS storage_bucket text,
   ADD COLUMN IF NOT EXISTS slot text NOT NULL DEFAULT 'post',
   ADD COLUMN IF NOT EXISTS asset_status text NOT NULL DEFAULT 'uploaded',
@@ -60,7 +65,7 @@ SELECT
   nullif(item->>'height','')::integer,
   nullif(item->>'durationMs','')::bigint,
   CASE WHEN item->>'status'='uploading' THEN 'pending'
-       WHEN item->>'status'='deleted' THEN 'failed'
+       WHEN item->>'status'='deleted' THEN 'deleted'
        ELSE 'ready' END,
   item->>'bucket',
   CASE WHEN item->>'slot' IN ('avatar','cover','post','story','group','page','message','marketplace')
