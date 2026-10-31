@@ -12,7 +12,7 @@ const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants',
-  'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'dataRightsRequests', 'pushSubscriptions'
+  'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
@@ -83,6 +83,8 @@ function stripLegacyDemoData(state) {
   state.messageConversationHides = (state.messageConversationHides || []).filter(item => !demoUsers.has(item.userId) && !demoUsers.has(item.peerId));
   state.notifications = (state.notifications || []).filter(n => !demoUsers.has(n.userId) && !demoUsers.has(n.actorId));
   state.sessions = (state.sessions || []).filter(s => !demoUsers.has(s.userId));
+  state.profileViews = (state.profileViews || []).filter(view => !demoUsers.has(view.targetUserId) && !demoUsers.has(view.viewerUserId));
+  state.profileViewPresence = (state.profileViewPresence || []).filter(view => !demoUsers.has(view.targetUserId) && !demoUsers.has(view.viewerUserId));
   return true;
 }
 

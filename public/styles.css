@@ -676,3 +676,17 @@ body[data-color-theme] .rail-link .rail-icon-3d{background:linear-gradient(145de
 @media(prefers-reduced-motion:reduce){
   .nav-3d-icon,.rail-link .rail-icon-3d{transition:none}
 }
+
+
+/* Owner-only, server-counted profile analytics. */
+.profile-live-insights{display:flex;align-items:stretch;gap:9px;flex-wrap:wrap;margin:11px 0 0}
+.profile-live-insights>span{display:flex;align-items:center;gap:7px;min-height:38px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft)}
+.profile-live-insights strong{font-size:14px;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
+.profile-live-insights small{font-size:10px;line-height:1.25;color:var(--muted);font-weight:650}
+.profile-live-insights .profile-viewing-now i{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#20b978;box-shadow:0 0 0 3px rgba(32,185,120,.14)}
+.profile-insights-note{margin:6px 0 0!important;color:var(--muted);font-size:10px!important;line-height:1.4}
+@media(max-width:560px){
+  .profile-live-insights{gap:6px}
+  .profile-live-insights>span{flex:1;min-width:0;padding:7px 8px}
+  .profile-live-insights small{font-size:9px}
+}

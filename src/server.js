@@ -13,6 +13,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
+import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1406,8 +1407,42 @@ async function route(req, res) {
         const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
         return json(res,200,{users,count:users.length});
       }
+      m=p.match(/^\/api\/users\/([^/]+)\/profile-presence$/);
+      if(method==='POST'&&m){
+        const target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(target.id!==user.id){
+          db.profileViewPresence ||= [];
+          touchProfilePresence(db.profileViewPresence,{targetUserId:target.id,viewerUserId:user.id,at:new Date()});
+          await saveStore();
+        }
+        const profileInsights=target.id===user.id
+          ?getProfileViewStats({views:db.profileViews||[],presence:db.profileViewPresence||[],targetUserId:target.id})
+          :undefined;
+        return json(res,200,{ok:true,...(profileInsights?{profileInsights}:{})});
+      }
       m=p.match(/^\/api\/users\/([^/]+)$/);
-      if(method==='GET'&&m){const target=db.users.find(u=>u.id===m[1]);if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});return json(res,200,{user:safeUser(target,user.id),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&x.userId===target.id&&!blockedBetween(user.id,x.userId)).map(x=>publicPost(x,user.id))),friendship:isFriend(user.id,target.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length}); }
+      if(method==='GET'&&m){
+        const target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        db.profileViews ||= [];
+        db.profileViewPresence ||= [];
+        if(recordProfileView(db.profileViews,{targetUserId:target.id,viewerUserId:user.id,at:new Date()}))await saveStore();
+        const profileInsights=target.id===user.id
+          ?getProfileViewStats({views:db.profileViews,presence:db.profileViewPresence,targetUserId:target.id})
+          :undefined;
+        const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&post.userId===target.id&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        return json(res,200,{
+          user:safeUser(target,user.id),
+          posts:profilePosts,
+          friendship:isFriend(user.id,target.id)?'accepted':null,
+          following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),
+          followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
+          followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
+          friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
+          ...(profileInsights?{profileInsights}:{})
+        });
+      }
       if(method==='PATCH'&&p==='/api/users/me'){
         const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         if(validation.value.username&&db.users.some(item=>item.id!==user.id&&normalizeUsername(item.username)===validation.value.username))return json(res,409,{error:'That username is already in use.'});
