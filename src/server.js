@@ -14,6 +14,8 @@ import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../bac
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { MARKETPLACE_PRODUCT_CATEGORIES, MARKETPLACE_SERVICE_CATEGORIES, MARKETPLACE_CURRENCIES, validateMarketplaceListingInput, canManageMarketplaceListing, isMarketplaceListingActive } from '../backend/modules/marketplace/service.js';
+import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote, validateMarketplaceServiceBookingInput, transitionMarketplaceBooking } from '../backend/modules/marketplace/commerce.js';
+import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -656,6 +658,152 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
       requireAuth(user);
+      if(method==='GET'&&p==='/api/marketplace/seller'){
+        const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
+        return json(res,200,{seller:seller?{sellerType:seller.sellerType,storeName:seller.storeName,description:seller.description,countryCode:seller.countryCode,contactEmail:seller.contactEmail,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,createdAt:seller.createdAt,updatedAt:seller.updatedAt}:null});
+      }
+      if(method==='POST'&&p==='/api/marketplace/seller'){
+        const validation=validateMarketplaceSellerApplication(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        db.marketplaceSellers||=[];let seller=db.marketplaceSellers.find(item=>item.userId===user.id);
+        if(seller&&seller.status!=='rejected')return json(res,409,{error:'A seller application already exists for this account.',status:seller.status});
+        const previousStatus=seller?.status||null,values=validation.value,stamp=now();
+        if(seller){Object.assign(seller,values,{status:'pending',identityStatus:'not_started',payoutStatus:'not_connected',reviewedAt:null,reviewedBy:null,reviewReason:'',submittedAt:stamp,updatedAt:stamp});}
+        else{seller={userId:user.id,...values,status:'pending',identityStatus:'not_started',payoutStatus:'not_connected',createdAt:stamp,submittedAt:stamp,updatedAt:stamp};db.marketplaceSellers.unshift(seller);}
+        db.marketplaceSellerEvents||=[];db.marketplaceSellerEvents.unshift({id:uid(),sellerId:user.id,actorId:user.id,eventType:'submitted',reason:previousStatus?'Resubmitted after rejection':'New application',createdAt:stamp});
+        db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'marketplace_seller_application_submitted',targetType:'marketplace_seller',targetId:user.id,createdAt:stamp});
+        await saveStore();
+        return json(res,201,{seller:{storeName:seller.storeName,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,submittedAt:seller.submittedAt}});
+      }
+      if(method==='GET'&&p==='/api/marketplace/admin/sellers'){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const status=String(url.searchParams.get('status')||'pending');
+        const sellers=(db.marketplaceSellers||[]).filter(item=>!status||item.status===status).map(item=>({userId:item.userId,sellerType:item.sellerType,storeName:item.storeName,description:item.description,countryCode:item.countryCode,contactEmail:item.contactEmail,status:item.status,identityStatus:item.identityStatus,payoutStatus:item.payoutStatus,submittedAt:item.submittedAt}));
+        return json(res,200,{sellers});
+      }
+      if(method==='GET'&&p==='/api/marketplace/admin/queue'){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
+        const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
+        return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
+      }
+      if(method==='GET'&&p==='/api/marketplace/admin/queue'){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
+        const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
+        return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
+      }
+      const sellerReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/review$/);
+      if(method==='PATCH'&&sellerReviewMatch){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const seller=(db.marketplaceSellers||[]).find(item=>item.userId===sellerReviewMatch[1]);if(!seller)return json(res,404,{error:'Seller application not found.'});
+        const identityStatus=String(input.identityStatus||seller.identityStatus),status=String(input.status||seller.status);
+        const reason=String(input.reason||'').trim().slice(0,1000);
+        if(!['not_started','pending','verified','rejected'].includes(identityStatus))return json(res,400,{error:'Choose a valid identity verification status.'});
+        if(!['pending','approved','rejected','suspended'].includes(status))return json(res,400,{error:'Choose a valid seller application status.'});
+        if(status==='approved'&&identityStatus!=='verified')return json(res,409,{error:'Identity or business verification must be completed before approval.'});
+        if(status==='approved'&&!reason)return json(res,400,{error:'Record the verification review reason before approving this seller.'});
+        const stamp=now();seller.identityStatus=identityStatus;seller.status=status;seller.reviewedAt=stamp;seller.reviewedBy=user.id;seller.reviewReason=reason;seller.updatedAt=stamp;
+        db.marketplaceSellerEvents||=[];db.marketplaceSellerEvents.unshift({id:uid(),sellerId:seller.userId,actorId:user.id,eventType:identityStatus==='verified'?'identity_verified':status,reason,createdAt:stamp});
+        db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'marketplace_seller_reviewed',targetType:'marketplace_seller',targetId:seller.userId,metadata:{status,identityStatus,reason},createdAt:stamp});
+        notify(seller.userId,user.id,'system','Your Minglora seller application status changed to '+status+'.',{marketplaceSellerStatus:status,identityStatus});
+        await saveStore();return json(res,200,{seller:{userId:seller.userId,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus}});
+      }
+      if(method==='POST'&&p==='/api/marketplace/checkout/quote'){
+        const bps=Number(process.env.MARKETPLACE_COMMISSION_BPS||0),quoteId=uid(),created=now(),expires=new Date(Date.now()+10*60*1000).toISOString();
+        const result=calculateMarketplaceCheckoutQuote({buyerId:user.id,items:input.items,listings:db.marketplaceListings||[],sellerProfiles:db.marketplaceSellers||[],commissionBps:bps,fulfillmentByListing:input.fulfillmentByListing||{},quoteId,createdAt:created,expiresAt:expires});
+        if(!result.valid)return json(res,400,{error:result.error});
+        db.marketplaceQuotes||=[];db.marketplaceQuotes.unshift({...result.value,status:'informational'});
+        await saveStore();return json(res,200,{quote:result.value,notice:'This is an informational quote only. No stock is reserved and no payment has been taken.'});
+      }
+      if(method==='GET'&&p==='/api/marketplace/checkout/status'){
+        return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
+      }
+      if(method==='GET'&&p==='/api/marketplace/bookings'){
+        const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(item=>{const listing=(db.marketplaceListings||[]).find(entry=>entry.id===item.listingId);const otherId=item.buyerId===user.id?item.sellerId:item.buyerId;const other=db.users.find(entry=>entry.id===otherId);return {...item,listingTitle:listing?.title||'Service appointment',otherName:other?.name||'Minglora member'};});
+        return json(res,200,{bookings});
+      }
+      if(method==='POST'&&p==='/api/marketplace/bookings'){
+        const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        const listing=(db.marketplaceListings||[]).find(item=>item.id===validation.value.listingId&&item.kind==='service'&&isMarketplaceListingActive(item));
+        if(!listing||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This service is not available for booking.'});
+        const seller=(db.marketplaceSellers||[]).find(item=>item.userId===listing.sellerId);
+        if(seller?.status!=='approved'||seller.identityStatus!=='verified')return json(res,409,{error:'This service provider has not completed seller verification.'});
+        const collision=(db.marketplaceBookings||[]).some(item=>item.sellerId===listing.sellerId&&['requested','accepted','completed_by_seller'].includes(item.status)&&new Date(validation.value.startAt)<new Date(item.endAt)&&new Date(validation.value.endAt)>new Date(item.startAt));
+        if(collision)return json(res,409,{error:'That appointment time is already requested or booked. Choose another time.'});
+        const booking={id:uid(),listingId:listing.id,buyerId:user.id,sellerId:listing.sellerId,...validation.value,status:'requested',priceMinor:listing.priceMinor??null,currency:listing.currency,createdAt:now(),updatedAt:now()};
+        db.marketplaceBookings||=[];db.marketplaceBookings.unshift(booking);
+        notify(listing.sellerId,user.id,'system',user.name+' requested a service appointment for '+listing.title+'.',{marketplaceBookingId:booking.id});
+        await saveStore();return json(res,201,{booking});
+      }
+      const bookingMatch=p.match(/^\/api\/marketplace\/bookings\/([^/]+)$/);
+      if(method==='PATCH'&&bookingMatch){
+        const booking=(db.marketplaceBookings||[]).find(item=>item.id===bookingMatch[1]);if(!booking)return json(res,404,{error:'Booking not found.'});
+        const transition=transitionMarketplaceBooking(booking,user.id,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
+        Object.assign(booking,transition.value);
+        const recipient=booking.buyerId===user.id?booking.sellerId:booking.buyerId;
+        notify(recipient,user.id,'system','A service booking status changed to '+booking.status+'.',{marketplaceBookingId:booking.id});
+        await saveStore();return json(res,200,{booking});
+      }
+      if(method==='GET'&&p==='/api/jobs'){
+        const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120);
+        const jobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(!query||(item.title+' '+item.companyName+' '+item.description).toLowerCase().includes(query))&&(!category||item.category===category)&&(!location||String(item.location||'').toLowerCase().includes(location))).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        return json(res,200,{jobs});
+      }
+      if(method==='GET'&&p==='/api/jobs/applications/mine'){
+        const applications=(db.jobApplications||[]).filter(item=>item.applicantId===user.id).map(item=>({...item,job:(db.jobPostings||[]).find(job=>job.id===item.jobId)||null}));
+        return json(res,200,{applications});
+      }
+      if(method==='GET'&&p==='/api/jobs/mine'){
+        return json(res,200,{jobs:(db.jobPostings||[]).filter(item=>item.employerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))});
+      }
+      if(method==='POST'&&p==='/api/jobs'){
+        const validation=validateJobPostingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        const job={id:uid(),employerId:user.id,...validation.value,status:'pending_review',createdAt:now(),updatedAt:now()};
+        db.jobPostings||=[];db.jobPostings.unshift(job);db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'job_posting_submitted',targetType:'job_posting',targetId:job.id,createdAt:now()});
+        await saveStore();return json(res,201,{job,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});
+      }
+      const jobReviewMatch=p.match(/^\/api\/jobs\/([^/]+)\/review$/);
+      if(method==='PATCH'&&jobReviewMatch){
+        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        const job=(db.jobPostings||[]).find(item=>item.id===jobReviewMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
+        const status=String(input.status||'');if(!['open','rejected'].includes(status))return json(res,400,{error:'Choose open or rejected.'});
+        if(status==='open'&&new Date(job.applicationDeadline)<=new Date())return json(res,409,{error:'The application deadline has passed.'});
+        job.status=status;job.reviewedBy=user.id;job.reviewedAt=now();job.reviewReason=String(input.reason||'').trim().slice(0,1000);job.updatedAt=now();
+        db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'job_posting_'+status,targetType:'job_posting',targetId:job.id,createdAt:now()});
+        notify(job.employerId,user.id,'system','Your job posting was '+status+'.',{jobId:job.id});
+        await saveStore();return json(res,200,{job});
+      }
+      const jobMatch=p.match(/^\/api\/jobs\/([^/]+)$/);
+      if(jobMatch&&method==='PATCH'){
+        const job=(db.jobPostings||[]).find(item=>item.id===jobMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
+        if(job.employerId!==user.id)return json(res,403,{error:'Only the employer can manage this posting.'});
+        const status=String(input.status||'');if(!['paused','closed'].includes(status)||!['open','paused'].includes(job.status))return json(res,400,{error:'Open job postings can be paused or closed.'});
+        job.status=status;job.updatedAt=now();await saveStore();return json(res,200,{job});
+      }
+      const jobApplyMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
+      if(method==='POST'&&jobApplyMatch){
+        const job=(db.jobPostings||[]).find(item=>item.id===jobApplyMatch[1]&&item.status==='open'&&new Date(item.applicationDeadline)>new Date());
+        if(!job||job.employerId===user.id)return json(res,404,{error:'This vacancy is unavailable for applications.'});
+        const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        db.jobApplications||=[];if(db.jobApplications.some(item=>item.jobId===job.id&&item.applicantId===user.id))return json(res,409,{error:'You have already applied for this vacancy.'});
+        const application={id:uid(),jobId:job.id,applicantId:user.id,...validation.value,status:'submitted',createdAt:now(),updatedAt:now()};
+        db.jobApplications.unshift(application);notify(job.employerId,user.id,'system',user.name+' submitted a job application for '+job.title+'.',{jobId:job.id,applicationId:application.id});
+        await saveStore();return json(res,201,{application});
+      }
+      const jobApplicationsMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
+      if(jobApplicationsMatch&&method==='GET'){
+        const job=(db.jobPostings||[]).find(item=>item.id===jobApplicationsMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
+        if(job.employerId!==user.id&&!isModerator(user))return json(res,403,{error:'Only the employer can review applications.'});
+        return json(res,200,{applications:(db.jobApplications||[]).filter(item=>item.jobId===job.id).map(item=>({...item,candidate:safeUser(db.users.find(member=>member.id===item.applicantId),user.id)}))});
+      }
+      const jobApplicationMatch=p.match(/^\/api\/jobs\/applications\/([^/]+)$/);
+      if(method==='PATCH'&&jobApplicationMatch){
+        const application=(db.jobApplications||[]).find(item=>item.id===jobApplicationMatch[1]);if(!application)return json(res,404,{error:'Application not found.'});
+        const job=(db.jobPostings||[]).find(item=>item.id===application.jobId);
+        const transition=transitionJobApplication(application,user.id,job,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
+        Object.assign(application,transition.value);notify(application.applicantId,user.id,'system','Your job application status changed to '+application.status+'.',{jobId:job.id,applicationId:application.id});
+        await saveStore();return json(res,200,{application});
+      }
       if(method==='GET'&&p==='/api/marketplace/categories')return json(res,200,{productCategories:MARKETPLACE_PRODUCT_CATEGORIES,serviceCategories:MARKETPLACE_SERVICE_CATEGORIES,currencies:MARKETPLACE_CURRENCIES});
       if(method==='GET'&&p==='/api/marketplace/listings'){
         const q=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),kind=String(url.searchParams.get('kind')||''),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120),sort=String(url.searchParams.get('sort')||'recent');
@@ -680,6 +828,9 @@ async function route(req, res) {
         return json(res,200,{listings:listings.filter(Boolean)});
       }
       if(method==='POST'&&p==='/api/marketplace/listings'){
+        const sellerApproval=(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
+        const testBypass=process.env.NODE_ENV==='test'&&process.env.MARKETPLACE_ALLOW_UNVERIFIED_SELLERS==='true';
+        if(!testBypass&&(sellerApproval?.status!=='approved'||sellerApproval?.identityStatus!=='verified'))return json(res,403,{error:'Complete the Minglora seller application and identity or business verification before publishing listings.'});
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'External image URLs are not accepted. Upload listing photos from your device.'});
         const validation=validateMarketplaceListingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
         const mediaIds=[...new Set((Array.isArray(input.mediaIds)?input.mediaIds:[]).map(value=>String(value||'')))];

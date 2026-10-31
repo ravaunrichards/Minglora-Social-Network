@@ -83,7 +83,7 @@ test('the responsive stylesheet and service-worker shell are versioned together'
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
   assert.ok(html.includes('styles.css?v=20261101-marketplace-core-1'));
-  assert.ok(worker.includes('minglora-shell-v32-marketplace-core-1'));
+  assert.ok(worker.includes('minglora-shell-v34-marketplace-commerce-3'));
   assert.ok(worker.includes('styles.css?v=20261101-marketplace-core-1'));
 });
 
