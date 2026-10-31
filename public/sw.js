@@ -1,6 +1,6 @@
 /* Minglora service worker: versioned shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v20-audio-speaker-connection';
-const SHELL=['/','/styles.css?v=20261031-audio-speaker-connection-3','/app.js?v=20261031-audio-speaker-connection-3','/settings.js?v=20261031-logout-in-settings-1','/assets/icons/navigation-3d.svg'];
+const CACHE_NAME='minglora-shell-v21-audio-speaker-connection';
+const SHELL=['/','/styles.css?v=20261031-audio-speaker-connection-4','/app.js?v=20261031-audio-speaker-connection-4','/settings.js?v=20261031-logout-in-settings-1','/assets/icons/navigation-3d.svg'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
