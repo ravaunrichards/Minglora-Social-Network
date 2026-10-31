@@ -1248,11 +1248,11 @@ async function route(req, res) {
         );
         if (!participant) return json(res, 404, { error: 'You are not an active participant in this live session.' });
         participant.leftAt = now();
+        await requestSupabaseState('live_participant_mark_left', { broadcastId: session.id, userId: user.id });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
-          item.sessionId === session.id && item.userId === user.id && ['accepted', 'connected'].includes(item.status)
+          item.sessionId === session.id && item.userId === user.id && ['requested', 'accepted', 'connected'].includes(item.status)
         );
         if (speakerRequest) {
-          await requestSupabaseState('live_speaker_mark_left', { broadcastId: session.id, userId: user.id });
           speakerRequest.status = 'left';
           speakerRequest.leftAt = now();
         }
