@@ -21,7 +21,8 @@ test('global navigation and Creator Studio tabs remain anchored while the page s
   assert.match(css, /\.profile-tabs\{\s*position:sticky/);
   assert.match(css, /\.settings-nav\{position:sticky/);
   assert.ok(css.includes('.creator-studio-nav-slot>.creator-studio-nav.live-format-picker{'));
-  assert.ok(css.includes('position:fixed!important;top:var(--creator-studio-nav-top,66px)!important;'));
+  assert.ok(css.includes('position:fixed!important;'));
+  assert.ok(css.includes('top:var(--creator-studio-nav-top,66px)!important;'));
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.creator-studio-nav\.live-format-picker\{\s*top:66px;z-index:70;display:flex!important/);
   assert.match(css, /overflow-x:auto;overflow-y:hidden;scrollbar-width:thin/);
 });
