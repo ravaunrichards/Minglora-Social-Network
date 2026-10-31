@@ -33,8 +33,8 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | GET | `/api/users/:id` | Read a profile and its posts; blocked pairs return not found |
 | PATCH | `/api/users/me` | Update display name, unique username, bio and location; profile media is uploaded separately |
 | POST/DELETE | `/api/users/:id/follow` | Follow or unfollow a member |
-| GET | `/api/users/:id/followers` | List that member's followers |
-| GET | `/api/users/:id/following` | List that member's follows |
+| GET | `/api/users/:id/followers` | List visible followers, excluding blocked or privacy-inaccessible profiles; requires a session |
+| GET | `/api/users/:id/following` | List visible profiles followed by the member, excluding blocked or privacy-inaccessible profiles; requires a session |
 | GET | `/api/users/:id/friends` | List that member's accepted friends; reciprocal follows create an accepted friendship |
 | POST | `/api/media/upload/prepare` | Allocate a member-owned media asset and return a signed TUS upload token |
 | POST | `/api/media/upload/complete` | Verify the stored object and finalize the member-owned media asset after TUS upload |
