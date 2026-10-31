@@ -1,6 +1,6 @@
 /* Minglora service worker: versioned shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v8-settings-signout';
-const SHELL=['/','/styles.css?v=20261031-logout-in-settings-1','/app.js?v=20261031-logout-in-settings-1','/settings.js?v=20261031-logout-in-settings-1'];
+const CACHE_NAME='minglora-shell-v9-navigation-3d-icons';
+const SHELL=['/','/styles.css?v=20261031-nav-3d-icons-1','/app.js?v=20261031-logout-in-settings-1','/settings.js?v=20261031-logout-in-settings-1','/assets/icons/navigation-3d.svg'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });

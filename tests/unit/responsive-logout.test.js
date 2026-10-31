@@ -12,12 +12,12 @@ const css = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
-  assert.ok(html.includes('href="/styles.css?v=20261031-logout-in-settings-1"'));
+  assert.ok(html.includes('href="/styles.css?v=20261031-nav-3d-icons-1"'));
   assert.ok(html.includes('src="/app.js?v=20261031-logout-in-settings-1"'));
   assert.ok(html.includes('src="/settings.js?v=20261031-logout-in-settings-1"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
 
-  const mobileNavStart = html.indexOf('<div class="mobile-nav">');
+  const mobileNavStart = html.indexOf('<div class="mobile-nav"');
   const mobileNavEnd = html.indexOf('</div>', mobileNavStart);
   const mobileNav = html.slice(mobileNavStart, mobileNavEnd);
   assert.doesNotMatch(mobileNav, /data-logout|Log out/);
@@ -51,8 +51,8 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(!css.includes('.mobile-nav [data-logout]'), 'no detached phone logout styling remains');
   assert.match(css, /\.settings-signout-card/);
   assert.match(css, /\.settings-logout-button/);
-  assert.match(serviceWorker, /minglora-shell-v8-settings-signout/);
-  assert.ok(serviceWorker.includes('styles.css?v=20261031-logout-in-settings-1'));
+  assert.match(serviceWorker, /minglora-shell-v9-navigation-3d-icons/);
+  assert.ok(serviceWorker.includes('styles.css?v=20261031-nav-3d-icons-1'));
   assert.ok(serviceWorker.includes('app.js?v=20261031-logout-in-settings-1'));
   assert.ok(serviceWorker.includes('settings.js?v=20261031-logout-in-settings-1'));
 });

@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <title>Minglora premium 3D navigation icon set</title>
+  <desc>Dimensional, polished icons for Minglora navigation and utility actions.</desc>
+  <defs>
+    <linearGradient id="blue-front" x1="0" y1="0" x2="0.85" y2="1"><stop stop-color="#a8ddff"/><stop offset=".34" stop-color="#4b9dff"/><stop offset="1" stop-color="#1760cc"/></linearGradient>
+    <linearGradient id="blue-side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#174c9a"/><stop offset="1" stop-color="#082d69"/></linearGradient>
+    <linearGradient id="blue-gloss" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".82"/><stop offset=".48" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="teal-front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9fff5"/><stop offset=".35" stop-color="#31c9ba"/><stop offset="1" stop-color="#087a87"/></linearGradient>
+    <linearGradient id="teal-side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#126b78"/><stop offset="1" stop-color="#073e58"/></linearGradient>
+    <linearGradient id="silver-front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset=".38" stop-color="#d9e8f8"/><stop offset="1" stop-color="#7899bd"/></linearGradient>
+    <linearGradient id="silver-side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7894b5"/><stop offset="1" stop-color="#344f73"/></linearGradient>
+    <linearGradient id="gold-front" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#fff3b0"/><stop offset=".38" stop-color="#f6c95c"/><stop offset="1" stop-color="#b87319"/></linearGradient>
+    <linearGradient id="gold-side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd791d"/><stop offset="1" stop-color="#71400c"/></linearGradient>
+    <linearGradient id="violet-front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ead7ff"/><stop offset=".42" stop-color="#9d7cf5"/><stop offset="1" stop-color="#5940b5"/></linearGradient>
+    <linearGradient id="red-front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffb5bf"/><stop offset=".42" stop-color="#fa536b"/><stop offset="1" stop-color="#b51f49"/></linearGradient>
+    <radialGradient id="lens" cx=".33" cy=".27" r=".8"><stop stop-color="#e4fbff"/><stop offset=".2" stop-color="#6bd8f6"/><stop offset=".58" stop-color="#1762ad"/><stop offset="1" stop-color="#082447"/></radialGradient>
+  </defs>
+
+  <symbol id="home" viewBox="0 0 64 64">
+    <path d="M8 30 30 12q2-2 4 0l22 18-4 5-5-4v21q0 3-3 3H20q-3 0-3-3V31l-5 4z" fill="url(#blue-side)" transform="translate(0 2)"/>
+    <path d="m8 29 22-19q2-2 4 0l22 19-5 6L32 22 13 35z" fill="url(#silver-side)"/>
+    <path d="m10 28 20-17q2-2 4 0l20 17-4 5L32 18 14 33z" fill="url(#blue-front)"/>
+    <path d="M18 31 32 19l14 12v23H18z" fill="url(#blue-front)"/>
+    <path d="M32 19 46 31v23H32z" fill="url(#blue-side)"/>
+    <path d="M25 39q0-2 2-2h10q2 0 2 2v15H25z" fill="url(#silver-side)"/>
+    <path d="M27 40h10v14H27z" fill="#143e76"/>
+    <path d="M20 32 32 22l12 10" fill="none" stroke="#eaf7ff" stroke-opacity=".7" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="M20 32v17" stroke="#d9f1ff" stroke-opacity=".45" stroke-width="1.4"/>
+  </symbol>
+
+  <symbol id="explore" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="25" fill="url(#blue-side)"/>
+    <circle cx="31" cy="30" r="24" fill="url(#silver-front)"/>
+    <circle cx="31" cy="29" r="20" fill="url(#blue-front)"/>
+    <circle cx="31" cy="29" r="15.5" fill="#123f7b" fill-opacity=".58" stroke="#d7f1ff" stroke-opacity=".6" stroke-width="1.4"/>
+    <path d="m40 17-5 17-15 8 6-17z" fill="url(#red-front)" stroke="#fff" stroke-opacity=".65" stroke-width="1"/>
+    <path d="m40 17-5 17-4-5z" fill="#ffe4e8"/>
+    <path d="m20 42 15-8-4-5z" fill="#9ac9f4"/>
+    <circle cx="31" cy="29" r="3.5" fill="url(#silver-front)" stroke="#fff" stroke-width="1"/>
+    <path d="M18 13a20 20 0 0 1 23-4" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="2.2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="create" viewBox="0 0 64 64">
+    <path d="M20 10h24q8 0 8 8v28q0 8-8 8H20q-8 0-8-8V18q0-8 8-8" fill="url(#blue-side)" transform="translate(1 2)"/>
+    <rect x="11" y="8" width="42" height="46" rx="11" fill="url(#blue-front)" stroke="#cdeeff" stroke-opacity=".85" stroke-width="1.5"/>
+    <rect x="15" y="12" width="34" height="37" rx="8" fill="url(#blue-gloss)" opacity=".65"/>
+    <path d="M29 19h6v10h10v6H35v10h-6V35H19v-6h10z" fill="#f7fcff" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>
+    <path d="m49 7 2.5 5.5L57 15l-5.5 2.5L49 23l-2.5-5.5L41 15l5.5-2.5z" fill="url(#gold-front)" stroke="#fff2c0" stroke-width=".8"/>
+  </symbol>
+
+  <symbol id="live" viewBox="0 0 64 64">
+    <path d="M12 20q0-5 5-5h28q5 0 5 5v26q0 5-5 5H17q-5 0-5-5z" fill="url(#blue-side)" transform="translate(1 2)"/>
+    <rect x="8" y="17" width="42" height="31" rx="7" fill="url(#silver-side)"/>
+    <rect x="8" y="14" width="40" height="31" rx="7" fill="url(#blue-front)" stroke="#d9f1ff" stroke-opacity=".85" stroke-width="1.2"/>
+    <path d="M13 18h27q4 0 4 4v5H13q-3 0-3-3v-2q0-4 3-4" fill="url(#blue-gloss)" opacity=".55"/>
+    <circle cx="29" cy="30" r="11" fill="url(#silver-side)"/>
+    <circle cx="29" cy="29" r="9" fill="url(#silver-front)"/>
+    <circle cx="29" cy="29" r="6.5" fill="url(#lens)"/>
+    <circle cx="26.5" cy="26.5" r="2.2" fill="#fff" fill-opacity=".72"/>
+    <circle cx="42" cy="20" r="2.4" fill="url(#red-front)"/>
+    <path d="m49 24 9-6q2-1 2 2v20q0 3-2 2l-9-6z" fill="url(#teal-side)"/>
+    <path d="m48 22 9-5q2-1 2 2v19q0 3-2 2l-9-6z" fill="url(#teal-front)"/>
+    <path d="M15 53h25" stroke="#7899bd" stroke-width="3" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="friends" viewBox="0 0 64 64">
+    <path d="M7 52q1-13 12-16 5-2 10 0 11 3 12 16v4H7z" fill="url(#teal-side)"/>
+    <circle cx="23" cy="22" r="10" fill="url(#teal-side)"/>
+    <path d="M30 55q1-13 11-17 5-2 10 0 7 3 8 17v2H30z" fill="url(#blue-side)"/>
+    <circle cx="45" cy="23" r="9" fill="url(#blue-side)"/>
+    <path d="M5 50q1-12 12-15 6-2 12 0 10 4 11 16v5H5z" fill="url(#teal-front)"/>
+    <circle cx="21" cy="21" r="10" fill="url(#silver-front)"/>
+    <path d="M29 53q1-12 11-16 6-2 11 0 8 3 9 16v3H29z" fill="url(#blue-front)"/>
+    <circle cx="43" cy="22" r="9" fill="url(#blue-front)"/>
+    <path d="M13 18q3-9 11-6 5 1 7 7" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 18q3-8 10-6 4 1 6 6" fill="none" stroke="#fff" stroke-opacity=".62" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="messages" viewBox="0 0 64 64">
+    <path d="M11 15q0-5 6-5h31q6 0 6 6v21q0 6-6 6H27l-10 8v-8q-6 0-6-6z" fill="url(#teal-side)" transform="translate(1 2)"/>
+    <path d="M13 12h31q6 0 6 6v18q0 6-6 6H28l-11 8v-8h-4q-6 0-6-6V18q0-6 6-6" fill="url(#teal-front)" stroke="#d6fff8" stroke-opacity=".8" stroke-width="1.1"/>
+    <path d="M14 17h25q4 0 4 4v4H13v-4q0-4 1-4" fill="url(#blue-gloss)" opacity=".6"/>
+    <path d="M23 28q0-5 5-5h21q6 0 6 6v13q0 6-6 6h-4v7l-9-7h-8q-5 0-5-6z" fill="url(#blue-side)"/>
+    <path d="M25 25h22q6 0 6 6v11q0 5-6 5h-3v6l-9-6h-10q-5 0-5-5V31q0-6 5-6" fill="url(#blue-front)" stroke="#e1f3ff" stroke-opacity=".85" stroke-width="1"/>
+    <g fill="#f5fbff"><circle cx="29" cy="36" r="2.4"/><circle cx="38" cy="36" r="2.4"/><circle cx="47" cy="36" r="2.4"/></g>
+  </symbol>
+
+  <symbol id="coins" viewBox="0 0 64 64">
+    <path d="M10 37v9q0 8 22 8t22-8v-9" fill="url(#gold-side)"/>
+    <ellipse cx="32" cy="37" rx="22" ry="9" fill="url(#gold-front)" stroke="#fff0b8" stroke-width="1.2"/>
+    <path d="M13 28v9q0 8 19 8t19-8v-9" fill="url(#gold-side)"/>
+    <ellipse cx="32" cy="28" rx="19" ry="8" fill="url(#gold-front)" stroke="#fff0b8" stroke-width="1.2"/>
+    <path d="M17 18v9q0 7 15 7t15-7v-9" fill="url(#gold-side)"/>
+    <ellipse cx="32" cy="18" rx="15" ry="7" fill="url(#gold-front)" stroke="#fff4cc" stroke-width="1.3"/>
+    <ellipse cx="32" cy="18" rx="8" ry="3.5" fill="none" stroke="#fff4cf" stroke-width="1.6"/>
+    <path d="M22 17q2-4 9-4" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="creator" viewBox="0 0 64 64">
+    <path d="m32 6 7 16 17 2-13 11 4 17-15-9-15 9 4-17L8 24l17-2z" fill="url(#gold-side)" transform="translate(0 2)"/>
+    <path d="m32 6 7 16 17 2-13 11 4 17-15-9-15 9 4-17L8 24l17-2z" fill="url(#gold-front)" stroke="#fff1bf" stroke-width="1.2"/>
+    <path d="m32 13 5 12 12 1-9 8 3 13-11-7-11 7 3-13-9-8 12-1z" fill="url(#blue-front)" opacity=".95"/>
+    <path d="M27 22 32 13l5 12" fill="none" stroke="#fff" stroke-opacity=".72" stroke-width="1.7" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="groups" viewBox="0 0 64 64">
+    <circle cx="32" cy="18" r="8" fill="url(#silver-side)"/>
+    <circle cx="13" cy="25" r="6.5" fill="url(#teal-side)"/>
+    <circle cx="51" cy="25" r="6.5" fill="url(#blue-side)"/>
+    <path d="M17 51q0-17 15-17t15 17v5H17z" fill="url(#blue-side)"/>
+    <path d="M4 52q0-14 10-16 7-1 11 5-4 5-4 14H4z" fill="url(#teal-side)"/>
+    <path d="M60 52q0-14-10-16-7-1-11 5 4 5 4 14h17z" fill="url(#blue-side)"/>
+    <circle cx="32" cy="16" r="8" fill="url(#silver-front)"/>
+    <circle cx="13" cy="23" r="6.5" fill="url(#teal-front)"/>
+    <circle cx="51" cy="23" r="6.5" fill="url(#blue-front)"/>
+    <path d="M16 50q0-16 16-16t16 16v6H16z" fill="url(#blue-front)"/>
+    <path d="M3 51q0-13 11-15 6-1 10 5-4 4-4 15H3z" fill="url(#teal-front)"/>
+    <path d="M61 51q0-13-11-15-6-1-10 5 4 4 4 15h17z" fill="url(#blue-front)"/>
+    <path d="M24 12q3-6 9-3" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.7" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="pages" viewBox="0 0 64 64">
+    <path d="M17 8h22l13 13v34q0 3-3 3H17q-4 0-4-4V12q0-4 4-4" fill="url(#blue-side)" transform="translate(1 2)"/>
+    <path d="M17 7h22l13 13v34q0 3-3 3H17q-4 0-4-4V11q0-4 4-4" fill="url(#silver-front)" stroke="#fff" stroke-opacity=".8" stroke-width="1.2"/>
+    <path d="M39 7v13h13" fill="url(#blue-front)" stroke="#dceeff" stroke-width="1"/>
+    <path d="M21 29h23M21 36h23M21 43h16" stroke="#2874c5" stroke-width="3" stroke-linecap="round"/>
+    <path d="M20 14h12" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="saved" viewBox="0 0 64 64">
+    <path d="M18 8h28q5 0 5 5v43L32 45 13 56V13q0-5 5-5" fill="url(#blue-side)" transform="translate(0 2)"/>
+    <path d="M18 7h28q5 0 5 5v42L32 43 13 54V12q0-5 5-5" fill="url(#blue-front)" stroke="#d8f0ff" stroke-width="1.2"/>
+    <path d="M20 12h24q3 0 3 4v25L32 34 17 41V16q0-4 3-4" fill="url(#blue-gloss)" opacity=".5"/>
+    <path d="m32 17 3 7 8 .6-6 5 2 8-7-4-7 4 2-8-6-5 8-.6z" fill="url(#gold-front)"/>
+  </symbol>
+
+  <symbol id="activity" viewBox="0 0 64 64">
+    <path d="M14 45q5-6 5-16 0-14 13-14t13 14q0 10 5 16l-4 5H18z" fill="url(#blue-side)" transform="translate(0 2)"/>
+    <path d="M12 44q6-7 6-16 0-14 14-14t14 14q0 9 6 16l-4 5H16z" fill="url(#blue-front)" stroke="#d7efff" stroke-width="1.2"/>
+    <path d="M22 28q0-11 10-11" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M27 51q1 6 5 6t5-6" fill="url(#silver-front)" stroke="#6385aa" stroke-width="1"/>
+    <path d="M26 13q0-5 6-5t6 5" fill="none" stroke="url(#gold-front)" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="47" cy="16" r="6" fill="url(#red-front)" stroke="#fff" stroke-width="1.2"/>
+    <path d="M45 16h4M47 14v4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="settings" viewBox="0 0 64 64">
+    <path d="M27 6h10l2 7q3 1 5 3l7-2 5 9-5 5v7l5 5-5 9-7-2q-2 2-5 3l-2 7H27l-2-7q-3-1-5-3l-7 2-5-9 5-5v-7l-5-5 5-9 7 2q2-2 5-3z" fill="url(#blue-side)" transform="translate(0 2)"/>
+    <path d="M27 5h10l2 7q3 1 5 3l7-2 5 9-5 5v7l5 5-5 9-7-2q-2 2-5 3l-2 7H27l-2-7q-3-1-5-3l-7 2-5-9 5-5v-7l-5-5 5-9 7 2q2-2 5-3z" fill="url(#silver-front)" stroke="#fff" stroke-opacity=".8" stroke-width="1.1"/>
+    <circle cx="32" cy="32" r="12" fill="url(#blue-side)"/>
+    <circle cx="32" cy="31" r="8" fill="url(#blue-front)" stroke="#e4f6ff" stroke-width="1"/>
+    <circle cx="29" cy="27" r="2" fill="#fff" fill-opacity=".8"/>
+  </symbol>
+
+  <symbol id="search" viewBox="0 0 64 64">
+    <circle cx="27" cy="26" r="17" fill="url(#blue-side)"/>
+    <circle cx="25" cy="24" r="16" fill="url(#silver-front)" stroke="#fff" stroke-width="1.1"/>
+    <circle cx="25" cy="24" r="11" fill="url(#blue-front)"/>
+    <path d="M37 37 53 53q3 3 6 0t0-6L43 31z" fill="url(#blue-side)"/>
+    <path d="m36 35 16 16q3 3 5 0l-1-2-16-16z" fill="url(#silver-front)"/>
+    <path d="M17 19q3-7 10-7" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="profile" viewBox="0 0 64 64">
+    <path d="M9 54q1-19 23-19t23 19v4H9z" fill="url(#blue-side)" transform="translate(0 2)"/>
+    <circle cx="32" cy="19" r="13" fill="url(#silver-side)"/>
+    <path d="M8 53q1-19 24-19t24 19v5H8z" fill="url(#blue-front)" stroke="#d8eeff" stroke-opacity=".8" stroke-width="1"/>
+    <circle cx="32" cy="18" r="13" fill="url(#silver-front)" stroke="#fff" stroke-opacity=".85" stroke-width="1"/>
+    <path d="M23 15q3-8 11-7 6 1 9 7" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M19 49q4-10 13-10t13 10" fill="none" stroke="#c8eaff" stroke-opacity=".7" stroke-width="2"/>
+  </symbol>
+</svg>

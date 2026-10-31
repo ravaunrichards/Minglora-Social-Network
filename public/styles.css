@@ -632,3 +632,47 @@ body[data-color-theme] .settings-section-title p,body[data-color-theme] .setting
 .settings-logout-button{flex:0 0 auto;min-width:130px;padding:11px 18px;border-radius:9px;font-weight:750}
 .settings-logout-button:hover{background:#b42336}
 @media(max-width:600px){.settings-session-actions{align-items:stretch;flex-direction:column}.settings-logout-button{width:100%}}
+
+
+/* Minglora premium 3D navigation icon system. */
+.nav-3d-icon{
+  display:block;
+  width:30px;
+  height:30px;
+  flex:0 0 auto;
+  overflow:visible;
+  filter:drop-shadow(0 2px 2px rgba(15,45,82,.22)) drop-shadow(0 5px 5px rgba(23,105,224,.12));
+  transition:transform .18s ease,filter .18s ease;
+}
+.nav-item .nav-3d-icon{width:31px;height:31px;margin:0 auto 1px}
+.nav-item:hover .nav-3d-icon{transform:translateY(-2px);filter:drop-shadow(0 3px 2px rgba(15,45,82,.24)) drop-shadow(0 7px 7px rgba(23,105,224,.2))}
+.nav-item.active .nav-3d-icon{transform:translateY(-1px);filter:drop-shadow(0 2px 2px rgba(15,45,82,.25)) drop-shadow(0 6px 8px rgba(23,105,224,.28))}
+.nav-item small{line-height:1.25}
+.nav-search-icon{width:23px;height:23px;filter:drop-shadow(0 2px 2px rgba(15,45,82,.18))}
+.circle-action .nav-3d-icon{width:27px;height:27px;margin:auto;filter:drop-shadow(0 2px 2px rgba(15,45,82,.2))}
+.rail-link .rail-icon-3d{
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(110,157,214,.24);
+  border-radius:12px;
+  background:linear-gradient(145deg,#f7fbff 0%,#dcecff 55%,#c5dcf8 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 4px rgba(27,76,132,.1);
+}
+.rail-link .rail-icon-3d .nav-3d-icon{width:31px;height:31px;filter:drop-shadow(0 2px 2px rgba(8,42,86,.24))}
+.rail-link:hover .rail-icon-3d{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 4px 8px rgba(27,76,132,.17)}
+.mobile-nav button{gap:2px;font-size:inherit}
+.mobile-nav button .nav-3d-icon{width:29px;height:29px;filter:drop-shadow(0 2px 2px rgba(15,45,82,.2)) drop-shadow(0 4px 5px rgba(23,105,224,.12))}
+.mobile-nav button.active .nav-3d-icon{transform:translateY(-1px);filter:drop-shadow(0 2px 2px rgba(15,45,82,.22)) drop-shadow(0 5px 7px rgba(23,105,224,.25))}
+.mobile-nav button small{line-height:1.2}
+body[data-color-theme] .rail-link .rail-icon-3d{background:linear-gradient(145deg,color-mix(in srgb,var(--card) 88%,white),color-mix(in srgb,var(--blue) 12%,var(--surface-soft)));border-color:var(--line)}
+.theme-dark .rail-link .rail-icon-3d,.theme-system .rail-link .rail-icon-3d{background:linear-gradient(145deg,#34465e,#1e3048);border-color:#435b79}
+@media(max-width:760px){
+  .mobile-nav button .nav-3d-icon{width:28px;height:28px}
+  .nav-search-icon{width:21px;height:21px}
+}
+@media(prefers-reduced-motion:reduce){
+  .nav-3d-icon,.rail-link .rail-icon-3d{transition:none}
+}
