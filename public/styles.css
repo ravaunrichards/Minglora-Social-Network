@@ -478,3 +478,11 @@
   body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
   .mobile-nav{height:calc(60px + env(safe-area-inset-bottom))}
 }
+
+
+/* Responsive logout access: desktop top action, tablet side rail, and phone bottom navigation. */
+.logout-rail-link{margin-top:4px;color:#b42336}
+.logout-rail-link span{background:#fff0f1;color:#b42336}
+.logout-rail-link:hover{background:#fff0f1}
+.mobile-nav [data-logout]{color:#b42336}
+.mobile-nav [data-logout]:active{background:#fff0f1}
