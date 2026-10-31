@@ -437,6 +437,15 @@
         }, 450);
       }
 
+      settingsForm?.addEventListener('change', event => {
+        if (event.target?.name !== 'theme' && event.target?.name !== 'colorTheme') return;
+        const formData = new FormData(settingsForm);
+        applyPreferences({ preferences: {
+          ...settings.preferences,
+          theme: formData.get('theme'),
+          colorTheme: formData.get('colorTheme') || 'minglora'
+        }});
+      });
       settingsForm?.addEventListener('change', queueSettingsSave);
       settingsForm?.addEventListener('submit', async event => {
         event.preventDefault();
