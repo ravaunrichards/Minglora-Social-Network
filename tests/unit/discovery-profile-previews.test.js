@@ -58,5 +58,5 @@ test('static shell cache is versioned for the upgraded discovery cards', async (
   const worker = await read('public/sw.js');
   assert.match(html, /20261031-creator-stage-sticky-fallback-2/);
   assert.match(html, /20261031-creator-stage-sticky-fallback-2/);
-  assert.match(worker, /minglora-shell-v32-marketplace-core-1/);
+  assert.match(worker, /minglora-shell-v33-marketplace-commerce-2/);
 });
