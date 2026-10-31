@@ -93,11 +93,11 @@ Deno.serve(async (req: Request) => {
     const name = String(input.name || "").trim();
     const username = String(input.username || "").trim().toLowerCase();
     const contactPhone = String(input.phoneNumber || input.contactPhone || "").trim();
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254 ||
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
         password.length < 10 || password.length > 1024 ||
         name.length < 2 || name.length > 120 ||
         !/^[a-z0-9_]{3,30}$/.test(username) ||
-        (contactPhone && !/^\\+[1-9][0-9]{7,14}$/.test(contactPhone))) {
+        (contactPhone && !/^\+[1-9][0-9]{7,14}$/.test(contactPhone))) {
       return json(400, { error: "Enter a valid name, username, email and password. Phone number is optional." });
     }
     const { data, error } = await admin.auth.admin.createUser({
