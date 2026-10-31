@@ -83,9 +83,9 @@ test('global navigation destinations all resolve to an application view and Home
 });
 
 test('the app shell and service worker cache the same final navigation and stage build', () => {
-  assert.match(html, /styles\.css\?v=20261031-creator-nav-fixed-1/);
-  assert.match(html, /app\.js\?v=20261031-creator-nav-fixed-1/);
-  assert.match(worker, /minglora-shell-v26-creator-nav-fixed/);
-  assert.match(worker, /styles\.css\?v=20261031-creator-nav-fixed-1/);
-  assert.match(worker, /app\.js\?v=20261031-creator-nav-fixed-1/);
+  assert.match(html, /styles\.css\?v=20261031-centered-header-tabs-1/);
+  assert.match(html, /app\.js\?v=20261031-centered-header-tabs-1/);
+  assert.match(worker, /minglora-shell-v27-centered-header-tabs/);
+  assert.match(worker, /styles\.css\?v=20261031-centered-header-tabs-1/);
+  assert.match(worker, /app\.js\?v=20261031-centered-header-tabs-1/);
 });
