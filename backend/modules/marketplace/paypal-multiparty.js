@@ -22,7 +22,7 @@ export function marketplacePayPalConfig(env = process.env) {
   const enabled = String(env.MARKETPLACE_PAYPAL_ENABLED || '').trim().toLowerCase() === 'true';
   const partnerApproved = String(env.MARKETPLACE_PAYPAL_PARTNER_APPROVED || '').trim().toLowerCase() === 'true';
   const liveApproved = String(env.MARKETPLACE_PAYPAL_LIVE_APPROVED || '').trim().toLowerCase() === 'true';
-  const enabledForTransactions = enabled && configured && modeValid && (mode === 'sandbox' || partnerApproved) && (mode !== 'live' || liveApproved);
+  const enabledForTransactions = enabled && configured && modeValid && partnerApproved && (mode !== 'live' || liveApproved);
   return {
     mode,
     base,
@@ -44,7 +44,7 @@ export function marketplacePayPalReadiness(env = process.env) {
   const blockers = [];
   if (!config.configured) blockers.push('Marketplace PayPal credentials, partner merchant ID, attribution ID and webhook ID must be configured separately from creator payouts.');
   if (!config.enabled) blockers.push('Marketplace PayPal integration is disabled.');
-  if (config.mode === 'live' && !config.partnerApproved) blockers.push('PayPal must approve Minglora as a multiparty marketplace partner before live onboarding and payments.');
+  if (!config.partnerApproved) blockers.push('PayPal must approve Minglora as a multiparty marketplace partner before seller onboarding and payments.');
   if (config.mode === 'live' && !config.liveApproved) blockers.push('Live Marketplace PayPal mode requires an explicit production approval flag.');
   if (!['sandbox', 'live'].includes(config.mode)) blockers.push('Marketplace PayPal mode must be sandbox or live.');
   return {
