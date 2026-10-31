@@ -29,9 +29,15 @@ All routes below require a signed-in Minglora account.
 
 Session state is persisted with the existing application persistence adapter. Rooms are created by LiveKit when the first authorized client connects. Host tokens can publish; viewer tokens can subscribe but cannot publish audio, video, or data. Tokens have a two-hour expiry. The client must disconnect on leave/end and request a fresh token when reconnecting after expiry.
 
-## Current limitations
+## Browser LIVE experience
 
-This is the server-side LiveKit integration foundation, not a finished livestream product UI. The browser UI does not yet implement LiveKit room connection, camera/microphone controls, guest requests, co-host moderation, stream recording/egress, or a verified LiveKit webhook receiver. Do not advertise those features as complete until implemented and tested. Ended sessions are no longer listed or joinable through Minglora's API; clients should disconnect when the host ends a session.
+The browser client connects to LiveKit rooms with the official `livekit-client` SDK. Hosts receive publish permissions and publish camera/microphone tracks; viewers receive subscribe-only permissions. The UI attaches remote audio/video tracks, reports current room participants from LiveKit room events, provides host camera/microphone controls, live chat, room themes, and the available 3D gift catalogue. The LIVE directory verifies that the host is currently connected before listing a session and displays provider-reported participant counts rather than fabricated counts.
+
+The directory and stream player must remain usable when the optional Coins catalogue or wallet endpoint is temporarily unavailable. Gifting and balance details may display a recoverable unavailable state, but must never prevent a viewer from entering or continuing to watch a real LIVE room.
+
+## Remaining limitations
+
+Guest requests, co-host moderation, stream recording/egress, and a verified LiveKit webhook receiver are not yet implemented. Do not advertise those features as complete until implemented and tested. Ended sessions are no longer listed or joinable through Minglora's API; clients should disconnect when the host ends a session.
 
 ## Cloud project setup
 
