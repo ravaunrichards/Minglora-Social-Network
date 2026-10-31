@@ -68,7 +68,7 @@ test('seller referral requests business marketplace payment, refund and platform
   assert.equal(payload.tracking_id,'seller-123');
   assert.deepEqual(payload.products,['EXPRESS_CHECKOUT']);
   assert.deepEqual(payload.operations[0].api_integration_preference.rest_api_integration.third_party_details.features,
-    ['PAYMENT','REFUND','PARTNER_FEE']);
+    ['PAYMENT','REFUND']);
   assert.equal(payload.legal_consents[0].granted,true);
   assert.throws(()=>buildMarketplacePayPalReferralPayload({trackingId:'seller',returnUrl:'http://insecure.test'}));
 });
