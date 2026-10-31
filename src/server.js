@@ -812,6 +812,9 @@ async function route(req, res) {
         return json(res,200,{listings:listings.filter(Boolean)});
       }
       if(method==='POST'&&p==='/api/marketplace/listings'){
+        const sellerApproval=(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
+        const testBypass=process.env.NODE_ENV==='test'&&process.env.MARKETPLACE_ALLOW_UNVERIFIED_SELLERS==='true';
+        if(!testBypass&&(sellerApproval?.status!=='approved'||sellerApproval?.identityStatus!=='verified'))return json(res,403,{error:'Complete the Minglora seller application and identity or business verification before publishing listings.'});
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'External image URLs are not accepted. Upload listing photos from your device.'});
         const validation=validateMarketplaceListingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
         const mediaIds=[...new Set((Array.isArray(input.mediaIds)?input.mediaIds:[]).map(value=>String(value||'')))];
