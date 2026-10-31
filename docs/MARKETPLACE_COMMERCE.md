@@ -2,36 +2,37 @@
 
 ## Product boundary
 
-Minglora Marketplace is a social-commerce and services platform, not merely a listings page. It connects seller onboarding, catalogues, discovery, checkout preparation, orders, fulfilment, buyer protection, returns, accounting and payouts. The Jobs area is a separate employer-to-candidate workflow and never uses the commerce payment ledger.
+Minglora Marketplace is a social-commerce and services platform. Jobs is a separate employer-to-candidate workflow and never uses the commerce payment ledger.
 
-## Implemented in this change
+## Implemented runtime and database workflows
 
-- Seller application validation and a persisted application workflow. New applications start as pending; a seller cannot approve themselves or submit payout account details through a public profile endpoint.
-- Server-calculated, short-lived checkout quotes for physical products. Quantities and prices are re-read from listings, self-purchases and overselling are rejected, mixed-currency carts are rejected, and delivery or shipping requires a seller-side rate rather than a client-supplied amount.
-- Quotes are informational only. Checkout is blocked while provider marketplace approval, tax/duty calculation and a supported seller settlement arrangement are unavailable. No buyer payment, seller balance or payout is invented.
-- Service booking requests with seller acceptance/decline, buyer cancellation and buyer confirmation after provider completion.
-- Employer job-posting submissions, moderation before publication, applicant submissions, employer review decisions and applicant withdrawal.
-- A normalized Supabase schema for seller verification, carts, orders, seller sub-orders, immutable payment evidence, webhook idempotency, double-entry ledger, fulfilment, service bookings, disputes, returns, payouts, verified reviews and job applications.
+- Seller applications start pending. Moderators can review seller status and identity status with an audit reason; an application cannot approve itself.
+- Product/service listings, discovery, saved listings and Inbox enquiries are part of the current browser/API workflow.
+- Checkout quotes are calculated server-side from database-held listing prices, quantity, currency and seller-maintained fulfilment rates. Quotes are short-lived and informational only; the quote route does not reserve stock or take payment.
+- Relational Supabase tables and database functions exist for carts, quote records, orders, seller sub-orders, idempotency keys and atomic inventory reservations. Order reads are available to buyer/seller participants. The order-creation function enforces provider, checkout, seller-payout, verified-seller and tax gates.
+- The checkout-status API currently reports `orderCreationEnabled: false`. Thus the presence of order tables, an order RPC or buyer/seller order screens must not be represented as live checkout or completed order settlement.
+- Service booking requests support seller acceptance/decline, buyer cancellation and participant confirmation after seller completion. They do not collect payment.
+- Employer job-posting submissions are moderated before publication. Published roles can be searched; candidates can apply; employers can review, shortlist, reject or hire; candidates can withdraw or view their applications.
 
-## Transaction lifecycle (target)
+## Target transaction lifecycle
 
-1. Seller applies; platform checks identity/business details, prohibited goods, policies and payout eligibility.
+1. Seller applies; the platform verifies identity/business details, prohibited-goods compliance and payout eligibility.
 2. Approved seller publishes an offer with truthful stock, currency, condition, service terms and fulfilment options.
-3. Buyer discovers an offer, checks seller/profile/reviews, adds items and receives a server-calculated quote.
-4. Before a live order can be created, the marketplace must have an approved provider contract, an enabled payment method, tax/duty rules, seller settlement rules and a server-side shipping/collection quote.
-5. Payment is confirmed through a verified provider event. Browser redirects are not payment evidence. Provider event IDs and order idempotency keys are unique.
-6. Inventory is reserved transactionally. Each seller receives a seller sub-order with its own fulfilment and financial breakdown.
+3. Buyer discovers an offer, reviews seller/profile information and receives a server-calculated quote.
+4. Before a live order can be created, the marketplace needs an approved provider contract, enabled buyer payment, a verified seller settlement route, supported shipping/collection rates and tax/duty rules.
+5. Payment must be confirmed through a verified provider event. Browser redirects are never payment evidence. Provider event IDs and order idempotency keys must be unique.
+6. Inventory is reserved transactionally and each seller receives a seller sub-order with its own fulfilment and financial breakdown.
 7. Seller accepts, prepares and dispatches or provides the service. Tracking, collection proof or service completion is recorded.
-8. Buyer confirms receipt or raises a return/dispute. Support can review evidence, make a reasoned decision and trigger a provider-supported full/partial refund.
-9. A balanced journal records gross, processor fee, marketplace fee, seller payable and refund adjustments. Seller payable becomes payout-eligible only under the approved provider and marketplace terms.
-10. A payout is sent using an approved provider route, reconciled against its provider reference and recorded with success/failure reason. Retries use idempotency and never duplicate a transfer.
-11. A review can be published only against a completed, verified purchase or service.
+8. Buyer confirms receipt or raises a return/dispute. Support reviews evidence and can trigger a provider-supported full/partial refund only after that capability is approved.
+9. Balanced financial journals record gross, processor fee, marketplace fee, seller payable and refund adjustments.
+10. Payouts are sent only through an approved provider route and reconciled against provider references. Retries must never duplicate transfers.
+11. Reviews are limited to completed, verified purchases or services.
 
 ## Payment and custody safeguards
 
-A checkout quote is not an order, an authorization, a capture or a promise that tax and delivery have been calculated. Current public application persistence is a JSONB compatibility document and is not suitable for concurrent stock reservations, a financial ledger, multiple independent workers or horizontal scaling. The normalized migration is a schema foundation; the present Node route layer still needs a transactional repository/RPC adapter before production commerce writes are enabled.
+A quote is not an order, authorization, capture, proof of delivery or a promise that tax and delivery are final. Database code contains order creation and atomic inventory reservation primitives, but the application checkout-status response currently disables order creation. No buyer payment, seller balance, earnings or payout may be invented. Never call the feature escrow unless the provider and legal structure explicitly support escrow.
 
-The existing PayPal API utility used by other Minglora flows is not evidence of an approved marketplace split-settlement product. Live marketplace processing must stay disabled until the payment provider confirms in writing the platform's marketplace model, merchant onboarding, buyer countries/currencies, seller payouts, fees, refunds, disputes, chargebacks, settlement timing and permitted custody/hold arrangements. Never call the feature escrow unless the provider and legal structure explicitly support escrow.
+Marketplace-specific seller, quote, order, booking and Jobs actions use the Supabase Edge Function with normalized Postgres tables/RPCs. The general social-domain runtime still uses a durable single-row JSONB compatibility adapter; that legacy path is not suitable for independent high-concurrency writes or horizontal scaling. Confirm migrations 029–034 and the matching Edge Function version against the active Supabase project before relying on the relational Marketplace path.
 
 ## Fulfilment and tax safeguards
 
@@ -39,14 +40,14 @@ Pickup can be quoted without a delivery fee. Local delivery and shipping require
 
 ## Jobs lifecycle
 
-Employer submissions start in moderation review. Published roles can be filtered by category, location, work arrangement and employment type. Candidates submit a cover letter and Minglora profile; employers can review, shortlist, reject or hire. Candidates can withdraw. CV upload, employer identity verification, interview scheduling, offer documents and payroll are separate workstreams and are not represented as complete in this first vertical slice.
+Employer submissions start in moderation review. Published roles can be filtered by category, location, work arrangement and employment type. Candidates submit a cover letter and Minglora profile; employers can review, shortlist, reject or hire. Candidates can withdraw. CV/resume upload, employer verification, interview scheduling, offer documents and payroll are separate workstreams and are not complete.
 
 ## Required production gates
 
-- Transactional Postgres repository and migration verification on a disposable project.
-- Provider marketplace approval and sandbox/production certification.
-- Distributed idempotency, inventory locking, webhook signature verification and reconciliation.
-- Seller KYC/business checks and secure verification-document storage.
-- Tax/duty and carrier-rate integrations for each launch jurisdiction.
-- Return/dispute operations, support SLAs, financial audit and backup/restore tests.
-- Abuse controls, prohibited-product rules, privacy checks and accessibility testing.
+- Verify database migrations 029–034 and the corresponding Supabase Edge Function deployment.
+- Complete provider marketplace approval and sandbox/production certification.
+- Complete tax/duty and carrier-rate integrations for each launch jurisdiction.
+- Verify seller KYC/business checks and secure verification-document storage.
+- Implement provider webhook verification and end-to-end payment/payout reconciliation before enabling money movement.
+- Validate returns/disputes, support SLAs, financial audit and backup/restore.
+- Complete prohibited-product rules, abuse controls, privacy checks and accessibility testing.
