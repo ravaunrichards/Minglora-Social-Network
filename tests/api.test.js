@@ -83,6 +83,9 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
+  const emptyDiscovery = await request('/api/discovery/people');
+  assert.equal(emptyDiscovery.status, 200);
+  assert.deepEqual(emptyDiscovery.body.users, []);
 
   const invalidPushEndpoint = await request('/api/push/subscriptions', {
     method: 'POST',
@@ -178,7 +181,19 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.match(deniedFriendRequest.body.error, /follow each other to become friends/i);
   const deniedMessage = await request('/api/messages', { method: 'POST', body: JSON.stringify({ to: registration.body.user.id, text: 'Should be blocked' }) });
   assert.equal(deniedMessage.status, 403);
+  const discoveryPost = await request('/api/posts', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A genuine public preview post from this member.' })
+  });
+  assert.equal(discoveryPost.status, 201);
   cookie = firstAccountCookie;
+  const memberDiscovery = await request('/api/discovery/people');
+  assert.equal(memberDiscovery.status, 200);
+  const suggestedMember = memberDiscovery.body.users.find(item => item.id === privacyTestRegistration.body.user.id);
+  assert.ok(suggestedMember, 'a real public member appears in discovery');
+  assert.equal(suggestedMember.recentPosts[0].text, 'A genuine public preview post from this member.');
+  assert.equal(suggestedMember.postsCount, 1);
+  assert.equal(memberDiscovery.body.users.some(item => item.id === registration.body.user.id), false, 'friends-only profiles remain hidden from non-friends');
 
   const invalidSettings = await request('/api/settings', {
     method: 'PATCH',
