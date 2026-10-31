@@ -996,7 +996,7 @@ Deno.serve(async (req: Request) => {
     if(!validUuid(buyerId)||!validUuid(quoteId)||idempotencyKey.length<8||idempotencyKey.length>128){
       return json(400,{error:"A valid checkout quote and idempotency key are required."});
     }
-    const {data,error}=await admin.rpc("create_marketplace_order_from_quote",{
+    const {data,error}=await admin.rpc("create_marketplace_order_idempotent",{
       p_buyer_id:buyerId,p_quote_id:quoteId,p_idempotency_key:idempotencyKey
     });
     if(error)return fail(error,"Marketplace order could not be created.");
@@ -1093,7 +1093,7 @@ Deno.serve(async (req: Request) => {
     if(order.status!=="awaiting_payment"||!["not_started","pending","failed"].includes(order.payment_status)){
       return json(409,{error:"This order can no longer be cancelled through this action."});
     }
-    const {data,count,error:releaseError}=await admin.rpc("release_marketplace_order_inventory",{
+    const {data,count,error:releaseError}=await admin.rpc("release_marketplace_unpaid_order_inventory",{
       p_order_id:orderId,p_reason:"buyer_cancelled_before_payment"
     });
     if(releaseError)return fail(releaseError,"Order inventory could not be released.");
@@ -1182,12 +1182,27 @@ Deno.serve(async (req: Request) => {
     const job=input.job||{};
     const title=String(job.title||"").trim(),companyName=String(job.companyName||"").trim();
     const description=String(job.description||"").trim(),deadline=new Date(job.applicationDeadline);
+    const category=String(job.category||""),employmentType=String(job.employmentType||""),workplaceType=String(job.workplaceType||"");
+    const location=String(job.location||"").trim().slice(0,160),currency=String(job.currency||"JMD").toUpperCase();
+    const salaryMin=job.salaryMinMinor==null?null:Number(job.salaryMinMinor);
+    const salaryMax=job.salaryMaxMinor==null?null:Number(job.salaryMaxMinor);
+    const allowedCategories=["technology","administration","customer_service","sales_marketing","finance","healthcare","education","construction_trades","transport_logistics","hospitality","creative_media","other"];
+    const allowedEmployment=["full_time","part_time","contract","temporary","internship","freelance"];
+    const allowedWorkplace=["onsite","hybrid","remote"];
+    const allowedCurrencies=["JMD","USD","CAD","GBP","EUR","TTD","BBD","GYD"];
     if(title.length<5||companyName.length<2||description.length<50||description.length>6000||
-       !Number.isFinite(deadline.getTime())||deadline<=new Date())return json(400,{error:"Job posting details or application deadline are invalid."});
+       !allowedCategories.includes(category)||!allowedEmployment.includes(employmentType)||
+       !allowedWorkplace.includes(workplaceType)||(workplaceType!=="remote"&&location.length<2)||
+       !allowedCurrencies.includes(currency)||!Number.isFinite(deadline.getTime())||deadline<=new Date()||
+       (salaryMin!==null&&(!Number.isSafeInteger(salaryMin)||salaryMin<0))||
+       (salaryMax!==null&&(!Number.isSafeInteger(salaryMax)||salaryMax<0))||
+       (salaryMin!==null&&salaryMax!==null&&salaryMax<salaryMin)){
+      return json(400,{error:"Job posting details, salary, location or application deadline are invalid."});
+    }
     const {data,error}=await admin.from("marketplace_job_postings").insert({
-      employer_id:employerId,company_name:companyName,title,description,category:job.category,
-      employment_type:job.employmentType,workplace_type:job.workplaceType,location_label:job.location||"",
-      currency:job.currency||"JMD",salary_min_minor:job.salaryMinMinor,salary_max_minor:job.salaryMaxMinor,
+      employer_id:employerId,company_name:companyName,title,description,category,
+      employment_type:employmentType,workplace_type:workplaceType,location_label:location,
+      currency,salary_min_minor:salaryMin,salary_max_minor:salaryMax,
       application_deadline:deadline.toISOString(),status:"pending_review"
     }).select("*").single();
     if(error)return fail(error,"Job vacancy could not be submitted.");
@@ -1202,15 +1217,23 @@ Deno.serve(async (req: Request) => {
     if(!validUuid(actorId)||!validUuid(String(input.jobId||""))||!["open","rejected"].includes(String(input.status||""))||!String(input.reason||"").trim()){
       return json(400,{error:"A valid vacancy moderation decision and reason are required."});
     }
+    const {data:pending,error:lookupError}=await admin.from("marketplace_job_postings")
+      .select("id,application_deadline").eq("id",input.jobId).eq("status","pending_review").maybeSingle();
+    if(lookupError)return json(503,{error:"Pending job vacancy could not be loaded."});
+    if(!pending)return json(404,{error:"Pending job vacancy not found."});
+    if(input.status==="open"&&new Date(pending.application_deadline)<=new Date()){
+      return json(409,{error:"The application deadline has passed. Edit and resubmit this vacancy with a future deadline."});
+    }
     const {data,error}=await admin.from("marketplace_job_postings").update({
       status:input.status,reviewed_by:actorId,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()
     }).eq("id",input.jobId).eq("status","pending_review").select("*").maybeSingle();
     if(error)return fail(error,"Job moderation decision could not be saved.");
-    if(!data)return json(404,{error:"Pending job vacancy not found."});
-    await admin.from("audit_log").insert({
+    if(!data)return json(409,{error:"The vacancy was reviewed by another request. Refresh the queue."});
+    const {error:auditError}=await admin.from("audit_log").insert({
       actor_id:actorId,action:"job_posting_"+String(input.status),target_type:"job_posting",
       target_id:String(input.jobId),metadata:{reason:String(input.reason).slice(0,1000)}
     });
+    if(auditError)return json(503,{error:"Vacancy decision saved but the audit event could not be written."});
     return json(200,{job:{id:data.id,employerId:data.employer_id,title:data.title,status:data.status,reviewedAt:data.reviewed_at}});
   }
 
