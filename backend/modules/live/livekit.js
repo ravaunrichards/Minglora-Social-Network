@@ -72,7 +72,7 @@ export async function verifyLiveKitConnection({ force = false } = {}) {
   return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
 }
 
-export async function createLiveKitToken({ identity, name, roomName, canPublish = false }) {
+export async function createLiveKitToken({ identity, name, roomName, canPublish = false, publishSources = null }) {
   const settings = config();
   if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
     const error = new Error('LiveKit is not configured for Minglora.');
@@ -95,7 +95,8 @@ export async function createLiveKitToken({ identity, name, roomName, canPublish 
     room: roomName,
     canPublish: Boolean(canPublish),
     canSubscribe: true,
-    canPublishData: Boolean(canPublish)
+    canPublishData: Boolean(canPublish),
+    ...(Array.isArray(publishSources) ? { canPublishSources: publishSources } : {})
   });
 
   return {
