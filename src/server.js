@@ -103,13 +103,15 @@ function safeUser(u,viewerId=null){
   if(own)result.aboutVisibility=visibility;
   return result;
 }
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',feedSort:'recent',reducedMotion:false}};
-function getUserSettings(user){const saved=user?.settings||{};return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences:{...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})}};}
+const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
+const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false}};
+function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','feedSort','reducedMotion']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -119,6 +121,8 @@ function validateSettingsPatch(input,user){
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
       if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
       if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
+      if(section==='preferences'&&key==='colorTheme'&&!APP_COLOR_THEMES.includes(value))return {valid:false,error:'Choose a supported Minglora colour theme.'};
+      if(section==='preferences'&&key==='liveRoomTheme'&&!LIVE_ROOM_THEMES.includes(value))return {valid:false,error:'Choose a supported LIVE room theme.'};
       if(section==='preferences'&&key==='feedSort'&&!['recent','oldest'].includes(value))return {valid:false,error:'Feed sort must be recent or oldest.'};
       if(section==='preferences'&&key==='reducedMotion'&&typeof value!=='boolean')return {valid:false,error:'Reduced motion must be true or false.'};
       next[section][key]=value;
@@ -1055,7 +1059,9 @@ async function route(req, res) {
           roomName,
           canPublish: true
         });
-        const session = { id, roomName, hostId: user.id, title, visibility, status: 'live', createdAt: now(), endedAt: null };
+        const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
+        const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
+        const session = { id, roomName, hostId: user.id, title, visibility, liveTheme, status: 'live', createdAt: now(), endedAt: null };
         await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
         db.liveSessions = db.liveSessions || [];
         db.liveParticipants = db.liveParticipants || [];
@@ -1067,6 +1073,25 @@ async function route(req, res) {
         }
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
+      }
+      const liveThemeMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/theme$/);
+      if (method === 'GET' && liveThemeMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveThemeMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
+        const allowed = session.hostId === user.id || session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
+        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
+        const liveTheme = LIVE_ROOM_THEMES.includes(session.liveTheme) ? session.liveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
+        return json(res, 200, { liveTheme });
+      }
+      if (method === 'PATCH' && liveThemeMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveThemeMatch[1] && item.status === 'live');
+        if (!session) return json(res, 404, { error: 'Live session not found.' });
+        if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change this room theme.' });
+        const liveTheme = String(input.liveTheme || '');
+        if (!LIVE_ROOM_THEMES.includes(liveTheme)) return json(res, 400, { error: 'Choose a supported LIVE room theme.' });
+        session.liveTheme = liveTheme;
+        await saveStore();
+        return json(res, 200, { liveTheme });
       }
       let liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/join$/);
       if (method === 'POST' && liveMatch) {
