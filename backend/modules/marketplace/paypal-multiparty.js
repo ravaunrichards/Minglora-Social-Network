@@ -67,11 +67,15 @@ export function buildMarketplacePayPalReferralPayload({
   trackingId,
   returnUrl,
   email,
+  shareDataConsent = false,
   locale = 'en-JM'
 }) {
   const tracking = String(trackingId || '').trim();
   const callback = String(returnUrl || '').trim();
   const contact = String(email || '').trim().toLowerCase();
+  if (shareDataConsent !== true) {
+    throw new Error('The seller must explicitly consent to PayPal sharing the data required for marketplace onboarding.');
+  }
   if (!tracking || tracking.length > 127 || !callback.startsWith('https://')) {
     throw new Error('A valid seller tracking ID and HTTPS return URL are required.');
   }
@@ -97,7 +101,7 @@ export function buildMarketplacePayPalReferralPayload({
       }
     }],
     products: ['EXPRESS_CHECKOUT'],
-    legal_consents: [{ type: 'SHARE_DATA_CONSENT', granted: true }]
+    legal_consents: [{ type: 'SHARE_DATA_CONSENT', granted: shareDataConsent }]
   };
   if (contact) payload.email = contact;
   if (locale) payload.preferred_language_code = locale;
