@@ -63,3 +63,10 @@ test('The host appears in the speaker roster independently of active speech', ()
   assert.match(roster,/Microphone connected/);
   assert.match(roster,/person\.speaking/);
 });
+
+test('LIVE participant leave records an ended connection for viewers and speakers', () => {
+  assert.match(server,/requestSupabaseState\('live_participant_mark_left'/);
+  assert.match(edge,/if \(action === "live_participant_mark_left"\)/);
+  assert.match(edge,/status:"left",left_at:new Date\(\)\.toISOString\(\)/);
+  assert.match(edge,/\.in\("status",\["requested","invited","accepted","connected"\]\)/);
+});
