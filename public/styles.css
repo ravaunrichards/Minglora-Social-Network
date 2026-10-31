@@ -627,3 +627,5 @@ body[data-color-theme] .settings-section-title p,body[data-color-theme] .setting
 .live-room-preview.live-preview-theme-garden{background:radial-gradient(circle at 50% 25%,#38664b,#091b13 76%)}
 .live-room-preview.live-preview-theme-social{background:radial-gradient(circle at 50% 25%,#654768,#170f1a 76%)}
 .live-create-form{grid-template-columns:minmax(0,1fr) 135px minmax(145px,175px) auto;align-items:end}
+
+@media(max-width:760px){.live-create-form>select{grid-column:1/-1}}
