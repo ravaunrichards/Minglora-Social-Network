@@ -35,7 +35,7 @@ test('phone overlays stay clear of the fixed bottom navigation and device safe a
   assert.ok(css.includes('body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}'));
   assert.ok(css.includes('#message-window-dock{bottom:calc(60px + env(safe-area-inset-bottom))!important'));
   assert.ok(css.includes('.toast{bottom:calc(72px + env(safe-area-inset-bottom))}'));
-  assert.match(css, /@media\\(max-width:760px\\)\\{\\.mobile-nav\\{height:calc\\(60px \\+ env\\(safe-area-inset-bottom\\)\\);padding-bottom:env\\(safe-area-inset-bottom\\)\\}\\}/);
+  assert.ok(css.includes('@media(max-width:760px){.mobile-nav{height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}}'));
 });
 
 test('dialogs can scroll on short screens instead of being cut off', async () => {
