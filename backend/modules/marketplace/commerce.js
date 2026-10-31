@@ -104,9 +104,12 @@ export function buildBalancedMarketplaceJournal({ currency, grossMinor, processo
   if (!CURRENCIES.has(String(currency || '').toUpperCase())) throw new Error('Unsupported ledger currency.');
   for (const value of [grossMinor, processorFeeMinor, commissionMinor, sellerNetMinor]) if (!Number.isSafeInteger(value) || value < 0) throw new Error('Ledger amounts must be non-negative integer minor units.');
   if (grossMinor <= 0 || grossMinor !== processorFeeMinor + commissionMinor + sellerNetMinor) throw new Error('Gross payment must equal processor fee, marketplace commission and seller net.');
+  // At capture, the provider owes the gross proceeds. The processing fee is a
+  // payable until the provider settlement statement confirms its deduction.
+  // Fee expense is recognised in the separate settlement journal.
   const entries = [
-    ...(grossMinor - processorFeeMinor > 0 ? [{ account: 'processor_clearing', direction: 'debit', amountMinor: grossMinor - processorFeeMinor }] : []),
-    ...(processorFeeMinor > 0 ? [{ account: 'payment_processing_expense', direction: 'debit', amountMinor: processorFeeMinor }] : []),
+    { account: 'processor_clearing', direction: 'debit', amountMinor: grossMinor },
+    ...(processorFeeMinor > 0 ? [{ account: 'processor_fee_payable', direction: 'credit', amountMinor: processorFeeMinor }] : []),
     ...(sellerNetMinor > 0 ? [{ account: 'seller_payable', direction: 'credit', amountMinor: sellerNetMinor }] : []),
     ...(commissionMinor > 0 ? [{ account: 'marketplace_commission_revenue', direction: 'credit', amountMinor: commissionMinor }] : [])
   ];
