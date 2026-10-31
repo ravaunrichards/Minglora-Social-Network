@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
+import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
@@ -941,7 +941,7 @@ async function route(req, res) {
         const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id);
         if(!asset)return json(res,404,{error:'The media upload record was not found.'});
         if(asset.status!=='uploading')return json(res,409,{error:'This upload has already been completed or retired.'});
-        const completed=await mediaGateway('media_upload_complete',{ownerId:user.id,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,byteSize:asset.byteSize});
+        const completed=await mediaGateway('media_upload_complete',{ownerId:user.id,assetId:asset.id,slot:asset.slot,originalName:asset.originalName||'Attachment',bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,byteSize:asset.byteSize});
         if(asset.slot==='avatar'||asset.slot==='cover'){
           if(typeof completed.url!=='string'||!completed.url.startsWith('https://'))return json(res,502,{error:'Minglora could not finalize this profile image.'});
           const previous=(db.mediaAssets||[]).find(item=>item.ownerId===user.id&&item.slot===asset.slot&&item.status==='attached');
