@@ -20,7 +20,7 @@ test('global navigation and Creator Studio tabs remain anchored while the page s
   assert.match(css, /\.mobile-nav\{position:fixed!important/);
   assert.match(css, /\.profile-tabs\{\s*position:sticky/);
   assert.match(css, /\.settings-nav\{position:sticky/);
-  assert.match(css, /\.creator-studio-nav\.live-format-picker\{\s*position:sticky!important;top:74px/);
+  assert.match(css, /\.creator-studio-nav-slot>\.creator-studio-nav\.live-format-picker\{\s*position:fixed!important;top:var\(--creator-studio-nav-top,66px\)!important/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.creator-studio-nav\.live-format-picker\{\s*top:66px;z-index:70;display:flex!important/);
   assert.match(css, /overflow-x:auto;overflow-y:hidden;scrollbar-width:thin/);
 });
@@ -68,9 +68,9 @@ test('global navigation destinations all resolve to an application view and Home
 });
 
 test('the app shell and service worker cache the same final navigation and stage build', () => {
-  assert.match(html, /styles\.css\?v=20261031-creator-stage-sticky-fallback-2/);
-  assert.match(html, /app\.js\?v=20261031-creator-stage-sticky-fallback-2/);
-  assert.match(worker, /minglora-shell-v25-creator-stage-sticky-fallback/);
-  assert.match(worker, /styles\.css\?v=20261031-creator-stage-sticky-fallback-2/);
-  assert.match(worker, /app\.js\?v=20261031-creator-stage-sticky-fallback-2/);
+  assert.match(html, /styles\.css\?v=20261031-creator-nav-fixed-1/);
+  assert.match(html, /app\.js\?v=20261031-creator-nav-fixed-1/);
+  assert.match(worker, /minglora-shell-v26-creator-nav-fixed/);
+  assert.match(worker, /styles\.css\?v=20261031-creator-nav-fixed-1/);
+  assert.match(worker, /app\.js\?v=20261031-creator-nav-fixed-1/);
 });
