@@ -1666,6 +1666,7 @@ function initCreatorStudio3D(canvas){
   function render(now){
     if(disposed)return;
     frame=requestAnimationFrame(render);
+    try{
     if(yawState.paused&&now!==0){/* Render a stable frame while paused. */}
     else{
       objects[16].ry+=.0011;
@@ -1686,6 +1687,14 @@ function initCreatorStudio3D(canvas){
       gl.uniform3fv(uniforms.color,object.color);gl.uniform1f(uniforms.glow,object.glow);
       gl.drawArrays(gl.TRIANGLES,0,geo.count);
     }
+    }catch(error){
+      if(disposed)return;
+      disposed=true;cancelAnimationFrame(frame);observer?.disconnect();
+      document.removeEventListener("visibilitychange",onVisibility);
+      canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);
+      canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+      showCompatibilityScene(error.message||"The WebGL renderer stopped unexpectedly.");
+    }
   }
   frame=requestAnimationFrame(render);
   const onDown=event=>{yawState.drag=true;yawState.lastX=event.clientX;yawState.lastY=event.clientY;canvas.setPointerCapture?.(event.pointerId);};
@@ -1699,9 +1708,8 @@ function initCreatorStudio3D(canvas){
   const onVisibility=()=>{if(document.hidden)yawState.paused=true;};
   document.addEventListener("visibilitychange",onVisibility);
   const onContextLost=event=>{
-    event.preventDefault();disposed=true;cancelAnimationFrame(frame);observer?.disconnect();
-    document.removeEventListener("visibilitychange",onVisibility);
-    canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+    event.preventDefault();
+    const cleanup=creatorStudioStageCleanup;creatorStudioStageCleanup=null;cleanup?.();
     showCompatibilityScene("The browser released the WebGL context; the compatibility renderer is now active.");
   };
   canvas.addEventListener("webglcontextlost",onContextLost,false);
