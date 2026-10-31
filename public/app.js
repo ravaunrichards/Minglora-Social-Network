@@ -608,14 +608,14 @@ async function endHostedLiveSession(session){
 function participantHasLiveAudio(participant){
   const publications=participant?.audioTrackPublications;
   if(publications&&typeof publications.values==="function"){
-    for(const publication of publications.values())if(publication&&!publication.isMuted)return true;
+    for(const publication of publications.values())if(publication)return true;
   }
   const tracks=participant?.trackPublications;
   if(tracks&&typeof tracks.values==="function"){
     for(const publication of tracks.values()){
       const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
       const source=String(publication?.source||"").toLowerCase();
-      if((kind==="audio"||source==="microphone")&&!publication?.isMuted)return true;
+      if(kind==="audio"||source==="microphone")return true;
     }
   }
   return false;
@@ -630,7 +630,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
       name:local?.name||state.user?.name||"You",
       label:role==="host"?"You · Host":"You · Guest speaker",
       connected:participantHasLiveAudio(local),
-      speaking:activeSpeakerIds.has(local?.identity)
+      speaking:activeSpeakerIds.has(local?.identity), muted:Array.from(local?.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted)
     });
   }
   const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
@@ -643,7 +643,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
       name:person.name||person.identity||"Minglora member",
       label:isHost?"Host": "Guest speaker",
       connected:hasAudio,
-      speaking:activeSpeakerIds.has(person.identity)
+      speaking:activeSpeakerIds.has(person.identity), muted:Array.from(person.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted)
     });
   }
   if(!speakers.length){
@@ -652,7 +652,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
   }
   root.innerHTML=speakers.map(person=>
     "<span class='live-speaker-chip "+(person.speaking?"active ":"")+(person.connected?"connected":"connecting")+"' title='"+esc(person.label)+"'>"+
-      esc(person.name)+"<small>"+(person.speaking?"Speaking":person.connected?"Microphone connected": "Connected · microphone starting")+"</small></span>"
+      esc(person.name)+"<small>"+(person.speaking?"Speaking":person.connected?(person.muted?"Microphone muted":"Microphone connected"):"Connected · microphone starting")+"</small></span>"
   ).join("");
 }
 async function openLiveRoom(session,role,issuedLiveKit){
