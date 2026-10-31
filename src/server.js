@@ -719,6 +719,26 @@ async function route(req, res) {
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_status');return json(res,200,result);}
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
+      if(method==='GET'&&p==='/api/marketplace/orders'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_orders_list',{userId:user.id});return json(res,200,result);}
+        return json(res,200,{orders:[]});
+      }
+      const marketplaceOrderMatch=p.match(/^\\/api\\/marketplace\\/orders\\/([^/]+)$/);
+      if(method==='GET'&&marketplaceOrderMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_get',{userId:user.id,orderId:marketplaceOrderMatch[1]});return json(res,200,result);}
+        return json(res,404,{error:'Order not found.'});
+      }
+      if(method==='POST'&&p==='/api/marketplace/orders'){
+        const quoteId=String(input.quoteId||''),idempotencyKey=String(input.idempotencyKey||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(quoteId)||idempotencyKey.length<8||idempotencyKey.length>128)return json(res,400,{error:'A valid checkout quote and idempotency key are required.'});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_create',{buyerId:user.id,quoteId,idempotencyKey});return json(res,201,result);}
+        return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
+      }
+      const marketplaceOrderCancelMatch=p.match(/^\\/api\\/marketplace\\/orders\\/([^/]+)\\/cancel$/);
+      if(method==='POST'&&marketplaceOrderCancelMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_cancel',{userId:user.id,orderId:marketplaceOrderCancelMatch[1]});return json(res,200,result);}
+        return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
+      }
       if(method==='GET'&&p==='/api/marketplace/bookings'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_bookings_list',{userId:user.id});return json(res,200,result);}
         const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(item=>{const listing=(db.marketplaceListings||[]).find(entry=>entry.id===item.listingId);const otherId=item.buyerId===user.id?item.sellerId:item.buyerId;const other=db.users.find(entry=>entry.id===otherId);return {...item,listingTitle:listing?.title||'Service appointment',otherName:other?.name||'Minglora member'};});
