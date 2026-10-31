@@ -24,8 +24,8 @@ test('app palettes and LIVE room styles are explicit allow-lists with sensible d
 test('Theme Centre previews and persists app and LIVE preferences separately', () => {
   assert.match(settings, /id="settings-preferences"/);
   assert.match(settings, /Theme Centre/);
-  assert.match(settings, /name="colorTheme"/);
-  assert.match(settings, /name="liveRoomTheme"/);
+  assert.match(settings, /name="\\$\\{name\\}"/);
+  assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings, /renderThemeChoices\('colorTheme', APP_THEMES/);
   assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings, /colorTheme: formData\.get\('colorTheme'\)/);
@@ -41,7 +41,7 @@ test('host LIVE style is stored on each broadcast and is controlled by the host'
   assert.match(app, /liveTheme:values\.get\("liveTheme"\)/);
   assert.match(app, /id='live-room-theme-select'/);
   assert.match(app, /\/theme.*method:"PATCH"/);
-  assert.match(app, /\/theme.*8000/);
+  assert.ok(app.includes('liveThemeRefreshTimer=setInterval') && app.includes('},8000);'), 'viewers periodically refresh the broadcast theme');
   assert.match(app, /applyLiveRoomTheme\(result\.liveTheme\)/);
 });
 
