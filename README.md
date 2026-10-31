@@ -105,7 +105,7 @@ All application API endpoints use the `/api` prefix.
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `GET /api/feed` (optional `?limit=20&cursor=...` pagination), `POST /api/posts`
 - `POST /api/posts/:id/reactions`, `POST /api/posts/:id/comments`
-- `GET /api/users`, `GET /api/users/:id`, `GET /api/users/:id/followers|following|friends`, `PATCH /api/users/me`
+- `GET /api/users` (lightweight member list), `GET /api/discovery/people` (privacy-filtered outside-profile previews with recent public posts, visible stories and mutual/follower counts), `GET /api/users/:id`, `GET /api/users/:id/followers|following|friends`, `PATCH /api/users/me`
 - `POST /api/friends/:id/request`, `POST /api/friends/:id/accept`
 - `GET /api/groups`, `POST /api/groups`, group detail and discussion routes under `/api/groups/:id`
 - `GET /api/pages`, `POST /api/pages`, Page detail/follow/post routes under `/api/pages/:id`
