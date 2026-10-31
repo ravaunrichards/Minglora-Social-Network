@@ -47,7 +47,7 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261031-audio-live-type-2'));
-  assert.ok(worker.includes('minglora-shell-v19-audio-live-3d'));
-  assert.ok(worker.includes('styles.css?v=20261031-audio-live-type-2'));
+  assert.ok(html.includes('styles.css?v=20261031-audio-speaker-connection-4'));
+  assert.ok(worker.includes('minglora-shell-v21-audio-speaker-connection'));
+  assert.ok(worker.includes('styles.css?v=20261031-audio-speaker-connection-4'));
 });
