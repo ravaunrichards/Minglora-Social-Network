@@ -84,3 +84,7 @@ test('LIVE participant confirmation retries until the server verifies LiveKit pr
   assert.match(app,/await syncLiveParticipantPresence\(session\)/);
   assert.match(app,/function stopLiveParticipantSync\(\)/);
 });
+
+test('Opening another LIVE room clears a previous participant-presence retry', () => {
+  assert.match(app,/async function openLiveRoom\(session,role,issuedLiveKit\)\{\s*stopLiveChatRefresh\(\);stopLiveSpeakerRefresh\(\);stopLiveParticipantSync\(\);/);
+});
