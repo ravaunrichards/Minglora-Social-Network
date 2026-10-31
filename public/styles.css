@@ -478,3 +478,7 @@
   body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
   .mobile-nav{height:calc(60px + env(safe-area-inset-bottom))}
 }
+
+
+/* Profile metrics live in About, separate from the username identity block. */
+.profile-about-counts{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0 15px}
