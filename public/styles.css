@@ -2245,7 +2245,7 @@ body:has(.creator-studio-shell) .creator-studio-nav.live-format-picker{
 
 
 /* Settings must remain a normal-flow page: no pinned category bars or floating save controls. */
-html:has(.settings-layout){scroll-padding-top:0}
+html:has(#settings-form){scroll-padding-top:0}
 .settings-layout{
   display:grid;
   grid-template-columns:190px minmax(0,1fr);
@@ -2316,7 +2316,7 @@ html:has(.settings-layout){scroll-padding-top:0}
   overflow:visible!important;
   padding:6px 0;
 }
-body:has(.settings-layout) #message-window-dock{
+body:has(#settings-form) #message-window-dock{
   position:static!important;
   inset:auto!important;
   top:auto!important;
@@ -2333,12 +2333,12 @@ body:has(.settings-layout) #message-window-dock{
   overflow:visible;
   z-index:auto;
 }
-body:has(.settings-layout) .message-window{
+body:has(#settings-form) .message-window{
   max-height:min(62vh,420px);
   height:min(420px,62vh);
 }
 @media(max-width:850px){
-  .settings-layout{grid-template-columns:minmax(0,1fr);gap:12px}
+  #settings-form{display:block!important}
   .settings-nav{
     display:grid!important;
     grid-template-columns:repeat(auto-fit,minmax(min(100%,125px),1fr));
@@ -2376,8 +2376,8 @@ body:has(.settings-layout) .message-window{
 
 
 /* Flat Settings presentation: remove nested panels and decorative heading layers. */
-html:has(.settings-layout){scroll-padding-top:16px}
-.settings-layout{display:block!important;min-width:0;overflow:visible}
+html:has(#settings-form){scroll-padding-top:16px}
+#settings-form{display:block!important;min-width:0;overflow:visible}
 .settings-nav{display:none!important}
 .settings-heading{margin:4px 0 8px!important}
 .settings-heading .settings-eyebrow,
@@ -2448,7 +2448,7 @@ html:has(.settings-layout){scroll-padding-top:16px}
   box-shadow:none!important;
 }
 .settings-ticket-messages{max-height:none!important;overflow:visible!important}
-body:has(.settings-layout) #message-window-dock{
+body:has(#settings-form) #message-window-dock{
   position:static!important;
   inset:auto!important;
   width:min(100%,1100px)!important;
