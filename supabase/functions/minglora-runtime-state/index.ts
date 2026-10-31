@@ -940,6 +940,27 @@ Deno.serve(async (req: Request) => {
       const current=mediaMap.get(media.listing_id)||[];
       current.push(media.asset_id);mediaMap.set(media.listing_id,current);
     }
+    const allMediaIds=[...new Set((mediaResult.data||[]).map((row:any)=>row.asset_id))];
+    const {data:assets,error:assetsError}=allMediaIds.length
+      ?await admin.from("media_assets")
+        .select("id,owner_id,storage_key,storage_bucket,mime_type,media_type,byte_size,asset_status,processing_status,attached_to")
+        .in("id",allMediaIds)
+      :{data:[],error:null};
+    if(assetsError)return json(503,{error:"Marketplace listing photos could not be loaded."});
+    const listingById=new Map(listings.map((row:any)=>[row.id,row]));
+    const assetById=new Map((assets||[]).map((asset:any)=>[asset.id,asset]));
+    const signedMediaMap=new Map<string,any[]>();
+    await Promise.all((mediaResult.data||[]).map(async (media:any)=>{
+      const listing=listingById.get(media.listing_id),asset=assetById.get(media.asset_id);
+      if(!listing||!asset||asset.owner_id!==listing.seller_id||asset.slot!=="marketplace"||
+         asset.asset_status!=="attached"||asset.processing_status!=="ready"||
+         asset.attached_to!=="marketplace:"+listing.id||asset.storage_bucket!=="minglora-post-media")return;
+      const {data,error}=await admin.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_key,3600);
+      if(error||!data?.signedUrl)return;
+      const current=signedMediaMap.get(listing.id)||[];
+      current.push({id:asset.id,mimeType:asset.mime_type,mediaType:asset.media_type,url:data.signedUrl,byteSize:asset.byte_size});
+      signedMediaMap.set(listing.id,current);
+    }));
     const storeMap=new Map((storeResult.data||[]).map((row:any)=>[row.user_id,row]));
     const profileMap=new Map((profileResult.data||[]).map((row:any)=>[row.id,row]));
     const savedSet=new Set((savedResult.data||[]).map((row:any)=>row.listing_id));
@@ -952,7 +973,7 @@ Deno.serve(async (req: Request) => {
         location:row.location_label,status:row.status==="archived"?"paused":row.status,
         kind:row.kind,priceType:row.price_type,quantity:row.quantity,
         fulfillment:row.fulfillment_options,serviceMode:row.service_mode,tags:row.tags||[],
-        mediaIds:mediaMap.get(row.id)||[],seller:{
+        mediaIds:mediaMap.get(row.id)||[],media:signedMediaMap.get(row.id)||[],seller:{
           id:row.seller_id,name:profile?.display_name||store?.store_name||"Minglora seller",
           username:profile?.username||"",storeName:store?.store_name||null
         },
