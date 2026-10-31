@@ -8,10 +8,14 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFile(resolve(root, path), 'utf8');
 
 function ruleFor(css, selector) {
-  const matches = [...css.matchAll(/([^{}]+)\\{([^{}]*)\\}/g)];
-  return matches.reverse().find(([, names]) =>
-    names.split(',').some(name => name.trim() === selector)
-  )?.[2] || '';
+  const blocks = css.split('}');
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    const open = blocks[index].lastIndexOf('{');
+    if (open < 0) continue;
+    const names = blocks[index].slice(0, open).split(',').map(name => name.trim());
+    if (names.includes(selector)) return blocks[index].slice(open + 1);
+  }
+  return '';
 }
 
 test('shared content containers can shrink without pushing the page out of alignment', async () => {
