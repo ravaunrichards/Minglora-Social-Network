@@ -82,7 +82,7 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261031-settings-flow-no-overlays-1'));
-  assert.ok(worker.includes('minglora-shell-v28-settings-flow-no-overlays'));
-  assert.ok(worker.includes('styles.css?v=20261031-settings-flow-no-overlays-1'));
+  assert.ok(html.includes('styles.css?v=20261031-settings-flat-2'));
+  assert.ok(worker.includes('minglora-shell-v30-settings-flat-2'));
+  assert.ok(worker.includes('styles.css?v=20261031-settings-flat-2'));
 });
