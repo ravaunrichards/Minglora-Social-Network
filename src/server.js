@@ -1381,7 +1381,21 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/discovery/people'){
         await pruneExpiredStories();
         const follows=db.follows||[];
-        const candidates=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member));
+        const activityAt=new Map();
+        for(const post of db.posts||[]){
+          if(post.status==='hidden'||blockedBetween(user.id,post.userId))continue;
+          const timestamp=Date.parse(post.createdAt)||0;
+          if(timestamp>(activityAt.get(post.userId)||0))activityAt.set(post.userId,timestamp);
+        }
+        for(const story of db.stories||[]){
+          if(!canViewStory(user.id,story))continue;
+          const timestamp=Date.parse(story.createdAt)||0;
+          if(timestamp>(activityAt.get(story.userId)||0))activityAt.set(story.userId,timestamp);
+        }
+        const candidates=db.users
+          .filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
+          .sort((first,second)=>Math.max(activityAt.get(second.id)||0,Date.parse(second.createdAt)||0)-Math.max(activityAt.get(first.id)||0,Date.parse(first.createdAt)||0))
+          .slice(0,24);
         const users=await Promise.all(candidates.map(async member=>{
           const memberFriendIds=[...new Set(follows
             .filter(edge=>edge.followedId===member.id&&follows.some(reverse=>reverse.followerId===member.id&&reverse.followedId===edge.followerId))
