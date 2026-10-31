@@ -403,7 +403,6 @@
           button.disabled = false;
         }
       });
-;
     } catch (error) {
       main.innerHTML = `<section class="card empty-state"><h3>Settings could not be loaded</h3><p>${escapeHtml(error.message)}</p><button class="primary" id="retry-settings">Try again</button></section>`;
       document.querySelector('#retry-settings')?.addEventListener('click', openSettings);
