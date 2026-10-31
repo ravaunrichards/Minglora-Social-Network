@@ -48,3 +48,12 @@ Guest requests, co-host moderation, stream recording/egress, and a verified Live
 5. Do not commit the secret or paste it into source files.
 
 LiveKit's Build plan currently starts at US$0/month with no credit card required. See [LiveKit pricing](https://livekit.com/pricing).
+
+
+## Independent audio LIVE and speaker stage
+
+Each broadcast stores `broadcast_type` as `video_audio` or `audio_only`. Audio-only hosts receive a LiveKit token limited to the microphone track source; camera permissions are not granted. Video+audio hosts receive microphone and camera publishing permissions. Viewers remain subscribe-only.
+
+Signed-in listeners can request a microphone seat through `POST /api/live/sessions/:id/speaker-requests`. The host can list requests with `GET /api/live/sessions/:id/speaker-requests` and accept or reject a request with `PATCH /api/live/sessions/:id/speaker-requests/:userId` using `{ "decision": "accept" | "reject" }`. A maximum of eight guest speakers can be approved per room. Approved guests reconnect through the normal join route and receive microphone-only publishing access. Their stage state is recorded in `live_participants` and Minglora's durable application state.
+
+The `GET /api/live/sessions/:id/speaker-request` endpoint returns the signed-in member's request status so the browser can offer the Join stage action after acceptance. Room theme preferences remain in Settings and are not exposed as LIVE launch or in-room selectors.
