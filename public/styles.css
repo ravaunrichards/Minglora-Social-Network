@@ -1179,3 +1179,14 @@ pre,code{max-width:100%;white-space:pre-wrap}
   .live-audio-orb,.live-audio-waveform.is-active i{animation:none!important;}
   .live-format-card{transition:none;}
 }
+
+.live-audio-mic-model{
+  position:absolute;top:27px;right:clamp(4px,7vw,76px);z-index:1;
+  width:clamp(94px,18vw,156px);height:clamp(172px,28vw,248px);
+  background:transparent;--poster-color:transparent;
+  filter:drop-shadow(0 20px 22px rgba(0,0,0,.38));
+  pointer-events:auto;
+}
+@media(max-width:760px){
+  .live-audio-mic-model{top:12px;right:1px;width:100px;height:178px;opacity:.92;}
+}
