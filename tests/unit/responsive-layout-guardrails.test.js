@@ -55,19 +55,22 @@ test('desktop navigation is centred in the available lane between search and not
   assert.ok(html.indexOf('class="top-nav"') < html.indexOf('id="notifications-btn"'));
 });
 
-test('Settings page navigation and save controls stay in normal flow without overlays', async () => {
+test('Settings is flattened without decorative category rails or nested card layers', async () => {
   const css = await read('public/styles.css');
   const settings = await read('public/settings.js');
-  const settingsLayout = css.slice(css.lastIndexOf('/* Settings must remain a normal-flow page'));
-  assert.match(settingsLayout, /\.settings-nav\{[\s\S]*?position:static!important/);
-  assert.match(settingsLayout, /\.settings-save-bar\{[\s\S]*?position:static!important/);
-  assert.match(settingsLayout, /scroll-margin-top:calc\(var\(--minglora-header-height,66px\) \+ 18px\)/);
-  assert.match(settingsLayout, /\.settings-ticket-messages\{[\s\S]*?max-height:none!important/);
-  assert.match(settingsLayout, /body:has\(\.settings-layout\) #message-window-dock\{[\s\S]*?position:static!important/);
-  assert.match(settingsLayout, /\.settings-nav\{[\s\S]*?grid-template-columns:repeat\(auto-fit/);
-  assert.doesNotMatch(settingsLayout, /\.settings-nav\{[^}]*overflow-x:auto/);
-  assert.match(settings, /<nav class="settings-nav"/);
-  assert.match(settings, /scrollIntoView\(\{ behavior: settings\.preferences\.reducedMotion \? 'auto' : 'smooth', block: 'start' \}\)/);
+  const flat = css.slice(css.lastIndexOf('/* Flat Settings presentation'));
+  assert.match(flat, /\.settings-nav\{display:none!important/);
+  assert.match(flat, /\.settings-card\{[\s\S]*?border:0!important/);
+  assert.match(flat, /\.settings-card\{[\s\S]*?background:transparent!important/);
+  assert.match(flat, /\.settings-section-title\{[\s\S]*?display:block!important/);
+  assert.match(flat, /\.settings-save-bar\{[\s\S]*?position:static!important/);
+  assert.match(flat, /body:has\(#settings-form\) #message-window-dock\{[\s\S]*?position:static!important/);
+  assert.doesNotMatch(settings, /class="settings-layout"|class="settings-nav"|class="settings-icon"|settings-icon/);
+  assert.doesNotMatch(settings, /sectionHeading\('[^']*',/);
+  assert.match(settings, /function sectionHeading\(title\)/);
+  assert.match(settings, /<form id="settings-form"/);
+  assert.match(settings, /id="settings-security"/);
+  assert.match(settings, /id="settings-help"/);
 });
  
 test('dialogs can scroll on short screens instead of being cut off', async () => {
