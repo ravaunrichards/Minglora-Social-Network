@@ -453,3 +453,17 @@
   .settings-field,.settings-toggle{align-items:flex-start}
   .settings-field select{min-width:0;max-width:48%}
 }
+
+
+/* Final layout guard: keep navigation and editor actions in normal document flow. */
+.settings-nav{position:static;inset:auto;z-index:auto;max-width:100%;overflow:visible}
+.settings-save-bar{position:static;inset:auto;z-index:auto;bottom:auto;box-shadow:none;margin:12px 0;padding:12px 14px}
+.settings-card{scroll-margin-top:16px}
+.profile-editor-backdrop{align-items:flex-start;overflow-y:auto;overscroll-behavior:contain}
+.profile-editor-modal{max-height:none;overflow:visible;margin:auto}
+.profile-editor-modal .modal-head,.profile-editor-modal .modal-actions{position:static;inset:auto;z-index:auto}
+.profile-editor-modal .modal-body{overflow:visible;min-height:0;overscroll-behavior:auto}
+.profile-body{position:static;align-items:start}
+.profile-about{position:static;min-width:0;overflow:visible}
+.live-gift-host-note{padding:14px;border-top:1px solid rgba(255,255,255,.1);color:#fff;font-size:12px}
+.live-gift-host-note p{margin:5px 0 0;color:#aeb7c7;line-height:1.5}
