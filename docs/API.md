@@ -113,6 +113,21 @@ Stories expire after 24 hours; expired records and their view records are remove
 
 Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with an explicit admin/moderator role. Do not add arbitrary member IDs to this list.
 
+## LIVE streaming
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/live/status` | Verify the Minglora LiveKit provider connection without exposing credentials |
+| GET | `/api/live/sessions` | List only sessions whose host is currently present in the corresponding LiveKit room; includes provider-verified viewer counts |
+| POST | `/api/live/sessions` | Create a live broadcast and issue a host publishing token |
+| POST | `/api/live/sessions/:id/join` | Join an allowed live session; hosts can publish and viewers can subscribe only |
+| POST | `/api/live/sessions/:id/leave` | Mark the current participant as having left |
+| POST | `/api/live/sessions/:id/end` | End a host-owned broadcast and close its LiveKit room |
+| GET/PATCH | `/api/live/sessions/:id/theme` | Read or update the host-selected room theme |
+| GET/POST | `/api/live/sessions/:id/chat` | Read or send messages in a live chat |
+
+The browser LiveKit client is responsible for connecting to the room and attaching published media tracks. Coins catalogue and wallet services are optional enrichments: a gifting-service failure must not block the LIVE directory or interrupt an established video session.
+
 ## Messages, notifications and search
 
 | Method | Path | Purpose |
