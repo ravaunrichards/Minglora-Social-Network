@@ -26,6 +26,19 @@ test('global navigation and Creator Studio tabs remain anchored while the page s
   assert.match(css, /overflow-x:auto;overflow-y:hidden;scrollbar-width:thin/);
 });
 
+test('Creator Studio dock stays fixed below the app header from initial render', () => {
+  const chromeStart = app.indexOf('function creatorStudioChrome(section,content)');
+  const chromeEnd = app.indexOf('function creatorStageSvgMarkup()', chromeStart);
+  const chrome = app.slice(chromeStart, chromeEnd);
+  assert.ok(chrome.indexOf("creator-studio-nav-slot") < chrome.indexOf("creator-studio-heading"), 'the dock renders before the page heading');
+  assert.match(app, /function syncCreatorStudioNavigationLayout\(\)/);
+  assert.match(app, /slot\.style\.height=\(height\+14\)\+"px"/);
+  assert.match(app, /setProperty\("--creator-studio-nav-top"/);
+  assert.match(app, /setProperty\("--creator-studio-nav-left"/);
+  assert.match(app, /setProperty\("--creator-studio-nav-width"/);
+  assert.match(app, /addEventListener\("resize",syncCreatorStudioNavigationLayout/);
+});
+ 
 test('Creator Studio keeps a 3D workstation visible without WebGL and after context loss', () => {
   assert.match(app, /function creatorStageSvgMarkup\(\)/);
   assert.match(app, /<svg id="creator-stage-svg-fallback"/);
