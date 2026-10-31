@@ -737,7 +737,7 @@ Deno.serve(async (req: Request) => {
     if(seller.seller_type!=="business"){
       return json(409,{error:"PayPal marketplace onboarding requires a verified PayPal Business account. Upgrade your PayPal account to Business before continuing."});
     }
-    const requestedFeatures=["PAYMENT","REFUND","PARTNER_FEE"];
+    const requestedFeatures=["PAYMENT","REFUND"];
     const {data:existing,error:existingError}=await admin.from("marketplace_seller_paypal_accounts")
       .select("onboarding_status,merchant_id").eq("user_id",userId).maybeSingle();
     if(existingError)return json(503,{error:"Existing PayPal seller connection could not be checked."});
@@ -782,14 +782,14 @@ Deno.serve(async (req: Request) => {
        !/^[a-f0-9]{64}$/i.test(nonceHash)||!stateHash||
        accountType!=="BUSINESS_ACCOUNT"||!permissionsGranted||!consentGranted||
        !emailConfirmed||!paymentsReceivable||
-       !["PAYMENT","REFUND","PARTNER_FEE"].every(feature=>grantedFeatures.includes(feature))){
+       !["PAYMENT","REFUND"].every(feature=>grantedFeatures.includes(feature))){
       return json(409,{error:"PayPal has not confirmed all required Business account, payment, refund and platform-fee permissions."});
     }
     const {data:current,error:lookupError}=await admin.from("marketplace_seller_paypal_accounts")
       .select("tracking_id,callback_nonce_hash,onboarding_status,requested_features")
       .eq("user_id",userId).maybeSingle();
     if(lookupError)return json(503,{error:"Saved PayPal seller onboarding could not be checked."});
-    if(!current||current.tracking_id!==trackingId||current.callback_nonce_hash!==nonceHash||current.onboarding_status!=="started"){
+    if(!current||current.tracking_id!==trackingId||current.callback_nonce_hash!==nonceHash||stateHash!==nonceHash||current.onboarding_status!=="started"){
       return json(403,{error:"The PayPal onboarding callback state has expired or does not match this seller."});
     }
     const {data:existingMerchant,error:merchantError}=await admin.from("marketplace_seller_paypal_accounts")
@@ -858,7 +858,7 @@ Deno.serve(async (req: Request) => {
          seller.payout_status!=="verified"||!account||account.onboarding_status!=="verified"||
          account.account_type!=="business"||!account.merchant_id||!account.permissions_granted||
          !account.consent_granted||!account.payments_receivable||!account.primary_email_confirmed||
-         !["PAYMENT","REFUND","PARTNER_FEE"].every(feature=>(account.granted_features||[]).includes(feature))){
+         !["PAYMENT","REFUND"].every(feature=>(account.granted_features||[]).includes(feature))){
         return json(409,{error:"Every seller must have an approved Minglora account and a verified PayPal Business connection with payment, refund and platform-fee permissions."});
       }
       paymentSellers.push({
