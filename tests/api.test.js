@@ -78,7 +78,6 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       name: 'Minglora Test User',
       username: 'mingloratest',
       email: 'test-user@example.test',
-      phoneNumber: '+18765550123',
       password: 'TestPassword123!'
     })
   });
