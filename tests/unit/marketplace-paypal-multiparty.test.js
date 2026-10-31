@@ -102,16 +102,18 @@ test('multi-seller checkout creates one PayPal purchase unit and platform fee pe
   assert.equal(result.purchase_units[0].payment_instruction.platform_fees[0].amount.value,'12.50');
   assert.equal(result.purchase_units[1].amount.value,'75.00');
   assert.throws(()=>buildMarketplacePayPalOrderPayload({
-    orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'JMD',attributionId:'MINGLORA_BN',sellerOrders:[sellerOrder1]
+    orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'JMD',attributionId:'MINGLORA_BN',returnUrl:'https://minglora-social-network.onrender.com/?marketplace=order-return',cancelUrl:'https://minglora-social-network.onrender.com/?marketplace=order-cancel',sellerOrders:[sellerOrder1]
   }),/does not currently support/);
   assert.throws(()=>buildMarketplacePayPalOrderPayload({
-    orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'USD',attributionId:'MINGLORA_BN',sellerOrders:[{...sellerOrder1,merchantId:''}]
+    orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'USD',attributionId:'MINGLORA_BN',returnUrl:'https://minglora-social-network.onrender.com/?marketplace=order-return',cancelUrl:'https://minglora-social-network.onrender.com/?marketplace=order-cancel',sellerOrders:[{...sellerOrder1,merchantId:''}]
   }),/merchant ID/);
   assert.throws(()=>buildMarketplacePayPalOrderPayload({
-    orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'USD',attributionId:'MINGLORA_BN',sellerOrders:[{...sellerOrder1,platformFeeMinor:12501}]
+    orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'USD',attributionId:'MINGLORA_BN',returnUrl:'https://minglora-social-network.onrender.com/?marketplace=order-return',cancelUrl:'https://minglora-social-network.onrender.com/?marketplace=order-cancel',sellerOrders:[{...sellerOrder1,platformFeeMinor:12501}]
   }),/cannot exceed/);
   assert.throws(()=>buildMarketplacePayPalOrderPayload({
     orderId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',currency:'USD',attributionId:'MINGLORA_BN',
+    returnUrl:'https://minglora-social-network.onrender.com/?marketplace=order-return',
+    cancelUrl:'https://minglora-social-network.onrender.com/?marketplace=order-cancel',
     sellerOrders:Array.from({length:11},(_,index)=>({...sellerOrder1,sellerOrderId:(index+1).toString().padStart(8,'0')+'-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}))
   }),/between 1 and 10/);
 });
