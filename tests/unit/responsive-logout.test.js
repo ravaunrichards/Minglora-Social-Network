@@ -11,6 +11,8 @@ const css = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 
 test('logout is reachable from desktop, tablet and phone navigation', () => {
+  assert.ok(html.includes('href="/styles.css?v=20261031-responsive-logout-1"'));
+  assert.ok(html.includes('src="/app.js?v=20261031-responsive-logout-1"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
 
   const mobileNavStart = html.indexOf('<div class="mobile-nav">');
@@ -43,4 +45,6 @@ test('responsive navigation exposes an alternative where the top logout button i
   assert.match(css, /\.logout-rail-link\{/);
   assert.match(css, /\.mobile-nav \[data-logout\]\{/);
   assert.match(serviceWorker, /minglora-shell-v6-responsive-logout/);
+  assert.ok(serviceWorker.includes('styles.css?v=20261031-responsive-logout-1'));
+  assert.ok(serviceWorker.includes('app.js?v=20261031-responsive-logout-1'));
 });
