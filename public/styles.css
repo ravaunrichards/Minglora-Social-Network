@@ -2179,3 +2179,66 @@ body:has(.creator-studio-shell) .creator-studio-nav.live-format-picker{
     scroll-snap-align:start;
   }
 }
+
+
+/* Desktop header: reserve the true middle lane for centred, expandable app navigation. */
+@media(min-width:761px){
+  .topbar{
+    display:flex!important;
+    align-items:center;
+    gap:clamp(10px,1.25vw,20px);
+    padding-inline:clamp(12px,1.7vw,24px);
+  }
+  .top-left{
+    flex:0 1 410px;
+    min-width:250px;
+    gap:clamp(8px,1vw,14px);
+  }
+  .brand{flex:0 0 auto}
+  .search-box{
+    flex:1 1 180px;
+    width:auto;
+    min-width:150px;
+    max-width:280px;
+  }
+  .top-nav{
+    flex:1 1 0;
+    min-width:0;
+    max-width:none;
+    justify-content:safe center;
+    gap:clamp(2px,.45vw,8px);
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    overscroll-behavior-x:contain;
+  }
+  .top-nav::-webkit-scrollbar{display:none}
+  .top-nav .nav-item{
+    flex:1 1 72px;
+    min-width:52px;
+    max-width:112px;
+    padding-inline:4px;
+  }
+  .top-nav .nav-3d-icon{width:27px;height:27px}
+  .top-actions{
+    flex:0 0 auto;
+    min-width:max-content;
+    gap:clamp(5px,.65vw,10px);
+    margin-left:0;
+  }
+}
+@media(min-width:761px) and (max-width:980px){
+  .topbar{gap:9px;padding-inline:12px}
+  .top-left{flex-basis:250px;min-width:220px;gap:7px}
+  .brand{font-size:20px}
+  .brand-mark{width:34px;height:34px;font-size:25px;border-radius:11px}
+  .search-box{min-width:104px;height:38px;padding-inline:9px}
+  .top-nav{gap:2px}
+  .top-nav .nav-item{flex-basis:48px;min-width:44px;max-width:68px;gap:1px}
+  .top-nav .nav-3d-icon{width:23px;height:23px}
+  .top-nav .nav-item small{font-size:9px}
+  .top-actions{gap:4px}
+  .top-actions .circle-action{width:34px;height:34px}
+  .profile-menu{padding:3px}
+  #top-name{display:none}
+}
