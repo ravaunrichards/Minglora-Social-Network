@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
-    "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue",
+    "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
@@ -799,6 +799,20 @@ Deno.serve(async (req: Request) => {
       target_id:sellerId,metadata:{status,identityStatus,reason}
     });
     return json(200,{seller:{userId:data.user_id,status:data.status,identityStatus:data.identity_status,payoutStatus:data.payout_status,storeName:data.store_name}});
+  }
+
+  if (action === "marketplace_seller_admin_list") {
+    const status=String(input.status||"pending");
+    if(!["pending","approved","rejected","suspended"].includes(status))return json(400,{error:"Invalid seller application filter."});
+    const {data,error}=await admin.from("marketplace_seller_profiles")
+      .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,created_at,reviewed_at")
+      .eq("status",status).order("created_at",{ascending:false}).limit(200);
+    if(error)return json(503,{error:"Seller applications could not be loaded."});
+    return json(200,{sellers:(data||[]).map((row:any)=>({
+      userId:row.user_id,sellerType:row.seller_type,storeName:row.store_name,description:row.description,
+      countryCode:row.country_code,contactEmail:row.contact_email,status:row.status,
+      identityStatus:row.identity_status,payoutStatus:row.payout_status,submittedAt:row.created_at,reviewedAt:row.reviewed_at
+    }))});
   }
 
   if (action === "marketplace_seller_queue") {
