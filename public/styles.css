@@ -1996,3 +1996,71 @@ body:has(.creator-studio-shell) .main-content{
   background:linear-gradient(140deg,rgba(114,93,255,.18),rgba(46,187,209,.07));
   box-shadow:inset 0 0 0 1px rgba(139,124,255,.23),0 12px 30px rgba(46,34,120,.12);
 }
+
+
+/* Pin all shared navigation while scrolling, including Creator Studio's workspace row. */
+.topbar{position:sticky!important;top:0!important;z-index:100!important;isolation:isolate}
+.left-rail,.right-rail{position:sticky;top:88px;align-self:start}
+.mobile-nav{position:fixed!important;left:0;right:0;bottom:0;z-index:90}
+.profile-tabs{position:sticky;top:66px;z-index:30;background:var(--card);scroll-margin-top:66px}
+body:has(.creator-studio-shell) .creator-studio-nav.live-format-picker{
+  position:sticky!important;
+  top:74px;
+  z-index:70;
+  align-self:start;
+  padding:8px;
+  margin:0 0 17px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:color-mix(in srgb,var(--card) 94%,transparent);
+  box-shadow:0 9px 26px rgba(8,24,48,.14);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.creator-studio-nav .creator-studio-nav-item.live-format-card{transform:none}
+.creator-studio-nav .creator-studio-nav-item.live-format-card:hover{transform:translateY(-1px)}
+.creator-studio-nav .creator-studio-nav-item .creator-ico{flex:none}
+.creator-stage-visual{isolation:isolate}
+.creator-stage-svg-fallback{
+  position:absolute;inset:0;display:block;width:100%;height:100%;padding:7px;
+  overflow:visible;touch-action:none;cursor:grab;outline:none;
+  filter:drop-shadow(0 18px 32px rgba(2,10,27,.24));
+}
+.creator-stage-svg-fallback[hidden]{display:none!important}
+.creator-stage-svg-fallback.is-dragging{cursor:grabbing}
+.creator-stage-svg-world{
+  transform-box:fill-box;transform-origin:center;
+  transition:transform .12s ease-out;
+}
+.creator-stage-svg-ring{transform-box:fill-box;transform-origin:center;animation:creator-stage-ring-float 7s ease-in-out infinite}
+.creator-stage-compatibility .creator-stage-visual:before{opacity:.7}
+.creator-stage-compatibility .creator-stage-caption{z-index:2}
+.creator-stage-compatibility .creator-stage-caption>span{background:#67e6d0;box-shadow:0 0 10px #67e6d0}
+.creator-stage-fallback{
+  position:absolute;left:15px;bottom:35px;z-index:3;
+  max-width:70%;margin:0;padding:5px 8px;border:1px solid rgba(160,211,255,.2);
+  border-radius:8px;background:rgba(5,18,39,.76);color:#d8efff;
+  font-size:8px;line-height:1.45;pointer-events:none;backdrop-filter:blur(6px);
+}
+.creator-stage-compatibility.is-paused .creator-stage-svg-ring{animation-play-state:paused}
+@keyframes creator-stage-ring-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
+@media(max-width:760px){
+  .topbar{height:58px;top:0!important}
+  .mobile-nav{bottom:0}
+  .profile-tabs{top:58px}
+  body:has(.creator-studio-shell) .creator-studio-nav.live-format-picker{
+    top:66px;
+    z-index:70;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+    padding:7px;
+    border-radius:13px;
+  }
+  .creator-studio-nav .creator-studio-nav-item.live-format-card{min-height:62px}
+  .creator-stage-svg-fallback{padding:0}
+  .creator-stage-fallback{left:9px;bottom:28px;max-width:86%;font-size:7px}
+}
+@media(prefers-reduced-motion:reduce){
+  .creator-stage-svg-ring{animation:none!important}
+  .creator-stage-svg-world{transition:none!important}
+}
