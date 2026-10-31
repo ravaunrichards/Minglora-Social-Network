@@ -679,17 +679,61 @@ async function startCoinPurchase(selection){
   catch(error){toast(error.message);if(button)button.disabled=false;}
 }
 async function renderCreator(){
-  activateSilent("creator");const data=await api("/creator/earnings"),account=data.payoutAccount||null;
+  activateSilent("creator");
+  const [data,liveStatusResult]=await Promise.all([
+    api("/creator/earnings"),
+    api("/live/status").catch(error=>({configured:false,connected:false,error:{message:error.message||"LIVE service status is unavailable."}}))
+  ]);
+  const account=data.payoutAccount||null;
   const platformTotal=(data.ledger||[]).reduce((sum,row)=>sum+Number(row.platform_share_minor||0),0);
-  setContent("<div class='page-heading'><div><span class='eyebrow'>Creator studio</span><h1>Creator earnings</h1><p class='muted'>A transparent 50/50 split of eligible LIVE gift revenue.</p></div></div><div class='creator-earnings-grid'>"+
-    "<article class='card earnings-stat'><small>Your share · 50%</small><strong>"+liveMoney(data.earnedMinor)+"</strong><span>Creator earnings</span></article>"+
-    "<article class='card earnings-stat'><small>Available to withdraw</small><strong>"+liveMoney(data.availableMinor)+"</strong><span>After existing payouts</span></article>"+
-    "<article class='card earnings-stat'><small>Minglora platform share · 50%</small><strong>"+liveMoney(platformTotal)+"</strong><span>Platform share from gifts</span></article></div>"+
+  const liveReady=Boolean(liveStatusResult.configured&&liveStatusResult.connected===true);
+  const liveStatusText=!liveStatusResult.configured
+    ?"LIVE is not configured"
+    :liveReady?"LIVE is ready":"LIVE connection unavailable";
+  const liveStatusDetail=liveReady
+    ?"Your title, audience and room style are ready. Camera and microphone access are requested when you start."
+    :String(liveStatusResult.error?.message||liveStatusResult.error||"Check the Minglora LiveKit server connection.");
+  setContent(
+    "<div class='page-heading creator-studio-heading'><div><span class='eyebrow'>Creator workspace</span><h1>Creator Studio</h1><p class='muted'>Start a real broadcast, connect with your audience and manage your creator earnings.</p></div></div>"+
+    "<section class='card creator-live-launch-card'>"+
+      "<div class='creator-live-launch-heading'><div><span class='eyebrow'>Minglora LIVE</span><h2>Go LIVE from Creator Studio</h2><p class='muted'>Your broadcast starts here. Add a title and press Start LIVE.</p></div>"+
+      "<span class='creator-live-status "+(liveReady?"ready":"unavailable")+"'>"+(liveReady?"● "+liveStatusText:"○ "+liveStatusText)+"</span></div>"+
+      "<form id='creator-live-start-form' class='creator-live-start-form'>"+
+        "<label class='creator-live-title-field' for='creator-live-title'><span>LIVE title</span><input id='creator-live-title' name='title' type='text' maxlength='120' minlength='1' required autocomplete='off' placeholder='What are you going LIVE about?'></label>"+
+        "<label class='creator-live-visibility-field'><span>Audience</span><select name='visibility' aria-label='LIVE audience'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select></label>"+
+        "<label class='creator-live-theme-field'><span>Room style</span><select name='liveTheme' aria-label='LIVE room style'>"+renderLiveThemeOptions(LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===state.settings?.preferences?.liveRoomTheme)?state.settings.preferences.liveRoomTheme:'studio')+"</select></label>"+
+        "<button class='primary creator-live-start-button' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button>"+
+      "</form>"+
+      "<p class='creator-live-help "+(liveReady?"":"warning")+"'>"+esc(liveStatusDetail)+"</p>"+
+    "</section>"+
+    "<div class='creator-earnings-section-heading'><div><span class='eyebrow'>Your performance</span><h2>Creator earnings</h2></div><span class='muted'>Eligible LIVE gifts · 50/50 split</span></div>"+
+    "<div class='creator-earnings-grid'>"+
+      "<article class='card earnings-stat'><small>Your share · 50%</small><strong>"+liveMoney(data.earnedMinor)+"</strong><span>Creator earnings</span></article>"+
+      "<article class='card earnings-stat'><small>Available to withdraw</small><strong>"+liveMoney(data.availableMinor)+"</strong><span>After existing payouts</span></article>"+
+      "<article class='card earnings-stat'><small>Minglora platform share · 50%</small><strong>"+liveMoney(platformTotal)+"</strong><span>Platform share from gifts</span></article></div>"+
     "<section class='card'><h2>PayPal payout details</h2><p class='muted'>Add the PayPal email address where you receive creator payouts.</p><form id='creator-payout-account-form' class='creator-payout-form'><input type='email' name='paypalEmail' required maxlength='254' placeholder='your-paypal@example.com' value='"+esc(account?.paypal_email||"")+"'><button class='primary' type='submit'>Save payout email</button></form>"+
     "<form id='creator-withdraw-form' class='creator-payout-form'><label for='creator-payout-amount'>Withdraw amount (USD)</label><input id='creator-payout-amount' name='amount' type='number' min='1' step='0.01' max='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' value='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' required><button class='primary' type='submit' "+(account&&Number(data.availableMinor)>=100?"":"disabled")+">Withdraw with PayPal</button></form><small class='muted'>Minimum withdrawal USD $1.00. Payout status is updated after the provider confirms processing.</small></section>"+
     "<section class='card'><div class='feed-header'><h2>Earnings history</h2><span class='muted'>Your share and Minglora’s share are recorded separately</span></div>"+
     ((data.ledger||[]).length?data.ledger.map(item=>"<div class='coin-ledger-row'><div><strong>LIVE gift earnings</strong><small>"+timeAgo(item.created_at)+"</small></div><b class='positive'>"+liveMoney(item.creator_share_minor)+"</b></div>").join(""):"<p class='muted'>Eligible LIVE gift earnings will appear here.</p>")+"</section>"+
-    "<section class='card'><h2>PayPal withdrawals</h2>"+((data.payouts||[]).length?data.payouts.map(item=>"<div class='coin-ledger-row'><div><strong>"+esc(String(item.status).toUpperCase())+"</strong><small>"+timeAgo(item.created_at)+"</small></div><b>"+liveMoney(item.amount_minor)+"</b></div>").join(""):"<p class='muted'>Your withdrawals will appear here.</p>")+"</section>");
+    "<section class='card'><h2>PayPal withdrawals</h2>"+((data.payouts||[]).length?data.payouts.map(item=>"<div class='coin-ledger-row'><div><strong>"+esc(String(item.status).toUpperCase())+"</strong><small>"+timeAgo(item.created_at)+"</small></div><b>"+liveMoney(item.amount_minor)+"</b></div>").join(""):"<p class='muted'>Your withdrawals will appear here.</p>")+"</section>"
+  );
+  $("#creator-live-start-form")?.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector(".creator-live-start-button");
+    const title=String(form.elements.title.value||"").trim();
+    if(!title){form.elements.title.focus();toast("Enter a title for your LIVE session.");return;}
+    if(!liveReady){toast(liveStatusDetail);return;}
+    button.disabled=true;button.textContent="Starting LIVE…";
+    try{
+      const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({
+        title,visibility:form.elements.visibility.value,liveTheme:form.elements.liveTheme.value
+      })});
+      await openLiveRoom(result.session,"host",result.liveKit);
+    }catch(error){
+      toast(error.message||"Minglora could not start your LIVE session.");
+      button.disabled=false;button.textContent="🔴 Start LIVE";
+    }
+  });
   $("#creator-payout-account-form")?.addEventListener("submit",async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector("button");button.disabled=true;try{await api("/creator/payout-account",{method:"PUT",body:JSON.stringify({paypalEmail:form.elements.paypalEmail.value})});toast("PayPal payout details saved.");await renderCreator();}catch(error){toast(error.message);button.disabled=false;}});
   $("#creator-withdraw-form")?.addEventListener("submit",async event=>{event.preventDefault();const amount=Number(event.currentTarget.elements.amount.value);if(!Number.isFinite(amount)||amount<1){toast("The minimum payout is USD $1.00.");return;}const button=event.currentTarget.querySelector("button");button.disabled=true;try{const result=await api("/creator/payouts",{method:"POST",body:JSON.stringify({amountMinor:Math.round(amount*100)})});toast("PayPal payout submitted. Status: "+result.status+".");await renderCreator();}catch(error){toast(error.message);button.disabled=false;}});
 }
