@@ -63,14 +63,28 @@ test('seller referral requests business marketplace payment and refund capabilit
   const payload=buildMarketplacePayPalReferralPayload({
     trackingId:'seller-123',
     returnUrl:'https://minglora-social-network.onrender.com/?marketplace=paypal-onboarding',
-    email:'seller@example.test'
+    email:'seller@example.test',
+    shareDataConsent:true
   });
   assert.equal(payload.tracking_id,'seller-123');
   assert.deepEqual(payload.products,['EXPRESS_CHECKOUT']);
   assert.deepEqual(payload.operations[0].api_integration_preference.rest_api_integration.third_party_details.features,
     ['PAYMENT','REFUND']);
   assert.equal(payload.legal_consents[0].granted,true);
-  assert.throws(()=>buildMarketplacePayPalReferralPayload({trackingId:'seller',returnUrl:'http://insecure.test'}));
+  assert.throws(()=>buildMarketplacePayPalReferralPayload({
+    trackingId:'seller-123',
+    returnUrl:'https://minglora-social-network.onrender.com/?marketplace=paypal-onboarding'
+  }),/explicitly consent/);
+  assert.throws(()=>buildMarketplacePayPalReferralPayload({
+    trackingId:'seller-123',
+    returnUrl:'https://minglora-social-network.onrender.com/?marketplace=paypal-onboarding',
+    shareDataConsent:false
+  }),/explicitly consent/);
+  assert.throws(()=>buildMarketplacePayPalReferralPayload({
+    trackingId:'seller-123',
+    returnUrl:'http://insecure.test',
+    shareDataConsent:true
+  }),/HTTPS/);
 });
 
 test('only PayPal REST transaction currencies and supported two-decimal amounts are accepted',()=>{
