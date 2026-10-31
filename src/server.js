@@ -861,6 +861,7 @@ async function route(req, res) {
       }
       const marketplaceSaveMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/save$/);
       if((method==='POST'||method==='DELETE')&&marketplaceSaveMatch){
+        if(isSupabasePersistence()){const found=(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceSaveMatch[1]})).listing;if(!found||blockedBetween(user.id,found.sellerId))return json(res,404,{error:'Marketplace listing not found.'});const result=await requestSupabaseState('marketplace_listing_save',{userId:user.id,listingId:marketplaceSaveMatch[1],save:method==='POST'});return json(res,200,result);}
         const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceSaveMatch[1]);
         if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'Marketplace listing not found.'});
         db.marketplaceSaved||=[];const existing=db.marketplaceSaved.find(item=>item.userId===user.id&&item.listingId===listing.id);
@@ -870,7 +871,7 @@ async function route(req, res) {
       }
       const marketplaceEnquiryMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/enquiries$/);
       if(method==='POST'&&marketplaceEnquiryMatch){
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceEnquiryMatch[1]);
+        const listing=isSupabasePersistence()?(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceEnquiryMatch[1]})).listing:(db.marketplaceListings||[]).find(item=>item.id===marketplaceEnquiryMatch[1]);
         if(!isMarketplaceListingActive(listing)||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This listing is unavailable for enquiries.'});
         const seller=db.users.find(member=>member.id===listing.sellerId),text=String(input.text||'').trim();
         if(!seller||text.length<5||text.length>2000)return json(res,400,{error:'Write an enquiry of 5–2000 characters.'});
@@ -884,12 +885,13 @@ async function route(req, res) {
       }
       const marketplaceListingMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)$/);
       if(marketplaceListingMatch&&method==='GET'){
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
+        const listing=isSupabasePersistence()?(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceListingMatch[1]})).listing:(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
         if(!listing||blockedBetween(user.id,listing.sellerId)||(!isMarketplaceListingActive(listing)&&!canManageMarketplaceListing(listing,user.id)))return json(res,404,{error:'Marketplace listing not found.'});
         if(listing.sellerId!==user.id){listing.views=Number(listing.views||0)+1;await saveStore();}
         return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
       }
       if(marketplaceListingMatch&&method==='PATCH'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_set_status',{userId:user.id,listingId:marketplaceListingMatch[1],status:String(input.status||'')});return json(res,200,{listing:await publicMarketplaceListing(result.listing,user.id)});}
         const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
         if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
         if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can manage this listing.'});
@@ -899,6 +901,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
       }
       if(marketplaceListingMatch&&method==='DELETE'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_set_status',{userId:user.id,listingId:marketplaceListingMatch[1],status:'removed'});return json(res,200,{ok:true,id:result.listing.id});}
         const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
         if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
         if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can remove this listing.'});
