@@ -656,7 +656,7 @@ async function route(req, res) {
         return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
-      if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
+      if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
