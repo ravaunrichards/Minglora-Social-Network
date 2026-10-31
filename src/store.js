@@ -173,6 +173,10 @@ async function loadStore() {
 
 export const db = await loadStore();
 
+export function isSupabasePersistence() {
+  return persistenceDriver === 'supabase';
+}
+
 export async function saveStore() {
   if (persistenceDriver === 'supabase') {
     const write = () => persistSupabaseState(db);

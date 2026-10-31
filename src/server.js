@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState } from './store.js';
+import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
@@ -357,7 +357,7 @@ async function publicGroupPost(post) {
 async function publicMarketplaceListing(listing,viewerId){
   const media=await Promise.all((listing.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===listing.sellerId&&item.slot==='marketplace'&&item.status!=='deleted');if(!asset)return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   const {mediaIds,...safeListing}=listing;
-  return {...safeListing,media:media.filter(Boolean),seller:safeUser(db.users.find(member=>member.id===listing.sellerId),viewerId),isSaved:(db.marketplaceSaved||[]).some(item=>item.userId===viewerId&&item.listingId===listing.id)};
+  return {...safeListing,media:Array.isArray(listing.media)?listing.media:media.filter(Boolean),seller:listing.seller||safeUser(db.users.find(member=>member.id===listing.sellerId),viewerId),isSaved:typeof listing.isSaved==='boolean'?listing.isSaved:(db.marketplaceSaved||[]).some(item=>item.userId===viewerId&&item.listingId===listing.id)};
 }
 async function publicPagePost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&(item.slot==='page'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
@@ -659,11 +659,13 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
       requireAuth(user);
       if(method==='GET'&&p==='/api/marketplace/seller'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
         return json(res,200,{seller:seller?{sellerType:seller.sellerType,storeName:seller.storeName,description:seller.description,countryCode:seller.countryCode,contactEmail:seller.contactEmail,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,createdAt:seller.createdAt,updatedAt:seller.updatedAt}:null});
       }
       if(method==='POST'&&p==='/api/marketplace/seller'){
         const validation=validateMarketplaceSellerApplication(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_apply',{userId:user.id,...validation.value,acceptTerms:input.acceptTerms===true});return json(res,201,result);}
         db.marketplaceSellers||=[];let seller=db.marketplaceSellers.find(item=>item.userId===user.id);
         if(seller&&seller.status!=='rejected')return json(res,409,{error:'A seller application already exists for this account.',status:seller.status});
         const previousStatus=seller?.status||null,values=validation.value,stamp=now();
@@ -677,11 +679,13 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/marketplace/admin/sellers'){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
         const status=String(url.searchParams.get('status')||'pending');
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_admin_list',{status});return json(res,200,result);}
         const sellers=(db.marketplaceSellers||[]).filter(item=>!status||item.status===status).map(item=>({userId:item.userId,sellerType:item.sellerType,storeName:item.storeName,description:item.description,countryCode:item.countryCode,contactEmail:item.contactEmail,status:item.status,identityStatus:item.identityStatus,payoutStatus:item.payoutStatus,submittedAt:item.submittedAt}));
         return json(res,200,{sellers});
       }
       if(method==='GET'&&p==='/api/marketplace/admin/queue'){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_queue');return json(res,200,result);}
         const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
         return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
@@ -695,6 +699,7 @@ async function route(req, res) {
       const sellerReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/review$/);
       if(method==='PATCH'&&sellerReviewMatch){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(isSupabasePersistence()){const status=String(input.status||''),identityStatus=String(input.identityStatus||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['pending','approved','rejected','suspended'].includes(status)||!['not_started','pending','verified','rejected'].includes(identityStatus)||!reason)return json(res,400,{error:'A valid seller review decision and audit reason are required.'});const result=await requestSupabaseState('marketplace_seller_review',{actorId:user.id,sellerId:sellerReviewMatch[1],status,identityStatus,reason});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===sellerReviewMatch[1]);if(!seller)return json(res,404,{error:'Seller application not found.'});
         const identityStatus=String(input.identityStatus||seller.identityStatus),status=String(input.status||seller.status);
         const reason=String(input.reason||'').trim().slice(0,1000);
@@ -709,6 +714,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{seller:{userId:seller.userId,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus}});
       }
       if(method==='POST'&&p==='/api/marketplace/checkout/quote'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_quote',{buyerId:user.id,items:input.items,fulfillmentByListing:input.fulfillmentByListing||{}});return json(res,200,result);}
         const bps=Number(process.env.MARKETPLACE_COMMISSION_BPS||0),quoteId=uid(),created=now(),expires=new Date(Date.now()+10*60*1000).toISOString();
         const result=calculateMarketplaceCheckoutQuote({buyerId:user.id,items:input.items,listings:db.marketplaceListings||[],sellerProfiles:db.marketplaceSellers||[],commissionBps:bps,fulfillmentByListing:input.fulfillmentByListing||{},quoteId,createdAt:created,expiresAt:expires});
         if(!result.valid)return json(res,400,{error:result.error});
@@ -716,13 +722,39 @@ async function route(req, res) {
         await saveStore();return json(res,200,{quote:result.value,notice:'This is an informational quote only. No stock is reserved and no payment has been taken.'});
       }
       if(method==='GET'&&p==='/api/marketplace/checkout/status'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_status');return json(res,200,result);}
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
+      
+      if(method==='GET'&&p==='/api/marketplace/orders'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_orders_list',{userId:user.id});return json(res,200,result);}
+        return json(res,200,{orders:[]});
+      }
+      const orderPathParts=p.split('/');
+      const marketplaceOrderMatch=orderPathParts.length===5&&orderPathParts[1]==='api'&&orderPathParts[2]==='marketplace'&&orderPathParts[3]==='orders'&&orderPathParts[4]?[p,orderPathParts[4]]:null;
+      if(method==='GET'&&marketplaceOrderMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_get',{userId:user.id,orderId:marketplaceOrderMatch[1]});return json(res,200,result);}
+        return json(res,404,{error:'Order not found.'});
+      }
+      if(method==='POST'&&p==='/api/marketplace/orders'){
+        const quoteId=String(input.quoteId||''),idempotencyKey=String(input.idempotencyKey||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(quoteId)||idempotencyKey.length<8||idempotencyKey.length>128)return json(res,400,{error:'A valid checkout quote and idempotency key are required.'});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_create',{buyerId:user.id,quoteId,idempotencyKey});return json(res,201,result);}
+        return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
+      }
+      const cancelPathParts=p.split('/');
+      const marketplaceOrderCancelMatch=cancelPathParts.length===6&&cancelPathParts[1]==='api'&&cancelPathParts[2]==='marketplace'&&cancelPathParts[3]==='orders'&&cancelPathParts[4]&&cancelPathParts[5]==='cancel'?[p,cancelPathParts[4]]:null;
+      if(method==='POST'&&marketplaceOrderCancelMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_cancel',{userId:user.id,orderId:marketplaceOrderCancelMatch[1]});return json(res,200,result);}
+        return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
+      }
       if(method==='GET'&&p==='/api/marketplace/bookings'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_bookings_list',{userId:user.id});return json(res,200,result);}
         const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(item=>{const listing=(db.marketplaceListings||[]).find(entry=>entry.id===item.listingId);const otherId=item.buyerId===user.id?item.sellerId:item.buyerId;const other=db.users.find(entry=>entry.id===otherId);return {...item,listingTitle:listing?.title||'Service appointment',otherName:other?.name||'Minglora member'};});
         return json(res,200,{bookings});
       }
       if(method==='POST'&&p==='/api/marketplace/bookings'){
+        if(isSupabasePersistence()){const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});const result=await requestSupabaseState('marketplace_booking_create',{buyerId:user.id,...validation.value});return json(res,201,result);}
         const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
         const listing=(db.marketplaceListings||[]).find(item=>item.id===validation.value.listingId&&item.kind==='service'&&isMarketplaceListingActive(item));
         if(!listing||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This service is not available for booking.'});
@@ -737,6 +769,7 @@ async function route(req, res) {
       }
       const bookingMatch=p.match(/^\/api\/marketplace\/bookings\/([^/]+)$/);
       if(method==='PATCH'&&bookingMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_booking_update',{actorId:user.id,bookingId:bookingMatch[1],status:String(input.status||'')});return json(res,200,result);}
         const booking=(db.marketplaceBookings||[]).find(item=>item.id===bookingMatch[1]);if(!booking)return json(res,404,{error:'Booking not found.'});
         const transition=transitionMarketplaceBooking(booking,user.id,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
         Object.assign(booking,transition.value);
@@ -745,19 +778,23 @@ async function route(req, res) {
         await saveStore();return json(res,200,{booking});
       }
       if(method==='GET'&&p==='/api/jobs'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_list',{userId:user.id,q:url.searchParams.get('q')||'',category:url.searchParams.get('category')||'',location:url.searchParams.get('location')||''});return json(res,200,result);}
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120);
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(!query||(item.title+' '+item.companyName+' '+item.description).toLowerCase().includes(query))&&(!category||item.category===category)&&(!location||String(item.location||'').toLowerCase().includes(location))).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         return json(res,200,{jobs});
       }
       if(method==='GET'&&p==='/api/jobs/applications/mine'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_mine',{applicantId:user.id});return json(res,200,result);}
         const applications=(db.jobApplications||[]).filter(item=>item.applicantId===user.id).map(item=>({...item,job:(db.jobPostings||[]).find(job=>job.id===item.jobId)||null}));
         return json(res,200,{applications});
       }
       if(method==='GET'&&p==='/api/jobs/mine'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_mine',{userId:user.id});return json(res,200,result);}
         return json(res,200,{jobs:(db.jobPostings||[]).filter(item=>item.employerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))});
       }
       if(method==='POST'&&p==='/api/jobs'){
         const validation=validateJobPostingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_create',{employerId:user.id,job:validation.value});return json(res,201,{...result,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});}
         const job={id:uid(),employerId:user.id,...validation.value,status:'pending_review',createdAt:now(),updatedAt:now()};
         db.jobPostings||=[];db.jobPostings.unshift(job);db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'job_posting_submitted',targetType:'job_posting',targetId:job.id,createdAt:now()});
         await saveStore();return json(res,201,{job,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});
@@ -765,6 +802,7 @@ async function route(req, res) {
       const jobReviewMatch=p.match(/^\/api\/jobs\/([^/]+)\/review$/);
       if(method==='PATCH'&&jobReviewMatch){
         if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(isSupabasePersistence()){const status=String(input.status||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['open','rejected'].includes(status)||!reason)return json(res,400,{error:'A valid vacancy moderation decision and reason are required.'});const result=await requestSupabaseState('marketplace_job_review',{actorId:user.id,jobId:jobReviewMatch[1],status,reason});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobReviewMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         const status=String(input.status||'');if(!['open','rejected'].includes(status))return json(res,400,{error:'Choose open or rejected.'});
         if(status==='open'&&new Date(job.applicationDeadline)<=new Date())return json(res,409,{error:'The application deadline has passed.'});
@@ -775,6 +813,7 @@ async function route(req, res) {
       }
       const jobMatch=p.match(/^\/api\/jobs\/([^/]+)$/);
       if(jobMatch&&method==='PATCH'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_update',{userId:user.id,jobId:jobMatch[1],status:String(input.status||'')});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         if(job.employerId!==user.id)return json(res,403,{error:'Only the employer can manage this posting.'});
         const status=String(input.status||'');if(!['paused','closed'].includes(status)||!['open','paused'].includes(job.status))return json(res,400,{error:'Open job postings can be paused or closed.'});
@@ -782,6 +821,7 @@ async function route(req, res) {
       }
       const jobApplyMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
       if(method==='POST'&&jobApplyMatch){
+        if(isSupabasePersistence()){const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});const result=await requestSupabaseState('marketplace_job_apply',{applicantId:user.id,jobId:jobApplyMatch[1],coverLetter:validation.value.coverLetter});return json(res,201,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobApplyMatch[1]&&item.status==='open'&&new Date(item.applicationDeadline)>new Date());
         if(!job||job.employerId===user.id)return json(res,404,{error:'This vacancy is unavailable for applications.'});
         const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
@@ -792,12 +832,14 @@ async function route(req, res) {
       }
       const jobApplicationsMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
       if(jobApplicationsMatch&&method==='GET'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_for_job',{viewerId:user.id,jobId:jobApplicationsMatch[1]});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobApplicationsMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         if(job.employerId!==user.id&&!isModerator(user))return json(res,403,{error:'Only the employer can review applications.'});
         return json(res,200,{applications:(db.jobApplications||[]).filter(item=>item.jobId===job.id).map(item=>({...item,candidate:safeUser(db.users.find(member=>member.id===item.applicantId),user.id)}))});
       }
       const jobApplicationMatch=p.match(/^\/api\/jobs\/applications\/([^/]+)$/);
       if(method==='PATCH'&&jobApplicationMatch){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_application_update',{actorId:user.id,applicationId:jobApplicationMatch[1],status:String(input.status||'')});return json(res,200,result);}
         const application=(db.jobApplications||[]).find(item=>item.id===jobApplicationMatch[1]);if(!application)return json(res,404,{error:'Application not found.'});
         const job=(db.jobPostings||[]).find(item=>item.id===application.jobId);
         const transition=transitionJobApplication(application,user.id,job,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
@@ -806,6 +848,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/marketplace/categories')return json(res,200,{productCategories:MARKETPLACE_PRODUCT_CATEGORIES,serviceCategories:MARKETPLACE_SERVICE_CATEGORIES,currencies:MARKETPLACE_CURRENCIES});
       if(method==='GET'&&p==='/api/marketplace/listings'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'browse',q:url.searchParams.get('q')||'',kind:url.searchParams.get('kind')||'',category:url.searchParams.get('category')||'',location:url.searchParams.get('location')||'',sort:url.searchParams.get('sort')||'recent',limit:Math.min(60,Math.max(1,Number(url.searchParams.get('limit')||36)||36))});const listings=await Promise.all((result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId)).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings,total:result.total??listings.length});}
         const q=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),kind=String(url.searchParams.get('kind')||''),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120),sort=String(url.searchParams.get('sort')||'recent');
         let listings=(db.marketplaceListings||[]).filter(item=>isMarketplaceListingActive(item)&&!blockedBetween(user.id,item.sellerId));
         if(kind==='product'||kind==='service')listings=listings.filter(item=>item.kind===kind);
@@ -819,16 +862,18 @@ async function route(req, res) {
         return json(res,200,{listings:await Promise.all(listings.slice(0,limit).map(item=>publicMarketplaceListing(item,user.id))),total});
       }
       if(method==='GET'&&p==='/api/marketplace/mine'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'mine',limit:60});const listings=await Promise.all((result.listings||[]).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings});}
         const listings=(db.marketplaceListings||[]).filter(item=>item.sellerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         return json(res,200,{listings:await Promise.all(listings.map(item=>publicMarketplaceListing(item,user.id)))});
       }
       if(method==='GET'&&p==='/api/marketplace/saved'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'saved',limit:60});const listings=await Promise.all((result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId)).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings});}
         const saved=(db.marketplaceSaved||[]).filter(item=>item.userId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const listings=await Promise.all(saved.map(async item=>{const listing=(db.marketplaceListings||[]).find(candidate=>candidate.id===item.listingId);if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return null;return {...await publicMarketplaceListing(listing,user.id),savedAt:item.createdAt};}));
         return json(res,200,{listings:listings.filter(Boolean)});
       }
       if(method==='POST'&&p==='/api/marketplace/listings'){
-        const sellerApproval=(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
+        const sellerApproval=isSupabasePersistence()?(await requestSupabaseState('marketplace_seller_get',{userId:user.id})).seller:(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
         const testBypass=process.env.NODE_ENV==='test'&&process.env.MARKETPLACE_ALLOW_UNVERIFIED_SELLERS==='true';
         if(!testBypass&&(sellerApproval?.status!=='approved'||sellerApproval?.identityStatus!=='verified'))return json(res,403,{error:'Complete the Minglora seller application and identity or business verification before publishing listings.'});
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'External image URLs are not accepted. Upload listing photos from your device.'});
@@ -838,12 +883,14 @@ async function route(req, res) {
         const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='marketplace'&&asset.status==='uploaded'&&asset.mediaType==='image'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more listing photos are unavailable. Upload them again.'});
         const listing={id:uid(),sellerId:user.id,...validation.value,mediaIds,status:'active',views:0,createdAt:now(),updatedAt:now()};
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_sync',{userId:user.id,listing});return json(res,201,{listing:await publicMarketplaceListing(result.listing||listing,user.id)});}
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo='marketplace:'+listing.id;});
         db.marketplaceListings||=[];db.marketplaceListings.unshift(listing);await saveStore();
         return json(res,201,{listing:await publicMarketplaceListing(listing,user.id)});
       }
       const marketplaceSaveMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/save$/);
       if((method==='POST'||method==='DELETE')&&marketplaceSaveMatch){
+        if(isSupabasePersistence()){const listing=(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceSaveMatch[1]})).listing;if(!listing||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'Marketplace listing not found.'});const result=await requestSupabaseState('marketplace_listing_save',{userId:user.id,listingId:marketplaceSaveMatch[1],save:method==='POST'});return json(res,200,result);}
         const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceSaveMatch[1]);
         if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'Marketplace listing not found.'});
         db.marketplaceSaved||=[];const existing=db.marketplaceSaved.find(item=>item.userId===user.id&&item.listingId===listing.id);
@@ -853,7 +900,7 @@ async function route(req, res) {
       }
       const marketplaceEnquiryMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/enquiries$/);
       if(method==='POST'&&marketplaceEnquiryMatch){
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceEnquiryMatch[1]);
+        const listing=isSupabasePersistence()?(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceEnquiryMatch[1]})).listing:(db.marketplaceListings||[]).find(item=>item.id===marketplaceEnquiryMatch[1]);
         if(!isMarketplaceListingActive(listing)||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This listing is unavailable for enquiries.'});
         const seller=db.users.find(member=>member.id===listing.sellerId),text=String(input.text||'').trim();
         if(!seller||text.length<5||text.length>2000)return json(res,400,{error:'Write an enquiry of 5–2000 characters.'});
@@ -867,12 +914,13 @@ async function route(req, res) {
       }
       const marketplaceListingMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)$/);
       if(marketplaceListingMatch&&method==='GET'){
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
+        const listing=isSupabasePersistence()?(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceListingMatch[1]})).listing:(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
         if(!listing||blockedBetween(user.id,listing.sellerId)||(!isMarketplaceListingActive(listing)&&!canManageMarketplaceListing(listing,user.id)))return json(res,404,{error:'Marketplace listing not found.'});
         if(listing.sellerId!==user.id){listing.views=Number(listing.views||0)+1;await saveStore();}
         return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
       }
       if(marketplaceListingMatch&&method==='PATCH'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_set_status',{userId:user.id,listingId:marketplaceListingMatch[1],status:String(input.status||'')});return json(res,200,{listing:await publicMarketplaceListing(result.listing,user.id)});}
         const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
         if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
         if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can manage this listing.'});
@@ -882,6 +930,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
       }
       if(marketplaceListingMatch&&method==='DELETE'){
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_set_status',{userId:user.id,listingId:marketplaceListingMatch[1],status:'removed'});return json(res,200,{ok:true,id:result.listing.id});}
         const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
         if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
         if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can remove this listing.'});
@@ -947,7 +996,7 @@ async function route(req, res) {
         const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id);
         if(!asset)return json(res,404,{error:'The media upload record was not found.'});
         if(asset.status!=='uploading')return json(res,409,{error:'This upload has already been completed or retired.'});
-        const completed=await mediaGateway('media_upload_complete',{ownerId:user.id,bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,byteSize:asset.byteSize});
+        const completed=await mediaGateway('media_upload_complete',{ownerId:user.id,assetId:asset.id,slot:asset.slot,originalName:asset.originalName||'Attachment',bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,byteSize:asset.byteSize});
         if(asset.slot==='avatar'||asset.slot==='cover'){
           if(typeof completed.url!=='string'||!completed.url.startsWith('https://'))return json(res,502,{error:'Minglora could not finalize this profile image.'});
           const previous=(db.mediaAssets||[]).find(item=>item.ownerId===user.id&&item.slot===asset.slot&&item.status==='attached');

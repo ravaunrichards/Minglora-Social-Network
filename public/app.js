@@ -2787,6 +2787,8 @@ function marketplaceCard(listing){
   return '<article class="marketplace-listing-card"><button type="button" class="marketplace-card-open" data-open-marketplace-listing="'+esc(listing.id)+'" aria-label="Open '+esc(listing.title)+'"><div class="marketplace-card-image">'+(image?'<img loading="lazy" src="'+esc(image)+'" alt="'+esc(listing.title)+'">':'<div class="marketplace-image-placeholder"><span>'+(listing.kind==='service'?'✦':'◇')+'</span><small>'+esc(listing.kind==='service'?'Minglora Services':'Minglora Marketplace')+'</small></div>')+'<span class="marketplace-type-pill">'+(listing.kind==='service'?'Service':'Product')+'</span></div><div class="marketplace-card-copy"><small class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</small><h3>'+esc(listing.title)+'</h3><strong class="marketplace-price">'+esc(marketplaceMoney(listing))+'</strong><span class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Available on Minglora')+'</span><span class="marketplace-seller"><img src="'+avatar(listing.seller)+'" alt=""><span>'+esc(listing.seller?.name||'Minglora seller')+'</span></span></div></button><div class="marketplace-card-actions"><button type="button" class="secondary" data-open-marketplace-listing="'+esc(listing.id)+'">View details</button><button type="button" class="marketplace-save '+(listing.isSaved?'is-saved':'')+'" data-save-marketplace-listing="'+esc(listing.id)+'" data-saved="'+(listing.isSaved?'true':'false')+'">'+(listing.isSaved?'♥ Saved':'♡ Save')+'</button></div></article>';
 }
 async function renderMarketplace(mode=state.marketplaceMode){
+  if(mode==='orders')return renderMarketplaceOrders();
+  if(mode==='order-detail')return renderMarketplaceOrderDetail(state.activeMarketplaceOrder);
   if(mode==='seller')return renderMarketplaceSeller();
   if(mode==='bookings')return renderMarketplaceBookings();
   if(mode==='jobs')return renderJobs();
@@ -2796,7 +2798,7 @@ async function renderMarketplace(mode=state.marketplaceMode){
   if(kind)params.set('kind',kind);if(query)params.set('q',query);
   if(mode==='saved'||mode==='mine')state.marketplaceListings=(await api(mode==='saved'?'/marketplace/saved':'/marketplace/mine')).listings||[];
   else state.marketplaceListings=(await api('/marketplace/listings'+(params.toString()?'?'+params.toString():''))).listings||[];
-  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['bookings','Bookings'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
+  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['bookings','Bookings'],['orders','Orders'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
   let html='<section class="marketplace-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA MARKETPLACE</span><h1>Discover more. Buy with confidence. Grow together.</h1><p>Explore real products and services from people and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="marketplace-create-listing">＋ Create a listing</button><span>Real sellers · Real listings · No fabricated inventory</span></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✦</span><span class="marketplace-art-spark">✧</span></div></section>';
   html+='<nav class="marketplace-tabs" aria-label="Marketplace sections">'+tabs.map(([key,label])=>'<button type="button" data-marketplace-mode="'+key+'" class="'+(mode===key?'active':'')+'">'+label+'</button>').join('')+'</nav>';
   if(mode!=='saved'&&mode!=='mine')html+='<form class="marketplace-search" id="marketplace-search-form"><label class="marketplace-search-field"><span>⌕</span><input id="marketplace-query" name="q" value="'+esc(query)+'" placeholder="Search products, services, shops and more" aria-label="Search Marketplace"></label><button class="primary" type="submit">Search</button></form>';
@@ -2845,7 +2847,8 @@ async function renderMarketplaceListing(listingId){
       const values=new FormData(form),quantity=Number(values.get('quantity')),fulfillment=String(values.get('fulfillment')||'');
       const response=await api('/marketplace/checkout/quote',{method:'POST',body:JSON.stringify({items:[{listingId:listing.id,quantity}],fulfillmentByListing:{[listing.id]:fulfillment}})});
       const quote=response.quote,format=minor=>new Intl.NumberFormat(undefined,{style:'currency',currency:quote.currency,maximumFractionDigits:2}).format(Number(minor||0)/100);
-      result.innerHTML='<div class="marketplace-quote-summary"><strong>Quote '+esc(quote.id||'')+'</strong><dl><dt>Items</dt><dd>'+format(quote.itemSubtotalMinor)+'</dd><dt>Fulfilment</dt><dd>'+format(quote.fulfillmentMinor)+'</dd><dt>Commission preview</dt><dd>'+format(quote.marketplaceCommissionPreviewMinor)+'</dd><dt>Tax and customs</dt><dd>Not calculated</dd><dt>Total before tax</dt><dd>'+format(quote.totalMinorBeforeTax)+'</dd></dl><strong>Checkout is not enabled</strong><ul>'+quote.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul><small>This quote is informational only. No payment was taken and stock was not reserved.</small></div>';
+      result.innerHTML='<div class="marketplace-quote-summary"><strong>Quote '+esc(quote.id||'')+'</strong><dl><dt>Items</dt><dd>'+format(quote.itemSubtotalMinor)+'</dd><dt>Fulfilment</dt><dd>'+format(quote.fulfillmentMinor)+'</dd><dt>Commission preview</dt><dd>'+format(quote.marketplaceCommissionPreviewMinor)+'</dd><dt>Tax and customs</dt><dd>'+(quote.taxMinor==null?'Not calculated':format(quote.taxMinor))+'</dd><dt>Total before tax</dt><dd>'+format(quote.totalMinorBeforeTax)+'</dd></dl>'+(quote.checkoutReady?'<button type="button" class="primary" id="marketplace-place-order" data-quote-id="'+esc(quote.id)+'">Create order</button>':'<strong>Checkout is not enabled</strong><ul>'+quote.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>')+'<small>'+(quote.checkoutReady?'An order reserves stock. Payment is a separate step.':'This quote is informational only. No payment was taken and stock was not reserved.')+'</small></div>';
+      $('#marketplace-place-order')?.addEventListener('click',async()=>{const place=$('#marketplace-place-order');if(!place)return;place.disabled=true;try{const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-'+quote.id+'-'+Date.now());const created=await api('/marketplace/orders',{method:'POST',body:JSON.stringify({quoteId:quote.id,idempotencyKey})});toast(created.notice||'Order created. Payment is not confirmed.');await renderMarketplaceOrderDetail(created.order?.id);}catch(error){toast(error.message);place.disabled=false;}});
     }catch(error){result.textContent=error.message;}finally{button.disabled=false;}
   });
   $('#marketplace-booking-form')?.addEventListener('submit',async event=>{
@@ -2856,6 +2859,53 @@ async function renderMarketplaceListing(listingId){
   $('#marketplace-enquiry-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;try{await api('/marketplace/listings/'+encodeURIComponent(listing.id)+'/enquiries',{method:'POST',body:JSON.stringify({text:new FormData(form).get('text')})});form.reset();toast('Your enquiry was sent to the seller’s Minglora inbox.');}catch(error){toast(error.message);}finally{button.disabled=false;}});
 }
 
+
+async function renderMarketplaceOrders(){
+  activateSilent('marketplace');
+  const data=await api('/marketplace/orders'),orders=data.orders||[];
+  let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="orders-back-marketplace">← Marketplace</button></div>';
+  html+='<section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">BUYER & SELLER ACTIVITY</span><h1>Your orders</h1><p>Purchases and sales for your Minglora shop.</p></div><span class="marketplace-results-count">'+orders.length+' orders</span></section>';
+  if(!orders.length){
+    html+='<section class="card empty-state"><h3>No Marketplace orders yet</h3><p>Your purchases and seller orders will appear here when orders are created.</p><button class="primary" id="orders-discover">Discover Marketplace</button></section>';
+  }else{
+    html+='<div class="marketplace-order-list">'+orders.map(order=>{
+      const seller=order.sellerOrder,amount=order.role==='seller'&&seller?seller.grossMinor:order.totalMinor;
+      const status=(seller?.status||order.status||'unknown').replaceAll('_',' ');
+      const date=new Date(order.createdAt).toLocaleString();
+      return '<button type="button" class="card marketplace-order-card" data-open-order="'+esc(order.id)+'"><div><span class="marketplace-status">'+esc(status)+'</span><h3>'+esc(order.id.slice(0,8).toUpperCase())+'</h3><small>'+(order.role==='seller'?'Seller order':'Purchase')+' · '+esc(order.paymentStatus.replaceAll('_',' '))+'</small><p>'+date+'</p></div><strong>'+esc(order.currency)+' '+(Number(amount||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</strong><span>›</span></button>';
+    }).join('')+'</div>';
+  }
+  setContent(html);
+  $('#orders-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
+  $('#orders-discover')?.addEventListener('click',()=>renderMarketplace('browse'));
+  document.querySelectorAll('[data-open-order]').forEach(button=>button.addEventListener('click',()=>renderMarketplaceOrderDetail(button.dataset.openOrder)));
+}
+async function renderMarketplaceOrderDetail(orderId){
+  if(!orderId)return renderMarketplaceOrders();
+  activateSilent('marketplace');state.activeMarketplaceOrder=orderId;
+  const data=await api('/marketplace/orders/'+encodeURIComponent(orderId)),order=data.order;
+  const money=minor=>esc(order.currency)+' '+(Number(minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="order-detail-back">← Your orders</button></div>';
+  html+='<section class="card marketplace-commerce-panel"><span class="marketplace-eyebrow">ORDER DETAILS</span><h1>Order '+esc(order.id.slice(0,8).toUpperCase())+'</h1><div class="marketplace-order-summary"><div><small>Order status</small><strong>'+esc(order.status.replaceAll('_',' '))+'</strong></div><div><small>Payment status</small><strong>'+esc(order.paymentStatus.replaceAll('_',' '))+'</strong></div><div><small>Order total</small><strong>'+money(order.totalMinor)+'</strong></div><div><small>Refunded</small><strong>'+money(order.refundedMinor)+'</strong></div></div><p class="muted">An order record is not proof of payment. Payment status changes only after the approved payment provider confirms capture.</p>';
+  if(order.status==='awaiting_payment'&&['pending','not_started','failed'].includes(order.paymentStatus))html+='<button type="button" class="secondary" id="cancel-marketplace-order">Cancel unpaid order and release reserved stock</button>';
+  html+='</section>';
+  html+=(order.sellerOrders||[]).map(sellerOrder=>{
+    const items=(sellerOrder.items||[]).map(item=>'<div class="marketplace-order-item"><div><strong>'+esc(item.title)+'</strong><small>Qty '+Number(item.quantity)+' · '+money(item.unitPriceMinor)+' each</small></div><strong>'+money(item.lineTotalMinor)+'</strong></div>').join('');
+    const fulfilments=(sellerOrder.fulfillments||[]).map(item=>'<p class="muted">Fulfilment: '+esc(item.method)+' · '+esc(item.status)+(item.carrier?' · '+esc(item.carrier):'')+(item.trackingReference?' · Tracking '+esc(item.trackingReference):'')+'</p>').join('');
+    return '<section class="card marketplace-commerce-panel"><div class="marketplace-order-subhead"><div><span class="marketplace-eyebrow">SELLER ORDER</span><h2>'+esc(sellerOrder.id.slice(0,8).toUpperCase())+'</h2></div><span class="marketplace-status">'+esc(sellerOrder.status.replaceAll('_',' '))+'</span></div><div class="marketplace-order-items">'+items+'</div><div class="marketplace-order-summary"><div><small>Gross</small><strong>'+money(sellerOrder.grossMinor)+'</strong></div><div><small>Marketplace fee</small><strong>'+money(sellerOrder.commissionMinor)+'</strong></div><div><small>Seller net</small><strong>'+money(sellerOrder.sellerNetMinor)+'</strong></div><div><small>Payout status</small><strong>'+esc(sellerOrder.payoutStatus.replaceAll('_',' '))+'</strong></div></div>'+fulfilments+'</section>';
+  }).join('');
+  const events=order.events||[];
+  html+='<section class="card marketplace-commerce-panel"><h2>Order activity</h2>'+(events.length?'<ol class="marketplace-order-events">'+events.map(item=>'<li><strong>'+esc(item.type.replaceAll('_',' '))+'</strong><small>'+new Date(item.createdAt).toLocaleString()+'</small><p>'+esc(item.note||'')+'</p></li>').join('')+'</ol>':'<p class="muted">No additional activity has been recorded.</p>')+'</section>';
+  setContent(html);
+  $('#order-detail-back')?.addEventListener('click',()=>renderMarketplaceOrders());
+  $('#cancel-marketplace-order')?.addEventListener('click',async()=>{
+    const button=$('#cancel-marketplace-order');
+    if(!window.confirm('Cancel this unpaid order? Reserved stock will be released.'))return;
+    button.disabled=true;
+    try{await api('/marketplace/orders/'+encodeURIComponent(order.id)+'/cancel',{method:'POST',body:'{}'});toast('Order cancelled and reserved stock released.');await renderMarketplaceOrderDetail(order.id);}
+    catch(error){toast(error.message);button.disabled=false;}
+  });
+}
 async function renderMarketplaceSeller(){
   activateSilent('marketplace');
   const data=await api('/marketplace/seller'),seller=data.seller;
@@ -2943,11 +2993,12 @@ async function renderMarketplaceBookings(){
 }
 const JOB_CATEGORY_OPTIONS=[['technology','Technology'],['administration','Administration'],['customer_service','Customer service'],['sales_marketing','Sales & marketing'],['finance','Finance'],['healthcare','Healthcare'],['education','Education'],['construction_trades','Construction & trades'],['transport_logistics','Transport & logistics'],['hospitality','Hospitality'],['creative_media','Creative & media'],['other','Other']];
 async function renderJobs(mode='browse'){
+  if(mode==='applications')return renderMyJobApplications();
   activateSilent('jobs');
   const query=$('#jobs-query')?.value?.trim()||'',params=new URLSearchParams();if(query)params.set('q',query);
   const data=mode==='mine'?(await api('/jobs/mine')):(await api('/jobs'+(params.toString()?'?'+params.toString():'')));
   const jobs=data.jobs||[];
-  let html='<section class="marketplace-hero marketplace-jobs-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA CAREERS</span><h1>Find your next opportunity.</h1><p>Discover vacancies shared by employers and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="jobs-create">＋ Post a vacancy</button></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✧</span></div></section><nav class="marketplace-tabs" aria-label="Jobs sections"><button type="button" data-jobs-mode="browse" class="'+(mode==='browse'?'active':'')+'">Find jobs</button><button type="button" data-jobs-mode="mine" class="'+(mode==='mine'?'active':'')+'">My vacancies</button><button type="button" id="jobs-back-marketplace">Marketplace</button></nav>';
+  let html='<section class="marketplace-hero marketplace-jobs-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA CAREERS</span><h1>Find your next opportunity.</h1><p>Discover vacancies shared by employers and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="jobs-create">＋ Post a vacancy</button></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✧</span></div></section><nav class="marketplace-tabs" aria-label="Jobs sections"><button type="button" data-jobs-mode="browse" class="'+(mode==='browse'?'active':'')+'">Find jobs</button><button type="button" data-jobs-mode="mine" class="'+(mode==='mine'?'active':'')+'">My vacancies</button><button type="button" data-jobs-mode="applications">My applications</button><button type="button" id="jobs-back-marketplace">Marketplace</button></nav>';
   if(mode==='browse')html+='<form class="marketplace-search" id="jobs-search-form"><label class="marketplace-search-field"><span>⌕</span><input id="jobs-query" name="q" value="'+esc(query)+'" placeholder="Search roles, companies and skills"></label><button type="submit" class="primary">Search jobs</button></form>';
   html+='<div class="marketplace-section-heading"><div><span class="marketplace-eyebrow">CAREER OPPORTUNITIES</span><h2>'+(mode==='mine'?'Your vacancies':'Open positions')+'</h2></div><span class="marketplace-results-count">'+jobs.length+' roles</span></div>';
   if(!jobs.length)html+='<section class="card empty-state"><h3>'+(mode==='mine'?'You have not posted a vacancy yet':'No matching jobs yet')+'</h3><p>'+(mode==='mine'?'Post a clear vacancy with responsibilities, location, work arrangement and application deadline.':'Try a different search or check back after employers publish vacancies.')+'</p>'+(mode==='mine'?'<button class="primary" id="jobs-create-empty">Post a vacancy</button>':'')+'</section>';
@@ -2962,6 +3013,28 @@ async function renderJobs(mode='browse'){
   $('#jobs-search-form')?.addEventListener('submit',event=>{event.preventDefault();renderJobs('browse');});
   document.querySelectorAll('[data-job-apply]').forEach(button=>button.addEventListener('click',()=>openJobApplication(button.dataset.jobApply)));
   document.querySelectorAll('[data-job-applications]').forEach(button=>button.addEventListener('click',()=>openJobApplications(button.dataset.jobApplications)));
+}
+
+async function renderMyJobApplications(){
+  activateSilent('jobs');
+  const data=await api('/jobs/applications/mine'),applications=data.applications||[];
+  let html='<section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">CAREER ACTIVITY</span><h1>My applications</h1></div></section>';
+  html+='<nav class="marketplace-tabs"><button type="button" data-jobs-mode="browse">Find jobs</button><button type="button" data-jobs-mode="mine">My vacancies</button><button type="button" data-jobs-mode="applications" class="active">My applications</button><button type="button" id="jobs-back-marketplace">Marketplace</button></nav>';
+  if(!applications.length)html+='<section class="card empty-state"><h3>No applications submitted</h3><p>Apply for an open Minglora vacancy to track its status here.</p><button class="primary" id="applications-find-jobs">Find jobs</button></section>';
+  else html+='<div class="marketplace-jobs-list">'+applications.map(item=>{
+    const job=item.job||{},canWithdraw=['submitted','reviewed','shortlisted'].includes(item.status);
+    return '<article class="card marketplace-job-card"><span class="marketplace-status">'+esc(item.status.replaceAll('_',' '))+'</span><h3>'+esc(job.title||'Vacancy no longer available')+'</h3><strong>'+esc(job.companyName||'')+'</strong><p>'+esc(job.location||'Remote')+' · '+esc(job.employmentType||'')+'</p><small>Submitted '+new Date(item.createdAt).toLocaleDateString()+'</small>'+(canWithdraw?'<div class="marketplace-card-actions"><button class="secondary" data-withdraw-application="'+esc(item.id)+'">Withdraw application</button></div>':'')+'</article>';
+  }).join('')+'</div>';
+  setContent(html);
+  document.querySelectorAll('[data-jobs-mode]').forEach(button=>button.addEventListener('click',()=>renderJobs(button.dataset.jobsMode)));
+  $('#jobs-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
+  $('#applications-find-jobs')?.addEventListener('click',()=>renderJobs('browse'));
+  document.querySelectorAll('[data-withdraw-application]').forEach(button=>button.addEventListener('click',async()=>{
+    if(!window.confirm('Withdraw this job application?'))return;
+    button.disabled=true;
+    try{await api('/jobs/applications/'+encodeURIComponent(button.dataset.withdrawApplication),{method:'PATCH',body:JSON.stringify({status:'withdrawn'})});toast('Application withdrawn.');await renderMyJobApplications();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
 }
 function openJobComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
