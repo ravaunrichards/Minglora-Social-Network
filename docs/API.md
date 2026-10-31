@@ -41,6 +41,22 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST/DELETE | `/api/users/:id/block` | Block or unblock a member |
 | GET | `/api/blocks` | List accounts currently blocked by the caller |
 
+## Marketplace
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/marketplace/categories` | List supported product/service categories and currencies |
+| GET | `/api/marketplace/listings` | Browse active listings with query, type, category, location and sort filters |
+| POST | `/api/marketplace/listings` | Publish a seller-owned listing with up to 8 uploaded photos |
+| GET | `/api/marketplace/listings/:id` | Read an active listing or the seller's own inactive listing |
+| PATCH/DELETE | `/api/marketplace/listings/:id` | Seller-only status management or removal |
+| POST/DELETE | `/api/marketplace/listings/:id/save` | Save or unsave an active listing |
+| GET | `/api/marketplace/saved` | List saved active listings |
+| GET | `/api/marketplace/mine` | List the signed-in seller's listings and statuses |
+| POST | `/api/marketplace/listings/:id/enquiries` | Send an enquiry to the seller through Minglora Inbox |
+
+Marketplace photos use signed upload endpoints with `slot=marketplace`. Checkout, orders, refunds, escrow, seller payouts, shipping, tax and appointment booking are not yet implemented.
+
 ## Friends and groups
 
 | Method | Path | Purpose |

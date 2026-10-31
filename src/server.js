@@ -13,6 +13,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
+import { MARKETPLACE_PRODUCT_CATEGORIES, MARKETPLACE_SERVICE_CATEGORIES, MARKETPLACE_CURRENCIES, validateMarketplaceListingInput, canManageMarketplaceListing, isMarketplaceListingActive } from '../backend/modules/marketplace/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -351,6 +352,11 @@ async function publicGroupPost(post) {
   const {imageUrl,...cleanPost}=post;
   return {...cleanPost,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.userId))};
 }
+async function publicMarketplaceListing(listing,viewerId){
+  const media=await Promise.all((listing.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===listing.sellerId&&item.slot==='marketplace'&&item.status!=='deleted');if(!asset)return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
+  const {mediaIds,...safeListing}=listing;
+  return {...safeListing,media:media.filter(Boolean),seller:safeUser(db.users.find(member=>member.id===listing.sellerId),viewerId),isSaved:(db.marketplaceSaved||[]).some(item=>item.userId===viewerId&&item.listingId===listing.id)};
+}
 async function publicPagePost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&(item.slot==='page'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   return {...post,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.publishedBy))};
@@ -650,6 +656,88 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:safeUser(user,user.id)});
       requireAuth(user);
+      if(method==='GET'&&p==='/api/marketplace/categories')return json(res,200,{productCategories:MARKETPLACE_PRODUCT_CATEGORIES,serviceCategories:MARKETPLACE_SERVICE_CATEGORIES,currencies:MARKETPLACE_CURRENCIES});
+      if(method==='GET'&&p==='/api/marketplace/listings'){
+        const q=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),kind=String(url.searchParams.get('kind')||''),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120),sort=String(url.searchParams.get('sort')||'recent');
+        let listings=(db.marketplaceListings||[]).filter(item=>isMarketplaceListingActive(item)&&!blockedBetween(user.id,item.sellerId));
+        if(kind==='product'||kind==='service')listings=listings.filter(item=>item.kind===kind);
+        if(category)listings=listings.filter(item=>item.category===category);
+        if(location)listings=listings.filter(item=>String(item.location||'').toLowerCase().includes(location));
+        if(q)listings=listings.filter(item=>(item.title+' '+item.description+' '+item.category+' '+(item.tags||[]).join(' ')+' '+(item.location||'')).toLowerCase().includes(q));
+        if(sort==='price_low')listings.sort((a,b)=>(a.priceMinor??Number.MAX_SAFE_INTEGER)-(b.priceMinor??Number.MAX_SAFE_INTEGER));
+        else if(sort==='price_high')listings.sort((a,b)=>(b.priceMinor??-1)-(a.priceMinor??-1));
+        else listings.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const total=listings.length,limit=Math.min(60,Math.max(1,Number(url.searchParams.get('limit')||36)||36));
+        return json(res,200,{listings:await Promise.all(listings.slice(0,limit).map(item=>publicMarketplaceListing(item,user.id))),total});
+      }
+      if(method==='GET'&&p==='/api/marketplace/mine'){
+        const listings=(db.marketplaceListings||[]).filter(item=>item.sellerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        return json(res,200,{listings:await Promise.all(listings.map(item=>publicMarketplaceListing(item,user.id)))});
+      }
+      if(method==='GET'&&p==='/api/marketplace/saved'){
+        const saved=(db.marketplaceSaved||[]).filter(item=>item.userId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const listings=await Promise.all(saved.map(async item=>{const listing=(db.marketplaceListings||[]).find(candidate=>candidate.id===item.listingId);if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return null;return {...await publicMarketplaceListing(listing,user.id),savedAt:item.createdAt};}));
+        return json(res,200,{listings:listings.filter(Boolean)});
+      }
+      if(method==='POST'&&p==='/api/marketplace/listings'){
+        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'External image URLs are not accepted. Upload listing photos from your device.'});
+        const validation=validateMarketplaceListingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
+        const mediaIds=[...new Set((Array.isArray(input.mediaIds)?input.mediaIds:[]).map(value=>String(value||'')))];
+        if(mediaIds.length>8)return json(res,400,{error:'Choose no more than 8 listing photos.'});
+        const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='marketplace'&&asset.status==='uploaded'&&asset.mediaType==='image'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more listing photos are unavailable. Upload them again.'});
+        const listing={id:uid(),sellerId:user.id,...validation.value,mediaIds,status:'active',views:0,createdAt:now(),updatedAt:now()};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='marketplace:'+listing.id;});
+        db.marketplaceListings||=[];db.marketplaceListings.unshift(listing);await saveStore();
+        return json(res,201,{listing:await publicMarketplaceListing(listing,user.id)});
+      }
+      const marketplaceSaveMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/save$/);
+      if((method==='POST'||method==='DELETE')&&marketplaceSaveMatch){
+        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceSaveMatch[1]);
+        if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'Marketplace listing not found.'});
+        db.marketplaceSaved||=[];const existing=db.marketplaceSaved.find(item=>item.userId===user.id&&item.listingId===listing.id);
+        if(method==='POST'&&!existing)db.marketplaceSaved.unshift({id:uid(),userId:user.id,listingId:listing.id,createdAt:now()});
+        if(method==='DELETE'&&existing)db.marketplaceSaved=db.marketplaceSaved.filter(item=>item.id!==existing.id);
+        await saveStore();return json(res,200,{saved:method==='POST'});
+      }
+      const marketplaceEnquiryMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/enquiries$/);
+      if(method==='POST'&&marketplaceEnquiryMatch){
+        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceEnquiryMatch[1]);
+        if(!isMarketplaceListingActive(listing)||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This listing is unavailable for enquiries.'});
+        const seller=db.users.find(member=>member.id===listing.sellerId),text=String(input.text||'').trim();
+        if(!seller||text.length<5||text.length>2000)return json(res,400,{error:'Write an enquiry of 5–2000 characters.'});
+        const audience=getUserSettings(seller).privacy.messageAudience;
+        if(audience!=='everyone'&&!isFriend(user.id,seller.id))return json(res,403,{error:'This seller only accepts new messages from confirmed friends.'});
+        const message={id:uid(),from:user.id,to:seller.id,text:'Marketplace enquiry: '+listing.title+'\n\n'+text,marketplaceListingId:listing.id,messageKind:'marketplace_inquiry',createdAt:now(),read:false};
+        db.messages.push(message);db.marketplaceInquiries||=[];
+        const inquiry={id:uid(),listingId:listing.id,senderId:user.id,sellerId:seller.id,messageId:message.id,status:'sent',createdAt:now()};
+        db.marketplaceInquiries.unshift(inquiry);notify(seller.id,user.id,'message',user.name+' sent an enquiry about '+listing.title+'.',{marketplaceListingId:listing.id});
+        await saveStore();return json(res,201,{inquiry:{id:inquiry.id,listingId:listing.id,status:inquiry.status,createdAt:inquiry.createdAt},messageId:message.id});
+      }
+      const marketplaceListingMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)$/);
+      if(marketplaceListingMatch&&method==='GET'){
+        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
+        if(!listing||blockedBetween(user.id,listing.sellerId)||(!isMarketplaceListingActive(listing)&&!canManageMarketplaceListing(listing,user.id)))return json(res,404,{error:'Marketplace listing not found.'});
+        if(listing.sellerId!==user.id){listing.views=Number(listing.views||0)+1;await saveStore();}
+        return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
+      }
+      if(marketplaceListingMatch&&method==='PATCH'){
+        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
+        if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
+        if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can manage this listing.'});
+        const status=String(input.status||'');if(!['active','paused','sold'].includes(status))return json(res,400,{error:'Choose Active, Paused or Sold.'});
+        if(status==='active'&&listing.kind==='product'&&Number(listing.quantity||0)<1)return json(res,409,{error:'Add available stock before reactivating this product.'});
+        listing.status=status;if(status==='sold'&&listing.kind==='product')listing.quantity=0;listing.updatedAt=now();
+        await saveStore();return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
+      }
+      if(marketplaceListingMatch&&method==='DELETE'){
+        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
+        if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
+        if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can remove this listing.'});
+        listing.status='removed';listing.removedAt=now();listing.updatedAt=now();
+        (listing.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
+        await saveStore();return json(res,200,{ok:true,id:listing.id});
+      }
       if(method==='POST'&&p==='/api/auth/phone/change'){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Verified phone authentication requires Supabase Auth.'});
         const phone=normalizeContactPhone(input.phone||'');
@@ -694,9 +782,10 @@ async function route(req, res) {
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
           group:['image/jpeg','image/png','image/webp','video/mp4'],
           page:['image/jpeg','image/png','image/webp','video/mp4'],
+          marketplace:['image/jpeg','image/png','image/webp','image/avif'],
           message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,marketplace:15*1024*1024,message:100*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
@@ -917,7 +1006,7 @@ async function route(req, res) {
       }
       if(method==='POST'&&p==='/api/reports'){
         const targetType=String(input.targetType||''),targetId=String(input.targetId||''),category=String(input.category||''),details=String(input.details||'').trim();
-        const allowedTypes=['user','post','comment','story','group','page','message'];
+        const allowedTypes=['user','post','comment','story','group','page','message','marketplace_listing'];
         const allowedCategories=['spam','harassment','hate','nudity','violence','scam','impersonation','copyright','privacy','other'];
         if(!allowedTypes.includes(targetType)||!targetId||!allowedCategories.includes(category)||details.length>2000)return json(res,400,{error:'Choose a report type, reason and optional details (maximum 2000 characters).'});
         let exists=false;
@@ -927,6 +1016,7 @@ async function route(req, res) {
         if(targetType==='story')exists=(db.stories||[]).some(item=>item.id===targetId);
         if(targetType==='group')exists=(db.groups||[]).some(item=>item.id===targetId);
         if(targetType==='page')exists=(db.pages||[]).some(item=>item.id===targetId);
+        if(targetType==='marketplace_listing')exists=(db.marketplaceListings||[]).some(item=>item.id===targetId&&item.status!=='removed');
         if(targetType==='message')exists=(db.messages||[]).some(item=>item.id===targetId&&(item.from===user.id||item.to===user.id));
         if(!exists)return json(res,404,{error:'The content you are reporting could not be found.'});
         const duplicate=(db.reports||[]).find(item=>item.reporterId===user.id&&item.targetType===targetType&&item.targetId===targetId&&['open','triaged'].includes(item.status));
@@ -943,7 +1033,7 @@ async function route(req, res) {
         const status=String(url.searchParams.get('status')||'open');
         const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>({
           ...item,reporter:safeUser(db.users.find(u=>u.id===item.reporterId)),
-          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null))
+          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):item.targetType==='marketplace_listing'?db.users.find(u=>u.id===(db.marketplaceListings||[]).find(listing=>listing.id===item.targetId)?.sellerId):null))
         }));
         return json(res,200,{reports});
       }

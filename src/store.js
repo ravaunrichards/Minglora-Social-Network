@@ -11,7 +11,7 @@ const now = () => new Date().toISOString();
 const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
-  'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
+  'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence'
 ];
 
