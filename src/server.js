@@ -1068,25 +1068,29 @@ async function route(req, res) {
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const title = String(input.title || '').trim();
         const visibility = String(input.visibility || 'public');
-        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(visibility)) {
-          return json(res, 400, { error: 'Enter a live title (1–120 characters) and choose public, friends or private visibility.' });
+        const broadcastType = String(input.broadcastType || 'video_audio');
+        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(visibility) ||
+            !['video_audio', 'audio_only'].includes(broadcastType)) {
+          return json(res, 400, { error: 'Enter a live title, choose an audience and select Video + Audio or Audio Only.' });
         }
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
+        const publishSources = broadcastType === 'audio_only' ? ['microphone'] : ['microphone', 'camera'];
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
           roomName,
-          canPublish: true
+          canPublish: true,
+          publishSources
         });
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
-        const session = { id, roomName, hostId: user.id, title, visibility, liveTheme, status: 'live', createdAt: now(), endedAt: null };
-        await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
+        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, liveTheme, status: 'live', createdAt: now(), endedAt: null };
+        await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
         db.liveSessions = db.liveSessions || [];
         db.liveParticipants = db.liveParticipants || [];
         db.liveSessions.unshift(session);
-        db.liveParticipants.push({ id: uid(), sessionId: id, userId: user.id, role: 'host', joinedAt: now(), leftAt: null });
+        db.liveParticipants.push({ id: uid(), sessionId: id, userId: user.id, role: 'host', joinedAt: now(), leftAt: null, status: 'connected' });
         if(visibility==='public'){
           const followerIds=[...new Set((db.follows||[]).filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
           for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',user.name+' is LIVE: '+title,{liveSessionId:id});
@@ -1113,6 +1117,59 @@ async function route(req, res) {
         await saveStore();
         return json(res, 200, { liveTheme });
       }
+      const liveSpeakerRequestsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-requests$/);
+      if (liveSpeakerRequestsMatch && method === 'GET') {
+        const session = (db.liveSessions || []).find(item => item.id === liveSpeakerRequestsMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
+        const requests = (db.liveSpeakerRequests || [])
+          .filter(item => item.sessionId === session.id && ['requested', 'accepted'].includes(item.status))
+          .map(item => ({ ...item, user: safeUser(db.users.find(member => member.id === item.userId), user.id) }));
+        return json(res, 200, { requests });
+      }
+      if (liveSpeakerRequestsMatch && method === 'POST') {
+        const session = (db.liveSessions || []).find(item => item.id === liveSpeakerRequestsMatch[1] && item.status === 'live');
+        if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        const allowed = session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
+        if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
+        const joined = (db.liveParticipants || []).some(item => item.sessionId === session.id && item.userId === user.id && !item.leftAt);
+        if (!joined) return json(res, 409, { error: 'Join the LIVE room before requesting a speaker place.' });
+        db.liveSpeakerRequests = db.liveSpeakerRequests || [];
+        const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id);
+        if (previous && ['requested', 'accepted'].includes(previous.status)) return json(res, 200, { request: previous });
+        await requestSupabaseState('live_speaker_request', { broadcastId: session.id, userId: user.id });
+        const request = { id: uid(), sessionId: session.id, userId: user.id, role: 'guest', status: 'requested', requestedAt: now(), acceptedAt: null, connectedAt: null, leftAt: null };
+        if (previous) Object.assign(previous, request); else db.liveSpeakerRequests.unshift(request);
+        await saveStore();
+        return json(res, 201, { request });
+      }
+      const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
+      if (method === 'GET' && liveSpeakerStatusMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveSpeakerStatusMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === user.id) || null;
+        return json(res, 200, { request });
+      }
+      const liveSpeakerDecisionMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-requests\/([^/]+)$/);
+      if (method === 'PATCH' && liveSpeakerDecisionMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveSpeakerDecisionMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
+        const speakerId = liveSpeakerDecisionMatch[2], decision = String(input.decision || '');
+        if (speakerId === user.id || !['accept', 'reject'].includes(decision)) return json(res, 400, { error: 'Choose a valid speaker request decision.' });
+        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === speakerId && item.status === 'requested');
+        if (!request) return json(res, 404, { error: 'This speaker request is no longer pending.' });
+        if (decision === 'accept') {
+          const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+            item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+          ).length;
+          if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+        }
+        await requestSupabaseState('live_speaker_request_review', { broadcastId: session.id, hostId: user.id, speakerId, decision });
+        request.status = decision === 'accept' ? 'accepted' : 'rejected';
+        request.acceptedAt = decision === 'accept' ? now() : null;
+        request.reviewedAt = now();
+        await saveStore();
+        return json(res, 200, { request });
+      }
       let liveMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/join$/);
       if (method === 'POST' && liveMatch) {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured for Minglora.' });
@@ -1125,13 +1182,24 @@ async function route(req, res) {
           session.visibility === 'public' ||
           (session.visibility === 'friends' && friendAccess);
         if (!allowed) return json(res, 404, { error: 'Live session not found.' });
-        const role = session.hostId === user.id ? 'host' : 'viewer';
+        const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
+          item.sessionId === session.id && item.userId === user.id
+        );
+        const role = session.hostId === user.id ? 'host' : speakerRequest?.status === 'accepted' ? 'guest' : 'viewer';
+        const publishSources = role === 'host'
+          ? (session.broadcastType === 'audio_only' ? ['microphone'] : ['microphone', 'camera'])
+          : role === 'guest' ? ['microphone'] : null;
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
           roomName: session.roomName,
-          canPublish: role === 'host'
+          canPublish: role === 'host' || role === 'guest',
+          publishSources
         });
+        if (role === 'guest') {
+          await requestSupabaseState('live_speaker_mark_connected', { broadcastId: session.id, userId: user.id });
+          speakerRequest.connectedAt = now();
+        }
         db.liveParticipants = db.liveParticipants || [];
         const existing = db.liveParticipants.find(participant =>
           participant.sessionId === session.id && participant.userId === user.id && !participant.leftAt
@@ -1139,8 +1207,9 @@ async function route(req, res) {
         if (existing) {
           existing.joinedAt = now();
           existing.role = role;
+          existing.status = role === 'guest' ? 'connected' : 'connected';
         } else {
-          db.liveParticipants.push({ id: uid(), sessionId: session.id, userId: user.id, role, joinedAt: now(), leftAt: null });
+          db.liveParticipants.push({ id: uid(), sessionId: session.id, userId: user.id, role, joinedAt: now(), leftAt: null, status: 'connected' });
         }
         await saveStore();
         return json(res, 200, { session, liveKit: { ...liveKit, role } });
@@ -1154,6 +1223,14 @@ async function route(req, res) {
         );
         if (!participant) return json(res, 404, { error: 'You are not an active participant in this live session.' });
         participant.leftAt = now();
+        const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
+          item.sessionId === session.id && item.userId === user.id && item.status === 'accepted'
+        );
+        if (speakerRequest) {
+          await requestSupabaseState('live_speaker_mark_left', { broadcastId: session.id, userId: user.id });
+          speakerRequest.status = 'left';
+          speakerRequest.leftAt = now();
+        }
         await saveStore();
         return json(res, 200, { ok: true });
       }
