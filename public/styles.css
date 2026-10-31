@@ -856,7 +856,7 @@ pre,code{max-width:100%;white-space:pre-wrap}
 .live-player-layout{grid-template-columns:minmax(0,1.55fr) minmax(260px,.8fr);min-height:0}
 .live-video-column,.live-community-panel{min-width:0;min-height:0}
 .live-video-stage{
-  min-width:0;border:1px solid var(--live-line);
+  min-width:0;grid-auto-rows:minmax(0,1fr);align-content:stretch;border:1px solid var(--live-line);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 14px 34px rgba(0,0,0,.26);
   transform:perspective(1200px) rotateX(.15deg);transform-style:preserve-3d
 }
