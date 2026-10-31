@@ -22,7 +22,7 @@ export function marketplacePayPalConfig(env = process.env) {
   const enabled = String(env.MARKETPLACE_PAYPAL_ENABLED || '').trim().toLowerCase() === 'true';
   const partnerApproved = String(env.MARKETPLACE_PAYPAL_PARTNER_APPROVED || '').trim().toLowerCase() === 'true';
   const liveApproved = String(env.MARKETPLACE_PAYPAL_LIVE_APPROVED || '').trim().toLowerCase() === 'true';
-  const enabledForTransactions = enabled && partnerApproved && configured && modeValid && (mode !== 'live' || liveApproved);
+  const enabledForTransactions = enabled && configured && modeValid && (mode === 'sandbox' || partnerApproved) && (mode !== 'live' || liveApproved);
   return {
     mode,
     base,
@@ -44,7 +44,7 @@ export function marketplacePayPalReadiness(env = process.env) {
   const blockers = [];
   if (!config.configured) blockers.push('Marketplace PayPal credentials, partner merchant ID, attribution ID and webhook ID must be configured separately from creator payouts.');
   if (!config.enabled) blockers.push('Marketplace PayPal integration is disabled.');
-  if (!config.partnerApproved) blockers.push('PayPal must approve Minglora as a multiparty marketplace partner.');
+  if (config.mode === 'live' && !config.partnerApproved) blockers.push('PayPal must approve Minglora as a multiparty marketplace partner before live onboarding and payments.');
   if (config.mode === 'live' && !config.liveApproved) blockers.push('Live Marketplace PayPal mode requires an explicit production approval flag.');
   if (!['sandbox', 'live'].includes(config.mode)) blockers.push('Marketplace PayPal mode must be sandbox or live.');
   return {
@@ -121,7 +121,7 @@ export function marketplaceMinorToPayPalValue(amountMinor, currency) {
   return (amount / 100).toFixed(2);
 }
 
-export function buildMarketplacePayPalOrderPayload({ orderId, currency, sellerOrders, attributionId }) {
+export function buildMarketplacePayPalOrderPayload({ orderId, currency, sellerOrders, attributionId, returnUrl, cancelUrl }) {
   const id = String(orderId || '').trim();
   const code = String(currency || '').trim().toUpperCase();
   const attribution = String(attributionId || '').trim();
@@ -130,6 +130,7 @@ export function buildMarketplacePayPalOrderPayload({ orderId, currency, sellerOr
     throw new Error('PayPal Marketplace checkout does not currently support ' + code + '.');
   }
   if (!attribution) throw new Error('Marketplace PayPal attribution ID is missing.');
+  if (!String(returnUrl || '').startsWith('https://') || !String(cancelUrl || '').startsWith('https://')) throw new Error('PayPal buyer return and cancel URLs must use HTTPS.');
   if (!Array.isArray(sellerOrders) || sellerOrders.length < 1 || sellerOrders.length > 10) {
     throw new Error('PayPal multi-seller checkout supports between 1 and 10 seller orders per transaction.');
   }
@@ -167,7 +168,9 @@ export function buildMarketplacePayPalOrderPayload({ orderId, currency, sellerOr
     purchase_units,
     application_context: {
       brand_name: 'Minglora',
-      user_action: 'PAY_NOW'
+      user_action: 'PAY_NOW',
+      return_url: String(returnUrl),
+      cancel_url: String(cancelUrl)
     }
   };
 }
