@@ -200,7 +200,7 @@ DECLARE
   v_direction text;
   v_amount bigint;
 BEGIN
-  IF jsonb_typeof(p_entries)<>'array' OR jsonb_array_length(p_entries)<2 THEN
+  IF p_entries IS NULL OR jsonb_typeof(p_entries)<>'array' OR jsonb_array_length(p_entries)<2 THEN
     RAISE EXCEPTION 'A journal requires at least two entries';
   END IF;
   INSERT INTO public.marketplace_journals(order_id,source_type,source_reference,currency,description)
@@ -226,6 +226,21 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.post_marketplace_journal(uuid,text,text,char,text,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.post_marketplace_journal(uuid,text,text,char,text,jsonb) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.prevent_marketplace_ledger_entry_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  RAISE EXCEPTION 'Marketplace ledger entries are immutable; post a reversing journal instead';
+END $;
+DROP TRIGGER IF EXISTS marketplace_ledger_entries_immutable ON public.marketplace_ledger_entries;
+CREATE TRIGGER marketplace_ledger_entries_immutable
+BEFORE UPDATE OR DELETE ON public.marketplace_ledger_entries
+FOR EACH ROW EXECUTE FUNCTION public.prevent_marketplace_ledger_entry_mutation();
+CREATE UNIQUE INDEX IF NOT EXISTS marketplace_platform_ledger_account_uq
+  ON public.marketplace_ledger_accounts (account_code,currency)
+  WHERE owner_user_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS public.marketplace_fulfillments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
