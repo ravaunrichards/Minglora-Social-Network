@@ -1044,6 +1044,23 @@ function creatorMetric(label,value,caption,icon){
 function creatorEmpty(title,description,icon){
   return "<section class='creator-empty-state'><span>"+creatorIcon(icon||"create")+"</span><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p></section>";
 }
+function syncCreatorStudioNavigationLayout(){
+  const slot=document.querySelector(".creator-studio-nav-slot");
+  const nav=slot?.querySelector(".creator-studio-nav.live-format-picker");
+  if(!slot||!nav)return;
+  const slotRect=slot.getBoundingClientRect();
+  const topbar=document.querySelector(".topbar");
+  const top=Math.max(0,Math.ceil(topbar?.getBoundingClientRect().bottom||0));
+  const height=Math.ceil(nav.getBoundingClientRect().height||nav.scrollHeight||60);
+  slot.style.height=(height+14)+"px";
+  nav.style.setProperty("--creator-studio-nav-top",top+"px");
+  nav.style.setProperty("--creator-studio-nav-left",Math.round(slotRect.left)+"px");
+  nav.style.setProperty("--creator-studio-nav-width",Math.round(slotRect.width)+"px");
+  if(!window.__mingloraCreatorStudioNavResizeBound){
+    window.addEventListener("resize",syncCreatorStudioNavigationLayout,{passive:true});
+    window.__mingloraCreatorStudioNavResizeBound=true;
+  }
+}
 function creatorStudioChrome(section,content){
   const name=creatorProfileName();
   const sections=[
@@ -1058,12 +1075,12 @@ function creatorStudioChrome(section,content){
   ];
   const nav=sections.map(([id,label,icon,description])=>"<button type='button' class='creator-studio-nav-item live-format-card "+(id===section?"active":"")+"' data-creator-section='"+id+"' aria-current='"+(id===section?"page":"false")+"'><span class='live-format-icon "+(["audience","analytics"].includes(id)?"audio":"")+"'>"+creatorIcon(icon)+"</span><span class='creator-tab-copy'><strong>"+label+"</strong><small>"+description+"</small></span></button>").join("");
   return "<div class='creator-studio-shell' data-creator-section-active='"+section+"'>"+
+    "<div class='creator-studio-nav-slot'><nav class='creator-studio-nav live-format-picker' aria-label='Creator Studio sections'>"+nav+"</nav></div>"+
     "<section class='creator-studio-heading'><div><span class='creator-eyebrow'>MINGLORA CREATOR WORKSPACE</span><h1>Creator Studio</h1><p>One connected Minglora workspace for creating, publishing, understanding your audience and managing creator activity.</p></div><div class='creator-studio-heading-actions'><span class='creator-account-chip'><i class='creator-studio-account-dot'></i><strong>"+esc(name)+"</strong></span><button type='button' class='secondary' data-creator-edit-profile>Edit profile</button><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create content</button></div></section>"+
     "<section class='creator-live-format-entry'><div class='creator-live-format-heading'><strong>Go LIVE</strong><small>Choose the broadcast format that matches your moment</small></div><div class='creator-live-format-options'>"+
       "<button type='button' class='live-format-card creator-live-format-card' data-creator-start-live='video_audio'><span class='live-format-icon'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2#live'></use></svg></span><span><strong>Video LIVE</strong><small>Camera and microphone</small></span></button>"+
       "<button type='button' class='live-format-card creator-live-format-card' data-creator-start-live='audio_only'><span class='live-format-icon audio'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2#microphone'></use></svg></span><span><strong>Audio LIVE</strong><small>Voice-first broadcast</small></span></button>"+
     "</div></section>"+
-    "<nav class='creator-studio-nav live-format-picker' aria-label='Creator Studio sections'>"+nav+"</nav>"+
     "<div class='creator-studio-content'>"+content+"</div>"+
     "<footer class='creator-studio-footer'><span>Minglora Creator Studio</span><span>Connected to your Minglora account · No invented activity or earnings</span></footer></div>";
 }
@@ -1308,6 +1325,7 @@ async function renderCreatorSection(section){
     section="overview";
   }
   setContent(creatorStudioChrome(section,content));
+  syncCreatorStudioNavigationLayout();
   window.scrollTo({top:0,behavior:"auto"});
   document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
   document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
