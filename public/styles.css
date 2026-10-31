@@ -1190,3 +1190,9 @@ pre,code{max-width:100%;white-space:pre-wrap}
 @media(max-width:760px){
   .live-audio-mic-model{top:12px;right:1px;width:100px;height:178px;opacity:.92;}
 }
+
+.live-speaker-chip.connected:before{background:#65e4c8;box-shadow:0 0 12px rgba(101,228,200,.65);}
+.live-speaker-chip.connecting:before{background:#efc16e;box-shadow:0 0 10px rgba(239,193,110,.35);}
+.live-speaker-chip small{display:block;color:rgba(226,238,249,.68);font-size:.65rem;font-weight:600;line-height:1.2;}
+.live-speaker-chip{display:grid;grid-template-columns:7px auto;column-gap:7px;row-gap:2px;}
+.live-speaker-chip:before{grid-row:1 / span 2;align-self:center;}
