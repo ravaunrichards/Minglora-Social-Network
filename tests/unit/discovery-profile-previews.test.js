@@ -58,5 +58,5 @@ test('static shell cache is versioned for the upgraded discovery cards', async (
   const worker = await read('public/sw.js');
   assert.match(html, /responsive-layout-guardrails-1/);
   assert.match(html, /discovery-profiles-1/);
-  assert.match(worker, /minglora-shell-v12-responsive-layout-guardrails/);
+  assert.match(worker, /minglora-shell-v18-audio-live/);
 });
