@@ -790,3 +790,38 @@ body[data-color-theme] .rail-link .rail-icon-3d{background:linear-gradient(145de
   .person-title-group h3{font-size:15px}.person-live-mini{margin-top:29px}.person-media-tile{height:65px}
 }
 @media(prefers-reduced-motion:reduce){.person-card--immersive,.person-cover:after{transition:none}.person-card--immersive:hover{transform:none}}
+
+
+/* Site-wide responsive layout guardrails: keep content aligned and overlays clear. */
+html{min-width:320px;overflow-x:clip;scroll-padding-top:76px}
+body{min-width:320px;overflow-x:clip}
+.layout,.main-content,.left-rail,.right-rail,.side-card,.card,.profile-body,.profile-body>*,.settings-layout,.settings-nav,.settings-panels,.message-layout,.live-player-shell,.person-card--immersive,.group-card,.page-card{min-width:0}
+.main-content h1,.main-content h2,.main-content h3,.main-content p,.main-content strong,.main-content small,.main-content a,.main-content time{overflow-wrap:anywhere}
+button,input,select,textarea{max-width:100%;min-width:0}
+textarea,pre,code{overflow-wrap:anywhere}
+pre,code{max-width:100%;white-space:pre-wrap}
+.page-heading{flex-wrap:wrap}
+.page-heading>div{flex:1 1 220px;min-width:0}
+.page-heading>button,.page-heading>.live-status-pill{flex:0 0 auto;max-width:100%}
+.profile-counts{display:flex;align-items:center;flex-wrap:wrap;gap:7px 12px}
+.profile-tabs{min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.profile-tabs button{flex:0 0 auto;white-space:nowrap}
+.post-actions{flex-wrap:wrap}
+.modal-backdrop{overflow-y:auto;overscroll-behavior:contain;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+.modal{min-height:0;max-height:min(90vh,calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px))}
+@media(max-width:760px){
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  .mobile-nav{height:calc(60px + env(safe-area-inset-bottom));padding:0  max(0px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px,env(safe-area-inset-left))}
+  .mobile-nav button{min-width:0;min-height:44px}
+  .toast{bottom:calc(72px + env(safe-area-inset-bottom))}
+  #message-window-dock{bottom:calc(60px + env(safe-area-inset-bottom))!important;max-height:calc(100dvh - 72px - env(safe-area-inset-bottom))}
+  .message-window{max-height:min(62vh,calc(100dvh - 76px - env(safe-area-inset-bottom)))}
+}
+@media(max-width:560px){
+  .settings-field,.settings-toggle{align-items:flex-start;flex-wrap:wrap;gap:9px}
+  .settings-field>span,.settings-toggle>span{flex:1 1 180px}
+  .settings-field select{width:100%;max-width:100%}
+}
+@media(max-width:390px){
+  .live-gift-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

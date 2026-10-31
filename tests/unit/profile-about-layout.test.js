@@ -43,7 +43,7 @@ test('browser reloads the corrected profile script and replaces the old service-
   const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
   const serverSource = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
   assert.match(indexHtml, /src="\/app\.js\?v=20261031-discovery-profiles-1"/);
-  assert.match(serviceWorker, /minglora-shell-v11-discovery-profile-previews/);
+  assert.match(serviceWorker, /minglora-shell-v12-responsive-layout-guardrails/);
   assert.match(serviceWorker, /\/app\.js\?v=20261031-discovery-profiles-1/);
   assert.match(serverSource, /'Cache-Control':'no-store'/);
   assert.match(serverSource, /'Cache-Control':'no-cache, max-age=0, must-revalidate'/);
