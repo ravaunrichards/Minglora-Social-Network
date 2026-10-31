@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio' };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
-window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}});
+window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
 const fallbackAvatar = name => {
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2)
     .map(part => part[0]).join('').toUpperCase().replace(/[^A-Z0-9]/g, '') || '?';
@@ -38,6 +38,112 @@ function startProfilePresence(profileId){
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&state.view==='profile'&&state.profile?.user?.id)void refreshProfilePresence(state.profile.user.id);
 });
+
+const APP_PALETTE_OPTIONS=[
+  {value:'minglora',label:'Minglora Blue',color:'#1769e0'},
+  {value:'ocean',label:'Ocean Breeze',color:'#0f766e'},
+  {value:'tropical',label:'Tropical Pulse',color:'#e45b4d'},
+  {value:'royal',label:'Royal Amethyst',color:'#7146c7'},
+  {value:'emerald',label:'Emerald Garden',color:'#16834f'},
+  {value:'rose',label:'Rose Bloom',color:'#be315f'},
+  {value:'golden',label:'Golden Hour',color:'#a16207'},
+  {value:'lavender',label:'Lavender Cloud',color:'#7864c8'},
+  {value:'midnight',label:'Midnight Neon',color:'#38bdf8'},
+  {value:'graphite',label:'Graphite Studio',color:'#64748b'}
+];
+const LIVE_PALETTE_OPTIONS=[
+  {value:'studio',label:'Creator Studio',color:'#c4d1e2'},
+  {value:'ocean',label:'Ocean Stage',color:'#67e8f9'},
+  {value:'tropical',label:'Tropical Party',color:'#ffab91'},
+  {value:'royal',label:'Royal Lounge',color:'#f2d58e'},
+  {value:'neon',label:'Neon Arena',color:'#67e8f9'},
+  {value:'sunset',label:'Sunset Spotlight',color:'#fbbf64'},
+  {value:'garden',label:'Garden Glow',color:'#6ee7b7'},
+  {value:'social',label:'Soft Social',color:'#e9b9e9'}
+];
+function renderPaletteSwitcher(){
+  const panel=$('#palette-switcher');
+  if(!panel)return;
+  const preferences=state.settings?.preferences||{};
+  const appTheme=preferences.colorTheme||document.body.dataset.colorTheme||'minglora';
+  const liveTheme=preferences.liveRoomTheme||'studio';
+  const appButtons=APP_PALETTE_OPTIONS.map(item=>"<button type='button' class='palette-swatch "+(item.value===appTheme?"active":"")+"' data-app-palette='"+item.value+"' style='--palette-color:"+item.color+"' aria-pressed='"+(item.value===appTheme?"true":"false")+"'><i></i><span>"+item.label+"</span></button>").join("");
+  const liveButtons=LIVE_PALETTE_OPTIONS.map(item=>"<button type='button' class='palette-swatch "+(item.value===liveTheme?"active":"")+"' data-live-palette='"+item.value+"' style='--palette-color:"+item.color+"' aria-pressed='"+(item.value===liveTheme?"true":"false")+"'><i></i><span>"+item.label+"</span></button>").join("");
+  panel.innerHTML="<div class='palette-switcher-head'><div><strong>Personalise Minglora</strong><small>Change your look whenever you like</small></div><button type='button' class='palette-switcher-close' id='palette-switcher-close' aria-label='Close palettes'>×</button></div>"+
+    "<section class='palette-switcher-section'><div class='palette-switcher-label'><strong>App palette</strong><small>Changes the full Minglora interface</small></div><div class='palette-swatch-grid'>"+appButtons+"</div></section>"+
+    "<section class='palette-switcher-section'><div class='palette-switcher-label'><strong>LIVE room palette</strong><small>Sets your default room look; hosts can also update an active room</small></div><div class='palette-swatch-grid live-palette-grid'>"+liveButtons+"</div></section>"+
+    "<p class='palette-switcher-status' id='palette-switcher-status' role='status'>Your palette changes save to your Minglora account.</p>"+
+    "<button type='button' class='palette-switcher-more' id='palette-switcher-more'>Open Theme Centre settings ↗</button>";
+  panel.querySelectorAll('[data-app-palette]').forEach(button=>button.addEventListener('click',()=>saveMingloraPalette('app',button.dataset.appPalette,button)));
+  panel.querySelectorAll('[data-live-palette]').forEach(button=>button.addEventListener('click',()=>saveMingloraPalette('live',button.dataset.livePalette,button)));
+  $('#palette-switcher-close')?.addEventListener('click',closePaletteSwitcher);
+  $('#palette-switcher-more')?.addEventListener('click',()=>{closePaletteSwitcher();window.MingloraSettings?.open?.();});
+}
+function openPaletteSwitcher(){
+  const panel=$('#palette-switcher'),toggle=$('#palette-toggle');
+  if(!panel||!toggle)return;
+  renderPaletteSwitcher();panel.classList.remove('hidden');toggle.setAttribute('aria-expanded','true');
+}
+function closePaletteSwitcher(){
+  $('#palette-switcher')?.classList.add('hidden');
+  $('#palette-toggle')?.setAttribute('aria-expanded','false');
+}
+async function saveMingloraPalette(kind,value,button){
+  const status=$('#palette-switcher-status');
+  if(button)button.disabled=true;
+  if(status)status.textContent='Saving your palette…';
+  try{
+    const key=kind==='app'?'colorTheme':'liveRoomTheme';
+    const result=await api('/settings',{method:'PATCH',body:JSON.stringify({preferences:{[key]:value}})});
+    state.settings=result.settings;
+    if(kind==='app'){
+      document.body.dataset.colorTheme=value;
+      const meta=document.querySelector('meta[name="theme-color"]');
+      if(meta)meta.setAttribute('content',APP_PALETTE_OPTIONS.find(item=>item.value===value)?.color||'#1769e0');
+    }
+    window.dispatchEvent(new CustomEvent('minglora:settings-loaded',{detail:result.settings}));
+    if(kind==='live'&&activeLiveSession&&activeLiveRole==='host'){
+      try{
+        await api('/live/sessions/'+encodeURIComponent(activeLiveSession.id)+'/theme',{method:'PATCH',body:JSON.stringify({liveTheme:value})});
+        activeLiveSession.liveTheme=value;
+        const player=document.querySelector('.live-player-shell');
+        if(player){
+          [...player.classList].filter(name=>name.startsWith('live-theme-')).forEach(name=>player.classList.remove(name));
+          player.classList.add('live-theme-'+value);
+        }
+      }catch(error){
+        renderPaletteSwitcher();
+        toast('Your default LIVE palette was saved, but the current room could not be updated: '+error.message);
+        return;
+      }
+    }
+    renderPaletteSwitcher();
+    toast(kind==='app'?'Minglora app palette updated.':'Your LIVE room palette was saved'+(activeLiveSession&&activeLiveRole==='host'?' and applied to this LIVE.':'.'));
+  }catch(error){
+    const current=$('#palette-switcher-status');
+    if(current)current.textContent='Palette not saved. '+error.message;
+    toast('Palette not saved: '+error.message);
+  }finally{
+    if(button)button.disabled=false;
+  }
+}
+function bindPaletteSwitcher(){
+  const toggle=$('#palette-toggle');
+  if(toggle&&!toggle.dataset.bound){
+    toggle.dataset.bound='true';
+    toggle.addEventListener('click',()=>$('#palette-switcher')?.classList.contains('hidden')?openPaletteSwitcher():closePaletteSwitcher());
+  }
+  if(!document.documentElement.dataset.paletteOutsideBound){
+    document.documentElement.dataset.paletteOutsideBound='true';
+    document.addEventListener('click',event=>{
+      const anchor=$('.palette-menu-anchor');
+      if(anchor&&!anchor.contains(event.target))closePaletteSwitcher();
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closePaletteSwitcher();});
+  }
+  renderPaletteSwitcher();
+}
+
 let toastTimer;
 let browserNotificationTimer=null;
 let browserNotificationSeen=new Set();
@@ -457,8 +563,8 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, independent audio rooms, creator chat and animated 3D gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose how people experience your broadcast. Audio Only never requests camera access.</p></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-format-picker'><legend>Broadcast format</legend>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='video_audio' checked><span class='live-format-icon'>▣</span><span><strong>Video + Audio</strong><small>Camera and microphone</small></span></label>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='audio_only'><span class='live-format-icon audio'>♫</span><span><strong>Audio Only</strong><small>Microphone, voice and audience</small></span></label></fieldset>"+
+      "<label class='live-format-card'><input type='radio' name='broadcastType' value='video_audio' "+(state.liveStartFormat==='video_audio'?'checked':'')+"><span class='live-format-icon'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg#live'></use></svg></span><span><strong>Video + Audio</strong><small>Camera and microphone</small></span></label>"+
+      "<label class='live-format-card'><input type='radio' name='broadcastType' value='audio_only' "+(state.liveStartFormat==='audio_only'?'checked':'')+"><span class='live-format-icon audio'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg#microphone'></use></svg></span><span><strong>Audio Only</strong><small>Microphone, voice and audience</small></span></label></fieldset>"+
       "<input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
@@ -467,6 +573,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
     (packages.length?"<div class='live-package-preview'>"+packages.map(p=>"<span>"+Number(p.coin_amount).toLocaleString()+" Coins · "+liveMoney(p.price_minor)+"</span>").join("")+"</div>":"")+"</section>");
+  $("#live-create-form")?.querySelectorAll("input[name='broadcastType']").forEach(input=>input.addEventListener("change",()=>{state.liveStartFormat=input.value;}));
   $("#live-create-form")?.addEventListener("submit",async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector("button[type='submit']");button.disabled=true;
     try{
@@ -940,19 +1047,23 @@ function creatorEmpty(title,description,icon){
 function creatorStudioChrome(section,content){
   const name=creatorProfileName();
   const sections=[
-    ["overview","Overview","creator"],
-    ["content","Content library","saved"],
-    ["publish","Create & publish","create"],
-    ["audience","Audience","friends"],
-    ["analytics","Analytics","explore"],
-    ["pages","Pages & channels","pages"],
-    ["monetization","Monetization","coins"],
-    ["settings","Studio settings","settings"]
+    ["overview","Overview","creator","Your account at a glance"],
+    ["content","Content library","saved","Your posts and media"],
+    ["publish","Create & publish","create","Make something new"],
+    ["audience","Audience","friends","People around your profile"],
+    ["analytics","Analytics","explore","Measure real activity"],
+    ["pages","Pages & channels","pages","Manage your Pages"],
+    ["monetization","Monetization","coins","Earnings and payouts"],
+    ["settings","Studio settings","settings","Creator preferences"]
   ];
-  const nav=sections.map(([id,label,icon])=>"<button type='button' class='creator-studio-nav-item "+(id===section?"active":"")+"' data-creator-section='"+id+"'>"+creatorIcon(icon)+"<span>"+label+"</span>"+(id==="monetization"?"<small>PAYMENTS</small>":"")+"</button>").join("");
+  const nav=sections.map(([id,label,icon,description])=>"<button type='button' class='creator-studio-nav-item live-format-card "+(id===section?"active":"")+"' data-creator-section='"+id+"' aria-current='"+(id===section?"page":"false")+"'><span class='live-format-icon "+(["audience","analytics"].includes(id)?"audio":"")+"'>"+creatorIcon(icon)+"</span><span class='creator-tab-copy'><strong>"+label+"</strong><small>"+description+"</small></span></button>").join("");
   return "<div class='creator-studio-shell' data-creator-section-active='"+section+"'>"+
     "<section class='creator-studio-heading'><div><span class='creator-eyebrow'>MINGLORA CREATOR WORKSPACE</span><h1>Creator Studio</h1><p>One connected Minglora workspace for creating, publishing, understanding your audience and managing creator activity.</p></div><div class='creator-studio-heading-actions'><span class='creator-account-chip'><i class='creator-studio-account-dot'></i><strong>"+esc(name)+"</strong></span><button type='button' class='secondary' data-creator-edit-profile>Edit profile</button><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create content</button></div></section>"+
-    "<nav class='creator-studio-nav' aria-label='Creator Studio sections'>"+nav+"<span class='creator-studio-nav-spacer'></span><button type='button' class='creator-studio-live-handoff' data-creator-open-live>"+creatorIcon("live")+"<span><strong>Open LIVE</strong><small>Go to your real broadcast room</small></span><span class='creator-handoff-arrow'>↗</span></button></nav>"+
+    "<section class='creator-live-format-entry'><div class='creator-live-format-heading'><strong>Go LIVE</strong><small>Choose the broadcast format that matches your moment</small></div><div class='creator-live-format-options'>"+
+      "<button type='button' class='live-format-card creator-live-format-card' data-creator-start-live='video_audio'><span class='live-format-icon'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg#live'></use></svg></span><span><strong>Video LIVE</strong><small>Camera and microphone</small></span></button>"+
+      "<button type='button' class='live-format-card creator-live-format-card' data-creator-start-live='audio_only'><span class='live-format-icon audio'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg#microphone'></use></svg></span><span><strong>Audio LIVE</strong><small>Voice-first broadcast</small></span></button>"+
+    "</div></section>"+
+    "<nav class='creator-studio-nav live-format-picker' aria-label='Creator Studio sections'>"+nav+"</nav>"+
     "<div class='creator-studio-content'>"+content+"</div>"+
     "<footer class='creator-studio-footer'><span>Minglora Creator Studio</span><span>Connected to your Minglora account · No invented activity or earnings</span></footer></div>";
 }
@@ -1126,6 +1237,7 @@ async function renderCreatorSection(section){
   setContent(creatorStudioChrome(section,content));
   document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
   document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
+  document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
   document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
   $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
   if(section==="overview"){
@@ -2524,6 +2636,7 @@ async function renderSearch(q){
 }
 async function renderView(){try{if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='live')await renderLive();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
+  bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
   $('#home-brand').onclick=()=>activateNav('feed');
   $('#rail-profile').onclick=()=>openProfile(state.user.id);
