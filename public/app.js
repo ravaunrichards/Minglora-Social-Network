@@ -885,7 +885,7 @@ function openEditProfile(u){
       <div class="profile-upload-section">
         <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif"><input id="edit-cover-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-cover-zoom"></label><button class="secondary" type="button" id="edit-cover-rotate">Rotate 90°</button><small>Use gallery, files or the device camera. Adjust zoom and crop before saving.</small></div>
       </div>
-      <p class="profile-upload-status muted" id="profile-upload-status" role="status">Your selected images upload securely to Minglora when you save.</p>
+      <p class="profile-upload-status muted" id="profile-upload-status" role="status">Profile details save automatically. Selected profile and cover photos upload securely when you select Save changes.</p>
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
     </form></section>`;
   document.body.append(modal);
@@ -900,6 +900,7 @@ function openEditProfile(u){
   const previewUrls=[];
   const phoneInput=modal.querySelector('#edit-contact-phone');
   const phoneStatus=modal.querySelector('#phone-verification-status');
+  const status=modal.querySelector('#profile-upload-status');
   const phonePanel=modal.querySelector('#phone-verification-panel');
   const phoneRequest=modal.querySelector('#request-phone-verification');
   const phoneVerify=modal.querySelector('#confirm-phone-verification');
@@ -949,32 +950,80 @@ function openEditProfile(u){
   const close=()=>{previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
-  modal.querySelector('form').onsubmit=async event=>{
-    event.preventDefault();const form=event.currentTarget,button=modal.querySelector('#save-profile-button'),status=modal.querySelector('#profile-upload-status');
-    const values=new FormData(form);
-    const payload={
+  const profileForm=modal.querySelector('#edit-profile-form');
+  const collectProfilePayload=()=>{
+    const values=new FormData(profileForm);
+    return {
       name:values.get('name'),username:values.get('username'),bio:values.get('bio'),location:values.get('location'),
       contactPhone:values.get('contactPhone'),country:values.get('country'),county:values.get('county'),
       parish:values.get('parish'),city:values.get('city'),gender:values.get('gender'),
       relationshipStatus:values.get('relationshipStatus'),
       aboutVisibility:{
-        bio:form.elements.show_bio.checked,location:form.elements.show_location.checked,
-        contactPhone:form.elements.show_contactPhone.checked,country:form.elements.show_country.checked,
-        county:form.elements.show_county.checked,parish:form.elements.show_parish.checked,
-        city:form.elements.show_city.checked,gender:form.elements.show_gender.checked,
-        relationshipStatus:form.elements.show_relationshipStatus.checked
+        bio:profileForm.elements.show_bio.checked,location:profileForm.elements.show_location.checked,
+        contactPhone:profileForm.elements.show_contactPhone.checked,country:profileForm.elements.show_country.checked,
+        county:profileForm.elements.show_county.checked,parish:profileForm.elements.show_parish.checked,
+        city:profileForm.elements.show_city.checked,gender:profileForm.elements.show_gender.checked,
+        relationshipStatus:profileForm.elements.show_relationshipStatus.checked
       }
     };
+  };
+  let profileSaveTimer=null;
+  let profileSaveQueue=Promise.resolve();
+  function queueProfileAutosave(event){
+    const target=event.target;
+    if(target?.type==='file'||target?.type==='range')return;
+    clearTimeout(profileSaveTimer);
+    status.textContent='Unsaved profile changes — saving automatically…';
+    profileSaveTimer=window.setTimeout(()=>{
+      profileSaveQueue=profileSaveQueue.catch(()=>{}).then(async()=>{
+        status.textContent='Saving profile details…';
+        try{
+          const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
+          state.user=result.user;
+          status.textContent='Profile details saved to your account.';
+        }catch(error){
+          status.textContent='Profile changes were not saved. '+error.message;
+          toast(error.message);
+        }
+      });
+    },650);
+  }
+  profileForm.addEventListener('input',queueProfileAutosave);
+  profileForm.addEventListener('change',queueProfileAutosave);
+  avatarInput.addEventListener('change',()=>{if(avatarInput.files?.[0])status.textContent='Profile picture selected. Save changes to upload it securely.';});
+  coverInput.addEventListener('change',()=>{if(coverInput.files?.[0])status.textContent='Cover photo selected. Save changes to upload it securely.';});
+  profileForm.onsubmit=async event=>{
+    event.preventDefault();
+    const button=modal.querySelector('#save-profile-button');
+    clearTimeout(profileSaveTimer);
     button.disabled=true;
     try{
-      if(avatarInput.files?.[0]){status.textContent='Uploading profile picture…';const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});}
-      if(coverInput.files?.[0]){status.textContent='Uploading cover photo…';const edited=await transformMediaImage(coverInput.files[0],coverEdit.zoom,coverEdit.rotation);await uploadProfileImage('cover',edited,1,0,update=>{status.textContent='Uploading cover photo… '+update.percentage+'%';});}
+      await profileSaveQueue.catch(()=>{});
+      if(avatarInput.files?.[0]){
+        status.textContent='Uploading profile picture…';
+        const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);
+        await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});
+      }
+      if(coverInput.files?.[0]){
+        status.textContent='Uploading cover photo…';
+        const edited=await transformMediaImage(coverInput.files[0],coverEdit.zoom,coverEdit.rotation);
+        await uploadProfileImage('cover',edited,1,0,update=>{status.textContent='Uploading cover photo… '+update.percentage+'%';});
+      }
       status.textContent='Saving profile details…';
-      const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(payload)});
-      state.user=result.user;close();showApp();await openProfile(state.user.id);toast('Profile updated.');
-    }catch(error){status.textContent=error.message;toast(error.message);}
-    finally{button.disabled=false;}
+      const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
+      state.user=result.user;
+      close();
+      showApp();
+      await openProfile(state.user.id);
+      toast('Profile updated and saved.');
+    }catch(error){
+      status.textContent='Profile changes were not saved. '+error.message;
+      toast(error.message);
+    }finally{
+      button.disabled=false;
+    }
   };
+
 }
 function openStoryComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';

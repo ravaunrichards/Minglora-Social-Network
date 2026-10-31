@@ -163,7 +163,7 @@
               ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
               ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
-            <div class="settings-save-bar"><span class="muted">Changes are saved to your Minglora account.</span><button class="primary" type="submit">Save changes</button></div>
+            <div class="settings-save-bar"><span class="muted" id="settings-save-status" role="status" aria-live="polite">Changes save automatically to your Minglora account.</span><button class="primary" type="submit">Save now</button></div>
           </form>
         </div>`;
 
@@ -332,10 +332,14 @@
       document.querySelector('#refresh-moderation')?.addEventListener('click',loadModerationQueue);
       if(canModerate){loadModerationQueue();loadModeratorSupportInbox();}
       
-      document.querySelector('#settings-form')?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const payload = {
+      const settingsForm = document.querySelector('#settings-form');
+      const settingsSaveStatus = document.querySelector('#settings-save-status');
+      let settingsSaveTimer = null;
+      let settingsSaveQueue = Promise.resolve();
+
+      function collectSettingsPayload() {
+        const formData = new FormData(settingsForm);
+        return {
           privacy: {
             profileVisibility: formData.get('profileVisibility'),
             allowFriendRequests: formData.has('allowFriendRequests'),
@@ -354,24 +358,49 @@
             reducedMotion: formData.has('reducedMotion')
           }
         };
-        const button = event.currentTarget.querySelector('button[type="submit"]');
+      }
+
+      async function persistSettings() {
+        const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(collectSettingsPayload()) });
+        applyPreferences(saved.settings);
+        window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: saved.settings }));
+        settingsSaveStatus.textContent = 'All changes saved to your Minglora account.';
+      }
+
+      function queueSettingsSave() {
+        if (!settingsForm || !settingsSaveStatus) return;
+        clearTimeout(settingsSaveTimer);
+        settingsSaveStatus.textContent = 'Unsaved changes — saving automatically…';
+        settingsSaveTimer = window.setTimeout(() => {
+          settingsSaveQueue = settingsSaveQueue.catch(() => {}).then(async () => {
+            settingsSaveStatus.textContent = 'Saving changes…';
+            try {
+              await persistSettings();
+            } catch (error) {
+              settingsSaveStatus.textContent = 'Not saved. ' + error.message;
+            }
+          });
+        }, 450);
+      }
+
+      settingsForm?.addEventListener('change', queueSettingsSave);
+      settingsForm?.addEventListener('submit', async event => {
+        event.preventDefault();
+        clearTimeout(settingsSaveTimer);
+        const button = settingsForm.querySelector('button[type="submit"]');
         button.disabled = true;
+        settingsSaveQueue = settingsSaveQueue.catch(() => {}).then(async () => {
+          settingsSaveStatus.textContent = 'Saving changes…';
+          try {
+            await persistSettings();
+          } catch (error) {
+            settingsSaveStatus.textContent = 'Not saved. ' + error.message;
+          }
+        });
         try {
-          const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(payload) });
-          applyPreferences(saved.settings);
-          window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: saved.settings }));
-          button.textContent = 'Saved';
-          const status = document.createElement('p');
-          status.className = 'settings-save-status';
-          status.setAttribute('role', 'status');
-          status.textContent = 'Your settings have been saved.';
-          event.currentTarget.querySelector('.settings-save-status')?.remove();
-          event.currentTarget.querySelector('.settings-save-bar')?.prepend(status);
-        } catch (error) {
-          window.alert(error.message);
+          await settingsSaveQueue;
         } finally {
           button.disabled = false;
-          button.textContent = 'Save changes';
         }
       });
     } catch (error) {
