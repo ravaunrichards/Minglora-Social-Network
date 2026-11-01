@@ -74,13 +74,21 @@ function setAuthMode(mode) {
   $('auth-feedback').textContent = '';
 }
 
+function mailboxDisplayAddress() {
+  const email = String(currentUser?.email || '');
+  if (email.toLowerCase().endsWith('.invalid') && currentUser?.username) {
+    return '@' + currentUser.username + ' (Minglora only)';
+  }
+  return email;
+}
+
 function updateCapabilityText() {
   const outbound = Boolean(mailStatus.outboundEmailConfigured);
   const internal = Boolean(mailStatus.internalMessagingEnabled);
   const inbound = Boolean(mailStatus.inboundEmailConfigured);
   const canCompose = outbound || internal;
   $('auth-capability').textContent = currentUser?.email
-    ? 'Your Minglora mailbox: ' + currentUser.email + (internal ? ' · Member-to-member mail is active.' : ' · Mail service status verified.')
+    ? 'Your Minglora mailbox: ' + mailboxDisplayAddress() + (internal ? ' · Send to members using @username.' : ' · Mail service status verified.')
     : 'Mailbox status is checked against the live Minglora service.';
   $('compose').disabled = !canCompose;
   $('send').disabled = !canCompose;
@@ -114,7 +122,7 @@ function startMailPolling() {
 function showMailbox() {
   $('auth-shell').classList.add('is-hidden');
   $('mail-app').classList.remove('is-hidden');
-  $('signed-email').textContent = currentUser.email;
+  $('signed-email').textContent = mailboxDisplayAddress();
   updateCapabilityText();
   startMailPolling();
   if (mailStatus.realtimeUrl) {
@@ -220,7 +228,7 @@ function renderConnectedAccounts() {
   const resend = connections.resend || {};
   const resendConnected = resend.connected === true;
   $('messages').innerHTML =
-    '<section class="provider-overview"><div class="provider-overview-icon">' + mailIcon('mailharbor') + '</div><div><strong>Minglora Mailbox</strong><p>' + escapeHtml(currentUser?.email || '') + '</p></div><span class="provider-state active">Active</span></section>' +
+    '<section class="provider-overview"><div class="provider-overview-icon">' + mailIcon('mailharbor') + '</div><div><strong>Minglora Mailbox</strong><p>' + escapeHtml(mailboxDisplayAddress()) + '</p></div><span class="provider-state active">Active</span></section>' +
     '<div class="provider-section-heading"><div><h2>MailHarbor delivery provider</h2><p>Outbound and inbound Internet mail through the verified MailHarbor domain.</p></div></div>' +
     '<div class="provider-grid"><article class="provider-card"><div class="provider-card-icon">' + mailIcon('delivery') + '</div><div class="provider-card-copy"><h3>Resend delivery</h3><p>External sending, receiving and signed delivery receipts.</p><span class="provider-state ' + (resendConnected ? 'active' : 'pending') + '">' + (resendConnected ? 'Connected' : 'Awaiting API key and verified domain') + '</span></div></article></div>' +
     '<div class="provider-section-heading"><div><h2>External mailbox sync</h2><p>Third-party accounts connect separately through each provider’s OAuth authorization.</p></div></div>' +
