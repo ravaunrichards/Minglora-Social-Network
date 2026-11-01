@@ -2021,6 +2021,7 @@ async function route(req, res) {
           reels:profileVideos,
           videos:profileVideos,
           friends:profileFriends,
+          groups:(db.groups||[]).filter(group=>group.ownerId===target.id||(group.members||[]).includes(target.id)).map(group=>({id:group.id,name:group.name,description:group.description||'',memberCount:(group.members||[]).length,isMember:(group.members||[]).includes(target.id)})),
           friendship:isFriend(user.id,target.id)?'accepted':null,
           following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),
           followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
