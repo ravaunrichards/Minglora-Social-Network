@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  CALL_CONNECT_GRACE_MS,
   CALL_MAX_PARTICIPANTS,
   CALL_RING_TIMEOUT_MS,
   canAnswerCall,
@@ -9,6 +10,7 @@ import {
   isCallParticipantBusy,
   isCallRingExpired,
   isCallTerminalStatus,
+  reconcileCallPresence,
   validateCallRingtoneUpload
 } from '../backend/modules/calls/service.js';
 
@@ -76,4 +78,57 @@ test('ringtone uploads validate supported audio and enforce the 20 MB limit',()=
   assert.equal(validateCallRingtoneUpload({mimeType:'image/png',byteSize:1024}).valid,false);
   assert.equal(validateCallRingtoneUpload({mimeType:'audio/ogg',byteSize:0}).valid,false);
   assert.equal(CALL_RING_TIMEOUT_MS,45_000);
+});
+
+test('stale call participants are cleared and an orphaned active call is ended',()=>{
+  const call={id:'call-stale',createdBy:'caller',status:'active',createdAt:'2026-10-31T10:00:00.000Z',answeredAt:'2026-10-31T10:00:05.000Z'};
+  const participants=[
+    {callId:call.id,userId:'caller',role:'host',status:'joined',joinedAt:'2026-10-31T10:00:06.000Z',leftAt:null},
+    {callId:call.id,userId:'recipient',role:'participant',status:'joined',joinedAt:'2026-10-31T10:00:07.000Z',leftAt:null}
+  ];
+  const result=reconcileCallPresence(call,participants,[],'2026-11-01T12:00:00.000Z',Date.parse('2026-11-01T12:00:00.000Z'));
+  assert.deepEqual(result,{changed:true,ended:true});
+  assert.equal(call.status,'ended');
+  assert.equal(call.endedAt,'2026-11-01T12:00:00.000Z');
+  assert.deepEqual(participants.map(item=>item.status),['left','left']);
+});
+
+test('a connected host keeps a call alive while a disconnected guest is cleared',()=>{
+  const call={id:'call-live',createdBy:'caller',status:'active',createdAt:'2026-10-31T10:00:00.000Z',answeredAt:'2026-10-31T10:00:05.000Z'};
+  const participants=[
+    {callId:call.id,userId:'caller',role:'host',status:'joined',joinedAt:'2026-10-31T10:00:06.000Z',leftAt:null},
+    {callId:call.id,userId:'guest',role:'participant',status:'joined',joinedAt:'2026-10-31T10:00:07.000Z',leftAt:null}
+  ];
+  const result=reconcileCallPresence(call,participants,[{identity:'caller'}],'2026-11-01T12:00:00.000Z',Date.parse('2026-11-01T12:00:00.000Z'));
+  assert.deepEqual(result,{changed:true,ended:false});
+  assert.equal(call.status,'active');
+  assert.equal(participants[0].status,'joined');
+  assert.equal(participants[1].status,'left');
+});
+
+test('fresh call joins receive a connection grace period during refresh',()=>{
+  const call={id:'call-connecting',createdBy:'caller',status:'active',createdAt:'2026-11-01T12:00:00.000Z',answeredAt:'2026-11-01T12:00:10.000Z'};
+  const participants=[
+    {callId:call.id,userId:'caller',role:'host',status:'calling',joinedAt:null,leftAt:null},
+    {callId:call.id,userId:'guest',role:'participant',status:'joined',joinedAt:'2026-11-01T12:00:11.000Z',leftAt:null}
+  ];
+  const nowMs=Date.parse('2026-11-01T12:00:20.000Z');
+  const result=reconcileCallPresence(call,participants,[],'2026-11-01T12:00:20.000Z',nowMs);
+  assert.deepEqual(result,{changed:false,ended:false});
+  assert.equal(participants[0].status,'calling');
+  assert.equal(participants[1].status,'joined');
+  assert.equal(CALL_CONNECT_GRACE_MS,30_000);
+});
+
+test('a host disconnect ends the call for every remaining participant',()=>{
+  const call={id:'call-host-left',createdBy:'caller',status:'active',createdAt:'2026-10-31T10:00:00.000Z',answeredAt:'2026-10-31T10:00:05.000Z'};
+  const participants=[
+    {callId:call.id,userId:'caller',role:'host',status:'joined',joinedAt:'2026-10-31T10:00:06.000Z',leftAt:null},
+    {callId:call.id,userId:'guest',role:'participant',status:'joined',joinedAt:'2026-10-31T10:00:07.000Z',leftAt:null},
+    {callId:call.id,userId:'invitee',role:'participant',status:'invited',joinedAt:null,leftAt:null}
+  ];
+  const result=reconcileCallPresence(call,participants,[{identity:'guest'}],'2026-11-01T12:00:00.000Z',Date.parse('2026-11-01T12:00:00.000Z'));
+  assert.deepEqual(result,{changed:true,ended:true});
+  assert.equal(call.status,'ended');
+  assert.deepEqual(participants.map(item=>item.status),['left','left','cancelled']);
 });
