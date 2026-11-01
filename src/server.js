@@ -151,13 +151,13 @@ function safeUser(u,viewerId=null){
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false}};
-function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
+function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','messengerArchivedConversationIds','messengerRestrictedUserIds']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -171,8 +171,10 @@ function validateSettingsPatch(input,user){
       if(section==='preferences'&&key==='colorTheme'&&!APP_COLOR_THEMES.includes(value))return {valid:false,error:'Choose a supported Minglora colour theme.'};
       if(section==='preferences'&&key==='liveRoomTheme'&&!LIVE_ROOM_THEMES.includes(value))return {valid:false,error:'Choose a supported LIVE room theme.'};
       if(section==='preferences'&&key==='feedSort'&&!['recent','oldest'].includes(value))return {valid:false,error:'Feed sort must be recent or oldest.'};
-      if(section==='preferences'&&key==='reducedMotion'&&typeof value!=='boolean')return {valid:false,error:'Reduced motion must be true or false.'};
-      next[section][key]=value;
+      if(section==='preferences'&&['reducedMotion','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus'].includes(key)&&typeof value!=='boolean')return {valid:false,error:'Messenger and motion preferences must be true or false.'};
+      if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key)&&(!Array.isArray(value)||value.length>500||value.some(id=>typeof id!=='string'||!id.trim()||id.length>128)))return {valid:false,error:'Messenger account lists must contain valid account identifiers.'};
+      if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key))next[section][key]=[...new Set(value)];
+      else next[section][key]=value;
     }
   }
   return {valid:true,settings:next};
@@ -2682,7 +2684,7 @@ async function route(req, res) {
             return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from))};
           }));
           const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
-          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount};
+          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id)};
         }));
         return json(res,200,{conversations:conversations.filter(Boolean)});
       }
