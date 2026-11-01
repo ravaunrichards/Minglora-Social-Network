@@ -76,6 +76,23 @@
     <path d="M36 18q3-8 10-6 4 1 6 6" fill="none" stroke="#fff" stroke-opacity=".62" stroke-width="2" stroke-linecap="round"/>
   </symbol>
 
+  <symbol id="meetwave" viewBox="0 0 64 64">
+    <path d="M10 15q0-5 5-5h34q5 0 5 5v29q0 5-5 5H15q-5 0-5-5z" fill="url(#blue-side)" transform="translate(1 3)"/>
+    <path d="M8 13q0-5 5-5h34q5 0 5 5v29q0 5-5 5H13q-5 0-5-5z" fill="url(#silver-side)"/>
+    <rect x="7" y="9" width="45" height="34" rx="7" fill="url(#blue-front)" stroke="#d9f1ff" stroke-opacity=".9" stroke-width="1.3"/>
+    <path d="M13 12h31q4 0 4 4v5H10v-4q0-5 3-5" fill="url(#blue-gloss)" opacity=".62"/>
+    <path d="M14 27q0-3 3-3h25q3 0 3 3v10q0 3-3 3H17q-3 0-3-3z" fill="#123d78" fill-opacity=".62" stroke="#d9f1ff" stroke-opacity=".45" stroke-width=".8"/>
+    <circle cx="23" cy="28" r="4.2" fill="url(#silver-front)" stroke="#fff" stroke-opacity=".8" stroke-width=".6"/>
+    <path d="M16.5 37q.7-5.2 6.5-5.2t6.5 5.2" fill="url(#teal-front)" stroke="#d5fff8" stroke-opacity=".7" stroke-width=".7"/>
+    <circle cx="36" cy="27.5" r="4.5" fill="url(#silver-front)" stroke="#fff" stroke-opacity=".8" stroke-width=".6"/>
+    <path d="M29 37q.8-5.6 7-5.6t7 5.6" fill="url(#teal-front)" stroke="#d5fff8" stroke-opacity=".7" stroke-width=".7"/>
+    <path d="M24 51h17" stroke="url(#silver-side)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M20 55h25" stroke="url(#blue-side)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="48" cy="42" r="7.5" fill="url(#teal-side)" stroke="#d6fff8" stroke-width="1"/>
+    <circle cx="48" cy="41" r="6" fill="url(#teal-front)"/>
+    <path d="M45.2 41h5.6M48 38.2v5.6" stroke="#f4fffe" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+
   <symbol id="messages" viewBox="0 0 64 64">
     <path d="M11 15q0-5 6-5h31q6 0 6 6v21q0 6-6 6H27l-10 8v-8q-6 0-6-6z" fill="url(#teal-side)" transform="translate(1 2)"/>
     <path d="M13 12h31q6 0 6 6v18q0 6-6 6H28l-11 8v-8h-4q-6 0-6-6V18q0-6 6-6" fill="url(#teal-front)" stroke="#d6fff8" stroke-opacity=".8" stroke-width="1.1"/>
