@@ -82,10 +82,11 @@ test('crop preview and saved output use the visible inner frame rather than its 
 });
 
 test('public profile pages and outside member cards show the complete saved profile images',()=>{
-  assert.match(app,/class="profile-cover">\\$\\{u\\.cover\\?/);
-  assert.match(app,/class="profile-cover-image" data-view-image=/);
-  assert.match(css,/\\.profile-cover-image\\{[^}]*object-fit:contain/);
-  assert.match(css,/\\.profile-info \\.avatar,.person-avatar-wrap \\.avatar\\{object-fit:contain/);
-  assert.match(css,/\\.person-card--immersive \\.person-cover\\{[^}]*aspect-ratio:3\\/1/);
-  assert.match(css,/\\.person-cover-image\\{object-fit:contain!important/);
+  assert.ok(app.includes('class="profile-cover">${u.cover?'));
+  assert.ok(app.includes('class="profile-cover-image" data-view-image='));
+  assert.ok(css.includes('.profile-cover-image{display:block;width:100%;height:100%;object-fit:contain'));
+  assert.ok(css.includes('.profile-info .avatar,.person-avatar-wrap .avatar{object-fit:contain'));
+  assert.ok(css.includes('.person-card--immersive .person-cover{'));
+  assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
+  assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
 });
