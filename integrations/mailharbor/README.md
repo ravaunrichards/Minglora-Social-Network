@@ -1,36 +1,44 @@
 # MailHarbor inside Minglora
 
-MailHarbor is a native Minglora mailbox feature. The member-facing client is served by Minglora at `/mailharbor/index.html`, uses the signed-in Minglora session and stores mail data through Minglora's existing durable Supabase state gateway.
+MailHarbor is a native Minglora application module, not a separate website or static link. Signed-in members open it from the desktop top navigation, mobile navigation or utility rail. Minglora's mailharbor route mounts the mailbox UI inside the existing app shell at /mailharbor/index.html?embedded=1. The embedded client uses the same-origin Minglora HttpOnly session cookie.
 
-## Single-service architecture
+## Active architecture
 
 - Minglora remains the only public application service.
-- MailHarbor routes are handled inside the existing Minglora API; there is no loopback API or separately deployed MailHarbor process.
-- Member mailbox records and message records are persisted in Minglora's existing state document through the same Supabase persistence gateway used by the social application.
-- Mailbox ownership is tied to the authenticated Minglora member ID. Every inbox, sent, message-detail and mutation query is scoped to that member.
-- The native implementation does not require a second Postgres connection string, a new Supabase project, a new database, or a new Render service.
+- The active UI is public/mailharbor/; its requests go to /api/mailharbor/*.
+- The active API is backend/modules/mailharbor/service.js, mounted by src/server.js.
+- The authenticated Minglora member ID owns each mailbox, message, draft and mutation.
+- Mailbox and message state are persisted by Minglora's current state persistence adapter. No separate public MailHarbor deployment is needed.
+- The shared dimensional icon artwork is public/assets/icons/navigation-3d.svg; MailHarbor's folder and action controls use its original vector 3D symbols.
+- public/mailharbor/ is a full in-app client. Its route is not a static card; the UI reads live API status and member mailbox data.
 
-## Available now
+## Available in the current module
 
-- Automatic mailbox creation when a signed-in Minglora member opens MailHarbor.
-- A stable internal mailbox address based on the member's Minglora username.
-- Inbox, Sent, Starred, Spam, Trash and Archive folders.
-- Member-to-member message delivery inside Minglora.
-- To, Cc and Bcc recipient handling; Bcc recipients are not exposed in recipient copies.
-- Search, read/unread, star, archive, trash and address-alias changes.
-- Messages and mailbox changes persisted through Minglora's existing Supabase-backed state store.
-- Delivery is confirmed only after the Minglora state save succeeds. A failed persistence save rolls the in-memory change back and returns an error instead of showing a false success.
+- Automatic mailbox provisioning from the signed-in Minglora identity.
+- Internal address aliases based on the member's Minglora username.
+- Inbox, Starred, Sent, Drafts, Spam, Trash and Archive views.
+- Search across the currently selected mailbox view.
+- Compose with To, Cc and Bcc.
+- Save, reopen, edit and send drafts.
+- Bulk mark-read, archive, report-spam, move-to-trash and restore-to-inbox actions.
+- Per-message star toggling and message detail view.
+- Member-to-member delivery to existing Minglora mailboxes.
+- Connected Accounts view that reports the real state of external provider setup.
+- Address alias changes with ownership and uniqueness checks.
+- Server-side owner scoping and persistence rollback on a failed save.
 
-## Internal and external mail are different
+## External accounts and Internet email
 
-Until Minglora connects an owned, DNS-verified sender domain and a real mail provider, member addresses use the reserved internal domain `members.minglora.invalid`. That domain is not publicly routable. Messages to existing Minglora member mailboxes are delivered inside Minglora; external addresses are rejected without saving or claiming delivery.
+Gmail, Yahoo Mail, Outlook and iCloud are shown as not connected until each real provider integration is configured. The current /api/mailharbor/status response explicitly reports their configuration and connection states as false. There are no fake connected badges and no external message is claimed as delivered.
 
-External sending and receiving are intentionally not advertised as available. To activate real Internet email later, configure a domain owned by Minglora, provider-issued SMTP credentials, verified SPF/DKIM/DMARC records, inbound MX routing and a signed inbound webhook. Do not mark a domain verified or enable inbound delivery before the provider confirms the setup.
+To enable external account sync, add provider-specific OAuth applications, redirect/callback routes, required scopes, token storage/refresh and member consent. For Internet sending and receiving, also configure a Minglora-owned domain, verified SMTP/outbound service, SPF/DKIM/DMARC records, inbound MX routing and a signed inbound webhook. Keep provider credentials server-side. Do not activate connection badges before a real OAuth handshake and mailbox sync succeed.
 
-## Legacy MailHarbor source
+Until a public mail domain is verified, internal member addresses use the reserved members.minglora.invalid domain. That namespace is internal-only and not publicly routable.
 
-The earlier standalone-style Express/Postgres source and its SQL migrations are retained under `source/` for reference and future transport expansion. They are not started by Minglora's production server. The active implementation is `backend/modules/mailharbor/service.js` and uses Minglora's native API and persistence path.
+## Legacy source mirror
+
+The older standalone Express/Postgres source and migrations remain under source/ for reference and possible future transport expansion. They are not started by Minglora's active production server. Do not treat the source mirror's SMTP/IMAP/realtime features as enabled in the current Minglora deployment.
 
 ## Verification
 
-The main Minglora CI suite includes MailHarbor service tests for mailbox provisioning, internal delivery, external-recipient rejection, ownership checks, message updates, and rollback when persistence fails. A live Render deployment is considered operational only after the service is healthy and a real authenticated mailbox request succeeds.
+tests/mailharbor.test.js verifies mailbox provisioning, internal delivery, external-recipient rejection, ownership checks, message state changes, rollback on failed persistence, and draft create/edit/send behavior. tests/unit/navigation-3d-icons.test.js verifies native MailHarbor navigation and its shared SVG icon artwork. A live deployment is only considered active when an authenticated /api/mailharbor/status and mailbox request succeed in the deployed service.
