@@ -15,6 +15,18 @@ test('profile exposes Facebook-style Posts, About, Friends, Photos, Reels and Mo
   assert.match(app, /data-profile-tab="videos"/);
 });
 
+test('profile status, check-ins, events and Highlights are loaded into visible profile sections', async () => {
+  const app = await read('../../public/app.js');
+  assert.match(app, /profile-status-badge/);
+  assert.match(app, /async function openProfileStatusEditor/);
+  assert.match(app, /async function openStoryArchiveManager/);
+  assert.match(app, /async function openProfileArchiveManager/);
+  assert.match(app, /id="profile-create-checkin"/);
+  assert.match(app, /id="profile-create-event"/);
+  assert.match(app, /id="profile-manage-highlights"/);
+  assert.match(app, /api\('\/profile-sections'/);
+});
+
 test('photo albums are persisted and owner-only album operations use owned uploaded image assets', async () => {
   const [server, store] = await Promise.all([read('../../src/server.js'), read('../../src/store.js')]);
   assert.match(store, /'albums'/);
