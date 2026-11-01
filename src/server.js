@@ -22,6 +22,7 @@ import { recordProfileView, touchProfilePresence, getProfileViewStats } from '..
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
 import { proxyMailHarbor } from './mailharbor-proxy.js';
+import { startMailHarborRuntime } from './mailharbor-runtime.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -3056,6 +3057,16 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+let mailHarborRuntime = null;
+if (process.env.MAILHARBOR_DATABASE_URL && Buffer.byteLength(String(process.env.MAILHARBOR_SSO_SECRET || '')) >= 32) {
+  try {
+    mailHarborRuntime = await startMailHarborRuntime({ publicServer: server });
+  } catch (error) {
+    console.error('[Minglora MailHarbor startup]', String(error?.message || error).slice(0, 240));
+  }
+} else {
+  console.info('[Minglora MailHarbor] Waiting for MAILHARBOR_DATABASE_URL to the existing Minglora Supabase Postgres database and MAILHARBOR_SSO_SECRET.');
+}
 server.listen(PORT,'0.0.0.0',async()=>{
   liveSessionCleanupReady = cleanupPersistedLiveSessions();
   const liveCleanup = await liveSessionCleanupReady;

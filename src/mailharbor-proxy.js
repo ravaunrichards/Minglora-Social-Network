@@ -21,7 +21,9 @@ function settings() {
   if (!base || Buffer.byteLength(secret) < 32) return null;
   let parsed;
   try { parsed = new URL(base); } catch { return null; }
-  if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') return null;
+  const localEmbeddedApi = parsed.protocol === 'http:' &&
+    parsed.hostname === '127.0.0.1' && parsed.port === '3211';
+  if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:' && !localEmbeddedApi) return null;
   return { base, secret };
 }
 
@@ -48,7 +50,7 @@ export async function proxyMailHarbor({ method, pathname, search = '', input = {
   const config = settings();
   if (!config) return {
     status: 503,
-    body: { error: 'MailHarbor is not connected yet. Configure MAILHARBOR_API_URL and the matching private MAILHARBOR_SSO_SECRET on both services.' }
+    body: { error: 'MailHarbor is not connected inside Minglora. Configure its local API and private SSO secret.' }
   };
   if (!user?.id || !user?.username || !user?.name) {
     return { status: 401, body: { error: 'A complete Minglora member session is required to open MailHarbor.' } };
@@ -66,7 +68,7 @@ export async function proxyMailHarbor({ method, pathname, search = '', input = {
     if (provision.status < 200 || provision.status >= 300) return provision;
 
     const safePath = String(pathname || '/');
-    if (!safePath.startsWith('/') || safePath.startsWith('//') || safePath.includes('\\\\')) {
+    if (!safePath.startsWith('/') || safePath.startsWith('//') || safePath.includes('\\')) {
       return { status: 400, body: { error: 'Invalid MailHarbor API route.' } };
     }
     const upstreamPath = API_PATH + safePath + String(search || '');
@@ -78,7 +80,7 @@ export async function proxyMailHarbor({ method, pathname, search = '', input = {
       input
     });
   } catch (error) {
-    console.error('[Minglora MailHarbor proxy]', String(error?.message || error).slice(0,180));
-    return { status: 503, body: { error: 'MailHarbor is temporarily unreachable. Your message request was not confirmed.' } };
+    console.error('[Minglora MailHarbor]', String(error?.message || error).slice(0,180));
+    return { status: 503, body: { error: 'MailHarbor is temporarily unavailable inside Minglora. Your message request was not confirmed.' } };
   }
 }
