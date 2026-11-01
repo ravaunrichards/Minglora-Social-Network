@@ -52,7 +52,7 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(!css.includes('.mobile-nav [data-logout]'), 'no detached phone logout styling remains');
   assert.match(css, /\.settings-signout-card/);
   assert.match(css, /\.settings-logout-button/);
-  assert.match(serviceWorker, /minglora-shell-v40-profile-crop-alignment/);
+  assert.match(serviceWorker, /minglora-shell-v41-profile-crop-precision/);
   assert.ok(serviceWorker.includes('styles.css?v=20261101-profile-crop-2'));
   assert.ok(serviceWorker.includes('app.js?v=20261101-profile-crop-2'));
   assert.ok(serviceWorker.includes('settings.js?v=20261101-call-ringtones-1'));
