@@ -76,8 +76,9 @@ function setAuthMode(mode) {
 
 function mailboxDisplayAddress() {
   const email = String(currentUser?.email || '');
-  if (email.toLowerCase().endsWith('.invalid') && currentUser?.username) {
-    return '@' + currentUser.username + ' (Minglora only)';
+  if (email.toLowerCase().endsWith('.invalid')) {
+    const username = email.split('@')[0];
+    return username ? '@' + username + ' (Minglora only)' : 'Minglora mailbox';
   }
   return email;
 }
@@ -552,9 +553,9 @@ $('manage-address').addEventListener('click', async () => {
   try {
     const result = await request('/account/address', { method: 'PATCH', body: { username: username.trim() } });
     currentUser.email = result.user.email;
-    $('signed-email').textContent = currentUser.email;
+    $('signed-email').textContent = mailboxDisplayAddress();
     updateCapabilityText();
-    window.alert('Your MailHarbor address is now ' + currentUser.email);
+    window.alert('Your MailHarbor address is now ' + mailboxDisplayAddress());
   } catch (error) { window.alert(error.message); }
 });
 $('signout').addEventListener('click', () => stopRealtime());
