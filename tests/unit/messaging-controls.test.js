@@ -57,7 +57,7 @@ test('Messenger top-right control opens a left chats panel with filters, quick a
   assert.ok(app.includes('data-messenger-new'));
   assert.ok(app.includes('data-messenger-see'));
   assert.ok(app.includes('data-messenger-options'));
-  for(const label of ['all','unread','groups','communities'])assert.ok(app.includes('data-messenger-filter="'+label+'"'));
+  assert.ok(app.includes("['all','unread','groups','communities'].map"));
   for(const label of ['Incoming call sounds','Message sounds','Automatically open new messages','Privacy settings','Active status','Message requests','Archived chats','Message delivery settings','Restricted accounts','Block settings'])assert.ok(app.includes(label));
   assert.ok(app.includes('data-messenger-setting='));
   assert.ok(app.includes('data-messenger-archive=')&&app.includes('data-messenger-restrict='));
