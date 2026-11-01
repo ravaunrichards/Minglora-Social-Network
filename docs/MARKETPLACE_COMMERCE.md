@@ -32,7 +32,7 @@ Minglora Marketplace is a social-commerce and services platform. Jobs is a separ
 
 A quote is not an order, authorization, capture, proof of delivery or a promise that tax and delivery are final. Database code contains order creation and atomic inventory reservation primitives, but the application checkout-status response currently disables order creation. No buyer payment, seller balance, earnings or payout may be invented. Never call the feature escrow unless the provider and legal structure explicitly support escrow.
 
-Marketplace-specific seller, quote, order, booking and Jobs actions use the Supabase Edge Function with normalized Postgres tables/RPCs. The general social-domain runtime still uses a durable single-row JSONB compatibility adapter; that legacy path is not suitable for independent high-concurrency writes or horizontal scaling. Confirm migrations 029–034 and the matching Edge Function version against the active Supabase project before relying on the relational Marketplace path.
+Marketplace-specific seller, quote, order, booking and Jobs actions use the Supabase Edge Function with normalized Postgres tables/RPCs. The general social-domain runtime still uses a durable single-row JSONB compatibility adapter; that legacy path is not suitable for independent high-concurrency writes or horizontal scaling. Migrations 029–038 are source-controlled; migrations 035–038 are applied to the active Minglora Supabase project and `minglora-runtime-state` is deployed at version 18.
 
 ## Fulfilment and tax safeguards
 
@@ -44,7 +44,7 @@ Employer submissions start in moderation review. Published roles can be filtered
 
 ## Required production gates
 
-- Verify database migrations 029–034 and the corresponding Supabase Edge Function deployment.
+- Migrations 029–038 and the corresponding Supabase Edge Function version 18 are verified in the active Minglora project.
 - Complete provider marketplace approval and sandbox/production certification.
 - Complete tax/duty and carrier-rate integrations for each launch jurisdiction.
 - Verify seller KYC/business checks and secure verification-document storage.
