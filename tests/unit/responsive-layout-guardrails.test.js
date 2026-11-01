@@ -27,7 +27,7 @@ test('shared content containers can shrink without pushing the page out of align
   }
   assert.ok(ruleFor(css, '.page-heading').includes('flex-wrap:wrap'));
   assert.ok(ruleFor(css, '.profile-counts').includes('flex-wrap:wrap'));
-  assert.ok(ruleFor(css, '.profile-tabs').includes('overflow-x:auto'));
+  assert.ok(ruleFor(css, '.profile-tabs-list').includes('overflow-x:auto'));
 });
 
 test('phone overlays stay clear of the fixed bottom navigation and device safe areas', async () => {
