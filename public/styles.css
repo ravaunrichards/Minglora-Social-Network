@@ -2764,3 +2764,30 @@ body.auth-mode .auth-screen{
 @keyframes minglora-call-pulse{0%{transform:scale(.88);opacity:.9}100%{transform:scale(1.2);opacity:0}}
 @media(prefers-reduced-motion:reduce){.call-ringing-pulse{animation:none}}
 @media(max-width:520px){.call-ringing-card{padding:31px 18px 22px;border-radius:23px}.call-ringtone-picker-row{align-items:flex-start;flex-direction:column}.call-ringtone-actions{width:100%}.call-ringtone-actions button{flex:1}}
+
+
+/* Shape-matched profile image cropping: circular avatar and wide rectangular cover. */
+.profile-crop-workspace{display:grid;grid-template-columns:190px minmax(0,1fr);align-items:center;gap:18px}
+.profile-crop-visual{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.profile-crop-preview{position:relative;overflow:hidden;isolation:isolate;flex:none;background:linear-gradient(135deg,#dce8f8,#f4f6fa);border:1px solid var(--line);user-select:none}
+.profile-crop-preview img{position:absolute;display:block;max-width:none;max-height:none;object-fit:fill;pointer-events:none;user-select:none;-webkit-user-drag:none;will-change:transform}
+.profile-crop-preview--avatar{width:176px;height:176px;border-radius:50%;border:5px solid #fff;box-shadow:0 0 0 1px var(--line),0 5px 18px #17203318}
+.profile-crop-preview--cover{width:100%;height:auto;aspect-ratio:3/1;min-height:105px;max-height:190px;border-radius:10px;background-color:#dce8f8}
+.profile-crop-preview.has-selection{cursor:grab;touch-action:none}
+.profile-crop-preview.is-dragging{cursor:grabbing}
+.profile-crop-caption{display:block;color:var(--muted);font-size:11px;line-height:1.45;text-align:center}
+.profile-crop-zoom{display:flex;flex-direction:column;gap:5px;width:100%;font-size:12px;font-weight:700;color:var(--ink)}
+.profile-crop-zoom input{width:100%;accent-color:var(--blue)}
+.profile-crop-actions{display:flex;flex-wrap:wrap;gap:7px}
+.profile-crop-actions button{font-size:11px;padding:8px 10px}
+.profile-crop-workspace .profile-upload-controls{width:100%;min-width:0}
+.profile-crop-workspace--cover{grid-template-columns:minmax(0,1fr);gap:9px}
+.profile-crop-workspace--cover .profile-crop-caption{text-align:left}
+@media(max-width:560px){
+ .profile-crop-workspace--avatar{grid-template-columns:minmax(0,1fr);gap:12px}
+ .profile-crop-visual{align-items:flex-start}
+ .profile-crop-preview--avatar{width:164px;height:164px}
+ .profile-crop-caption{text-align:left}
+ .profile-crop-workspace .profile-upload-controls{align-items:stretch}
+ .profile-crop-actions button{flex:1}
+}
