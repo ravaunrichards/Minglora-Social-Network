@@ -3,6 +3,7 @@ name: HarborPay Integration CI
 on:
   push:
     branches:
+      - main
       - feat/harborpay-independent-financial-service
     paths:
       - "integrations/harborpay/**"
@@ -62,6 +63,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql
+      - name: Apply HarborPay Auth profile sync and index maintenance migration
+        working-directory: integrations/harborpay/source
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql
       - name: Verify schema, RLS, service-role grants and single-use identity linking
         working-directory: integrations/harborpay/source
         env:
