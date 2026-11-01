@@ -5,13 +5,14 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [hostHtml, hostApp, mailHtml, mailApp, mailCss, sprite] = await Promise.all([
+const [hostHtml, hostApp, mailHtml, mailApp, mailCss, sprite, server] = await Promise.all([
   read('public/index.html'),
   read('public/app.js'),
   read('public/mailharbor/index.html'),
   read('public/mailharbor/app.js'),
   read('public/mailharbor/styles.css'),
-  read('public/assets/icons/navigation-3d.svg')
+  read('public/assets/icons/navigation-3d.svg'),
+  read('src/server.js')
 ]);
 
 test('MailHarbor is rendered as a routed, session-backed Minglora module', () => {
@@ -20,6 +21,14 @@ test('MailHarbor is rendered as a routed, session-backed Minglora module', () =>
   assert.match(hostApp, /src='\/mailharbor\/index.html\?embedded=1'/);
   assert.match(mailApp, /credentials: 'same-origin'/);
   assert.match(mailApp, /const API_BASE = '\/api\/mailharbor'/);
+});
+
+
+test('MailHarbor frame is allowed only from the same Minglora origin', () => {
+  assert.match(server, /rel === 'mailharbor\/index\.html'/);
+  assert.match(server, /'X-Frame-Options': 'SAMEORIGIN'/);
+  assert.match(server, /'X-Frame-Options': 'DENY'/);
+  assert.match(hostApp, /src='\/mailharbor\/index\.html\?embedded=1'/);
 });
 
 test('all mailbox destinations are real tabs with matching dimensional SVG symbols', () => {
