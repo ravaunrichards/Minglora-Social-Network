@@ -26,6 +26,8 @@ jobs:
           node --check src/mailharbor-proxy.js
           node --check src/mailharbor-runtime.js
           node --check src/store.js
+          node --check backend/modules/mailharbor/service.js
+          node --check tests/mailharbor.test.js
           node --check backend/modules/live/livekit.js
           node --check backend/modules/calls/service.js
           node --check tests/calls.test.js
