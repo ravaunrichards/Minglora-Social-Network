@@ -79,7 +79,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the new icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v36-android-update-ready/);
+  assert.match(serviceWorker, /minglora-shell-v37-profile-expansion/);
   assert.match(serviceWorker, /styles\.css\?v=20261101-marketplace-core-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
