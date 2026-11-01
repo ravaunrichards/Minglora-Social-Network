@@ -63,9 +63,15 @@
         const result=await api('/meetwave/rooms',{method:'POST',body:JSON.stringify(payload)});
         close();await joinRoom(result.room.id);
       }catch(error){
-        const message=modal.isConnected?modal.querySelector('#mw-create-error'):null;
-        if(message)message.textContent=error.message;
-        submit.disabled=false;submit.textContent=scheduled?'Save meeting':mode==='personal'?'Save personal room':'Create meeting';
+        if(modal.isConnected){
+          const message=modal.querySelector('#mw-create-error');
+          if(message)message.textContent=error.message;
+          submit.disabled=false;submit.textContent=scheduled?'Save meeting':mode==='personal'?'Save personal room':'Create meeting';
+        }else{
+          note(error.message,true);
+          await refreshLobby().catch(()=>{});
+          note(error.message,true);
+        }
       }
     });
   }
