@@ -2100,6 +2100,100 @@ function createMediaPicker(root,options={}){
   };
 }
 
+function clampProfileCropPosition(stage,edit){
+  const rect=stage.getBoundingClientRect();
+  if(!rect.width||!rect.height||!edit.imageWidth||!edit.imageHeight)return;
+  const swapped=Math.abs(edit.rotation%180)===90;
+  const rotatedWidth=swapped?edit.imageHeight:edit.imageWidth;
+  const rotatedHeight=swapped?edit.imageWidth:edit.imageHeight;
+  const fitScale=Math.max(rect.width/rotatedWidth,rect.height/rotatedHeight);
+  const drawnWidth=rotatedWidth*fitScale*edit.zoom;
+  const drawnHeight=rotatedHeight*fitScale*edit.zoom;
+  const maxX=Math.max(0,(drawnWidth-rect.width)/2),maxY=Math.max(0,(drawnHeight-rect.height)/2);
+  edit.offsetX=Math.max(-maxX,Math.min(maxX,edit.offsetX));
+  edit.offsetY=Math.max(-maxY,Math.min(maxY,edit.offsetY));
+}
+function updateProfileCropPreview(stage,image,edit){
+  const rect=stage.getBoundingClientRect();
+  if(!rect.width||!rect.height||!edit.imageWidth||!edit.imageHeight)return;
+  clampProfileCropPosition(stage,edit);
+  const swapped=Math.abs(edit.rotation%180)===90;
+  const rotatedWidth=swapped?edit.imageHeight:edit.imageWidth;
+  const rotatedHeight=swapped?edit.imageWidth:edit.imageHeight;
+  const fitScale=Math.max(rect.width/rotatedWidth,rect.height/rotatedHeight);
+  image.style.width=(edit.imageWidth*fitScale)+'px';
+  image.style.height=(edit.imageHeight*fitScale)+'px';
+  image.style.left='calc(50% + '+edit.offsetX+'px)';
+  image.style.top='calc(50% + '+edit.offsetY+'px)';
+  image.style.transform='translate(-50%,-50%) rotate('+edit.rotation+'deg) scale('+edit.zoom+')';
+}
+function bindProfileCropStage(stage,image,edit){
+  const update=()=>updateProfileCropPreview(stage,image,edit);
+  image.addEventListener('load',()=>{
+    edit.imageWidth=image.naturalWidth||0;
+    edit.imageHeight=image.naturalHeight||0;
+    update();
+  });
+  if(image.complete&&image.naturalWidth){
+    edit.imageWidth=image.naturalWidth;
+    edit.imageHeight=image.naturalHeight;
+    update();
+  }
+  let drag=null;
+  stage.addEventListener('pointerdown',event=>{
+    if(!edit.fileSelected)return;
+    drag={pointerId:event.pointerId,x:event.clientX,y:event.clientY,offsetX:edit.offsetX,offsetY:edit.offsetY};
+    stage.classList.add('is-dragging');
+    try{stage.setPointerCapture(event.pointerId);}catch{}
+    event.preventDefault();
+  });
+  stage.addEventListener('pointermove',event=>{
+    if(!drag||drag.pointerId!==event.pointerId)return;
+    edit.offsetX=drag.offsetX+(event.clientX-drag.x);
+    edit.offsetY=drag.offsetY+(event.clientY-drag.y);
+    update();
+  });
+  const stop=event=>{
+    if(!drag||(event?.pointerId!=null&&drag.pointerId!==event.pointerId))return;
+    drag=null;stage.classList.remove('is-dragging');
+  };
+  stage.addEventListener('pointerup',stop);
+  stage.addEventListener('pointercancel',stop);
+  stage.addEventListener('lostpointercapture',stop);
+  return update;
+}
+async function transformProfileCrop(file,edit,stage,slot){
+  let bitmap;
+  try{bitmap=await createImageBitmap(file);}
+  catch{throw new Error('This image could not be opened for cropping on this device. Choose a JPEG, PNG or WEBP image instead.');}
+  try{
+    const rect=stage.getBoundingClientRect();
+    if(!rect.width||!rect.height)throw new Error('The image crop preview is not ready. Select the photo again and try.');
+    const outputWidth=slot==='avatar'?1080:1800;
+    const outputHeight=Math.max(1,Math.round(outputWidth*rect.height/rect.width));
+    const swapped=Math.abs(edit.rotation%180)===90;
+    const rotatedWidth=swapped?bitmap.height:bitmap.width;
+    const rotatedHeight=swapped?bitmap.width:bitmap.height;
+    const fitScale=Math.max(outputWidth/rotatedWidth,outputHeight/rotatedHeight);
+    const canvas=document.createElement('canvas');
+    canvas.width=outputWidth;canvas.height=outputHeight;
+    const context=canvas.getContext('2d');
+    if(!context)throw new Error('Image cropping is not supported in this browser.');
+    context.translate(
+      outputWidth/2+edit.offsetX*(outputWidth/rect.width),
+      outputHeight/2+edit.offsetY*(outputHeight/rect.height)
+    );
+    context.rotate(edit.rotation*Math.PI/180);
+    context.scale(fitScale*edit.zoom,fitScale*edit.zoom);
+    context.drawImage(bitmap,-bitmap.width/2,-bitmap.height/2);
+    const mimeType=file.type==='image/png'?'image/png':'image/jpeg';
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Minglora could not prepare the cropped image.')),mimeType,mimeType==='image/jpeg'?.92:undefined));
+    const base=(file.name||'minglora-profile-image').replace(/\.[^.]+$/,'');
+    const extension=mimeType==='image/png'?'png':'jpg';
+    return new File([blob],base+'-profile-crop.'+extension,{type:mimeType,lastModified:Date.now()});
+  }finally{bitmap.close?.();}
+}
+
 function openEditProfile(u){
   const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
   const modal=document.createElement('div');modal.className='modal-backdrop profile-editor-backdrop';
@@ -2122,10 +2216,34 @@ function openEditProfile(u){
         <div class="field"><label class="about-toggle"><input type="checkbox" name="show_bio" ${aboutVisibility.bio?'checked':''}> Display my bio on my profile</label></div>
       </section>
       <div class="profile-upload-section">
-        <h3>Profile picture</h3><div class="profile-upload-row"><img id="edit-avatar-preview" class="profile-upload-avatar" src="${avatar(u)}" alt="Profile picture preview"><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div><input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif"><input id="edit-avatar-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-avatar-zoom"></label><button class="secondary" type="button" id="edit-avatar-rotate">Rotate 90°</button><small>Choose from your phone gallery, files or use the camera. Adjust zoom and crop before saving.</small></div></div>
+        <h3>Profile picture</h3>
+        <div class="profile-crop-workspace profile-crop-workspace--avatar">
+          <div class="profile-crop-visual">
+            <div id="edit-avatar-preview" class="profile-crop-preview profile-crop-preview--avatar" role="img" aria-label="Circular profile picture crop preview"><img id="edit-avatar-crop-image" src="${esc(avatar(u))}" alt=""></div>
+            <small class="profile-crop-caption">Circular preview — this is the shape people see on your profile.</small>
+          </div>
+          <div class="profile-upload-controls">
+            <div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div>
+            <input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif">
+            <label class="profile-crop-zoom">Zoom <input type="range" min="1" max="3" step="0.05" value="1" id="edit-avatar-zoom" disabled></label>
+            <div class="profile-crop-actions"><button class="secondary" type="button" id="edit-avatar-rotate" disabled>Rotate 90°</button><button class="secondary" type="button" id="edit-avatar-reset" disabled>Reset crop</button></div>
+            <small>Drag the photo inside the circle to move it. Zoom in or out, rotate it, then save when the preview looks right.</small>
+          </div>
+        </div>
       </div>
       <div class="profile-upload-section">
-        <h3>Cover photo</h3><div id="edit-cover-preview" class="profile-cover-upload-preview" role="img" aria-label="Cover photo preview"></div><div class="profile-upload-controls"><div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div><input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif"><input id="edit-cover-camera" class="profile-file-input" type="file" accept="image/*" capture="environment"><label class="profile-zoom-control">Zoom / crop <input type="range" min="1" max="2.5" step="0.05" value="1" id="edit-cover-zoom"></label><button class="secondary" type="button" id="edit-cover-rotate">Rotate 90°</button><small>Use gallery, files or the device camera. Adjust zoom and crop before saving.</small></div>
+        <h3>Cover photo</h3>
+        <div class="profile-crop-workspace profile-crop-workspace--cover">
+          <div id="edit-cover-preview" class="profile-crop-preview profile-crop-preview--cover" role="img" aria-label="Wide rectangular cover photo crop preview"><img id="edit-cover-crop-image" src="${esc(u.cover||'data:,')}" alt=""></div>
+          <small class="profile-crop-caption">Wide cover preview — the rectangular shape used across the top of your profile.</small>
+          <div class="profile-upload-controls">
+            <div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div>
+            <input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif">
+            <label class="profile-crop-zoom">Zoom <input type="range" min="1" max="3" step="0.05" value="1" id="edit-cover-zoom" disabled></label>
+            <div class="profile-crop-actions"><button class="secondary" type="button" id="edit-cover-rotate" disabled>Rotate 90°</button><button class="secondary" type="button" id="edit-cover-reset" disabled>Reset crop</button></div>
+            <small>Drag the photo inside the rectangle to reposition it. The finished cover is cropped to the same wide shape shown here.</small>
+          </div>
+        </div>
       </div>
       <p class="profile-upload-status muted" id="profile-upload-status" role="status">Profile details save automatically. Selected profile and cover photos upload securely when you select Save changes.</p>
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
@@ -2133,13 +2251,61 @@ function openEditProfile(u){
   document.body.append(modal);
   const avatarInput=modal.querySelector('#edit-avatar-file');
   const coverInput=modal.querySelector('#edit-cover-file');
-  const avatarCamera=modal.querySelector('#edit-avatar-camera');
-  const coverCamera=modal.querySelector('#edit-cover-camera');
-  const avatarEdit={zoom:1,rotation:0},coverEdit={zoom:1,rotation:0};
+  const avatarEdit={zoom:1,rotation:0,offsetX:0,offsetY:0,imageWidth:0,imageHeight:0,fileSelected:false};
+  const coverEdit={zoom:1,rotation:0,offsetX:0,offsetY:0,imageWidth:0,imageHeight:0,fileSelected:false};
   const avatarPreview=modal.querySelector('#edit-avatar-preview');
   const coverPreview=modal.querySelector('#edit-cover-preview');
-  if(u.cover)coverPreview.style.backgroundImage='url("'+String(u.cover).replace(/["\\]/g,'')+'")';
+  const avatarPreviewImage=modal.querySelector('#edit-avatar-crop-image');
+  const coverPreviewImage=modal.querySelector('#edit-cover-crop-image');
+  const avatarZoom=modal.querySelector('#edit-avatar-zoom');
+  const coverZoom=modal.querySelector('#edit-cover-zoom');
   const previewUrls=[];
+  const updateAvatarCrop=bindProfileCropStage(avatarPreview,avatarPreviewImage,avatarEdit);
+  const updateCoverCrop=bindProfileCropStage(coverPreview,coverPreviewImage,coverEdit);
+  function resetProfileCrop(edit,zoomInput,update){
+    edit.zoom=1;edit.rotation=0;edit.offsetX=0;edit.offsetY=0;
+    zoomInput.value='1';update();
+  }
+  function previewFile(input,stage,image,edit,zoomInput,slot){
+    const file=input.files?.[0];if(!file)return;
+    if(!imageMime(file)){toast('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');input.value='';return;}
+    if(file.size>mediaMaxBytes(slot)){toast('The '+(slot==='avatar'?'profile picture':'cover photo')+' must be '+mediaMaxLabel(slot)+' or smaller.');input.value='';return;}
+    resetProfileCrop(edit,zoomInput,slot==='avatar'?updateAvatarCrop:updateCoverCrop);
+    edit.fileSelected=true;stage.classList.add('has-selection');
+    zoomInput.disabled=false;
+    modal.querySelector('#edit-'+slot+'-rotate').disabled=false;
+    modal.querySelector('#edit-'+slot+'-reset').disabled=false;
+    const url=URL.createObjectURL(file);previewUrls.push(url);
+    image.src=url;
+    status.textContent=(slot==='avatar'?'Profile picture':'Cover photo')+' selected. Adjust the crop preview before saving.';
+  }
+  function enableCropDragging(stage,edit,update){
+    let drag=null;
+    stage.addEventListener('pointerdown',event=>{
+      if(!edit.fileSelected)return;
+      drag={pointerId:event.pointerId,x:event.clientX,y:event.clientY,offsetX:edit.offsetX,offsetY:edit.offsetY};
+      stage.classList.add('is-dragging');
+      try{stage.setPointerCapture(event.pointerId);}catch{}
+      event.preventDefault();
+    });
+    stage.addEventListener('pointermove',event=>{
+      if(!drag||drag.pointerId!==event.pointerId)return;
+      edit.offsetX=drag.offsetX+(event.clientX-drag.x);
+      edit.offsetY=drag.offsetY+(event.clientY-drag.y);
+      update();
+    });
+    const stop=event=>{
+      if(!drag||(event?.pointerId!=null&&drag.pointerId!==event.pointerId))return;
+      drag=null;stage.classList.remove('is-dragging');
+    };
+    stage.addEventListener('pointerup',stop);
+    stage.addEventListener('pointercancel',stop);
+    stage.addEventListener('lostpointercapture',stop);
+  }
+  enableCropDragging(avatarPreview,avatarEdit,updateAvatarCrop);
+  enableCropDragging(coverPreview,coverEdit,updateCoverCrop);
+  const updateBothCrops=()=>{updateAvatarCrop();updateCoverCrop();};
+  window.addEventListener('resize',updateBothCrops);
   const phoneInput=modal.querySelector('#edit-contact-phone');
   const phoneStatus=modal.querySelector('#phone-verification-status');
   const status=modal.querySelector('#profile-upload-status');
@@ -2168,28 +2334,23 @@ function openEditProfile(u){
       state.user.contactPhone=phone;
     }catch(error){phoneStatus.textContent=error.message;toast(error.message);phoneVerify.disabled=false;}
   };
-  function previewFile(input,target){
-    const file=input.files?.[0];if(!file)return;
-    if(!imageMime(file)){toast('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');input.value='';return;}
-    if(file.size>8*1024*1024){toast('Images must be 8 MB or smaller.');input.value='';return;}
-    const url=URL.createObjectURL(file);previewUrls.push(url);if(target.tagName==='IMG')target.src=url;else{target.style.backgroundImage='url("'+url+'")';target.style.backgroundSize='cover';}target.classList.add('has-preview');
-  }
-  avatarInput.addEventListener('change',()=>{avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';avatarPreview.style.transform='scale(1) rotate(0deg)';previewFile(avatarInput,avatarPreview);});
-  coverInput.addEventListener('change',()=>{coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';coverPreview.style.transform='scale(1) rotate(0deg)';coverPreview.style.backgroundSize='cover';previewFile(coverInput,coverPreview);});
-  function assignCameraFile(cameraInput,targetInput,targetPreview,editState,zoomInput){
-    const file=cameraInput.files?.[0];if(!file)return;
-    const transfer=new DataTransfer();transfer.items.add(file);targetInput.files=transfer.files;
-    editState.zoom=1;editState.rotation=0;zoomInput.value='1';previewFile(targetInput,targetPreview);
-  }
-  modal.querySelector('#edit-avatar-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{const transfer=new DataTransfer();transfer.items.add(file);avatarInput.files=transfer.files;avatarEdit.zoom=1;avatarEdit.rotation=0;modal.querySelector('#edit-avatar-zoom').value='1';previewFile(avatarInput,avatarPreview);}});
-  modal.querySelector('#edit-cover-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{const transfer=new DataTransfer();transfer.items.add(file);coverInput.files=transfer.files;coverEdit.zoom=1;coverEdit.rotation=0;modal.querySelector('#edit-cover-zoom').value='1';previewFile(coverInput,coverPreview);}});
-  avatarCamera.addEventListener('change',()=>assignCameraFile(avatarCamera,avatarInput,avatarPreview,avatarEdit,modal.querySelector('#edit-avatar-zoom')));
-  coverCamera.addEventListener('change',()=>assignCameraFile(coverCamera,coverInput,coverPreview,coverEdit,modal.querySelector('#edit-cover-zoom')));
-  modal.querySelector('#edit-avatar-zoom').addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);avatarPreview.style.transform='scale('+avatarEdit.zoom+') rotate('+avatarEdit.rotation+'deg)';});
-  modal.querySelector('#edit-cover-zoom').addEventListener('input',event=>{coverEdit.zoom=Number(event.target.value);coverPreview.style.backgroundSize=(coverEdit.zoom*100)+'%';coverPreview.style.transform='rotate('+coverEdit.rotation+'deg)';});
-  modal.querySelector('#edit-avatar-rotate').onclick=()=>{avatarEdit.rotation=(avatarEdit.rotation+90)%360;avatarPreview.style.transform='scale('+avatarEdit.zoom+') rotate('+avatarEdit.rotation+'deg)';};
-  modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;coverPreview.style.transform='rotate('+coverEdit.rotation+'deg)';};
-  const close=()=>{previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
+  avatarInput.addEventListener('change',()=>previewFile(avatarInput,avatarPreview,avatarPreviewImage,avatarEdit,avatarZoom,'avatar'));
+  coverInput.addEventListener('change',()=>previewFile(coverInput,coverPreview,coverPreviewImage,coverEdit,coverZoom,'cover'));
+  modal.querySelector('#edit-avatar-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{
+    const transfer=new DataTransfer();transfer.items.add(file);avatarInput.files=transfer.files;
+    previewFile(avatarInput,avatarPreview,avatarPreviewImage,avatarEdit,avatarZoom,'avatar');
+  }});
+  modal.querySelector('#edit-cover-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{
+    const transfer=new DataTransfer();transfer.items.add(file);coverInput.files=transfer.files;
+    previewFile(coverInput,coverPreview,coverPreviewImage,coverEdit,coverZoom,'cover');
+  }});
+  avatarZoom.addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);updateAvatarCrop();});
+  coverZoom.addEventListener('input',event=>{coverEdit.zoom=Number(event.target.value);updateCoverCrop();});
+  modal.querySelector('#edit-avatar-rotate').onclick=()=>{avatarEdit.rotation=(avatarEdit.rotation+90)%360;updateAvatarCrop();};
+  modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;updateCoverCrop();};
+  modal.querySelector('#edit-avatar-reset').onclick=()=>resetProfileCrop(avatarEdit,avatarZoom,updateAvatarCrop);
+  modal.querySelector('#edit-cover-reset').onclick=()=>resetProfileCrop(coverEdit,coverZoom,updateCoverCrop);
+  const close=()=>{window.removeEventListener('resize',updateBothCrops);previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   const profileForm=modal.querySelector('#edit-profile-form');
@@ -2243,12 +2404,12 @@ function openEditProfile(u){
       await profileSaveQueue.catch(()=>{});
       if(avatarInput.files?.[0]){
         status.textContent='Uploading profile picture…';
-        const edited=await transformMediaImage(avatarInput.files[0],avatarEdit.zoom,avatarEdit.rotation);
+        const edited=await transformProfileCrop(avatarInput.files[0],avatarEdit,avatarPreview,'avatar');
         await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});
       }
       if(coverInput.files?.[0]){
         status.textContent='Uploading cover photo…';
-        const edited=await transformMediaImage(coverInput.files[0],coverEdit.zoom,coverEdit.rotation);
+        const edited=await transformProfileCrop(coverInput.files[0],coverEdit,coverPreview,'cover');
         await uploadProfileImage('cover',edited,1,0,update=>{status.textContent='Uploading cover photo… '+update.percentage+'%';});
       }
       status.textContent='Saving profile details…';
