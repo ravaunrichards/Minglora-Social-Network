@@ -74,6 +74,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(anonymousSession.body.user, null);
   const anonymousMeetWaveStatus = await request('/api/meetwave/status');
   assert.equal(anonymousMeetWaveStatus.status, 401);
+  const anonymousCallInbox = await request('/api/calls/incoming');
+  assert.equal(anonymousCallInbox.status, 401);
+  const anonymousCallRingtone = await request('/api/calls/ringtone');
+  assert.equal(anonymousCallRingtone.status, 401);
 
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
@@ -158,6 +162,18 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ title: 'This must not create a fake live room', visibility: 'public' })
   });
   assert.equal(unconfiguredLiveStart.status, 503);
+  const emptyCallInbox = await request('/api/calls/incoming');
+  assert.equal(emptyCallInbox.status, 200);
+  assert.deepEqual(emptyCallInbox.body.calls, []);
+  const defaultCallRingtone = await request('/api/calls/ringtone');
+  assert.equal(defaultCallRingtone.status, 200);
+  assert.equal(defaultCallRingtone.body.ringtone, null);
+  const unconfiguredCallStart = await request('/api/calls', {
+    method: 'POST', body: JSON.stringify({ to: 'unavailable-recipient', kind: 'audio' })
+  });
+  assert.equal(unconfiguredCallStart.status, 503);
+  const stillEmptyCallInbox = await request('/api/calls/incoming');
+  assert.deepEqual(stillEmptyCallInbox.body.calls, [], 'unconfigured calls must not create fake call records');
 
 
   const invalidProfile = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({ avatar: 'javascript:alert(1)' }) });
