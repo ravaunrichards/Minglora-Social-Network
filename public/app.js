@@ -3652,10 +3652,28 @@ async function showIncomingCallOverlay(call){
  if(state.settings?.preferences?.messengerIncomingCallSounds!==false&&!await startIncomingRingtone())overlay.querySelector('#call-enable-ringtone').classList.remove('hidden');
  incomingCallStatusTimer=setInterval(async()=>{try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch{closeIncomingCallOverlay();}},1600);
 }
+async function clearStaleMingloraCallNotifications(activeCallIds=[]){
+ try{
+  const registration=await navigator.serviceWorker?.getRegistration?.();
+  if(!registration?.getNotifications)return;
+  const valid=new Set(activeCallIds.map(String));
+  const notifications=await registration.getNotifications();
+  notifications.forEach(notification=>{
+   const data=notification.data||{};
+   if(data.type==='call'&&(!data.callId||!valid.has(String(data.callId))))notification.close();
+  });
+ }catch{}
+}
 async function pollIncomingCalls(){
  if(!state.user||incomingCallPollBusy||activeCallRoom||outgoingCallPending)return;
  incomingCallPollBusy=true;
- try{const result=await api('/calls/incoming'),call=(result.calls||[])[0];if(call&&!incomingCallOverlay)await showIncomingCallOverlay(call);else if(!call&&incomingCallOverlay)closeIncomingCallOverlay();}
+ try{
+  const result=await api('/calls/incoming'),calls=result.calls||[];
+  await clearStaleMingloraCallNotifications(calls.map(call=>call.id));
+  const call=calls[0];
+  if(call&&!incomingCallOverlay)await showIncomingCallOverlay(call);
+  else if(!call&&incomingCallOverlay)closeIncomingCallOverlay();
+ }
  catch{}finally{incomingCallPollBusy=false;}
 }
 function startIncomingCallPolling(){if(incomingCallPollingTimer)clearInterval(incomingCallPollingTimer);incomingCallPollingTimer=null;if(!state.user)return;void pollIncomingCalls();incomingCallPollingTimer=setInterval(pollIncomingCalls,1800);}
@@ -3669,11 +3687,11 @@ async function waitForCallAnswer(call,member){
  showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false,starting:false};
  const deadline=Date.parse(call.ringExpiresAt||'')||Date.now()+45000;
  while(outgoingCallPending&&!outgoingCallPending.cancelled&&Date.now()<deadline){
-  let response;try{response=await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);return;}
+  let response;try{response=await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch(e){await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);return;}
   const status=response.call?.status;
   if(status==='active'){
    closeOutgoingCallOverlay();outgoingCallPending=null;
-   try{const joined=await api('/calls/'+encodeURIComponent(call.id)+'/join',{method:'POST',body:'{}'});await openMingloraCall(joined.call,joined.liveKit);}catch(e){toast(e.message);}return;
+   try{const joined=await api('/calls/'+encodeURIComponent(call.id)+'/join',{method:'POST',body:'{}'});await clearStaleMingloraCallNotifications([]);await openMingloraCall(joined.call,joined.liveKit);}catch(e){toast(e.message);}return;
   }
   if(['declined','missed','cancelled','ended'].includes(status)){closeOutgoingCallOverlay();outgoingCallPending=null;toast(status==='missed'?'No answer. The call was missed.':status==='declined'?'The call was declined.':'The call ended.');return;}
   await new Promise(resolve=>setTimeout(resolve,1300));
@@ -3698,7 +3716,7 @@ async function startMingloraCall(member,kind='video'){
 }
 async function answerMingloraCall(callId){
  if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before answering another call.');return;}
- try{closeIncomingCallOverlay();const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});await openMingloraCall(joined.call,joined.liveKit);}
+ try{closeIncomingCallOverlay();const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});await clearStaleMingloraCallNotifications([]);await openMingloraCall(joined.call,joined.liveKit);}
  catch(e){toast(e.message);void pollIncomingCalls();}
 }
 async function declineMingloraCall(callId){
