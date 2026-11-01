@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="MeetWaveTheme" parent="@android:style/Theme.Material.Light.DarkActionBar">
+        <item name="android:colorPrimary">@color/brandBg</item>
+        <item name="android:colorPrimaryDark">@color/brandBg</item>
+        <item name="android:colorAccent">@color/brandPrimary</item>
+        <item name="android:windowBackground">@color/brandBg</item>
+    </style>
+
+    <style name="MeetWaveTheme.Launch">
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+</resources>
