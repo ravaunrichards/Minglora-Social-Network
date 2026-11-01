@@ -59,7 +59,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette']) {
+  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);
@@ -78,8 +78,8 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
 });
 
-test('service-worker shell pre-caches the new icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v54-messenger-left-panel/);
-  assert.match(serviceWorker, /styles\.css\?v=20261101-messenger-left-panel-1/);
+test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
+  assert.match(serviceWorker, /minglora-shell-v56-messenger-right-panel-2/);
+  assert.match(serviceWorker, /styles\.css\?v=20261101-messenger-right-panel-2/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
