@@ -58,15 +58,15 @@
           <span id="count">0 messages</span>
         </div>
         <div id="messages" class="messages" aria-live="polite"></div>
-        <p class="footnote">Message status reflects the mail provider response. Queued messages are not yet sent.</p>
+        <p class="footnote">Minglora member mail is delivered internally. External email is not sent until a verified domain and provider are connected.</p>
       </section>
     </section>
   </div>
 
   <dialog id="composer" class="dialog">
     <form id="compose-form">
-      <div class="modalhead"><div><b>New message</b><p>Send through your configured MailHarbor provider.</p></div><button class="iconbtn" id="close-compose" type="button" aria-label="Close">×</button></div>
-      <label class="field">To<input id="to" type="text" required placeholder="name@example.com"></label>
+      <div class="modalhead"><div><b>New message</b><p>Send to a Minglora member mailbox.</p></div><button class="iconbtn" id="close-compose" type="button" aria-label="Close">×</button></div>
+      <label class="field">To<input id="to" type="text" required placeholder="member@members.minglora.invalid"></label>
       <label class="field">Cc <span class="optional">(optional)</span><input id="cc" type="text" placeholder="name@example.com"></label>
       <label class="field">Bcc <span class="optional">(optional)</span><input id="bcc" type="text" placeholder="name@example.com"></label>
       <label class="field">Subject<input id="subject" type="text" maxlength="998" placeholder="Subject"></label>
