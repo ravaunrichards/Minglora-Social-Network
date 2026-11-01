@@ -28,7 +28,7 @@ The local JSON store includes narrowly scoped cleanup for explicitly identified 
 - Basic substring search across people, posts, groups and Pages
 - Member reports, moderator review queue and supported moderation actions (moderator access requires an explicit ID allow-list)
 - Help & support ticket creation, member replies, status tracking and moderator responses
-- MeetWave meeting rooms integrated into Minglora accounts and LiveKit: instant, scheduled and personal rooms, public/friends/invitation-only access, eight-person room capacity, host-only room ending, invitations, room codes, persistent meeting chat and live participant counts from LiveKit.
+- MeetWave is a distinct meeting feature within Minglora—not merged into direct Messages, group calls or creator LIVE. It has its own navigation, UI assets, API namespace, backend module and state collections; it reuses Minglora accounts and the shared LiveKit provider. It supports instant, scheduled and reusable personal rooms, invite-only/friends/public access, invitations, room codes, persistent meeting chat, host-only room ending and provider-verified participant counts. MeetWave invitation privacy is controlled separately from direct-message privacy.
 - LiveKit-powered browser LIVE rooms with real host camera/microphone publishing, subscriber-only viewer access, remote track playback, provider-verified live directory and participant counts, live chat, room themes and a 3D gift catalogue (requires Minglora LiveKit Cloud credentials)
 - Local JSON-file persistence for development and durable Supabase-backed persistence for the hosted API
 - Node test runner, integration tests, Docker packaging and GitHub Actions CI
@@ -119,6 +119,7 @@ All application API endpoints use the `/api` prefix.
 - `GET/PATCH /api/settings`, `POST /api/media/upload/prepare`, `POST /api/media/upload/complete`, `GET /api/account/export`
 - `/api/security/*` password, email, MFA and session controls; `/api/reports/*`, `/api/moderation/*` and `/api/support/*` reporting, review and support workflows
 - `/api/live/*` session/status routes documented in [LiveKit integration](backend/modules/live/README.md)
+- `/api/meetwave/status`, `/api/meetwave/rooms`, room join/leave/end, member invitations and room chat under `/api/meetwave/*`
 
 See [docs/API.md](docs/API.md) for the current contract. Planned endpoints must not be treated as implemented.
 
