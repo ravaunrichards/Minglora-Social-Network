@@ -7,7 +7,7 @@ This document records target scope without claiming that each client or product 
 | Client | Current status |
 |---|---|
 | Browser | Working responsive starter client in `public/` |
-| Android | Planned; target boundary in `apps/android/` |
+| Android | Native WebView shell and update-check client implemented; signed release automation activates after signing secrets are configured. Not a separate native feature-complete client. |
 | iOS/iPadOS | Planned; target boundary in `apps/ios/` |
 | Desktop | Planned; target boundary in `apps/desktop/` |
 | TV | Planned; target boundary in `apps/tv/` |

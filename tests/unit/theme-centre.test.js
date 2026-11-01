@@ -54,6 +54,6 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /styles\.css\?v=20261101-marketplace-core-1/);
   assert.match(html, /app\.js\?v=20261031-marketplace-commerce-3/);
   assert.match(html, /settings\.js\?v=20261031-settings-flat-2/);
-  assert.match(sw, /minglora-shell-v35-marketplace-commerce-4/);
+  assert.match(sw, /minglora-shell-v36-android-update-ready/);
   assert.match(sw, /settings\.js\?v=20261031-settings-flat-2/);
 });
