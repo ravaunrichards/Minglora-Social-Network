@@ -4,7 +4,7 @@
 
 Create a new Supabase project named HarborPay for this repository. Do not reuse Zovara or another application's project.
 
-In the HarborPay project, run these migrations in order: database/migrations/20261029000100_harborpay_core.sql, then database/migrations/20261030000200_harborpay_merchant_operations.sql. The second migration adds merchants/team permissions, customers, orders, payment links, refunds, disputes, payment-status history, API keys, outbound webhooks, audit events, and atomic inbound-webhook claims. Run database/verify.sql and the Supabase security/performance advisors after both migrations. Enable Email/Password authentication and configure the production email sender and authentication redirect URLs in Supabase. Use the HarborPay web origin as an allowed redirect origin.
+In the HarborPay project, run these migrations in order: database/migrations/20261029000100_harborpay_core.sql, then database/migrations/20261030000200_harborpay_merchant_operations.sql, then database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql. The third migration creates only the signed Minglora identity handoff and account-link records in HarborPay's own database. The second migration adds merchants/team permissions, customers, orders, payment links, refunds, disputes, payment-status history, API keys, outbound webhooks, audit events, and atomic inbound-webhook claims. Run database/verify.sql and the Supabase security/performance advisors after both migrations. Enable Email/Password authentication and configure the production email sender and authentication redirect URLs in Supabase. Use the HarborPay web origin as an allowed redirect origin.
 
 The web application needs the project URL and a publishable/anon key. The API needs the same project URL and the service-role key. The service-role key is secret and belongs only in the HarborPay API environment.
 
@@ -27,7 +27,7 @@ PayPal documentation:
 
 Register this HTTPS listener URL in the PayPal REST app:
 
-https://harborpay-api.onrender.com/api/paypal/webhook
+https://minglora-harborpay-api.onrender.com/api/paypal/webhook
 
 Subscribe at minimum to:
 - CHECKOUT.ORDER.APPROVED
@@ -46,6 +46,9 @@ Copy the webhook ID into PAYPAL_WEBHOOK_ID. HarborPay verifies every webhook thr
 
 Set these on the HarborPay API service:
 
+- HARBORPAY_WEB_URL=https://minglora-minglora-harborpay-web.onrender.com
+- MINGLORA_SSO_SECRET=THE_SAME_DISTINCT_RANDOM_SECRET_AS_MINGLORA_HARBORPAY_SSO_SECRET
+
 - PORT=4000
 - SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 - SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_SERVICE_ROLE_KEY
@@ -54,16 +57,18 @@ Set these on the HarborPay API service:
 - PAYPAL_CLIENT_SECRET=YOUR_SANDBOX_CLIENT_SECRET
 - PAYPAL_WEBHOOK_ID=YOUR_SANDBOX_WEBHOOK_ID
 - PAYPAL_CURRENCY=USD
-- APP_URL=https://harborpay-web.onrender.com
-- WEB_ORIGIN=https://harborpay-web.onrender.com
+- APP_URL=https://minglora-harborpay-web.onrender.com
+- WEB_ORIGIN=https://minglora-harborpay-web.onrender.com
 - PAYPAL_PAYOUTS_ENABLED=false
 - HARBORPAY_ADMIN_USER_IDS=YOUR_AUTH_USER_UUID
 
 Set these on the HarborPay static web service:
 
+- VITE_API_URL=https://minglora-minglora-harborpay-api.onrender.com
+
 - VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 - VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_PUBLISHABLE_OR_ANON_KEY
-- VITE_API_URL=https://harborpay-api.onrender.com
+- VITE_API_URL=https://minglora-harborpay-api.onrender.com
 
 The API service and static site are separate Render services. Never set SUPABASE_SERVICE_ROLE_KEY, PAYPAL_CLIENT_SECRET, or PAYPAL_WEBHOOK_ID on the static site.
 
@@ -90,7 +95,15 @@ References:
 
 This repository does not establish HarborPay's legal authorization. Do not offer public stored-value accounts, custodial balances, money transmission, or remittance services until a qualified Jamaican regulatory/legal review confirms the operating model and required approvals or regulated partners.
 
-## 8. Sandbox verification checklist
+## 8. Minglora identity-link bridge
+
+The bridge uses two separate server-only values: Minglora's HARBORPAY_SSO_SECRET and HarborPay's MINGLORA_SSO_SECRET. They must match and must be a unique random secret of at least 32 bytes, unrelated to other app secrets. Minglora sends a signed, timestamped request to HarborPay only after the user accepts the data-sharing notice. HarborPay verifies the HMAC over the exact request body, rejects stale requests, stores a SHA-256 token hash, and returns a ten-minute single-use URL. HarborPay exchanges the code once, prefills only name/email, and links the accounts only after a verified HarborPay email matches the consented Minglora email. Never add identity credentials, tokens, passwords, payment methods or KYC documents to the payload.
+
+Deploy the static HarborPay site with a Content-Security-Policy frame-ancestors allow-list containing only the real Minglora origin (the Blueprint includes the current Render Minglora origin). Do not set X-Frame-Options DENY or SAMEORIGIN, because this independently hosted HarborPay page must render in the Minglora iframe. Add any custom Minglora domain explicitly and remove unused origins. A new-tab fallback remains available for browsers that restrict embedded storage.
+
+The Minglora integration does not make profile data KYC, does not automatically open an account, and does not grant transaction permissions. HarborPay's own Auth, email verification, KYC/KYB and transaction risk gates remain authoritative.
+
+## 9. Sandbox verification checklist
 
 1. Register a new HarborPay test user.
 2. Confirm the user is created in the HarborPay Supabase Auth project and the profile trigger creates their profile.

@@ -61,14 +61,22 @@ function Brand() {
   );
 }
 
-function AuthScreen() {
+function AuthScreen({ prefill = null }) {
   const [mode, setMode] = useState("signin");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState(prefill?.fullName || "");
+  const [email, setEmail] = useState(prefill?.email || "");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!prefill) return;
+    if (prefill.fullName) setFullName(prefill.fullName);
+    if (prefill.email) setEmail(prefill.email);
+    setMode("signup");
+    setNotice("Minglora shared your name and email after you approved the data-sharing notice. Confirm your HarborPay email before linking accounts.");
+  }, [prefill]);
 
   async function submit(event) {
     event.preventDefault();
@@ -111,6 +119,7 @@ function AuthScreen() {
           <p className="eyebrow">SECURE PAYMENTS</p>
           <h1>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
           <p>Sign in securely to manage your HarborPay payments.</p>
+          {prefill && <p className="message success">Your name and email were prefilled from Minglora with your permission. HarborPay account verification is separate.</p>}
         </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "signup" && (
@@ -207,7 +216,34 @@ function App() {
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [notice, setNotice] = useState("");
+  const [mingloraPrefill, setMingloraPrefill] = useState(null);
+  const [mingloraLinkToken, setMingloraLinkToken] = useState(() => window.sessionStorage.getItem("harborpay_minglora_link_token") || "");
+  const [mingloraLinked, setMingloraLinked] = useState(false);
+  const linkAttempted = useRef(false);
   const processedCapture = useRef(false);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("minglora_handoff");
+    if (!code) return undefined;
+    url.searchParams.delete("minglora_handoff");
+    window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+    let active = true;
+    apiRequest("/api/integrations/minglora/exchange", null, {
+      method: "POST",
+      body: { code }
+    }).then((result) => {
+      if (!active) return;
+      setMingloraPrefill(result.prefill || null);
+      setMingloraLinkToken(result.linkToken || "");
+      if (result.linkToken) window.sessionStorage.setItem("harborpay_minglora_link_token", result.linkToken);
+      setNotice("Minglora shared only your name and email after you approved the notice. Create or sign in to your independent HarborPay account to link it.");
+    }).catch((error) => {
+      if (!active) return;
+      setNotice(error.message || "The Minglora activation link could not be verified.");
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -237,6 +273,36 @@ function App() {
       .catch(() => { if (active) setHealth({ ok: false }); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!session?.access_token) return undefined;
+    let active = true;
+    apiRequest("/api/integrations/minglora/status", session.access_token)
+      .then((result) => { if (active) setMingloraLinked(result.linked === true); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session?.access_token || !mingloraLinkToken || linkAttempted.current) return undefined;
+    let active = true;
+    linkAttempted.current = true;
+    apiRequest("/api/integrations/minglora/link", session.access_token, {
+      method: "POST",
+      body: { linkToken: mingloraLinkToken }
+    }).then((result) => {
+      if (!active) return;
+      setMingloraLinked(true);
+      setMingloraLinkToken("");
+      window.sessionStorage.removeItem("harborpay_minglora_link_token");
+      setNotice(result.message || "Your HarborPay account is linked to Minglora.");
+    }).catch((error) => {
+      if (!active) return;
+      setNotice(error.message || "Your account link could not be completed. You can retry by reopening HarborPay from Minglora.");
+      linkAttempted.current = false;
+    });
+    return () => { active = false; };
+  }, [session, mingloraLinkToken]);
 
   async function loadPayments(accessToken) {
     setPaymentsLoading(true);
@@ -324,7 +390,7 @@ function App() {
   }
 
   if (!supabaseConfigured) return <SetupScreen />;
-  if (!session) return <AuthScreen />;
+  if (!session) return <AuthScreen prefill={mingloraPrefill} />;
 
   const completedCount = payments.filter((payment) => payment.status === "completed").length;
   const pendingCount = payments.filter((payment) => ["created", "approved", "pending"].includes(payment.status)).length;
@@ -356,7 +422,8 @@ function App() {
             <span className={"connection-state " + (health?.configured?.paypal && health?.configured?.supabase ? "ready" : "warning")}>
               <i /> {health?.configured?.paypal && health?.configured?.supabase ? "Providers configured" : "Setup incomplete"}
             </span>
-            <div className="user-pill">{session.user.email}</div>
+            {mingloraLinked && <span className="connection-state ready"><i /> Linked to Minglora</span>}
+           <div className="user-pill">{session.user.email}</div>
           </div>
         </header>
 

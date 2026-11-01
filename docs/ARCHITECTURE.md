@@ -36,6 +36,12 @@ This is the runtime that actually serves requests today. The expanded module/dat
 - `Dockerfile`, `docker-compose.yml` — container build and local persistent-volume runtime.
 - `.github/workflows/ci.yml` — automated test workflow.
 
+## HarborPay service boundary
+
+HarborPay is mounted as a destination in Minglora navigation, but it is not an internal wallet table or a shared backend domain. Its independent application and API live in integrations/harborpay/source; its dedicated Supabase database and service-role credentials must remain separate. Minglora's server creates a one-time HMAC-signed activation handoff only after explicit consent. The handoff sends only the Minglora account UUID, email and display name, is stored as a token hash in HarborPay, and is exchanged once. HarborPay email verification is required before the identity link is created. No Minglora token/password or KYC evidence is shared. See integrations/harborpay/docs/INTEGRATION.md.
+
+The current Minglora UI exposes HarborPay, but the feature is not operational until the dedicated HarborPay Supabase project, API/web services, matching bridge secrets, provider credentials and allowed iframe origin are configured. A configured entry point is not evidence that wallet transfers or international payment corridors are active.
+
 ## Expanded source organization
 
 - `apps/`: documented boundaries for browser, Android, iOS, desktop, TV, admin and Creator Studio clients. The live browser client remains in `public/` until deliberately extracted.

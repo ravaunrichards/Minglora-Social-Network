@@ -31,8 +31,8 @@ A customer-held wallet, peer-to-peer stored balances, escrow, or redeemable e-mo
 
 - web/ — React customer application.
 - server/ — Express API, Supabase authentication, PayPal Orders, Payouts, and webhooks.
-- database/migrations/ — versioned Supabase core and merchant-operations migrations.
-- database/schema.sql — complete schema reference matching both migrations.
+- database/migrations/ — versioned Supabase core, merchant-operations and Minglora identity-bridge migrations.
+- database/schema.sql — complete schema reference matching all three migrations.
 - database/tests/ — PostgreSQL schema, RLS, merchant ownership and webhook concurrency checks.
 - docs/DATABASE.md — table map and database security boundaries.
 - docs/ — architecture and deployment runbook.

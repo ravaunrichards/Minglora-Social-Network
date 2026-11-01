@@ -6,7 +6,8 @@ where table_schema = 'public'
     'profiles','payments','payouts','webhook_events','merchant_accounts',
     'merchant_members','merchant_customers','orders','payment_links',
     'refunds','disputes','payment_status_events','merchant_api_keys',
-    'merchant_webhook_endpoints','webhook_deliveries','audit_events'
+    'merchant_webhook_endpoints','webhook_deliveries','audit_events',
+    'minglora_link_handoffs','minglora_identity_links'
   )
 order by table_name;
 
@@ -19,7 +20,8 @@ where n.nspname = 'public'
     'profiles','payments','payouts','webhook_events','merchant_accounts',
     'merchant_members','merchant_customers','orders','payment_links',
     'refunds','disputes','payment_status_events','merchant_api_keys',
-    'merchant_webhook_endpoints','webhook_deliveries','audit_events'
+    'merchant_webhook_endpoints','webhook_deliveries','audit_events',
+    'minglora_link_handoffs','minglora_identity_links'
   )
 order by c.relname;
 
@@ -29,6 +31,8 @@ where routine_schema = 'public'
   and routine_name in (
     'harborpay_claim_webhook_event',
     'harborpay_complete_webhook_event',
-    'harborpay_release_webhook_event'
+    'harborpay_release_webhook_event',
+    'harborpay_exchange_minglora_handoff',
+    'harborpay_link_minglora_identity'
   )
 order by routine_name;

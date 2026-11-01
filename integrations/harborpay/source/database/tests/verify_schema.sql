@@ -4,6 +4,7 @@ declare
   required_tables text[] := array[
     'profiles','payments','payouts','webhook_events','merchant_accounts',
     'merchant_members','merchant_customers','orders','payment_links',
+    'minglora_link_handoffs','minglora_identity_links',
     'refunds','disputes','payment_status_events','merchant_api_keys',
     'merchant_webhook_endpoints','webhook_deliveries','audit_events'
   ];
@@ -37,6 +38,24 @@ begin
     raise exception 'The service role is missing webhook claim RPC permission';
   end if;
 
+
+  if to_regprocedure('public.harborpay_exchange_minglora_handoff(text)') is null
+    or to_regprocedure('public.harborpay_link_minglora_identity(text,uuid,text)') is null then
+    raise exception 'HarborPay Minglora identity bridge RPC functions are incomplete';
+  end if;
+  if has_function_privilege('authenticated','public.harborpay_exchange_minglora_handoff(text)','EXECUTE')
+    or has_function_privilege('authenticated','public.harborpay_link_minglora_identity(text,uuid,text)','EXECUTE') then
+    raise exception 'Authenticated users must not execute privileged Minglora bridge RPCs directly';
+  end if;
+  if not has_function_privilege('service_role','public.harborpay_exchange_minglora_handoff(text)','EXECUTE')
+    or not has_function_privilege('service_role','public.harborpay_link_minglora_identity(text,uuid,text)','EXECUTE') then
+    raise exception 'HarborPay service role is missing Minglora bridge RPC permission';
+  end if;
+  if has_table_privilege('authenticated','public.minglora_link_handoffs','SELECT')
+    or has_table_privilege('authenticated','public.minglora_identity_links','SELECT') then
+    raise exception 'Authenticated users must not directly read Minglora identity-link tables';
+  end if;
+
   if to_regclass('public.wallet_balances') is not null
     or to_regclass('public.customer_wallets') is not null then
     raise exception 'This schema must not create unapproved stored-value balances';
@@ -62,6 +81,42 @@ begin
   end if;
 end;
 $$;
+
+
+-- The single-use exchange can be repeated only with a new approved launch request.
+-- The same verified personal account may be linked idempotently, but a different
+-- HarborPay user cannot claim a Minglora identity already linked elsewhere.
+insert into public.minglora_link_handoffs (
+  request_id, minglora_user_id, email, full_name,
+  handoff_token_hash, consent_version, expires_at
+) values (
+  '55555555-5555-4555-8555-555555555555',
+  '33333333-3333-4333-8333-333333333333',
+  'owner-one@example.test',
+  'Minglora CI Owner',
+  'ci-minglora-handoff-hash-111111111111111111111111',
+  '2026-11-01',
+  now() + interval '10 minutes'
+);
+
+select public.harborpay_exchange_minglora_handoff(
+  'ci-minglora-handoff-hash-111111111111111111111111'
+);
+
+do $
+declare
+  linked boolean;
+begin
+  linked := public.harborpay_link_minglora_identity(
+    'ci-minglora-handoff-hash-111111111111111111111111',
+    '11111111-1111-4111-8111-111111111111',
+    'owner-one@example.test'
+  );
+  if linked is not true then
+    raise exception 'A returning HarborPay user could not link an already linked identity using a fresh consented handoff';
+  end if;
+end;
+$;
 
 -- Merchant creation must automatically grant the owner role.
 insert into public.merchant_accounts (owner_user_id, display_name)

@@ -1,7 +1,7 @@
 {
   "project": "HarborPay",
   "version": "1.0.0",
-  "status": "Database migrations and PostgreSQL security CI are passing. Merchant account, customer, order, and payment-link record APIs are implemented with server-side role checks. Public merchant checkout remains disabled.",
+  "status": "Source snapshot imported into Minglora with an independent consent-based identity bridge and Render blueprint. The current application still supports PayPal checkout/capture, payment history, verified webhooks and merchant records only; wallet transfers, stored-value balances, public merchant checkout and international remittance remain disabled/not implemented.",
   "generated_files": [
     ".gitignore",
     "PROJECT_MANIFEST.json",
@@ -32,7 +32,8 @@
     "database/verify.sql",
     "docs/DATABASE.md",
     "server/src/merchant.js",
-    "server/test/merchant.test.js"
+    "server/test/merchant.test.js",
+    "database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql"
   ],
   "integrations": [
     "Supabase Auth",
@@ -40,7 +41,9 @@
     "PayPal Orders v2",
     "PayPal capture",
     "PayPal signature-verified webhooks",
-    "PayPal Payouts (administrator-only and disabled by default)"
+    "PayPal Payouts (administrator-only and disabled by default)",
+    "Minglora signed consent-based identity handoff",
+    "Dedicated HarborPay Supabase database and Auth project"
   ],
   "removed_demo_components": [
     "Sample Jamie Davis account",
@@ -56,6 +59,10 @@
     "Set server-only environment variables on the HarborPay API service",
     "Complete the full Sandbox checkout and webhook verification checklist",
     "Obtain PayPal Live and Payouts approvals before enabling real-money operations",
-    "Complete Jamaican regulatory/legal review before offering stored-value or money-transmission services"
+    "Complete Jamaican regulatory/legal review before offering stored-value or money-transmission services",
+    "Apply 20261101000300_harborpay_minglora_identity_bridge.sql only to the dedicated HarborPay database",
+    "Configure the matching HARBORPAY_SSO_SECRET and MINGLORA_SSO_SECRET as distinct server-only values",
+    "Deploy separate HarborPay API and web services and configure the approved Minglora frame-ancestor origin",
+    "Complete country-by-country KYC/KYB, licensing, partner and reconciliation review before stored-value or remittance capabilities"
   ]
 }

@@ -4,7 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { createClient } from "@supabase/supabase-js";
-import { randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   capturePayPalOrder,
   createPayPalOrder,
@@ -120,7 +120,8 @@ app.get("/api/health", (_request, response) => {
       supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
       paypal: isPayPalConfigured(),
       paypalWebhook: isPayPalWebhookConfigured(),
-      payoutsEnabled: process.env.PAYPAL_PAYOUTS_ENABLED === "true"
+      payoutsEnabled: process.env.PAYPAL_PAYOUTS_ENABLED === "true",
+      mingloraIdentityBridge: Buffer.byteLength(String(process.env.MINGLORA_SSO_SECRET || "")) >= 32
     },
     timestamp: new Date().toISOString()
   });
@@ -288,8 +289,111 @@ app.post("/api/paypal/webhook", express.raw({ type: "application/json", limit: "
   response.status(200).json({ received: true });
 }));
 
-app.use(express.json({ limit: "32kb" }));
+app.use(express.json({ limit: "32kb", verify(request, _response, buffer) { request.rawBody = Buffer.from(buffer); } }));
 app.use("/api", apiLimiter);
+
+function harborPayTokenHash(value) {
+  return createHash("sha256").update(String(value || ""), "utf8").digest("hex");
+}
+
+function createHmacHex(secret, value) {
+  return createHmac("sha256", secret).update(value, "utf8").digest("hex");
+}
+
+function verifyMingloraLaunch(request) {
+  const secret = String(process.env.MINGLORA_SSO_SECRET || "");
+  if (Buffer.byteLength(secret) < 32) throw httpError(503, "Minglora identity linking is not configured.");
+  const timestamp = String(request.get("x-harborpay-timestamp") || "");
+  const supplied = String(request.get("x-harborpay-signature") || "");
+  const sentAt = Number(timestamp);
+  if (!/^\d{13}$/.test(timestamp) || !Number.isFinite(sentAt) || Math.abs(Date.now() - sentAt) > 90_000) {
+    throw httpError(401, "The Minglora identity request is expired or invalid.");
+  }
+  if (!Buffer.isBuffer(request.rawBody)) throw httpError(400, "The signed request body is unavailable.");
+  const bodyHash = createHash("sha256").update(request.rawBody).digest("hex");
+  const canonical = [timestamp, "POST", "/api/integrations/minglora/launch", bodyHash].join("\n");
+  const expected = createHmacHex(secret, canonical);
+  const left = Buffer.from(expected, "hex");
+  const right = Buffer.from(supplied, "hex");
+  if (right.length !== left.length || !timingSafeEqual(left, right)) {
+    throw httpError(401, "The Minglora identity signature could not be verified.");
+  }
+}
+
+app.post("/api/integrations/minglora/launch", asyncRoute(async (request, response) => {
+  verifyMingloraLaunch(request);
+  const { mingloraUserId, email, fullName, requestId, consentVersion } = request.body || {};
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(String(mingloraUserId || ""))) throw httpError(400, "A valid Minglora account reference is required.");
+  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw httpError(400, "A valid contact email is required.");
+  if (typeof fullName !== "string" || fullName.trim().length < 2 || fullName.trim().length > 120) throw httpError(400, "A valid display name is required.");
+  if (!uuidPattern.test(String(requestId || ""))) throw httpError(400, "A valid request identifier is required.");
+  if (consentVersion !== "2026-11-01") throw httpError(400, "The current Minglora data-sharing notice must be accepted.");
+  const webUrl = String(process.env.HARBORPAY_WEB_URL || process.env.WEB_ORIGIN || "").trim();
+  let base;
+  try { base = new URL(webUrl); } catch { throw httpError(503, "HarborPay web application URL is not configured."); }
+  if (base.protocol !== "https:" && process.env.NODE_ENV === "production") throw httpError(503, "HarborPay requires an HTTPS web application URL in production.");
+  if (base.username || base.password || base.search || base.hash) throw httpError(503, "HarborPay web application URL is invalid.");
+
+  const code = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const { error } = await getDatabase().from("minglora_link_handoffs").insert({
+    request_id: requestId,
+    minglora_user_id: mingloraUserId,
+    email: email.trim().toLowerCase(),
+    full_name: fullName.trim(),
+    handoff_token_hash: harborPayTokenHash(code),
+    expires_at: expiresAt,
+    consent_version: consentVersion
+  });
+  if (error) {
+    if (error.code === "23505") throw httpError(409, "This Minglora activation request has already been used. Start again from Minglora.");
+    throw httpError(503, "HarborPay could not securely prepare your account activation.");
+  }
+  base.searchParams.set("minglora_handoff", code);
+  response.set("Cache-Control", "no-store").json({ launchUrl: base.toString(), expiresAt });
+}));
+
+app.post("/api/integrations/minglora/exchange", asyncRoute(async (request, response) => {
+  const code = String(request.body?.code || "");
+  if (!/^[A-Za-z0-9_-]{40,100}$/.test(code)) throw httpError(400, "The Minglora activation link is invalid or expired.");
+  const { data, error } = await getDatabase().rpc("harborpay_exchange_minglora_handoff", {
+    p_token_hash: harborPayTokenHash(code)
+  });
+  if (error) throw httpError(503, "HarborPay could not validate the Minglora activation link.");
+  const handoff = Array.isArray(data) ? data[0] : null;
+  if (!handoff) throw httpError(410, "The Minglora activation link has expired or has already been used. Return to Minglora and start again.");
+  response.set("Cache-Control", "no-store").json({
+    prefill: { email: handoff.email, fullName: handoff.full_name },
+    linkToken: code,
+    expiresAt: handoff.expires_at
+  });
+}));
+
+app.post("/api/integrations/minglora/link", requireAuth, asyncRoute(async (request, response) => {
+  const code = String(request.body?.linkToken || "");
+  if (!/^[A-Za-z0-9_-]{40,100}$/.test(code)) throw httpError(400, "The account-linking approval has expired. Start again from Minglora.");
+  const email = String(request.user.email || "").trim().toLowerCase();
+  if (!email || !(request.user.email_confirmed_at || request.user.confirmed_at)) {
+    throw httpError(403, "Confirm your HarborPay email address before linking the account.");
+  }
+  const { data, error } = await getDatabase().rpc("harborpay_link_minglora_identity", {
+    p_token_hash: harborPayTokenHash(code),
+    p_harborpay_user_id: request.user.id,
+    p_verified_email: email
+  });
+  if (error || data !== true) throw httpError(error?.code === "23505" ? 409 : 403, "This financial account could not be linked. Check that the verified HarborPay email matches the Minglora email and contact support if it is already linked.");
+  response.set("Cache-Control", "no-store").json({ linked: true, message: "Your HarborPay account is securely linked to Minglora." });
+}));
+
+app.get("/api/integrations/minglora/status", requireAuth, asyncRoute(async (request, response) => {
+  const { data, error } = await getDatabase().from("minglora_identity_links")
+    .select("minglora_user_id, email, linked_at")
+    .eq("harborpay_user_id", request.user.id)
+    .maybeSingle();
+  if (error) throw httpError(503, "Account-link status is temporarily unavailable.");
+  response.set("Cache-Control", "no-store").json({ linked: Boolean(data), link: data || null });
+}));
 
 app.get("/api/payments", requireAuth, asyncRoute(async (request, response) => {
   const { data, error } = await getDatabase().from("payments")

@@ -1,0 +1,81 @@
+# HarborPay is deployed as two independent Render services.
+# This Blueprint does not create a Supabase project or enable live-money processing.
+# These names are intentionally separate from the original harborpay-api/web services.
+services:
+  - type: web
+    name: minglora-harborpay-api
+    runtime: node
+    plan: free
+    rootDir: integrations/harborpay/source/server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PAYPAL_ENVIRONMENT
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_CURRENCY
+        value: USD
+      - key: PAYPAL_PAYOUTS_ENABLED
+        value: "false"
+      - key: HARBORPAY_ADMIN_USER_IDS
+        sync: false
+      - key: HARBORPAY_WEB_URL
+        value: https://minglora-harborpay-web.onrender.com
+      - key: WEB_ORIGIN
+        value: https://minglora-harborpay-web.onrender.com
+      - key: MINGLORA_SSO_SECRET
+        sync: false
+      - key: APP_URL
+        value: https://minglora-harborpay-web.onrender.com
+
+  - type: web
+    runtime: static
+    name: minglora-harborpay-web
+    rootDir: integrations/harborpay/source/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "frame-ancestors 'self' https://minglora-social-network.onrender.com http://localhost:3000;"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+    envVars:
+      - key: VITE_API_URL
+        value: https://minglora-harborpay-api.onrender.com
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false

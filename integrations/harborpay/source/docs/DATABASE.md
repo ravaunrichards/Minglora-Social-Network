@@ -8,6 +8,7 @@ HarborPay is a PayPal-backed payment-processing application. This schema records
 - `merchant_accounts`: distinct merchant/business spaces, each with an owner.
 - `merchant_members`: explicit team roles for merchant owners, administrators, finance, support, developers, and read-only users.
 - A database trigger creates the owner membership when a merchant account is created.
+- minglora_link_handoffs and minglora_identity_links: hashed, short-lived, single-use consent handoffs and one-to-one account-link references. They are visible only to the HarborPay service role.
 
 ## Payment operations
 
@@ -36,6 +37,7 @@ HarborPay is a PayPal-backed payment-processing application. This schema records
 
 1. `20261029000100_harborpay_core.sql` — profiles, payments, payouts, and inbound webhook records.
 2. `20261030000200_harborpay_merchant_operations.sql` — merchant accounts/team roles, customers, orders, payment links, refunds, disputes, status history, API keys, outbound webhooks, audit trail, and webhook processing leases.
+3. `20261101000300_harborpay_minglora_identity_bridge.sql` — consented Minglora handoffs, replay protection, one-to-one external identity links, RLS and service-role-only RPCs.
 
 The complete reference SQL is in `database/schema.sql`.
 
