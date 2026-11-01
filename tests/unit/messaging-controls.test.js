@@ -48,7 +48,7 @@ test('Small media files use the signed-upload URL route and large files retain T
 });
 
 
-test('Messenger top-right control opens a left chats panel with filters, quick actions and individual settings switches', async()=>{
+test('Messenger top-right control opens a right-side chats panel with filters, quick actions and individual settings switches', async()=>{
   const [app,css,html,server,settings]=await Promise.all([
     read('../../public/app.js'),read('../../public/styles.css'),read('../../public/index.html'),
     read('../../src/server.js'),read('../../public/settings.js')
@@ -64,9 +64,10 @@ test('Messenger top-right control opens a left chats panel with filters, quick a
   assert.ok(app.includes('data-messenger-setting='));
   assert.ok(app.includes('data-messenger-archive=')&&app.includes('data-messenger-restrict='));
   assert.ok(app.includes('data-messenger-destination='));
-  assert.ok(css.includes('.messenger-panel{position:fixed')&&css.includes('left:max(14px'));
+  assert.ok(css.includes('.messenger-panel{position:fixed')&&css.includes('left:auto;right:max(14px,env(safe-area-inset-right))'));
+  assert.ok(css.includes('top:70px;left:auto;right:max(8px,env(safe-area-inset-right))'));
   assert.ok(css.includes('.messenger-switch.is-on'));
-  assert.ok(html.includes('20261101-messenger-left-panel-1'));
+  assert.ok(html.includes('20261101-messenger-right-panel-1'));
   assert.ok(server.includes('messengerAutoOpenNewMessages')&&server.includes('messengerArchivedConversationIds'));
   assert.ok(server.includes('isRequest:!isFriend'));
   assert.ok(settings.includes('messengerActiveStatus: true'));
