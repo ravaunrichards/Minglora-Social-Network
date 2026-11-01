@@ -3040,8 +3040,8 @@ body.auth-mode .auth-screen{
 }
 
 
-/* Facebook-style Messenger chats panel: anchored to the left below the top bar. */
-.messenger-panel{position:fixed;z-index:2300;top:76px;left:max(14px,env(safe-area-inset-left));width:min(378px,calc(100vw - 28px));height:min(690px,calc(100dvh - 92px - env(safe-area-inset-bottom)));min-height:300px;display:flex;flex-direction:column;overflow:visible;border:1px solid var(--line);border-radius:16px;background:var(--surface,var(--card));color:var(--text,var(--ink));box-shadow:0 16px 48px rgba(22,34,55,.24);animation:messenger-panel-enter .16s ease-out}
+/* Messenger chats panel: anchored to the right below the top bar. */
+.messenger-panel{position:fixed;z-index:2300;top:76px;left:auto;right:max(14px,env(safe-area-inset-right));width:min(378px,calc(100vw - 28px));height:min(690px,calc(100dvh - 92px - env(safe-area-inset-bottom)));min-height:300px;display:flex;flex-direction:column;overflow:visible;border:1px solid var(--line);border-radius:16px;background:var(--surface,var(--card));color:var(--text,var(--ink));box-shadow:0 16px 48px rgba(22,34,55,.24);animation:messenger-panel-enter .16s ease-out}
 .messenger-panel[hidden]{display:none!important}
 @keyframes messenger-panel-enter{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
 .messenger-panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 14px 11px}
@@ -3106,7 +3106,7 @@ body.auth-mode .auth-screen{
 .messenger-subview-head button{width:28px;height:28px;border:0;border-radius:50%;background:var(--surface-soft,var(--bg));color:var(--blue);font-size:20px}
 .messenger-subview-head strong{font-size:12px}
 @media(max-width:700px){
-  .messenger-panel{top:70px;left:max(8px,env(safe-area-inset-left));width:min(390px,calc(100vw - 16px));height:min(650px,calc(100dvh - 82px - env(safe-area-inset-bottom)));max-height:calc(100dvh - 82px - env(safe-area-inset-bottom));border-radius:14px}
+  .messenger-panel{top:70px;left:auto;right:max(8px,env(safe-area-inset-right));width:min(390px,calc(100vw - 16px));height:min(650px,calc(100dvh - 82px - env(safe-area-inset-bottom)));max-height:calc(100dvh - 82px - env(safe-area-inset-bottom));border-radius:14px}
   .messenger-chat-row-actions{opacity:1}
   .messenger-panel-header{padding:12px 10px 9px}
   .messenger-panel-icon{width:32px;height:32px}
