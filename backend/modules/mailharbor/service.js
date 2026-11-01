@@ -211,14 +211,6 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
   if (route === '/drafts' && verb === 'POST') {
     const parsed = validateDraftRecipients(input);
     if (parsed.error) return { status: 400, body: { error: parsed.error } };
-
-    const draftId = input.draftId === undefined || input.draftId === null || input.draftId === '' ? null : Number(input.draftId);
-    const draft = draftId === null ? null : db.mailMessages.find(item =>
-      Number(item.id) === draftId && String(item.owner_id) === String(mailbox.memberId) && item.folder === 'drafts'
-    );
-    if (draftId !== null && (!Number.isSafeInteger(draftId) || !draft)) {
-      return { status: 404, body: { error: 'Draft not found in your mailbox.' } };
-    }
     const subject = String(input.subject ?? '').trim();
     const bodyText = String(input.body ?? '');
     if (subject.length > MAX_SUBJECT_LENGTH) return { status: 400, body: { error: 'Subject must be 998 characters or fewer.' } };
@@ -243,6 +235,14 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
   if (route === '/messages' && verb === 'POST') {
     const parsed = validateRecipients(input);
     if (parsed.error) return { status: 400, body: { error: parsed.error } };
+
+    const draftId = input.draftId === undefined || input.draftId === null || input.draftId === '' ? null : Number(input.draftId);
+    const draft = draftId === null ? null : db.mailMessages.find(item =>
+      Number(item.id) === draftId && String(item.owner_id) === String(mailbox.memberId) && item.folder === 'drafts'
+    );
+    if (draftId !== null && (!Number.isSafeInteger(draftId) || !draft)) {
+      return { status: 404, body: { error: 'Draft not found in your mailbox.' } };
+    }
     const subject = String(input.subject ?? '').trim();
     const bodyText = String(input.body ?? '');
     if (subject.length > MAX_SUBJECT_LENGTH) return { status: 400, body: { error: 'Subject must be 998 characters or fewer.' } };
