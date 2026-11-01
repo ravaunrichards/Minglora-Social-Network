@@ -56,7 +56,7 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261101-mailharbor-in-app-1/);
   assert.match(html,/app\.js\?v=20261101-mailharbor-in-app-1/);
-  assert.match(worker,/minglora-shell-v57-mailharbor-in-app-1/);
+  assert.match(worker,/minglora-shell-v58-profile-tools-1/);
   assert.match(worker,/styles\.css\?v=20261101-mailharbor-in-app-1/);
   assert.match(worker,/app\.js\?v=20261101-mailharbor-in-app-1/);
 });
