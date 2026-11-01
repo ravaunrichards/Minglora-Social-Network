@@ -3037,12 +3037,14 @@ async function refreshMessageConversations(){
   try{
     let result=await api('/messages');
     state.conversations=result.conversations||[];
+    paintMessengerBadge(state.conversations);
     const activeIds=new Set(state.messageWindows.filter(win=>!win.minimized).map(win=>win.user.id));
     const unread=state.conversations.filter(conversation=>activeIds.has(conversation.user.id)&&(conversation.unreadCount||0)>0);
     if(unread.length){
       await Promise.all(unread.map(conversation=>api('/messages/'+encodeURIComponent(conversation.user.id)+'/read',{method:'POST',body:'{}'}).catch(()=>null)));
       result=await api('/messages');
       state.conversations=result.conversations||[];
+      paintMessengerBadge(state.conversations);
     }
     state.messageWindows.filter(win=>!win.minimized).forEach(win=>{
       const conversation=state.conversations.find(item=>item.user.id===win.user.id);
@@ -3077,6 +3079,7 @@ async function refreshMessageConversations(){
 }
 async function reloadMessageWindows(){
   state.conversations=(await api('/messages')).conversations||[];
+  paintMessengerBadge(state.conversations);
   renderMessageWindows();
   if(state.view==='messages')renderMessages().catch(error=>toast(error.message));
 }
@@ -3510,7 +3513,7 @@ async function pollBrowserNotifications(){
       const fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
-        if(webPushSubscriptionActive||!['live','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
+        if(webPushSubscriptionActive||!['live','message','profile_view'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':'New Minglora message';
         const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
