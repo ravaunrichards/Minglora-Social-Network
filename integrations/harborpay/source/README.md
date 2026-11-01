@@ -10,6 +10,9 @@ HarborPay is a payment application built around real provider transactions. The 
 - PayPal webhook signature verification and idempotent event storage.
 - A restricted server-side PayPal Payouts endpoint for authorized administrators.
 - A customer transaction history that reads only records belonging to the signed-in user.
+- HarborPay personal profile management, including phone, country, locale, time zone and Auth verification status.
+- A merchant workspace for creating business profiles, maintaining business details, and managing customers, order records and payment-link records with role checks on every API call.
+- Supabase Auth email-confirmation, sign-in, password-recovery and password-update flows in the HarborPay web client.
 - PostgreSQL migration/RLS/webhook tests, API tests, and a production build check.
 
 ## Merchant API
@@ -18,6 +21,9 @@ HarborPay is a payment application built around real provider transactions. The 
 - `GET/POST /api/merchants/:merchantId/customers` — manage merchant customer records.
 - `GET/POST /api/merchants/:merchantId/orders` — manage merchant order records. Creating an order does not mean it has been paid.
 - `GET/POST /api/merchants/:merchantId/payment-links` — create and list payment-link records. Public checkout is not yet activated.
+- `GET/POST /api/profile` — read/update the signed-in HarborPay profile.
+- `POST /api/merchants/:merchantId/profile` — owner/admin business-profile updates.
+- `POST /api/merchants/:merchantId/payment-links/:linkId/status` — owner/admin activation or disabling of a payment-link record.
 
 Every merchant resource request checks the caller's merchant membership and role in the API. The API service role bypasses database RLS, so server-side authorization is mandatory. Payment links are records only until a merchant-specific public checkout flow is implemented and tested.
 
@@ -31,7 +37,7 @@ A customer-held wallet, peer-to-peer stored balances, escrow, or redeemable e-mo
 
 - web/ — React customer application.
 - server/ — Express API, Supabase authentication, PayPal Orders, Payouts, and webhooks.
-- database/migrations/ — versioned Supabase core, merchant-operations and Minglora identity-bridge migrations.
+- database/migrations/ — versioned Supabase core, merchant-operations, Minglora identity-bridge, and Auth/profile-index migrations.
 - database/schema.sql — complete schema reference matching all three migrations.
 - database/tests/ — PostgreSQL schema, RLS, merchant ownership and webhook concurrency checks.
 - docs/DATABASE.md — table map and database security boundaries.
@@ -43,7 +49,7 @@ A customer-held wallet, peer-to-peer stored balances, escrow, or redeemable e-mo
 Requirements: Node.js 20 or newer and npm.
 
 1. Create a separate Supabase project for HarborPay. Do not reuse a database belonging to another application.
-2. Run both migrations in order in the HarborPay Supabase SQL editor: 20261029000100_harborpay_core.sql, then 20261030000200_harborpay_merchant_operations.sql.
+2. Apply the four migrations in order: 20261029000100_harborpay_core.sql, 20261030000200_harborpay_merchant_operations.sql, 20261101000300_harborpay_minglora_identity_bridge.sql, and 20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql. The dedicated Minglora HarborPay database has all four applied.
 3. Create a PayPal REST application in the PayPal Developer Dashboard. Start with Sandbox credentials.
 4. Copy server/.env.example to server/.env and fill in the server-only secrets.
 5. Copy web/.env.example to web/.env.local and set the public Supabase URL/key and API URL.
