@@ -91,9 +91,9 @@ test('private contact information is only supplied to its owner or viewers allow
 });
 
 test('profile shell and service worker load the organised About UI without stale cached assets',()=>{
-  assert.match(html,/app\.js\?v=20261101-messenger-right-panel-2/);
-  assert.match(html,/styles\.css\?v=20261101-messenger-right-panel-2/);
-  assert.match(worker,/minglora-shell-v56-messenger-right-panel-2/);
-  assert.match(worker,/app\.js\?v=20261101-messenger-right-panel-2/);
-  assert.match(worker,/styles\.css\?v=20261101-messenger-right-panel-2/);
+  assert.match(html,/app\.js\?v=20261101-mailharbor-in-app-1/);
+  assert.match(html,/styles\.css\?v=20261101-mailharbor-in-app-1/);
+  assert.match(worker,/minglora-shell-v57-mailharbor-in-app-1/);
+  assert.match(worker,/app\.js\?v=20261101-mailharbor-in-app-1/);
+  assert.match(worker,/styles\.css\?v=20261101-mailharbor-in-app-1/);
 });
