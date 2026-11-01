@@ -1,0 +1,108 @@
+name: HarborPay Integration CI
+
+on:
+  push:
+    branches:
+      - feat/harborpay-independent-financial-service
+    paths:
+      - "integrations/harborpay/**"
+      - "src/harborpay-bridge.js"
+      - "src/server.js"
+      - "src/store.js"
+      - "tests/harborpay-bridge.test.js"
+      - "tests/api.test.js"
+  pull_request:
+    branches: [main]
+    paths:
+      - "integrations/harborpay/**"
+      - "src/harborpay-bridge.js"
+      - "src/server.js"
+      - "src/store.js"
+      - "tests/harborpay-bridge.test.js"
+      - "tests/api.test.js"
+
+jobs:
+  database-migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: harborpay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d harborpay_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create Supabase-compatible test roles
+        working-directory: integrations/harborpay/source
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/supabase_bootstrap.sql
+      - name: Apply HarborPay core migration
+        working-directory: integrations/harborpay/source
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261029000100_harborpay_core.sql
+      - name: Apply HarborPay merchant operations migration
+        working-directory: integrations/harborpay/source
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261030000200_harborpay_merchant_operations.sql
+      - name: Apply HarborPay Minglora identity bridge migration
+        working-directory: integrations/harborpay/source
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql
+      - name: Verify schema, RLS, service-role grants and single-use identity linking
+        working-directory: integrations/harborpay/source
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/verify_schema.sql
+
+  api-and-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install HarborPay API dependencies
+        working-directory: integrations/harborpay/source/server
+        run: npm install --no-audit --no-fund
+      - name: Check HarborPay API syntax
+        working-directory: integrations/harborpay/source/server
+        run: node --check src/index.js
+      - name: Run HarborPay API tests
+        working-directory: integrations/harborpay/source/server
+        run: npm test
+      - name: Install HarborPay web dependencies
+        working-directory: integrations/harborpay/source/web
+        run: npm install --no-audit --no-fund
+      - name: Build HarborPay web application
+        working-directory: integrations/harborpay/source/web
+        env:
+          VITE_API_URL: https://harborpay-api.invalid
+          VITE_SUPABASE_URL: https://harborpay.invalid.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_ci_build_only
+        run: npm run build
+
+  minglora-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check:repo
