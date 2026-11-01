@@ -3058,14 +3058,24 @@ async function route(req, res) {
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
 let mailHarborRuntime = null;
-if (process.env.MAILHARBOR_DATABASE_URL && Buffer.byteLength(String(process.env.MAILHARBOR_SSO_SECRET || '')) >= 32) {
+const mailHarborDatabaseUrl = String(
+  process.env.MAILHARBOR_DATABASE_URL || process.env.DATABASE_URL || ''
+).trim();
+const mailHarborSsoReady =
+  Buffer.byteLength(String(process.env.MAILHARBOR_SSO_SECRET || '')) >= 32;
+if (mailHarborDatabaseUrl && mailHarborSsoReady) {
   try {
     mailHarborRuntime = await startMailHarborRuntime({ publicServer: server });
   } catch (error) {
     console.error('[Minglora MailHarbor startup]', String(error?.message || error).slice(0, 240));
   }
 } else {
-  console.info('[Minglora MailHarbor] Waiting for MAILHARBOR_DATABASE_URL to the existing Minglora Supabase Postgres database and MAILHARBOR_SSO_SECRET.');
+  const missing = [];
+  if (!mailHarborDatabaseUrl) {
+    missing.push('MAILHARBOR_DATABASE_URL (or DATABASE_URL for the existing Minglora Supabase project)');
+  }
+  if (!mailHarborSsoReady) missing.push('MAILHARBOR_SSO_SECRET');
+  console.info(`[Minglora MailHarbor] Waiting for ${missing.join(' and ')}.`);
 }
 server.listen(PORT,'0.0.0.0',async()=>{
   liveSessionCleanupReady = cleanupPersistedLiveSessions();
