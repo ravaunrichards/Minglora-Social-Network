@@ -70,3 +70,21 @@
 .subscription-channel strong{max-width:100%;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .subscription-channel small{font-size:10px;color:var(--muted)}
 .subscription-empty{padding:12px;border-radius:10px;background:var(--soft);font-size:13px;color:var(--muted)}
+
+
+/* Active StreamBay channel customization and creator tools */
+.channel-banner{height:190px;overflow:hidden;background:linear-gradient(120deg,#e8efff,#c9d8f4);border-radius:16px}
+.channel-banner img{width:100%;height:100%;object-fit:cover;display:block}
+.channel-profile-avatar{outline:5px solid var(--surface);box-shadow:0 4px 18px rgba(15,25,45,.16)}
+.channel-about{margin:20px 0 24px;padding:18px 20px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.channel-about h2{font-size:16px;margin:0 0 9px}
+.channel-about p{white-space:pre-wrap;line-height:1.6;color:var(--muted)}
+.channel-links{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.channel-links a{color:var(--accent);font-weight:700;text-decoration:none;border:1px solid var(--line);border-radius:20px;padding:7px 11px}
+.channel-links a:hover{background:var(--soft)}
+.image-upload-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.image-upload-row label{min-width:0}
+.image-upload-row span{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:4px}
+.channel-editor-form{max-height:min(88vh,900px);overflow:auto}
+.thumb img{width:100%;height:100%;display:block;object-fit:cover}
+@media(max-width:560px){.channel-banner{height:120px;border-radius:10px}.image-upload-row{grid-template-columns:1fr}}

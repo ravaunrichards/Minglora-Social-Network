@@ -40,3 +40,12 @@ The video detail view includes playback, likes, comments, subscribe/unsubscribe 
 - PATCH /api/streambay/channel
 
 The original standalone StreamBay registration/login and local JSON user store are intentionally excluded so Minglora remains the single identity, session and persistence provider.
+
+
+## Expanded active channel and creator controls
+
+- StreamBay has a separate creator channel profile with editable channel name, public handle, short bio, full About description, location and up to five HTTPS links.
+- Channel profile and cover images use Minglora's authenticated media upload and are attached only to StreamBay channel records. They do not overwrite the Minglora member avatar or profile cover.
+- Creator video editing supports custom thumbnail images. Thumbnail assets are ownership-checked and retained with their video record.
+- Watch Later is saved per Minglora member and is accessible from the StreamBay navigation.
+- The API also supports persistent playlists with public/private visibility, add/remove video operations, and owner-only edit/delete operations.

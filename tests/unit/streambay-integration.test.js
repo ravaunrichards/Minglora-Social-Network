@@ -10,7 +10,7 @@ const makeContext = () => {
     users:[owner,viewer],
     mediaAssets:[{id:'asset-1',ownerId:owner.id,slot:'post',status:'attached',attachedTo:'streambay:video-1',mediaType:'video',mimeType:'video/mp4',byteSize:1024,bucket:'videos',path:'creator/video-1.mp4'}],
     streambayVideos:[{id:'video-1',ownerId:owner.id,assetId:'asset-1',title:'A real video',description:'A description',category:'Education',views:2,status:'published',createdAt:'2026-10-30T12:00:00.000Z'}],
-    streambayComments:[],streambaySubscriptions:[],streambayLikes:[],streambayHistory:[],streambayChannels:[]
+    streambayComments:[],streambaySubscriptions:[],streambayLikes:[],streambayHistory:[],streambayChannels:[],streambayPlaylists:[],streambayPlaylistItems:[],streambayWatchLater:[]
   };
   let sequence=0;
   return {
@@ -126,4 +126,40 @@ test('StreamBay UI has six dedicated areas, Minglora session auth, and no second
   assert.ok(css.includes('.sb-3d-icon'));
   assert.ok(store.includes("'streambayVideos'"));
   assert.ok(server.includes('handleStreamBayApi'));
+});
+
+
+test('StreamBay channel customization stores About details and attaches owned channel images',async()=>{
+  const context=makeContext();context.user=owner;
+  context.db.mediaAssets.push({id:'channel-avatar',ownerId:owner.id,slot:'post',status:'uploaded',mediaType:'image',mimeType:'image/webp',byteSize:1200,bucket:'images',path:'creator/channel.webp'});
+  context.method='PATCH';context.path='/api/streambay/channel';
+  context.input={name:'My Creator Channel',handle:'creator.channel',bio:'Short channel bio',about:'Full channel About information',location:'Kingston',links:['https://example.com'],avatarAssetId:'channel-avatar'};
+  const result=await handleStreamBayApi(context);
+  assert.equal(result.body.channel.name,'My Creator Channel');
+  assert.equal(result.body.channel.handle,'creator.channel');
+  assert.equal(result.body.channel.bio,'Short channel bio');
+  assert.equal(result.body.channel.about,'Full channel About information');
+  assert.equal(result.body.channel.location,'Kingston');
+  assert.equal(result.body.channel.links[0].url,'https://example.com/');
+  assert.equal(context.db.mediaAssets.find(item=>item.id==='channel-avatar').attachedTo,'streambay:channel:avatar');
+  context.input={handle:'invalid handle'};
+  await assert.rejects(()=>handleStreamBayApi(context),error=>error.status===400);
+});
+
+test('StreamBay supports custom thumbnails, Watch Later and private playlist controls',async()=>{
+  const context=makeContext();context.user=owner;
+  context.db.mediaAssets.push({id:'video-thumb',ownerId:owner.id,slot:'post',status:'uploaded',mediaType:'image',mimeType:'image/png',byteSize:1200,bucket:'images',path:'creator/thumb.png'});
+  context.method='PATCH';context.path='/api/streambay/videos/video-1';context.input={thumbnailAssetId:'video-thumb'};
+  let result=await handleStreamBayApi(context);
+  assert.equal(result.body.video.thumbnailUrl,'https://media.example/creator/thumb.png');
+  context.user=viewer;context.method='POST';context.path='/api/streambay/watch-later/video-1';
+  result=await handleStreamBayApi(context);assert.equal(result.body.saved,true);
+  context.method='GET';context.path='/api/streambay/watch-later';
+  result=await handleStreamBayApi(context);assert.equal(result.body.videos.length,1);
+  context.user=owner;context.method='POST';context.path='/api/streambay/playlists';context.input={title:'Private favourites',visibility:'private'};
+  result=await handleStreamBayApi(context);const id=result.body.playlist.id;
+  context.user=viewer;context.method='GET';context.path='/api/streambay/playlists/'+id;
+  await assert.rejects(()=>handleStreamBayApi(context),error=>error.status===404);
+  context.user=owner;context.method='POST';context.path='/api/streambay/playlists/'+id+'/videos';context.input={videoId:'video-1'};
+  result=await handleStreamBayApi(context);assert.equal(result.body.videoCount,1);
 });

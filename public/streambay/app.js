@@ -1,5 +1,5 @@
 const $ = selector => document.querySelector(selector);
-const state = { user:null, videos:[], category:'All', route:'home', query:'', channelId:null };
+const state = { user:null, videos:[], category:'All', route:'home', query:'', channelId:null, watchLaterIds:new Set(), playlistId:null, playlistOwner:false };
 const CATEGORIES = ['All','Music','Gaming','Education','News','Sports','Comedy','Technology','Travel','Food','Lifestyle','Other'];
 const ICONS = '/assets/icons/navigation-3d.svg?v=20261101-streambay-1';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -54,12 +54,13 @@ function showGrid(){
 }
 function thumb(video){
   const src=video.media?.url;
-  const preview=src?'<video muted playsinline preload="metadata" src="'+esc(src)+'#t=1"></video>':'<div class="thumb-placeholder">'+icon('creator')+'</div>';
+  const preview=video.thumbnailUrl?'<img loading="lazy" src="'+esc(video.thumbnailUrl)+'" alt="">':src?'<video muted playsinline preload="metadata" src="'+esc(src)+'#t=1"></video>':'<div class="thumb-placeholder">'+icon('creator')+'</div>';
   return '<div class="thumb">'+preview+'<span class="duration">VIDEO</span></div>';
 }
 function videoCard(video){
   const owner=video.owner||{},own=Boolean(state.user&&video.ownerId===state.user.id);
-  const actions=own?'<div class="video-management"><button type="button" data-edit-video="'+esc(video.id)+'">'+icon('settings')+'<span>Edit</span></button><button type="button" data-delete-video="'+esc(video.id)+'">'+icon('close')+'<span>Delete</span></button></div>':'';
+  const actions=(own?'<div class="video-management"><button type="button" data-edit-video="'+esc(video.id)+'">'+icon('settings')+'<span>Edit</span></button><button type="button" data-delete-video="'+esc(video.id)+'">'+icon('close')+'<span>Delete</span></button></div>':'')+
+    (state.route==='playlist'&&state.playlistOwner?'<div class="video-management"><button type="button" data-remove-playlist="'+esc(video.id)+'">'+icon('close')+'<span>Remove from playlist</span></button></div>':'');
   return '<article class="video-card" data-watch="'+esc(video.id)+'">'+thumb(video)+'<div class="video-meta">'+
     '<div class="channel-avatar" data-channel="'+esc(owner.id||'')+'">'+(owner.avatar?'<img loading="lazy" src="'+esc(owner.avatar)+'" alt="">':initials(owner.name))+'</div>'+
     '<div class="video-copy"><h3>'+esc(video.title)+'</h3><p class="creator" data-channel="'+esc(owner.id||'')+'">'+esc(owner.name||'Minglora creator')+'</p><p>'+fmt(video.views)+' views · '+ago(video.createdAt)+'</p></div></div>'+actions+'</article>';
@@ -67,6 +68,7 @@ function videoCard(video){
 function bindCards(root=document){
   root.querySelectorAll('[data-edit-video]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();const video=state.videos.find(item=>item.id===button.dataset.editVideo);if(video)openVideoEditor(video);}));
   root.querySelectorAll('[data-delete-video]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();deleteVideo(button.dataset.deleteVideo,button);}));
+  root.querySelectorAll('[data-remove-playlist]').forEach(button=>button.addEventListener('click',async event=>{event.stopPropagation();try{await api('/api/streambay/playlists/'+encodeURIComponent(state.playlistId)+'/videos/'+encodeURIComponent(button.dataset.removePlaylist),{method:'DELETE'});await openPlaylist(state.playlistId);}catch(error){toast(error.message);}}));
   root.querySelectorAll('[data-watch]').forEach(element=>element.addEventListener('click',event=>{
     if(event.target.closest('[data-channel]'))return;
     location.hash='watch/'+encodeURIComponent(element.dataset.watch);
@@ -85,9 +87,11 @@ async function loadVideos(){
   $('#videoGrid').innerHTML='<div class="loading">Loading videos…</div>';
   try{
     let rows=[];
-    if(['subscriptions','history','uploads'].includes(state.route)&&!requireSignedIn())return;
+    if(['subscriptions','history','uploads','watch-later'].includes(state.route)&&!requireSignedIn())return;
     if(state.route==='history'){
       rows=(await api('/api/streambay/history')).videos||[];
+    }else if(state.route==='watch-later'){
+      rows=(await api('/api/streambay/watch-later')).videos||[];
     }else{
       const sort=state.route==='subscriptions'?'subscriptions':state.route==='explore'?'popular':'recent';
       const mine=state.route==='uploads'?'&mine=1':'';
@@ -108,6 +112,7 @@ async function loadVideos(){
       explore:['Explore','Discover popular videos from across Minglora.'],
       subscriptions:['Subscriptions','New videos from channels you follow.'],
       history:['History','Videos you have watched on StreamBay.'],
+      'watch-later':['Watch later','Videos you saved to watch another time.'],
       uploads:['Your videos','Manage the videos published to your channel.']
     };
     const heading=headings[state.route]||headings.home;
@@ -146,11 +151,13 @@ async function openWatch(id){
     const result=await api('/api/streambay/videos/'+encodeURIComponent(id)+'/view');
     const video=result.video;
     if(!video.media?.url)throw new Error('The video file is not currently available.');
-    const [commentData,channelData,suggestionsData]=await Promise.all([
+    const [commentData,channelData,suggestionsData,watchLaterData]=await Promise.all([
       api('/api/streambay/videos/'+encodeURIComponent(id)+'/comments'),
       api('/api/streambay/channels/'+encodeURIComponent(video.owner.id)),
-      api('/api/streambay/videos?sort=popular')
+      api('/api/streambay/videos?sort=popular'),
+      state.user?api('/api/streambay/watch-later'):Promise.resolve({videos:[]})
     ]);
+    state.watchLaterIds=new Set((watchLaterData.videos||[]).map(item=>item.id));
     const channel=channelData.channel;
     const suggestions=(suggestionsData.videos||[]).filter(item=>item.id!==id).slice(0,6);
     $('#watchView').innerHTML='<div class="watch-layout"><div>'+
@@ -158,12 +165,45 @@ async function openWatch(id){
       '<h1 class="watch-title">'+esc(video.title)+'</h1>'+
       '<div class="watch-actions"><div class="owner-row"><div class="channel-avatar" data-channel="'+esc(channel.id)+'">'+(channel.avatar?'<img src="'+esc(channel.avatar)+'" alt="">':initials(channel.name))+'</div><div class="details" data-channel="'+esc(channel.id)+'">'+esc(channel.name)+'<small>'+fmt(channel.subscribers)+' subscribers</small></div>'+
       (state.user?.id!==channel.id?'<button class="subscribe '+(channel.subscribed?'subscribed':'')+'" id="subscribeBtn" type="button">'+(channel.subscribed?'Subscribed':'Subscribe')+'</button>':'')+
-      '</div><button class="action-pill" id="likeBtn" type="button">'+icon('saved')+'<span>'+fmt(video.likes)+' Likes</span></button>'+(state.user?.id===video.ownerId?'<button class="action-pill" id="watchEditVideo" type="button">'+icon('settings')+'<span>Edit</span></button><button class="action-pill" id="watchDeleteVideo" type="button">'+icon('close')+'<span>Delete</span></button>':'')+'</div>'+
+      '</div><button class="action-pill" id="likeBtn" type="button">'+icon('saved')+'<span>'+fmt(video.likes)+' Likes</span></button>'+
+      (state.user?'<button class="action-pill" id="watchLaterBtn" type="button">'+icon('activity')+'<span>'+(state.watchLaterIds.has(video.id)?'Saved for later':'Watch later')+'</span></button><button class="action-pill" id="addToPlaylistBtn" type="button">'+icon('creator')+'<span>Add to playlist</span></button>':'')+
+      '<button class="action-pill" id="shareVideoBtn" type="button">'+icon('share')+'<span>Share</span></button>'+
+      (state.user?.id===video.ownerId?'<button class="action-pill" id="watchEditVideo" type="button">'+icon('settings')+'<span>Edit</span></button><button class="action-pill" id="watchDeleteVideo" type="button">'+icon('close')+'<span>Delete</span></button>':'')+'</div>'+
       '<div class="description"><b>'+fmt(video.views)+' views · '+new Date(video.createdAt).toLocaleDateString()+' · '+esc(video.category)+'</b><p>'+esc(video.description||'No description provided.')+'</p></div>'+
       '<section class="comments"><h3>'+fmt(video.comments)+' Comments</h3><form class="comment-form" id="commentForm"><input name="text" maxlength="1000" placeholder="Add a comment…" required><button type="submit">Comment</button></form><div id="commentsList">'+((commentData.comments||[]).map(commentHtml).join()||'<p class="fineprint">Be the first to comment.</p>')+'</div></section>'+
       '</div><aside class="suggestions"><h3>Up next</h3>'+suggestions.map(item=>'<div class="suggestion" data-watch="'+esc(item.id)+'">'+thumb(item)+'<div><h4>'+esc(item.title)+'</h4><p>'+esc(item.owner?.name||'Creator')+'</p><p>'+fmt(item.views)+' views</p></div></div>').join('')+'</aside></div>';
     $('#watchEditVideo')?.addEventListener('click',()=>openVideoEditor(video));
     $('#watchDeleteVideo')?.addEventListener('click',()=>deleteVideo(id));
+    $('#addToPlaylistBtn')?.addEventListener('click',async()=>{
+      if(!requireSignedIn())return;
+      try{
+        const result=await api('/api/streambay/playlists?mine=1');
+        let rows=result.playlists||[];
+        if(!rows.length){
+          const title=prompt('Create a playlist name');
+          if(!title||!title.trim())return;
+          const created=await api('/api/streambay/playlists',{method:'POST',body:JSON.stringify({title:title.trim(),visibility:'public'})});
+          rows=[created.playlist];
+        }
+        const menu=rows.map((item,index)=>(index+1)+'. '+item.title).join('\n');
+        const choice=Number(prompt('Add this video to which playlist?\n'+menu,'1'));
+        if(!Number.isInteger(choice)||choice<1||choice>rows.length)return;
+        await api('/api/streambay/playlists/'+encodeURIComponent(rows[choice-1].id)+'/videos',{method:'POST',body:JSON.stringify({videoId:video.id})});
+        toast('Video added to '+rows[choice-1].title+'.');
+      }catch(error){toast(error.message);}
+    });
+    $('#watchLaterBtn')?.addEventListener('click',async()=>{
+      if(!requireSignedIn())return;
+      try{
+        if(state.watchLaterIds.has(video.id)){await api('/api/streambay/watch-later/'+encodeURIComponent(video.id),{method:'DELETE'});state.watchLaterIds.delete(video.id);}
+        else{await api('/api/streambay/watch-later/'+encodeURIComponent(video.id),{method:'POST'});state.watchLaterIds.add(video.id);}
+        $('#watchLaterBtn span').textContent=state.watchLaterIds.has(video.id)?'Saved for later':'Watch later';
+      }catch(error){toast(error.message);}
+    });
+    $('#shareVideoBtn')?.addEventListener('click',async()=>{
+      const shareUrl=location.origin+'/streambay/index.html#watch/'+encodeURIComponent(video.id);
+      try{if(navigator.share)await navigator.share({title:video.title,url:shareUrl});else{await navigator.clipboard.writeText(shareUrl);toast('Video link copied.');}}catch(error){if(error.name!=='AbortError')toast('Could not share this video.');}
+    });
     $('#subscribeBtn')?.addEventListener('click',async()=>{
       if(!requireSignedIn())return;
       try{const update=await api('/api/streambay/channels/'+encodeURIComponent(channel.id)+'/subscribe',{method:'POST'});channel.subscribed=update.subscribed;channel.subscribers=update.subscribers;$('#subscribeBtn').textContent=update.subscribed?'Subscribed':'Subscribe';$('#subscribeBtn').classList.toggle('subscribed',update.subscribed);toast(update.subscribed?'Subscribed to channel':'Unsubscribed');}
@@ -200,6 +240,8 @@ function openVideoEditor(video){
   form.elements.title.value=video.title;
   form.elements.description.value=video.description||'';
   form.elements.category.value=video.category||'Other';
+  form.elements.thumbnail.value='';
+  $('#thumbnailStatus').textContent=video.thumbnailUrl?'A custom thumbnail is set. Choose another image to replace it.':'No custom thumbnail set. The video preview is used.';
   $('#editVideoDialog').showModal();
 }
 async function deleteVideo(id,button){
@@ -235,17 +277,24 @@ async function openChannel(id){
     const own=state.user?.id===channel.id;
     const videos=videoResult.videos||[];
     state.videos=videos;
-    $('#channelView').innerHTML='<div class="channel-banner"></div><div class="channel-heading"><div class="channel-avatar">'+(channel.avatar?'<img src="'+esc(channel.avatar)+'" alt="">':initials(channel.name))+'</div><div class="channel-info"><h1>'+esc(channel.name)+'</h1><p>@'+esc(channel.handle)+' · '+fmt(channel.subscribers)+' subscribers · '+fmt(channel.videoCount)+' videos</p></div>'+
-      (own?'<button class="action-pill" id="editChannel" type="button">Edit channel</button><button class="action-pill" id="yourVideos" type="button">'+icon('creator')+' Your videos</button>': '<button class="subscribe '+(channel.subscribed?'subscribed':'')+'" id="channelSubscribe" type="button">'+(channel.subscribed?'Subscribed':'Subscribe')+'</button>')+
-      '</div><div class="channel-bio">'+esc(channel.bio||'Welcome to my StreamBay channel.')+'</div><div class="channel-tabs"><span>Videos</span><span>About</span></div><div class="video-grid">'+(videos.map(videoCard).join()||'<div class="empty">This channel has not published videos yet.</div>')+'</div>';
+    $('#channelView').innerHTML='<div class="channel-banner">'+(channel.cover?'<img src="'+esc(channel.cover)+'" alt="Channel cover">':'')+'</div><div class="channel-heading"><div class="channel-avatar channel-profile-avatar">'+(channel.avatar?'<img src="'+esc(channel.avatar)+'" alt="Channel profile image">':initials(channel.name))+'</div><div class="channel-info"><h1>'+esc(channel.name)+'</h1><p>@'+esc(channel.handle)+' · '+fmt(channel.subscribers)+' subscribers · '+fmt(channel.videoCount)+' videos'+(channel.location?' · '+esc(channel.location):'')+'</p></div>'+
+      (own?'<button class="action-pill" id="editChannel" type="button">'+icon('settings')+' Customize channel</button><button class="action-pill" id="yourVideos" type="button">'+icon('creator')+' Your videos</button>': '<button class="subscribe '+(channel.subscribed?'subscribed':'')+'" id="channelSubscribe" type="button">'+(channel.subscribed?'Subscribed':'Subscribe')+'</button>')+
+      '</div><div class="channel-bio">'+esc(channel.bio||'')+'</div><section class="channel-about"><h2>About this channel</h2><p>'+esc(channel.about||channel.bio||'This creator has not added a channel description yet.')+'</p>'+(channel.location?'<p><b>Location:</b> '+esc(channel.location)+'</p>':'')+(channel.links?.length?'<div class="channel-links">'+channel.links.map(link=>'<a href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label||link.url)+'</a>').join('')+'</div>':'')+'</section><div class="channel-tabs"><span>Videos</span><span>About</span></div><div class="video-grid">'+(videos.map(videoCard).join()||'<div class="empty">This channel has not published videos yet.</div>')+'</div>';
     $('#channelSubscribe')?.addEventListener('click',async()=>{
       if(!requireSignedIn())return;
       try{const update=await api('/api/streambay/channels/'+encodeURIComponent(channel.id)+'/subscribe',{method:'POST'});$('#channelSubscribe').textContent=update.subscribed?'Subscribed':'Subscribe';$('#channelSubscribe').classList.toggle('subscribed',update.subscribed);toast(update.subscribed?'Subscribed':'Unsubscribed');}
       catch(error){toast(error.message);}
     });
     $('#editChannel')?.addEventListener('click',()=>{
-      $('#editForm').elements.name.value=channel.name;
-      $('#editForm').elements.bio.value=channel.bio||'';
+      const form=$('#editForm');
+      form.elements.name.value=channel.name;
+      form.elements.handle.value=channel.handle||'';
+      form.elements.bio.value=channel.bio||'';
+      form.elements.about.value=channel.about||'';
+      form.elements.location.value=channel.location||'';
+      form.elements.links.value=(channel.links||[]).map(link=>link.url).join('\n');
+      form.elements.avatar.value='';form.elements.cover.value='';
+      $('#channelImageStatus').textContent='Upload new channel images or leave them unchanged.';
       $('#editDialog').showModal();
     });
     $('#yourVideos')?.addEventListener('click',()=>{location.hash='uploads';});
@@ -272,8 +321,11 @@ async function route(){
   $('#searchInput').value='';
   if(page==='watch'&&id){syncNavigation();return openWatch(decodeURIComponent(id));}
   if(page==='channel'){syncNavigation();return openChannel(decodeURIComponent(id||'me'));}
-  state.route=['home','explore','subscriptions','history','uploads'].includes(page)?page:'home';
+  if(page==='playlist'&&id){syncNavigation();return openPlaylist(decodeURIComponent(id));}
+  state.route=['home','explore','subscriptions','history','uploads','watch-later','playlists'].includes(page)?page:'home';
+  state.playlistId=null;state.playlistOwner=false;
   syncNavigation();
+  if(state.route==='playlists')return loadPlaylists();
   $('#watchView').classList.add('hidden');
   $('#channelView').classList.add('hidden');
   $('#videoGrid').classList.remove('hidden');
@@ -322,6 +374,85 @@ async function uploadVideo(file,onProgress){
   if(!completed.asset?.id)throw new Error('Video uploaded, but Minglora could not register the media file.');
   return completed.asset.id;
 }
+async function loadPlaylists(){
+  if(!requireSignedIn())return;
+  state.route='playlists';state.playlistId=null;state.playlistOwner=false;
+  showGrid();renderChips();$('#chips').classList.add('hidden');
+  setTitle('Your playlists','Create, organize and manage your video collections.');
+  $('#pageTitle').insertAdjacentHTML('beforeend','<button class="primary" id="createPlaylistBtn" type="button">'+icon('create')+' Create playlist</button>');
+  $('#createPlaylistBtn').addEventListener('click',async()=>{
+    const title=prompt('Playlist name');
+    if(!title||!title.trim())return;
+    const description=prompt('Playlist description (optional)')||'';
+    const visibility=confirm('Make this playlist public? Choose Cancel for private.')?'public':'private';
+    try{await api('/api/streambay/playlists',{method:'POST',body:JSON.stringify({title:title.trim(),description,visibility})});toast('Playlist created.');await loadPlaylists();}
+    catch(error){toast(error.message);}
+  });
+  $('#videoGrid').innerHTML='<div class="loading">Loading your playlists…</div>';
+  try{
+    const result=await api('/api/streambay/playlists?mine=1'),rows=result.playlists||[];
+    $('#videoGrid').innerHTML=rows.length?'<div class="playlist-grid">'+rows.map(item=>'<button type="button" class="playlist-card" data-playlist="'+esc(item.id)+'"><span class="playlist-art">'+icon('creator')+'</span><strong>'+esc(item.title)+'</strong><small>'+fmt(item.videoCount)+' videos · '+esc(item.visibility)+'</small></button>').join('')+'</div>':'<div class="empty"><strong>No playlists yet</strong><p>Create a playlist to organize videos you want to watch again.</p></div>';
+    $('#videoGrid').querySelectorAll('[data-playlist]').forEach(button=>button.addEventListener('click',()=>{location.hash='playlist/'+encodeURIComponent(button.dataset.playlist);}));
+  }catch(error){$('#videoGrid').innerHTML='<div class="empty">'+esc(error.message)+'</div>';}
+}
+
+async function openPlaylist(id){
+  if(!requireSignedIn())return;
+  state.route='playlist';state.playlistId=id;syncNavigation();
+  $('#watchView').classList.add('hidden');$('#channelView').classList.add('hidden');$('#videoGrid').classList.remove('hidden');$('#pageTitle').classList.remove('hidden');$('#chips').classList.add('hidden');
+  $('#videoGrid').innerHTML='<div class="loading">Loading playlist…</div>';
+  try{
+    const result=await api('/api/streambay/playlists/'+encodeURIComponent(id));
+    const playlist=result.playlist,rows=result.videos||[];
+    state.playlistOwner=playlist.ownerId===state.user?.id;state.videos=rows;
+    setTitle(playlist.title,playlist.description||fmt(rows.length)+' videos');
+    if(state.playlistOwner){
+      $('#pageTitle').insertAdjacentHTML('beforeend','<button class="action-pill" id="editPlaylistBtn" type="button">'+icon('settings')+' Edit</button><button class="action-pill" id="deletePlaylistBtn" type="button">'+icon('close')+' Delete</button>');
+      $('#editPlaylistBtn').addEventListener('click',async()=>{
+        const title=prompt('Playlist name',playlist.title);if(!title||!title.trim())return;
+        const description=prompt('Playlist description',playlist.description||'')??playlist.description;
+        const visibility=confirm('Make this playlist public? Choose Cancel for private.')?'public':'private';
+        try{await api('/api/streambay/playlists/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({title:title.trim(),description,visibility})});await openPlaylist(id);}
+        catch(error){toast(error.message);}
+      });
+      $('#deletePlaylistBtn').addEventListener('click',async()=>{
+        if(!confirm('Delete this playlist? Its videos will remain on your channel.'))return;
+        try{await api('/api/streambay/playlists/'+encodeURIComponent(id),{method:'DELETE'});location.hash='playlists';}
+        catch(error){toast(error.message);}
+      });
+    }
+    $('#videoGrid').innerHTML=rows.length?rows.map(videoCard).join():'<div class="empty"><strong>This playlist is empty</strong><p>Save a video to this collection from its watch page.</p></div>';
+    bindCards($('#videoGrid'));
+  }catch(error){$('#videoGrid').innerHTML='<div class="empty">'+esc(error.message)+'</div>';}
+}
+
+async function uploadImage(file, maxSize, label, onProgress=()=>{}) {
+  if(!file)return null;
+  const allowed=['image/jpeg','image/png','image/webp','image/avif'];
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  const mime=allowed.includes(file.type)?file.type:({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',avif:'image/avif'}[ext]||'');
+  if(!mime)throw new Error(label+' must be JPG, PNG, WebP or AVIF.');
+  if(file.size<1||file.size>maxSize)throw new Error(label+' exceeds the allowed file size.');
+  const prepared=await api('/api/media/upload/prepare',{method:'POST',body:JSON.stringify({slot:'post',mimeType:mime,byteSize:file.size,fileName:file.name||label})});
+  const info=prepared.upload||{};
+  if(!prepared.assetId||!info.bucket||!info.path)throw new Error('Minglora could not prepare the secure image upload.');
+  if(info.signedUrl&&file.size<=6*1024*1024){
+    const data=new FormData();data.append('cacheControl','3600');data.append('',file,file.name||label);
+    const response=await fetch(info.signedUrl,{method:'PUT',headers:{'x-upsert':'false'},body:data});
+    if(!response.ok)throw new Error('Minglora storage could not accept this image. Please retry.');
+    onProgress(100);
+  }else{
+    if(!window.tus?.Upload||!info.endpoint||!info.token)throw new Error('Secure resumable image uploads are unavailable. Refresh and try again.');
+    await new Promise((resolve,reject)=>{
+      const upload=new window.tus.Upload(file,{endpoint:info.endpoint,retryDelays:[0,3000,5000,10000],headers:{'x-signature':info.token},uploadDataDuringCreation:true,removeFingerprintOnSuccess:true,storeFingerprintForResuming:false,chunkSize:2*1024*1024,metadata:{bucketName:info.bucket,objectName:info.path,contentType:mime,cacheControl:'3600'},onProgress:(sent,total)=>onProgress(total?Math.min(100,Math.round(sent/total*100)):0),onError:error=>reject(new Error('Image upload failed: '+(error?.message||'Connection interrupted.'))),onSuccess:resolve});
+      upload.start();
+    });
+  }
+  const completed=await api('/api/media/upload/complete',{method:'POST',body:JSON.stringify({assetId:prepared.assetId})});
+  if(!completed.asset?.id)throw new Error('Image uploaded, but Minglora could not register the media file.');
+  return completed.asset.id;
+}
+
 async function init(){
   try{
     const result=await api('/api/auth/me');
@@ -397,8 +528,10 @@ $('#editVideoForm').addEventListener('submit',async event=>{
   const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),id=form.elements.videoId.value;
   button.disabled=true;
   try{
+    const thumbnailAssetId=form.elements.thumbnail.files[0]?await uploadImage(form.elements.thumbnail.files[0],10*1024*1024,'Video thumbnail'):undefined;
     await api('/api/streambay/videos/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({
-      title:form.elements.title.value,description:form.elements.description.value,category:form.elements.category.value
+      title:form.elements.title.value,description:form.elements.description.value,category:form.elements.category.value,
+      ...(thumbnailAssetId?{thumbnailAssetId}:{})
     })});
     $('#editVideoDialog').close();
     toast('Video details updated.');
@@ -413,10 +546,13 @@ $('#editForm').addEventListener('submit',async event=>{
   const form=event.currentTarget,button=form.querySelector('button[type="submit"]');
   button.disabled=true;
   try{
-    await api('/api/streambay/channel',{method:'PATCH',body:JSON.stringify({name:form.elements.name.value,bio:form.elements.bio.value})});
-    $('#editDialog').close();
-    toast('StreamBay channel updated.');
-    await openChannel('me');
+    const avatarAssetId=form.elements.avatar.files[0]?await uploadImage(form.elements.avatar.files[0],10*1024*1024,'Channel profile image',pct=>$('#channelImageStatus').textContent='Uploading profile image: '+pct+'%'):undefined;
+    const coverAssetId=form.elements.cover.files[0]?await uploadImage(form.elements.cover.files[0],20*1024*1024,'Channel cover image',pct=>$('#channelImageStatus').textContent='Uploading cover image: '+pct+'%'):undefined;
+    const payload={name:form.elements.name.value,handle:form.elements.handle.value,bio:form.elements.bio.value,about:form.elements.about.value,location:form.elements.location.value,links:form.elements.links.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean)};
+    if(avatarAssetId)payload.avatarAssetId=avatarAssetId;
+    if(coverAssetId)payload.coverAssetId=coverAssetId;
+    await api('/api/streambay/channel',{method:'PATCH',body:JSON.stringify(payload)});
+    $('#editDialog').close();toast('Your StreamBay channel has been updated.');await openChannel('me');
   }catch(error){toast(error.message);}
   finally{button.disabled=false;}
 });
