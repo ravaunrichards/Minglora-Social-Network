@@ -362,7 +362,7 @@ function createApp(options = {}) {
   }));
 
   app.post('/api/webhooks/inbound', asyncRoute(async (req, res) => {
-    if (!config.inboundWebhookSecret || !config.inboundMailEnabled) return res.status(503).json({ error: 'Inbound email processing is not enabled. Verify the domain, MX records and provider webhook first.' });
+    if (!config.inboundWebhookSecret || !config.inboundMailEnabled) return res.status(503).json({ error: 'Inbound email is not configured or enabled. Verify the domain, MX records and provider webhook first.' });
     const signature = String(req.get('x-mailharbor-signature') || '');
     const expected = 'sha256=' + crypto.createHmac('sha256', config.inboundWebhookSecret).update(req.rawBody || Buffer.alloc(0)).digest('hex');
     const suppliedBuffer = Buffer.from(signature);
