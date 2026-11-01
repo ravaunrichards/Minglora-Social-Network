@@ -5,13 +5,13 @@ import { validateProfilePatch } from '../../src/domain/validation.js';
 test('profile About accepts separately structured categories and audience settings',()=>{
   const result=validateProfilePatch({
     aboutSections:{
-      personalDetails:{pronouns:'they/them',currentCity:'Kingston',hometown:'Montego Bay'},
+      personalDetails:{pronouns:'they/them',currentCity:'Kingston',hometown:'Montego Bay',familyMembers:['Sam — parent','Alex — sibling']},
       intro:{bio:'A short introduction.'},
       work:{entries:[{company:'Example Studio',position:'Designer',isCurrent:true}]},
       education:{entries:[{school:'Example University',degree:'BSc',graduationYear:'2024'}]},
       hobbies:{items:['Reading','Photography']},
       interests:{items:['Music','Football']},
-      travel:{visited:['Portland, Jamaica'],wantToVisit:['Kyoto, Japan']},
+      travel:{placesLived:['Kingston, Jamaica'],visited:['Portland, Jamaica'],wantToVisit:['Kyoto, Japan']},
       links:{items:[
         {platform:'Instagram',url:'https://www.instagram.com/example'},
         {platform:'TikTok',url:'https://www.tiktok.com/@example'}
@@ -25,6 +25,8 @@ test('profile About accepts separately structured categories and audience settin
   });
   assert.equal(result.valid,true,result.errors.join(' '));
   assert.equal(result.value.aboutSections.links.items.length,2);
+  assert.equal(result.value.aboutSections.personalDetails.familyMembers.length,2);
+  assert.equal(result.value.aboutSections.travel.placesLived[0],'Kingston, Jamaica');
   assert.equal(result.value.aboutSections.work.entries[0].isCurrent,true);
   assert.equal(result.value.aboutSectionVisibility.contactInfo,'private');
 });
