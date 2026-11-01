@@ -2735,3 +2735,6 @@ body.auth-mode .auth-screen{
 @media(prefers-reduced-motion:reduce){
   .auth-photo-card img{transition:none}
 }
+
+
+@media(max-width:900px){.mobile-nav{overflow-x:auto;scrollbar-width:none}.mobile-nav::-webkit-scrollbar{display:none}.mobile-nav [data-view="meetwave"]{flex:0 0 auto}}

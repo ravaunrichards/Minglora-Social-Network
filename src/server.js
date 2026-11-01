@@ -6,7 +6,8 @@ import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
-import { createLiveKitToken, deleteLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
+import { canAccessMeetWaveRoom, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -227,6 +228,26 @@ async function body(req, maxBytes=1_000_000) {
   if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
+function meetWaveRoomInvitation(roomId,userId){
+  return (db.meetWaveInvitations||[]).find(item=>item.roomId===roomId&&item.userId===userId&&item.status==='accepted')||null;
+}
+function canUserAccessMeetWaveRoom(room,userId){
+  if(!room||room.status==='ended')return false;
+  const invited=Boolean(meetWaveRoomInvitation(room.id,userId));
+  const friend=room.visibility==='friends'&&isFriend(userId,room.ownerId);
+  return canAccessMeetWaveRoom(room,userId,{isFriend:friend,invited});
+}
+function meetWaveRoomView(room,viewerId){
+  if(!room)return null;
+  const owner=db.users.find(member=>member.id===room.ownerId);
+  return {
+    id:room.id,title:room.title,description:room.description||'',mode:room.mode,
+    visibility:room.visibility,scheduledAt:room.scheduledAt||null,status:room.status,
+    createdAt:room.createdAt,startedAt:room.startedAt||null,endedAt:room.endedAt||null,
+    participantLimit:room.participantLimit||8,ownerId:room.ownerId,
+    owner:safeUser(owner,viewerId),isHost:room.ownerId===viewerId
+  };
+}
 const MESSAGE_STICKERS=Object.freeze({
   heart:'💖',fire:'🔥',celebration:'🎉',crown:'👑',flower:'🌺',
   butterfly:'🦋',laugh:'😂',party:'🥳',clap:'👏',love:'😍'
@@ -2125,6 +2146,160 @@ async function route(req, res) {
         db.pageFollows=db.pageFollows.filter(f=>f.pageId!==page.id);
         db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
         await saveStore();return json(res,200,{ok:true,id:page.id});
+      }
+      if(method==='GET'&&p==='/api/meetwave/status'){
+        requireAuth(user);
+        const health=await verifyLiveKitConnection();
+        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,maxParticipants:8});
+      }
+      if(method==='GET'&&p==='/api/meetwave/rooms'){
+        requireAuth(user);
+        const rooms=(db.meetWaveRooms||[])
+          .filter(room=>room.status!=='ended'&&canUserAccessMeetWaveRoom(room,user.id))
+          .sort((a,b)=>new Date(a.scheduledAt||a.createdAt)-new Date(b.scheduledAt||b.createdAt))
+          .slice(0,100)
+          .map(room=>meetWaveRoomView(room,user.id));
+        return json(res,200,{rooms});
+      }
+      if(method==='POST'&&p==='/api/meetwave/rooms'){
+        requireAuth(user);
+        if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave needs the Minglora LiveKit service to be configured before rooms can be created.'});
+        const validation=validateMeetWaveRoomInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        db.meetWaveRooms||=[];
+        if(validation.value.mode==='personal'){
+          const existing=db.meetWaveRooms.find(room=>room.ownerId===user.id&&room.mode==='personal'&&room.status!=='ended');
+          if(existing)return json(res,200,{room:meetWaveRoomView(existing,user.id),reused:true});
+        }
+        let id;
+        do{id='MW-'+crypto.randomBytes(4).toString('hex').toUpperCase();}
+        while(db.meetWaveRooms.some(room=>room.id===id));
+        const room={
+          id,roomName:'minglora-meetwave-'+id.toLowerCase().replace(/[^a-z0-9]/g,''),
+          ownerId:user.id,title:validation.value.title,description:validation.value.description,
+          mode:validation.value.mode,visibility:validation.value.visibility,
+          scheduledAt:validation.value.scheduledAt,status:validation.value.mode==='scheduled'?'scheduled':'ready',
+          participantLimit:8,createdAt:now(),startedAt:null,endedAt:null
+        };
+        db.meetWaveRooms.unshift(room);
+        await saveStore();
+        return json(res,201,{room:meetWaveRoomView(room,user.id),reused:false});
+      }
+      if(method==='GET'&&p==='/api/meetwave/invitations'){
+        requireAuth(user);
+        const invitations=(db.meetWaveInvitations||[])
+          .filter(item=>item.userId===user.id&&item.status==='pending')
+          .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
+          .map(item=>({id:item.id,status:item.status,createdAt:item.createdAt,room:meetWaveRoomView((db.meetWaveRooms||[]).find(room=>room.id===item.roomId),user.id)}))
+          .filter(item=>item.room);
+        return json(res,200,{invitations});
+      }
+      let meetWaveInvitationMatch=p.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
+      if(meetWaveInvitationMatch&&method==='POST'){
+        requireAuth(user);
+        const invitation=(db.meetWaveInvitations||[]).find(item=>item.id===meetWaveInvitationMatch[1]&&item.userId===user.id);
+        if(!invitation||invitation.status!=='pending')return json(res,404,{error:'This MeetWave invitation is no longer pending.'});
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===invitation.roomId);
+        if(!room||room.status==='ended')return json(res,410,{error:'This meeting room has ended.'});
+        invitation.status=meetWaveInvitationMatch[2]==='accept'?'accepted':'declined';
+        invitation.respondedAt=now();
+        await saveStore();
+        return json(res,200,{invitation:{id:invitation.id,status:invitation.status},room:meetWaveRoomView(room,user.id)});
+      }
+      let meetWaveRoomMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)(?:\/(join|leave|messages|invitations))?$/);
+      if(meetWaveRoomMatch){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveRoomMatch[1]);
+        const action=meetWaveRoomMatch[2]||'';
+        if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(blockedBetween(user.id,room.ownerId)&&room.ownerId!==user.id)return json(res,403,{error:'This meeting room is unavailable.'});
+        if(!canUserAccessMeetWaveRoom(room,user.id))return json(res,403,{error:'You do not have access to this MeetWave room.'});
+        if(method==='GET'&&!action){
+          let participants=[];
+          if(isLiveKitConfigured()&&room.status==='active'){
+            try{participants=await listLiveKitParticipants(room.roomName);}
+            catch(error){return json(res,503,{error:'Minglora could not verify the live participant list for this room.'});}
+          }
+          return json(res,200,{room:meetWaveRoomView(room,user.id),participants,participantCount:participants.length});
+        }
+        if(method==='POST'&&action==='join'){
+          if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot connect because Minglora LiveKit is not configured.'});
+          const availability=meetWaveRoomJoinAvailability(room);
+          if(availability==='ended')return json(res,410,{error:'This meeting has ended.'});
+          if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
+          await ensureLiveKitRoom(room.roomName,room.participantLimit||8);
+          const participants=await listLiveKitParticipants(room.roomName);
+          if(participants.length>=(room.participantLimit||8)&&!participants.some(participant=>participant.identity===user.id)){
+            return json(res,409,{error:'This MeetWave room is full. The current limit is eight participants.'});
+          }
+          const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
+          db.meetWaveAttendance||=[];
+          let attendance=db.meetWaveAttendance.find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(!attendance){attendance={id:uid(),roomId:room.id,userId:user.id,role:room.ownerId===user.id?'host':'participant',status:'joined',joinedAt:now(),leftAt:null};db.meetWaveAttendance.push(attendance);}
+          else{attendance.role=room.ownerId===user.id?'host':'participant';attendance.status='joined';attendance.joinedAt=now();attendance.leftAt=null;}
+          room.status='active';room.startedAt=room.startedAt||now();room.lastActivityAt=now();
+          await saveStore();
+          return json(res,200,{room:meetWaveRoomView(room,user.id),role:attendance.role,liveKit:{...liveKit,role:attendance.role}});
+        }
+        if(method==='POST'&&action==='leave'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&!item.leftAt);
+          if(!attendance)return json(res,200,{left:true});
+          attendance.status='left';attendance.leftAt=now();await saveStore();
+          return json(res,200,{left:true});
+        }
+        if(method==='POST'&&action==='invitations'){
+          if(room.ownerId!==user.id)return json(res,403,{error:'Only the room host can invite members.'});
+          const requestedIds=Array.isArray(input.userIds)?input.userIds.map(String):[];
+          const requestedUsernames=Array.isArray(input.usernames)?input.usernames.map(value=>normalizeUsername(String(value||''))).filter(Boolean):[];
+          const invitees=[...new Map([
+            ...requestedIds.map(id=>db.users.find(member=>member.id===id)).filter(Boolean),
+            ...requestedUsernames.map(username=>db.users.find(member=>normalizeUsername(member.username)===username)).filter(Boolean)
+          ].map(member=>[member.id,member])).values()];
+          if(!invitees.length||invitees.length>20)return json(res,400,{error:'Choose between one and twenty existing Minglora members to invite.'});
+          if(invitees.some(member=>member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          db.meetWaveInvitations||=[];
+          const sent=[];
+          for(const member of invitees){
+            const settings=getUserSettings(member).privacy;
+            if(settings.messageAudience==='nobody'||(settings.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
+            let invitation=db.meetWaveInvitations.find(item=>item.roomId===room.id&&item.userId===member.id);
+            if(invitation&&invitation.status==='accepted')continue;
+            if(!invitation){invitation={id:uid(),roomId:room.id,userId:member.id,invitedBy:user.id,status:'pending',createdAt:now(),respondedAt:null};db.meetWaveInvitations.push(invitation);}
+            else{invitation.status='pending';invitation.invitedBy=user.id;invitation.createdAt=now();invitation.respondedAt=null;}
+            notify(member.id,user.id,'meetwave_invite',user.name+' invited you to a MeetWave room.',{roomId:room.id,roomTitle:room.title,invitationId:invitation.id});
+            sent.push({userId:member.id,username:member.username});
+          }
+          await saveStore();
+          return json(res,200,{sent,skipped:invitees.length-sent.length});
+        }
+        if((method==='GET'||method==='POST')&&action==='messages'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='joined'&&!item.leftAt);
+          if(room.ownerId!==user.id&&!attendance)return json(res,403,{error:'Join this meeting before accessing its chat.'});
+          if(method==='GET'){
+            const after=Date.parse(url.searchParams.get('after')||'');
+            const messages=(db.meetWaveMessages||[])
+              .filter(message=>message.roomId===room.id&&(!Number.isFinite(after)||new Date(message.createdAt).getTime()>after))
+              .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100)
+              .map(message=>({...message,author:safeUser(db.users.find(member=>member.id===message.userId),user.id)}));
+            return json(res,200,{messages});
+          }
+          const textValue=normalizeMeetWaveMessage(input.text);
+          if(!textValue)return json(res,400,{error:'Enter a chat message of up to 1,000 characters.'});
+          db.meetWaveMessages||=[];
+          const message={id:uid(),roomId:room.id,userId:user.id,text:textValue,createdAt:now()};
+          db.meetWaveMessages.push(message);room.lastActivityAt=message.createdAt;
+          await saveStore();
+          return json(res,201,{message:{...message,author:safeUser(user,user.id)}});
+        }
+        if(method==='DELETE'&&!action){
+          if(room.ownerId!==user.id)return json(res,403,{error:'Only the host can end this meeting for everyone.'});
+          if(room.status==='ended')return json(res,200,{ended:true});
+          room.status='ended';room.endedAt=now();
+          (db.meetWaveAttendance||[]).filter(item=>item.roomId===room.id&&!item.leftAt).forEach(item=>{item.status='left';item.leftAt=room.endedAt;});
+          await saveStore();
+          try{await deleteLiveKitRoom(room.roomName);}catch(error){const status=Number(error?.statusCode||error?.status||0);if(status!==404)console.warn('[MeetWave] LiveKit room cleanup failed.',{roomId:room.id,status});}
+          return json(res,200,{ended:true,room:meetWaveRoomView(room,user.id)});
+        }
       }
       if(method==='POST'&&p==='/api/calls'){
         if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});

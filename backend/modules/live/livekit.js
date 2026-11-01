@@ -108,6 +108,38 @@ export async function createLiveKitToken({ identity, name, roomName, canPublish 
   };
 }
 
+
+export async function ensureLiveKitRoom(roomName, maxParticipants = 8) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid LiveKit room name is required.');
+    error.status = 400;
+    throw error;
+  }
+  const participantLimit = Number(maxParticipants);
+  if (!Number.isInteger(participantLimit) || participantLimit < 2 || participantLimit > 100) {
+    const error = new Error('The LiveKit room participant limit is invalid.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  const existing = await service.listRooms([roomName]);
+  if (existing.some(room => room.name === roomName)) return { name: roomName, created: false };
+  try {
+    await service.createRoom({ name: roomName, emptyTimeout: 600, maxParticipants: participantLimit });
+    return { name: roomName, created: true };
+  } catch (error) {
+    const rooms = await service.listRooms([roomName]);
+    if (rooms.some(room => room.name === roomName)) return { name: roomName, created: false };
+    throw error;
+  }
+}
+
 export async function listLiveKitParticipants(roomName) {
   const settings = config();
   if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
