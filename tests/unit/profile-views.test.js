@@ -80,21 +80,31 @@ test('server records authorized profile access, returns owner-only analytics and
   assert.match(store, /'profileViews', 'profileViewPresence'/, 'new metrics persist through the configured state store');
 });
 
-test('profile owner sees transparent analytics labels and a visible-tab heartbeat', async () => {
+test('profile viewer history is opt-in, reciprocal and managed in notification settings', async () => {
   const { readFile } = await import('node:fs/promises');
   const { fileURLToPath } = await import('node:url');
   const { dirname, resolve } = await import('node:path');
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-  const app = await readFile(resolve(root, 'public/app.js'), 'utf8');
-  const css = await readFile(resolve(root, 'public/styles.css'), 'utf8');
+  const [app, css, settings, server] = await Promise.all([
+    readFile(resolve(root, 'public/app.js'), 'utf8'),
+    readFile(resolve(root, 'public/styles.css'), 'utf8'),
+    readFile(resolve(root, 'public/settings.js'), 'utf8'),
+    readFile(resolve(root, 'src/server.js'), 'utf8')
+  ]);
 
-  assert.match(app, /Profile views · 30 days/);
-  assert.match(app, /Viewing now/);
-  assert.match(app, /Visits from signed-in members/);
-  assert.match(app, /profile-presence/);
-  assert.match(app, /setInterval\(\(\)=>void refreshProfilePresence\(profileId\),20000\)/);
-  assert.match(app, /document\.visibilityState!=='visible'/);
-  assert.match(app, /if\(view!=='profile'\)stopProfilePresence\(\)/);
-  assert.match(css, /\.profile-live-insights/);
-  assert.match(css, /\.profile-viewing-now i/);
+  assert.doesNotMatch(app, /Profile views · 30 days|Viewing now|Visits from signed-in members|profile-live-insights/);
+  assert.doesNotMatch(app, /creatorMetric\(["']Profile views|creatorMetric\(["']Active profile viewers/);
+  assert.match(settings, /Profile view history/);
+  assert.match(settings, /settings-profile-view-history/);
+  assert.match(settings, /notificationProfileViews/);
+  assert.match(settings, /data-profile-viewer/);
+  assert.match(server, /profileViews:false/);
+  assert.match(server, /getUserSettings\(user\)\.notifications\.profileViews===true&&getUserSettings\(target\)\.notifications\.profileViews===true/);
+  assert.match(server, /recordedView\.historyEligible=true/);
+  assert.match(server, /p==='\/api\/profile-views'/);
+  assert.match(server, /windowDays:30/);
+  assert.match(server, /n\.type==='profile_view'\?prefs\.profileViews/);
+  assert.match(app, /data-profile-view-actor/);
+  assert.match(app, /minglora:open-profile/);
+  assert.match(css, /\.settings-profile-viewer-list/);
 });
