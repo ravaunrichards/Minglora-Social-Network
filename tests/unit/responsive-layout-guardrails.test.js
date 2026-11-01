@@ -26,7 +26,7 @@ test('shared content containers can shrink without pushing the page out of align
     assert.ok(ruleFor(css, selector).includes('min-width:0'), selector + ' must be allowed to shrink inside its parent');
   }
   assert.ok(ruleFor(css, '.page-heading').includes('flex-wrap:wrap'));
-  assert.ok(ruleFor(css, '.profile-counts').includes('flex-wrap:wrap'));
+  assert.ok(ruleFor(css, '.profile-counts').includes('grid-template-columns:repeat(4,minmax(0,1fr))'));
   assert.ok(ruleFor(css, '.profile-tabs-list').includes('overflow-x:auto'));
 });
 
