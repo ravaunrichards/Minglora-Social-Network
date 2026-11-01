@@ -1856,7 +1856,7 @@ function profileTabMarkup(data,tab,aboutHtml,isMe){
     }).join('');
     const combined=[...photos,...albums.flatMap(album=>album.photos.map(photo=>({...photo,albumId:album.id})))];
     const unique=combined.filter((item,index,list)=>list.findIndex(other=>other.id===item.id)===index);
-    return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Photos</h2><p class="muted">Individual photos and organised albums</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-album">Create album / Upload photos</button>':'')+'</div>'+
+    return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Photos</h2><p class="muted">Individual photos and organised albums</p></div>'+(isMe?'<div class="profile-photo-actions"><button type="button" class="primary" id="profile-upload-photo">Upload single photo</button><button type="button" class="secondary" id="profile-create-album">Create album / Upload photos</button></div>':'')+'</div>'+
       (albums.length?'<h3 class="profile-subheading">Photo albums</h3><div class="profile-albums-grid">'+albumMarkup+'</div>':'<div class="empty-state"><h3>No albums yet</h3><p>'+(isMe?'Create an album and upload your first photos.':'This member has not created any public albums yet.')+'</p></div>')+
       '<h3 class="profile-subheading">All photos</h3>'+(unique.length?'<div class="profile-media-grid">'+unique.map(item=>profilePhotoTile(item,false)).join('')+'</div>':'<p class="muted">No individual photos have been shared yet.</p>')+'</section>';
   }
@@ -1885,6 +1885,24 @@ function openProfileAlbumEditor(profileId,album=null){
       }
       if(mediaIds.length)await api('/albums/'+encodeURIComponent(savedAlbum.id)+'/photos',{method:'POST',body:JSON.stringify({mediaIds})});
       close();await openProfile(profileId);toast(album?'Album updated.':'Photo album created.');
+    }catch(error){toast(error.message);submit.disabled=false;}
+  });
+}
+function openProfilePhotoComposer(profileId){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-photo-title"><div class="modal-head"><h2 id="profile-photo-title">Upload a photo</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write something about this photo"></textarea></label></div><div class="field"><label>Select one photo · zoom and rotate before upload</label><div data-profile-photo-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Upload photo</button></div></form></section>';
+  document.body.append(modal);
+  const picker=createMediaPicker(modal.querySelector('[data-profile-photo-picker]'),{slot:'post',maxFiles:1,accept:'image/jpeg,image/png,image/webp,image/avif'});
+  const close=()=>{picker.destroy();modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('form').addEventListener('submit',async event=>{
+    event.preventDefault();const submit=modal.querySelector('button[type="submit"]');submit.disabled=true;
+    try{
+      if(!picker.hasSelection())throw new Error('Choose a photo to upload.');
+      const mediaIds=await picker.upload(),values=new FormData(event.currentTarget);
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      close();await openProfile(profileId);toast('Your photo has been uploaded.');
     }catch(error){toast(error.message);submit.disabled=false;}
   });
 }
@@ -1940,11 +1958,11 @@ function renderProfile(data){
 function bindProfileTabActions(panel){
   panel.querySelector('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(state.profile.user));
   panel.querySelector('#profile-composer')?.addEventListener('click',()=>openComposer());
+  panel.querySelector('#profile-upload-photo')?.addEventListener('click',()=>openProfilePhotoComposer(state.profile.user.id));
   panel.querySelector('#profile-create-album')?.addEventListener('click',()=>openProfileAlbumEditor(state.profile.user.id));
   panel.querySelector('#profile-create-reel')?.addEventListener('click',()=>openProfileReelComposer(state.profile.user.id));
   panel.querySelectorAll('[data-profile-tab]').forEach(button=>button.addEventListener('click',()=>{
-    const current=state.profile; if(current)renderProfile(state.profile);
-    if(button.dataset.profileTab){state.profileTab=button.dataset.profileTab;renderProfile(state.profile);}
+    if(!state.profile)return;state.profileTab=button.dataset.profileTab;renderProfile(state.profile);
   }));
   panel.querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.profile)));
   panel.querySelectorAll('[data-album-edit]').forEach(button=>button.addEventListener('click',()=>{
