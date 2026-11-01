@@ -315,7 +315,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
         <div className="hp-status-card">
           <span className={"hp-status-dot " + selected.status}>{selected.status}</span>
           <p>{selected.status === "active" ? "Merchant account is marked active. Provider capability still determines which payment services are available." : "This merchant profile is saved but not approved for processing. Complete the required business verification and connect an eligible payment provider before accepting customer payments."}</p>
-          <div className="hp-status-meta"><span>Country</span><strong>{selected.country_code || "JM"}</strong></div>
+          <div className="hp-status-meta"><span>Account type</span><strong>{String(selected.account_type || "merchant").replaceAll("_", " ")}</strong></div><div className="hp-status-meta"><span>Country</span><strong>{selected.country_code || "JM"}</strong></div>
           <div className="hp-status-meta"><span>Settlement currency</span><strong>{selected.settlement_currency || "USD"}</strong></div>
           <div className="hp-status-meta"><span>Payouts</span><strong>{selected.payouts_enabled ? "Provider enabled" : "Not enabled"}</strong></div>
         </div>
