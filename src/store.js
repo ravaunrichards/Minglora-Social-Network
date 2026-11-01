@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { mergeConcurrentState, reconcileStateInPlace } from './state-merge.js';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,7 @@ const stateApiUrl = String(process.env.SUPABASE_STATE_API_URL || '').trim().repl
 const stateApiKey = String(process.env.SUPABASE_STATE_API_KEY || '').trim();
 const publishableKey = String(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
 let supabaseRevision = null;
+let lastPersistedSnapshot = null;
 let saveQueue = Promise.resolve();
 
 export function initialState() {
@@ -125,14 +127,47 @@ async function persistSupabaseState(state) {
   if (!Number.isSafeInteger(supabaseRevision)) {
     throw new Error('Supabase state revision is unavailable; reload the store before saving.');
   }
-  const payload = await requestSupabaseState('save', {
-    state,
-    expectedRevision: supabaseRevision
-  });
-  if (!Number.isSafeInteger(Number(payload.revision))) {
-    throw new Error('Supabase did not return a valid state revision.');
+
+  const maxConflictRetries = 3;
+  let conflictRetries = 0;
+  while (true) {
+    // Persist an immutable snapshot. The live in-memory state may continue to
+    // receive requests while this network write is in flight.
+    const snapshot = structuredClone(state);
+    try {
+      const payload = await requestSupabaseState('save', {
+        state: snapshot,
+        expectedRevision: supabaseRevision
+      });
+      if (!Number.isSafeInteger(Number(payload.revision))) {
+        throw new Error('Supabase did not return a valid state revision.');
+      }
+      supabaseRevision = Number(payload.revision);
+      lastPersistedSnapshot = snapshot;
+      return;
+    } catch (error) {
+      if (error.status !== 409 || conflictRetries >= maxConflictRetries) {
+        if (error.status === 409) {
+          throw new Error('Minglora data changed repeatedly while saving. Your changes were not overwritten; retry the save.');
+        }
+        throw error;
+      }
+
+      // Another app instance committed first. Reload its current state and
+      // merge both writers' changes against the last confirmed snapshot.
+      const latest = await requestSupabaseState('load');
+      if (!latest.state || !Number.isSafeInteger(Number(latest.revision))) {
+        throw new Error('Minglora could not reload the latest data after a save conflict.');
+      }
+      const remoteSnapshot = structuredClone(latest.state);
+      const baseSnapshot = lastPersistedSnapshot || {};
+      const merged = mergeConcurrentState(baseSnapshot, state, remoteSnapshot);
+      reconcileStateInPlace(state, merged);
+      supabaseRevision = Number(latest.revision);
+      lastPersistedSnapshot = remoteSnapshot;
+      conflictRetries += 1;
+    }
   }
-  supabaseRevision = Number(payload.revision);
 }
 
 async function loadSupabaseStore() {
@@ -141,6 +176,7 @@ async function loadSupabaseStore() {
     throw new Error('Minglora Supabase state row is missing or invalid.');
   }
   supabaseRevision = Number(payload.revision);
+  lastPersistedSnapshot = structuredClone(payload.state);
   const normalized = normalizeState(payload.state);
   const cleaned = stripLegacyDemoData(normalized.state);
   if (normalized.changed || cleaned) await persistSupabaseState(normalized.state);
