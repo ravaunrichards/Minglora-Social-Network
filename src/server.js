@@ -2908,7 +2908,7 @@ async function route(req, res) {
             return json(res,503,{error:'Minglora could not prepare your call connection. Check LiveKit and try again.'});
           }
           if(participant.status==='invited'&&call.status==='ringing'){call.status='active';call.answeredAt=now();call.answeredById=user.id;}
-          participant.status='joined';participant.joinedAt=participant.joinedAt||now();participant.leftAt=null;
+          participant.status='joined';participant.joinedAt=now();participant.leftAt=null;
           await saveStore();return json(res,200,{call,liveKit:{...liveKit,role:participant.role}});
         }
         if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
