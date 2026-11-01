@@ -1,5 +1,1 @@
-# Photos and albums
-
-**Status:** not implemented.
-
-Target: private/public/friends-only photo albums, ordered items, captions, cover selection, tagging, comments, reactions, owner editing/deletion, and viewer-aware media delivery. Album access and media access must use the same audience policy; a guessed URL must not expose a private photo.
+# Photos, albums and profile media\n\n**Implemented:** Member-owned photo albums with public, friends-only and private visibility; ordered image entries; editable album names and descriptions; photo attachment/removal; and cover selection constrained to a photo in that album. Profile reads enforce both profile visibility and album audience before signing any photo URL. Photos uploaded to the existing authenticated post-media slot are registered by asset ID; external URLs are not accepted.\n\nThe profile UI exposes Posts, About, Friends, Photos, Reels and More sections. Photos show individual image posts plus albums. Reels and Videos are built from actual uploaded video media attached to published posts. The upload editor provides image zoom/rotation and resumable uploads.\n
