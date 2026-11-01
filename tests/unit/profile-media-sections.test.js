@@ -6,8 +6,8 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('profile exposes Facebook-style Posts, About, Friends, Photos, Reels and More sections', async () => {
   const app = await read('../../public/app.js');
-  for (const section of ['posts','about','friends','photos','reels','more']) {
-    assert.ok(app.includes("data-profile-tab=\"'+key+'\""), section+' tab attribute must be rendered');
+  const sections = [['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']];
+  for (const [key,label] of sections) assert.ok(app.includes("['"+key+"','"+label+"']"), label+' profile section must exist');
   }
   assert.match(app, /function profileTabMarkup/);
   assert.match(app, /function bindProfileTabActions/);
@@ -20,7 +20,7 @@ test('photo albums are persisted and owner-only album operations use owned uploa
   const [server, store] = await Promise.all([read('../../src/server.js'), read('../../src/store.js')]);
   assert.match(store, /'albums'/);
   assert.match(server, /p==='\/api\/albums'/);
-  assert.match(server, /\/api\/albums\/\(\[\^\/\]\+\)\/photos/);
+  assert.ok(server.includes("m=p.match(/^\\/api\\/albums\\/([^/]+)\\/photos$/);"), 'album photo attachment route must exist');
   assert.match(server, /asset\.ownerId===user\.id&&asset\.slot==='post'&&asset\.status==='uploaded'&&asset\.mediaType==='image'/);
   assert.match(server, /album\.visibility==='public'/);
   assert.match(server, /album\.visibility==='friends'&&viewerIsFriend/);
