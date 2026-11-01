@@ -1945,6 +1945,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!completed.asset?.id)throw new Error('The file uploaded but Minglora could not register it.');
   return {...completed.asset,user:completed.user||null};
 }
+window.uploadMediaFile=uploadMediaFile;
 async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(!file)return null;
   if(file.size>mediaMaxBytes(slot))throw new Error('Profile media must be '+mediaMaxLabel(slot)+' or smaller.');
