@@ -32,7 +32,8 @@ test('profile image crop tools support drag positioning, zoom, rotation and rese
   assert.match(app,/id="edit-cover-rotate"/);
   assert.match(app,/id="edit-avatar-reset"/);
   assert.match(app,/id="edit-cover-reset"/);
-  assert.match(app,/edit\.rotation=\(edit\.rotation\+90\)%360/);
+  assert.match(app,/avatarEdit\.rotation=\(avatarEdit\.rotation\+90\)%360/);
+  assert.match(app,/coverEdit\.rotation=\(coverEdit\.rotation\+90\)%360/);
 });
 
 test('the uploaded avatar and cover are cropped to the exact selected preview frame',()=>{
