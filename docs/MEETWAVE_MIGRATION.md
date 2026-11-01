@@ -1,6 +1,6 @@
 # MeetWave integration into Minglora
 
-MeetWave is now a first-class Minglora feature. The canonical application repository is \`ravaunrichards/Minglora-Social-Network\`; the original source project is \`ravaunrichards/meetwave-video-conferencing\`.
+MeetWave is now a first-class Minglora feature. The canonical application repository is `ravaunrichards/Minglora-Social-Network`; the original source project is `ravaunrichards/meetwave-video-conferencing`.
 
 ## Integration decisions
 
@@ -19,7 +19,7 @@ The original MeetWave repository is retained as a source/archive copy. It is not
 
 ## Provider requirement
 
-MeetWave requires the existing Minglora LiveKit configuration (\`LIVEKIT_URL\`, \`LIVEKIT_API_KEY\`, and \`LIVEKIT_API_SECRET\`). When those settings are absent or the provider is unreachable, the API reports that status and room creation/joining fails closed rather than generating fake meeting presence or fake participant counts.
+MeetWave requires the existing Minglora LiveKit configuration (`LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`). When those settings are absent or the provider is unreachable, the API reports that status and room creation/joining fails closed rather than generating fake meeting presence or fake participant counts.
 
 ## Current scope
 

@@ -28,6 +28,7 @@ jobs:
           node --check backend/modules/meetwave/service.js
           node --check public/meetwave.js
           node --check tests/unit/livekit.test.js
+          node --check tests/unit/meetwave.test.js
           node --check src/domain/validation.js
           node --check src/domain/pagination.js
           node --check src/domain/relationships.js
