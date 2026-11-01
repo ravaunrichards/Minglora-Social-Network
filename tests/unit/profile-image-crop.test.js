@@ -17,6 +17,7 @@ test('profile editor previews the avatar as a circle and the cover as a wide rec
   assert.match(app,/aria-label="Wide rectangular cover photo crop preview"/);
   assert.match(css,/\.profile-crop-preview--avatar\{[^}]*border-radius:50%/);
   assert.match(css,/\.profile-crop-preview--cover\{[^}]*aspect-ratio:3\/1/);
+  assert.match(css,/\.profile-cover\{[^}]*aspect-ratio:3\/1/);
 });
 
 test('profile image crop tools support drag positioning, zoom, rotation and reset for each image',()=>{
