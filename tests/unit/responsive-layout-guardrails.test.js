@@ -106,9 +106,16 @@ test('login and account creation have separate full-size responsive entry panels
 test('floating windows, dialogs, media viewers and calls follow a safe stacking order', async () => {
   const css = await read('public/styles.css');
   const z = selector => {
-    const match = ruleFor(css, selector).match(/z-index:\s*(\d+)/);
-    assert.ok(match, selector + ' must have an explicit layer');
-    return Number(match[1]);
+    const layers = css.replace(/\\/\\*[\\s\\S]*?\\*\\//g, '').split('}').flatMap(block => {
+      const open = block.lastIndexOf('{');
+      if (open < 0) return [];
+      const selectors = block.slice(0, open).split(',').map(name => name.trim());
+      if (!selectors.includes(selector)) return [];
+      const match = block.slice(open + 1).match(/z-index:\\s*(\\d+)/);
+      return match ? [Number(match[1])] : [];
+    });
+    assert.ok(layers.length, selector + ' must have an explicit layer');
+    return layers[layers.length - 1];
   };
   const messageDock = z('#message-window-dock');
   const modal = z('.modal-backdrop');
