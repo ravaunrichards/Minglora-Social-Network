@@ -1936,6 +1936,55 @@ async function route(req, res) {
           :undefined;
         return json(res,200,{ok:true,...(profileInsights?{profileInsights}:{})});
       }
+      if(method==='POST'&&p==='/api/albums'){
+        const title=String(input.title||'').trim().slice(0,100),description=String(input.description||'').trim().slice(0,500),visibility=String(input.visibility||'public');
+        if(!title)return json(res,400,{error:'Give your album a title.'});
+        if(!['public','friends','private'].includes(visibility))return json(res,400,{error:'Choose public, friends or private visibility.'});
+        db.albums ||= [];
+        const album={id:uid(),ownerId:user.id,title,description,visibility,items:[],createdAt:now(),updatedAt:now()};
+        db.albums.unshift(album);await saveStore();return json(res,201,{album});
+      }
+      m=p.match(/^\/api\/albums\/([^/]+)$/);
+      if(m&&method==='PATCH'){
+        db.albums ||= [];const album=db.albums.find(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(!album)return json(res,404,{error:'Album not found.'});
+        if(input.title!==undefined){const title=String(input.title||'').trim().slice(0,100);if(!title)return json(res,400,{error:'Album title cannot be empty.'});album.title=title;}
+        if(input.description!==undefined)album.description=String(input.description||'').trim().slice(0,500);
+        if(input.visibility!==undefined){if(!['public','friends','private'].includes(input.visibility))return json(res,400,{error:'Invalid album visibility.'});album.visibility=input.visibility;}
+        if(input.coverAssetId!==undefined){
+          const assetId=String(input.coverAssetId||'');
+          if(assetId&&!((album.items||[]).some(item=>item.assetId===assetId)))return json(res,400,{error:'The album cover must be a photo in this album.'});
+          album.coverAssetId=assetId||null;
+        }
+        album.updatedAt=now();await saveStore();return json(res,200,{album});
+      }
+      if(m&&method==='DELETE'){
+        db.albums ||= [];const index=db.albums.findIndex(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(index<0)return json(res,404,{error:'Album not found.'});
+        db.albums.splice(index,1);await saveStore();return json(res,200,{ok:true});
+      }
+      m=p.match(/^\/api\/albums\/([^/]+)\/photos$/);
+      if(m&&method==='POST'){
+        db.albums ||= [];const album=db.albums.find(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(!album)return json(res,404,{error:'Album not found.'});
+        const ids=[...new Set((Array.isArray(input.mediaIds)?input.mediaIds:[]).map(String))];
+        if(!ids.length)return json(res,400,{error:'Select at least one uploaded photo.'});
+        if((album.items||[]).length+ids.length>100)return json(res,400,{error:'An album can contain up to 100 photos.'});
+        const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'&&asset.mediaType==='image'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more photos are unavailable. Upload them again.'});
+        album.items ||= [];
+        for(const asset of assets)if(!album.items.some(item=>item.assetId===asset.id))album.items.push({assetId:asset.id,caption:'',addedAt:now()});
+        if(!album.coverAssetId&&album.items.length)album.coverAssetId=album.items[0].assetId;
+        album.updatedAt=now();await saveStore();return json(res,201,{album});
+      }
+      m=p.match(/^\/api\/albums\/([^/]+)\/photos\/([^/]+)$/);
+      if(m&&method==='DELETE'){
+        db.albums ||= [];const album=db.albums.find(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(!album)return json(res,404,{error:'Album not found.'});
+        album.items=(album.items||[]).filter(item=>item.assetId!==m[2]);
+        if(album.coverAssetId===m[2])album.coverAssetId=album.items[0]?.assetId||null;
+        album.updatedAt=now();await saveStore();return json(res,200,{album});
+      }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
@@ -1947,9 +1996,26 @@ async function route(req, res) {
           ?getProfileViewStats({views:db.profileViews,presence:db.profileViewPresence,targetUserId:target.id})
           :undefined;
         const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&post.userId===target.id&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        const viewerIsFriend=isFriend(user.id,target.id);
+        const profileAlbums=await Promise.all((db.albums||[]).filter(album=>album.ownerId===target.id&&(user.id===target.id||album.visibility==='public'||(album.visibility==='friends'&&viewerIsFriend))).map(async album=>{
+          const ordered=[...(album.items||[])].sort((a,b)=>new Date(a.addedAt||0)-new Date(b.addedAt||0));
+          const photos=await Promise.all(ordered.map(async item=>{
+            const asset=(db.mediaAssets||[]).find(candidate=>candidate.id===item.assetId&&candidate.ownerId===target.id&&candidate.slot==='post'&&candidate.status==='uploaded'&&candidate.mediaType==='image');
+            if(!asset)return null;
+            try{return {id:asset.id,url:await resolveAssetUrl(asset),mediaType:'image',mimeType:asset.mimeType,caption:item.caption||'',addedAt:item.addedAt};}catch{return null;}
+          }));
+          const visiblePhotos=photos.filter(photo=>photo?.url);
+          return {id:album.id,title:album.title,description:album.description||'',visibility:album.visibility,coverAssetId:album.coverAssetId||null,createdAt:album.createdAt,updatedAt:album.updatedAt,photos:visiblePhotos};
+        }));
+        const profileMedia=profilePosts.flatMap(post=>(post.media||[]).map(media=>({...media,postId:post.id,postText:post.text||'',createdAt:post.createdAt}))).filter(media=>media.url);
+        const profilePhotos=profileMedia.filter(media=>media.mediaType==='image');
+        const profileVideos=profileMedia.filter(media=>media.mediaType==='video');
+        const profileFriends=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
+          .map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)).map(member=>safeUser(member,user.id));
+
         return json(res,200,{
           user:safeUser(target,user.id),
-          posts:profilePosts,
+          posts:profilePosts,\n          albums:profileAlbums,\n          photos:profilePhotos,\n          reels:profileVideos,\n          videos:profileVideos,\n          friends:profileFriends,
           friendship:isFriend(user.id,target.id)?'accepted':null,
           following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),
           followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
