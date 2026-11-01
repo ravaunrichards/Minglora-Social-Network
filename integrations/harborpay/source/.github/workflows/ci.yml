@@ -1,0 +1,66 @@
+name: HarborPay CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  database-migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: harborpay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d harborpay_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create Supabase-compatible test roles
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/supabase_bootstrap.sql
+      - name: Apply HarborPay core migration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261029000100_harborpay_core.sql
+      - name: Apply HarborPay merchant operations migration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/20261030000200_harborpay_merchant_operations.sql
+      - name: Verify database schema, RLS, and webhook processing
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/harborpay_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/verify_schema.sql
+
+  api-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm --prefix server install --no-audit --no-fund
+      - run: node --check server/src/index.js
+      - run: npm --prefix server test
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm --prefix web install --no-audit --no-fund
+      - run: npm --prefix web run build
