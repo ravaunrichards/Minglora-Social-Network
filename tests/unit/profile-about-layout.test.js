@@ -73,7 +73,8 @@ test('each About section has independent Public, Friends or Only me visibility e
   assert.match(app,/<option value="private"/);
   assert.match(server,/function canViewAboutSection\(viewerId,target,visibility\)/);
   assert.match(server,/sectionVisibility\[key\]/);
-  assert.match(server,/aboutSections\[key\]=u\.aboutSections\?\.\[key\]\|\|\{\}/);
+  assert.match(server,/if\(!canViewAboutSection\(viewerId,u,sectionVisibility\[key\]\)\)continue/);
+  assert.match(server,/aboutSections\[key\]=\{\.\.\.\(u\.aboutSections\?\.\[key\]\|\|\{\}\)\}/);
   assert.match(server,/about_sections:next\.aboutSections/);
   assert.match(server,/about_section_visibility:next\.aboutSectionVisibility/);
 });
