@@ -267,3 +267,41 @@ test('MailHarbor queues and dispatches external messages through the provider ou
     }
   }
 });
+
+test('MailHarbor accepts @username and bare usernames for free internal member delivery', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+
+  const sentToHandle = await call(state, state.db.users[0], 'POST', '/messages', {
+    to: '@bob',
+    subject: 'Handle delivery',
+    body: 'This uses the Minglora member handle.'
+  });
+  assert.equal(sentToHandle.status, 202);
+  assert.equal(sentToHandle.body.message.delivery_status, 'delivered');
+  const bobInbox = await call(state, state.db.users[1], 'GET', '/messages', {}, '?folder=inbox');
+  assert.equal(bobInbox.body.messages.length, 1);
+  assert.equal(bobInbox.body.messages[0].sender_email, 'alice@' + INTERNAL_MAIL_DOMAIN);
+
+  const sentToBareUsername = await call(state, state.db.users[1], 'POST', '/messages', {
+    to: 'alice',
+    subject: 'Reply by username',
+    body: 'A bare Minglora username also resolves internally.'
+  });
+  assert.equal(sentToBareUsername.status, 202);
+  const aliceInbox = await call(state, state.db.users[0], 'GET', '/messages', {}, '?folder=inbox');
+  assert.equal(aliceInbox.body.messages.length, 1);
+  assert.equal(aliceInbox.body.messages[0].sender_email, 'bob@' + INTERNAL_MAIL_DOMAIN);
+});
+
+test('MailHarbor normalizes @username recipients when saving drafts', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const saved = await call(state, state.db.users[0], 'POST', '/drafts', {
+    to: '@bob', subject: 'Handle draft', body: 'Draft for a Minglora member.'
+  });
+  assert.equal(saved.status, 201);
+  const draft = state.db.mailMessages.find(message => message.id === saved.body.message.id);
+  assert.deepEqual(draft.recipients.to, ['bob@' + INTERNAL_MAIL_DOMAIN]);
+});
+
