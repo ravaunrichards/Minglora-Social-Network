@@ -10,6 +10,7 @@ MeetWave is now a first-class Minglora feature. The canonical application reposi
 - Support instant, scheduled and reusable personal rooms; public, friends-only and invitation-only access; room codes and invite links; host room ending; member invitations; participant chat; and real participant counts from LiveKit.
 - Enforce a server-side maximum of eight concurrent participants per room. Scheduled rooms become joinable fifteen minutes before the scheduled start.
 - Persist rooms, invitations, attendance and meeting chat in Minglora's existing durable application-state collections.
+- Keep meeting invitation privacy independent: MeetWave has its own `privacy.meetWaveAudience` setting (`everyone`, `friends` or `nobody`). It does not read or inherit the direct-message audience setting.
 
 ## Source material excluded for security and product integrity
 
@@ -20,6 +21,10 @@ The original MeetWave repository is retained as a source/archive copy. It is not
 ## Provider requirement
 
 MeetWave requires the existing Minglora LiveKit configuration (`LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`). When those settings are absent or the provider is unreachable, the API reports that status and room creation/joining fails closed rather than generating fake meeting presence or fake participant counts.
+
+## Feature boundaries
+
+MeetWave is a separate product area within Minglora. Its own navigation item, frontend assets, API routes, backend domain module, and data collections keep meeting-room responsibilities distinct from one-to-one messages, group calls, creator LIVE broadcasts, Groups and Events. Shared infrastructure is intentionally limited to Minglora authentication/session identity, the common LiveKit media service, account profiles, and the runtime persistence adapter. Shared infrastructure does not merge feature permissions or user settings.
 
 ## Current scope
 
