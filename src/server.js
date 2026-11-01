@@ -3119,5 +3119,19 @@ server.listen(PORT,'0.0.0.0',async()=>{
     liveConfigured: isLiveKitConfigured()
   }));
   const liveHealth = await verifyLiveKitConnection({ force: true });
-  console.info('[Minglora LiveKit verification]', JSON.stringify(liveHealth));
+  const liveVerification = {
+    configured: liveHealth.configured,
+    connected: liveHealth.connected,
+    checkedAt: liveHealth.checkedAt
+  };
+  if (liveHealth.connected) {
+    // Keep the success payload free of an "error" field so structured log
+    // ingestion cannot mistake the null error property for an error-level event.
+    console.info('[Minglora LiveKit verification]', JSON.stringify(liveVerification));
+  } else {
+    console.error('[Minglora LiveKit verification failed]', JSON.stringify({
+      ...liveVerification,
+      verificationError: String(liveHealth.error || 'LiveKit connection failed').slice(0, 240)
+    }));
+  }
 });
