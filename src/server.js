@@ -123,8 +123,20 @@ function safeUser(u,viewerId=null){
   }
   const aboutSections={};
   for(const key of ABOUT_SECTION_KEYS){
-    if(canViewAboutSection(viewerId,u,sectionVisibility[key]))aboutSections[key]=u.aboutSections?.[key]||{};
+    if(!canViewAboutSection(viewerId,u,sectionVisibility[key]))continue;
+    aboutSections[key]={...(u.aboutSections?.[key]||{})};
   }
+  const legacyPersonal={
+    currentCity:u.city||u.location||'',country:u.country||'',county:u.county||'',parish:u.parish||'',
+    gender:u.gender||'',relationshipStatus:u.relationshipStatus||''
+  };
+  if(aboutSections.personalDetails){
+    for(const [key,value] of Object.entries(legacyPersonal)){
+      if(!Object.hasOwn(aboutSections.personalDetails,key))aboutSections.personalDetails[key]=value;
+    }
+  }
+  if(aboutSections.intro&&!Object.hasOwn(aboutSections.intro,'bio'))aboutSections.intro.bio=u.bio||'';
+  if(aboutSections.contactInfo&&!Object.hasOwn(aboutSections.contactInfo,'phone'))aboutSections.contactInfo.phone=u.contactPhone||'';
   result.aboutSections=aboutSections;
   if(own){
     result.email=u.email||'';
