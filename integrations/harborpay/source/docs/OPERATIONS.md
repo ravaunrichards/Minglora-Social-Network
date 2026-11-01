@@ -4,11 +4,17 @@
 
 Create a new Supabase project named HarborPay for this repository. Do not reuse Zovara or another application's project.
 
-In the HarborPay project, run these migrations in order: database/migrations/20261029000100_harborpay_core.sql, then database/migrations/20261030000200_harborpay_merchant_operations.sql, then database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql. The third migration creates only the signed Minglora identity handoff and account-link records in HarborPay's own database. The second migration adds merchants/team permissions, customers, orders, payment links, refunds, disputes, payment-status history, API keys, outbound webhooks, audit events, and atomic inbound-webhook claims. Run database/verify.sql and the Supabase security/performance advisors after both migrations. Enable Email/Password authentication and configure the production email sender and authentication redirect URLs in Supabase. Use the HarborPay web origin as an allowed redirect origin.
+In the HarborPay project, apply these migrations in order: `20261029000100_harborpay_core.sql`, `20261030000200_harborpay_merchant_operations.sql`, `20261101000300_harborpay_minglora_identity_bridge.sql`, and `20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql`. The dedicated Minglora HarborPay project has all four migrations applied. The fourth migration synchronizes email verification from Supabase Auth into the HarborPay profile, adds the three missing foreign-key indexes, and removes a duplicate webhook index. The merchant operations migration creates merchant/team permissions, customers, orders, payment links, refunds, disputes, payment-status history, API keys, outbound webhooks, audit events, and atomic inbound-webhook claims. Run `database/verify.sql`, `database/tests/verify_schema.sql`, and Supabase security/performance advisors after applying the migrations.
 
 The web application needs the project URL and a publishable/anon key. The API needs the same project URL and the service-role key. The service-role key is secret and belongs only in the HarborPay API environment.
 
-## 2. Create a PayPal REST app
+## 2. Configure HarborPay Auth and transactional email
+
+Enable the Email provider in HarborPay Supabase Auth. Set the HarborPay web origin as the Site URL and allow exact HarborPay redirect URLs for signup confirmation and password recovery. For local development, allow only the local Vite origin used by the developer. Do not add wildcard production redirect domains.
+
+Configure a custom SMTP sender on the HarborPay Supabase Auth settings using a verified sending domain and its real SMTP credentials. The hosted default email sender is rate-limited and is not suitable for a public financial-service onboarding flow. Use distinct, branded signup-confirmation and password-reset templates, and verify both links return to the HarborPay web app. HarborPay uses separate Supabase Auth; Minglora account login is not a substitute.
+
+## 3. Create a PayPal REST app
 
 Create a PayPal REST application for the HarborPay merchant account. Start with Sandbox mode. Copy the client ID and secret into the API service environment only.
 
@@ -23,7 +29,7 @@ PayPal documentation:
 - Webhook integration: https://developer.paypal.com/api/rest/webhooks/rest/
 - Payout country support: https://developer.paypal.com/payouts/supported-features/
 
-## 3. Configure the PayPal webhook
+## 4. Configure the PayPal webhook
 
 Register this HTTPS listener URL in the PayPal REST app:
 
@@ -42,11 +48,11 @@ Subscribe at minimum to:
 
 Copy the webhook ID into PAYPAL_WEBHOOK_ID. HarborPay verifies every webhook through PayPal's verify-webhook-signature API before storing or processing the event. Do not disable verification.
 
-## 4. Render environment variables
+## 5. Render environment variables
 
 Set these on the HarborPay API service:
 
-- HARBORPAY_WEB_URL=https://minglora-minglora-harborpay-web.onrender.com
+- HARBORPAY_WEB_URL=https://minglora-harborpay-web.onrender.com
 - MINGLORA_SSO_SECRET=THE_SAME_DISTINCT_RANDOM_SECRET_AS_MINGLORA_HARBORPAY_SSO_SECRET
 
 - PORT=4000
@@ -64,7 +70,7 @@ Set these on the HarborPay API service:
 
 Set these on the HarborPay static web service:
 
-- VITE_API_URL=https://minglora-minglora-harborpay-api.onrender.com
+- VITE_API_URL=https://minglora-harborpay-api.onrender.com
 
 - VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 - VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_PUBLISHABLE_OR_ANON_KEY
@@ -72,11 +78,11 @@ Set these on the HarborPay static web service:
 
 The API service and static site are separate Render services. Never set SUPABASE_SERVICE_ROLE_KEY, PAYPAL_CLIENT_SECRET, or PAYPAL_WEBHOOK_ID on the static site.
 
-## 5. Merchant API surface
+## 6. Merchant API and user workspace
 
-The API supports authenticated merchant account creation/listing, merchant customer records, merchant order records, and payment-link records. Merchant routes enforce owner/admin/finance/support/viewer roles server-side before using the privileged database client. Order creation returns `paymentStatus: not_started`; it does not collect funds. Payment links are not public checkout URLs yet. The public merchant checkout, merchant onboarding/KYC, settlement and refund workflows must be implemented and tested before these records can be used to represent customer payments.
+The HarborPay React client exposes live authenticated Personal Profile, Business, Customers, Orders and Payment Links screens. Signup/sign-in, email confirmation, password recovery and password update use HarborPay Supabase Auth. Its API supports `GET/POST /api/profile`, merchant account creation/listing, owner/admin business-profile updates, merchant customer records, merchant order records, payment-link record creation/listing and owner/admin activation/disable controls. Merchant routes enforce owner/admin/finance/support/viewer roles server-side before using the privileged database client. The `harborpay_auth_profile_sync` trigger mirrors Auth email-confirmation state into the profile. Order creation returns `paymentStatus: not_started`; it does not collect funds. Payment links are not public checkout URLs yet. The public merchant checkout, merchant onboarding/KYC, settlement and refund workflows must be implemented and tested before these records can be used to represent customer payments.
 
-## 6. Payout controls
+## 7. Payout controls
 
 PayPal lists Jamaica as a country with the "Send, receive, and withdraw" Payouts feature set. This does not automatically grant Payouts API access to a new merchant account. Confirm access with PayPal before using the endpoint.
 
