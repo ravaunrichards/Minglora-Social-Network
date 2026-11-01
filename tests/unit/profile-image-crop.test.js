@@ -38,10 +38,15 @@ test('profile image crop tools support drag positioning, zoom, rotation and rese
 
 test('the uploaded avatar and cover are cropped to the exact selected preview frame',()=>{
   assert.match(app,/async function transformProfileCrop\(file,edit,stage,slot\)/);
+  assert.match(app,/function profileCropViewport\(stage\)/);
+  assert.match(app,/return \{width:stage\.clientWidth,height:stage\.clientHeight\}/);
+  assert.match(app,/const viewport=profileCropViewport\(stage\)/);
   assert.match(app,/const outputWidth=slot==='avatar'\?1080:1800/);
-  assert.match(app,/const outputHeight=Math\.max\(1,Math\.round\(outputWidth\*rect\.height\/rect\.width\)\)/);
-  assert.match(app,/edit\.offsetX\*\(outputWidth\/rect\.width\)/);
-  assert.match(app,/edit\.offsetY\*\(outputHeight\/rect\.height\)/);
+  assert.match(app,/const outputHeight=Math\.max\(1,Math\.round\(outputWidth\*viewport\.height\/viewport\.width\)\)/);
+  assert.match(app,/edit\.offsetX\*\(outputWidth\/viewport\.width\)/);
+  assert.match(app,/edit\.offsetY\*\(outputHeight\/viewport\.height\)/);
+  assert.doesNotMatch(app,/function enableCropDragging/);
+  assert.equal((app.match(/stage\.addEventListener\('pointerdown'/g)||[]).length,1);
   assert.match(app,/transformProfileCrop\(avatarInput\.files\[0\],avatarEdit,avatarPreview,'avatar'\)/);
   assert.match(app,/transformProfileCrop\(coverInput\.files\[0\],coverEdit,coverPreview,'cover'\)/);
 });
@@ -52,4 +57,19 @@ test('the refreshed shell and service worker load the profile crop editor and it
   assert.match(worker,/minglora-shell-v39-layout-overlap-audit/);
   assert.match(worker,/styles\.css\?v=20261101-layout-overlap-1/);
   assert.match(worker,/app\.js\?v=20261101-profile-crop-1/);
+});
+
+test('crop preview and saved output use the visible inner frame rather than its border',()=>{
+  const helper=app.slice(app.indexOf('function profileCropViewport'),app.indexOf('function bindProfileCropStage'));
+  assert.match(helper,/stage\.clientWidth/);
+  assert.match(helper,/stage\.clientHeight/);
+  assert.doesNotMatch(helper,/getBoundingClientRect/);
+  // A 176px circular frame with a 5px border has a 166px visible crop area.
+  // Both preview and export must be calculated from 166px, never from 176px.
+  const outer=176,border=5,visible=outer-border*2,sourceW=800,sourceH=1200;
+  const previewScale=Math.max(visible/sourceW,visible/sourceH);
+  const exportScale=Math.max(1080/sourceW,1080/sourceH);
+  assert.equal((visible/previewScale),(1080/exportScale));
+  const previewOffset=14,exportOffset=previewOffset*(1080/visible);
+  assert.equal(exportOffset/exportScale,previewOffset/previewScale);
 });
