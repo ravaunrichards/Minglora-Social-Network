@@ -300,9 +300,9 @@ function createHmacHex(secret, value) {
   return createHmac("sha256", secret).update(value, "utf8").digest("hex");
 }
 
-function verifyMingloraLaunch(request) {
+function verifyMingloraLaunch(request, endpoint = "/api/integrations/minglora/launch") {
   const secret = String(process.env.MINGLORA_SSO_SECRET || "");
-  if (Buffer.byteLength(secret) < 32) throw httpError(503, "Minglora identity linking is not configured.");
+  if (Buffer.byteLength(secret) < 32) throw httpError(503, "Minglora identity linking is not configured on HarborPay.");
   const timestamp = String(request.get("x-harborpay-timestamp") || "");
   const supplied = String(request.get("x-harborpay-signature") || "");
   const sentAt = Number(timestamp);
@@ -311,14 +311,26 @@ function verifyMingloraLaunch(request) {
   }
   if (!Buffer.isBuffer(request.rawBody)) throw httpError(400, "The signed request body is unavailable.");
   const bodyHash = createHash("sha256").update(request.rawBody).digest("hex");
-  const canonical = [timestamp, "POST", "/api/integrations/minglora/launch", bodyHash].join("\n");
+  const canonical = [timestamp, "POST", endpoint, bodyHash].join("\n");
   const expected = createHmacHex(secret, canonical);
   const left = Buffer.from(expected, "hex");
   const right = Buffer.from(supplied, "hex");
   if (right.length !== left.length || !timingSafeEqual(left, right)) {
-    throw httpError(401, "The Minglora identity signature could not be verified.");
+    throw httpError(401, "The Minglora and HarborPay signing secrets do not match or the identity signature is invalid.");
   }
 }
+
+app.post("/api/integrations/minglora/healthcheck", asyncRoute(async (request, response) => {
+  verifyMingloraLaunch(request, "/api/integrations/minglora/healthcheck");
+  const { error } = await getDatabase().from("profiles").select("id").limit(1);
+  if (error) throw httpError(503, "HarborPay cannot read its dedicated Supabase database.");
+  response.set("Cache-Control", "no-store").json({
+    ready: true,
+    service: "harborpay-api",
+    databaseConfigured: true,
+    identityBridge: true
+  });
+}));
 
 app.post("/api/integrations/minglora/launch", asyncRoute(async (request, response) => {
   verifyMingloraLaunch(request);
