@@ -25,6 +25,7 @@ test('starting or answering a call refreshes stale sessions and rejects overlapp
   assert.match(server,/const busyElsewhere=\(db\.callParticipants\|\|\[\]\)\.some/);
   assert.match(server,/callCreationReservations\.add\(id\)/);
   assert.match(server,/callCreationReservations\.delete\(id\)/);
+  assert.match(server,/participant\.status='joined';participant\.joinedAt=now\(\);participant\.leftAt=null/);
 });
 
 test('call notifications are removed only when the user no longer has an active invitation',()=>{
