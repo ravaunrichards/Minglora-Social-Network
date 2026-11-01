@@ -84,20 +84,23 @@ function createApp(options = {}) {
   }));
 
   app.get('/api/status', (_req, res) => {
+    const outboundEmailConfigured = config.smtp.configured &&
+      (!config.mingloraSsoSecret || Boolean(config.mailDomain && config.mailDomainVerified));
+    const inboundEmailConfigured = Boolean(config.inboundWebhookSecret && config.inboundMailEnabled);
     res.json({
       service: 'MailHarbor',
-      outboundEmailConfigured: config.smtp.configured,
-      inboundEmailConfigured: Boolean(config.inboundWebhookSecret),
+      outboundEmailConfigured,
+      inboundEmailConfigured,
       mingloraSsoConfigured: Boolean(config.mingloraSsoSecret),
       mailDomainConfigured: Boolean(config.mailDomain),
       mailDomainVerified: Boolean(config.mailDomainVerified),
       mailDomain: config.mailDomain || null,
       realtimeConfigured: Boolean(config.realtimePublicUrl),
       realtimeUrl: config.realtimePublicUrl,
-      registrationAvailable: config.smtp.configured,
-      deliveryNote: config.smtp.configured
+      registrationAvailable: !config.mingloraSsoSecret && config.smtp.configured,
+      deliveryNote: outboundEmailConfigured
         ? 'Outbound messages are queued for the MailHarbor delivery loop running in this application service.'
-        : 'Outbound delivery is disabled until a verified SMTP provider is configured.'
+        : 'Outbound delivery is disabled until SMTP and a verified MailHarbor sender domain are configured.'
     });
   });
 
@@ -404,8 +407,12 @@ function createApp(options = {}) {
   }));
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
-  app.use(express.static(path.resolve(__dirname, '../../frontend'), { etag: true, maxAge: '1h', index: 'index.html' }));
-  app.get('*', (_req, res) => res.sendFile(path.resolve(__dirname, '../../frontend/index.html')));
+  if (config.mingloraSsoSecret) {
+    app.get('*', (_req, res) => res.status(404).json({ error: 'This MailHarbor service is accessed through the authenticated Minglora application.' }));
+  } else {
+    app.use(express.static(path.resolve(__dirname, '../../frontend'), { etag: true, maxAge: '1h', index: 'index.html' }));
+    app.get('*', (_req, res) => res.sendFile(path.resolve(__dirname, '../../frontend/index.html')));
+  }
 
   app.use((error, _req, res, _next) => {
     process.stderr.write('MailHarbor request error: ' + error.message + '\n');
