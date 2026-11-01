@@ -189,3 +189,28 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .hp-security-note{font-size:9px;line-height:1.6;color:#8393a4;background:#f5f8fb;padding:12px;border-radius:9px;margin:13px 0 0}
 @media(max-width:900px){.hp-workspace-grid{grid-template-columns:1fr}}
 @media(max-width:720px){.hp-workspace-toolbar{align-items:stretch}.hp-merchant-select-wrap{width:100%}.hp-toolbar-actions{width:100%}.hp-toolbar-actions button{flex:1}.hp-work-panel{padding:15px}.hp-form-grid{grid-template-columns:1fr}.hp-form-actions{grid-column:1}.hp-form-error{grid-column:1}.hp-data-date{display:none}.hp-data-trailing{max-width:120px}.hp-work-panel-heading h2{font-size:15px}}
+
+
+/* Interactive account-type pages and saved organization applications */
+.hp-account-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.hp-account-type-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-width:0;min-height:205px;padding:16px;border:1px solid #e2eaf2;border-radius:13px;background:#fff;text-align:left;color:#24435f;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.hp-account-type-card:hover,.hp-account-type-card.active{border-color:#5e99dd;box-shadow:0 8px 24px #23578f14;transform:translateY(-1px)}
+.hp-account-type-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#eaf2fc;color:#286fbe}
+.hp-account-type-card>strong{font:800 15px Manrope,sans-serif;color:#243e58}
+.hp-account-type-card>small{font-size:10px;line-height:1.55;color:#7d8fa2;flex:1}
+.hp-account-type-action{display:flex;align-items:center;gap:7px;color:#286fc1;font-size:10px;font-weight:800}
+.hp-account-type-card.active .hp-account-type-action{color:#0d865d}
+.hp-action-message{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid #e1eaf1;border-radius:10px;background:#f8fafc;font-size:10px;line-height:1.6;color:#4d637a}
+.hp-action-message.success{border-color:#cce9db;background:#f2fbf6;color:#247b58}
+.hp-action-message.error{border-color:#f2d7d4;background:#fff7f6;color:#a74942}
+.hp-field-full{grid-column:1/-1}
+.hp-field textarea{width:100%;min-width:0;resize:vertical;border:1px solid #dce4ed;border-radius:8px;padding:11px 10px;color:#28435e;outline:none;font:500 11px 'DM Sans',sans-serif;background:#fff}
+.hp-field textarea:focus{border-color:#79a8e5;box-shadow:0 0 0 3px #eaf2ff}
+.hp-application-row{display:flex;align-items:center;gap:11px;padding:13px 0;border-top:1px solid #edf1f5;min-width:0}
+.hp-application-row:first-child{border-top:0}
+.hp-application-row .hp-data-icon{flex:0 0 34px}
+.hp-application-row .hp-data-trailing{min-width:120px}
+.hp-application-row .hp-data-trailing small{color:#8c9bac;font-size:9px}
+.hp-account-types .hp-provider-gate{grid-column:1/-1}
+@media(max-width:1000px){.hp-account-type-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.hp-account-type-grid{grid-template-columns:1fr}.hp-account-type-card{min-height:0}.hp-field-full{grid-column:1}.hp-application-row{align-items:flex-start;flex-wrap:wrap}.hp-application-row .hp-data-trailing{width:100%;padding-left:45px;justify-items:start}}
