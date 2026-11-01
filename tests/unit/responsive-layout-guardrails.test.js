@@ -83,7 +83,7 @@ test('the responsive stylesheet and service-worker shell are versioned together'
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
   assert.ok(html.includes('styles.css?v=20261101-profile-more-4'));
-  assert.ok(worker.includes('minglora-shell-v46-profile-more-sections'));
+  assert.ok(worker.includes('minglora-shell-v47-profile-overflow-menu'));
   assert.ok(worker.includes('styles.css?v=20261101-profile-more-4'));
 });
 
