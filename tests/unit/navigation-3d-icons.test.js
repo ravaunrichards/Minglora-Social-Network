@@ -12,7 +12,7 @@ const [html, css, sprite, serviceWorker] = await Promise.all([
   read('public/sw.js')
 ]);
 
-const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2#${id}"></use>`;
+const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#${id}"></use>`;
 
 test('desktop navigation keeps its existing destinations and uses 3D icons', () => {
   const nav = html.match(/<nav class="top-nav"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -24,7 +24,8 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
     ['creator', 'creator', 'Studio'],
     ['friends', 'friends', 'Friends'],
     ['messages', 'messages', 'Messenger'],
-    ['coins', 'coins', 'Coins']
+    ['coins', 'coins', 'Coins'],
+    ['mailharbor', 'mailharbor', 'Mail']
   ]) {
     assert.match(nav, new RegExp(`data-view="${view}"`));
     assert.ok(nav.includes(useIcon(icon)), `${label} has its matching dimensional icon`);
@@ -42,11 +43,18 @@ test('mobile navigation uses the same 3D icon artwork and keeps all six destinat
     ['creator', 'creator'],
     ['friends', 'friends'],
     ['messages', 'messages'],
-    ['coins', 'coins']
+    ['coins', 'coins'],
+    ['mailharbor', 'mailharbor']
   ]) {
     assert.match(nav, new RegExp(`data-view="${view}"`));
     assert.ok(nav.includes(useIcon(icon)), `${view} uses the shared 3D artwork`);
   }
+});
+
+test('MailHarbor is a first-class route in desktop, mobile and utility navigation', () => {
+  assert.match(html, /data-view="mailharbor"/);
+  assert.match(html, /mailharbor-rail-entry[^>]*data-view="mailharbor"/);
+  assert.ok(html.includes(useIcon('mailharbor')));
 });
 
 test('utility rail and header actions use the matching rendered icon assets', () => {
@@ -59,7 +67,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right']) {
+  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right', 'mailharbor', 'inbox', 'sent', 'drafts', 'star', 'spam', 'trash', 'compose', 'refresh']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);
@@ -79,7 +87,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v56-messenger-right-panel-2/);
+  assert.match(serviceWorker, /minglora-shell-v57-mailharbor-in-app-1/);
   assert.match(serviceWorker, /styles\.css\?v=20261101-messenger-right-panel-2/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
