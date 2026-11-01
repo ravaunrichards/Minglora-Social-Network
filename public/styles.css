@@ -3149,3 +3149,20 @@ body.auth-mode .auth-screen{
   .messenger-filter-tabs button{gap:3px;font-size:10px}
   .messenger-filter-tabs button .messenger-3d-icon{width:17px;height:17px}
 }
+
+
+/* Dedicated StreamBay entry point. */
+.top-nav .streambay-entry{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;min-width:60px;color:var(--muted);text-decoration:none;border-radius:12px}
+.top-nav .streambay-entry:hover{background:var(--surface-soft);color:var(--text)}
+.top-nav .streambay-entry .nav-3d-icon{width:30px;height:30px}
+.top-nav .streambay-entry small{font-size:10px;font-weight:700}
+.mobile-nav .streambay-mobile-entry{display:grid;place-items:center;gap:2px;min-width:56px;color:var(--muted);text-decoration:none;border-radius:10px;padding:4px 3px}
+.mobile-nav .streambay-mobile-entry .nav-3d-icon{width:25px;height:25px}
+.mobile-nav .streambay-mobile-entry small{font-size:9px;font-weight:700}
+.left-rail .streambay-rail-entry{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none}
+.left-rail .streambay-rail-entry:hover{background:var(--surface-soft)}
+.left-rail .streambay-rail-entry .nav-3d-icon{width:28px;height:28px}
+@media(max-width:850px){
+  .top-nav .streambay-entry{min-width:50px}
+  .mobile-nav .streambay-mobile-entry{min-width:0;flex:1}
+}

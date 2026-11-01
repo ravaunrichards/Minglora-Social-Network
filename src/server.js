@@ -20,6 +20,7 @@ import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote
 import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
+import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -620,6 +621,13 @@ async function route(req, res) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
+      if (p.startsWith('/api/streambay/')) {
+        const streamBayResponse = await handleStreamBayApi({
+          method, path:p, url, input, user, db, saveStore, uid, now,
+          requireAuth, safeUser, resolveAssetUrl, blockedBetween
+        });
+        if (streamBayResponse) return json(res, streamBayResponse.status, streamBayResponse.body);
+      }
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});

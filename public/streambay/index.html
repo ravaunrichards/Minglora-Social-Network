@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1769e0">
+  <meta name="description" content="StreamBay — Minglora's dedicated video platform for discovering, watching and sharing videos.">
+  <title>StreamBay — Minglora</title>
+  <link rel="stylesheet" href="/streambay/styles.css?v=20261101-streambay-1">
+</head>
+<body>
+  <header class="topbar">
+    <button class="iconbtn menu" id="menuBtn" type="button" aria-label="Open StreamBay navigation"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#more"></use></svg></button>
+    <a class="brand" href="#home" aria-label="StreamBay Home"><span class="brandmark"><svg class="sb-brand-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#live"></use></svg></span><span>StreamBay</span></a>
+    <form id="searchForm" class="search">
+      <input id="searchInput" placeholder="Search videos, creators..." aria-label="Search videos and creators" autocomplete="off">
+      <button type="submit" aria-label="Search"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#search"></use></svg></button>
+    </form>
+    <div class="top-actions">
+      <button id="uploadOpen" class="upload-btn" type="button"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#create"></use></svg><span>Create</span></button>
+      <a class="minglora-link" href="/" title="Return to Minglora"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#home"></use></svg><span>Minglora</span></a>
+      <a id="avatarBtn" class="avatar" href="/" aria-label="Your Minglora account"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#profile"></use></svg></a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar" class="sidebar" aria-label="StreamBay navigation">
+      <nav>
+        <a href="#home" data-nav="home" class="active"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#home"></use></svg>Home</a>
+        <a href="#explore" data-nav="explore"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#explore"></use></svg>Explore</a>
+        <a href="#subscriptions" data-nav="subscriptions"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#saved"></use></svg>Subscriptions</a>
+        <a href="#history" data-nav="history"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#activity"></use></svg>History</a>
+      </nav>
+      <hr>
+      <nav>
+        <div class="side-label">YOUR SPACE</div>
+        <a href="#channel/me" data-nav="channel"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#profile"></use></svg>Your channel</a>
+        <a href="#uploads" data-nav="uploads"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#creator"></use></svg>Your videos</a>
+      </nav>
+      <hr>
+      <p class="side-note">Discover creators, watch what you love, and build your own channel — all with your Minglora account.</p>
+      <a class="side-footer" href="/"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#arrow-left"></use></svg><span>Back to Minglora</span></a>
+    </aside>
+
+    <main class="main">
+      <section id="signInRequired" class="sign-in-required hidden">
+        <div class="gate-icon"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#profile"></use></svg></div>
+        <h1>Sign in to Minglora</h1>
+        <p>StreamBay uses your Minglora account. Sign in once, then return here to watch, subscribe and publish videos.</p>
+        <a class="primary" href="/">Open Minglora sign in</a>
+      </section>
+      <div id="streambayContent">
+        <div id="chips" class="chips"></div>
+        <section id="pageTitle" class="page-title"><h1>Home</h1><p>Fresh videos and creators worth your time.</p></section>
+        <div id="videoGrid" class="video-grid"><div class="loading">Loading StreamBay…</div></div>
+        <section id="watchView" class="watch-view hidden"></section>
+        <section id="channelView" class="channel-view hidden"></section>
+      </div>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="StreamBay sections">
+    <a href="#home" data-nav="home" class="active"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#home"></use></svg><small>Home</small></a>
+    <a href="#explore" data-nav="explore"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#explore"></use></svg><small>Explore</small></a>
+    <a href="#subscriptions" data-nav="subscriptions"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#saved"></use></svg><small>Subs</small></a>
+    <a href="#history" data-nav="history"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#activity"></use></svg><small>History</small></a>
+    <a href="#channel/me" data-nav="channel"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#profile"></use></svg><small>Channel</small></a>
+    <a href="#uploads" data-nav="uploads"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#creator"></use></svg><small>Videos</small></a>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="uploadDialog">
+    <form id="uploadForm" class="dialog-form">
+      <button type="button" class="close" data-close="uploadDialog" aria-label="Close upload dialog"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#close"></use></svg></button>
+      <h2>Publish a video</h2>
+      <p>Upload to your StreamBay channel using Minglora's secure media storage.</p>
+      <label>Video title<input name="title" maxlength="120" required minlength="2" placeholder="Give your video a clear title"></label>
+      <label>Description<textarea name="description" rows="3" maxlength="5000" placeholder="What is this video about?"></textarea></label>
+      <label>Category<select name="category"><option>Other</option><option>Music</option><option>Gaming</option><option>Education</option><option>News</option><option>Sports</option><option>Comedy</option><option>Technology</option><option>Travel</option><option>Food</option><option>Lifestyle</option></select></label>
+      <label class="filedrop">Choose video file<input name="video" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" required><span>MP4, WebM or MOV · up to 500 MB</span></label>
+      <progress id="uploadProgress" max="100" value="0" hidden></progress>
+      <p id="uploadStatus" class="fineprint" role="status">Only publish videos you own or have permission to distribute.</p>
+      <button class="primary" type="submit">Upload and publish</button>
+    </form>
+  </dialog>
+
+  <dialog id="editDialog">
+    <form id="editForm" class="dialog-form">
+      <button type="button" class="close" data-close="editDialog" aria-label="Close channel editor"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#close"></use></svg></button>
+      <h2>Edit your channel</h2>
+      <label>Channel name<input name="name" required minlength="2" maxlength="60"></label>
+      <label>About your channel<textarea name="bio" rows="4" maxlength="500" placeholder="Tell viewers about your channel"></textarea></label>
+      <button class="primary" type="submit">Save changes</button>
+    </form>
+  </dialog>
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js" defer></script>
+  <script src="/streambay/app.js?v=20261101-streambay-1" defer></script>
+</body>
+</html>
