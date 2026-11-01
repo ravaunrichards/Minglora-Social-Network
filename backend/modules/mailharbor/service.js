@@ -162,6 +162,12 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     internalMessagingEnabled: true,
     outboundEmailConfigured: false,
     inboundEmailConfigured: false,
+    externalProviders: {
+      gmail: { configured: false, connected: false },
+      yahoo: { configured: false, connected: false },
+      outlook: { configured: false, connected: false },
+      icloud: { configured: false, connected: false }
+    },
     realtimeUrl: null,
     deliveryNote: 'MailHarbor member-to-member delivery is active inside Minglora. External email sending and receiving are not enabled until a verified sender domain and provider are connected.'
   };
