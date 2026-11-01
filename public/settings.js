@@ -1,6 +1,6 @@
 (() => {
   const defaults = {
-    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone' },
+    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true },
     preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false }
   };
@@ -112,6 +112,9 @@
               <label class="settings-toggle"><span><strong>Allow friend requests</strong><small>Let other members send you friend requests.</small></span><input type="checkbox" name="allowFriendRequests" ${settings.privacy.allowFriendRequests ? 'checked' : ''}></label>
               <label class="settings-field"><span><strong>Who can message you?</strong><small>Choose who can start a new direct conversation.</small></span>
                 <select name="messageAudience"><option value="everyone" ${settings.privacy.messageAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.messageAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.messageAudience === 'nobody' ? 'selected' : ''}>Nobody new</option></select>
+              </label>
+              <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
+                <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
               </label>
             </section>
             <section class="settings-card" id="settings-blocking">
@@ -388,7 +391,8 @@
           privacy: {
             profileVisibility: formData.get('profileVisibility'),
             allowFriendRequests: formData.has('allowFriendRequests'),
-            messageAudience: formData.get('messageAudience')
+            messageAudience: formData.get('messageAudience'),
+            meetWaveAudience: formData.get('meetWaveAudience')
           },
           notifications: {
             inApp: formData.has('notificationInApp'),
