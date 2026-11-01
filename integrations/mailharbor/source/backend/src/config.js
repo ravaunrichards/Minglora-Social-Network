@@ -15,12 +15,12 @@ function normalizeRealtimeUrl(value, nodeEnv) {
 
 function loadConfig(env = process.env) {
   const nodeEnv = env.NODE_ENV || 'development';
-  const jwtSecret = env.JWT_SECRET || (nodeEnv === 'production' ? '' : 'local-only-change-this-secret-before-deploying');
+  const jwtSecret = env.JWT_SECRET || env.SESSION_SECRET || (nodeEnv === 'production' ? '' : 'local-only-change-this-secret-before-deploying');
   if (nodeEnv === 'production' && Buffer.byteLength(jwtSecret) < 32) {
     throw new Error('JWT_SECRET must contain at least 32 bytes in production.');
   }
 
-  const mingloraSsoSecret = env.MINGLORA_SSO_SECRET || '';
+  const mingloraSsoSecret = env.MINGLORA_SSO_SECRET || env.MAILHARBOR_SSO_SECRET || '';
   const mailDomain = String(env.MAILHARBOR_MAIL_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
   const mailDomainVerified = bool(env.MAILHARBOR_DOMAIN_VERIFIED, false);
   const inboundMailEnabled = bool(env.INBOUND_MAIL_ENABLED, false);
@@ -45,7 +45,7 @@ function loadConfig(env = process.env) {
     nodeEnv,
     isProduction: nodeEnv === 'production',
     port: Number(env.PORT || 3000),
-    databaseUrl: env.DATABASE_URL || '',
+    databaseUrl: env.MAILHARBOR_DATABASE_URL || env.DATABASE_URL || '',
     databaseSsl: bool(env.DATABASE_SSL, false),
     jwtSecret,
     trustProxy: bool(env.TRUST_PROXY, nodeEnv === 'production'),
