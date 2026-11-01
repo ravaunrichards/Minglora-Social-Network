@@ -36,6 +36,8 @@ test('MailHarbor opens a durable Minglora member mailbox without a separate data
   assert.equal(result.body.internalMessagingEnabled, true);
   assert.equal(result.body.outboundEmailConfigured, false);
   assert.equal(result.body.mailboxMode, 'minglora-internal');
+  assert.equal(result.body.externalProviders.gmail.connected, false);
+  assert.equal(result.body.externalProviders.yahoo.connected, false);
   assert.equal(state.db.mailboxes.length, 1);
   assert.equal(state.db.mailboxes[0].email, 'alice@' + INTERNAL_MAIL_DOMAIN);
   assert.equal(state.saves, 1);
