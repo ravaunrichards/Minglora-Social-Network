@@ -19,7 +19,7 @@ test('profile bio and location are displayed in About, not beside the profile ph
   assert.match(identityHeader, /u\.username/);
   assert.doesNotMatch(identityHeader, /u\.(bio|location)/);
   const rowsStart = appSource.indexOf('const rows=[', renderProfileStart);
-  const rowsEnd = appSource.indexOf('].filter(([,value])=>', rowsStart);
+  const rowsEnd = appSource.indexOf('.filter(([,value])=>', rowsStart);
   assert.notEqual(rowsStart, -1, 'About details collection must exist');
   assert.notEqual(rowsEnd, -1, 'About details collection must close');
   const rows = appSource.slice(rowsStart, rowsEnd);
@@ -30,7 +30,7 @@ test('profile bio and location are displayed in About, not beside the profile ph
 
 test('all other personal profile details stay in the About details collection', () => {
   const rowsStart = appSource.indexOf('const rows=[', renderProfileStart);
-  const rowsEnd = appSource.indexOf('].filter(([,value])=>', rowsStart);
+  const rowsEnd = appSource.indexOf('.filter(([,value])=>', rowsStart);
   const rows = appSource.slice(rowsStart, rowsEnd);
   for (const field of ['country', 'county', 'parish', 'city', 'gender', 'relationshipStatus', 'contactPhone']) {
     assert.ok(rows.includes('u.' + field), field + ' must be in About');
