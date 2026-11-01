@@ -58,7 +58,7 @@ function ensureMailbox(db, member) {
   let mailbox = db.mailboxes.find(item => String(item.memberId) === memberId);
   if (!mailbox) {
     mailbox = {
-      id: memberId, memberId, username, email: mailboxEmail(username), displayName,
+      id: memberId, memberId, username, addressUsername: username, email: mailboxEmail(username), displayName,
       mailSettings: { ...DEFAULT_MAILBOX_SETTINGS },
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
@@ -77,8 +77,17 @@ function ensureMailbox(db, member) {
       }
     }
   }
-  const desiredEmail = mailboxEmail(username);
   if (mailbox.username !== username) { mailbox.username = username; changed = true; }
+  let addressUsername = String(mailbox.addressUsername || '').trim().toLowerCase();
+  if (!USERNAME_RE.test(addressUsername)) {
+    const storedEmail = String(mailbox.email || '').trim().toLowerCase();
+    const storedDomain = '@' + currentMailboxDomain();
+    const storedLocalPart = storedEmail.endsWith(storedDomain) ? storedEmail.slice(0, -storedDomain.length) : '';
+    addressUsername = USERNAME_RE.test(storedLocalPart) ? storedLocalPart : username;
+    mailbox.addressUsername = addressUsername;
+    changed = true;
+  }
+  const desiredEmail = mailboxEmail(addressUsername);
   if (String(mailbox.email || '').toLowerCase() !== desiredEmail) { mailbox.email = desiredEmail; changed = true; }
   if (mailbox.displayName !== displayName) { mailbox.displayName = displayName; changed = true; }
   return { mailbox, changed };
@@ -445,14 +454,22 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
   if (route === '/account/address' && verb === 'PATCH') {
     const username = String(input.username || '').trim().toLowerCase();
     if (!USERNAME_RE.test(username)) return { status: 400, body: { error: 'Mailbox names must use 3–30 letters, numbers or underscores.' } };
-    if (db.mailboxes.some(item => String(item.memberId) !== String(mailbox.memberId) && String(item.username).toLowerCase() === username)) {
+    const claimedByMailbox = db.mailboxes.some(item =>
+      String(item.memberId) !== String(mailbox.memberId) &&
+      String(item.addressUsername || item.username).toLowerCase() === username
+    );
+    const claimedByMember = db.users.some(item =>
+      String(item.id) !== String(mailbox.memberId) &&
+      String(item.username || '').toLowerCase() === username
+    );
+    if (claimedByMailbox || claimedByMember) {
       return { status: 409, body: { error: 'That MailHarbor address is already in use.' } };
     }
     const before = {
       mailboxes: structuredClone(db.mailboxes),
       mailMessages: structuredClone(db.mailMessages)
     };
-    mailbox.username = username;
+    mailbox.addressUsername = username;
     mailbox.email = mailboxEmail(username);
     mailbox.updatedAt = new Date().toISOString();
     try { await saveStore(); }
