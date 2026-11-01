@@ -305,3 +305,33 @@ test('MailHarbor normalizes @username recipients when saving drafts', async () =
   assert.deepEqual(draft.recipients.to, ['bob@' + INTERNAL_MAIL_DOMAIN]);
 });
 
+test('MailHarbor address aliases persist across requests without changing the Minglora username', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const changed = await call(state, state.db.users[0], 'PATCH', '/account/address', { username: 'alice_mail' });
+  assert.equal(changed.status, 200);
+  assert.equal(changed.body.user.email, 'alice_mail@' + INTERNAL_MAIL_DOMAIN);
+
+  const reopened = await call(state, state.db.users[0], 'GET', '/me');
+  assert.equal(reopened.body.user.username, 'alice');
+  assert.equal(reopened.body.user.email, 'alice_mail@' + INTERNAL_MAIL_DOMAIN);
+  assert.equal(state.db.mailboxes[0].username, 'alice');
+  assert.equal(state.db.mailboxes[0].addressUsername, 'alice_mail');
+
+  const reply = await call(state, state.db.users[1], 'POST', '/messages', {
+    to: 'alice_mail', subject: 'Alias works', body: 'Deliver to the saved alias.'
+  });
+  assert.equal(reply.status, 202);
+  const inbox = await call(state, state.db.users[0], 'GET', '/messages', {}, '?folder=inbox');
+  assert.equal(inbox.body.messages.length, 1);
+});
+
+test('MailHarbor address aliases cannot claim another member username', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const conflict = await call(state, state.db.users[0], 'PATCH', '/account/address', { username: 'bob' });
+  assert.equal(conflict.status, 409);
+  const saved = await call(state, state.db.users[0], 'GET', '/me');
+  assert.equal(saved.body.user.email, 'alice@' + INTERNAL_MAIL_DOMAIN);
+});
+
