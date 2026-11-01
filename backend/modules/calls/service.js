@@ -48,13 +48,14 @@ export function reconcileCallPresence(call,participants,providerParticipants,sta
  };
  let changed=false;
  for(const participant of related){
-  if(!["joined","calling"].includes(participant.status))continue;
+  const wasRecentlyActive=["joined","calling"].includes(participant.status);
   const connected=providerIds.has(String(participant.userId));
-  if(connected){
+  if(connected&&["joined","calling","left"].includes(participant.status)){
    if(participant.status!=="joined"){participant.status="joined";participant.joinedAt=participant.joinedAt||stamp;changed=true;}
    if(participant.leftAt){participant.leftAt=null;changed=true;}
    continue;
   }
+  if(!wasRecentlyActive)continue;
   if(withinGrace(participant))continue;
   if(participant.status!=="left"||!participant.leftAt){participant.status="left";participant.leftAt=participant.leftAt||stamp;changed=true;}
  }
