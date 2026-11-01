@@ -1805,7 +1805,7 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){stopProfilePresence();try{const data=await api(`/users/${id}`);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profile?.user?.id!==id)state.profileTab='posts';try{const data=await api(`/users/${encodeURIComponent(id)}`);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 
 async function renderConnections(profileId,kind){
@@ -1831,41 +1831,139 @@ function openImageViewer(url,label='Image'){
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   document.addEventListener('keydown',function onKey(event){if(event.key==='Escape'){close();document.removeEventListener('keydown',onKey);}});
 }
+function profileAboutMarkup(u,isMe){
+  const rows=[['Bio',u.bio],['Location',u.location],['Country',u.country],['County',u.county],['Parish',u.parish],['City',u.city],['Gender',u.gender],['Relationship status',u.relationshipStatus],['Contact phone',u.contactPhone]]
+    .filter(([,value])=>String(value||'').trim());
+  rows.push(['Joined',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})]);
+  return rows.map(([label,value])=>'<div class="about-row'+(label==='Bio'?' about-row-bio':'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join('');
+}
+function profilePhotoTile(item,owner=false,albumId=''){
+  const url=esc(item.url||'');
+  const media=item.mediaType==='video'
+    ?'<video controls playsinline preload="metadata" src="'+url+'"></video>'
+    :'<img loading="lazy" src="'+url+'" alt="Photo shared on Minglora">';
+  return '<article class="profile-media-tile">'+media+(item.postText?'<small>'+esc(item.postText.slice(0,90))+'</small>':'')+
+    (owner&&albumId?'<button type="button" class="profile-media-remove" data-profile-photo-remove="'+esc(item.id)+'" data-album-id="'+esc(albumId)+'" aria-label="Remove photo from album">Remove</button>':'')+'</article>';
+}
+function profileTabMarkup(data,tab,aboutHtml,isMe){
+  const posts=data.posts||[],albums=data.albums||[],photos=data.photos||[],reels=data.reels||[],friends=data.friends||[];
+  if(tab==='about')return '<section class="card profile-about"><div class="about-heading"><h3>About</h3>'+(isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':'')+'</div>'+(aboutHtml||'<p class="muted">No About details have been added yet.</p>')+'</section>';
+  if(tab==='friends')return '<section class="card"><div class="page-heading"><h2>Friends</h2><span class="muted">'+friends.length+' friends</span></div>'+(friends.length?'<div class="profile-friends-grid">'+friends.map(member=>'<button type="button" class="profile-friend-card" data-profile="'+esc(member.id)+'"><img class="avatar" src="'+avatar(member)+'" alt=""><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+'</small></button>').join('')+'</div>':'<div class="empty-state"><h3>No friends to show</h3><p>Friends appear here when both members follow each other.</p></div>')+'</section>';
+  if(tab==='photos'){
+    const albumMarkup=albums.map(album=>{
+      const cover=album.photos.find(photo=>photo.id===album.coverAssetId)||album.photos[0];
+      return '<article class="profile-album-card"><button type="button" class="profile-album-cover" data-album-open="'+esc(album.id)+'">'+(cover?'<img src="'+esc(cover.url)+'" alt="">':'<span>▧</span>')+'</button><div class="profile-album-info"><strong>'+esc(album.title)+'</strong><small>'+album.photos.length+' photos · '+esc(album.visibility)+'</small>'+(album.description?'<p>'+esc(album.description)+'</p>':'')+(isMe?'<div class="profile-album-actions"><button type="button" class="secondary" data-album-edit="'+esc(album.id)+'">Edit / Add photos</button><button type="button" class="secondary" data-album-delete="'+esc(album.id)+'">Delete</button></div>':'')+'</div></article>';
+    }).join('');
+    const combined=[...photos,...albums.flatMap(album=>album.photos.map(photo=>({...photo,albumId:album.id})))];
+    const unique=combined.filter((item,index,list)=>list.findIndex(other=>other.id===item.id)===index);
+    return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Photos</h2><p class="muted">Individual photos and organised albums</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-album">Create album / Upload photos</button>':'')+'</div>'+
+      (albums.length?'<h3 class="profile-subheading">Photo albums</h3><div class="profile-albums-grid">'+albumMarkup+'</div>':'<div class="empty-state"><h3>No albums yet</h3><p>'+(isMe?'Create an album and upload your first photos.':'This member has not created any public albums yet.')+'</p></div>')+
+      '<h3 class="profile-subheading">All photos</h3>'+(unique.length?'<div class="profile-media-grid">'+unique.map(item=>profilePhotoTile(item,false)).join('')+'</div>':'<p class="muted">No individual photos have been shared yet.</p>')+'</section>';
+  }
+  if(tab==='reels')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Reels</h2><p class="muted">Short videos shared on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-reel">Create reel</button>':'')+'</div>'+(reels.length?'<div class="profile-reels-grid">'+reels.map(item=>'<article class="profile-reel-tile"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><small>'+esc(item.postText||'Video')+'</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No reels yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
+  if(tab==='videos')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Videos</h2><p class="muted">All video posts on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-reel">Upload video</button>':'')+'</div>'+(reels.length?'<div class="profile-video-list">'+reels.map(item=>'<article class="profile-video-row"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><div><strong>'+esc(item.postText||'Video shared')+'</strong><small>'+esc(timeAgo(item.createdAt))+'</small></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No videos yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
+  if(tab==='more')return '<section class="card profile-more-menu"><h2>More on this profile</h2><button type="button" data-profile-tab="videos"><span>▣</span><strong>Videos</strong><small>Watch all videos shared here</small><b>›</b></button><button type="button" data-profile-tab="photos"><span>▧</span><strong>Photo albums</strong><small>Browse organised photo collections</small><b>›</b></button><button type="button" data-profile-tab="posts"><span>☰</span><strong>Posts</strong><small>Return to profile posts</small><b>›</b></button></section>';
+  return '<div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>Intro</h3>'+(isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':'')+'</div>'+(aboutHtml||'<p class="muted">No About details have been added yet.</p>')+'</div><div>'+(isMe?'<div class="card"><div class="composer-top"><img class="avatar" src="'+avatar(state.user)+'" alt=""><button class="composer-open" id="profile-composer">Share an update</button></div></div>':'')+(posts.length?posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>')+'</div></div>';
+}
+function openProfileAlbumEditor(profileId,album=null){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal composer-modal profile-album-editor" role="dialog" aria-modal="true" aria-labelledby="profile-album-editor-title"><div class="modal-head"><h2 id="profile-album-editor-title">'+(album?'Edit photo album':'Create photo album')+'</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Album name<input name="title" maxlength="100" required value="'+esc(album?.title||'')+'" placeholder="e.g. Family, Holidays, Jamaica"></label></div><div class="field"><label>Description<textarea name="description" maxlength="500" placeholder="Add a description">'+esc(album?.description||'')+'</textarea></label></div><div class="field"><label>Who can see this album<select name="visibility"><option value="public" '+(album?.visibility==='public'?'selected':'')+'>Public</option><option value="friends" '+(album?.visibility==='friends'?'selected':'')+'>Friends</option><option value="private" '+(album?.visibility==='private'?'selected':'')+'>Only me</option></select></label></div><div class="field"><label>'+(album?'Add more photos':'Upload photos')+'</label><div data-profile-album-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">'+(album?'Save album':'Create album')+'</button></div></form></section>';
+  document.body.append(modal);
+  const picker=createMediaPicker(modal.querySelector('[data-profile-album-picker]'),{slot:'post',maxFiles:30,accept:'image/jpeg,image/png,image/webp,image/avif'});
+  const close=()=>{picker.destroy();modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('form').addEventListener('submit',async event=>{
+    event.preventDefault();const submit=modal.querySelector('button[type="submit"]');submit.disabled=true;
+    try{
+      const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
+      let savedAlbum;
+      if(album){
+        savedAlbum=(await api('/albums/'+encodeURIComponent(album.id),{method:'PATCH',body:JSON.stringify({title:values.get('title'),description:values.get('description'),visibility:values.get('visibility')})})).album;
+      }else{
+        savedAlbum=(await api('/albums',{method:'POST',body:JSON.stringify({title:values.get('title'),description:values.get('description'),visibility:values.get('visibility')})})).album;
+      }
+      if(mediaIds.length)await api('/albums/'+encodeURIComponent(savedAlbum.id)+'/photos',{method:'POST',body:JSON.stringify({mediaIds})});
+      close();await openProfile(profileId);toast(album?'Album updated.':'Photo album created.');
+    }catch(error){toast(error.message);submit.disabled=false;}
+  });
+}
+function openProfileReelComposer(profileId){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-reel-title"><div class="modal-head"><h2 id="profile-reel-title">Create a reel</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write a caption for your reel"></textarea></label></div><div class="field"><label>Choose a video</label><div data-profile-reel-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish reel</button></div></form></section>';
+  document.body.append(modal);
+  const picker=createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:1,accept:'video/mp4,video/webm,video/quicktime'});
+  const close=()=>{picker.destroy();modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('form').addEventListener('submit',async event=>{
+    event.preventDefault();const submit=modal.querySelector('button[type="submit"]');submit.disabled=true;
+    try{
+      if(!picker.hasSelection())throw new Error('Choose a video for your reel.');
+      const mediaIds=await picker.upload(),values=new FormData(event.currentTarget);
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      close();await openProfile(profileId);toast('Your reel has been published.');
+    }catch(error){toast(error.message);submit.disabled=false;}
+  });
+}
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
-    ? '<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
-    : `<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="${data.following?'true':'false'}">${data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow')}</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>`;
-  const aboutRows=[
-    ['Bio',u.bio],['Location',u.location],
-    ['Country',u.country],['County',u.county],
-    ['Parish',u.parish],['City',u.city],['Gender',u.gender],
-    ['Relationship status',u.relationshipStatus],['Contact phone',u.contactPhone]
-  ].filter(([,value])=>String(value||'').trim());
-  aboutRows.push(['Joined',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})]);
-  const aboutHtml=aboutRows.map(([label,value])=>`<div class="about-row${label==='Bio'?' about-row-bio':''}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('');
-  setContent(`<section class="card" style="padding:0;overflow:hidden"><div class="profile-cover">${u.cover?`<img class="profile-cover-image" data-view-image="${esc(u.cover)}" data-image-label="${esc(u.name)} cover photo" src="${esc(u.cover)}" alt="">`:''}</div><div class="profile-info"><img class="avatar" data-view-image="${esc(u.avatar||'')}" data-image-label="${esc(u.name)} profile picture" src="${avatar(u)}" alt=""><div class="profile-info-main"><h1>${esc(u.name)}</h1><p>@${esc(u.username)}</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>${data.followersCount||0}</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>${data.followingCount||0}</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>${data.friendsCount||0}</strong> friends</button><span><strong>${data.posts.length}</strong> posts</span></p>${isMe?`<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">${Number(data.profileInsights?.profileViews30d||0).toLocaleString()}</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">${Number(data.profileInsights?.activeViewersCount||0).toLocaleString()}</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>`:''}</div>${relationshipActions}</div><div class="profile-tabs"><button class="active">Posts</button><button id="profile-about-tab">About</button><button id="profile-friends-tab">Friends</button></div></section><div class="profile-body"><div class="card profile-about"><div class="about-heading"><h3>About</h3>${isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':''}</div>${aboutHtml||'<p class="muted">No About details have been added yet.</p>'}</div><div><div class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="profile-composer">${isMe?'Share an update':`Share an update on ${esc(u.name.split(' ')[0])}'s profile`}</button></div></div>${data.posts.length?data.posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>'}</div></div>`);
-  bindFeed();
+    ?'<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
+    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
+  const aboutHtml=profileAboutMarkup(u,isMe);
+  const tab=state.profileTab||'posts';
+  setContent('<section class="card profile-header-card" style="padding:0;overflow:hidden"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div><div class="profile-info"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt=""><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong> friends</button><span><strong>'+(data.posts||[]).length+'</strong> posts</span></p>'+(isMe?'<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">'+Number(data.profileInsights?.profileViews30d||0).toLocaleString()+'</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">'+Number(data.profileInsights?.activeViewersCount||0).toLocaleString()+'</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>':'')+'</div>'+relationshipActions+'</div><nav class="profile-tabs" aria-label="Profile sections">'+[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</nav></section><div id="profile-tab-panel"></div>');
+  const showTab=nextTab=>{
+    state.profileTab=nextTab;
+    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab;button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
+    const panel=$('#profile-tab-panel');if(!panel)return;
+    panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
+    bindProfileTabActions(panel);
+  };
+  document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.profileTab)));
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
-  $('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(u));
   $('#profile-follow')?.addEventListener('click',async()=>{
     const following=$('#profile-follow')?.dataset.following==='true';
-    try{
-      const result=await api(`/users/${u.id}/follow`,{method:following?'DELETE':'POST',body:'{}'});
-      toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));
-      await openProfile(u.id);
-    }catch(e){toast(e.message);}
+    try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
+    catch(error){toast(error.message);}
   });
   $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
   document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
-  $('#profile-block')?.addEventListener('click',async()=>{if(!window.confirm(`Block ${u.name}? You will no longer see each other’s profile, posts or messages.`))return;try{await api(`/users/${u.id}/block`,{method:'POST',body:'{}'});toast('Member blocked.');state.profile=null;state.view='feed';await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar()}catch(e){toast(e.message)}});
-  $('#profile-composer')?.addEventListener('click',()=>openComposer());
-  $('#profile-about-tab')?.addEventListener('click',()=>{document.querySelectorAll('.profile-tabs button').forEach(button=>button.classList.toggle('active',button.id==='profile-about-tab'));document.querySelector('.profile-about')?.scrollIntoView({behavior:'smooth'});});
-  $('#profile-friends-tab')?.addEventListener('click',()=>renderConnections(u.id,'friends'));
+  $('#profile-block')?.addEventListener('click',async()=>{if(!window.confirm('Block '+u.name+'? You will no longer see each other’s profile, posts or messages.'))return;try{await api('/users/'+encodeURIComponent(u.id)+'/block',{method:'POST',body:'{}'});toast('Member blocked.');state.profile=null;state.view='feed';await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar();}catch(error){toast(error.message);}});
   document.querySelectorAll('[data-open-connections]').forEach(button=>button.addEventListener('click',()=>renderConnections(u.id,button.dataset.openConnections)));
   document.querySelectorAll('[data-view-image]').forEach(image=>image.addEventListener('click',()=>{const url=image.dataset.viewImage;if(url)openImageViewer(url,image.dataset.imageLabel||'Profile image');}));
+  showTab(tab);
   startProfilePresence(u.id);
+}
+function bindProfileTabActions(panel){
+  panel.querySelector('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(state.profile.user));
+  panel.querySelector('#profile-composer')?.addEventListener('click',()=>openComposer());
+  panel.querySelector('#profile-create-album')?.addEventListener('click',()=>openProfileAlbumEditor(state.profile.user.id));
+  panel.querySelector('#profile-create-reel')?.addEventListener('click',()=>openProfileReelComposer(state.profile.user.id));
+  panel.querySelectorAll('[data-profile-tab]').forEach(button=>button.addEventListener('click',()=>{
+    const current=state.profile; if(current)renderProfile(state.profile);
+    if(button.dataset.profileTab){state.profileTab=button.dataset.profileTab;renderProfile(state.profile);}
+  }));
+  panel.querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.profile)));
+  panel.querySelectorAll('[data-album-edit]').forEach(button=>button.addEventListener('click',()=>{
+    const album=(state.profile.albums||[]).find(item=>item.id===button.dataset.albumEdit);if(album)openProfileAlbumEditor(state.profile.user.id,album);
+  }));
+  panel.querySelectorAll('[data-album-delete]').forEach(button=>button.addEventListener('click',async()=>{
+    const albumId=button.dataset.albumDelete;if(!window.confirm('Delete this album? The uploaded photos themselves will remain in your media.'))return;
+    try{await api('/albums/'+encodeURIComponent(albumId),{method:'DELETE'});await openProfile(state.profile.user.id);state.profileTab='photos';}catch(error){toast(error.message);}
+  }));
+  panel.querySelectorAll('[data-profile-photo-remove]').forEach(button=>button.addEventListener('click',async()=>{
+    try{await api('/albums/'+encodeURIComponent(button.dataset.albumId)+'/photos/'+encodeURIComponent(button.dataset.profilePhotoRemove),{method:'DELETE'});await openProfile(state.profile.user.id);state.profileTab='photos';}catch(error){toast(error.message);}
+  }));
+  panel.querySelectorAll('[data-album-open]').forEach(button=>button.addEventListener('click',()=>{
+    const album=(state.profile.albums||[]).find(item=>item.id===button.dataset.albumOpen);if(!album)return;
+    const photos=album.photos||[];const modal=document.createElement('div');modal.className='modal-backdrop';
+    modal.innerHTML='<section class="modal profile-album-viewer" role="dialog" aria-modal="true" aria-label="'+esc(album.title)+'"><div class="modal-head"><div><h2>'+esc(album.title)+'</h2><small>'+photos.length+' photos</small></div><button class="modal-close" type="button" aria-label="Close">×</button></div><div class="modal-body"><div class="profile-media-grid">'+photos.map(photo=>profilePhotoTile(photo,state.profile.user.id===state.user.id,album.id)).join('')+'</div></div></section>';
+    document.body.append(modal);modal.querySelector('.modal-close').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove();});
+    modal.querySelectorAll('[data-profile-photo-remove]').forEach(remove=>remove.addEventListener('click',async()=>{try{await api('/albums/'+encodeURIComponent(remove.dataset.albumId)+'/photos/'+encodeURIComponent(remove.dataset.profilePhotoRemove),{method:'DELETE'});modal.remove();await openProfile(state.profile.user.id);state.profileTab='photos';}catch(error){toast(error.message);}}));
+  }));
 }
 function mediaMaxBytes(slot){
   return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:slot==='marketplace'?15*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
