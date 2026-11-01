@@ -52,7 +52,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
   assert.match(html, /styles\.css\?v=20261101-layout-overlap-1/);
-  assert.match(html, /app\.js\?v=20261101-layout-overlap-1/);
+  assert.match(html, /app\.js\?v=20261101-profile-crop-1/);
   assert.match(html, /settings\.js\?v=20261101-call-ringtones-1/);
   assert.match(sw, /minglora-shell-v39-layout-overlap-audit/);
   assert.match(sw, /settings\.js\?v=20261101-call-ringtones-1/);
