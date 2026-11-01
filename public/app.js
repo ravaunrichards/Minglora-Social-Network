@@ -1918,7 +1918,8 @@ function profileAboutMarkup(u,isMe){
       aboutRowMarkup('Hometown',personal.hometown),
       aboutRowMarkup('Country',personal.country),
       aboutRowMarkup('County',personal.county),
-      aboutRowMarkup('Parish',personal.parish)
+      aboutRowMarkup('Parish',personal.parish),
+      (Array.isArray(personal.familyMembers)&&personal.familyMembers.length)?'<div class="about-list-group"><strong>Family and relationships</strong>'+aboutChipsMarkup(personal.familyMembers)+'</div>':''
     ].join(''),
     intro:aboutRowMarkup('Introduction',intro.bio,'about-row-bio'),
     work:aboutWorkMarkup(sections.work?.entries),
@@ -2006,7 +2007,8 @@ function openAboutSectionEditor(sectionKey,u){
       aboutEditorField('hometown','Hometown',personal.hometown)+
       aboutEditorField('country','Country',personal.country)+
       aboutEditorField('county','County',personal.county)+
-      aboutEditorField('parish','Parish',personal.parish);
+      aboutEditorField('parish','Parish',personal.parish)+
+      aboutEditorTextarea('familyMembers','Family members and relationships',aboutLines(personal.familyMembers),'Add one name and relationship per line');
   }else if(sectionKey==='intro'){
     fields=aboutEditorTextarea('bio','Intro / short bio',saved.bio||u.bio||'','Write a short introduction about yourself');
   }else if(sectionKey==='work'){
@@ -2073,6 +2075,7 @@ function openAboutSectionEditor(sectionKey,u){
       let section={};
       if(sectionKey==='personalDetails'){
         for(const key of ['birthDate','pronouns','gender','relationshipStatus','currentCity','hometown','country','county','parish'])section[key]=fieldValue(key);
+        section.familyMembers=fieldLines('familyMembers');
       }else if(sectionKey==='intro'){
         section.bio=fieldValue('bio');
       }else if(sectionKey==='work'||sectionKey==='education'){
