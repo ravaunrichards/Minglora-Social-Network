@@ -141,6 +141,7 @@ function validateAboutSections(input,errors){
     }else if(section==='hobbies'||section==='interests'){
       clean.items=cleanAboutList(raw.items,60,80,section,errors);
     }else if(section==='travel'){
+      clean.placesLived=cleanAboutList(raw.placesLived,100,120,'Places lived',errors);
       clean.visited=cleanAboutList(raw.visited,100,120,'Visited places',errors);
       clean.wantToVisit=cleanAboutList(raw.wantToVisit,100,120,'Places to visit',errors);
     }else if(section==='links'){
