@@ -411,7 +411,7 @@ function App() {
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={19} /><span><strong>Provider-secured checkout</strong><small>Payment approval stays on PayPal.</small></span></div>
           <button className="signout-button" onClick={signOut}><LogOut size={17} /> Sign out</button>
-          <small className="side-legal">HarborPay · Payment records are not stored-value balances.</small>
+          <small className="side-legal">HarborPay · Secure payments and clear transaction records.</small>
         </div>
       </aside>
 
@@ -430,9 +430,9 @@ function App() {
         <div className="page-content">
           <section className="page-heading">
             <div>
-              <p className="eyebrow">YOUR PAYMENT SPACE</p>
+              <p className="eyebrow">PAYMENTS MADE CLEAR</p>
               <h1>{section === "Overview" ? "Welcome to HarborPay" : "Your transactions"}</h1>
-              <p>Secure checkout, clear payment records, and real provider status.</p>
+              <p>Pay with confidence, review your transactions, and keep track of payment updates in one convenient place.</p>
             </div>
             {section === "Overview" && <button className="primary-button top-pay" onClick={() => { setPaymentError(""); setShowPayment(true); }}>Make a payment <ArrowUpRight size={17} /></button>}
           </section>
@@ -443,9 +443,9 @@ function App() {
             <>
               <section className="balance-grid">
                 <div className="balance-card">
-                  <div className="balance-title"><span>HarborPay stored balance</span><Wallet size={19} /></div>
-                  <strong className="balance-value">Not offered</strong>
-                  <p>Funds are processed by PayPal and settle to the merchant account. HarborPay is not presenting a customer-held wallet balance.</p>
+                  <div className="balance-title"><span>Payment activity</span><Wallet size={19} /></div>
+                  <strong className="balance-value">Your transactions</strong>
+                  <p>Review your payment activity and provider-confirmed transaction status in one place. Funds are processed securely through PayPal.</p>
                 </div>
                 <div className="stat-card">
                   <span className="stat-icon"><CheckCircle2 size={20} /></span>
@@ -462,7 +462,7 @@ function App() {
               </section>
               <section className="information-panel">
                 <div className="information-icon"><ShieldCheck size={21} /></div>
-                <div><strong>Your payment is handled by PayPal</strong><p>HarborPay sends you to PayPal for approval. A payment is marked completed only after PayPal confirms the capture. Your card details are not entered into HarborPay.</p></div>
+                <div><strong>Secure checkout with PayPal</strong><p>When you make a payment, HarborPay connects you to PayPal to review and approve it. Your transaction is updated after PayPal confirms the payment. Your card details are entered on PayPal, not on Minglora.</p></div>
               </section>
             </>
           )}
@@ -484,10 +484,10 @@ function App() {
                   <strong className="amount-cell">{formatMoney(payment)}</strong>
                 </div>
               ))}
-              <div className="table-foot">Payment statuses come from PayPal capture responses and verified webhook events.</div>
+              <div className="table-foot">Transaction statuses are updated from confirmed payment-provider activity.</div>
             </div>
           </section>
-          <footer className="app-footer"><span>HarborPay</span><span>Secure payments · No fabricated balances</span></footer>
+          <footer className="app-footer"><span>HarborPay</span><span>Secure payments · Clear transaction history</span></footer>
         </div>
       </main>
 
