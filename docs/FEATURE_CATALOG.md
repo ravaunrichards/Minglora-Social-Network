@@ -4,6 +4,7 @@ This is a scope checklist, not a claim of Facebook parity.
 
 | Domain | Current state |
 |---|---|
+| MeetWave meetings | Minglora-authenticated instant, scheduled and reusable personal rooms; private/friends/public access, invitations, LiveKit audio/video, screen sharing, meeting chat and host-only room ending | Breakout rooms, recording, captions/transcription, waiting room, co-hosts and AI meeting notes |
 | Accounts | Supabase Auth sign-up/sign-in; login rate limiting, password reset/change, email-change verification, server-sealed auth tokens, session revoke and TOTP MFA when provider configured | Passkeys, push login alerts and account deletion |
 | Profiles | Edit display name, unique username, bio and location; avatar/cover from gallery, folders or camera with image zoom/crop/rotation and Supabase Storage upload | Verified profiles, themes, albums and tagging |
 | Feed/posts | Posts accept device-uploaded photos, videos, audio and GLB 3D attachments; zoom/crop/rotation tools for images; edit and delete own posts | Automated video transcoding, chunked large uploads, personalized ranking and per-post audiences |

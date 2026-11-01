@@ -25,7 +25,10 @@ jobs:
           node --check src/server.js
           node --check src/store.js
           node --check backend/modules/live/livekit.js
+          node --check backend/modules/meetwave/service.js
+          node --check public/meetwave.js
           node --check tests/unit/livekit.test.js
+          node --check tests/unit/meetwave.test.js
           node --check src/domain/validation.js
           node --check src/domain/pagination.js
           node --check src/domain/relationships.js
