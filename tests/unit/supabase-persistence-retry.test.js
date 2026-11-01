@@ -84,3 +84,53 @@ test('Supabase save does not retry a permanent client error', () => {
   `;
   assert.doesNotThrow(() => runIsolated(script));
 });
+
+test('Supabase save reloads and merges concurrent remote data after a revision conflict', () => {
+  const script = `
+    import assert from 'node:assert/strict';
+    const initialState = ${JSON.stringify(baseState)};
+    const remoteState = structuredClone(initialState);
+    remoteState.users.push({ id: 'concurrent-remote-user', name: 'Remote member' });
+    let loadCalls = 0;
+    let saveCalls = 0;
+    let savedState;
+    globalThis.fetch = async (_url, options) => {
+      const request = JSON.parse(options.body);
+      if (request.action === 'load') {
+        loadCalls += 1;
+        const snapshot = loadCalls === 1 ? initialState : remoteState;
+        const revision = loadCalls === 1 ? 7 : 8;
+        return new Response(JSON.stringify({ state: snapshot, revision }), {
+          status: 200, headers: { 'content-type': 'application/json' }
+        });
+      }
+      if (request.action === 'save') {
+        saveCalls += 1;
+        if (saveCalls === 1) {
+          return new Response(JSON.stringify({ error: 'revision changed' }), {
+            status: 409, headers: { 'content-type': 'application/json' }
+          });
+        }
+        savedState = request.state;
+        return new Response(JSON.stringify({ revision: 9 }), {
+          status: 200, headers: { 'content-type': 'application/json' }
+        });
+      }
+      throw new Error('Unexpected Supabase action: ' + request.action);
+    };
+    const { db, saveStore } = await import(__STORE_URL__);
+    db.users.push({ id: 'concurrent-local-user', name: 'Local member' });
+    await saveStore();
+    assert.equal(loadCalls, 2);
+    assert.equal(saveCalls, 2);
+    assert.deepEqual(
+      savedState.users.map(user => user.id).sort(),
+      ['concurrent-local-user', 'concurrent-remote-user']
+    );
+    assert.deepEqual(
+      db.users.map(user => user.id).sort(),
+      ['concurrent-local-user', 'concurrent-remote-user']
+    );
+  `;
+  assert.doesNotThrow(() => runIsolated(script));
+});
