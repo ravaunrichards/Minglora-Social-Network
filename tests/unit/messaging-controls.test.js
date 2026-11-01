@@ -67,7 +67,7 @@ test('Messenger top-right control opens a right-side chats panel with filters, q
   assert.ok(css.includes('.messenger-panel{position:fixed')&&css.includes('left:auto;right:max(14px,env(safe-area-inset-right))'));
   assert.ok(css.includes('top:70px;left:auto;right:max(8px,env(safe-area-inset-right))'));
   assert.ok(css.includes('.messenger-switch.is-on'));
-  assert.ok(html.includes('20261101-messenger-right-panel-2'));
+  assert.ok(html.includes('20261101-mailharbor-in-app-1'));
   assert.ok(server.includes('messengerAutoOpenNewMessages')&&server.includes('messengerArchivedConversationIds'));
   assert.ok(server.includes('isRequest:!isFriend'));
   assert.ok(settings.includes('messengerActiveStatus: true'));
