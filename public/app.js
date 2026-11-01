@@ -1831,11 +1831,289 @@ function openImageViewer(url,label='Image'){
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   document.addEventListener('keydown',function onKey(event){if(event.key==='Escape'){close();document.removeEventListener('keydown',onKey);}});
 }
+const ABOUT_SECTION_DEFINITIONS=[
+  ['personalDetails','Personal details','Basic details, location and personal information'],
+  ['intro','Intro','A short introduction about you'],
+  ['work','Work','Current and previous workplaces'],
+  ['education','Education','Schools, colleges and qualifications'],
+  ['hobbies','Hobbies','Things you enjoy doing'],
+  ['interests','Interests','Music, films, books, sports, games and more'],
+  ['travel','Travel','Places you have visited and want to explore'],
+  ['links','Links','Personal websites, portfolios and social media'],
+  ['contactInfo','Contact info','Ways people can contact you'],
+  ['names','Names','Other names, nicknames and pronunciation'],
+  ['details','Details','Languages, favourite quote and extra information'],
+  ['aboutYou','About you','A little more about who you are']
+];
+const DEFAULT_ABOUT_SECTION_VISIBILITY_UI={
+  personalDetails:'friends',intro:'public',work:'public',education:'public',hobbies:'public',
+  interests:'public',travel:'public',links:'public',contactInfo:'private',names:'friends',
+  details:'friends',aboutYou:'public'
+};
+function aboutRowMarkup(label,value,extraClass=''){
+  if(value===undefined||value===null||String(value).trim()==='')return '';
+  return '<div class="about-row '+extraClass+'"><span>'+esc(label)+'</span><strong>'+esc(String(value))+'</strong></div>';
+}
+function aboutChipsMarkup(items){
+  return Array.isArray(items)&&items.length
+    ?'<div class="about-chip-list">'+items.map(item=>'<span class="about-chip">'+esc(item)+'</span>').join('')+'</div>'
+    :'';
+}
+function aboutSafeExternalUrl(value){
+  try{
+    const url=new URL(String(value||''));
+    return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&url.hostname.includes('.')?url.href:'';
+  }catch{return '';}
+}
+function aboutLinkMarkup(link){
+  const href=aboutSafeExternalUrl(link?.url);
+  if(!href)return '';
+  const label=String(link.label||link.platform||new URL(href).hostname);
+  return '<a class="about-social-link" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer"><span>'+esc(label)+'</span><small>'+esc(link.platform||'Website')+'</small><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"></path><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"></path></svg></a>';
+}
+function aboutWorkMarkup(entries){
+  return (entries||[]).filter(item=>item&&Object.values(item).some(value=>value&&value!==false)).map(item=>
+    '<article class="about-entry-display"><strong>'+esc(item.position||item.company||'Work experience')+'</strong>'+
+    (item.company?'<span>'+esc(item.company)+'</span>':'')+
+    (item.city?'<small>'+esc(item.city)+'</small>':'')+
+    (item.description?'<p>'+esc(item.description)+'</p>':'')+
+    (item.startDate||item.endDate||item.isCurrent?'<small>'+esc(item.startDate||'')+(item.startDate||item.endDate?' – ':'')+esc(item.isCurrent?'Present':item.endDate||'')+'</small>':'')+
+    '</article>'
+  ).join('');
+}
+function aboutEducationMarkup(entries){
+  return (entries||[]).filter(item=>item&&Object.values(item).some(value=>value&&value!==false)).map(item=>
+    '<article class="about-entry-display"><strong>'+esc(item.school||'Education')+'</strong>'+
+    (item.degree||item.fieldOfStudy?'<span>'+esc([item.degree,item.fieldOfStudy].filter(Boolean).join(' · '))+'</span>':'')+
+    (item.city?'<small>'+esc(item.city)+'</small>':'')+
+    (item.graduationYear?'<small>Graduation: '+esc(item.graduationYear)+'</small>':'')+
+    (item.description?'<p>'+esc(item.description)+'</p>':'')+
+    '</article>'
+  ).join('');
+}
 function profileAboutMarkup(u,isMe){
-  const rows=[['Bio',u.bio],['Location',u.location],['Country',u.country],['County',u.county],['Parish',u.parish],['City',u.city],['Gender',u.gender],['Relationship status',u.relationshipStatus],['Contact phone',u.contactPhone]]
-    .filter(([,value])=>String(value||'').trim());
-  rows.push(['Joined',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})]);
-  return rows.map(([label,value])=>'<div class="about-row'+(label==='Bio'?' about-row-bio':'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join('');
+  const sections=u.aboutSections||{};
+  const personal={...(sections.personalDetails||{})};
+  if(!personal.currentCity)personal.currentCity=u.city||u.location||'';
+  if(!personal.country)personal.country=u.country||'';
+  if(!personal.county)personal.county=u.county||'';
+  if(!personal.parish)personal.parish=u.parish||'';
+  if(!personal.gender)personal.gender=u.gender||'';
+  if(!personal.relationshipStatus)personal.relationshipStatus=u.relationshipStatus||'';
+  const intro={...(sections.intro||{})};
+  if(!intro.bio)intro.bio=u.bio||'';
+  const contact={...(sections.contactInfo||{})};
+  if(!contact.phone)contact.phone=u.contactPhone||'';
+  if(!contact.email&&isMe)contact.email=u.email||'';
+  const travel=sections.travel||{},details=sections.details||{},aboutYou=sections.aboutYou||{};
+  const values={
+    personalDetails:[
+      aboutRowMarkup('Birthday',personal.birthDate),
+      aboutRowMarkup('Pronouns',personal.pronouns),
+      aboutRowMarkup('Gender',personal.gender),
+      aboutRowMarkup('Relationship status',personal.relationshipStatus),
+      aboutRowMarkup('Current city',personal.currentCity),
+      aboutRowMarkup('Hometown',personal.hometown),
+      aboutRowMarkup('Country',personal.country),
+      aboutRowMarkup('County',personal.county),
+      aboutRowMarkup('Parish',personal.parish)
+    ].join(''),
+    intro:aboutRowMarkup('Introduction',intro.bio,'about-row-bio'),
+    work:aboutWorkMarkup(sections.work?.entries),
+    education:aboutEducationMarkup(sections.education?.entries),
+    hobbies:aboutChipsMarkup(sections.hobbies?.items),
+    interests:aboutChipsMarkup(sections.interests?.items),
+    travel:[
+      (travel.visited||[]).length?'<div class="about-list-group"><strong>Places visited</strong>'+aboutChipsMarkup(travel.visited)+'</div>':'',
+      (travel.wantToVisit||[]).length?'<div class="about-list-group"><strong>Want to visit</strong>'+aboutChipsMarkup(travel.wantToVisit)+'</div>':''
+    ].join(''),
+    links:(sections.links?.items||[]).map(aboutLinkMarkup).join(''),
+    contactInfo:[
+      contact.email?'<div class="about-row"><span>Email</span><strong><a href="mailto:'+esc(contact.email)+'">'+esc(contact.email)+'</a></strong></div>':'',
+      contact.phone?'<div class="about-row"><span>Phone</span><strong><a href="tel:'+esc(contact.phone)+'">'+esc(contact.phone)+'</a></strong></div>':'',
+      contact.whatsapp?'<div class="about-row"><span>WhatsApp</span><strong>'+esc(contact.whatsapp)+'</strong></div>':'',
+      contact.website&&aboutSafeExternalUrl(contact.website)?'<div class="about-row"><span>Website</span><strong><a href="'+esc(aboutSafeExternalUrl(contact.website))+'" target="_blank" rel="noopener noreferrer">'+esc(contact.website)+'</a></strong></div>':'',
+      contact.preferredContact?aboutRowMarkup('Preferred contact',contact.preferredContact):''
+    ].join(''),
+    names:[
+      aboutRowMarkup('Other name',sections.names?.otherName),
+      aboutRowMarkup('Nickname',sections.names?.nickname),
+      aboutRowMarkup('Name pronunciation',sections.names?.pronunciation),
+      aboutRowMarkup('Former name',sections.names?.formerName)
+    ].join(''),
+    details:[
+      (details.languages||[]).length?'<div class="about-list-group"><strong>Languages</strong>'+aboutChipsMarkup(details.languages)+'</div>':'',
+      details.favoriteQuote?aboutRowMarkup('Favourite quote',details.favoriteQuote,'about-row-bio'):'',
+      details.otherDetails?aboutRowMarkup('Other details',details.otherDetails,'about-row-bio'):'',
+      u.createdAt?aboutRowMarkup('Joined Minglora',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})):''
+    ].join(''),
+    aboutYou:aboutRowMarkup('About you',aboutYou.description,'about-row-bio')
+  };
+  return ABOUT_SECTION_DEFINITIONS.map(([key,label,description])=>{
+    const content=values[key]||'';
+    if(!content&&!isMe)return '';
+    const edit=isMe
+      ?'<button type="button" class="about-section-edit" data-edit-about-section="'+key+'" aria-label="Edit '+esc(label)+'" title="Edit '+esc(label)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg></button>'
+      :'';
+    return '<section class="about-section-card" data-about-section="'+key+'"><header><div><h4>'+esc(label)+'</h4><p>'+esc(description)+'</p></div>'+edit+'</header><div class="about-section-content">'+(content||'<p class="about-section-empty">Add your '+esc(label.toLowerCase())+' to complete this section.</p>')+'</div></section>';
+  }).join('');
+}
+function aboutEditorField(name,label,value='',type='text',placeholder=''){
+  return '<label class="field about-editor-field"><span>'+esc(label)+'</span><input type="'+type+'" data-about-field="'+name+'" value="'+esc(value||'')+'" placeholder="'+esc(placeholder)+'"></label>';
+}
+function aboutEditorTextarea(name,label,value='',placeholder=''){
+  return '<label class="field about-editor-field"><span>'+esc(label)+'</span><textarea data-about-field="'+name+'" rows="4" placeholder="'+esc(placeholder)+'">'+esc(value||'')+'</textarea></label>';
+}
+function aboutLines(value){return Array.isArray(value)?value.join('\n'):'';}
+function aboutEditorEntryRow(kind,item={}){
+  const work=kind==='work';
+  const fields=work
+    ?[['company','Company / employer','text'],['position','Position / job title','text'],['city','City / location','text'],['description','Description','textarea'],['startDate','Start date','date'],['endDate','End date','date']]
+    :[['school','School / college / university','text'],['degree','Degree / qualification','text'],['fieldOfStudy','Field of study','text'],['city','City / location','text'],['graduationYear','Graduation year','text'],['description','Description','textarea']];
+  return '<article class="about-editor-entry" data-about-entry>'+fields.map(([key,label,type])=>type==='textarea'
+    ?'<label class="field"><span>'+label+'</span><textarea data-entry-field="'+key+'" rows="2">'+esc(item[key]||'')+'</textarea></label>'
+    :'<label class="field"><span>'+label+'</span><input type="'+type+'" data-entry-field="'+key+'" value="'+esc(item[key]||'')+'"></label>'
+  ).join('')+(work?'<label class="about-editor-checkbox"><input type="checkbox" data-entry-field="isCurrent" '+(item.isCurrent?'checked':'')+'> I currently work here</label>':'')+
+  '<button type="button" class="about-editor-remove" data-remove-about-entry>Remove this '+(work?'workplace':'school')+'</button></article>';
+}
+const ABOUT_SOCIAL_PLATFORMS=['Website','Instagram','Facebook','TikTok','YouTube','X','Threads','LinkedIn','Snapchat','Pinterest','Twitch','Discord','WhatsApp','Telegram','Reddit','Bluesky','Mastodon','Other'];
+function aboutSocialLinkRow(item={}){
+  return '<article class="about-social-editor-row" data-about-link-row><label class="field"><span>Platform</span><select data-link-field="platform">'+ABOUT_SOCIAL_PLATFORMS.map(platform=>'<option value="'+esc(platform)+'" '+(String(item.platform||'Website')===platform?'selected':'')+'>'+esc(platform)+'</option>').join('')+'</select></label><label class="field"><span>Profile URL</span><input type="url" data-link-field="url" value="'+esc(item.url||'')+'" placeholder="https://..."></label><label class="field"><span>Display label (optional)</span><input data-link-field="label" value="'+esc(item.label||'')+'" placeholder="My Instagram"></label><button type="button" class="about-editor-remove" data-remove-about-link>Remove link</button></article>';
+}
+function openAboutSectionEditor(sectionKey,u){
+  const definition=ABOUT_SECTION_DEFINITIONS.find(item=>item[0]===sectionKey);
+  if(!definition)return;
+  const [,label,description]=definition;
+  const sections=u.aboutSections||{},saved=sections[sectionKey]||{};
+  const audience=u.aboutSectionVisibility?.[sectionKey]||DEFAULT_ABOUT_SECTION_VISIBILITY_UI[sectionKey]||'friends';
+  let fields='';
+  if(sectionKey==='personalDetails'){
+    const personal={...saved};
+    if(!personal.currentCity)personal.currentCity=u.city||u.location||'';
+    if(!personal.country)personal.country=u.country||'';
+    if(!personal.county)personal.county=u.county||'';
+    if(!personal.parish)personal.parish=u.parish||'';
+    if(!personal.gender)personal.gender=u.gender||'';
+    if(!personal.relationshipStatus)personal.relationshipStatus=u.relationshipStatus||'';
+    fields=aboutEditorField('birthDate','Date of birth',personal.birthDate||'','date')+
+      aboutEditorField('pronouns','Pronouns',personal.pronouns,'text','e.g. she/her, he/him, they/them')+
+      aboutEditorField('gender','Gender',personal.gender)+
+      aboutEditorField('relationshipStatus','Relationship status',personal.relationshipStatus)+
+      aboutEditorField('currentCity','Current city / town',personal.currentCity)+
+      aboutEditorField('hometown','Hometown',personal.hometown)+
+      aboutEditorField('country','Country',personal.country)+
+      aboutEditorField('county','County',personal.county)+
+      aboutEditorField('parish','Parish',personal.parish);
+  }else if(sectionKey==='intro'){
+    fields=aboutEditorTextarea('bio','Intro / short bio',saved.bio||u.bio||'','Write a short introduction about yourself');
+  }else if(sectionKey==='work'){
+    fields='<div class="about-editor-repeater" data-about-repeater="work">'+(saved.entries||[]).map(item=>aboutEditorEntryRow('work',item)).join('')+'</div><button type="button" class="secondary about-editor-add" data-add-about-entry="work">＋ Add workplace</button><p class="about-editor-note">Add current and previous jobs. You can include your position, employer, location and dates.</p>';
+  }else if(sectionKey==='education'){
+    fields='<div class="about-editor-repeater" data-about-repeater="education">'+(saved.entries||[]).map(item=>aboutEditorEntryRow('education',item)).join('')+'</div><button type="button" class="secondary about-editor-add" data-add-about-entry="education">＋ Add school or qualification</button><p class="about-editor-note">Add schools, colleges, universities, degrees and other qualifications.</p>';
+  }else if(sectionKey==='hobbies'){
+    fields=aboutEditorTextarea('items','Your hobbies',aboutLines(saved.items),'Add one hobby per line');
+  }else if(sectionKey==='interests'){
+    fields=aboutEditorTextarea('items','Your interests',aboutLines(saved.items),'Add music, movies, TV, books, sports, games, artists, teams and more — one per line');
+  }else if(sectionKey==='travel'){
+    fields=aboutEditorTextarea('visited','Places you have visited',aboutLines(saved.visited),'Add one place per line')+
+      aboutEditorTextarea('wantToVisit','Places you want to visit',aboutLines(saved.wantToVisit),'Add one destination per line');
+  }else if(sectionKey==='links'){
+    fields='<div class="about-social-editor-list" data-about-link-list>'+(saved.items||[]).map(aboutSocialLinkRow).join('')+'</div><button type="button" class="secondary about-editor-add" id="about-add-social-link">＋ Add social media or website link</button><p class="about-editor-note">Add full profile URLs for Instagram, Facebook, TikTok, YouTube, X, Threads, LinkedIn and other services. Links open in a new tab.</p>';
+  }else if(sectionKey==='contactInfo'){
+    const contact={...(saved||{})};if(!contact.phone)contact.phone=u.contactPhone||'';
+    fields=aboutEditorField('email','Email address',contact.email||'','email')+
+      aboutEditorField('phone','Phone number',contact.phone||'','tel','Include + and country code')+
+      aboutEditorField('whatsapp','WhatsApp number',contact.whatsapp||'','tel','Include + and country code')+
+      aboutEditorField('website','Website',contact.website||'','url','https://...')+
+      aboutEditorField('preferredContact','Preferred way to contact you',contact.preferredContact||'');
+  }else if(sectionKey==='names'){
+    fields=aboutEditorField('otherName','Other name',saved.otherName)+
+      aboutEditorField('nickname','Nickname',saved.nickname)+
+      aboutEditorField('pronunciation','How to pronounce your name',saved.pronunciation)+
+      aboutEditorField('formerName','Former name',saved.formerName);
+  }else if(sectionKey==='details'){
+    fields=aboutEditorTextarea('languages','Languages you speak',aboutLines(saved.languages),'Add one language per line')+
+      aboutEditorTextarea('favoriteQuote','Favourite quote',saved.favoriteQuote,'A quote that means something to you')+
+      aboutEditorTextarea('otherDetails','Other details',saved.otherDetails,'Anything else you would like people to know');
+  }else if(sectionKey==='aboutYou'){
+    fields=aboutEditorTextarea('description','About you',saved.description,'Tell people a little more about yourself');
+  }
+  const modal=document.createElement('div');modal.className='modal-backdrop about-section-editor-backdrop';
+  modal.innerHTML='<section class="modal about-section-editor-modal" role="dialog" aria-modal="true" aria-labelledby="about-section-editor-title"><div class="modal-head"><div><h2 id="about-section-editor-title">Edit '+esc(label)+'</h2><small class="muted">'+esc(description)+'</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="about-section-editor-form">'+fields+'<label class="field about-audience-field"><span>Who can see this section?</span><select name="audience"><option value="public" '+(audience==='public'?'selected':'')+'>Public — everyone</option><option value="friends" '+(audience==='friends'?'selected':'')+'>Friends</option><option value="private" '+(audience==='private'?'selected':'')+'>Only me</option></select></label><p class="about-editor-status muted" role="status"></p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Save '+esc(label)+'</button></div></form></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  const entryList=modal.querySelector('[data-about-repeater]');
+  modal.querySelectorAll('[data-add-about-entry]').forEach(button=>button.addEventListener('click',()=>{
+    entryList?.insertAdjacentHTML('beforeend',aboutEditorEntryRow(button.dataset.addAboutEntry,{}));
+  }));
+  entryList?.addEventListener('click',event=>{
+    const remove=event.target.closest('[data-remove-about-entry]');
+    if(remove)remove.closest('[data-about-entry]')?.remove();
+  });
+  const linkList=modal.querySelector('[data-about-link-list]');
+  modal.querySelector('#about-add-social-link')?.addEventListener('click',()=>linkList?.insertAdjacentHTML('beforeend',aboutSocialLinkRow({platform:'Website'})));
+  linkList?.addEventListener('click',event=>{
+    const remove=event.target.closest('[data-remove-about-link]');
+    if(remove)remove.closest('[data-about-link-row]')?.remove();
+  });
+  const form=modal.querySelector('#about-section-editor-form');
+  const status=modal.querySelector('.about-editor-status');
+  const fieldValue=name=>String(form.querySelector('[data-about-field="'+name+'"]')?.value||'').trim();
+  const fieldLines=name=>fieldValue(name).split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const button=form.querySelector('button[type="submit"]');button.disabled=true;status.textContent='Saving '+label.toLowerCase()+'…';
+    try{
+      let section={};
+      if(sectionKey==='personalDetails'){
+        for(const key of ['birthDate','pronouns','gender','relationshipStatus','currentCity','hometown','country','county','parish'])section[key]=fieldValue(key);
+      }else if(sectionKey==='intro'){
+        section.bio=fieldValue('bio');
+      }else if(sectionKey==='work'||sectionKey==='education'){
+        section.entries=[...form.querySelectorAll('[data-about-entry]')].map(row=>{
+          const item={};
+          row.querySelectorAll('[data-entry-field]').forEach(input=>{
+            item[input.dataset.entryField]=input.type==='checkbox'?input.checked:String(input.value||'').trim();
+          });
+          return item;
+        }).filter(item=>Object.entries(item).some(([key,value])=>key==='isCurrent'?value:Boolean(value)));
+      }else if(sectionKey==='hobbies'||sectionKey==='interests'){
+        section.items=fieldLines('items');
+      }else if(sectionKey==='travel'){
+        section.visited=fieldLines('visited');section.wantToVisit=fieldLines('wantToVisit');
+      }else if(sectionKey==='links'){
+        section.items=[...form.querySelectorAll('[data-about-link-row]')].map(row=>({
+          platform:String(row.querySelector('[data-link-field="platform"]')?.value||'Website'),
+          url:String(row.querySelector('[data-link-field="url"]')?.value||'').trim(),
+          label:String(row.querySelector('[data-link-field="label"]')?.value||'').trim()
+        })).filter(item=>item.url);
+      }else if(sectionKey==='contactInfo'){
+        for(const key of ['email','phone','whatsapp','website','preferredContact'])section[key]=fieldValue(key);
+      }else if(sectionKey==='names'){
+        for(const key of ['otherName','nickname','pronunciation','formerName'])section[key]=fieldValue(key);
+      }else if(sectionKey==='details'){
+        section.languages=fieldLines('languages');section.favoriteQuote=fieldValue('favoriteQuote');section.otherDetails=fieldValue('otherDetails');
+      }else if(sectionKey==='aboutYou'){
+        section.description=fieldValue('description');
+      }
+      const patch={aboutSections:{[sectionKey]:section},aboutSectionVisibility:{[sectionKey]:form.elements.audience.value}};
+      if(sectionKey==='intro')patch.bio=section.bio;
+      if(sectionKey==='personalDetails'){
+        patch.location=section.currentCity;patch.city=section.currentCity;
+        patch.country=section.country;patch.county=section.county;patch.parish=section.parish;
+        patch.gender=section.gender;patch.relationshipStatus=section.relationshipStatus;
+      }
+      if(sectionKey==='contactInfo')patch.contactPhone=section.phone||'';
+      const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(patch)});
+      state.user={...state.user,...result.user};
+      close();state.profileTab='about';await openProfile(state.user.id);
+      state.profileTab='about';toast(label+' saved.');
+    }catch(error){
+      status.textContent='Could not save '+label.toLowerCase()+'. '+error.message;toast(error.message);button.disabled=false;
+    }
+  });
 }
 function profilePhotoTile(item,owner=false,albumId=''){
   const url=esc(item.url||'');
@@ -1848,7 +2126,7 @@ function profilePhotoTile(item,owner=false,albumId=''){
 function getProfileSectionPrefs(profileId){const defaults={about:true,friends:true,photos:true,reels:true,groups:false,checkins:false,events:false};try{return {...defaults,...JSON.parse(localStorage.getItem('minglora-profile-sections:'+profileId)||'{}')};}catch{return defaults;}}
 function profileTabMarkup(data,tab,aboutHtml,isMe){
   const posts=data.posts||[],albums=data.albums||[],photos=data.photos||[],reels=data.reels||[],friends=data.friends||[];
-  if(tab==='about')return '<section class="card profile-about"><div class="about-heading"><h3>About</h3>'+(isMe?'<button class="text-button" id="edit-about-inline">Edit</button>':'')+'</div>'+(aboutHtml||'<p class="muted">No About details have been added yet.</p>')+'</section>';
+  if(tab==='about')return '<section class="card profile-about"><div class="about-heading"><div><h3>About you</h3><p class="muted">Your details, story, work, education and the things you enjoy.</p></div></div><div class="profile-about-sections">'+(aboutHtml||'<p class="muted">No About details have been added yet.</p>')+'</div></section>';
   if(tab==='friends')return '<section class="card"><div class="page-heading"><h2>Friends</h2><span class="muted">'+friends.length+' friends</span></div>'+(friends.length?'<div class="profile-friends-grid">'+friends.map(member=>'<button type="button" class="profile-friend-card" data-profile="'+esc(member.id)+'"><img class="avatar" src="'+avatar(member)+'" alt=""><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+'</small></button>').join('')+'</div>':'<div class="empty-state"><h3>No friends to show</h3><p>Friends appear here when both members follow each other.</p></div>')+'</section>';
   if(tab==='photos'){
     const albumMarkup=albums.map(album=>{
@@ -2059,6 +2337,7 @@ function bindProfileTabActions(panel){
   panel.querySelectorAll('[data-open-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openGroup)));
 
   panel.querySelector('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(state.profile.user));
+  panel.querySelectorAll('[data-edit-about-section]').forEach(button=>button.addEventListener('click',()=>openAboutSectionEditor(button.dataset.editAboutSection,state.profile.user)));
   panel.querySelector('#profile-composer')?.addEventListener('click',()=>openComposer());
   panel.querySelector('#profile-upload-photo')?.addEventListener('click',()=>openProfilePhotoComposer(state.profile.user.id));
   panel.querySelector('#profile-create-album')?.addEventListener('click',()=>openProfileAlbumEditor(state.profile.user.id));
