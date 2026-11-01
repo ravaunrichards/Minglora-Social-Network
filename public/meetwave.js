@@ -9,7 +9,9 @@
   }
   function roomCard(room){
     const date=room.scheduledAt?new Date(room.scheduledAt).toLocaleString():'Ready now';
-    return '<article class="mw-room-card"><div class="mw-room-card-top"><span class="mw-room-badge">'+esc(room.mode)+'</span><span class="mw-privacy">'+esc(room.visibility)+'</span></div><h3>'+esc(room.title)+'</h3><p>'+esc(room.description||'Minglora meeting room')+'</p><div class="mw-room-meta"><span>Host: '+esc(room.owner?.name||'Minglora member')+'</span><span>'+esc(date)+'</span></div><div class="mw-room-code-row"><code>'+esc(room.id)+'</code><button class="mw-text-button" data-copy="'+esc(room.id)+'">Copy link</button></div><div class="mw-room-actions"><button class="mw-primary" data-join="'+esc(room.id)+'">'+(room.isHost?'Start meeting':'Join room')+'</button>'+(room.isHost?'<button class="mw-secondary" data-invite="'+esc(room.id)+'">Invite</button>':'')+'</div></article>';
+    const visibility=room.visibility==='private'?'Invite only':room.visibility;
+    const presence=room.participantCountVerified?(room.status==='active'?room.participantCount+' in room':'Not started'):'Live count unavailable';
+    return '<article class="mw-room-card"><div class="mw-room-card-top"><span class="mw-room-badge">'+esc(room.mode)+'</span><span class="mw-privacy">'+esc(visibility)+'</span></div><h3>'+esc(room.title)+'</h3><p>'+esc(room.description||'Minglora meeting room')+'</p><div class="mw-room-meta"><span>Host: '+esc(room.owner?.name||'Minglora member')+'</span><span>'+esc(date)+'</span><span>'+esc(presence)+'</span></div><div class="mw-room-code-row"><code>'+esc(room.id)+'</code><button class="mw-text-button" data-copy="'+esc(room.id)+'">Copy link</button></div><div class="mw-room-actions"><button class="mw-primary" data-join="'+esc(room.id)+'">'+(room.isHost?'Start meeting':'Join room')+'</button>'+(room.isHost?'<button class="mw-secondary" data-invite="'+esc(room.id)+'">Invite</button>':'')+'</div></article>';
   }
   async function refreshLobby(){
     const [rooms,invitations,provider]=await Promise.all([api('/meetwave/rooms'),api('/meetwave/invitations'),api('/meetwave/status')]);
@@ -63,9 +65,10 @@
     catch{}finally{chatBusy=false;}
   }
   async function joinRoom(id){
+    const client=window.LivekitClient;
+    if(!client?.Room)throw new Error('MeetWave media client failed to load. Refresh Minglora before joining.');
     const info=await api(endpoint(id));
-    const result=await api(endpoint(id)+'/join',{method:'POST',body:'{}'}),client=window.LivekitClient;
-    if(!client?.Room)throw new Error('MeetWave media client failed to load. Refresh Minglora.');
+    const result=await api(endpoint(id)+'/join',{method:'POST',body:'{}'});
     activeRoom=info.room;setContent(meetingMarkup(activeRoom,result.role));messageIds=new Set();screenOn=false;
     roomClient=new client.Room({adaptiveStream:true,dynacast:true});
     roomClient.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachTrack(track,participant);updateCount();});
@@ -97,8 +100,10 @@
   async function disconnect(){if(poller){clearInterval(poller);poller=null;}if(roomClient){try{for(const publication of roomClient.localParticipant.trackPublications.values())publication.track?.stop();await roomClient.disconnect();}catch{}}roomClient=null;}
   async function leaveRoom(end){
     if(!activeRoom)return;const room=activeRoom;activeRoom=null;await disconnect();
-    if(end)await api(endpoint(room.id),{method:'DELETE',body:'{}'}).catch(error=>note(error.message,true));
-    else await api(endpoint(room.id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});
+    try{
+      if(end)await api(endpoint(room.id),{method:'DELETE',body:'{}'});
+      else await api(endpoint(room.id)+'/leave',{method:'POST',body:'{}'});
+    }catch(error){note('You left the meeting, but Minglora could not confirm the room update: '+error.message,true);}
     state.view='meetwave';await render();
   }
   async function render(){
