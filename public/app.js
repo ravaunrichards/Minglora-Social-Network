@@ -2100,27 +2100,33 @@ function createMediaPicker(root,options={}){
   };
 }
 
+function profileCropViewport(stage){
+  // Absolute-positioned crop content is laid out inside the padding box.
+  // clientWidth/clientHeight exclude the visible border; getBoundingClientRect()
+  // includes it and therefore produces a different crop from the pixels users see.
+  return {width:stage.clientWidth,height:stage.clientHeight};
+}
 function clampProfileCropPosition(stage,edit){
-  const rect=stage.getBoundingClientRect();
-  if(!rect.width||!rect.height||!edit.imageWidth||!edit.imageHeight)return;
+  const viewport=profileCropViewport(stage);
+  if(!viewport.width||!viewport.height||!edit.imageWidth||!edit.imageHeight)return;
   const swapped=Math.abs(edit.rotation%180)===90;
   const rotatedWidth=swapped?edit.imageHeight:edit.imageWidth;
   const rotatedHeight=swapped?edit.imageWidth:edit.imageHeight;
-  const fitScale=Math.max(rect.width/rotatedWidth,rect.height/rotatedHeight);
+  const fitScale=Math.max(viewport.width/rotatedWidth,viewport.height/rotatedHeight);
   const drawnWidth=rotatedWidth*fitScale*edit.zoom;
   const drawnHeight=rotatedHeight*fitScale*edit.zoom;
-  const maxX=Math.max(0,(drawnWidth-rect.width)/2),maxY=Math.max(0,(drawnHeight-rect.height)/2);
+  const maxX=Math.max(0,(drawnWidth-viewport.width)/2),maxY=Math.max(0,(drawnHeight-viewport.height)/2);
   edit.offsetX=Math.max(-maxX,Math.min(maxX,edit.offsetX));
   edit.offsetY=Math.max(-maxY,Math.min(maxY,edit.offsetY));
 }
 function updateProfileCropPreview(stage,image,edit){
-  const rect=stage.getBoundingClientRect();
-  if(!rect.width||!rect.height||!edit.imageWidth||!edit.imageHeight)return;
+  const viewport=profileCropViewport(stage);
+  if(!viewport.width||!viewport.height||!edit.imageWidth||!edit.imageHeight)return;
   clampProfileCropPosition(stage,edit);
   const swapped=Math.abs(edit.rotation%180)===90;
   const rotatedWidth=swapped?edit.imageHeight:edit.imageWidth;
   const rotatedHeight=swapped?edit.imageWidth:edit.imageHeight;
-  const fitScale=Math.max(rect.width/rotatedWidth,rect.height/rotatedHeight);
+  const fitScale=Math.max(viewport.width/rotatedWidth,viewport.height/rotatedHeight);
   image.style.width=(edit.imageWidth*fitScale)+'px';
   image.style.height=(edit.imageHeight*fitScale)+'px';
   image.style.left='calc(50% + '+edit.offsetX+'px)';
@@ -2167,10 +2173,10 @@ async function transformProfileCrop(file,edit,stage,slot){
   try{bitmap=await createImageBitmap(file);}
   catch{throw new Error('This image could not be opened for cropping on this device. Choose a JPEG, PNG or WEBP image instead.');}
   try{
-    const rect=stage.getBoundingClientRect();
-    if(!rect.width||!rect.height)throw new Error('The image crop preview is not ready. Select the photo again and try.');
+    const viewport=profileCropViewport(stage);
+    if(!viewport.width||!viewport.height)throw new Error('The image crop preview is not ready. Select the photo again and try.');
     const outputWidth=slot==='avatar'?1080:1800;
-    const outputHeight=Math.max(1,Math.round(outputWidth*rect.height/rect.width));
+    const outputHeight=Math.max(1,Math.round(outputWidth*viewport.height/viewport.width));
     const swapped=Math.abs(edit.rotation%180)===90;
     const rotatedWidth=swapped?bitmap.height:bitmap.width;
     const rotatedHeight=swapped?bitmap.width:bitmap.height;
@@ -2180,8 +2186,8 @@ async function transformProfileCrop(file,edit,stage,slot){
     const context=canvas.getContext('2d');
     if(!context)throw new Error('Image cropping is not supported in this browser.');
     context.translate(
-      outputWidth/2+edit.offsetX*(outputWidth/rect.width),
-      outputHeight/2+edit.offsetY*(outputHeight/rect.height)
+      outputWidth/2+edit.offsetX*(outputWidth/viewport.width),
+      outputHeight/2+edit.offsetY*(outputHeight/viewport.height)
     );
     context.rotate(edit.rotation*Math.PI/180);
     context.scale(fitScale*edit.zoom,fitScale*edit.zoom);
@@ -2279,31 +2285,6 @@ function openEditProfile(u){
     image.src=url;
     status.textContent=(slot==='avatar'?'Profile picture':'Cover photo')+' selected. Adjust the crop preview before saving.';
   }
-  function enableCropDragging(stage,edit,update){
-    let drag=null;
-    stage.addEventListener('pointerdown',event=>{
-      if(!edit.fileSelected)return;
-      drag={pointerId:event.pointerId,x:event.clientX,y:event.clientY,offsetX:edit.offsetX,offsetY:edit.offsetY};
-      stage.classList.add('is-dragging');
-      try{stage.setPointerCapture(event.pointerId);}catch{}
-      event.preventDefault();
-    });
-    stage.addEventListener('pointermove',event=>{
-      if(!drag||drag.pointerId!==event.pointerId)return;
-      edit.offsetX=drag.offsetX+(event.clientX-drag.x);
-      edit.offsetY=drag.offsetY+(event.clientY-drag.y);
-      update();
-    });
-    const stop=event=>{
-      if(!drag||(event?.pointerId!=null&&drag.pointerId!==event.pointerId))return;
-      drag=null;stage.classList.remove('is-dragging');
-    };
-    stage.addEventListener('pointerup',stop);
-    stage.addEventListener('pointercancel',stop);
-    stage.addEventListener('lostpointercapture',stop);
-  }
-  enableCropDragging(avatarPreview,avatarEdit,updateAvatarCrop);
-  enableCropDragging(coverPreview,coverEdit,updateCoverCrop);
   const updateBothCrops=()=>{updateAvatarCrop();updateCoverCrop();};
   window.addEventListener('resize',updateBothCrops);
   const phoneInput=modal.querySelector('#edit-contact-phone');
