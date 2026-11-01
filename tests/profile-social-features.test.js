@@ -68,13 +68,20 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
 
   const post=await request(alice.cookie,'/api/posts',{method:'POST',body:JSON.stringify({text:'This post will be archived and restored.'})});
   assert.equal(post.status,201,JSON.stringify(post.body));
+  const comment=await request(alice.cookie,'/api/posts/'+post.body.post.id+'/comments',{method:'POST',body:JSON.stringify({text:'A comment that must be locked with the archive.'})});
+  assert.equal(comment.status,201,JSON.stringify(comment.body));
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/save',{method:'POST',body:'{}'})).status,200);
   assert.equal((await request(alice.cookie,'/api/profile/archive',{method:'POST',body:JSON.stringify({postId:post.body.post.id})})).status,200);
   assert.equal((await request(alice.cookie,'/api/profile/archive')).body.posts.length,1);
   assert.equal((await request(alice.cookie,'/api/feed')).body.posts.some(item=>item.id===post.body.post.id),false);
   assert.equal((await request(alice.cookie,'/api/search?q=archived')).body.posts.some(item=>item.id===post.body.post.id),false);
   assert.equal((await request(alice.cookie,'/api/saved-posts')).body.posts.some(item=>item.id===post.body.post.id),false);
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/reactions',{method:'POST',body:JSON.stringify({reaction:'like'})})).status,404);
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/comments',{method:'POST',body:JSON.stringify({text:'This must fail while archived.'})})).status,404);
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/comments/'+comment.body.comment.id,{method:'DELETE',body:'{}'})).status,404);
   assert.equal((await request(alice.cookie,'/api/profile/archive/'+post.body.post.id,{method:'DELETE',body:'{}'})).status,200);
   assert.equal((await request(alice.cookie,'/api/feed')).body.posts.some(item=>item.id===post.body.post.id),true);
+  assert.equal((await request(alice.cookie,'/api/saved-posts')).body.posts.some(item=>item.id===post.body.post.id),true);
 
   const activity=await request(alice.cookie,'/api/users/'+alice.id+'/activity');
   assert.equal(activity.status,200);assert.ok(activity.body.activity.some(item=>item.action==='profile_status_updated'));
