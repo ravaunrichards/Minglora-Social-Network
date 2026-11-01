@@ -546,7 +546,7 @@ function App() {
             </div>
           </section>}
           {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} notify={notify} />}
-          {section === "Profile" && <ProfileWorkspace session={session} notify={(message) => setNotice(message)} />}
+          {section === "Profile" && <ProfileWorkspace session={session} notify={notify} />}
 
           <footer className="app-footer"><span>HarborPay</span><span>Secure payments · No fabricated balances</span></footer>
         </div>
