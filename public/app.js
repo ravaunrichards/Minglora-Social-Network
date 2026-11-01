@@ -141,7 +141,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261101-messenger-left-panel-1',{scope:'/'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261101-messenger-right-panel-1',{scope:'/'});
     const subscription=await registration.pushManager.getSubscription();
     if(subscription){
       webPushSubscriptionActive=true;
