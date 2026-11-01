@@ -12,33 +12,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<
 const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { const res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
-let profilePresenceTimer=null;
-let profilePresenceBusy=false;
-function stopProfilePresence(){if(profilePresenceTimer){clearInterval(profilePresenceTimer);profilePresenceTimer=null;}profilePresenceBusy=false;}
-function updateProfileInsights(insights){
-  const views=$('#profile-views-count'),active=$('#profile-active-viewers-count');
-  if(views)views.textContent=Number(insights?.profileViews30d||0).toLocaleString();
-  if(active)active.textContent=Number(insights?.activeViewersCount||0).toLocaleString();
-}
-async function refreshProfilePresence(profileId){
-  if(profilePresenceBusy||document.visibilityState!=='visible'||state.view!=='profile'||state.profile?.user?.id!==profileId)return;
-  profilePresenceBusy=true;
-  try{
-    const result=await api(`/users/${encodeURIComponent(profileId)}/profile-presence`,{method:'POST',body:'{}'});
-    if(result.profileInsights&&state.view==='profile'&&state.profile?.user?.id===profileId)updateProfileInsights(result.profileInsights);
-  }catch(error){
-    console.warn('Profile presence refresh failed:',error.message);
-  }finally{profilePresenceBusy=false;}
-}
-function startProfilePresence(profileId){
-  stopProfilePresence();
-  void refreshProfilePresence(profileId);
-  profilePresenceTimer=setInterval(()=>void refreshProfilePresence(profileId),20000);
-}
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&state.view==='profile'&&state.profile?.user?.id)void refreshProfilePresence(state.profile.user.id);
-});
-
+function stopProfilePresence(){}
 const APP_PALETTE_OPTIONS=[
   {value:'minglora',label:'Minglora Blue',color:'#1769e0'},
   {value:'ocean',label:'Ocean Breeze',color:'#0f766e'},
@@ -1807,6 +1781,7 @@ async function renderGroup(groupId){
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
 async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profile?.user?.id!==id)state.profileTab='posts';try{const data=await api(`/users/${encodeURIComponent(id)}`);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
+window.addEventListener('minglora:open-profile',event=>{const userId=event.detail?.userId;if(state.user&&userId)void openProfile(String(userId));});
 
 async function renderConnections(profileId,kind){
   if(!['followers','following','friends'].includes(kind))return;
@@ -2292,7 +2267,7 @@ function renderProfile(data){
     :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const tab=state.profileTab||'posts';
-  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div>'+(isMe?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p>'+(isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'<p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong> friends</button><span><strong>'+(data.posts||[]).length+'</strong> posts</span></p>'+(isMe?'<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">'+Number(data.profileInsights?.profileViews30d||0).toLocaleString()+'</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">'+Number(data.profileInsights?.activeViewersCount||0).toLocaleString()+'</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>':'')+'</div>'+relationshipActions+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['groups','Groups'],['checkins','Check-ins'],['events','Events'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status"><span aria-hidden="true">✎</span><span>Profile status</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
+  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div>'+(isMe?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">+(isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'+'</div><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p></div>'+relationshipActions+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['groups','Groups'],['checkins','Check-ins'],['events','Events'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status"><span aria-hidden="true">✎</span><span>Profile status</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab;button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
@@ -2331,7 +2306,6 @@ function renderProfile(data){
   document.querySelectorAll('[data-open-connections]').forEach(button=>button.addEventListener('click',()=>renderConnections(u.id,button.dataset.openConnections)));
   document.querySelectorAll('[data-view-image]').forEach(image=>image.addEventListener('click',()=>{const url=image.dataset.viewImage;if(url)openImageViewer(url,image.dataset.imageLabel||'Profile image');}));
   showTab(tab);
-  startProfilePresence(u.id);
 }
 function bindProfileTabActions(panel){
   panel.querySelector('#profile-section-manager')?.addEventListener('submit',event=>{
@@ -3303,10 +3277,23 @@ async function openMessageWindow(member){
     renderMessageWindows();
   }catch(error){toast(error.message);}
 }
+function paintMessengerBadge(conversations=[]){
+  const count=(Array.isArray(conversations)?conversations:[]).reduce((total,item)=>total+Math.max(0,Number(item.unreadCount)||0),0);
+  const badge=$('#messenger-unread-count');
+  const button=$('#messenger-btn');
+  if(badge){badge.textContent=count>99?'99+':String(count);badge.classList.toggle('hidden',count===0);}
+  if(button)button.setAttribute('aria-label',count?('Messenger, '+count+' unread messages'):'Messenger');
+}
+async function updateMessengerBadge(){
+  if(!state.user)return;
+  try{const result=await api('/messages');paintMessengerBadge(result.conversations||[]);}
+  catch(error){console.warn('Messenger unread count unavailable:',error.message);}
+}
 async function renderMessages(){
   activateSilent('messages');
   const messageData=await api('/messages');
   state.conversations=messageData.conversations||[];
+  paintMessengerBadge(state.conversations);
   const conversationRows=state.conversations.length?state.conversations.map(conversation=>{
     const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':'Open chat');
     return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><div class="message-inbox-row-actions"><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button><button class="secondary" type="button" data-remove-inbox-chat="'+esc(conversation.user.id)+'">Remove</button></div></div>';
@@ -3494,11 +3481,12 @@ async function openMingloraCall(call,liveKit){
 async function renderNotifications(){
   state.notifications=(await api('/notifications')).notifications;
   const rows=state.notifications.map(n=>{
-    const icon=n.type==='message'?'▤':n.type==='friend'?'♧':n.type==='call'?'📞':n.type==='live'?'🔴':n.type==='reaction'?'♡':'♢';
+    const icon=n.type==='message'?'▤':n.type==='profile_view'?'◉':n.type==='friend'?'♧':n.type==='call'?'📞':n.type==='live'?'🔴':n.type==='reaction'?'♡':'♢';
     let actions='';
     if(n.type==='call'&&n.callId)actions='<div class="notice-actions"><button class="primary" type="button" data-answer-call="'+esc(n.callId)+'">Answer</button><button class="secondary" type="button" data-decline-call="'+esc(n.callId)+'">Decline</button></div>';
     else if(n.type==='live'&&n.liveSessionId)actions='<div class="notice-actions"><button class="primary" type="button" data-watch-notified-live="'+esc(n.liveSessionId)+'">Watch LIVE</button></div>';
     else if(n.type==='message'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-message-actor="'+esc(n.actor.id)+'">Open message</button></div>';
+    else if(n.type==='profile_view'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-profile-view-actor="'+esc(n.actor.id)+'">View profile</button></div>';
     return '<article class="notice-item '+(n.read?'':'unread')+'"><div class="notice-icon">'+icon+'</div><div class="notice-content"><p>'+esc(n.text)+'</p><small>'+timeAgo(n.createdAt)+'</small>'+actions+'</div></article>';
   }).join('');
   setContent('<div class="page-heading"><div><h1>Notifications</h1><p class="muted">Receive LIVE, call and message alerts, including when Minglora is in the background.</p></div><div class="notice-actions"><button class="secondary" id="enable-browser-alerts">Enable device push</button><button class="text-button" id="mark-read">Mark all read</button></div></div><section class="card">'+(rows||'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>')+'</section>');
@@ -3506,6 +3494,7 @@ async function renderNotifications(){
   document.querySelectorAll('[data-answer-call]').forEach(button=>button.onclick=()=>answerMingloraCall(button.dataset.answerCall));
   document.querySelectorAll('[data-decline-call]').forEach(button=>button.onclick=()=>declineMingloraCall(button.dataset.declineCall));
   document.querySelectorAll('[data-message-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.messageActor);if(item?.actor)openMessageWindow(item.actor);});
+  document.querySelectorAll('[data-profile-view-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.profileViewActor);if(item?.actor)openProfile(item.actor.id);});
   document.querySelectorAll('[data-watch-notified-live]').forEach(button=>button.onclick=async()=>{
     try{const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.watchNotifiedLive);if(!session){toast('This LIVE session has ended.');return;}await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');}
     catch(error){toast(error.message);}
@@ -3514,6 +3503,7 @@ async function renderNotifications(){
 }
 async function pollBrowserNotifications(){
   if(!state.user)return;
+  void updateMessengerBadge();
   try{
     const items=(await api('/notifications')).notifications||[];
     if(!browserNotificationPrimed){
@@ -3524,7 +3514,7 @@ async function pollBrowserNotifications(){
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
         if(webPushSubscriptionActive||!['live','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
-        const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':'New Minglora message';
+        const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':'New Minglora message';
         const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
       }
@@ -3538,7 +3528,7 @@ function startBrowserNotificationPolling(){
   pollBrowserNotifications();
   browserNotificationTimer=setInterval(pollBrowserNotifications,12000);
 }
-async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));}catch{}}
+async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));void updateMessengerBadge();}catch{}}
 async function renderSearch(q){
   activateSilent('search');const data=await api('/search?q='+encodeURIComponent(q));state.searchResults=data;
   const pages=data.pages||[];
@@ -3839,6 +3829,7 @@ function bindNavigation(){
   $('#profile-menu').onclick=()=>openProfile(state.user.id);
   $('#rail-notifications').onclick=()=>renderNotifications();
   $('#notifications-btn').onclick=()=>renderNotifications();
+  $('#messenger-btn')?.addEventListener('click',()=>activateNav('messages'));
   $('#see-people').onclick=()=>activateNav('friends');
   $('#see-groups').onclick=()=>activateNav('groups');
   $('#search-form').addEventListener('submit',async e=>{
@@ -3864,7 +3855,7 @@ function bindNavigation(){
 }
 async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><img class="avatar" src="${avatar(p)}" alt=""><div class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></div><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
 async function enterMingloraApp(user,showWelcome=false){
-  state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();
+  state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   const params=new URLSearchParams(window.location.search);
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else activateNav('feed');
