@@ -199,20 +199,21 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     if (!bodyText.trim()) return { status: 400, body: { error: 'Write a message before sending.' } };
     if (bodyText.length > MAX_BODY_LENGTH) return { status: 400, body: { error: 'Message is too long.' } };
 
+    const beforeSend = {
+      mailboxes: structuredClone(db.mailboxes),
+      mailMessages: structuredClone(db.mailMessages)
+    };
     const resolved = parsed.unique.map(email => ({ email, recipient: mailboxForAddress(db, email) }));
     const blocked = resolved.find(({ recipient }) =>
       !recipient || memberIsBlocked(db, String(mailbox.memberId), String(recipient.memberId))
     );
     if (blocked) {
-      db.mailboxes.splice(0, db.mailboxes.length, ...beforeProvision.mailboxes);
-      db.mailMessages.splice(0, db.mailMessages.length, ...beforeProvision.mailMessages);
+      db.mailboxes.splice(0, db.mailboxes.length, ...beforeSend.mailboxes);
+      db.mailMessages.splice(0, db.mailMessages.length, ...beforeSend.mailMessages);
       return { status: 404, body: { error: 'One or more Minglora member mailboxes could not be found.' } };
     }
 
-    const before = {
-      mailboxes: structuredClone(beforeProvision.mailboxes),
-      mailMessages: structuredClone(beforeProvision.mailMessages)
-    };
+    const before = beforeSend;
     const createdAt = new Date().toISOString();
     const recipients = parsed.recipients;
     const messageId = makeMessageId(db);
