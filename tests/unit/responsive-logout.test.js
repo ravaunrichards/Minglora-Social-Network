@@ -14,7 +14,7 @@ const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
   assert.ok(html.includes('href="/styles.css?v=20261101-messenger-profile-view-2"'));
   assert.ok(html.includes('src="/app.js?v=20261101-messenger-profile-view-2"'));
-  assert.ok(html.includes('src="/settings.js?v=20261101-call-ringtones-1"'));
+  assert.ok(html.includes('src="/settings.js?v=20261101-messenger-profile-view-2"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
 
   const mobileNavStart = html.indexOf('<div class="mobile-nav"');
@@ -55,5 +55,5 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.match(serviceWorker, /minglora-shell-v52-messenger-profile-view/);
   assert.ok(serviceWorker.includes('styles.css?v=20261101-messenger-profile-view-2'));
   assert.ok(serviceWorker.includes('app.js?v=20261101-messenger-profile-view-2'));
-  assert.ok(serviceWorker.includes('settings.js?v=20261101-call-ringtones-1'));
+  assert.ok(serviceWorker.includes('settings.js?v=20261101-messenger-profile-view-2'));
 });
