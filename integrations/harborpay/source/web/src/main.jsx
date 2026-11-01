@@ -75,7 +75,6 @@ function AuthScreen({ prefill = null, recovery = false, onRecoveryComplete = () 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [notice, setNotice] = useState("");
-  const notify = useCallback((message) => setNotice(message), []);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -263,6 +262,7 @@ function App() {
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [notice, setNotice] = useState("");
+  const notify = useCallback((message) => setNotice(message), []);
   const [mingloraPrefill, setMingloraPrefill] = useState(null);
   const [mingloraLinkToken, setMingloraLinkToken] = useState(() => window.sessionStorage.getItem("harborpay_minglora_link_token") || "");
   const [mingloraLinked, setMingloraLinked] = useState(false);
