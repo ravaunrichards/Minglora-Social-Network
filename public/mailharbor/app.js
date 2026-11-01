@@ -256,7 +256,7 @@ async function renderSettings(settings, feedback = '') {
   $('messages').innerHTML =
     '<form id="mail-settings-form" class="mail-settings">' +
       '<section class="mail-settings-card"><div class="mail-settings-heading">' + mailIcon('profile') + '<div><h2>Mailbox identity</h2><p>Your address is linked to your signed-in Minglora member.</p></div></div>' +
-        '<label class="mail-setting-field">Mailbox address<input value="' + escapeHtml(currentUser?.email || '') + '" readonly></label>' +
+        '<label class="mail-setting-field">Mailbox address<input value="' + escapeHtml(mailboxDisplayAddress()) + '" readonly></label>' +
         '<label class="mail-setting-field">Display name<input id="mail-display-name" maxlength="120" value="' + escapeHtml(mailSettingsState.displayName || currentUser?.name || '') + '" required></label>' +
       '</section>' +
       '<section class="mail-settings-card"><div class="mail-settings-heading">' + mailIcon('compose') + '<div><h2>Writing preferences</h2><p>Your signature is added to new messages; you can edit it before sending.</p></div></div>' +
