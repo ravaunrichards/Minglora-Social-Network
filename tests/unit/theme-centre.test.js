@@ -53,7 +53,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
   }
   assert.match(html, /styles\.css\?v=20261101-profile-tools-1/);
   assert.match(html, /app\.js\?v=20261101-profile-tools-1/);
-  assert.match(html, /settings\.js\?v=20261101-profile-tools-1/);
+  assert.match(html, /settings\.js\?v=20261101-mailharbor-in-app-1/);
   assert.match(sw, /minglora-shell-v58-profile-tools-1/);
-  assert.match(sw, /settings\.js\?v=20261101-profile-tools-1/);
+  assert.match(sw, /settings\.js\?v=20261101-mailharbor-in-app-1/);
 });
