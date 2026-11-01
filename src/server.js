@@ -21,7 +21,7 @@ import { validateJobPostingInput, validateJobApplicationInput, transitionJobAppl
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
-import { handleMailHarborApi } from '../backend/modules/mailharbor/service.js';
+import { handleMailHarborApi, handleMailHarborWebhook, processMailHarborOutbox } from '../backend/modules/mailharbor/service.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -290,8 +290,18 @@ const sessionAuth=createSessionAuthManager({
   refreshSession:supabaseRefreshSession,save:saveStore
 });
 async function body(req, maxBytes=1_000_000) {
-  let raw=''; for await (const chunk of req) { raw += chunk; if (raw.length > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413}); }
-  if (!raw) return {}; try { return JSON.parse(raw); } catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buffer.length;
+    if (total > maxBytes) throw Object.assign(new Error('Request body too large'), {status:413});
+    chunks.push(buffer);
+  }
+  req.rawBody = Buffer.concat(chunks);
+  if (!req.rawBody.length) return {};
+  try { return JSON.parse(req.rawBody.toString('utf8')); }
+  catch { throw Object.assign(new Error('Invalid JSON body'), {status:400}); }
 }
 const requireAuth = user => { if (!user) throw Object.assign(new Error('Sign in to continue.'), {status:401}); };
 function meetWaveRoomInvitation(roomId,userId){
@@ -640,6 +650,10 @@ async function route(req, res) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
+      if (method === 'POST' && p === '/api/mailharbor/webhooks/resend') {
+        const webhook = await handleMailHarborWebhook({ headers: req.headers, rawBody: req.rawBody, db, saveStore });
+        return json(res, webhook.status, webhook.body, { 'Cache-Control': 'no-store' });
+      }
       if (p.startsWith('/api/streambay/')) {
         const streamBayResponse = await handleStreamBayApi({
           method, path:p, url, input, user, db, saveStore, uid, now,
@@ -3067,6 +3081,12 @@ server.listen(PORT,'0.0.0.0',async()=>{
   const liveCleanup = await liveSessionCleanupReady;
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   console.log(`Minglora listening on port ${PORT}`);
+  const mailHarborWorker = setInterval(() => {
+    processMailHarborOutbox({ db, saveStore }).catch(error => {
+      console.error('[Minglora MailHarbor worker] External delivery worker error:', String(error?.message || error).slice(0, 240));
+    });
+  }, 3000);
+  mailHarborWorker.unref?.();
   const persistence = await persistenceHealth();
   console.info('[Minglora readiness]', JSON.stringify({
     authProvider: AUTH_PROVIDER,

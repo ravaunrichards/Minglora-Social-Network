@@ -217,9 +217,13 @@ function renderConnectedAccounts() {
   $('count').textContent = '1 active mailbox';
   $('toolbar').classList.add('is-hidden');
   $('folders').querySelectorAll('[data-folder]').forEach(button => button.classList.toggle('active', button.dataset.folder === 'accounts'));
+  const resend = connections.resend || {};
+  const resendConnected = resend.connected === true;
   $('messages').innerHTML =
     '<section class="provider-overview"><div class="provider-overview-icon">' + mailIcon('mailharbor') + '</div><div><strong>Minglora Mailbox</strong><p>' + escapeHtml(currentUser?.email || '') + '</p></div><span class="provider-state active">Active</span></section>' +
-    '<div class="provider-section-heading"><div><h2>External email accounts</h2><p>Connect other mailboxes after secure provider authorization is configured.</p></div></div>' +
+    '<div class="provider-section-heading"><div><h2>MailHarbor delivery provider</h2><p>Outbound and inbound Internet mail through the verified MailHarbor domain.</p></div></div>' +
+    '<div class="provider-grid"><article class="provider-card"><div class="provider-card-icon">' + mailIcon('delivery') + '</div><div class="provider-card-copy"><h3>Resend delivery</h3><p>External sending, receiving and signed delivery receipts.</p><span class="provider-state ' + (resendConnected ? 'active' : 'pending') + '">' + (resendConnected ? 'Connected' : 'Awaiting API key and verified domain') + '</span></div></article></div>' +
+    '<div class="provider-section-heading"><div><h2>External mailbox sync</h2><p>Third-party accounts connect separately through each provider’s OAuth authorization.</p></div></div>' +
     '<div class="provider-grid">' + providers.map(provider => {
       const state = connections[provider.key] || {};
       const connected = state.connected === true;
@@ -293,12 +297,17 @@ function renderMessages() {
     const sender = currentFolder === 'sent'
       ? 'To: ' + ((message.recipients && message.recipients.to) || []).join(', ')
       : (message.sender_name ? message.sender_name + ' · ' : '') + message.sender_email;
-    const status = message.delivery_channel === 'minglora_internal' && (message.delivery_status === 'sent' || message.delivery_status === 'delivered')
+    const status = message.delivery_channel === 'minglora_internal' && message.delivery_status === 'delivered'
       ? '<span class="delivery sent">Delivered internally</span>'
-      : message.delivery_status === 'queued' ? '<span class="delivery queued">Queued</span>'
-      : message.delivery_status === 'failed' ? '<span class="delivery failed">Failed</span>'
-      : message.delivery_status === 'received' ? '<span class="delivery sent">Received</span>'
-      : message.delivery_status === 'sent' ? '<span class="delivery sent">Sent</span>' : '';
+      : message.delivery_channel === 'resend' && message.delivery_status === 'delivered'
+        ? '<span class="delivery sent">Delivered externally</span>'
+        : message.delivery_status === 'queued' ? '<span class="delivery queued">Queued for delivery</span>'
+        : message.delivery_status === 'failed' || message.delivery_status === 'bounced'
+          ? '<span class="delivery failed">' + (message.delivery_status === 'bounced' ? 'Bounced' : 'Failed') + '</span>'
+          : message.delivery_status === 'received' ? '<span class="delivery sent">Received</span>'
+          : message.delivery_status === 'sent' && message.delivery_channel === 'resend'
+            ? '<span class="delivery queued">Accepted by provider</span>'
+            : message.delivery_status === 'sent' ? '<span class="delivery sent">Sent</span>' : '';
     const preview = mailSettingsState.showMessagePreview === false ? '' : '<span>' + escapeHtml(message.body_text || '') + '</span>';
     return '<article class="message' + unread + '" data-id="' + id + '">' +
       '<input class="select-message" type="checkbox" aria-label="Select message"' + checked + '>' +

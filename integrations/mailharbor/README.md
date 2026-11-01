@@ -26,14 +26,16 @@ MailHarbor is a native Minglora application module, not a separate website or st
 - Connected Accounts view that reports the real state of external provider setup.
 - Per-member MailHarbor settings for sender display name, signature, refresh interval, read-on-open, previews and compact rows.
 - Authenticated automatic mailbox refresh when a realtime socket is not configured.
+- External Resend outbox processing with idempotency, bounded retries and provider message IDs.
+- Signed inbound Resend webhooks, received-email retrieval, recipient mailbox routing and delivery/bounce/complaint receipts.
 - Address alias changes with ownership and uniqueness checks.
 - Server-side owner scoping and persistence rollback on a failed save.
 
 ## External accounts and Internet email
 
-Gmail, Yahoo Mail, Outlook and iCloud are shown as not connected until each real provider integration is configured. The current /api/mailharbor/status response explicitly reports their configuration and connection states as false. There are no fake connected badges and no external message is claimed as delivered.
+MailHarbor uses Resend for verified external Internet email. Outbound messages are queued in Minglora state and sent by the native delivery loop; provider acceptance is shown as sent, and signed email.delivered / email.bounced / email.complained events update the final delivery state. Inbound email is accepted only through the signed /api/mailharbor/webhooks/resend route and Resend's Receiving API. Gmail, Yahoo Mail, Outlook and iCloud mailbox sync remain independent OAuth connections and are shown as disconnected until their own authorization flows are configured. The status endpoint reports actual capabilities and never fakes a connected badge.
 
-To enable external account sync, add provider-specific OAuth applications, redirect/callback routes, required scopes, token storage/refresh and member consent. For Internet sending and receiving, also configure a Minglora-owned domain, verified SMTP/outbound service, SPF/DKIM/DMARC records, inbound MX routing and a signed inbound webhook. Keep provider credentials server-side. Do not activate connection badges before a real OAuth handshake and mailbox sync succeed.
+To enable external Internet email, set MAILHARBOR_RESEND_API_KEY, MAILHARBOR_MAIL_DOMAIN, MAILHARBOR_DOMAIN_VERIFIED=true and MAILHARBOR_FROM_EMAIL in the Minglora Render environment only after the domain is verified in Resend and its exact SPF/DKIM records have been published. For inbound email, also set MAILHARBOR_RESEND_WEBHOOK_SECRET and MAILHARBOR_INBOUND_ENABLED=true, add a Resend webhook to https://minglora-social-network.onrender.com/api/mailharbor/webhooks/resend for email.received, email.delivered, email.bounced and email.complained, and configure MX using the exact receiving record supplied by Resend. The app verifies Svix signatures against the raw request body. Keep credentials server-side.
 
 Until a public mail domain is verified, internal member addresses use the reserved members.minglora.invalid domain. That namespace is internal-only and not publicly routable. Internal send and receive are persisted in Minglora's state store; sender-side Sent items are marked delivered only after recipient mailbox writes are saved. The mailbox client refreshes over the authenticated API on each member's selected interval.
 

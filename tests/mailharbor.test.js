@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleMailHarborApi, INTERNAL_MAIL_DOMAIN } from '../backend/modules/mailharbor/service.js';
+import { handleMailHarborApi, INTERNAL_MAIL_DOMAIN, processMailHarborOutbox } from '../backend/modules/mailharbor/service.js';
 
 function setup() {
   const db = {
@@ -78,8 +78,8 @@ test('MailHarbor never reports external email as delivered', async () => {
     subject: 'External',
     body: 'This must not be queued.'
   });
-  assert.equal(result.status, 400);
-  assert.match(result.body.error, /External email is not connected/);
+  assert.equal(result.status, 503);
+  assert.match(result.body.error, /Resend API key and verify a public MailHarbor sender domain/);
   assert.equal(state.db.mailMessages.length, 0);
 });
 
@@ -169,8 +169,8 @@ test('MailHarbor lets an external address remain in a draft but never sends it',
     subject: 'External draft',
     body: 'Not delivered.'
   });
-  assert.equal(result.status, 400);
-  assert.match(result.body.error, /External email is not connected/);
+  assert.equal(result.status, 503);
+  assert.match(result.body.error, /External email delivery is not active/);
   assert.equal(state.db.mailMessages.find(message => message.id === saved.body.message.id).folder, 'drafts');
 });
 
@@ -225,4 +225,45 @@ test('MailHarbor rejects invalid settings without changing stored preferences', 
   const saved = await call(state, state.db.users[0], 'GET', '/settings');
   assert.equal(saved.body.settings.displayName, 'Alice Example');
   assert.equal(saved.body.settings.checkForNewMailSeconds, 20);
+});
+
+
+test('MailHarbor queues and dispatches external messages through the provider outbox', async () => {
+  const savedEnv = {};
+  const keys = ['MAILHARBOR_RESEND_API_KEY', 'MAILHARBOR_MAIL_DOMAIN', 'MAILHARBOR_DOMAIN_VERIFIED', 'MAILHARBOR_FROM_EMAIL'];
+  for (const key of keys) savedEnv[key] = process.env[key];
+  process.env.MAILHARBOR_RESEND_API_KEY = 're_test_mailharbor';
+  process.env.MAILHARBOR_MAIL_DOMAIN = 'mail.example.com';
+  process.env.MAILHARBOR_DOMAIN_VERIFIED = 'true';
+  process.env.MAILHARBOR_FROM_EMAIL = 'no-reply@mail.example.com';
+  try {
+    const state = setup();
+    const queued = await call(state, state.db.users[0], 'POST', '/messages', {
+      to: 'person@example.net',
+      subject: 'External test',
+      body: 'Queued for provider delivery.'
+    });
+    assert.equal(queued.status, 202);
+    assert.equal(queued.body.message.delivery_status, 'queued');
+    const delivered = await processMailHarborOutbox({
+      db: state.db,
+      saveStore: state.saveStore,
+      sendEmail: async (message, idempotencyKey) => {
+        assert.equal(message.externalDelivery.to[0], 'person@example.net');
+        assert.match(idempotencyKey, /^minglora-mailharbor-/);
+        return { id: 'provider-message-12345678' };
+      }
+    });
+    assert.equal(delivered.processed, true);
+    assert.equal(delivered.status, 'sent');
+    const sentMessage = state.db.mailMessages.find(message => message.id === queued.body.message.id);
+    assert.equal(sentMessage.delivery_status, 'sent');
+    assert.equal(sentMessage.provider_message_id, 'provider-message-12345678');
+    assert.equal(sentMessage.externalDelivery.status, 'sent');
+  } finally {
+    for (const key of keys) {
+      if (savedEnv[key] === undefined) delete process.env[key];
+      else process.env[key] = savedEnv[key];
+    }
+  }
 });
