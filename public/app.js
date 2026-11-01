@@ -1139,19 +1139,16 @@ function creatorStageSvgMarkup(){
   </svg>`;
 }
 function creatorOverviewMarkup(){
-  const s=state.creatorStudio,profile=s.profile||{},insights=profile.profileInsights||{},user=profile.user||{};
+  const s=state.creatorStudio,profile=s.profile||{},user=profile.user||{};
   const posts=Array.isArray(profile.posts)?profile.posts:[];
   const pages=creatorOwnPages(),earnings=s.earnings||{};
-  const totalViews=insights.profileViews30d;
-  const activeViewers=insights.activeViewersCount;
   const preview=posts.slice(0,2).map(creatorPostCard).join("");
-  return "<section class='creator-stage-card'><div class='creator-stage-copy'><span class='creator-stage-label'><i></i> MINGLORA CREATIVE WORKSPACE</span><h2>Make your next<br><em>moment matter.</em></h2><p>Plan your content, publish to your community and turn real audience activity into creator growth.</p><div class='creator-stage-actions'><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create a post</button><button type='button' class='secondary' data-creator-section='content'>Explore your content ↗</button></div><div class='creator-stage-note'>Your creator space is separate from the live broadcast room.</div></div>"+
+  return "<section class='creator-stage-card'><div class='creator-stage-copy'><span class='creator-stage-label'><i></i> MINGLORA CREATIVE WORKSPACE</span><h2>Make your next<br><em>moment matter.</em></h2><p>Plan your content and publish to your community. Manage profile visitor history from Notification Settings.</p><div class='creator-stage-actions'><button type='button' class='primary' data-creator-section='publish'>"+creatorIcon("create")+" Create a post</button><button type='button' class='secondary' data-creator-section='content'>Explore your content ↗</button></div><div class='creator-stage-note'>Your creator space is separate from the live broadcast room.</div></div>"+
     "<div class='creator-stage-visual'><canvas id='creator-stage-canvas' aria-label='Interactive real-time 3D Minglora creator production studio'></canvas>"+creatorStageSvgMarkup()+"<div class='creator-stage-caption'><span></span> LIVE WEBGL 3D SCENE <small>Drag to orbit</small></div><div class='creator-stage-controls'><button type='button' id='creator-stage-reset' aria-label='Reset 3D studio view'>↻</button><button type='button' id='creator-stage-pause' aria-label='Pause 3D studio animation'>Ⅱ</button></div><p class='creator-stage-fallback' id='creator-stage-fallback' hidden>3D compatibility renderer active.</p></div></section>"+
     "<div class='creator-section-title'><div><span class='creator-eyebrow'>CHANNEL OVERVIEW</span><h2>Your performance, at a glance</h2></div><button type='button' class='creator-inline-link' data-creator-section='analytics'>View analytics ↗</button></div>"+
     "<div class='creator-metrics-grid'>"+
       creatorMetric("Followers",creatorNumber(profile.followersCount),"Current profile audience","friends")+
-      creatorMetric("Profile views · 30 days",totalViews==null?"Unavailable":creatorNumber(totalViews),"Recorded profile visits","explore")+
-      creatorMetric("Active profile viewers",activeViewers==null?"Unavailable":creatorNumber(activeViewers),"Current recorded profile presence","activity")+
+      creatorMetric("Following",creatorNumber(profile.followingCount),"Profiles you follow","profile")+
       creatorMetric("Published posts",creatorNumber(posts.length),"Your published personal posts","saved")+
     "</div>"+
     "<div class='creator-overview-lower'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR LATEST WORK</span><h3>Recent publications</h3></div><button type='button' class='creator-inline-link' data-creator-section='content'>View all ↗</button></div>"+(preview||creatorEmpty("Your content starts here","Publish a post and your real content will appear in this workspace.","create"))+"</section>"+
