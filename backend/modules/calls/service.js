@@ -61,10 +61,10 @@ export function reconcileCallPresence(call,participants,providerParticipants,sta
  }
  const host=related.find(item=>item.userId===call.createdBy);
  const hostConnected=Boolean(host&&providerIds.has(String(host.userId)));
- const hostConnecting=Boolean(host&&["calling","joined"].includes(host.status)&&!hostConnected&&withinGrace(host));
- const hostUnavailable=!host||["left","declined","missed","cancelled"].includes(host.status)||(!hostConnected&&!hostConnecting);
+ const hostConnecting=Boolean(host&&["calling","joined","left"].includes(host.status)&&!hostConnected&&withinGrace(host));
+ const hostUnavailable=!host||["declined","missed","cancelled"].includes(host.status)||(!hostConnected&&!hostConnecting);
  const anyoneConnected=related.some(item=>providerIds.has(String(item.userId))&&["joined","calling"].includes(item.status));
- const anyoneConnecting=related.some(item=>["joined","calling"].includes(item.status)&&withinGrace(item));
+ const anyoneConnecting=related.some(item=>["calling","joined","left"].includes(item.status)&&withinGrace(item));
  if(hostUnavailable||(!anyoneConnected&&!anyoneConnecting&&!related.some(item=>item.status==="invited"))){
   call.status="ended";
   call.endedAt=call.endedAt||stamp;
