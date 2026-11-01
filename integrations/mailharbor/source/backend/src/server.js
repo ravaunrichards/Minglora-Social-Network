@@ -13,7 +13,7 @@ const { pool } = require('./db');
 const { migrate } = require('./migrate');
 const { createRealtimeService } = require('./realtime');
 const { startWorker } = require('./worker');
-const { issueAccessToken, requireAuth } = require('./security');
+const { issueAccessToken, requireAuth, verifyMingloraRequest } = require('./security');
 const {
   normalizeEmail,
   validateRegistration,
@@ -63,7 +63,7 @@ function createApp(options = {}) {
     legacyHeaders: false,
     message: { error: 'Too many authentication attempts. Try again later.' }
   });
-  const auth = requireAuth(config.jwtSecret);
+  const auth = requireAuth(config.jwtSecret, { db, mingloraSsoSecret: config.mingloraSsoSecret });
   const sendLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Mail send limit reached. Try again later.' } });
 
   app.get('/health/live', (_req, res) => {
@@ -88,6 +88,9 @@ function createApp(options = {}) {
       service: 'MailHarbor',
       outboundEmailConfigured: config.smtp.configured,
       inboundEmailConfigured: Boolean(config.inboundWebhookSecret),
+      mingloraSsoConfigured: Boolean(config.mingloraSsoSecret),
+      mailDomainConfigured: Boolean(config.mailDomain),
+      mailDomain: config.mailDomain || null,
       realtimeConfigured: Boolean(config.realtimePublicUrl),
       realtimeUrl: config.realtimePublicUrl,
       registrationAvailable: config.smtp.configured,
@@ -97,7 +100,32 @@ function createApp(options = {}) {
     });
   });
 
+  app.post('/api/sso/provision', asyncRoute(async (req, res) => {
+    if (!config.mingloraSsoSecret || !config.mailDomain) return res.status(503).json({ error: 'Minglora SSO and a verified MailHarbor email domain must be configured.' });
+    if (!verifyMingloraRequest(req, config.mingloraSsoSecret)) return res.status(401).json({ error: 'Minglora service signature is invalid or expired.' });
+    const mingloraUserId = String(req.get('x-minglora-user-id') || '');
+    const username = String(req.body?.username || '').trim().toLowerCase();
+    const displayName = String(req.body?.displayName || '').trim().slice(0, 120);
+    if (!/^[a-f0-9-]{16,64}$/i.test(mingloraUserId) || !/^[a-z0-9_]{3,30}$/.test(username) || !displayName) return res.status(400).json({ error: 'A valid Minglora member ID, username and display name are required.' });
+    const email = username + '@' + config.mailDomain;
+    try {
+      const result = await db.query(
+        `INSERT INTO mail_users(email, display_name, password_hash, email_verified_at, minglora_user_id, minglora_username)
+         VALUES ($1, $2, NULL, now(), $3, $4)
+         ON CONFLICT (minglora_user_id) DO UPDATE SET display_name = EXCLUDED.display_name, minglora_username = EXCLUDED.minglora_username, updated_at = now()
+         RETURNING id, email, display_name, minglora_user_id, minglora_username, email_verified_at, created_at`,
+        [email, displayName, mingloraUserId, username]
+      );
+      const member = result.rows[0];
+      return res.status(200).json({ user: { id: member.id, email: member.email, displayName: member.display_name, mingloraUserId: member.minglora_user_id, username: member.minglora_username, emailVerifiedAt: member.email_verified_at, createdAt: member.created_at } });
+    } catch (error) {
+      if (error.code === '23505') return res.status(409).json({ error: 'That MailHarbor email address is already assigned to another member.' });
+      throw error;
+    }
+  }));
+
   app.post('/api/auth/register', authLimiter, asyncRoute(async (req, res) => {
+    if (config.mingloraSsoSecret) return res.status(403).json({ error: 'MailHarbor accounts are created through Minglora. Sign in to Minglora to continue.' });
     const validation = validateRegistration(req.body);
     if (!validation.ok) return res.status(400).json({ error: validation.error });
     if (!config.smtp.configured) {
@@ -147,6 +175,7 @@ function createApp(options = {}) {
   }));
 
   app.post('/api/auth/verify', authLimiter, asyncRoute(async (req, res) => {
+    if (config.mingloraSsoSecret) return res.status(403).json({ error: 'Email verification is managed by Minglora for connected accounts.' });
     const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
     if (!/^[a-f0-9]{64}$/i.test(token)) return res.status(400).json({ error: 'Verification link is invalid or expired.' });
     const result = await db.query(
@@ -168,6 +197,7 @@ function createApp(options = {}) {
   }));
 
   app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
+    if (config.mingloraSsoSecret) return res.status(403).json({ error: 'MailHarbor uses your Minglora sign-in. Return to Minglora to authenticate.' });
     const validation = validateLogin(req.body);
     if (!validation.ok) return res.status(400).json({ error: validation.error });
     const { email, password } = validation.value;
@@ -189,12 +219,28 @@ function createApp(options = {}) {
 
   app.get('/api/me', auth, asyncRoute(async (req, res) => {
     const result = await db.query(
-      'SELECT id, email, display_name, email_verified_at, created_at FROM mail_users WHERE id = $1',
+      'SELECT id, email, display_name, email_verified_at, created_at, minglora_user_id, minglora_username FROM mail_users WHERE id = $1',
       [req.user.id]
     );
     if (!result.rowCount) return res.status(401).json({ error: 'Account is no longer available.' });
     const user = result.rows[0];
-    return res.json({ user: { id: user.id, email: user.email, displayName: user.display_name, emailVerifiedAt: user.email_verified_at, createdAt: user.created_at } });
+    return res.json({ user: { id: user.id, email: user.email, displayName: user.display_name, mingloraUserId: user.minglora_user_id || null, username: user.minglora_username || null, emailVerifiedAt: user.email_verified_at, createdAt: user.created_at } });
+  }));
+
+  app.patch('/api/account/address', auth, asyncRoute(async (req, res) => {
+    if (!req.user.mingloraUserId) return res.status(403).json({ error: 'Address changes are available for Minglora-linked accounts only.' });
+    const username = String(req.body?.username || '').trim().toLowerCase();
+    const reserved = ['admin','administrator','abuse','billing','contact','help','hostmaster','mailer-daemon','no-reply','noreply','postmaster','root','security','support','webmaster'];
+    if (!/^[a-z0-9_]{3,30}$/.test(username) || reserved.includes(username)) return res.status(400).json({ error: 'Choose a non-reserved address name with 3–30 letters, numbers or underscores.' });
+    if (!config.mailDomain) return res.status(503).json({ error: 'A MailHarbor email domain is not configured.' });
+    try {
+      const result = await db.query('UPDATE mail_users SET email = $1, minglora_username = $2, updated_at = now() WHERE id = $3 RETURNING id, email, minglora_username', [username + '@' + config.mailDomain, username, req.user.id]);
+      if (!result.rowCount) return res.status(404).json({ error: 'MailHarbor account not found.' });
+      return res.json({ user: { id: result.rows[0].id, email: result.rows[0].email, username: result.rows[0].minglora_username } });
+    } catch (error) {
+      if (error.code === '23505') return res.status(409).json({ error: 'That MailHarbor email address is already in use.' });
+      throw error;
+    }
   }));
 
   app.post('/api/realtime/ticket', auth, asyncRoute(async (req, res) => {
@@ -266,7 +312,7 @@ function createApp(options = {}) {
         `INSERT INTO mail_messages(owner_id, sender_email, reply_to, recipients, subject, body_text, folder, delivery_status)
          VALUES ($1, $2, $3, $4::jsonb, $5, $6, 'sent', 'queued')
          RETURNING id, delivery_status, created_at`,
-        [req.user.id, config.smtp.from, req.user.email, JSON.stringify({ to, cc, bcc }), subject, body]
+        [req.user.id, req.user.mingloraUserId ? req.user.email : config.smtp.from, req.user.email, JSON.stringify({ to, cc, bcc }), subject, body]
       );
       const message = inserted.rows[0];
       await client.query(

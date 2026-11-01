@@ -4,8 +4,10 @@ CREATE TABLE IF NOT EXISTS mail_users (
   id BIGSERIAL PRIMARY KEY,
   email VARCHAR(254) NOT NULL UNIQUE,
   display_name VARCHAR(120) NOT NULL,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
   email_verified_at TIMESTAMPTZ,
+  minglora_user_id TEXT UNIQUE,
+  minglora_username VARCHAR(30),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

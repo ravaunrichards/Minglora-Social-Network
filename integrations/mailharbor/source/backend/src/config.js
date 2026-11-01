@@ -20,6 +20,14 @@ function loadConfig(env = process.env) {
     throw new Error('JWT_SECRET must contain at least 32 bytes in production.');
   }
 
+  const mingloraSsoSecret = env.MINGLORA_SSO_SECRET || '';
+  const mailDomain = String(env.MAILHARBOR_MAIL_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
+  if (mailDomain && !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/.test(mailDomain)) {
+    throw new Error('MAILHARBOR_MAIL_DOMAIN must be a valid domain name.');
+  }
+  if (nodeEnv === 'production' && Buffer.byteLength(mingloraSsoSecret) < 32) {
+    throw new Error('MINGLORA_SSO_SECRET must contain at least 32 bytes in production.');
+  }
   const smtpHost = (env.SMTP_HOST || '').trim();
   const smtpUser = (env.SMTP_USER || '').trim();
   const smtpPassword = env.SMTP_PASSWORD || '';
@@ -44,6 +52,8 @@ function loadConfig(env = process.env) {
     realtimePublicUrl: normalizeRealtimeUrl(realtimeUrl, nodeEnv),
     realtimeAllowedOrigins: realtimeOrigins,
     inboundWebhookSecret: env.INBOUND_WEBHOOK_SECRET || '',
+    mingloraSsoSecret,
+    mailDomain,
     smtp: {
       host: smtpHost,
       port: Number(env.SMTP_PORT || 587),
