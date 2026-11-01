@@ -54,7 +54,7 @@ The release workflow attaches:
 - `minglora-android.apk`
 - `android-update.json`
 
-The app checks the latest release manifest on launch and at most every six hours while active. A regular update can be postponed. When the installed version is below `minimumSupportedVersionCode`, the app displays a non-dismissible update prompt. The download opens in the user's browser; Android's package installer still requires the user to approve installation. The app does not silently install APKs.
+The app checks the latest release manifest on launch and at most every six hours while active. A regular update can be postponed. When the installed version is below `minimumSupportedVersionCode`, the app displays a non-dismissible update prompt. After the user chooses Download, the app downloads the APK through Android DownloadManager, verifies its SHA-256 against the release manifest, and prepares an Android PackageInstaller session. Android still displays the system approval screen; the app never silently installs an APK.
 
 The update manifest download is HTTPS-only and restricted to this repository's fixed GitHub Release APK path. Android verifies that the APK package signature matches the installed app during installation.
 

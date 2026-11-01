@@ -22,7 +22,7 @@ The signed-release workflow publishes two assets to the latest GitHub Release:
 
 The manifest identifies the package, monotonically increasing version code, version name, minimum supported version, release notes, fixed APK download URL, release page and SHA-256 digest. The Android app checks the manifest on launch and at most every six hours while active. A standard update can be postponed; a release can require an update by raising the `MINGLORA_ANDROID_MIN_VERSION_CODE` repository Actions variable.
 
-The app only accepts the fixed HTTPS GitHub release download URL for this repository. Android verifies that the APK package signature matches the installed app during installation. The app opens the download in the browser; the user must approve installation in Android. Silent installation is not attempted.
+The app only accepts the fixed HTTPS GitHub release download URL for this repository and requires a 64-character SHA-256 digest in the manifest. Android DownloadManager retrieves the package; a native receiver hashes the completed download and rejects it if the digest differs. Only a checksum-matching APK is copied into an Android PackageInstaller session. Android then shows its own installation approval UI. The app does not silently install APKs, and Android still requires the package signing certificate to match the installed application.
 
 ## One-time signing setup
 

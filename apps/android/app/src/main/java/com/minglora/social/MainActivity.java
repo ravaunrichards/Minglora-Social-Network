@@ -8,9 +8,12 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
@@ -34,16 +37,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import android.app.DownloadManager;
 
 public final class MainActivity extends Activity {
     private static final String APP_HOST = "minglora-social-network.onrender.com";
     private static final String UPDATE_MANIFEST_URL = "https://github.com/ravaunrichards/Minglora-Social-Network/releases/latest/download/android-update.json";
-    private static final String APK_DOWNLOAD_URL = "https://github.com/ravaunrichards/Minglora-Social-Network/releases/latest/download/minglora-android.apk";
     private static final String PREFS_NAME = "minglora_android_updates";
     private static final String LAST_CHECK_KEY = "last_successful_check";
+    private static final String PENDING_URL_KEY = "pending_update_url";
+    private static final String PENDING_SHA_KEY = "pending_update_sha256";
+    private static final String PENDING_VERSION_KEY = "pending_update_version";
+    private static final String DOWNLOAD_ID_KEY = "pending_update_download_id";
     private static final long UPDATE_CHECK_INTERVAL_MS = 6L * 60L * 60L * 1000L;
     private static final int FILE_CHOOSER_REQUEST = 4101;
     private static final int WEB_PERMISSION_REQUEST = 4102;
+    private static final int INSTALL_SOURCES_REQUEST = 4103;
 
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -135,11 +143,6 @@ public final class MainActivity extends Activity {
             }
         });
 
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            Uri uri = Uri.parse(url);
-            if ("https".equalsIgnoreCase(uri.getScheme())) openExternal(uri);
-            else Toast.makeText(this, "Only secure HTTPS downloads are allowed.", Toast.LENGTH_LONG).show();
-        });
         setContentView(webView);
     }
 
@@ -207,6 +210,16 @@ public final class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == INSTALL_SOURCES_REQUEST) {
+            if (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls()) {
+                beginVerifiedApkDownload();
+            } else {
+                Toast.makeText(this,
+                        "Allow Minglora to install updates, then choose Download update again.",
+                        Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
         if (requestCode != FILE_CHOOSER_REQUEST || fileChooserCallback == null) return;
         Uri[] results = null;
         if (resultCode == RESULT_OK && data != null) {
@@ -259,13 +272,15 @@ public final class MainActivity extends Activity {
                     return;
                 }
                 Uri downloadUri = Uri.parse(manifest.optString("apkUrl", ""));
-                if (!isTrustedReleaseDownload(downloadUri)) return;
+                String apkSha256 = manifest.optString("apkSha256", "").trim();
+                if (!isTrustedReleaseDownload(downloadUri) || !apkSha256.matches("(?i)[a-f0-9]{64}")) return;
 
                 String versionName = manifest.optString("versionName", "new version");
                 String releaseNotes = manifest.optString("releaseNotes", "A new Minglora version is ready.");
                 boolean mandatory = installedVersionCode < minimumSupportedVersionCode;
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putLong(LAST_CHECK_KEY, now).apply();
-                mainHandler.post(() -> showUpdateDialog(versionName, releaseNotes, mandatory));
+                mainHandler.post(() -> showUpdateDialog(versionName, releaseNotes, mandatory,
+                        downloadUri.toString(), apkSha256));
             } catch (Exception ignored) {
                 // A failed check never blocks normal sign-in or app use.
             } finally {
@@ -276,7 +291,7 @@ public final class MainActivity extends Activity {
 
     private int getInstalledVersionCode() {
         try {
-            if (android.os.Build.VERSION.SDK_INT >= 28)
+            if (Build.VERSION.SDK_INT >= 28)
                 return (int) getPackageManager().getPackageInfo(getPackageName(), 0).getLongVersionCode();
             return getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
         } catch (PackageManager.NameNotFoundException error) {
@@ -290,17 +305,74 @@ public final class MainActivity extends Activity {
                 "/ravaunrichards/Minglora-Social-Network/releases/latest/download/minglora-android.apk".equals(uri.getPath());
     }
 
-    private void showUpdateDialog(String versionName, String releaseNotes, boolean mandatory) {
+    private void showUpdateDialog(String versionName, String releaseNotes,
+                                  boolean mandatory, String apkUrl, String apkSha256) {
         if (isFinishing() || updateDialogVisible) return;
         updateDialogVisible = true;
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle(mandatory ? "Minglora update required" : "Minglora update available")
-                .setMessage("Version " + versionName + "\n\n" + releaseNotes)
-                .setPositiveButton("Download update", (dialog, which) -> openExternal(Uri.parse(APK_DOWNLOAD_URL)));
+                .setMessage("Version " + versionName + "\n\n" + releaseNotes +
+                        "\n\nThe downloaded package will be checksum-verified before Android is asked to install it.")
+                .setPositiveButton("Download update",
+                        (dialog, which) -> startUpdateFlow(apkUrl, apkSha256, versionName));
         if (!mandatory) builder.setNegativeButton("Later", (dialog, which) -> dialog.dismiss());
         AlertDialog dialog = builder.setCancelable(!mandatory).create();
         dialog.setOnDismissListener(ignored -> updateDialogVisible = false);
         dialog.show();
+    }
+
+    private void startUpdateFlow(String apkUrl, String apkSha256, String versionName) {
+        if (!isTrustedReleaseDownload(Uri.parse(apkUrl)) ||
+                apkSha256 == null || !apkSha256.matches("(?i)[a-f0-9]{64}")) {
+            Toast.makeText(this, "The update information failed security validation.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putString(PENDING_URL_KEY, apkUrl)
+                .putString(PENDING_SHA_KEY, apkSha256.toLowerCase())
+                .putString(PENDING_VERSION_KEY, versionName)
+                .apply();
+
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            Intent settingsIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName()));
+            try {
+                startActivityForResult(settingsIntent, INSTALL_SOURCES_REQUEST);
+            } catch (ActivityNotFoundException error) {
+                Toast.makeText(this, "Android settings for app installation are unavailable.", Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+        beginVerifiedApkDownload();
+    }
+
+    private void beginVerifiedApkDownload() {
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String url = prefs.getString(PENDING_URL_KEY, "");
+        String sha = prefs.getString(PENDING_SHA_KEY, "");
+        String version = prefs.getString(PENDING_VERSION_KEY, "latest");
+        if (!isTrustedReleaseDownload(Uri.parse(url)) || !sha.matches("(?i)[a-f0-9]{64}")) {
+            Toast.makeText(this, "No valid Minglora update is waiting to download.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url))
+                    .setTitle("Minglora update " + version)
+                    .setDescription("Downloading and verifying the official Minglora Android package")
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setAllowedOverMetered(true)
+                    .setAllowedOverRoaming(false);
+            String safeVersion = version.replaceAll("[^A-Za-z0-9._-]", "_");
+            request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS,
+                    "minglora-update-" + safeVersion + ".apk");
+            long downloadId = manager.enqueue(request);
+            prefs.edit().putLong(DOWNLOAD_ID_KEY, downloadId).apply();
+            Toast.makeText(this, "Minglora update download started.", Toast.LENGTH_LONG).show();
+        } catch (Exception error) {
+            prefs.edit().putLong(LAST_CHECK_KEY, 0L).apply();
+            Toast.makeText(this, "Minglora could not start the update download.", Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override
