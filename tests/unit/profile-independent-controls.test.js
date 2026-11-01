@@ -44,7 +44,7 @@ test('profile owner has a dedicated Add story action with its own icon and real 
 });
 
 test('profile media and story controls remain responsive and visible in refreshed app assets',()=>{
-  assert.match(css,/\.profile-cover-edit-button\{[^}]*position:absolute/);
+  assert.match(css,/\.profile-media-edit-button\{[^}]*position:absolute/);
   assert.match(css,/\.profile-avatar-edit-wrap\{[^}]*position:relative/);
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
