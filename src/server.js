@@ -2015,7 +2015,12 @@ async function route(req, res) {
 
         return json(res,200,{
           user:safeUser(target,user.id),
-          posts:profilePosts,\n          albums:profileAlbums,\n          photos:profilePhotos,\n          reels:profileVideos,\n          videos:profileVideos,\n          friends:profileFriends,
+          posts:profilePosts,
+          albums:profileAlbums,
+          photos:profilePhotos,
+          reels:profileVideos,
+          videos:profileVideos,
+          friends:profileFriends,
           friendship:isFriend(user.id,target.id)?'accepted':null,
           following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),
           followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
