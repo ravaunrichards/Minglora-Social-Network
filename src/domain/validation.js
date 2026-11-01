@@ -133,6 +133,7 @@ function validateAboutSections(input,errors){
       for(const [key,max] of Object.entries(fields[section])){
         if(raw[key]!==undefined)clean[key]=cleanAboutText(raw[key],max,section+' '+key,errors);
       }
+      if(section==='personalDetails'&&raw.familyMembers!==undefined)clean.familyMembers=cleanAboutList(raw.familyMembers,30,140,'Family members and relationships',errors);
       if(section==='details'&&raw.languages!==undefined)clean.languages=cleanAboutList(raw.languages,30,60,'Languages',errors);
     }else if(section==='work'){
       clean.entries=cleanAboutEntries(raw.entries,'Work',errors).entries;
