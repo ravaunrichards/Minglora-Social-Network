@@ -58,7 +58,7 @@ Personal, business, merchant and enterprise account categories are product scope
 
 Planned capabilities include person-to-person transfers, payment requests, receive money, bank/card funding, wallet accounts, withdrawals, merchant checkout and payment links, invoices, subscriptions, refunds, disputes, FX, supported international corridors, enterprise payment operations, tax/report exports, developer APIs and reconciliation. These must be delivered via real authorized providers and partner arrangements; listing them in scope does not mean they are currently active.
 
-The imported HarborPay implementation currently provides PayPal Orders checkout/capture, payment history, signed PayPal webhooks, a restricted admin payout endpoint, merchant/team records, customer/order/payment-link records, refund/dispute record structures and the Minglora handoff/link foundation. Its merchant payment links are not public checkout URLs yet. It has no customer-held stored-value ledger or P2P wallet transfer service.
+The implemented HarborPay client and API provide independent Supabase Auth sign-up/sign-in/password recovery, customer PayPal Orders checkout/capture, payment history, signed PayPal webhooks, a restricted admin payout endpoint, personal profile management, merchant/business profile management, customer records, order records, payment-link records, refund/dispute record structures and the consent-based Minglora handoff/link flow. Merchant payment-link records can be created and disabled, but they are not public payable checkout URLs yet because merchant-specific PayPal onboarding/settlement has not been implemented. There is no customer-held stored-value ledger or P2P wallet transfer service.
 
 ## Verification required before release
 
