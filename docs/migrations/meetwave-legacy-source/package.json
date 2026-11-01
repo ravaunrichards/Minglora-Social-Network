@@ -1,0 +1,19 @@
+{
+  "name": "meetwave-video-conferencing",
+  "version": "1.1.0",
+  "private": true,
+  "description": "MeetWave browser meetings and synchronized Android WebView client",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "sync:android": "node scripts/sync-android-assets.js",
+    "test": "npm run sync:android && node --test"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "express": "5.3.0",
+    "ws": "8.22.1"
+  }
+}
