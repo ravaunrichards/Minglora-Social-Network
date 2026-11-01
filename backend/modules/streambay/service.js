@@ -110,6 +110,67 @@ export async function handleStreamBayApi(context) {
     return { status: 200, body: { ok: true, service: 'minglora-streambay', videos: videos.filter(item => item.status === 'published').length } };
   }
 
+  if (method === 'GET' && path === '/api/streambay/channels') {
+    const query = String(url.searchParams.get('q') || '').trim().toLowerCase().replace(/^@/, '').slice(0, 100);
+    const offset = Math.max(0, Math.min(10000, Number.parseInt(url.searchParams.get('offset') || '0', 10) || 0));
+    const limit = Math.max(1, Math.min(50, Number.parseInt(url.searchParams.get('limit') || '24', 10) || 24));
+    let creators = db.users.filter(owner => {
+      if (!owner || owner.status === 'deleted' || owner.status === 'suspended') return false;
+      if (user && blockedBetween(user.id, owner.id)) return false;
+      const hasVideos = videos.some(video => video.ownerId === owner.id && visibleVideo(db, video, user, blockedBetween));
+      const hasSubscriptions = subscriptions.some(item => item.creatorId === owner.id);
+      const hasChannelProfile = channels.some(item => item.userId === owner.id);
+      return hasVideos || hasSubscriptions || hasChannelProfile;
+    });
+    if (query) creators = creators.filter(owner => {
+      const profile = channelFor(db, owner);
+      return [profile.name, profile.handle, profile.bio, profile.about, profile.location, owner.name, owner.username]
+        .join(' ').toLowerCase().includes(query);
+    });
+    creators.sort((a,b) => {
+      const subs = count(subscriptions, item => item.creatorId === b.id) - count(subscriptions, item => item.creatorId === a.id);
+      if (subs) return subs;
+      const videoA = videos.filter(item => item.ownerId === a.id && visibleVideo(db, item, user, blockedBetween)).length;
+      const videoB = videos.filter(item => item.ownerId === b.id && visibleVideo(db, item, user, blockedBetween)).length;
+      return videoB - videoA || String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+    const total = creators.length;
+    const page = creators.slice(offset, offset + limit);
+    const result = await Promise.all(page.map(async owner => ({
+      ...await publicChannel(db, owner, resolveAssetUrl),
+      owner: safeUser(owner, user?.id || null),
+      subscribers: count(subscriptions, item => item.creatorId === owner.id),
+      subscribed: Boolean(user && subscriptions.some(item => item.creatorId === owner.id && item.subscriberId === user.id)),
+      videoCount: count(videos, item => item.ownerId === owner.id && item.status === 'published' && Boolean(mediaAssetFor(db, item)))
+    })));
+    return { status: 200, body: { channels: result, total, offset, limit, hasMore: offset + result.length < total, nextOffset: offset + result.length } };
+  }
+
+  const subscriberMatch = path.match(/^\/api\/streambay\/channels\/([^/]+)\/subscribers$/);
+  if (method === 'GET' && subscriberMatch) {
+    let channelId;
+    try { channelId = decodeURIComponent(subscriberMatch[1]); } catch { fail('Channel identifier is invalid.'); }
+    const owner = resolveChannelUser(db, channelId);
+    if (!owner || (user && blockedBetween(user.id, owner.id))) fail('Channel not found.', 404);
+    const offset = Math.max(0, Math.min(100000, Number.parseInt(url.searchParams.get('offset') || '0', 10) || 0));
+    const limit = Math.max(1, Math.min(50, Number.parseInt(url.searchParams.get('limit') || '50', 10) || 50));
+    const all = subscriptions
+      .filter(item => item.creatorId === owner.id)
+      .filter(item => {
+        const member = db.users.find(entry => entry.id === item.subscriberId);
+        return Boolean(member && member.status !== 'deleted' && member.status !== 'suspended' &&
+          !blockedBetween(owner.id, member.id) && (!user || !blockedBetween(user.id, member.id)));
+      })
+      .sort((a,b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const total = all.length;
+    const page = all.slice(offset, offset + limit);
+    const result = page.map(item => {
+      const member = db.users.find(entry => entry.id === item.subscriberId);
+      return { ...safeUser(member, user?.id || null), subscribedAt: item.createdAt || null };
+    });
+    return { status: 200, body: { subscribers: result, total, offset, limit, hasMore: offset + result.length < total, nextOffset: offset + result.length } };
+  }
+
   if (method === 'GET' && path === '/api/streambay/videos') {
     const query = String(url.searchParams.get('q') || '').trim().toLowerCase().slice(0, 100);
     const sort = String(url.searchParams.get('sort') || 'recent');

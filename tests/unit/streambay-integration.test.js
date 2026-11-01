@@ -163,3 +163,61 @@ test('StreamBay supports custom thumbnails, Watch Later and private playlist con
   context.user=owner;context.method='POST';context.path='/api/streambay/playlists/'+id+'/videos';context.input={videoId:'video-1'};
   result=await handleStreamBayApi(context);assert.equal(result.body.videoCount,1);
 });
+
+
+test('StreamBay channel discovery searches creator names and handles',async()=>{
+  const context=makeContext();context.db.streambayChannels.push({userId:owner.id,name:'Caribbean Learning',handle:'caribbean.creator'});
+  context.method='GET';context.path='/api/streambay/channels';
+  context.url=new URL('https://minglora.test/api/streambay/channels?q=caribbean');
+  const result=await handleStreamBayApi(context);
+  assert.equal(result.status,200);
+  assert.equal(result.body.channels.length,1);
+  assert.equal(result.body.channels[0].id,owner.id);
+  assert.equal(result.body.channels[0].handle,'caribbean.creator');
+  assert.equal(result.body.channels[0].videoCount,1);
+  assert.equal(result.body.total,1);
+});
+
+test('StreamBay exposes a paginated subscriber list using public Minglora member profiles',async()=>{
+  const context=makeContext();
+  context.db.streambaySubscriptions.push({id:'sub-1',creatorId:owner.id,subscriberId:viewer.id,createdAt:'2026-11-01T10:00:00.000Z'});
+  context.method='GET';context.path='/api/streambay/channels/'+owner.id+'/subscribers';
+  context.url=new URL('https://minglora.test'+context.path+'?offset=0&limit=1');
+  const result=await handleStreamBayApi(context);
+  assert.equal(result.status,200);
+  assert.equal(result.body.total,1);
+  assert.equal(result.body.subscribers.length,1);
+  assert.equal(result.body.subscribers[0].id,viewer.id);
+  assert.equal(result.body.subscribers[0].username,viewer.username);
+  assert.equal(result.body.hasMore,false);
+});
+
+test('StreamBay does not expose blocked members in a creator subscriber list',async()=>{
+  const context=makeContext();
+  context.db.streambaySubscriptions.push({id:'sub-1',creatorId:owner.id,subscriberId:viewer.id,createdAt:'2026-11-01T10:00:00.000Z'});
+  context.user=null;
+  context.blockedBetween=(a,b)=>(a===owner.id&&b===viewer.id)||(a===viewer.id&&b===owner.id);
+  context.method='GET';context.path='/api/streambay/channels/'+owner.id+'/subscribers';
+  context.url=new URL('https://minglora.test'+context.path);
+  const result=await handleStreamBayApi(context);
+  assert.equal(result.body.total,0);
+  assert.equal(result.body.subscribers.length,0);
+});
+
+test('StreamBay channel pages use navigable Videos, About and Subscribers tabs and searchable creator cards',async()=>{
+  const [app,html,css]=await Promise.all([
+    readFile(new URL('../../public/streambay/app.js',import.meta.url),'utf8'),
+    readFile(new URL('../../public/streambay/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../../public/streambay/styles.css',import.meta.url),'utf8')
+  ]);
+  assert.ok(app.includes("openChannel(decodeURIComponent(parts[1]||'me'),parts[2]||'videos')"));
+  assert.ok(app.includes("'/subscribers?offset='"));
+  assert.ok(app.includes("api('/api/streambay/channels?q="));
+  assert.ok(app.includes("role=\"tablist\""));
+  assert.ok(app.includes('aria-selected='));
+  assert.ok(app.includes('Discover creators'));
+  assert.ok(html.includes('id="creatorDiscovery"'));
+  assert.ok(css.includes('.channel-identity{'));
+  assert.ok(css.includes('.channel-tabs a.active:after'));
+  assert.ok(css.includes('.subscriber-grid{'));
+});

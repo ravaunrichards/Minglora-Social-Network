@@ -49,3 +49,11 @@ The original standalone StreamBay registration/login and local JSON user store a
 - Creator video editing supports custom thumbnail images. Thumbnail assets are ownership-checked and retained with their video record.
 - Watch Later is saved per Minglora member and is accessible from the StreamBay navigation.
 - The API also supports persistent playlists with public/private visibility, add/remove video operations, and owner-only edit/delete operations.
+
+## Channel navigation, discovery and subscribers
+
+- A public channel page is divided into working Videos, About and Subscribers tabs. The active tab is part of the channel URL so sections can be linked directly.
+- The channel name and public handle sit in a dedicated identity section below the cover image. The profile image, subscriber/video counts and Subscribe/Unsubscribe action are displayed there.
+- The Subscribers tab reads the actual Minglora StreamBay subscription records and returns public member profile fields only. It is paginated, filters deleted/suspended or blocked accounts, and offers a load-more action.
+- Explore displays a discoverable creator directory. Global search checks creator names, handles (including @handle searches), bios and About details as well as matching videos.
+- Every creator card opens that creator's channel. Channel links can be shared and opened by public handle or Minglora account identifier.
