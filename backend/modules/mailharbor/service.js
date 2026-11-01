@@ -25,6 +25,21 @@ function parseAddressList(value) {
   return source.map(item => String(item ?? '').trim().toLowerCase()).filter(Boolean);
 }
 
+function parseAddressList(value) {
+  const source = Array.isArray(value) ? value : String(value ?? '').split(/[;,\n]/);
+  return source.map(item => String(item ?? '').trim().toLowerCase()).filter(Boolean);
+}
+
+function parseRecipientAddressList(value) {
+  const source = Array.isArray(value) ? value : String(value ?? '').split(/[;,\n]/);
+  return source.map(item => {
+    const address = String(item ?? '').trim().toLowerCase();
+    if (!address) return '';
+    const username = address.startsWith('@') ? address.slice(1) : address;
+    return USERNAME_RE.test(username) ? mailboxEmail(username) : address;
+  }).filter(Boolean);
+}
+
 function currentMailboxDomain() {
   if (!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))+$/.test(INTERNAL_MAIL_DOMAIN)) {
     throw new Error('MailHarbor internal mailbox domain is invalid.');
@@ -104,9 +119,9 @@ function mailboxForAddress(db, email) {
 
 function validateDraftRecipients(input, existing = {}) {
   const recipients = {
-    to: parseAddressList(input.to === undefined ? existing.to || [] : input.to),
-    cc: parseAddressList(input.cc === undefined ? existing.cc || [] : input.cc),
-    bcc: parseAddressList(input.bcc === undefined ? existing.bcc || [] : input.bcc)
+    to: parseRecipientAddressList(input.to === undefined ? existing.to || [] : input.to),
+    cc: parseRecipientAddressList(input.cc === undefined ? existing.cc || [] : input.cc),
+    bcc: parseRecipientAddressList(input.bcc === undefined ? existing.bcc || [] : input.bcc)
   };
   const all = [...recipients.to, ...recipients.cc, ...recipients.bcc];
   const unique = [...new Set(all)];
@@ -120,9 +135,9 @@ function validateDraftRecipients(input, existing = {}) {
 
 function validateRecipients(input) {
   const recipients = {
-    to: parseAddressList(input.to),
-    cc: parseAddressList(input.cc),
-    bcc: parseAddressList(input.bcc)
+    to: parseRecipientAddressList(input.to),
+    cc: parseRecipientAddressList(input.cc),
+    bcc: parseRecipientAddressList(input.bcc)
   };
   const all = [...recipients.to, ...recipients.cc, ...recipients.bcc];
   const unique = [...new Set(all)];
