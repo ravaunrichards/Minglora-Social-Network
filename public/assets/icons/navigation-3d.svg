@@ -12,6 +12,7 @@
     <linearGradient id="gold-front" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#fff3b0"/><stop offset=".38" stop-color="#f6c95c"/><stop offset="1" stop-color="#b87319"/></linearGradient>
     <linearGradient id="gold-side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd791d"/><stop offset="1" stop-color="#71400c"/></linearGradient>
     <linearGradient id="violet-front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ead7ff"/><stop offset=".42" stop-color="#9d7cf5"/><stop offset="1" stop-color="#5940b5"/></linearGradient>
+    <linearGradient id="red-side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a52344"/><stop offset="1" stop-color="#5e1029"/></linearGradient>
     <linearGradient id="red-front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffb5bf"/><stop offset=".42" stop-color="#fa536b"/><stop offset="1" stop-color="#b51f49"/></linearGradient>
     <radialGradient id="lens" cx=".33" cy=".27" r=".8"><stop stop-color="#e4fbff"/><stop offset=".2" stop-color="#6bd8f6"/><stop offset=".58" stop-color="#1762ad"/><stop offset="1" stop-color="#082447"/></radialGradient>
   </defs>
