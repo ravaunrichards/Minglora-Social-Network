@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
+import { CALL_RING_TIMEOUT_MS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, expireRingingCall, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -990,7 +991,7 @@ async function route(req, res) {
         const mimeKinds={
           'image/jpeg':'image','image/png':'image','image/webp':'image','image/avif':'image',
           'video/mp4':'video','video/webm':'video','video/quicktime':'video',
-          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','model/gltf-binary':'model3d','application/pdf':'document',
+          'audio/mpeg':'audio','audio/mp4':'audio','audio/ogg':'audio','audio/webm':'audio','audio/wav':'audio','audio/x-wav':'audio','audio/flac':'audio','audio/aac':'audio','model/gltf-binary':'model3d','application/pdf':'document',
           'text/plain':'document','text/csv':'document','application/zip':'document','application/x-zip-compressed':'document',
           'application/msword':'document','application/vnd.ms-excel':'document','application/vnd.ms-powerpoint':'document',
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'document',
@@ -1005,9 +1006,10 @@ async function route(req, res) {
           group:['image/jpeg','image/png','image/webp','video/mp4'],
           page:['image/jpeg','image/png','image/webp','video/mp4'],
           marketplace:['image/jpeg','image/png','image/webp','image/avif'],
-          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation']
+          message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+          ringtone:Object.keys(CALL_RINGTONE_MIME_TYPES)
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,marketplace:15*1024*1024,message:100*1024*1024};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,marketplace:15*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
@@ -2321,6 +2323,55 @@ async function route(req, res) {
           return json(res,200,{ended:true,room:meetWaveRoomView(room,user.id)});
         }
       }
+      if(method==='GET'&&p==='/api/calls/ringtone'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(!asset)return json(res,200,{ringtone:null});
+        const url=await resolveAssetUrl(asset);
+        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+      }
+      if(method==='POST'&&p==='/api/calls/ringtone'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='uploaded');
+        if(!asset)return json(res,404,{error:'The uploaded ringtone could not be found.'});
+        const validation=validateCallRingtoneUpload({mimeType:asset.mimeType,byteSize:asset.byteSize});
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(previous){previous.status='deleted';previous.deletedAt=now();}
+        asset.status='attached';asset.attachedTo='account:call-ringtone';asset.completedAt=asset.completedAt||now();
+        user.callRingtoneAssetId=asset.id;
+        await saveStore();
+        if(previous)void mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Previous ringtone cleanup failed.',{message:error.message}));
+        const url=await resolveAssetUrl(asset);
+        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+      }
+      if(method==='DELETE'&&p==='/api/calls/ringtone'){
+        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        user.callRingtoneAssetId=null;
+        if(previous){previous.status='deleted';previous.deletedAt=now();}
+        await saveStore();
+        if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Ringtone cleanup failed.',{message:error.message}));
+        return json(res,200,{ok:true,ringtone:null});
+      }
+      if(method==='GET'&&p==='/api/calls/incoming'){
+        let changed=false;const stamp=now();
+        for(const call of (db.calls||[]))if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],stamp))changed=true;
+        if(changed)await saveStore();
+        const incoming=(db.calls||[]).filter(call=>['ringing','active'].includes(call.status)&&!blockedBetween(user.id,call.createdBy))
+          .map(call=>{
+            const participant=(db.callParticipants||[]).find(item=>item.callId===call.id&&item.userId===user.id);
+            if(!participant||participant.status!=='invited')return null;
+            return {id:call.id,kind:call.kind,status:call.status,createdAt:call.createdAt,ringExpiresAt:call.ringExpiresAt,caller:safeUser(db.users.find(member=>member.id===call.createdBy))};
+          }).filter(Boolean);
+        return json(res,200,{calls:incoming});
+      }
+      const callStatusMatch=p.match(/^\/api\/calls\/([^/]+)\/status$/);
+      if(method==='GET'&&callStatusMatch){
+        const call=(db.calls||[]).find(item=>item.id===callStatusMatch[1]);
+        const participant=(db.callParticipants||[]).find(item=>item.callId===callStatusMatch[1]&&item.userId===user.id);
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now()))await saveStore();
+        return json(res,200,{call:{id:call.id,status:call.status,createdBy:call.createdBy,kind:call.kind,answeredAt:call.answeredAt,endedAt:call.endedAt},participantStatus:participant.status});
+      }
       if(method==='POST'&&p==='/api/calls'){
         if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
         const recipientIds=[...new Set([String(input.to||''),...(Array.isArray(input.participantIds)?input.participantIds.map(String):[])].filter(Boolean))];
@@ -2330,44 +2381,61 @@ async function route(req, res) {
         if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
         if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
         const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
-        const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName,canPublish:true});
-        const call={id,roomName,createdBy:user.id,kind,status:'active',createdAt:now(),endedAt:null};
-        db.calls||=[];db.callParticipants||=[];
-        db.calls.unshift(call);
-        db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'joined',joinedAt:now(),leftAt:null});
+        const createdAt=now();
+        const call={id,roomName,createdBy:user.id,kind,status:'ringing',createdAt,ringExpiresAt:new Date(Date.now()+CALL_RING_TIMEOUT_MS).toISOString(),answeredAt:null,endedAt:null};
+        db.calls||=[];db.callParticipants||=[];db.calls.unshift(call);
+        db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'calling',joinedAt:null,leftAt:null});
         for(const recipient of recipients){
           db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
           notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
         }
-        await saveStore();
-        return json(res,201,{call,liveKit:{...liveKit,role:'host'}});
+        await saveStore();return json(res,201,{call});
       }
-      let callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end)$/);
-      if(callMatch&&['POST'].includes(method)){
+      let callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end|decline|cancel)$/);
+      if(callMatch&&method==='POST'){
         if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
         const call=db.calls.find(item=>item.id===callMatch[1]);
         const participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
         const action=callMatch[2];
         if(!call)return json(res,404,{error:'Call not found.'});
         if(action==='join'){
-          if(call.status==='ended'||!participant||participant.status==='declined'||participant.status==='left')return json(res,404,{error:'This call invitation is no longer active.'});
+          if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now()))await saveStore();
+          if(['ended','cancelled','declined','missed'].includes(call.status)||!participant||['declined','left','missed','cancelled'].includes(participant.status))return json(res,404,{error:'This call invitation is no longer active.'});
           if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
+          if(participant.status==='calling'&&call.status==='ringing')return json(res,409,{error:'Waiting for the other member to answer.'});
+          if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer ringing.'});
+          if(participant.status==='invited'&&call.status==='ringing'){call.status='active';call.answeredAt=now();call.answeredById=user.id;}
           participant.status='joined';participant.joinedAt=participant.joinedAt||now();participant.leftAt=null;
           const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:call.roomName,canPublish:true});
           await saveStore();return json(res,200,{call,liveKit:{...liveKit,role:participant.role}});
         }
         if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(action==='decline'){
+          if(user.id===call.createdBy||participant.status!=='invited')return json(res,403,{error:'Only an invited recipient can decline this call.'});
+          if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer available.'});
+          participant.status='declined';participant.leftAt=now();
+          const stillInvited=(db.callParticipants||[]).some(item=>item.callId===call.id&&item.status==='invited');
+          if(!stillInvited&&call.status==='ringing'){call.status='declined';call.endedAt=now();}
+          await saveStore();return json(res,200,{ok:true,call});
+        }
+        if(action==='cancel'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the caller can cancel this call.'});
+          if(['ended','cancelled','declined','missed'].includes(call.status))return json(res,200,{ok:true,call});
+          call.status='cancelled';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='invited').forEach(item=>{item.status='cancelled';item.leftAt=call.endedAt;});
+          await saveStore();return json(res,200,{ok:true,call});
+        }
         if(action==='invite'){
-          if(call.status==='ended'||participant.status!=='joined')return json(res,409,{error:'Join the call before inviting more people.'});
+          if(['ended','cancelled','declined','missed'].includes(call.status)||participant.status!=='joined')return json(res,409,{error:'Join the call before inviting more people.'});
           const invitedIds=[...new Set((Array.isArray(input.userIds)?input.userIds:[]).map(String).filter(Boolean))];
           if(!invitedIds.length||invitedIds.length>6)return json(res,400,{error:'Choose between one and six additional participants.'});
-          const current=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='declined'&&item.status!=='left').length;
+          const current=(db.callParticipants||[]).filter(item=>item.callId===call.id&&!['declined','left','missed','cancelled'].includes(item.status)).length;
           if(current+invitedIds.length>8)return json(res,409,{error:'Minglora group calls support up to eight participants.'});
           const invited=invitedIds.map(id=>db.users.find(member=>member.id===id));
           if(invited.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
           const newlyInvited=[];
           for(const member of invited){
-            if((db.callParticipants||[]).some(item=>item.callId===call.id&&item.userId===member.id&&item.status!=='declined'&&item.status!=='left'))continue;
+            if((db.callParticipants||[]).some(item=>item.callId===call.id&&item.userId===member.id&&!['declined','left','missed','cancelled'].includes(item.status)))continue;
             if(getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
             db.callParticipants.push({id:uid(),callId:call.id,userId:member.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
             notify(member.id,user.id,'call',user.name+' invited you to a Minglora group call.',{callId:call.id,callKind:call.kind});
@@ -2377,8 +2445,12 @@ async function route(req, res) {
         }
         if(action==='leave'){
           participant.status='left';participant.leftAt=now();
-          const active=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='joined');
-          if(user.id===call.createdBy||active.length===0){call.status='ended';call.endedAt=now();(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status='left';item.leftAt=call.endedAt;});}
+          const joined=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='joined');
+          const stillInvited=(db.callParticipants||[]).some(item=>item.callId===call.id&&item.status==='invited');
+          if(user.id===call.createdBy||(joined.length===0&&!stillInvited)){
+            call.status='ended';call.endedAt=now();
+            (db.callParticipants||[]).filter(item=>item.callId===call.id&&['invited','calling'].includes(item.status)).forEach(item=>{item.status='cancelled';item.leftAt=call.endedAt;});
+          }
           await saveStore();return json(res,200,{ok:true,call});
         }
         if(action==='end'){
