@@ -4,7 +4,7 @@
 
 Create a new Supabase project named HarborPay for this repository. Do not reuse Zovara or another application's project.
 
-In the HarborPay project, apply these migrations in order: `20261029000100_harborpay_core.sql`, `20261030000200_harborpay_merchant_operations.sql`, `20261101000300_harborpay_minglora_identity_bridge.sql`, and `20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql`. The dedicated Minglora HarborPay project has all four migrations applied. The fourth migration synchronizes email verification from Supabase Auth into the HarborPay profile, adds the three missing foreign-key indexes, and removes a duplicate webhook index. The merchant operations migration creates merchant/team permissions, customers, orders, payment links, refunds, disputes, payment-status history, API keys, outbound webhooks, audit events, and atomic inbound-webhook claims. Run `database/verify.sql`, `database/tests/verify_schema.sql`, and Supabase security/performance advisors after applying the migrations.
+In the HarborPay project, apply all seven migrations in ascending order: `20261029000100_harborpay_core.sql`, `20261030000200_harborpay_merchant_operations.sql`, `20261101000300_harborpay_minglora_identity_bridge.sql`, `20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql`, `20261101000500_harborpay_account_applications_and_reviews.sql`, `20261101000600_harborpay_account_types.sql`, and `20261101000700_harborpay_account_application_account_types_fix.sql`. The dedicated HarborPay database has all seven applied. Migrations 005–007 add Business, Merchant and Enterprise applications with real owner-linked organization records and review statuses. Run `database/verify.sql`, `database/tests/verify_schema.sql`, and Supabase security/performance advisors after applying the migrations.
 
 The web application needs the project URL and a publishable/anon key. The API needs the same project URL and the service-role key. The service-role key is secret and belongs only in the HarborPay API environment.
 
@@ -50,7 +50,7 @@ Copy the webhook ID into PAYPAL_WEBHOOK_ID. HarborPay verifies every webhook thr
 
 ## 5. Render environment variables
 
-Set these on the HarborPay API service:
+Set these on the HarborPay API service. `MINGLORA_SSO_SECRET` must exactly match the Minglora service's `HARBORPAY_SSO_SECRET`; generate one random secret and configure the same value on both servers without putting it in source control:
 
 - HARBORPAY_WEB_URL=https://minglora-harborpay-web.onrender.com
 - MINGLORA_SSO_SECRET=THE_SAME_DISTINCT_RANDOM_SECRET_AS_MINGLORA_HARBORPAY_SSO_SECRET
@@ -78,11 +78,17 @@ Set these on the HarborPay static web service:
 
 The API service and static site are separate Render services. Never set SUPABASE_SERVICE_ROLE_KEY, PAYPAL_CLIENT_SECRET, or PAYPAL_WEBHOOK_ID on the static site.
 
-## 6. Merchant API and user workspace
+## 6. Personal, Business, Merchant and Enterprise account journeys
+
+The HarborPay website has a real Account types page. Personal opens the signed-in profile. Business, Merchant and Enterprise each submit a validated application through `POST /api/account-applications`; HarborPay creates a corresponding owner-controlled organization workspace and stores the application's status. `GET /api/account-applications` returns only the caller's own applications. These are application and workspace records—not automatic KYC/KYB, PayPal approval or live-payment activation.
+
+Administrators configured in `HARBORPAY_ADMIN_USER_IDS` can review applications with `GET /api/admin/account-applications` and `POST /api/admin/account-applications/:applicationId/review`. Review notes are not exposed by the customer endpoint.
+
+## 7. Merchant API and user workspace
 
 The HarborPay React client exposes live authenticated Personal Profile, Business, Customers, Orders and Payment Links screens. Signup/sign-in, email confirmation, password recovery and password update use HarborPay Supabase Auth. Its API supports `GET/POST /api/profile`, merchant account creation/listing, owner/admin business-profile updates, merchant customer records, merchant order records, payment-link record creation/listing and owner/admin activation/disable controls. Merchant routes enforce owner/admin/finance/support/viewer roles server-side before using the privileged database client. The `harborpay_auth_profile_sync` trigger mirrors Auth email-confirmation state into the profile. Order creation returns `paymentStatus: not_started`; it does not collect funds. Payment links are not public checkout URLs yet. The public merchant checkout, merchant onboarding/KYC, settlement and refund workflows must be implemented and tested before these records can be used to represent customer payments.
 
-## 7. Payout controls
+## 8. Payout controls
 
 PayPal lists Jamaica as a country with the "Send, receive, and withdraw" Payouts feature set. This does not automatically grant Payouts API access to a new merchant account. Confirm access with PayPal before using the endpoint.
 
@@ -90,7 +96,7 @@ Payouts are disabled by default. To enable them, first complete merchant onboard
 
 The endpoint is POST /api/admin/payouts. It is not a customer wallet withdrawal endpoint and does not promise or calculate a customer's HarborPay balance. It sends money from the merchant's PayPal business account to an email recipient. Review the merchant's legal, contractual, tax, AML, fraud, and consumer-protection duties before enabling it.
 
-## 8. Jamaica regulatory boundary
+## 9. Jamaica regulatory boundary
 
 The Bank of Jamaica describes Payment Service Providers as entities authorized to provide electronic retail payment instruments and services. Its current public PSP page says it is working on amendments to establish a PSP licensing/supervision regime and identifies the FinTech Regulatory Sandbox as the interim controlled testing route. The Bank also publishes a separate remittance licensing framework.
 
@@ -101,7 +107,7 @@ References:
 
 This repository does not establish HarborPay's legal authorization. Do not offer public stored-value accounts, custodial balances, money transmission, or remittance services until a qualified Jamaican regulatory/legal review confirms the operating model and required approvals or regulated partners.
 
-## 9. Minglora identity-link bridge
+## 10. Minglora identity-link bridge
 
 The bridge uses two separate server-only values: Minglora's HARBORPAY_SSO_SECRET and HarborPay's MINGLORA_SSO_SECRET. They must match and must be a unique random secret of at least 32 bytes, unrelated to other app secrets. Minglora sends a signed, timestamped request to HarborPay only after the user accepts the data-sharing notice. HarborPay verifies the HMAC over the exact request body, rejects stale requests, stores a SHA-256 token hash, and returns a ten-minute single-use URL. HarborPay exchanges the code once, prefills only name/email, and links the accounts only after a verified HarborPay email matches the consented Minglora email. Never add identity credentials, tokens, passwords, payment methods or KYC documents to the payload.
 
@@ -109,7 +115,7 @@ Deploy the static HarborPay site with a Content-Security-Policy frame-ancestors 
 
 The Minglora integration does not make profile data KYC, does not automatically open an account, and does not grant transaction permissions. HarborPay's own Auth, email verification, KYC/KYB and transaction risk gates remain authoritative.
 
-## 10. Sandbox verification checklist
+## 11. Sandbox verification checklist
 
 1. Register a new HarborPay test user.
 2. Confirm the user is created in the HarborPay Supabase Auth project and the profile trigger creates their profile.
