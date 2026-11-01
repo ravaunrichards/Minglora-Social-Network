@@ -6,6 +6,8 @@ on:
 
 jobs:
   test:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -14,8 +16,60 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Generate and commit reproducible npm lockfiles
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm install --prefix integrations/mailharbor/source/backend --package-lock-only --ignore-scripts --no-audit --no-fund
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json integrations/mailharbor/source/backend/package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: add reproducible dependency lockfiles"
+            git push origin HEAD:main
+          fi
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Audit root and MailHarbor dependencies
+        run: |
+          npm audit --json > "$RUNNER_TEMP/root-npm-audit.json" || true
+          npm audit --prefix integrations/mailharbor/source/backend --json > "$RUNNER_TEMP/mailharbor-npm-audit.json" || true
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          let failed = false;
+          for (const [label, file] of [
+            ['Minglora', process.env.RUNNER_TEMP + '/root-npm-audit.json'],
+            ['MailHarbor', process.env.RUNNER_TEMP + '/mailharbor-npm-audit.json']
+          ]) {
+            const report = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (report.error || !report.metadata) {
+              console.error(label + ' npm audit did not return a valid advisory report:', report.error || 'missing metadata');
+              failed = true;
+              continue;
+            }
+            const summary = report.metadata.vulnerabilities || {};
+            console.log(label + ' audit summary:', JSON.stringify(summary));
+            for (const [name, item] of Object.entries(report.vulnerabilities || {})) {
+              console.log(JSON.stringify({
+                package: name,
+                severity: item.severity,
+                direct: item.isDirect,
+                range: item.range,
+                fixAvailable: item.fixAvailable,
+                advisories: (item.via || []).map(entry => typeof entry === 'string' ? entry : ({
+                  title: entry.title,
+                  url: entry.url,
+                  range: entry.range,
+                  cwe: entry.cwe,
+                  cvss: entry.cvss?.score
+                }))
+              }, null, 2));
+            }
+            if (Number(summary.total || 0) > 0) failed = true;
+          }
+          if (failed) process.exitCode = 1;
+          NODE
       - name: Audit production and development dependencies
         run: |
           npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
@@ -56,6 +110,7 @@ jobs:
           node --check public/mailharbor/oauth-complete.js
           node --check tests/mailharbor.test.js
           node --check tests/mailharbor-oauth.test.js
+          node --check tests/unit/supabase-persistence-retry.test.js
           node --check backend/modules/live/livekit.js
           node --check backend/modules/calls/service.js
           node --check tests/calls.test.js
