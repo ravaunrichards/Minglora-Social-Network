@@ -72,16 +72,35 @@ test("HarborPay readiness checks the remote API and identifies missing bridge co
   assert.equal(missingRemoteSecret.configured, false);
   assert.match(missingRemoteSecret.message, /MINGLORA_SSO_SECRET/i);
 
+  let healthcheckCalls = 0;
   const ready = await getHarborPayBridgeStatus({
     env,
-    fetchImpl: async () => new Response(JSON.stringify({
-      service: "harborpay-api",
-      configured: { supabase: true, mingloraIdentityBridge: true }
-    }), { status: 200, headers: { "Content-Type": "application/json" } })
+    fetchImpl: async (url, options = {}) => {
+      if (options.method === "POST") {
+        healthcheckCalls += 1;
+        assert.match(url, /\/api\/integrations\/minglora\/healthcheck$/);
+        assert.equal(options.body, "{}");
+        const bodyHash = createHash("sha256").update(options.body, "utf8").digest("hex");
+        const canonical = [options.headers["x-harborpay-timestamp"], "POST", "/api/integrations/minglora/healthcheck", bodyHash].join("\n");
+        const expected = createHmac("sha256", secret).update(canonical, "utf8").digest("hex");
+        assert.equal(options.headers["x-harborpay-signature"], expected);
+        return new Response(JSON.stringify({
+          ready: true,
+          service: "harborpay-api",
+          databaseConfigured: true,
+          identityBridge: true
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({
+        service: "harborpay-api",
+        configured: { supabase: true, mingloraIdentityBridge: true }
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
   });
   assert.equal(ready.configured, true);
   assert.equal(ready.apiReachable, true);
-  assert.match(ready.message, /ready/i);
+  assert.equal(healthcheckCalls, 1);
+  assert.match(ready.message, /secret matches/i);
 });
 
 test("HarborPay readiness returns a useful error for a non-JSON deployment response", async () => {
