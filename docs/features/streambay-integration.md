@@ -28,6 +28,8 @@ The video detail view includes playback, likes, comments, subscribe/unsubscribe 
 - POST /api/streambay/videos
 - GET /api/streambay/videos/:id
 - GET /api/streambay/videos/:id/view
+- PATCH and DELETE /api/streambay/videos/:id
+- PATCH and DELETE /api/streambay/videos/:id
 - POST /api/streambay/videos/:id/like
 - GET and POST /api/streambay/videos/:id/comments
 - GET /api/streambay/channels/:id

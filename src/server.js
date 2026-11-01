@@ -624,7 +624,8 @@ async function route(req, res) {
       if (p.startsWith('/api/streambay/')) {
         const streamBayResponse = await handleStreamBayApi({
           method, path:p, url, input, user, db, saveStore, uid, now,
-          requireAuth, safeUser, resolveAssetUrl, blockedBetween
+          requireAuth, safeUser, resolveAssetUrl, blockedBetween,
+          deleteMediaAsset: asset => mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path})
         });
         if (streamBayResponse) return json(res, streamBayResponse.status, streamBayResponse.body);
       }

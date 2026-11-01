@@ -52,6 +52,7 @@
       <div id="streambayContent">
         <div id="chips" class="chips"></div>
         <section id="pageTitle" class="page-title"><h1>Home</h1><p>Fresh videos and creators worth your time.</p></section>
+        <section id="subscriptionChannels" class="subscription-channels hidden" aria-label="Subscribed channels"></section>
         <div id="videoGrid" class="video-grid"><div class="loading">Loading StreamBay…</div></div>
         <section id="watchView" class="watch-view hidden"></section>
         <section id="channelView" class="channel-view hidden"></section>
@@ -92,6 +93,17 @@
       <label>Channel name<input name="name" required minlength="2" maxlength="60"></label>
       <label>About your channel<textarea name="bio" rows="4" maxlength="500" placeholder="Tell viewers about your channel"></textarea></label>
       <button class="primary" type="submit">Save changes</button>
+    </form>
+  </dialog>
+  <dialog id="editVideoDialog">
+    <form id="editVideoForm" class="dialog-form">
+      <button type="button" class="close" data-close="editVideoDialog" aria-label="Close video editor"><svg class="sb-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-streambay-1#close"></use></svg></button>
+      <h2>Edit video</h2>
+      <input type="hidden" name="videoId">
+      <label>Video title<input name="title" required minlength="2" maxlength="120"></label>
+      <label>Description<textarea name="description" rows="4" maxlength="5000"></textarea></label>
+      <label>Category<select name="category"><option>Other</option><option>Music</option><option>Gaming</option><option>Education</option><option>News</option><option>Sports</option><option>Comedy</option><option>Technology</option><option>Travel</option><option>Food</option><option>Lifestyle</option></select></label>
+      <button class="primary" type="submit">Save video</button>
     </form>
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js" defer></script>

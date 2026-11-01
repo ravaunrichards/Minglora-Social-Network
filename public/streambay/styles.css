@@ -54,3 +54,19 @@
   .sign-in-required{margin:6vh 8px;padding:27px 18px}
   .channel-heading{flex-wrap:wrap}
 }
+
+.video-management{display:flex;justify-content:flex-end;gap:7px;padding:0 2px 2px}
+.video-management button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:18px;padding:5px 10px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:750}
+.video-management button:hover{background:var(--soft);color:var(--ink)}
+.video-management .sb-3d-icon{width:18px;height:18px}
+
+/* Subscribed channel shelf. */
+.subscription-channels{margin:-5px 0 25px;padding:14px 16px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.subscription-channels h2{font-size:14px;margin:0 0 12px}
+.subscription-channel-row{display:flex;gap:13px;overflow-x:auto;padding:2px 2px 7px;scrollbar-width:thin}
+.subscription-channel{display:grid;justify-items:center;gap:5px;flex:0 0 86px;min-width:0;border:0;background:transparent;padding:4px;border-radius:12px;color:var(--ink)}
+.subscription-channel:hover{background:var(--soft)}
+.subscription-channel .channel-avatar{width:48px;height:48px}
+.subscription-channel strong{max-width:100%;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.subscription-channel small{font-size:10px;color:var(--muted)}
+.subscription-empty{padding:12px;border-radius:10px;background:var(--soft);font-size:13px;color:var(--muted)}

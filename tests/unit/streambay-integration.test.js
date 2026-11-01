@@ -20,6 +20,7 @@ const makeContext = () => {
     requireAuth:user=>{if(!user)throw Object.assign(new Error('Sign in to continue.'),{status:401});},
     safeUser:user=>user?{id:user.id,name:user.name,username:user.username,avatar:user.avatar||''}:null,
     resolveAssetUrl:async asset=>'https://media.example/'+asset.path,
+    deleteMediaAsset:async()=>{},
     blockedBetween:()=>false
   };
 };
@@ -64,6 +65,24 @@ test('StreamBay uses Minglora users for channel subscriptions, likes and comment
   assert.equal(result.body.comment.user.id,viewer.id);
 });
 
+test('StreamBay video edits and deletes require the owning Minglora account',async()=>{
+  const context=makeContext();
+  context.method='PATCH';context.path='/api/streambay/videos/video-1';
+  context.input={title:'Updated title',description:'Updated details',category:'Music'};
+  const updated=await handleStreamBayApi(context);
+  assert.equal(updated.status,200);
+  assert.equal(updated.body.video.title,'Updated title');
+  context.user={...viewer,id:'someone-else'};
+  await assert.rejects(()=>handleStreamBayApi(context),error=>error.status===403);
+  context.user=viewer;
+  context.method='DELETE';context.path='/api/streambay/videos/video-1';
+  context.deleteMediaAsset=async()=>{};
+  const deleted=await handleStreamBayApi(context);
+  assert.equal(deleted.body.deleted,true);
+  assert.equal(context.db.streambayVideos[0].status,'deleted');
+  assert.equal(context.db.mediaAssets[0].status,'deleted');
+});
+
 test('StreamBay records account history and allows channel-specific profile settings',async()=>{
   const context=makeContext();
   context.path='/api/streambay/videos/video-1/view';
@@ -94,6 +113,9 @@ test('StreamBay UI has six dedicated areas, Minglora session auth, and no second
   ]);
   for(const section of ['Home','Explore','Subscriptions','History','Your channel','Your videos'])assert.ok(html.includes(section),section+' navigation exists');
   assert.ok(app.includes("api('/api/auth/me')"));
+  assert.ok(app.includes("api('/api/streambay/subscriptions')"));
+  assert.ok(app.includes('data-subscription-channel'));
+  assert.ok(html.includes('id="subscriptionChannels"'));
   assert.ok(!app.includes('streambay_token'));
   assert.ok(!app.includes('localStorage'));
   assert.ok(html.includes('/assets/icons/navigation-3d.svg'));

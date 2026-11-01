@@ -70,7 +70,7 @@ function visibleVideo(db, video, viewer, blockedBetween) {
 }
 
 export async function handleStreamBayApi(context) {
-  const { method, path, url, input={}, user, db, saveStore, uid, now, requireAuth, safeUser, resolveAssetUrl, blockedBetween } = context;
+  const { method, path, url, input={}, user, db, saveStore, uid, now, requireAuth, safeUser, resolveAssetUrl, blockedBetween, deleteMediaAsset } = context;
   const videos = array(db, 'streambayVideos');
   const comments = array(db, 'streambayComments');
   const subscriptions = array(db, 'streambaySubscriptions');
@@ -166,6 +166,41 @@ export async function handleStreamBayApi(context) {
     const action = videoMatch[2] || '';
     const video = videos.find(item => item.id === id && visibleVideo(db, item, user, blockedBetween));
     if (!video) fail('Video not found.', 404);
+
+    if (method === 'PATCH' && !action) {
+      requireAuth(user);
+      if (video.ownerId !== user.id) fail('Only the channel owner can edit this video.', 403);
+      const title = input.title === undefined ? video.title : String(input.title).trim();
+      const description = input.description === undefined ? video.description || '' : String(input.description).trim();
+      const category = input.category === undefined ? video.category || 'Other' : String(input.category).trim();
+      if (title.length < 2 || title.length > 120) fail('Video title must contain 2–120 characters.');
+      if (description.length > 5000) fail('Video description must be 5,000 characters or fewer.');
+      if (!CATEGORIES.has(category)) fail('Choose a supported video category.');
+      video.title = title;
+      video.description = description;
+      video.category = category;
+      video.updatedAt = now();
+      await saveStore();
+      return { status: 200, body: { video: await publicVideo({ db, video, viewer: user, safeUser, resolveAssetUrl }) } };
+    }
+    if (method === 'DELETE' && !action) {
+      requireAuth(user);
+      if (video.ownerId !== user.id) fail('Only the channel owner can delete this video.', 403);
+      const asset = mediaAssetFor(db, video);
+      if (asset) {
+        if (typeof deleteMediaAsset !== 'function') fail('Video storage deletion is not configured.', 503);
+        await deleteMediaAsset(asset);
+        asset.status = 'deleted';
+        asset.deletedAt = now();
+      }
+      video.status = 'deleted';
+      video.deletedAt = now();
+      db.streambayLikes = likes.filter(item => item.videoId !== video.id);
+      db.streambayComments = comments.filter(item => item.videoId !== video.id);
+      db.streambayHistory = history.filter(item => item.videoId !== video.id);
+      await saveStore();
+      return { status: 200, body: { ok: true, deleted: true, videoId: video.id } };
+    }
 
     if (method === 'GET' && !action) {
       return { status: 200, body: { video: await publicVideo({ db, video, viewer: user, safeUser, resolveAssetUrl }) } };
