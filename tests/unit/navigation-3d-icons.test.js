@@ -33,7 +33,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
   }
 });
 
-test('mobile navigation uses the same 3D icon artwork and keeps all six destinations', () => {
+test('mobile navigation uses the same 3D icon artwork and keeps the main destinations', () => {
   const nav = html.match(/<div class="mobile-nav"[\s\S]*?<\/div>/)?.[0] || '';
   assert.ok(nav, 'mobile navigation exists');
 
@@ -57,12 +57,6 @@ test('MailHarbor is a first-class route in desktop, mobile and utility navigatio
   assert.ok(html.includes(useIcon('mailharbor')));
 });
 
-test('MailHarbor is a first-class route in desktop, mobile and utility navigation', () => {
-  assert.match(html, /data-view="mailharbor"/);
-  assert.match(html, /mailharbor-rail-entry[^>]*data-view="mailharbor"/);
-  assert.ok(html.includes(useIcon('mailharbor')));
-});
-
 test('utility rail and header actions use the matching rendered icon assets', () => {
   for (const icon of ['live', 'coins', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
     assert.ok(html.includes(useIcon(icon)), `utility icon ${icon} is wired into the interface`);
@@ -73,7 +67,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right', 'mailharbor', 'inbox', 'sent', 'drafts', 'star', 'spam', 'trash', 'compose', 'refresh', 'mailharbor', 'inbox', 'sent', 'drafts', 'star', 'spam', 'trash', 'compose', 'refresh']) {
+  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right', 'mailharbor', 'inbox', 'sent', 'drafts', 'star', 'spam', 'trash', 'compose', 'refresh']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);
