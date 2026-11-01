@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  BriefcaseBusiness,
   Building2,
   CheckCircle2,
   ClipboardList,
@@ -20,6 +21,7 @@ import {
 import { supabase, supabaseConfigured } from "./lib/supabase.js";
 import MerchantWorkspace from "./merchant-workspace.jsx";
 import ProfileWorkspace from "./profile-workspace.jsx";
+import AccountTypesWorkspace from "./account-types-workspace.jsx";
 import "./styles.css";
 
 const rawApiUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:4000" : "");
@@ -258,6 +260,7 @@ function App() {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [health, setHealth] = useState(null);
   const [section, setSection] = useState("Overview");
+  const [initialAccountType, setInitialAccountType] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -272,8 +275,13 @@ function App() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const code = url.searchParams.get("minglora_handoff");
+    const requestedType = url.searchParams.get("account_type") || "";
+    if (["personal", "business", "merchant", "enterprise"].includes(requestedType)) {
+      setInitialAccountType(requestedType);
+    }
     if (!code) return undefined;
     url.searchParams.delete("minglora_handoff");
+    url.searchParams.delete("account_type");
     window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
     let active = true;
     apiRequest("/api/integrations/minglora/exchange", null, {
@@ -324,6 +332,10 @@ function App() {
       .catch(() => { if (active) setHealth({ ok: false }); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (session?.user?.id && initialAccountType) setSection("Accounts");
+  }, [session?.user?.id, initialAccountType]);
 
   useEffect(() => {
     if (!session?.access_token) return undefined;
@@ -464,6 +476,7 @@ function App() {
           <button className={section === "Customers" ? "active" : ""} onClick={() => setSection("Customers")}><Users size={18} /> Customers</button>
           <button className={section === "Orders" ? "active" : ""} onClick={() => setSection("Orders")}><ClipboardList size={18} /> Orders</button>
           <button className={section === "Payment links" ? "active" : ""} onClick={() => setSection("Payment links")}><Link2 size={18} /> Payment links</button>
+          <button className={section === "Accounts" ? "active" : ""} onClick={() => setSection("Accounts")}><BriefcaseBusiness size={18} /> Account types</button>
           <button className={section === "Profile" ? "active" : ""} onClick={() => setSection("Profile")}><UserRoundCog size={18} /> My profile</button>
         </nav>
         <div className="sidebar-bottom">
@@ -489,8 +502,8 @@ function App() {
           <section className="page-heading">
             <div>
               <p className="eyebrow">YOUR PAYMENT SPACE</p>
-              <h1>{({ Overview: "Welcome to HarborPay", Transactions: "Your transactions", Business: "Merchant business", Customers: "Merchant customers", Orders: "Merchant orders", "Payment links": "Payment links", Profile: "My HarborPay profile" })[section] || section}</h1>
-              <p>{section === "Business" || section === "Customers" || section === "Orders" || section === "Payment links" ? "Manage real records in your HarborPay merchant database." : "Secure checkout, clear payment records, and real provider status."}</p>
+              <h1>{({ Overview: "Welcome to HarborPay", Transactions: "Your transactions", Accounts: "Choose an account", Business: "Business workspace", Customers: "Merchant customers", Orders: "Merchant orders", "Payment links": "Payment links", Profile: "My HarborPay profile" })[section] || section}</h1>
+              <p>{section === "Accounts" ? "Open and manage personal, business, merchant and enterprise account journeys." : ["Business", "Customers", "Orders", "Payment links"].includes(section) ? "Manage live records in your HarborPay organization workspace." : "Secure checkout, clear payment records, and real provider status."}</p>
             </div>
             {section === "Overview" && <button className="primary-button top-pay" onClick={() => { setPaymentError(""); setShowPayment(true); }}>Make a payment <ArrowUpRight size={17} /></button>}
           </section>
@@ -545,6 +558,7 @@ function App() {
               <div className="table-foot">Payment statuses come from PayPal capture responses and verified webhook events.</div>
             </div>
           </section>}
+          {section === "Accounts" && <AccountTypesWorkspace session={session} initialType={initialAccountType} onProfile={() => setSection("Profile")} notify={notify} />}
           {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} notify={notify} />}
           {section === "Profile" && <ProfileWorkspace session={session} notify={notify} />}
 
