@@ -6,7 +6,7 @@ declare
     'merchant_members','merchant_customers','orders','payment_links',
     'minglora_link_handoffs','minglora_identity_links',
     'refunds','disputes','payment_status_events','merchant_api_keys',
-    'merchant_webhook_endpoints','webhook_deliveries','audit_events'
+    'merchant_webhook_endpoints','webhook_deliveries','audit_events','account_applications'
   ];
   item text;
 begin
@@ -59,6 +59,24 @@ begin
   if to_regclass('public.wallet_balances') is not null
     or to_regclass('public.customer_wallets') is not null then
     raise exception 'This schema must not create unapproved stored-value balances';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'merchant_accounts'
+      and column_name = 'account_type'
+  ) then
+    raise exception 'Merchant account records must distinguish business, merchant and enterprise types';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.account_applications', 'SELECT')
+    or has_table_privilege('authenticated', 'public.account_applications', 'INSERT')
+    or has_table_privilege('anon', 'public.account_applications', 'SELECT') then
+    raise exception 'Account applications must be accessed through authenticated HarborPay API routes, not direct client table grants';
+  end if;
+  if not has_table_privilege('service_role', 'public.account_applications', 'SELECT')
+    or not has_table_privilege('service_role', 'public.account_applications', 'INSERT')
+    or not has_table_privilege('service_role', 'public.account_applications', 'UPDATE') then
+    raise exception 'HarborPay service role is missing account application permissions';
   end if;
 
   if not exists (
@@ -182,6 +200,43 @@ begin
   end if;
 end;
 $$;
+
+insert into public.merchant_accounts (owner_user_id, display_name, account_type)
+values
+  ('11111111-1111-4111-8111-111111111111', 'CI Business One', 'business'),
+  ('22222222-2222-4222-8222-222222222222', 'CI Enterprise Two', 'enterprise');
+
+insert into public.account_applications (
+  applicant_user_id, account_type, organization_name, contact_name, contact_email,
+  country_code, business_description, use_case, merchant_id
+)
+select
+  ma.owner_user_id, ma.account_type, ma.display_name,
+  case when ma.account_type = 'enterprise' then 'CI Owner Two' else 'CI Owner One' end,
+  case when ma.account_type = 'enterprise' then 'owner-two@example.test' else 'owner-one@example.test' end,
+  'JM',
+  'A test organization used to verify HarborPay account application persistence and ownership controls.',
+  'Accept customer payments and track account services.',
+  ma.id
+from public.merchant_accounts ma
+where ma.display_name in ('CI Merchant One', 'CI Business One', 'CI Enterprise Two');
+
+do $verify$
+declare
+  application_count integer;
+  distinct_types integer;
+begin
+  select count(*), count(distinct account_type)
+    into application_count, distinct_types
+    from public.account_applications;
+  if application_count <> 3 then
+    raise exception 'Expected 3 persisted account applications, received %', application_count;
+  end if;
+  if distinct_types <> 3 then
+    raise exception 'Business, merchant and enterprise applications were not kept distinct';
+  end if;
+end;
+$verify$;
 
 insert into public.merchant_customers (merchant_id, email)
 select id, 'buyer@example.test'
