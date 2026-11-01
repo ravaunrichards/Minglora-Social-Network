@@ -71,3 +71,15 @@ test('Messenger top-right control opens a left chats panel with filters, quick a
   assert.ok(server.includes('isRequest:!isFriend'));
   assert.ok(settings.includes('messengerActiveStatus: true'));
 });
+
+test('Messenger restrictions are enforced for incoming messages and archived chats stay out of the main inbox', async()=>{
+  const [app,server]=await Promise.all([read('../../public/app.js'),read('../../src/server.js')]);
+  assert.ok(server.includes("recipientSettings.preferences.messengerRestrictedUserIds||[]).includes(user.id)"));
+  assert.ok(app.includes('const archivedIds=new Set(messengerPreferences().messengerArchivedConversationIds||[])'));
+  assert.ok(app.includes('const visibleConversations=state.conversations.filter(conversation=>!archivedIds.has(conversation.user.id))'));
+});
+test('Messenger notification sound reuses the user-activated call audio context', async()=>{
+  const app=await read('../../public/app.js');
+  assert.ok(app.includes('const context=callToneContext||messengerMessageSoundContext||new AudioContextClass()'));
+  assert.ok(app.includes('if(context.state!==\'running\')return'));
+});
