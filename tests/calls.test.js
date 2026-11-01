@@ -145,3 +145,28 @@ test('provider presence wins over a stale left marker while the room is still ac
   assert.equal(participants[0].status,'joined');
   assert.equal(participants[0].leftAt,null);
 });
+
+test('malformed or missing ring timestamps cannot leave a call busy forever',()=>{
+  const stamp='2026-11-01T12:00:00.000Z';
+  const nowMs=Date.parse(stamp);
+  const invalid={id:'call-invalid-time',status:'ringing',createdAt:'not-a-date',ringExpiresAt:'also-not-a-date'};
+  const missing={id:'call-missing-time',status:'ringing'};
+  const valid={id:'call-valid-time',status:'ringing',createdAt:'2026-11-01T11:59:40.000Z',ringExpiresAt:'not-a-date'};
+  assert.equal(isCallRingExpired(invalid,nowMs),true);
+  assert.equal(isCallRingExpired(missing,nowMs),true);
+  assert.equal(isCallRingExpired(valid,nowMs),false);
+  assert.equal(expireRingingCall(invalid,[],stamp,nowMs),true);
+  assert.equal(invalid.status,'missed');
+});
+
+test('a short provider presence gap does not end a recently reconnected host call',()=>{
+  const call={id:'call-host-reconnecting',createdBy:'caller',status:'active',createdAt:'2026-11-01T12:00:00.000Z',answeredAt:'2026-11-01T12:00:10.000Z'};
+  const participants=[
+    {callId:call.id,userId:'caller',role:'host',status:'left',joinedAt:'2026-11-01T12:00:11.000Z',leftAt:'2026-11-01T12:00:15.000Z'},
+    {callId:call.id,userId:'guest',role:'participant',status:'joined',joinedAt:'2026-11-01T12:00:12.000Z',leftAt:null}
+  ];
+  const nowMs=Date.parse('2026-11-01T12:00:20.000Z');
+  const result=reconcileCallPresence(call,participants,[{identity:'guest'}],'2026-11-01T12:00:20.000Z',nowMs);
+  assert.deepEqual(result,{changed:false,ended:false});
+  assert.equal(call.status,'active');
+});
