@@ -60,3 +60,21 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(worker,/styles\.css\?v=20261101-inline-profile-edit-3/);
   assert.match(worker,/app\.js\?v=20261101-inline-profile-edit-3/);
 });
+
+test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{
+  assert.match(app,/const modal=document\.createElement\('section'\);modal\.className='card profile-inline-editor'/);
+  assert.match(app,/profileHeader\.insertAdjacentElement\('afterend',modal\)/);
+  assert.match(app,/className='card profile-inline-editor about-section-inline-editor'/);
+  assert.match(app,/profilePanel\.append\(modal\)/);
+  assert.doesNotMatch(app,/modal-backdrop profile-editor-backdrop|modal-backdrop about-section-editor-backdrop/);
+  assert.doesNotMatch(css,/\.profile-editor-backdrop|\.profile-editor-modal|\.about-section-editor-modal/);
+  assert.match(css,/\.profile-inline-editor\{/);
+  assert.match(css,/\.about-section-inline-editor\{/);
+});
+
+test('profile Likes total is supplied by the server from actual like reactions on visible profile posts',()=>{
+  const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
+  assert.match(server,/likesCount:profilePosts\.reduce\(\(total,post\)=>total\+Object\.values\(post\.reactions\|\|\{\}\)\.filter\(reaction=>reaction==='like'\)\.length,0\)/);
+  assert.match(app,/Number\(data\.likesCount\|\|0\)\.toLocaleString\(\)/);
+  assert.match(app,/<span>Likes<\/span>/);
+});
