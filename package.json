@@ -11,7 +11,7 @@
     "check:repo": "node scripts/check-repository.mjs"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
