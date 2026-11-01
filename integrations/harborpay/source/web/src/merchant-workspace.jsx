@@ -119,7 +119,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
       });
       notify("Merchant profile created. It is in draft status until provider and business checks are completed.");
       setShowCreate(false);
-      const items = await loadMerchants();
+      await loadMerchants();
       setMerchantId(result.merchant.id);
     } catch (error) {
       setFormError(error.message);
@@ -156,7 +156,8 @@ export default function MerchantWorkspace({ session, section, notify }) {
   async function createCustomer(event) {
     event.preventDefault();
     if (!selected) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     setBusy(true);
     setFormError("");
     try {
@@ -170,7 +171,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
           externalReference: form.get("externalReference") || null
         }
       });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadResources(selected.id);
       notify("Customer saved to your merchant records.");
     } catch (error) {
@@ -183,7 +184,8 @@ export default function MerchantWorkspace({ session, section, notify }) {
   async function createOrder(event) {
     event.preventDefault();
     if (!selected) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     setBusy(true);
     setFormError("");
     try {
@@ -197,7 +199,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
           orderReference: form.get("orderReference") || null
         }
       });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadResources(selected.id);
       notify("Order " + result.order.order_reference + " was created. No payment is recorded until a provider checkout is completed.");
     } catch (error) {
@@ -210,7 +212,8 @@ export default function MerchantWorkspace({ session, section, notify }) {
   async function createLink(event) {
     event.preventDefault();
     if (!selected) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     setBusy(true);
     setFormError("");
     try {
@@ -223,7 +226,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
           maxUses: form.get("maxUses") || null
         }
       });
-      event.currentTarget.reset();
+      formElement.reset();
       await loadResources(selected.id);
       notify(result.message || "Payment link record created. Public checkout is not enabled.");
     } catch (error) {
