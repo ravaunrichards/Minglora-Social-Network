@@ -12,7 +12,7 @@ const css = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
-  assert.ok(html.includes('href="/styles.css?v=20261101-profile-crop-1"'));
+  assert.ok(html.includes('href="/styles.css?v=20261101-layout-overlap-1"'));
   assert.ok(html.includes('src="/app.js?v=20261101-profile-crop-1"'));
   assert.ok(html.includes('src="/settings.js?v=20261101-call-ringtones-1"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
@@ -52,8 +52,8 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(!css.includes('.mobile-nav [data-logout]'), 'no detached phone logout styling remains');
   assert.match(css, /\.settings-signout-card/);
   assert.match(css, /\.settings-logout-button/);
-  assert.match(serviceWorker, /minglora-shell-v38-profile-image-crop/);
-  assert.ok(serviceWorker.includes('styles.css?v=20261101-profile-crop-1'));
+  assert.match(serviceWorker, /minglora-shell-v39-layout-overlap-audit/);
+  assert.ok(serviceWorker.includes('styles.css?v=20261101-layout-overlap-1'));
   assert.ok(serviceWorker.includes('app.js?v=20261101-profile-crop-1'));
   assert.ok(serviceWorker.includes('settings.js?v=20261101-call-ringtones-1'));
 });
