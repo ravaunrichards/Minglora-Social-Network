@@ -132,3 +132,16 @@ test('a host disconnect ends the call for every remaining participant',()=>{
   assert.equal(call.status,'ended');
   assert.deepEqual(participants.map(item=>item.status),['left','left','cancelled']);
 });
+
+test('provider presence wins over a stale left marker while the room is still active',()=>{
+  const call={id:'call-reconnected',createdBy:'caller',status:'active',createdAt:'2026-10-31T10:00:00.000Z',answeredAt:'2026-10-31T10:00:05.000Z'};
+  const participants=[
+    {callId:call.id,userId:'caller',role:'host',status:'left',joinedAt:'2026-10-31T10:00:06.000Z',leftAt:'2026-11-01T11:59:59.000Z'},
+    {callId:call.id,userId:'guest',role:'participant',status:'joined',joinedAt:'2026-10-31T10:00:07.000Z',leftAt:null}
+  ];
+  const result=reconcileCallPresence(call,participants,[{identity:'caller'},{identity:'guest'}],'2026-11-01T12:00:00.000Z',Date.parse('2026-11-01T12:00:00.000Z'));
+  assert.deepEqual(result,{changed:true,ended:false});
+  assert.equal(call.status,'active');
+  assert.equal(participants[0].status,'joined');
+  assert.equal(participants[0].leftAt,null);
+});
