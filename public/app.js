@@ -149,9 +149,15 @@ let browserNotificationTimer=null;
 let browserNotificationSeen=new Set();
 let browserNotificationPrimed=false;
 let webPushSubscriptionActive=false;
+let incomingCallPollingTimer=null,incomingCallPollBusy=false,incomingCallOverlay=null,incomingCallStatusTimer=null;
+let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtone:null};
+let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
+window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
 function showAuth(){ $('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
-function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startBrowserNotificationPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
+function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
+function primeCallAudio(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;if(!callToneContext)callToneContext=new C();if(callToneContext.state==='suspended')void callToneContext.resume();}catch{}}
+document.addEventListener('pointerdown',primeCallAudio,{capture:true,once:true});
 function base64UrlToBytes(value){
   const base64=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
   const padded=base64+'='.repeat((4-base64.length%4)%4);
@@ -160,7 +166,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261031-studio-twin-palette-1',{scope:'/'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261101-phone-call-ringing-1',{scope:'/'});
     const subscription=await registration.pushManager.getSubscription();
     if(subscription){
       webPushSubscriptionActive=true;
@@ -192,8 +198,9 @@ async function handleMingloraPushNavigation(){
   const callId=params.get('callId'),liveSessionId=params.get('liveSessionId'),actorId=params.get('actorId');
   window.history.replaceState({},'',window.location.pathname+window.location.hash);
   try{
-    if(type==='call'&&callId){await answerMingloraCall(callId);return;}
+    if(type==='answer-call'&&callId){await answerMingloraCall(callId);return;}
     if(type==='decline-call'&&callId){await declineMingloraCall(callId);return;}
+    if(type==='call'&&callId){const calls=(await api('/calls/incoming')).calls||[];const incoming=calls.find(item=>item.id===callId);if(incoming)await showIncomingCallOverlay(incoming);else await renderNotifications();return;}
     if(type==='live'&&liveSessionId){
       const sessions=(await api('/live/sessions')).sessions||[],session=sessions.find(item=>item.id===liveSessionId);
       if(session){await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');return;}
@@ -1861,10 +1868,10 @@ function renderProfile(data){
   startProfilePresence(u.id);
 }
 function mediaMaxBytes(slot){
-  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:slot==='marketplace'?15*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:500*1024*1024;
+  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:slot==='marketplace'?15*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
 }
 function mediaMaxLabel(slot){
-  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':slot==='marketplace'?'15 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':'500 MB';
+  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':slot==='marketplace'?'15 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
 }
 async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
@@ -1872,6 +1879,13 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
   let mimeType=String(prepared.type||'').split(';')[0].trim().toLowerCase();
   if(!mimeType&&prepared.name?.toLowerCase().endsWith('.glb'))mimeType='model/gltf-binary';
+  if(slot==='ringtone'&&(!mimeType||mimeType==='application/octet-stream')){
+    const ext=String(prepared.name||'').toLowerCase().split('.').pop();
+    const audioTypes={mp3:'audio/mpeg',m4a:'audio/mp4',mp4:'audio/mp4',ogg:'audio/ogg',opus:'audio/ogg',webm:'audio/webm',wav:'audio/wav',flac:'audio/flac',aac:'audio/aac'};
+    mimeType=audioTypes[ext]||mimeType;
+  }
+  if(slot==='ringtone'&&mimeType==='audio/x-m4a')mimeType='audio/mp4';
+  if(slot==='ringtone'&&mimeType==='audio/mp3')mimeType='audio/mpeg';
   if(!mimeType)throw new Error('Minglora could not detect the selected file type. Choose a supported photo, video, audio or GLB file.');
   if(prepared.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
   const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size,fileName:prepared.name||'Attachment'})});
@@ -1941,6 +1955,7 @@ async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{})
 
 let mediaPickerSequence=0;
 function mediaAccept(slot){
+  if(slot==='ringtone')return 'audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac';
   if(slot==='message')return 'image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/ogg,audio/webm,application/pdf,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation';
   if(slot==='marketplace')return 'image/jpeg,image/png,image/webp,image/avif';
   if(slot==='group'||slot==='page')return 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,video/mp4';
@@ -2629,25 +2644,93 @@ async function renderMessages(){
   renderMessageWindows();
 }
 
+function stopCallTone(){
+ if(callToneTimer){clearInterval(callToneTimer);callToneTimer=null;}
+ if(callRingtoneAudio){callRingtoneAudio.pause();callRingtoneAudio.currentTime=0;callRingtoneAudio=null;}
+ for(const node of callToneNodes){try{node.stop?.();node.disconnect?.();}catch{}}
+ callToneNodes=[];
+}
+function playCallTone(frequencies,durationMs=900){
+ primeCallAudio();if(!callToneContext||callToneContext.state!=='running')return false;
+ const start=callToneContext.currentTime;
+ for(const frequency of frequencies){
+  const oscillator=callToneContext.createOscillator(),gain=callToneContext.createGain();
+  oscillator.type='sine';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(0,start);
+  gain.gain.linearRampToValueAtTime(.12,start+.035);gain.gain.setValueAtTime(.12,start+Math.max(.05,durationMs/1000-.08));
+  gain.gain.linearRampToValueAtTime(0,start+durationMs/1000);oscillator.connect(gain);gain.connect(callToneContext.destination);
+  oscillator.start(start);oscillator.stop(start+durationMs/1000+.02);callToneNodes.push(oscillator,gain);
+  oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+ }
+ return true;
+}
+function startCallRingback(){stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);}
+async function getCallRingtone(force=false){
+ if(!force&&Date.now()-callRingtoneCache.loadedAt<300000)return callRingtoneCache.ringtone;
+ try{const result=await api('/calls/ringtone');callRingtoneCache={loadedAt:Date.now(),ringtone:result.ringtone||null};}
+ catch{callRingtoneCache={loadedAt:Date.now(),ringtone:null};}
+ return callRingtoneCache.ringtone;
+}
+async function startIncomingRingtone(){
+ stopCallTone();const ringtone=await getCallRingtone();
+ if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=.9;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
+ const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
+}
+function closeIncomingCallOverlay(){if(incomingCallStatusTimer){clearInterval(incomingCallStatusTimer);incomingCallStatusTimer=null;}if(incomingCallOverlay){incomingCallOverlay.remove();incomingCallOverlay=null;}stopCallTone();}
+function closeOutgoingCallOverlay(){if(outgoingCallOverlay){outgoingCallOverlay.remove();outgoingCallOverlay=null;}stopCallTone();}
+async function showIncomingCallOverlay(call){
+ if(!call?.id||activeCallRoom||incomingCallOverlay?.dataset.callId===call.id)return;
+ if(incomingCallOverlay)closeIncomingCallOverlay();
+ const caller=call.caller||{},label=call.kind==='audio'?'Voice call':'Video call',overlay=document.createElement('div');
+ overlay.className='call-overlay call-ringing-overlay';overlay.dataset.callId=call.id;
+ overlay.innerHTML='<section class="call-ringing-card" role="dialog" aria-modal="true" aria-label="Incoming '+label.toLowerCase()+'"><div class="call-ringing-glow"></div><div class="call-ringing-avatar-wrap"><img class="call-ringing-avatar" src="'+esc(avatar(caller))+'" alt=""><span class="call-ringing-pulse"></span></div><span class="call-ringing-eyebrow">INCOMING MINGLORA CALL</span><h2>'+esc(caller.name||'Minglora member')+'</h2><p class="call-ringing-kind">'+label+'</p><p class="call-ringing-status">Your phone is ringing</p><div class="call-ringing-actions"><button type="button" class="call-answer-button" id="call-answer-incoming">Answer</button><button type="button" class="call-decline-button" id="call-decline-incoming">Decline</button></div><button type="button" class="call-enable-sound hidden" id="call-enable-ringtone">Tap to enable ringtone</button></section>';
+ document.body.append(overlay);incomingCallOverlay=overlay;
+ overlay.querySelector('#call-answer-incoming').onclick=async()=>{overlay.querySelector('#call-answer-incoming').disabled=true;closeIncomingCallOverlay();await answerMingloraCall(call.id);};
+ overlay.querySelector('#call-decline-incoming').onclick=async()=>{overlay.querySelector('#call-decline-incoming').disabled=true;await declineMingloraCall(call.id);};
+ overlay.querySelector('#call-enable-ringtone').onclick=async()=>{primeCallAudio();const ok=await startIncomingRingtone();if(ok)overlay.querySelector('#call-enable-ringtone').classList.add('hidden');};
+ if(!await startIncomingRingtone())overlay.querySelector('#call-enable-ringtone').classList.remove('hidden');
+ incomingCallStatusTimer=setInterval(async()=>{try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch{closeIncomingCallOverlay();}},1600);
+}
+async function pollIncomingCalls(){
+ if(!state.user||incomingCallPollBusy||activeCallRoom||outgoingCallPending)return;
+ incomingCallPollBusy=true;
+ try{const result=await api('/calls/incoming'),call=(result.calls||[])[0];if(call&&!incomingCallOverlay)await showIncomingCallOverlay(call);else if(!call&&incomingCallOverlay)closeIncomingCallOverlay();}
+ catch{}finally{incomingCallPollBusy=false;}
+}
+function startIncomingCallPolling(){if(incomingCallPollingTimer)clearInterval(incomingCallPollingTimer);incomingCallPollingTimer=null;if(!state.user)return;void pollIncomingCalls();incomingCallPollingTimer=setInterval(pollIncomingCalls,1800);}
+function showOutgoingCallOverlay(member,call){
+ closeIncomingCallOverlay();const overlay=document.createElement('div');overlay.className='call-overlay call-ringing-overlay call-outgoing-overlay';
+ overlay.innerHTML='<section class="call-ringing-card" role="dialog" aria-modal="true" aria-label="Calling '+esc(member.name||'member')+'"><div class="call-ringing-glow"></div><div class="call-ringing-avatar-wrap"><img class="call-ringing-avatar" src="'+esc(avatar(member))+'" alt=""><span class="call-ringing-pulse"></span></div><span class="call-ringing-eyebrow">MINGLORA CALL</span><h2>'+esc(member.name||'Minglora member')+'</h2><p class="call-ringing-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</p><p class="call-ringing-status">Ringing…</p><button type="button" class="call-decline-button" id="call-cancel-outgoing">Cancel call</button></section>';
+ document.body.append(overlay);outgoingCallOverlay=overlay;
+ overlay.querySelector('#call-cancel-outgoing').onclick=async()=>{overlay.querySelector('#call-cancel-outgoing').disabled=true;if(outgoingCallPending)outgoingCallPending.cancelled=true;try{await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'});}catch(e){toast(e.message);}closeOutgoingCallOverlay();outgoingCallPending=null;};
+}
+async function waitForCallAnswer(call,member){
+ showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false};
+ const deadline=Date.parse(call.ringExpiresAt||'')||Date.now()+45000;
+ while(outgoingCallPending&&!outgoingCallPending.cancelled&&Date.now()<deadline){
+  let response;try{response=await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);return;}
+  const status=response.call?.status;
+  if(status==='active'){
+   closeOutgoingCallOverlay();outgoingCallPending=null;
+   try{const joined=await api('/calls/'+encodeURIComponent(call.id)+'/join',{method:'POST',body:'{}'});await openMingloraCall(joined.call,joined.liveKit);}catch(e){toast(e.message);}return;
+  }
+  if(['declined','missed','cancelled','ended'].includes(status)){closeOutgoingCallOverlay();outgoingCallPending=null;toast(status==='missed'?'No answer. The call was missed.':status==='declined'?'The call was declined.':'The call ended.');return;}
+  await new Promise(resolve=>setTimeout(resolve,1300));
+ }
+ if(outgoingCallPending&&!outgoingCallPending.cancelled){try{await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch{}closeOutgoingCallOverlay();outgoingCallPending=null;toast('No answer. The call has ended.');}
+}
 async function startMingloraCall(member,kind='video'){
-  if(!member?.id||member.id===state.user.id)return;
-  if(activeCallRoom){toast('Finish your current call before starting another.');return;}
-  try{
-    const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});
-    await openMingloraCall(created.call,created.liveKit);
-  }catch(error){toast(error.message);}
+ if(!member?.id||member.id===state.user.id)return;
+ if(activeCallRoom||outgoingCallPending){toast('Finish your current call before starting another.');return;}
+ try{primeCallAudio();const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});await waitForCallAnswer(created.call,member);}
+ catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);}
 }
-async function answerMingloraCall(callId){
-  try{
-    const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});
-    await openMingloraCall(joined.call,joined.liveKit);
-  }catch(error){toast(error.message);}
-}
+async function answerMingloraCall(callId){try{closeIncomingCallOverlay();const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});await openMingloraCall(joined.call,joined.liveKit);}catch(e){toast(e.message);}}
 async function declineMingloraCall(callId){
-  try{await api('/calls/'+encodeURIComponent(callId)+'/leave',{method:'POST',body:'{}'});toast('Call declined.');await renderNotifications();}
-  catch(error){toast(error.message);}
+ try{await api('/calls/'+encodeURIComponent(callId)+'/decline',{method:'POST',body:'{}'});if(incomingCallOverlay?.dataset.callId===callId)closeIncomingCallOverlay();toast('Call declined.');await renderNotifications();}
+ catch(e){toast(e.message);}
 }
 async function openMingloraCall(call,liveKit){
+  closeIncomingCallOverlay();closeOutgoingCallOverlay();
   if(activeCallRoom){toast('A call is already open.');return;}
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){toast('The call player could not load. Refresh Minglora and try again.');return;}
@@ -2749,7 +2832,7 @@ async function pollBrowserNotifications(){
       const fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
-        if(webPushSubscriptionActive||!['live','call','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
+        if(webPushSubscriptionActive||!['live','message'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':'New Minglora message';
         const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
