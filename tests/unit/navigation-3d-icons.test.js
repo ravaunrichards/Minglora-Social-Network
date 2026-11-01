@@ -88,6 +88,6 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
   assert.match(serviceWorker, /minglora-shell-v57-mailharbor-in-app-1/);
-  assert.match(serviceWorker, /styles\.css\?v=20261101-messenger-right-panel-2/);
+  assert.match(serviceWorker, /styles\.css\?v=20261101-mailharbor-in-app-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
