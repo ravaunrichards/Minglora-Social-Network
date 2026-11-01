@@ -26,7 +26,7 @@ test('shared content containers can shrink without pushing the page out of align
     assert.ok(ruleFor(css, selector).includes('min-width:0'), selector + ' must be allowed to shrink inside its parent');
   }
   assert.ok(ruleFor(css, '.page-heading').includes('flex-wrap:wrap'));
-  assert.ok(ruleFor(css, '.profile-counts').includes('grid-template-columns:repeat(4,minmax(0,1fr))'));
+  assert.ok(ruleFor(css, '.profile-counts').includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
   assert.ok(ruleFor(css, '.profile-tabs-list').includes('overflow-x:auto'));
 });
 
@@ -82,9 +82,9 @@ test('dialogs can scroll on short screens instead of being cut off', async () =>
 test('the responsive stylesheet and service-worker shell are versioned together', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.ok(html.includes('styles.css?v=20261101-messenger-profile-view-2'));
-  assert.ok(worker.includes('minglora-shell-v52-messenger-profile-view'));
-  assert.ok(worker.includes('styles.css?v=20261101-messenger-profile-view-2'));
+  assert.ok(html.includes('styles.css?v=20261101-inline-profile-edit-3'));
+  assert.ok(worker.includes('minglora-shell-v53-inline-profile-edit'));
+  assert.ok(worker.includes('styles.css?v=20261101-inline-profile-edit-3'));
 });
 
 
