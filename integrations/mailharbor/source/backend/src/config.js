@@ -34,7 +34,7 @@ function loadConfig(env = process.env) {
   const smtpUser = (env.SMTP_USER || '').trim();
   const smtpPassword = env.SMTP_PASSWORD || '';
   const mailFrom = (env.MAIL_FROM || '').trim();
-  const appBaseUrl = (env.APP_BASE_URL || env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\\/+$/, '');
+  const appBaseUrl = (env.APP_BASE_URL || env.RENDER_EXTERNAL_URL || 'http://localhost:3000').replace(/\/+$/, '');
   const configuredOrigins = (env.CORS_ORIGINS || '').split(',').map((item) => item.trim()).filter(Boolean);
   const defaultOrigin = new URL(appBaseUrl).origin;
   const realtimeUrl = env.REALTIME_PUBLIC_URL || (env.RENDER_EXTERNAL_HOSTNAME ? 'wss://' + env.RENDER_EXTERNAL_HOSTNAME : '');
