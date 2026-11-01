@@ -309,12 +309,16 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     if (externalAddresses.length && !providerStatus.outboundEmailConfigured) {
       return { status: 503, body: { error: 'External email delivery is not active. Configure a Resend API key and verify a public MailHarbor sender domain first. No external message was queued.' } };
     }
+    const before = { mailboxes: structuredClone(db.mailboxes), mailMessages: structuredClone(db.mailMessages) };
     const internalResolved = internalAddresses.map(email => ({ email, recipient: mailboxForAddress(db, email) }));
     const blocked = internalResolved.find(({ recipient }) =>
       !recipient || memberIsBlocked(db, String(mailbox.memberId), String(recipient.memberId))
     );
-    if (blocked) return { status: 404, body: { error: 'One or more Minglora member mailboxes could not be found.' } };
-    const before = { mailboxes: structuredClone(db.mailboxes), mailMessages: structuredClone(db.mailMessages) };
+    if (blocked) {
+      db.mailboxes.splice(0, db.mailboxes.length, ...before.mailboxes);
+      db.mailMessages.splice(0, db.mailMessages.length, ...before.mailMessages);
+      return { status: 404, body: { error: 'One or more Minglora member mailboxes could not be found.' } };
+    }
     if (draft) {
       const draftIndex = db.mailMessages.findIndex(item => Number(item.id) === draftId && String(item.owner_id) === String(mailbox.memberId));
       if (draftIndex >= 0) db.mailMessages.splice(draftIndex, 1);
