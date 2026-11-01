@@ -499,6 +499,12 @@ async function renderFriends(){
 }
 let activeCallRoom=null;
 let activeCallOverlay=null;
+function refreshMingloraCallAvailability(){
+  if(document.visibilityState==='visible'&&state.user&&!activeCallRoom&&!outgoingCallPending)void pollIncomingCalls();
+}
+document.addEventListener('visibilitychange',refreshMingloraCallAvailability);
+window.addEventListener('online',refreshMingloraCallAvailability);
+window.addEventListener('pageshow',refreshMingloraCallAvailability);
 let activeLiveRoom=null;
 let activeLiveSession=null;
 let activeLiveRole=null;
@@ -3660,7 +3666,7 @@ function showOutgoingCallOverlay(member,call){
  overlay.querySelector('#call-cancel-outgoing').onclick=async()=>{overlay.querySelector('#call-cancel-outgoing').disabled=true;if(outgoingCallPending)outgoingCallPending.cancelled=true;try{await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'});}catch(e){toast(e.message);}closeOutgoingCallOverlay();outgoingCallPending=null;};
 }
 async function waitForCallAnswer(call,member){
- showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false};
+ showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false,starting:false};
  const deadline=Date.parse(call.ringExpiresAt||'')||Date.now()+45000;
  while(outgoingCallPending&&!outgoingCallPending.cancelled&&Date.now()<deadline){
   let response;try{response=await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);return;}
@@ -3675,12 +3681,26 @@ async function waitForCallAnswer(call,member){
  if(outgoingCallPending&&!outgoingCallPending.cancelled){try{await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch{}closeOutgoingCallOverlay();outgoingCallPending=null;toast('No answer. The call has ended.');}
 }
 async function startMingloraCall(member,kind='video'){
- if(!member?.id||member.id===state.user.id)return;
- if(activeCallRoom||outgoingCallPending){toast('Finish your current call before starting another.');return;}
- try{primeCallAudio();const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});await waitForCallAnswer(created.call,member);}
- catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);}
+ if(!member?.id||!state.user||member.id===state.user.id)return;
+ if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before starting another.');return;}
+ // Reserve the outgoing state before the network request so a fast double tap
+ // cannot create two simultaneous calls from the same device.
+ outgoingCallPending={callId:null,cancelled:false,starting:true};
+ try{
+  primeCallAudio();
+  const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});
+  if(outgoingCallPending?.cancelled){
+   await api('/calls/'+encodeURIComponent(created.call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});
+   outgoingCallPending=null;return;
+  }
+  await waitForCallAnswer(created.call,member);
+ }catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);}
 }
-async function answerMingloraCall(callId){try{closeIncomingCallOverlay();const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});await openMingloraCall(joined.call,joined.liveKit);}catch(e){toast(e.message);}}
+async function answerMingloraCall(callId){
+ if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before answering another call.');return;}
+ try{closeIncomingCallOverlay();const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});await openMingloraCall(joined.call,joined.liveKit);}
+ catch(e){toast(e.message);void pollIncomingCalls();}
+}
 async function declineMingloraCall(callId){
  try{await api('/calls/'+encodeURIComponent(callId)+'/decline',{method:'POST',body:'{}'});if(incomingCallOverlay?.dataset.callId===callId)closeIncomingCallOverlay();toast('Call declined.');await renderNotifications();}
  catch(e){toast(e.message);}
@@ -3695,7 +3715,7 @@ async function openMingloraCall(call,liveKit){
     toast('The call player could not load. Refresh Minglora and try again.');return;
   }
   const overlay=document.createElement('div');overlay.className='call-overlay';
-  overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">End call</button></footer></section>';
+  overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">'+(call.createdBy===state.user.id?'End call for everyone':'Leave call')+'</button></footer></section>';
   document.body.append(overlay);activeCallOverlay=overlay;
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeCallRoom=room;
   let microphoneEnabled=true,cameraEnabled=call.kind==='video',intentionallyLeaving=false;
