@@ -42,7 +42,8 @@ test('browser reloads the corrected profile script and replaces the old service-
   const indexHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
   const serverSource = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
-  assert.match(indexHtml, /src="\/app\.js\?v=20261031-profile-expansion-1"/);
+  assert.match(indexHtml, /href="\/styles\.css\?v=20261031-profile-expansion-1"/);
+  assert.match(indexHtml, /src="\/app\.js\?v=20261031-profile-expansion-1"/)
   assert.match(serviceWorker, /minglora-shell-v37-profile-expansion/);
   assert.match(serviceWorker, /\/app\.js\?v=20261031-profile-expansion-1/);
   assert.match(serverSource, /'Cache-Control':'no-store'/);
