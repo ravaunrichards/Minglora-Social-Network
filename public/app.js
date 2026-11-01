@@ -2024,7 +2024,7 @@ function openAboutSectionEditor(sectionKey,u){
   }else if(sectionKey==='links'){
     fields='<div class="about-social-editor-list" data-about-link-list>'+(saved.items||[]).map(aboutSocialLinkRow).join('')+'</div><button type="button" class="secondary about-editor-add" id="about-add-social-link">＋ Add social media or website link</button><p class="about-editor-note">Add full profile URLs for Instagram, Facebook, TikTok, YouTube, X, Threads, LinkedIn and other services. Links open in a new tab.</p>';
   }else if(sectionKey==='contactInfo'){
-    const contact={...(saved||{})};if(!contact.phone)contact.phone=u.contactPhone||'';
+    const contact={...(saved||{})};if(!Object.hasOwn(contact,'phone'))contact.phone=u.contactPhone||'';if(!Object.hasOwn(contact,'email'))contact.email=u.email||'';
     fields=aboutEditorField('email','Email address',contact.email||'','email')+
       aboutEditorField('phone','Phone number',contact.phone||'','tel','Include + and country code')+
       aboutEditorField('whatsapp','WhatsApp number',contact.whatsapp||'','tel','Include + and country code')+
