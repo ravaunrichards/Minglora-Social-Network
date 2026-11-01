@@ -47,7 +47,7 @@ function Empty({ title, description }) {
   return <div className="hp-empty"><span className="hp-empty-icon"><FileText size={21} /></span><strong>{title}</strong><p>{description}</p></div>;
 }
 
-export default function MerchantWorkspace({ session, section, notify }) {
+export default function MerchantWorkspace({ session, section, initialMerchantId = "", notify }) {
   const token = session?.access_token;
   const [merchants, setMerchants] = useState([]);
   const [merchantId, setMerchantId] = useState("");
@@ -66,7 +66,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
       const result = await apiRequest("/api/merchants", token);
       const items = result.items || [];
       setMerchants(items);
-      setMerchantId((current) => items.some((item) => item.id === current) ? current : (items[0]?.id || ""));
+      setMerchantId((current) => items.some((item) => item.id === current) ? current : (items.some((item) => item.id === initialMerchantId) ? initialMerchantId : (items[0]?.id || "")));
       return items;
     } catch (error) {
       notify(error.message, "error");
@@ -74,7 +74,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
     } finally {
       setLoading(false);
     }
-  }, [token, notify]);
+  }, [token, notify, initialMerchantId]);
 
   const loadResources = useCallback(async (id) => {
     if (!id) {
