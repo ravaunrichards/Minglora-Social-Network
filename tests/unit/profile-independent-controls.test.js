@@ -45,7 +45,12 @@ test('profile owner has a dedicated Add story action with its own icon and real 
 
 test('profile media and story controls remain responsive and visible in refreshed app assets',()=>{
   assert.match(css,/\.profile-media-action-row\{[^}]*display:flex/);
-  assert.match(css,/\.profile-inline-media-edit\{[^}]*display:inline-flex/);\n  assert.doesNotMatch(css,/\.profile-media-edit-button\{[^}]*position:absolute/);\n  assert.doesNotMatch(css,/\.profile-avatar-edit-button\{[^}]*position:absolute/);\n  assert.doesNotMatch(app,/profile-media-edit-button|profile-avatar-edit-button/);\n  assert.match(app,/profile-media-action-row/);\n  assert.match(app,/profile-avatar-inline-edit/);
+  assert.match(css,/\.profile-inline-media-edit\{[^}]*display:inline-flex/);
+  assert.doesNotMatch(css,/\.profile-media-edit-button\{[^}]*position:absolute/);
+  assert.doesNotMatch(css,/\.profile-avatar-edit-button\{[^}]*position:absolute/);
+  assert.doesNotMatch(app,/profile-media-edit-button|profile-avatar-edit-button/);
+  assert.match(app,/profile-media-action-row/);
+  assert.match(app,/profile-avatar-inline-edit/);
   assert.match(css,/\.profile-avatar-edit-wrap\{[^}]*flex:0 0/);
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
