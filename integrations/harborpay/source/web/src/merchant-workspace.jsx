@@ -70,7 +70,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
       return items;
     } catch (error) {
       notify(error.message, "error");
-      throw error;
+      return [];
     } finally {
       setLoading(false);
     }
