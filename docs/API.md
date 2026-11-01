@@ -31,7 +31,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | GET | `/api/users` | Lightweight list of other accounts and friendship status |
 | GET | `/api/discovery/people` | Privacy-filtered member previews with real recent posts, currently visible stories, relationship counts and mutual-connection counts; verified LIVE presence is obtained separately from `/api/live/sessions` |
 | GET | `/api/users/:id` | Read a profile and its posts; blocked pairs return not found |
-| PATCH | `/api/users/me` | Update display name, unique username, bio and location; profile media is uploaded separately |
+| PATCH | `/api/users/me` | Update display name, unique username, legacy profile details, structured About sections and per-section visibility; profile media is uploaded separately |
 | POST/DELETE | `/api/users/:id/follow` | Follow or unfollow a member |
 | GET | `/api/users/:id/followers` | List visible followers, excluding blocked or privacy-inaccessible profiles; requires a session |
 | GET | `/api/users/:id/following` | List visible profiles followed by the member, excluding blocked or privacy-inaccessible profiles; requires a session |
@@ -40,6 +40,8 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST | `/api/media/upload/complete` | Verify the stored object and finalize the member-owned media asset after TUS upload |
 | POST/DELETE | `/api/users/:id/block` | Block or unblock a member |
 | GET | `/api/blocks` | List accounts currently blocked by the caller |
+
+Profile About data is saved by section using `aboutSections` and `aboutSectionVisibility`. Supported sections are Personal details, Intro, Work, Education, Hobbies, Interests, Travel, Links, Contact info, Names, Details and About you. Each section has an independent `public`, `friends` or `private` audience. Social profile links must use complete HTTP(S) URLs; contact email and phone values are validated server-side. The API returns only sections the signed-in viewer is permitted to see.
 
 ## Marketplace
 
