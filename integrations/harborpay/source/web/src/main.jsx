@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowDownLeft,
@@ -75,6 +75,7 @@ function AuthScreen({ prefill = null, recovery = false, onRecoveryComplete = () 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [notice, setNotice] = useState("");
+  const notify = useCallback((message) => setNotice(message), []);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -544,7 +545,7 @@ function App() {
               <div className="table-foot">Payment statuses come from PayPal capture responses and verified webhook events.</div>
             </div>
           </section>}
-          {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} notify={(message) => setNotice(message)} />}
+          {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} notify={notify} />}
           {section === "Profile" && <ProfileWorkspace session={session} notify={(message) => setNotice(message)} />}
 
           <footer className="app-footer"><span>HarborPay</span><span>Secure payments · No fabricated balances</span></footer>
