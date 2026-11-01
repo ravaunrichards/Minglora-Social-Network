@@ -12,7 +12,7 @@ const [html, css, sprite, serviceWorker] = await Promise.all([
   read('public/sw.js')
 ]);
 
-const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2#${id}"></use>`;
+const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2#${id}"></use>`;
 
 test('desktop navigation keeps its existing destinations and uses 3D icons', () => {
   const nav = html.match(/<nav class="top-nav"[\s\S]*?<\/nav>/)?.[0] || '';
