@@ -72,6 +72,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const anonymousSession = await request('/api/auth/me');
   assert.equal(anonymousSession.status, 200);
   assert.equal(anonymousSession.body.user, null);
+  const anonymousMeetWaveStatus = await request('/api/meetwave/status');
+  assert.equal(anonymousMeetWaveStatus.status, 401);
 
   const beforeRegistration = await request('/api/feed');
   assert.equal(beforeRegistration.status, 401);
@@ -87,6 +89,17 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
+  const meetWaveStatus = await request('/api/meetwave/status');
+  assert.equal(meetWaveStatus.status, 200);
+  assert.equal(meetWaveStatus.body.enabled, true);
+  assert.equal(meetWaveStatus.body.configured, false);
+  const emptyMeetWaveRooms = await request('/api/meetwave/rooms');
+  assert.equal(emptyMeetWaveRooms.status, 200);
+  assert.deepEqual(emptyMeetWaveRooms.body.rooms, []);
+  const unavailableMeetWaveCreate = await request('/api/meetwave/rooms', {
+    method: 'POST', body: JSON.stringify({ title: 'No fake room', mode: 'instant', visibility: 'private' })
+  });
+  assert.equal(unavailableMeetWaveCreate.status, 503);
   const emptyDiscovery = await request('/api/discovery/people');
   assert.equal(emptyDiscovery.status, 200);
   assert.deepEqual(emptyDiscovery.body.users, []);
@@ -169,6 +182,17 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const reloadedSettings = await request('/api/settings');
   assert.equal(reloadedSettings.body.settings.privacy.allowFriendRequests, false);
   assert.equal(reloadedSettings.body.settings.notifications.messages, false);
+  assert.equal(reloadedSettings.body.settings.privacy.meetWaveAudience, 'everyone');
+  const meetWavePrivacyUpdate = await request('/api/settings', {
+    method: 'PATCH', body: JSON.stringify({ privacy: { meetWaveAudience: 'nobody' } })
+  });
+  assert.equal(meetWavePrivacyUpdate.status, 200);
+  assert.equal(meetWavePrivacyUpdate.body.settings.privacy.meetWaveAudience, 'nobody');
+  assert.equal(meetWavePrivacyUpdate.body.settings.privacy.messageAudience, 'friends');
+  const invalidMeetWavePrivacyUpdate = await request('/api/settings', {
+    method: 'PATCH', body: JSON.stringify({ privacy: { meetWaveAudience: 'anyone' } })
+  });
+  assert.equal(invalidMeetWavePrivacyUpdate.status, 400);
 
   const firstAccountCookie = cookie;
   const privacyTestRegistration = await request('/api/auth/register', {
