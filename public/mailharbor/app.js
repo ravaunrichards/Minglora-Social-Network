@@ -1,12 +1,17 @@
 'use strict';
 
 const API_BASE = '/api/mailharbor';
+const ICON_SPRITE = '/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1';
 const $ = (id) => document.getElementById(id);
+function mailIcon(id, className = 'mail-3d-icon') {
+  return '<svg class="' + className + '" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="' + ICON_SPRITE + '#' + id + '"></use></svg>';
+}
 let token = '';
 let currentUser = null;
 let currentFolder = 'inbox';
 let messageList = [];
 let selected = new Set();
+let currentDraftId = null;
 let mailStatus = { outboundEmailConfigured: false, inboundEmailConfigured: false };
 let authMode = 'login';
 let searchTimer = null;
@@ -20,9 +25,11 @@ const folderNames = {
   inbox: 'Inbox',
   starred: 'Starred',
   sent: 'Sent',
+  drafts: 'Drafts',
   spam: 'Spam',
   trash: 'Trash',
-  archive: 'Archive'
+  archive: 'Archive',
+  accounts: 'Connected accounts'
 };
 
 function setFeedback(element, message, isError = false) {
@@ -155,6 +162,7 @@ function stopRealtime() {
 }
 
 async function loadMessages() {
+  if (currentFolder === 'accounts') { renderConnectedAccounts(); return; }
   const query = new URLSearchParams({ folder: currentFolder });
   const search = $('search').value.trim();
   if (search) query.set('search', search);
@@ -177,7 +185,37 @@ function formatDate(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
+
+function renderConnectedAccounts() {
+  const providers = [
+    { key: 'gmail', name: 'Gmail', description: 'Google mailbox sync through user-approved OAuth.' },
+    { key: 'yahoo', name: 'Yahoo Mail', description: 'Yahoo mailbox sync through user-approved OAuth.' },
+    { key: 'outlook', name: 'Outlook', description: 'Microsoft mailbox sync through Microsoft identity.' },
+    { key: 'icloud', name: 'iCloud Mail', description: 'Apple mail access through supported account authorization.' }
+  ];
+  const connections = mailStatus.externalProviders || {};
+  $('heading').textContent = 'Connected accounts';
+  $('subheading').textContent = 'See which mail providers are connected to your Minglora mailbox.';
+  $('count').textContent = '1 active mailbox';
+  $('toolbar').classList.add('is-hidden');
+  $('folders').querySelectorAll('[data-folder]').forEach(button => button.classList.toggle('active', button.dataset.folder === 'accounts'));
+  $('messages').innerHTML =
+    '<section class="provider-overview"><div class="provider-overview-icon">' + mailIcon('mailharbor') + '</div><div><strong>Minglora Mailbox</strong><p>' + escapeHtml(currentUser?.email || '') + '</p></div><span class="provider-state active">Active</span></section>' +
+    '<div class="provider-section-heading"><div><h2>External email accounts</h2><p>Connect other mailboxes after secure provider authorization is configured.</p></div></div>' +
+    '<div class="provider-grid">' + providers.map(provider => {
+      const state = connections[provider.key] || {};
+      const connected = state.connected === true;
+      const configured = state.configured === true;
+      const label = connected ? 'Connected' : configured ? 'Ready for authorization' : 'Not connected';
+      return '<article class="provider-card"><div class="provider-card-icon">' + mailIcon('external-link') + '</div><div class="provider-card-copy"><h3>' + provider.name + '</h3><p>' + provider.description + '</p><span class="provider-state ' + (connected ? 'active' : 'pending') + '">' + label + '</span></div><button type="button" class="secondary provider-connect" disabled title="Provider OAuth credentials and authorization callback are not configured">Unavailable</button></article>';
+    }).join('') + '</div>' +
+    '<p class="provider-notice" role="note">Gmail, Yahoo, Outlook and iCloud are not being represented as connected. Their account data will only sync after the required provider credentials, callback routes, scopes and your explicit authorization are in place.</p>';
+}
+
 function renderMessages() {
+  $('toolbar').classList.remove('is-hidden');
+  $('spam').classList.toggle('is-hidden', currentFolder === 'spam' || currentFolder === 'trash');
+  $('restore').classList.toggle('is-hidden', !['spam', 'trash', 'archive'].includes(currentFolder));
   $('heading').textContent = folderNames[currentFolder] || 'Inbox';
   $('subheading').textContent = currentFolder === 'inbox' ? 'Your mail, all in one place.' : 'Messages in ' + folderNames[currentFolder].toLowerCase() + '.';
   $('folders').querySelectorAll('[data-folder]').forEach((button) => {
@@ -186,7 +224,7 @@ function renderMessages() {
   $('count').textContent = messageList.length + (messageList.length === 1 ? ' message' : ' messages');
 
   if (!messageList.length) {
-    $('messages').innerHTML = '<div class="empty"><span class="empty-mark">✉</span><strong>This folder is empty</strong><p>Messages sent to your Minglora mailbox by other members will appear here.</p></div>';
+    $('messages').innerHTML = '<div class="empty"><span class="empty-mark">' + mailIcon(currentFolder === 'sent' ? 'sent' : currentFolder === 'drafts' ? 'drafts' : currentFolder === 'spam' ? 'spam' : currentFolder === 'trash' ? 'trash' : 'inbox') + '</span><strong>This folder is empty</strong><p>Messages sent to your Minglora mailbox by other members will appear here.</p></div>';
     return;
   }
 
@@ -205,7 +243,7 @@ function renderMessages() {
       : message.delivery_status === 'sent' ? '<span class="delivery sent">Sent</span>' : '';
     return '<article class="message' + unread + '" data-id="' + id + '">' +
       '<input class="select-message" type="checkbox" aria-label="Select message"' + checked + '>' +
-      '<button class="star' + starred + '" data-star="' + id + '" type="button" aria-label="Toggle star">' + (message.is_starred ? '★' : '☆') + '</button>' +
+      '<button class="star' + starred + '" data-star="' + id + '" type="button" aria-label="Toggle star">' + mailIcon('star') + '</button>' +
       '<div class="sender">' + escapeHtml(sender) + '</div>' +
       '<div class="summary"><strong>' + escapeHtml(message.subject || '(no subject)') + '</strong><span>' + escapeHtml(message.body_text || '') + '</span>' + status + '</div>' +
       '<time class="time">' + escapeHtml(formatDate(message.created_at)) + '</time>' +
@@ -217,6 +255,17 @@ async function openMessage(id) {
   try {
     const result = await request('/messages/' + encodeURIComponent(id));
     const message = result.message;
+    if (message.folder === 'drafts') {
+      currentDraftId = Number(message.id);
+      $('to').value = (message.recipients?.to || []).join(', ');
+      $('cc').value = (message.recipients?.cc || []).join(', ');
+      $('bcc').value = (message.recipients?.bcc || []).join(', ');
+      $('subject').value = message.subject || '';
+      $('body').value = message.body_text || '';
+      setFeedback($('compose-feedback'), 'Editing saved draft.');
+      $('composer').showModal();
+      return;
+    }
     $('detail-subject').textContent = message.subject || '(no subject)';
     $('detail-date').textContent = formatDate(message.created_at);
     $('detail-from').textContent = message.sender_email || '';
@@ -242,12 +291,45 @@ async function mutateSelected(action) {
   try {
     await Promise.all(ids.map((id) => {
       if (action === 'delete') return request('/messages/' + id, { method: 'DELETE' });
-      const patch = action === 'read' ? { isRead: true } : { folder: 'archive' };
+      const patch = action === 'read' ? { isRead: true } : action === 'spam' ? { folder: 'spam' } : action === 'restore' ? { folder: 'inbox' } : { folder: 'archive' };
       return request('/messages/' + id, { method: 'PATCH', body: patch });
     }));
     await loadMessages();
   } catch (error) {
     window.alert(error.message);
+  }
+}
+
+
+function composePayload() {
+  return {
+    to: $('to').value,
+    cc: $('cc').value,
+    bcc: $('bcc').value,
+    subject: $('subject').value,
+    body: $('body').value
+  };
+}
+
+async function saveDraft() {
+  const button = $('save-draft');
+  button.disabled = true;
+  setFeedback($('compose-feedback'), 'Saving draft…');
+  try {
+    const payload = composePayload();
+    const result = currentDraftId
+      ? await request('/messages/' + encodeURIComponent(currentDraftId), { method: 'PATCH', body: payload })
+      : await request('/drafts', { method: 'POST', body: payload });
+    currentDraftId = Number(result.message?.id || currentDraftId);
+    $('composer').close();
+    $('compose-form').reset();
+    currentDraftId = null;
+    currentFolder = 'drafts';
+    await loadMessages();
+  } catch (error) {
+    setFeedback($('compose-feedback'), error.message, true);
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -306,11 +388,16 @@ $('search').addEventListener('input', () => {
 $('refresh').addEventListener('click', () => loadMessages().catch((error) => window.alert(error.message)));
 $('markread').addEventListener('click', () => mutateSelected('read'));
 $('archive').addEventListener('click', () => mutateSelected('archive'));
+$('spam').addEventListener('click', () => mutateSelected('spam'));
+$('restore').addEventListener('click', () => mutateSelected('restore'));
 $('delete').addEventListener('click', () => mutateSelected('delete'));
 $('compose').addEventListener('click', () => {
+  currentDraftId = null;
+  $('compose-form').reset();
   setFeedback($('compose-feedback'), '');
   $('composer').showModal();
 });
+$('save-draft').addEventListener('click', saveDraft);
 $('close-compose').addEventListener('click', () => $('composer').close());
 $('close-detail').addEventListener('click', () => $('message-view').close());
 
@@ -331,11 +418,13 @@ $('compose-form').addEventListener('submit', async (event) => {
         cc: $('cc').value,
         bcc: $('bcc').value,
         subject: $('subject').value,
-        body: $('body').value
+        body: $('body').value,
+        draftId: currentDraftId
       }
     });
     $('composer').close();
     $('compose-form').reset();
+    currentDraftId = null;
     currentFolder = 'sent';
     await loadMessages();
     window.alert(internalOnly
