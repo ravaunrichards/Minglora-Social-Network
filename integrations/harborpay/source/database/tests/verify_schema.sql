@@ -103,7 +103,7 @@ select public.harborpay_exchange_minglora_handoff(
   'ci-minglora-handoff-hash-111111111111111111111111'
 );
 
-do $
+do $$
 declare
   linked boolean;
 begin
@@ -116,7 +116,7 @@ begin
     raise exception 'A returning HarborPay user could not link an already linked identity using a fresh consented handoff';
   end if;
 end;
-$;
+$$;
 
 -- Merchant creation must automatically grant the owner role.
 insert into public.merchant_accounts (owner_user_id, display_name)
