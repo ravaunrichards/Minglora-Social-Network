@@ -8,7 +8,6 @@ test('profile exposes Facebook-style Posts, About, Friends, Photos, Reels and Mo
   const app = await read('../../public/app.js');
   const sections = [['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']];
   for (const [key,label] of sections) assert.ok(app.includes("['"+key+"','"+label+"']"), label+' profile section must exist');
-  }
   assert.match(app, /function profileTabMarkup/);
   assert.match(app, /function bindProfileTabActions/);
   assert.match(app, /profile-albums-grid/);
