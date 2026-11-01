@@ -39,6 +39,26 @@ To enable external Internet email, set MAILHARBOR_RESEND_API_KEY, MAILHARBOR_MAI
 
 Until a public mail domain is verified, internal member addresses use the reserved members.minglora.invalid domain. That namespace is internal-only and not publicly routable. Internal send and receive are persisted in Minglora's state store; sender-side Sent items are marked delivered only after recipient mailbox writes are saved. The mailbox client refreshes over the authenticated API on each member's selected interval.
 
+## $0 external email path
+
+The intended zero-cost provider is Resend's Free plan. Its published limits currently show 3,000 transactional emails per month, 100 per day, up to three custom sending domains, and three inbound inboxes. Inbound email is supported by Resend's receiving API and webhook flow. Check the live plan limits before enabling production traffic:
+- Pricing: https://resend.com/pricing
+- Receiving: https://resend.com/features/inbound
+
+Minglora does not enable paid overages or automatically move to a paid plan. Keep sending within the Free plan quota. Do not add a paid email add-on, dedicated IP, or paid Cloudflare Workers email sending.
+
+For the requested `@minglora.com` member addresses, the domain must be controlled by Minglora's owner and its DNS records must be editable. A domain that is already registered cannot be newly registered again, and a public DNS lookup cannot grant permission to edit it. Once the owner has DNS access, verify `minglora.com` in Resend and publish only the exact SPF, DKIM and receiving MX records supplied by Resend. Do not replace existing MX records without checking the current mail service first.
+
+After verification, set these Render environment variables privately:
+- `MAILHARBOR_RESEND_API_KEY`: Resend Free API key.
+- `MAILHARBOR_MAIL_DOMAIN=minglora.com`.
+- `MAILHARBOR_DOMAIN_VERIFIED=true`: only after the provider confirms verification.
+- `MAILHARBOR_FROM_EMAIL=no-reply@minglora.com`.
+- `MAILHARBOR_RESEND_WEBHOOK_SECRET`: the signing secret for the Minglora webhook.
+- `MAILHARBOR_INBOUND_ENABLED=true`: only after inbound MX routing and the signed webhook are active.
+
+Never commit API keys or webhook secrets. Until all domain/provider checks are complete, keep the reserved internal-only mailbox domain and Minglora member-to-member delivery unchanged. Do not advertise an `.invalid` address as an Internet email address, and do not substitute another domain without the owner's approval.
+
 ## Legacy source mirror
 
 The older standalone Express/Postgres source and migrations remain under source/ for reference and possible future transport expansion. They are not started by Minglora's active production server. Do not treat the source mirror's SMTP/IMAP/realtime features as enabled in the current Minglora deployment.
