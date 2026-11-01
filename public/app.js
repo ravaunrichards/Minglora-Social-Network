@@ -141,7 +141,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261101-messenger-right-panel-1',{scope:'/'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261101-messenger-right-panel-2',{scope:'/'});
     const subscription=await registration.pushManager.getSubscription();
     if(subscription){
       webPushSubscriptionActive=true;
@@ -190,7 +190,11 @@ async function handleMingloraPushNavigation(){
 }
 function activateNav(view){if(state.messengerPanelOpen)closeMessengerPanel();if(state.view==='meetwave'&&view!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
-function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer">What's on your mind, ${esc(state.user.name.split(' ')[0])}?</button></div><div class="composer-actions"><button id="post-photo" class="photo">▣ &nbsp; Photo / link</button><button id="post-feeling" class="feeling">☻ &nbsp; Feeling / activity</button><button id="post-text">✎ &nbsp; Write post</button></div></section>`;}
+const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2';
+function messenger3dIcon(id,className='messenger-3d-icon'){
+  return '<svg class="'+className+'" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="'+MESSENGER_ICON_SPRITE+'#'+id+'"></use></svg>';
+}
+function composer(){return `<section class="card"><div class="composer-top"><img class="avatar" src="${avatar(state.user)}" alt=""><button class="composer-open" id="open-composer" type="button" aria-haspopup="dialog">${messenger3dIcon('share','composer-share-icon')}<span>Share your thoughts, ${esc(state.user.name.split(' ')[0])}?</span></button></div><div class="composer-actions"><button id="post-photo" class="photo" type="button">${messenger3dIcon('photo','composer-action-icon')}<span>Photo / link</span></button><button id="post-feeling" class="feeling" type="button">${messenger3dIcon('feeling','composer-action-icon')}<span>Feeling / activity</span></button><button id="post-text" type="button">${messenger3dIcon('create','composer-action-icon')}<span>Share thoughts</span></button></div></section>`;}
 function renderSingleMedia(media,className='post-media-viewer'){
   if(!media?.url)return '';
   const url=esc(media.url);
@@ -346,7 +350,7 @@ function renderStoriesPanel(){const seen=new Set();const visible=state.stories.f
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 function openComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Create a post</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>◉ Anyone can see this</small></div></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What is on your mind?" aria-label="Post text"></textarea></div><div class="field"><label>Photos, videos, audio and 3D models</label><div id="create-post-media-picker"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Public · Anyone can see this</small></div></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos, audio and 3D models</label><div id="create-post-media-picker"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
   document.body.append(modal);
   const picker=createMediaPicker(modal.querySelector('#create-post-media-picker'),{slot:'post',maxFiles:10});
   const close=()=>{picker.destroy();modal.remove();};
@@ -3349,44 +3353,44 @@ async function openMessengerPanel(){
   syncMessageRefreshPolling();
   renderMessengerPanel();
   try{const result=await api('/messages');state.conversations=result.conversations||[];paintMessengerBadge(state.conversations);renderMessengerPanelList();}
-  catch(error){const list=$('#messenger-panel-list');if(list)list.innerHTML='<div class="messenger-empty-state"><span>⚠️</span><strong>Chats could not load</strong><p>'+esc(error.message)+'</p></div>';}
+  catch(error){const list=$('#messenger-panel-list');if(list)list.innerHTML='<div class="messenger-empty-state"><span>'+messenger3dIcon('activity')+'</span><strong>Chats could not load</strong><p>'+esc(error.message)+'</p></div>';}
 }
 async function toggleMessengerPanel(){if(state.messengerPanelOpen)closeMessengerPanel();else await openMessengerPanel();}
 function messengerToggleRow(key,label,icon,description,defaultValue){
   const enabled=messengerPreference(key,defaultValue);
-  return '<div class="messenger-option-row"><span class="messenger-option-icon" aria-hidden="true">'+icon+'</span><span class="messenger-option-copy"><strong>'+label+'</strong><small>'+description+'</small></span><button type="button" class="messenger-switch '+(enabled?'is-on':'')+'" data-messenger-setting="'+key+'" aria-label="'+label+': '+(enabled?'ON':'OFF')+'" aria-pressed="'+(enabled?'true':'false')+'"><span>'+(enabled?'ON':'OFF')+'</span></button></div>';
+  return '<div class="messenger-option-row"><span class="messenger-option-icon" aria-hidden="true">'+messenger3dIcon(icon,'messenger-3d-icon')+'</span><span class="messenger-option-copy"><strong>'+label+'</strong><small>'+description+'</small></span><button type="button" class="messenger-switch '+(enabled?'is-on':'')+'" data-messenger-setting="'+key+'" aria-label="'+label+': '+(enabled?'ON':'OFF')+'" aria-pressed="'+(enabled?'true':'false')+'"><span>'+(enabled?'ON':'OFF')+'</span></button></div>';
 }
 function messengerDestinationRow(destination,label,icon,description){
-  return '<button type="button" class="messenger-option-link" data-messenger-destination="'+destination+'"><span class="messenger-option-icon" aria-hidden="true">'+icon+'</span><span class="messenger-option-copy"><strong>'+label+'</strong><small>'+description+'</small></span><span class="messenger-option-chevron">›</span></button>';
+  return '<button type="button" class="messenger-option-link" data-messenger-destination="'+destination+'"><span class="messenger-option-icon" aria-hidden="true">'+messenger3dIcon(icon,'messenger-3d-icon')+'</span><span class="messenger-option-copy"><strong>'+label+'</strong><small>'+description+'</small></span><span class="messenger-option-chevron">'+messenger3dIcon('arrow-right','messenger-3d-icon')+'</span></button>';
 }
 function renderMessengerPanel(){
   if(!state.messengerPanelOpen)return;
   const panel=ensureMessengerPanel(),prefs=messengerPreferences();
   panel.innerHTML=
     '<header class="messenger-panel-header"><div class="messenger-panel-heading"><h2>Chats</h2><span>Stay connected on Minglora</span></div><div class="messenger-panel-actions">'+
-    '<button type="button" class="messenger-panel-icon" data-messenger-new title="New message" aria-label="New message">✎</button>'+
-    '<button type="button" class="messenger-panel-icon" data-messenger-see title="See in Messenger" aria-label="See in Messenger">↗</button>'+
-    '<button type="button" class="messenger-panel-icon" data-messenger-options title="Messenger options" aria-label="Messenger options" aria-expanded="'+(state.messengerOptionsOpen?'true':'false')+'">···</button>'+
-    '<button type="button" class="messenger-panel-icon messenger-panel-close" data-messenger-close title="Close chats" aria-label="Close chats">×</button></div></header>'+
-    '<label class="messenger-search"><span aria-hidden="true">⌕</span><input id="messenger-search-input" type="search" placeholder="'+(state.messengerComposeMode?'Search people by name or username':'Search Messenger')+'" autocomplete="off" aria-label="'+(state.messengerComposeMode?'Search people':'Search Messenger')+'"></label>'+
+    '<button type="button" class="messenger-panel-icon" data-messenger-new title="New message" aria-label="New message">'+messenger3dIcon('create')+'</button>'+
+    '<button type="button" class="messenger-panel-icon" data-messenger-see title="See in Messenger" aria-label="See in Messenger">'+messenger3dIcon('external-link')+'</button>'+
+    '<button type="button" class="messenger-panel-icon" data-messenger-options title="Messenger options" aria-label="Messenger options" aria-expanded="'+(state.messengerOptionsOpen?'true':'false')+'">'+messenger3dIcon('more')+'</button>'+
+    '<button type="button" class="messenger-panel-icon messenger-panel-close" data-messenger-close title="Close chats" aria-label="Close chats">'+messenger3dIcon('close')+'</button></div></header>'+
+    '<label class="messenger-search"><span aria-hidden="true">'+messenger3dIcon('search')+'</span><input id="messenger-search-input" type="search" placeholder="'+(state.messengerComposeMode?'Search people by name or username':'Search Messenger')+'" autocomplete="off" aria-label="'+(state.messengerComposeMode?'Search people':'Search Messenger')+'"></label>'+
     '<nav class="messenger-filter-tabs" aria-label="Filter chats">'+
-    ['all','unread','groups','communities'].map(filter=>'<button type="button" data-messenger-filter="'+filter+'" class="'+(state.messengerFilter===filter?'active':'')+'" aria-pressed="'+(state.messengerFilter===filter?'true':'false')+'">'+({all:'All',unread:'Unread',groups:'Groups',communities:'Communities'}[filter])+'</button>').join('')+
+    ['all','unread','groups','communities'].map(filter=>'<button type="button" data-messenger-filter="'+filter+'" class="'+(state.messengerFilter===filter?'active':'')+'" aria-pressed="'+(state.messengerFilter===filter?'true':'false')+'"><span>'+messenger3dIcon(({all:'messages',unread:'activity',groups:'groups',communities:'pages'})[filter])+'</span><span>'+({all:'All',unread:'Unread',groups:'Groups',communities:'Communities'}[filter])+'</span></button>').join('')+
     '</nav>'+
     '<div class="messenger-panel-list" id="messenger-panel-list" aria-live="polite"></div>'+
-    '<footer class="messenger-panel-footer"><button type="button" data-messenger-see><span aria-hidden="true">↗</span> See all in Messenger</button></footer>'+
+    '<footer class="messenger-panel-footer"><button type="button" data-messenger-see">'+messenger3dIcon('external-link')+'<span>See all in Messenger</span></button></footer>'+
     '<section class="messenger-options-menu '+(state.messengerOptionsOpen?'':'hidden')+'" id="messenger-options-menu" aria-label="Messenger settings">'+
     '<div class="messenger-options-heading"><strong>Messenger settings</strong><small>Control how you receive messages</small></div>'+
-    messengerToggleRow('messengerIncomingCallSounds','Incoming call sounds','📞','Play sound when someone calls you',true)+
-    messengerToggleRow('messengerMessageSounds','Message sounds','🔔','Play a sound for new messages',true)+
-    messengerToggleRow('messengerAutoOpenNewMessages','Automatically open new messages','💬','Open a chat window when a new message arrives',false)+
+    messengerToggleRow('messengerIncomingCallSounds','Incoming call sounds','call','Play sound when someone calls you',true)+
+    messengerToggleRow('messengerMessageSounds','Message sounds','sound','Play a sound for new messages',true)+
+    messengerToggleRow('messengerAutoOpenNewMessages','Automatically open new messages','messages','Open a chat window when a new message arrives',false)+
     '<div class="messenger-options-divider"></div>'+
-    messengerDestinationRow('privacy','Privacy settings','🛡️','Manage your privacy and audience')+
-    messengerToggleRow('messengerActiveStatus','Active status','🟢','Let people see when you are active',true)+
-    messengerDestinationRow('requests','Message requests','✉️','Review messages from people you do not follow mutually')+
-    messengerDestinationRow('archived','Archived chats','🗄️','Find conversations you have archived')+
-    messengerDestinationRow('delivery','Message delivery settings','📨','Choose who can send you messages')+
-    messengerDestinationRow('restricted','Restricted accounts','⛔','Manage accounts you have restricted')+
-    messengerDestinationRow('blocking','Block settings','🚫','Review and manage blocked accounts')+
+    messengerDestinationRow('privacy','Privacy settings','privacy','Manage your privacy and audience')+
+    messengerToggleRow('messengerActiveStatus','Active status','activity','Let people see when you are active',true)+
+    messengerDestinationRow('requests','Message requests','request','Review messages from people you do not follow mutually')+
+    messengerDestinationRow('archived','Archived chats','archive','Find conversations you have archived')+
+    messengerDestinationRow('delivery','Message delivery settings','delivery','Choose who can send you messages')+
+    messengerDestinationRow('restricted','Restricted accounts','lock','Manage accounts you have restricted')+
+    messengerDestinationRow('blocking','Block settings','block','Review and manage blocked accounts')+
     '</section>';
   const search=$('#messenger-search-input');if(search)search.value=state.messengerSearch||'';
   panel.querySelectorAll('[data-messenger-filter]').forEach(button=>button.onclick=()=>{state.messengerFilter=button.dataset.messengerFilter;state.messengerPanelSection='chats';state.messengerComposeMode=false;renderMessengerPanel();});
@@ -3407,14 +3411,14 @@ async function renderMessengerPanelList(){
   if(state.messengerComposeMode){
     if(!Array.isArray(state.messengerComposeUsers)){
       if(state.messengerComposeLoading)return;
-      state.messengerComposeLoading=true;list.innerHTML='<div class="messenger-empty-state"><span>⌕</span><strong>Find someone to message</strong><p>Search for a Minglora member by name or username.</p></div>';
+      state.messengerComposeLoading=true;list.innerHTML='<div class="messenger-empty-state"><span>'+messenger3dIcon('search')+'</span><strong>Find someone to message</strong><p>Search for a Minglora member by name or username.</p></div>';
       try{state.messengerComposeUsers=(await api('/users')).users||[];}
-      catch(error){list.innerHTML='<div class="messenger-empty-state"><strong>Members could not load</strong><p>'+esc(error.message)+'</p></div>';}
+      catch(error){list.innerHTML='<div class="messenger-empty-state"><span>'+messenger3dIcon('activity')+'</span><strong>Members could not load</strong><p>'+esc(error.message)+'</p></div>';}
       finally{state.messengerComposeLoading=false;}
       if(!Array.isArray(state.messengerComposeUsers))return;
     }
     const members=state.messengerComposeUsers.filter(member=>member.id!==state.user?.id&&(!query||(String(member.name||'')+' '+String(member.username||'')).toLowerCase().includes(query))).slice(0,30);
-    list.innerHTML=members.length?members.map(member=>'<button type="button" class="messenger-compose-person" data-messenger-compose-to="'+esc(member.id)+'"><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span><span class="messenger-compose-arrow">›</span></button>').join(''):'<div class="messenger-empty-state"><span>👥</span><strong>No members found</strong><p>Try a different name or username.</p></div>';
+    list.innerHTML=members.length?members.map(member=>'<button type="button" class="messenger-compose-person" data-messenger-compose-to="'+esc(member.id)+'"><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span><span class="messenger-compose-arrow">'+messenger3dIcon('arrow-right')+'</span></button>').join(''):'<div class="messenger-empty-state"><span>'+messenger3dIcon('friends')+'</span><strong>No members found</strong><p>Try a different name or username.</p></div>';
     list.querySelectorAll('[data-messenger-compose-to]').forEach(button=>button.onclick=()=>{const member=state.messengerComposeUsers.find(item=>item.id===button.dataset.messengerComposeTo);if(member){state.messengerComposeMode=false;openMessageWindow(member);}});
     return;
   }
@@ -3426,7 +3430,7 @@ async function renderMessengerPanelList(){
     if(section==='restricted')rows=state.conversations.filter(item=>restricted.has(item.user.id));
     const title=section==='archived'?'Archived chats':section==='requests'?'Message requests':'Restricted accounts';
     const rowsHtml=rows.map(conversation=>messengerConversationRow(conversation,section)).join('');
-    list.innerHTML='<div class="messenger-subview-head"><button type="button" data-messenger-back>‹</button><strong>'+title+'</strong></div>'+(rowsHtml||'<div class="messenger-empty-state"><span>'+(section==='requests'?'✉️':section==='archived'?'🗄️':'⛔')+'</span><strong>'+(section==='requests'?'No message requests':section==='archived'?'No archived chats':'No restricted accounts')+'</strong><p>'+(section==='requests'?'Messages from people who are not mutual friends appear here when available.':section==='archived'?'Chats you archive will be kept here until you restore them.':'Accounts you restrict will be listed here.')+'</p></div>');
+    list.innerHTML='<div class="messenger-subview-head"><button type="button" data-messenger-back aria-label="Back to chats">'+messenger3dIcon('arrow-left')+'</button><strong>'+title+'</strong></div>'+(rowsHtml||'<div class="messenger-empty-state"><span>'+messenger3dIcon(section==='requests'?'request':section==='archived'?'archive':'lock')+'</span><strong>'+(section==='requests'?'No message requests':section==='archived'?'No archived chats':'No restricted accounts')+'</strong><p>'+(section==='requests'?'Messages from people who are not mutual friends appear here when available.':section==='archived'?'Chats you archive will be kept here until you restore them.':'Accounts you restrict will be listed here.')+'</p></div>');
     list.querySelector('[data-messenger-back]')?.addEventListener('click',()=>{state.messengerPanelSection='chats';renderMessengerPanelList();});
     bindMessengerConversationRows(list,section);
     return;
@@ -3439,7 +3443,7 @@ async function renderMessengerPanelList(){
   const heading=state.messengerFilter==='groups'?'Group chats':state.messengerFilter==='communities'?'Community chats':state.messengerFilter==='unread'?'Unread chats':'Your conversations';
   const rowsHtml=rows.map(conversation=>messengerConversationRow(conversation,'chats')).join('');
   const emptyMessage=state.messengerFilter==='groups'?'Group conversations will appear here when group messaging is available.':state.messengerFilter==='communities'?'Community conversations will appear here when community messaging is available.':state.messengerFilter==='unread'?'You have no unread conversations.':'Your recent conversations will appear here. Start a chat with the new message button.';
-  list.innerHTML='<div class="messenger-list-heading"><strong>'+heading+'</strong><span>'+rows.length+'</span></div>'+(rowsHtml||'<div class="messenger-empty-state"><span>'+(state.messengerFilter==='groups'?'👥':state.messengerFilter==='communities'?'🌐':'✉️')+'</span><strong>'+(state.messengerFilter==='unread'?'All caught up':'No chats to show')+'</strong><p>'+emptyMessage+'</p>'+(state.messengerFilter==='groups'||state.messengerFilter==='communities'?'<button type="button" data-messenger-browse-groups>Browse groups</button>':'')+'</div>');
+  list.innerHTML='<div class="messenger-list-heading"><strong>'+heading+'</strong><span>'+rows.length+'</span></div>'+(rowsHtml||'<div class="messenger-empty-state"><span>'+messenger3dIcon(state.messengerFilter==='groups'?'groups':state.messengerFilter==='communities'?'pages':'messages')+'</span><strong>'+(state.messengerFilter==='unread'?'All caught up':'No chats to show')+'</strong><p>'+emptyMessage+'</p>'+(state.messengerFilter==='groups'||state.messengerFilter==='communities'?'<button type="button" data-messenger-browse-groups>Browse groups</button>':'')+'</div>');
   list.querySelector('[data-messenger-browse-groups]')?.addEventListener('click',()=>{closeMessengerPanel();activateNav('groups');});
   bindMessengerConversationRows(list,'chats');
 }
@@ -3447,7 +3451,7 @@ function messengerConversationRow(conversation,section){
   const member=conversation.user||{},last=conversation.messages?.at(-1);
   const preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':last?.stickerId?'Sticker':'Start chatting');
   const unread=Number(conversation.unreadCount)||0,archived=section==='archived',restricted=section==='restricted';
-  const action=archived?'<button type="button" class="messenger-chat-row-action" data-messenger-unarchive="'+esc(member.id)+'" title="Restore chat" aria-label="Restore chat">↩</button>':restricted?'<button type="button" class="messenger-chat-row-action" data-messenger-unrestrict="'+esc(member.id)+'" title="Unrestrict account" aria-label="Unrestrict account">✓</button>':'<button type="button" class="messenger-chat-row-action" data-messenger-archive="'+esc(member.id)+'" title="Archive chat" aria-label="Archive chat">🗄</button><button type="button" class="messenger-chat-row-action" data-messenger-restrict="'+esc(member.id)+'" title="Restrict account" aria-label="Restrict account">⛔</button>';
+  const action=archived?'<button type="button" class="messenger-chat-row-action" data-messenger-unarchive="'+esc(member.id)+'" title="Restore chat" aria-label="Restore chat">'+messenger3dIcon('restore')+'</button>':restricted?'<button type="button" class="messenger-chat-row-action" data-messenger-unrestrict="'+esc(member.id)+'" title="Unrestrict account" aria-label="Unrestrict account">'+messenger3dIcon('unlock')+'</button>':'<button type="button" class="messenger-chat-row-action" data-messenger-archive="'+esc(member.id)+'" title="Archive chat" aria-label="Archive chat">'+messenger3dIcon('archive')+'</button><button type="button" class="messenger-chat-row-action" data-messenger-restrict="'+esc(member.id)+'" title="Restrict account" aria-label="Restrict account">'+messenger3dIcon('lock')+'</button>';
   return '<article class="messenger-chat-row" data-messenger-open="'+esc(member.id)+'" tabindex="0" role="button" aria-label="Open chat with '+esc(member.name||'Minglora member')+'"><img class="messenger-chat-avatar" src="'+avatar(member)+'" alt=""><span class="messenger-chat-copy"><strong>'+esc(member.name||'Minglora member')+'</strong><small>'+esc(preview)+'</small></span>'+(unread?'<span class="messenger-chat-unread">'+(unread>99?'99+':unread)+'</span>':'')+'<span class="messenger-chat-row-actions">'+action+'</span></article>';
 }
 function bindMessengerConversationRows(list,section){
@@ -3485,20 +3489,30 @@ async function saveMessengerPreference(key,value){
   }
 }
 async function openMessengerDestination(destination){
-  if(['requests','archived','restricted'].includes(destination)){
+  const messengerViews=['requests','archived','restricted'];
+  if(messengerViews.includes(destination)){
     state.messengerPanelSection=destination;state.messengerComposeMode=false;state.messengerSearch='';
     const search=$('#messenger-search-input');if(search)search.value='';
-    renderMessengerPanelList();state.messengerOptionsOpen=false;$('#messenger-options-menu')?.classList.add('hidden');
-    return;
+    state.messengerOptionsOpen=false;$('#messenger-options-menu')?.classList.add('hidden');
+    renderMessengerPanelList();return;
   }
+  const settingsRoutes={
+    privacy:{section:'#settings-privacy'},
+    delivery:{section:'#settings-privacy',focus:'[name="messageAudience"]'},
+    blocking:{section:'#settings-blocking'}
+  };
+  const route=settingsRoutes[destination];
+  if(!route){toast('That Messenger destination is not available.');return;}
   closeMessengerPanel();
   const open=window.MingloraSettings?.open;
   if(typeof open!=='function'){toast('Settings are not available right now.');return;}
   try{
     await open();
-    const target=destination==='blocking'?$('#settings-blocking'):destination==='delivery'?$('#settings-privacy'):$('#settings-privacy');
-    window.setTimeout(()=>{target?.scrollIntoView({behavior:'smooth',block:'start'});if(destination==='delivery')target?.querySelector('[name="messageAudience"]')?.focus();},0);
-  }catch(error){toast(error.message||'Could not open privacy settings.');}
+    const target=$(route.section);
+    if(!target){toast('The requested settings section could not be opened.');return;}
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+    if(route.focus)target.querySelector(route.focus)?.focus();
+  }catch(error){toast(error.message||'Could not open Messenger settings.');}
 }
 async function renderMessages(){
   activateSilent('messages');
@@ -3510,7 +3524,7 @@ async function renderMessages(){
   const conversationRows=visibleConversations.length?visibleConversations.map(conversation=>{
     const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':'Open chat');
     return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><div class="message-inbox-row-actions"><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button><button class="secondary" type="button" data-remove-inbox-chat="'+esc(conversation.user.id)+'">Remove</button></div></div>';
-  }).join(''):'<div class="message-inbox-empty"><div class="empty-icon">✉</div><h3>No conversations yet</h3><p>Open another member’s profile and select Message to start a private chat.</p></div>';
+  }).join(''):'<div class="message-inbox-empty"><div class="empty-icon">'+messenger3dIcon('messages')+'</div><h3>No conversations yet</h3><p>Open another member’s profile and select Message to start a private chat.</p></div>';
   setContent('<div class="page-heading"><div><h1>Messenger</h1><p class="muted">Private conversations from your Minglora account, shared across your signed-in devices.</p></div><span class="eyebrow">'+visibleConversations.length+' conversations</span></div><section class="card"><div class="inbox-people-list">'+conversationRows+'</div></section>');
   document.querySelectorAll('[data-open-inbox-chat]').forEach(button=>button.onclick=()=>{
     const conversation=state.conversations.find(item=>item.user.id===button.dataset.openInboxChat);
