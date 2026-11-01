@@ -96,7 +96,7 @@ function createApp(options = {}) {
       mailDomainVerified: Boolean(config.mailDomainVerified),
       mailDomain: config.mailDomain || null,
       realtimeConfigured: Boolean(config.realtimePublicUrl),
-      realtimeUrl: config.realtimePublicUrl,
+      realtimeUrl: config.realtimePublicUrl ? config.realtimePublicUrl + '/ws' : null,
       registrationAvailable: !config.mingloraSsoSecret && config.smtp.configured,
       deliveryNote: outboundEmailConfigured
         ? 'Outbound messages are queued for the MailHarbor delivery loop running in this application service.'
