@@ -16,7 +16,8 @@ const COLLECTIONS = [
   'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
   'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions', 'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems', 'streambayWatchLater',
-  'mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts'
+  'mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts',
+  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
