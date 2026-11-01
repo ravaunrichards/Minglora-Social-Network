@@ -142,3 +142,14 @@ Copy `.env.example` to a private environment file and replace each `YOUR_PROJECT
 
 - Product: **Minglora**
 - Repository: [ravaunrichards/Minglora-Social-Network](https://github.com/ravaunrichards/Minglora-Social-Network)
+
+
+## MailHarbor — built-in email
+
+Minglora includes MailHarbor as its own mailbox platform. Open **MailHarbor** from the left navigation or visit `/mailharbor/index.html`. MailHarbor uses the signed-in Minglora member session; members do not need a separate MailHarbor password.
+
+The integration design, source mirror, service deployment blueprint, separate database migrations, SSO contract and provider requirements are documented in [integrations/mailharbor/README.md](integrations/mailharbor/README.md).
+
+MailHarbor mailbox messages and delivery jobs are stored in its own PostgreSQL database and are not mixed into Minglora's social-network state. Real outbound sending and inbound receiving require a verified MailHarbor mail domain, an SMTP provider, inbound routing/webhook, matching DNS records and private deployment credentials. The repository does not contain those provider secrets and the service must remain clearly marked as unavailable until configured.
+
+The integrated MailHarbor source currently provides inbox, sent, spam, trash, archive and starred folders, search, read/star/archive/trash actions, plain-text composition, SMTP outbox/retries, signed inbound ingestion and mailbox-change realtime notifications. It is not yet full Gmail parity: attachments, HTML/MIME handling, labels, advanced search, contacts, filters, IMAP/POP3, push notifications and spam classification remain future implementation work.

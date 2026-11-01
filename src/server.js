@@ -21,6 +21,7 @@ import { validateJobPostingInput, validateJobApplicationInput, transitionJobAppl
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
+import { proxyMailHarbor } from './mailharbor-proxy.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -760,6 +761,16 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
+      if (p.startsWith('/api/mailharbor/')) {
+        const result = await proxyMailHarbor({
+          method,
+          pathname: p.slice('/api/mailharbor'.length),
+          search: url.search,
+          input,
+          user
+        });
+        return json(res, result.status, result.body, { 'Cache-Control': 'no-store' });
+      }
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
