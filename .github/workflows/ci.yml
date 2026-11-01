@@ -37,3 +37,23 @@ jobs:
           node --check src/domain/relationships.js
       - name: Run automated tests
         run: npm test
+
+
+  mailharbor:
+    name: MailHarbor service tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install MailHarbor backend dependencies
+        run: npm install --prefix integrations/mailharbor/source/backend --no-audit --no-fund
+      - name: Run MailHarbor API and SSO tests
+        run: npm test --prefix integrations/mailharbor/source/backend
+      - name: Check integrated proxy and web client syntax
+        run: |
+          node --check src/mailharbor-proxy.js
+          node --check public/mailharbor/app.js

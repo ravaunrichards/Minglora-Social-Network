@@ -21,7 +21,7 @@ function verifyMingloraRequest(req, secret, now = Date.now()) {
   if (!Number.isFinite(age) || age > 120000) return false;
   const requestPath = String(req.originalUrl || req.url || '/');
   const bodyHash = crypto.createHash('sha256').update(req.rawBody || Buffer.alloc(0)).digest('hex');
-  const signed = [timestamp, String(req.method || 'GET').toUpperCase(), requestPath, userId, bodyHash].join('\\n');
+  const signed = [timestamp, String(req.method || 'GET').toUpperCase(), requestPath, userId, bodyHash].join('\n');
   const expected = crypto.createHmac('sha256', secret).update(signed).digest();
   const actual = Buffer.from(supplied, 'hex');
   return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);

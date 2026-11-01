@@ -6,7 +6,7 @@ const sha256 = value => crypto.createHash('sha256').update(value || Buffer.alloc
 function signedHeaders({ secret, userId, method, path, body = '' }) {
   const timestamp = String(Date.now());
   const bodyHash = sha256(body);
-  const signed = [timestamp, String(method).toUpperCase(), path, String(userId), bodyHash].join('\\n');
+  const signed = [timestamp, String(method).toUpperCase(), path, String(userId), bodyHash].join('\n');
   const signature = crypto.createHmac('sha256', secret).update(signed).digest('hex');
   return {
     'x-minglora-user-id': String(userId),
