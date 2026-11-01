@@ -6,7 +6,7 @@ const sha256 = value => crypto.createHash('sha256').update(value || Buffer.alloc
 function signedHeaders({ secret, userId, method, path, body = '' }) {
   const timestamp = String(Date.now());
   const bodyHash = sha256(body);
-  const signed = [timestamp, String(method).toUpperCase(), path, String(userId), bodyHash].join('\\n');
+  const signed = [timestamp, String(method).toUpperCase(), path, String(userId), bodyHash].join('\n');
   const signature = crypto.createHmac('sha256', secret).update(signed).digest('hex');
   return {
     'x-minglora-user-id': String(userId),
@@ -16,7 +16,7 @@ function signedHeaders({ secret, userId, method, path, body = '' }) {
 }
 
 function settings() {
-  const base = String(process.env.MAILHARBOR_API_URL || '').trim().replace(/\\/+$/, '');
+  const base = String(process.env.MAILHARBOR_API_URL || '').trim().replace(/\/+$/, '');
   const secret = String(process.env.MAILHARBOR_SSO_SECRET || '');
   if (!base || Buffer.byteLength(secret) < 32) return null;
   let parsed;
@@ -68,7 +68,7 @@ export async function proxyMailHarbor({ method, pathname, search = '', input = {
     if (provision.status < 200 || provision.status >= 300) return provision;
 
     const safePath = String(pathname || '/');
-    if (!safePath.startsWith('/') || safePath.startsWith('//') || safePath.includes('\\\\')) {
+    if (!safePath.startsWith('/') || safePath.startsWith('//') || safePath.includes('\\')) {
       return { status: 400, body: { error: 'Invalid MailHarbor API route.' } };
     }
     const upstreamPath = API_PATH + safePath + String(search || '');
