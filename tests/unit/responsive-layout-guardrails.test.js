@@ -101,3 +101,46 @@ test('login and account creation have separate full-size responsive entry panels
   assert.ok(authScript.includes('new MutationObserver'));
   assert.ok(authScript.includes('[data-auth-mode]'));
 });
+
+
+test('floating windows, dialogs, media viewers and calls follow a safe stacking order', async () => {
+  const css = await read('public/styles.css');
+  const z = selector => {
+    const match = ruleFor(css, selector).match(/z-index:\s*(\d+)/);
+    assert.ok(match, selector + ' must have an explicit layer');
+    return Number(match[1]);
+  };
+  const messageDock = z('#message-window-dock');
+  const modal = z('.modal-backdrop');
+  const storyViewer = z('.story-viewer-backdrop');
+  const camera = z('.device-camera-backdrop');
+  const imageViewer = z('.image-viewer-backdrop');
+  const activeCall = z('.call-overlay');
+  const incomingCall = z('.call-ringing-overlay');
+  assert.ok(modal > messageDock, 'dialogs must cover floating message windows');
+  assert.equal(storyViewer, modal, 'story dialogs must not sit behind message windows');
+  assert.ok(camera > modal, 'device camera must remain above the editor that launched it');
+  assert.ok(imageViewer > camera, 'image viewer must remain above ordinary camera controls');
+  assert.ok(activeCall > imageViewer, 'an active call must not be hidden by an image viewer');
+  assert.ok(incomingCall > activeCall, 'incoming call actions must remain visible above active content');
+});
+
+test('profile cover preview, saved cover and phone layout use the same wide crop shape', async () => {
+  const css = await read('public/styles.css');
+  const mobileStart = css.indexOf('@media(max-width:760px)');
+  const mobileEnd = css.indexOf('@media(max-width:390px)', mobileStart);
+  assert.notEqual(mobileStart, -1);
+  assert.notEqual(mobileEnd, -1);
+  const mobileRules = css.slice(mobileStart, mobileEnd);
+  assert.match(css, /\.profile-cover\{[^}]*aspect-ratio:3\/1/);
+  assert.match(mobileRules, /\.profile-cover\{height:auto;aspect-ratio:3\/1\}/);
+  assert.match(css, /\.profile-crop-preview--cover\{[^}]*aspect-ratio:3\/1;min-height:0/);
+});
+
+test('profile editing dialogs scroll instead of clipping controls on short screens', async () => {
+  const css = await read('public/styles.css');
+  assert.ok(ruleFor(css, '.profile-editor-backdrop').includes('overflow-y:auto'));
+  assert.ok(ruleFor(css, '.profile-editor-modal').includes('overflow:visible'));
+  assert.ok(ruleFor(css, '.profile-editor-modal .modal-body').includes('overflow:visible'));
+});
+
