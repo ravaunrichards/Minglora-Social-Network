@@ -61,3 +61,8 @@
   .content{padding-top:19px}
 }
 @media(prefers-reduced-motion:reduce){.mail-3d-icon{filter:none}}
+
+.toolbar .mail-3d-icon{width:21px;height:21px}
+.signout .mail-3d-icon{display:inline-block;width:18px;height:18px;vertical-align:middle}
+.modalfoot .mail-3d-icon{display:inline-block;width:22px;height:22px;vertical-align:middle}
+.provider-overview .mail-3d-icon,.provider-card .mail-3d-icon{max-width:100%}
