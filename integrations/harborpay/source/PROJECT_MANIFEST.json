@@ -1,7 +1,7 @@
 {
   "project": "HarborPay",
   "version": "1.0.0",
-  "status": "Source snapshot imported into Minglora with an independent consent-based identity bridge and Render blueprint. The current application still supports PayPal checkout/capture, payment history, verified webhooks and merchant records only; wallet transfers, stored-value balances, public merchant checkout and international remittance remain disabled/not implemented.",
+  "status": "HarborPay's dedicated Supabase database is migrated and the consent-based Minglora identity bridge plus customer and merchant user workspaces are implemented in source. Auth email/URL settings, dedicated API/web deployment, PayPal credentials/webhook and live browser verification remain external release requirements. Customer-held stored value, P2P transfers, international remittance and public merchant checkout remain disabled/not implemented.",
   "generated_files": [
     ".gitignore",
     "PROJECT_MANIFEST.json",
@@ -33,7 +33,10 @@
     "docs/DATABASE.md",
     "server/src/merchant.js",
     "server/test/merchant.test.js",
-    "database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql"
+    "database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql",
+    "database/migrations/20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql",
+    "web/src/merchant-workspace.jsx",
+    "web/src/profile-workspace.jsx"
   ],
   "integrations": [
     "Supabase Auth",
@@ -52,7 +55,10 @@
     "Synthetic wallet and sample activity display"
   ],
   "activation_requirements": [
-    "Create and migrate a dedicated HarborPay Supabase project",
+    "Dedicated HarborPay Supabase database is provisioned; all four tracked migrations are applied and verified",
+    "Configure HarborPay Auth Site URL, Minglora/HarborPay redirect URLs, email confirmation and custom SMTP",
+    "Deploy the separate HarborPay API and web services and configure the Minglora consent handoff",
+    "Complete PayPal Sandbox checkout, webhook and account email-confirmation browser tests",
     "Configure HarborPay Supabase Auth and transactional email",
     "Configure PayPal Sandbox REST application credentials",
     "Register the HarborPay PayPal webhook and store its webhook ID",
@@ -60,7 +66,6 @@
     "Complete the full Sandbox checkout and webhook verification checklist",
     "Obtain PayPal Live and Payouts approvals before enabling real-money operations",
     "Complete Jamaican regulatory/legal review before offering stored-value or money-transmission services",
-    "Apply 20261101000300_harborpay_minglora_identity_bridge.sql only to the dedicated HarborPay database",
     "Configure the matching HARBORPAY_SSO_SECRET and MINGLORA_SSO_SECRET as distinct server-only values",
     "Deploy separate HarborPay API and web services and configure the approved Minglora frame-ancestor origin",
     "Complete country-by-country KYC/KYB, licensing, partner and reconciliation review before stored-value or remittance capabilities"
