@@ -120,19 +120,78 @@ export async function getHarborPayBridgeStatus({ fetchImpl = fetch, env = proces
     };
   }
 
-  const identityBridge = health.configured?.mingloraIdentityBridge === true;
+  const identityBridgeConfigured = health.configured?.mingloraIdentityBridge === true;
   const databaseConfigured = health.configured?.supabase === true;
-  const configured = identityBridge && databaseConfigured;
+  if (!identityBridgeConfigured) {
+    return {
+      configured: false,
+      apiReachable: true,
+      identityBridge: false,
+      databaseConfigured,
+      message: "HarborPay is online, but its MINGLORA_SSO_SECRET is missing or too short. Set it to the same private value as Minglora's HARBORPAY_SSO_SECRET."
+    };
+  }
+
+  const healthPath = "/api/integrations/minglora/healthcheck";
+  const body = "{}";
+  const timestamp = String(Date.now());
+  const bodyHash = createHash("sha256").update(body, "utf8").digest("hex");
+  const canonical = [timestamp, "POST", healthPath, bodyHash].join("\n");
+  const signature = createHmac("sha256", String(env.HARBORPAY_SSO_SECRET))
+    .update(canonical, "utf8")
+    .digest("hex");
+
+  let bridgeResponse;
+  try {
+    bridgeResponse = await fetchImpl(apiOrigin + healthPath, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "x-harborpay-timestamp": timestamp,
+        "x-harborpay-signature": signature
+      },
+      body,
+      signal: AbortSignal.timeout(7000)
+    });
+  } catch {
+    return {
+      configured: false,
+      apiReachable: true,
+      identityBridge: false,
+      databaseConfigured,
+      message: "HarborPay is online, but its signed account-link readiness check could not be completed."
+    };
+  }
+
+  const bridgeRaw = await bridgeResponse.text().catch(() => "");
+  let bridge = {};
+  try { bridge = JSON.parse(bridgeRaw); } catch {}
+  if (bridgeResponse.status === 401) {
+    return {
+      configured: false,
+      apiReachable: true,
+      identityBridge: false,
+      databaseConfigured,
+      message: "The HarborPay and Minglora SSO secrets do not match. Set the exact same private secret on both server services."
+    };
+  }
+  if (!bridgeResponse.ok || bridge.ready !== true) {
+    return {
+      configured: false,
+      apiReachable: true,
+      identityBridge: false,
+      databaseConfigured: bridge.databaseConfigured === true,
+      message: bridge.error || "HarborPay's signed account-link readiness check failed (HTTP " + bridgeResponse.status + ")."
+    };
+  }
+
   return {
-    configured,
+    configured: true,
     apiReachable: true,
-    identityBridge,
-    databaseConfigured,
-    message: !identityBridge
-      ? "HarborPay is online, but its MINGLORA_SSO_SECRET is missing or too short. Set it to the exact same private value as Minglora's HARBORPAY_SSO_SECRET."
-      : !databaseConfigured
-        ? "HarborPay is online, but its dedicated Supabase URL or server-only service-role key is not configured."
-        : "HarborPay is online and the account activation bridge is ready."
+    identityBridge: true,
+    databaseConfigured: bridge.databaseConfigured === true,
+    message: "HarborPay is online, the dedicated database is responding and the Minglora signing secret matches."
   };
 }
 
