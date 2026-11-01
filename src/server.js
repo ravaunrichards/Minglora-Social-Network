@@ -165,6 +165,7 @@ function readProfileSections(userId){
 }
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
   if(viewerId===ownerId)return true;
+  if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
   if(audience==='friends')return isFriend(viewerId,ownerId);
   if(audience==='followers')return (db.follows||[]).some(edge=>edge.followerId===viewerId&&edge.followedId===ownerId);
@@ -396,8 +397,16 @@ const canViewStory = (viewerId, story) => canViewStoryPolicy({
 });
 async function pruneExpiredStories() {
   const current = Date.now();
-  const cleaned = removeExpiredStories({ stories:db.stories || [], views:db.storyViews || [], now:current });
+  const activeStories=db.stories||[];
+  const cleaned = removeExpiredStories({ stories:activeStories, views:db.storyViews || [], now:current });
   if (!cleaned.removedCount) return;
+  const retainedIds=new Set(cleaned.stories.map(story=>story.id));
+  const expired=activeStories.filter(story=>!retainedIds.has(story.id));
+  db.storyArchives ||= [];
+  const archivedIds=new Set(db.storyArchives.map(story=>story.id));
+  for(const story of expired){
+    if(!archivedIds.has(story.id))db.storyArchives.unshift({...story,archivedAt:now()});
+  }
   db.stories = cleaned.stories;
   db.storyViews = cleaned.views;
   await saveStore();
