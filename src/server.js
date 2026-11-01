@@ -648,7 +648,7 @@ async function route(req, res) {
   }
 
   if (p.startsWith('/api/')) {
-    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,p.startsWith('/api/mailharbor/')?7_000_000:1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
       if (method === 'POST' && p === '/api/mailharbor/webhooks/resend') {

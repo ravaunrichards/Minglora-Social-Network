@@ -34,7 +34,18 @@ export async function sendMailHarborExternal(message,idempotencyKey) {
   if(!to.length&&cc.length)to=[cc.shift()];
   if(!to.length&&bcc.length)to=[bcc.shift()];
   if(!to.length)throw new Error('At least one external recipient is required.');
-  return request('/emails',{method:'POST',idempotencyKey,body:{from:name+' <'+sender+'>',to,cc,bcc,reply_to:message.reply_to||sender,subject:String(message.subject||''),text:String(message.body_text||'')}});
+  const attachments = (Array.isArray(message.attachments) ? message.attachments : [])
+    .filter(item => item.contentBase64)
+    .map(item => ({
+      filename: String(item.filename || 'attachment').replace(/[\r\n]/g, '_').slice(0, 180),
+      content: String(item.contentBase64),
+      content_type: String(item.contentType || 'application/octet-stream')
+    }));
+  return request('/emails',{method:'POST',idempotencyKey,body:{
+    from:name+' <'+sender+'>',to,cc,bcc,reply_to:message.reply_to||sender,
+    subject:String(message.subject||''),text:String(message.body_text||''),
+    ...(attachments.length ? {attachments} : {})
+  }});
 }
 export async function retrieveResendReceivedEmail(id) {
   if(!/^[a-z0-9-]{16,80}$/i.test(String(id||'')))throw new Error('Invalid Resend inbound email ID.');

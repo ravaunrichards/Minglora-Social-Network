@@ -27,7 +27,12 @@ jobs:
           node --check src/mailharbor-runtime.js
           node --check src/store.js
           node --check backend/modules/mailharbor/service.js
+          node --check backend/modules/mailharbor/oauth.js
+          node --check backend/modules/mailharbor/provider.js
+          node --check public/mailharbor/app.js
+          node --check public/mailharbor/oauth-complete.js
           node --check tests/mailharbor.test.js
+          node --check tests/mailharbor-oauth.test.js
           node --check backend/modules/live/livekit.js
           node --check backend/modules/calls/service.js
           node --check tests/calls.test.js

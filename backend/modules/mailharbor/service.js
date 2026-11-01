@@ -6,14 +6,24 @@ const MESSAGE_FOLDERS = new Set(['inbox', 'sent', 'drafts', 'spam', 'trash', 'ar
 const MAX_RECIPIENTS = 50;
 const MAX_BODY_LENGTH = 100000;
 const MAX_SUBJECT_LENGTH = 998;
+const MAX_ATTACHMENT_COUNT = 5;
+const MAX_ATTACHMENT_BYTES = 1500000;
+const MAX_TOTAL_ATTACHMENT_BYTES = 4000000;
 const DEFAULT_MAILBOX_SETTINGS = Object.freeze({ signature: '', checkForNewMailSeconds: 20, markReadOnOpen: true, showMessagePreview: true, compactView: false });
 import { getMailHarborProviderStatus, retrieveResendReceivedEmail, sendMailHarborExternal, verifyResendWebhook } from './provider.js';
+import {
+  completeMailHarborOAuth, disconnectMailHarborOAuthAccount, getMailHarborOAuthStatus,
+  listMailHarborOAuthAccounts, sendMailHarborOAuthMessage, startMailHarborOAuth,
+  syncMailHarborOAuthAccount
+} from './oauth.js';
 
 function ensureCollections(db) {
   if (!Array.isArray(db.mailboxes)) db.mailboxes = [];
   if (!Array.isArray(db.mailMessages)) db.mailMessages = [];
   if (!Array.isArray(db.users)) db.users = [];
   if (!Array.isArray(db.blocks)) db.blocks = [];
+  if (!Array.isArray(db.mailOAuthStates)) db.mailOAuthStates = [];
+  if (!Array.isArray(db.mailExternalAccounts)) db.mailExternalAccounts = [];
 }
 
 function cleanText(value, maxLength) {
@@ -154,6 +164,33 @@ function validateRecipients(input) {
   return { recipients, unique };
 }
 
+function validateAttachments(value, fallback = []) {
+  if (value === undefined) return { attachments: Array.isArray(fallback) ? fallback : [] };
+  if (!Array.isArray(value)) return { error: 'Attachments must be provided as a file list.' };
+  if (value.length > MAX_ATTACHMENT_COUNT) return { error: 'Attach up to 5 files per message.' };
+  let totalBytes = 0;
+  const attachments = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || typeof item.contentBase64 !== 'string') {
+      return { error: 'One of the attachments is missing its file data.' };
+    }
+    const filename = String(item.filename || '').replace(/[\/\\\r\n\0]/g, '_').trim().slice(0, 180);
+    if (!filename) return { error: 'Every attachment must have a file name.' };
+    const base64 = item.contentBase64.replace(/\s/g, '');
+    if (!base64 || base64.length > 2100000 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) {
+      return { error: 'An attachment contains invalid file data.' };
+    }
+    const size = Buffer.from(base64, 'base64').length;
+    if (!size || size > MAX_ATTACHMENT_BYTES) return { error: 'Each attachment must be 1.5 MB or smaller.' };
+    totalBytes += size;
+    if (totalBytes > MAX_TOTAL_ATTACHMENT_BYTES) return { error: 'The combined attachment size must be 4 MB or smaller.' };
+    const rawType = String(item.contentType || 'application/octet-stream').toLowerCase();
+    const contentType = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(rawType) ? rawType.slice(0, 120) : 'application/octet-stream';
+    attachments.push({ filename, contentType, size, contentBase64: base64 });
+  }
+  return { attachments };
+}
+
 async function persist(db, saveStore, before) {
   try {
     await saveStore();
@@ -183,6 +220,10 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
   const route = String(pathname || '/');
   const query = new URLSearchParams(search);
   const providerStatus = getMailHarborProviderStatus();
+  const memberAccounts = listMailHarborOAuthAccounts(db, mailbox.memberId);
+  const oauthStatus = getMailHarborOAuthStatus(process.env, {
+    mailExternalAccounts: db.mailExternalAccounts.filter(item => item.memberId === String(mailbox.memberId))
+  });
   const internalStatus = {
     service: 'mailharbor', status: 'ready', mailboxMode: 'minglora-internal',
     mailDomain: currentMailboxDomain(), mailboxSettingsEnabled: true,
@@ -193,17 +234,91 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     externalInboundConfigured: providerStatus.inboundEmailConfigured,
     mailboxRefreshMode: 'authenticated-polling',
     externalProviders: {
-      resend: providerStatus.resend, gmail: providerStatus.gmail, yahoo: providerStatus.yahoo,
-      outlook: providerStatus.outlook, icloud: providerStatus.icloud
+      resend: providerStatus.resend, gmail: oauthStatus.gmail,
+      outlook: oauthStatus.outlook,
+      yahoo: { configured: false, connected: false },
+      icloud: { configured: false, connected: false }
     },
+    oauthOutboundEnabled: memberAccounts.length > 0,
+    oauthInboundEnabled: memberAccounts.some(account => account.canSync === true),
+    oauthCallbackUrls: { gmail: oauthStatus.gmail.callbackUrl, outlook: oauthStatus.outlook.callbackUrl },
     externalMailDomainVerified: providerStatus.domainVerified,
     provider: 'resend', realtimeUrl: null,
     deliveryNote: providerStatus.outboundEmailConfigured
-      ? 'External email is queued through Resend. Signed provider delivery receipts update final delivery status.'
-      : 'Internal Minglora send and receive are active. External sending requires a Resend API key and a verified public sender domain. Inbound also requires a signed webhook and receiving-domain routing.'
+      ? 'External Internet email can be sent through the verified Resend domain. Signed provider receipts update delivery state.'
+      : memberAccounts.some(account => account.canSync === true)
+        ? 'External email can be sent through a connected account. Outlook inbox sync imports incoming messages into MailHarbor.'
+        : memberAccounts.length
+          ? 'External sending is enabled through a connected Gmail account. Inbox sync is not included for Gmail on the zero-cost path.'
+          
+        : 'Internal Minglora mail is active. Connect a Gmail or Outlook account to send and receive external email without a Minglora-owned mail domain.'
   };
 
   if (verb === 'GET' && route === '/status') return { status: 200, body: internalStatus };
+
+  if (verb === 'GET' && route === '/accounts') {
+    return { status: 200, body: {
+      accounts: memberAccounts,
+      providers: oauthStatus,
+      resend: providerStatus.resend,
+      internalMailbox: { address: mailbox.email, internetRoutable: !mailbox.email.endsWith('.invalid') }
+    } };
+  }
+
+  const oauthStartMatch = route.match(/^\/oauth\/(gmail|outlook)\/start$/);
+  if (oauthStartMatch && verb === 'POST') {
+    try {
+      const started = await startMailHarborOAuth({
+        provider: oauthStartMatch[1], memberId: mailbox.memberId, db, saveStore
+      });
+      return { status: 200, body: started };
+    } catch (error) {
+      return { status: error.status || 503, body: { error: error.message || 'Could not start the provider connection.' } };
+    }
+  }
+
+  const oauthCallbackMatch = route.match(/^\/oauth\/(gmail|outlook)\/callback$/);
+  if (oauthCallbackMatch && verb === 'GET') {
+    const provider = oauthCallbackMatch[1];
+    let destination = '/mailharbor/index.html?oauth=connected';
+    try {
+      await completeMailHarborOAuth({
+        provider, memberId: mailbox.memberId,
+        code: query.get('code'), state: query.get('state'), providerError: query.get('error'),
+        db, saveStore
+      });
+      destination += '&provider=' + encodeURIComponent(provider);
+    } catch (error) {
+      destination = '/mailharbor/index.html?oauth=error&message=' +
+        encodeURIComponent(String(error.message || 'The provider connection failed.').slice(0, 240));
+    }
+    const origin = String(process.env.APP_ORIGIN || 'https://minglora-social-network.onrender.com').replace(/\/+$/, '');
+    return { status: 302, redirectTo: origin + destination, body: null };
+  }
+
+  const accountSyncMatch = route.match(/^\/accounts\/([a-f0-9-]{20,80})\/sync$/i);
+  if (accountSyncMatch && verb === 'POST') {
+    try {
+      const result = await syncMailHarborOAuthAccount({
+        db, memberId: mailbox.memberId, accountId: accountSyncMatch[1], saveStore, makeMessageId
+      });
+      return { status: 200, body: result };
+    } catch (error) {
+      return { status: error.status || 502, body: { error: error.message || 'Mailbox sync failed.' } };
+    }
+  }
+
+  const accountMatch = route.match(/^\/accounts\/([a-f0-9-]{20,80})$/i);
+  if (accountMatch && verb === 'DELETE') {
+    try {
+      const result = await disconnectMailHarborOAuthAccount({
+        db, memberId: mailbox.memberId, accountId: accountMatch[1], saveStore
+      });
+      return { status: 200, body: result };
+    } catch (error) {
+      return { status: error.status || 503, body: { error: error.message || 'Could not disconnect the account.' } };
+    }
+  }
   if (verb === 'GET' && route === '/me') {
     return {
       status: 200,
@@ -266,7 +381,15 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     messages.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)) || Number(b.id) - Number(a.id));
     return {
       status: 200,
-      body: { messages: messages.slice(offset, offset + limit), count: messages.length, limit, offset }
+      body: {
+        messages: messages.slice(offset, offset + limit).map(message => ({
+          ...message,
+          attachments: (message.attachments || []).map(({ contentBase64, ...attachment }) => ({
+            ...attachment, available: Boolean(contentBase64)
+          }))
+        })),
+        count: messages.length, limit, offset
+      }
     };
   }
 
@@ -288,12 +411,14 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     const bodyText = String(input.body ?? '');
     if (subject.length > MAX_SUBJECT_LENGTH) return { status: 400, body: { error: 'Subject must be 998 characters or fewer.' } };
     if (bodyText.length > MAX_BODY_LENGTH) return { status: 400, body: { error: 'Draft is too long.' } };
+    const parsedAttachments = validateAttachments(input.attachments);
+    if (parsedAttachments.error) return { status: 400, body: { error: parsedAttachments.error } };
     const before = structuredClone(db.mailMessages);
     const createdAt = new Date().toISOString();
     const id = makeMessageId(db);
     db.mailMessages.push({
       id, owner_id: mailbox.memberId, sender_email: mailbox.email, reply_to: mailbox.email,
-      recipients: parsed.recipients, subject, body_text: bodyText, folder: 'drafts',
+      recipients: parsed.recipients, subject, body_text: bodyText, attachments: parsedAttachments.attachments, folder: 'drafts',
       is_read: true, is_starred: false, delivery_status: 'draft', delivery_channel: 'drafts',
       last_error: null, created_at: createdAt, updated_at: createdAt
     });
@@ -321,12 +446,28 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     if (subject.length > MAX_SUBJECT_LENGTH) return { status: 400, body: { error: 'Subject must be 998 characters or fewer.' } };
     if (!bodyText.trim()) return { status: 400, body: { error: 'Write a message before sending.' } };
     if (bodyText.length > MAX_BODY_LENGTH) return { status: 400, body: { error: 'Message is too long.' } };
+    const parsedAttachments = validateAttachments(input.attachments, draft?.attachments || []);
+    if (parsedAttachments.error) return { status: 400, body: { error: parsedAttachments.error } };
 
-    const providerStatus = getMailHarborProviderStatus();
+    const liveProviderStatus = getMailHarborProviderStatus();
     const internalAddresses = parsed.unique.filter(email => email.split('@')[1] === currentMailboxDomain());
     const externalAddresses = parsed.unique.filter(email => email.split('@')[1] !== currentMailboxDomain());
-    if (externalAddresses.length && !providerStatus.outboundEmailConfigured) {
-      return { status: 503, body: { error: 'External email delivery is not active. Configure a Resend API key and verify a public MailHarbor sender domain first. No external message was queued.' } };
+    const requestedAccountId = String(input.fromAccountId || '').trim();
+    let externalAccount = null;
+    if (externalAddresses.length && requestedAccountId) {
+      externalAccount = db.mailExternalAccounts.find(item =>
+        item.id === requestedAccountId && item.memberId === String(mailbox.memberId) && item.status === 'connected'
+      ) || null;
+      if (!externalAccount) return { status: 404, body: { error: 'That connected sending account is not available in your mailbox.' } };
+    } else if (externalAddresses.length && !liveProviderStatus.outboundEmailConfigured) {
+      externalAccount = db.mailExternalAccounts.find(item =>
+        item.memberId === String(mailbox.memberId) && item.status === 'connected' && item.isDefault === true
+      ) || db.mailExternalAccounts.find(item =>
+        item.memberId === String(mailbox.memberId) && item.status === 'connected'
+      ) || null;
+    }
+    if (externalAddresses.length && !externalAccount && !liveProviderStatus.outboundEmailConfigured) {
+      return { status: 503, body: { error: 'External email is not connected. Connect a Gmail or Outlook account in MailHarbor → Connected accounts, or configure a verified Resend sending domain.' } };
     }
     const before = { mailboxes: structuredClone(db.mailboxes), mailMessages: structuredClone(db.mailMessages) };
     const internalResolved = internalAddresses.map(email => ({ email, recipient: mailboxForAddress(db, email) }));
@@ -346,7 +487,9 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     const recipients = parsed.recipients;
     const messageId = makeMessageId(db);
     const externalDelivery = externalAddresses.length ? {
-      status: 'queued', attempts: 0, nextAttemptAt: createdAt,
+      status: 'queued', provider: externalAccount ? externalAccount.provider : 'resend',
+      accountId: externalAccount ? externalAccount.id : null,
+      attempts: 0, nextAttemptAt: createdAt,
       to: recipients.to.filter(email => externalAddresses.includes(email)),
       cc: recipients.cc.filter(email => externalAddresses.includes(email)),
       bcc: recipients.bcc.filter(email => externalAddresses.includes(email))
@@ -355,9 +498,9 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     db.mailMessages.push({
       id: messageId, owner_id: mailbox.memberId, sender_email: mailbox.email,
       sender_name: mailbox.displayName, reply_to: mailbox.email, recipients,
-      subject, body_text: bodyText, folder: 'sent', is_read: true, is_starred: false,
+      subject, body_text: bodyText, attachments: parsedAttachments.attachments, folder: 'sent', is_read: true, is_starred: false,
       delivery_status: hasExternal ? 'queued' : 'delivered',
-      delivery_channel: hasExternal ? (internalResolved.length ? 'mixed' : 'resend') : 'minglora_internal',
+      delivery_channel: hasExternal ? (internalResolved.length ? 'mixed' : (externalAccount ? externalAccount.provider : 'resend')) : 'minglora_internal',
       externalDelivery, last_error: null, created_at: createdAt,
       sent_at: hasExternal ? null : createdAt, delivered_at: hasExternal ? null : createdAt
     });
@@ -366,7 +509,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
         id: makeMessageId(db), owner_id: recipient.memberId, sender_email: mailbox.email,
         sender_name: mailbox.displayName, reply_to: mailbox.email,
         recipients: { to: recipients.to, cc: recipients.cc, bcc: [] },
-        subject, body_text: bodyText, folder: 'inbox', is_read: false, is_starred: false,
+        subject, body_text: bodyText, attachments: structuredClone(parsedAttachments.attachments), folder: 'inbox', is_read: false, is_starred: false,
         delivery_status: 'received', delivery_channel: 'minglora_internal',
         last_error: null, created_at: createdAt, sent_at: null, received_at: createdAt
       });
@@ -379,7 +522,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     }
     return { status: 202, body: { message: {
       id: messageId, delivery_status: hasExternal ? 'queued' : 'delivered',
-      delivery_channel: hasExternal ? (internalResolved.length ? 'mixed' : 'resend') : 'minglora_internal',
+      delivery_channel: hasExternal ? (internalResolved.length ? 'mixed' : (externalAccount ? externalAccount.provider : 'resend')) : 'minglora_internal',
       externalRecipientsQueued: externalAddresses.length, internalRecipientsDelivered: internalResolved.length,
       created_at: createdAt
     } } };
@@ -419,6 +562,11 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
         const parsed = validateDraftRecipients(input, message.recipients || {});
         if (parsed.error) return { status: 400, body: { error: parsed.error } };
         patch.recipients = parsed.recipients;
+      }
+      if (input.attachments !== undefined) {
+        const parsed = validateAttachments(input.attachments);
+        if (parsed.error) return { status: 400, body: { error: parsed.error } };
+        patch.attachments = parsed.attachments;
       }
     }
     if (!Object.keys(patch).length) return { status: 400, body: { error: 'No supported message changes were provided.' } };
@@ -486,16 +634,28 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
 export { INTERNAL_MAIL_DOMAIN, ensureMailbox, parseAddressList, validateRecipients };
 
 let mailHarborWorkerBusy = false;
-export async function processMailHarborOutbox({ db, saveStore, sendEmail = sendMailHarborExternal, now = Date.now } = {}) {
+export async function processMailHarborOutbox({ db, saveStore, sendEmail = sendMailHarborExternal, sendOAuthEmail = sendMailHarborOAuthMessage, now = Date.now } = {}) {
   ensureCollections(db);
   if (mailHarborWorkerBusy) return { processed: false, reason: 'busy' };
-  if (!getMailHarborProviderStatus().outboundEmailConfigured) return { processed: false, reason: 'provider-not-configured' };
   const current = now();
+  const resendReady = getMailHarborProviderStatus().outboundEmailConfigured;
   const message = db.mailMessages.find(item => item.folder === 'sent' && item.externalDelivery &&
     ['queued', 'processing'].includes(item.externalDelivery.status) &&
     (Date.parse(item.externalDelivery.nextAttemptAt || 0) <= current ||
-      (item.externalDelivery.status === 'processing' && current - Date.parse(item.externalDelivery.processingAt || 0) > 300000)));
+      (item.externalDelivery.status === 'processing' && current - Date.parse(item.externalDelivery.processingAt || 0) > 300000)) &&
+    (String(item.externalDelivery.provider || 'resend') !== 'resend' || resendReady));
   if (!message) return { processed: false, reason: 'empty' };
+  const deliveryProvider = String(message.externalDelivery.provider || 'resend');
+  if (['gmail', 'outlook'].includes(deliveryProvider) &&
+      !db.mailExternalAccounts.some(item => item.id === message.externalDelivery.accountId &&
+        item.memberId === String(message.owner_id) && item.status === 'connected')) {
+    message.externalDelivery.status = 'failed';
+    message.delivery_status = 'failed';
+    message.last_error = 'The connected sending account is no longer available. Reconnect it and send the message again.';
+    await saveStore().catch(() => {});
+    return { processed: true, messageId: message.id, status: 'failed', error: message.last_error };
+  }
+  if (!['resend', 'gmail', 'outlook'].includes(deliveryProvider)) return { processed: false, reason: 'unsupported-provider' };
   mailHarborWorkerBusy = true;
   const before = structuredClone(message);
   try {
@@ -509,13 +669,17 @@ export async function processMailHarborOutbox({ db, saveStore, sendEmail = sendM
     return { processed: false, reason: 'persistence-failed', error: error.message };
   }
   try {
-    const result = await sendEmail(message, 'minglora-mailharbor-' + String(message.id));
+    const result = deliveryProvider === 'resend'
+      ? await sendEmail(message, 'minglora-mailharbor-' + String(message.id))
+      : await sendOAuthEmail({
+          db, memberId: message.owner_id, accountId: message.externalDelivery.accountId, message, saveStore
+        });
     message.externalDelivery.status = 'sent';
     message.externalDelivery.providerMessageId = String(result.id || result.messageId || '');
     message.externalDelivery.acceptedAt = new Date(now()).toISOString();
     message.provider_message_id = message.externalDelivery.providerMessageId;
     message.delivery_status = 'sent';
-    message.delivery_channel = 'resend';
+    message.delivery_channel = deliveryProvider;
     message.sent_at = message.externalDelivery.acceptedAt;
     message.last_error = null;
     await saveStore();

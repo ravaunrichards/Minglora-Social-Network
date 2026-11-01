@@ -72,10 +72,13 @@
     <form id="compose-form">
       <div class="modalhead"><div><b>New message</b><p>Send to a Minglora member using @username. Internet email activates when the external provider is configured.</p></div><button class="iconbtn" id="close-compose" type="button" aria-label="Close"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#close"></use></svg></button></div>
       <label class="field">To<input id="to" type="text" placeholder="@username or name@example.com"></label>
+      <label class="field">Send from<select id="from-account"><option value="">Use default sending account</option></select><span class="optional">External recipients use the selected connected account. Internal members still receive your Minglora mailbox copy.</span></label>
       <label class="field">Cc <span class="optional">(optional)</span><input id="cc" type="text" placeholder="@username or name@example.com"></label>
       <label class="field">Bcc <span class="optional">(optional)</span><input id="bcc" type="text" placeholder="@username or name@example.com"></label>
       <label class="field">Subject<input id="subject" type="text" maxlength="998" placeholder="Subject"></label>
       <label class="field">Message<textarea id="body" rows="8" maxlength="100000" placeholder="Write your message…"></textarea></label>
+      <label class="field">Attachments<input id="attachments" type="file" multiple><span class="optional">Up to 5 files, 1.5 MB each, 4 MB total.</span></label>
+      <div id="compose-attachments" class="mail-attachment-list" aria-live="polite"></div>
       <div class="modalfoot"><span id="compose-feedback" class="feedback" role="status"></span><button class="secondary" id="save-draft" type="button"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#drafts"></use></svg> Save draft</button><button class="primary" id="send" type="submit"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#sent"></use></svg> Send message</button></div>
     </form>
   </dialog>
@@ -84,10 +87,15 @@
     <div class="modalhead"><div><b id="detail-subject">Message</b><p id="detail-date"></p></div><button class="iconbtn" id="close-detail" type="button" aria-label="Close"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#close"></use></svg></button></div>
     <div class="detail-meta"><div><strong>From</strong><span id="detail-from"></span></div><div><strong>To</strong><span id="detail-to"></span></div><div><strong>Status</strong><span id="detail-status"></span></div></div>
     <pre id="detail-body" class="detail-body"></pre>
+    <div id="detail-attachments" class="mail-attachment-list detail-attachments"></div>
+    <div class="message-action-row">
+      <button class="secondary" id="reply-message" type="button">Reply</button>
+      <button class="secondary" id="forward-message" type="button">Forward</button>
+    </div>
     <p id="detail-error" class="detail-error is-hidden"></p>
   </dialog>
 
   <script>if(new URLSearchParams(location.search).get('embedded')==='1')document.body.classList.add('mailharbor-embedded');</script>
-  <script src="app.js?v=20261101-mailharbor-settings-1" defer></script>
+  <script src="app.js?v=20261101-mailharbor-oauth-1" defer></script>
 </body>
 </html>

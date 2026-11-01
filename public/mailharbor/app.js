@@ -9,6 +9,10 @@ function mailIcon(id, className = 'mail-3d-icon') {
 let token = '';
 let currentUser = null;
 let currentFolder = 'inbox';
+let mailAccounts = [];
+let mailProviders = {};
+let pendingAttachments = [];
+let activeMessage = null;
 let messageList = [];
 let selected = new Set();
 let currentDraftId = null;
@@ -87,19 +91,20 @@ function updateCapabilityText() {
   const outbound = Boolean(mailStatus.outboundEmailConfigured);
   const internal = Boolean(mailStatus.internalMessagingEnabled);
   const inbound = Boolean(mailStatus.inboundEmailConfigured);
-  const canCompose = outbound || internal;
+  const oauthEnabled = mailStatus.oauthOutboundEnabled === true;
+  const canCompose = outbound || oauthEnabled || internal;
   $('auth-capability').textContent = currentUser?.email
     ? 'Your Minglora mailbox: ' + mailboxDisplayAddress() + (internal ? ' · Send to members using @username.' : ' · Mail service status verified.')
     : 'Mailbox status is checked against the live Minglora service.';
   $('compose').disabled = !canCompose;
   $('send').disabled = !canCompose;
-  $('service-banner').classList.toggle('is-hidden', outbound && inbound);
-  if (internal && !outbound && !inbound) {
-    $('service-banner').textContent = 'MailHarbor is active inside Minglora: internal sending and receiving are enabled. External Internet email is not connected yet.';
-  } else if (!outbound) {
-    $('service-banner').textContent = 'External sending is awaiting a verified MailHarbor sender domain and delivery provider.';
-  } else if (!inbound) {
-    $('service-banner').textContent = 'External sending is configured. External receiving is awaiting inbound routing, signed webhook verification and matching MX records.';
+  $('service-banner').classList.toggle('is-hidden', (outbound && inbound) || (oauthEnabled && mailStatus.oauthInboundEnabled));
+  if (internal && !outbound && !oauthEnabled && !inbound) {
+    $('service-banner').textContent = 'MailHarbor is active inside Minglora: internal sending and receiving are enabled. Connect Gmail or Outlook for external mail.';
+  } else if (!outbound && !oauthEnabled) {
+    $('service-banner').textContent = 'External sending is awaiting a connected Gmail/Outlook account or a verified MailHarbor sender domain.';
+  } else if (!inbound && !oauthEnabled) {
+    $('service-banner').textContent = 'External sending is configured. External receiving is awaiting inbound routing or a connected Gmail/Outlook mailbox.';
   }
 }
 
@@ -109,15 +114,29 @@ function showAuth() {
   $('mail-app').classList.add('is-hidden');
 }
 
+let lastExternalSyncAt = 0;
+async function syncConnectedAccountsQuietly(force = false) {
+  if (!mailAccounts.some(account => account.canSync) || document.visibilityState === 'hidden') return;
+  const current = Date.now();
+  if (!force && current - lastExternalSyncAt < 60000) return;
+  lastExternalSyncAt = current;
+  await Promise.allSettled(mailAccounts.filter(account => account.canSync).map(account =>
+    request('/accounts/' + encodeURIComponent(account.id) + '/sync', { method: 'POST', body: {} })
+  ));
+}
+
 function startMailPolling() {
   if (mailPollingTimer) window.clearInterval(mailPollingTimer);
   const seconds = [15, 20, 30, 60].includes(Number(mailSettingsState.checkForNewMailSeconds))
     ? Number(mailSettingsState.checkForNewMailSeconds) : 20;
   mailPollingTimer = window.setInterval(() => {
     if (document.visibilityState !== 'hidden' && currentUser && !['accounts', 'settings'].includes(currentFolder)) {
-      loadMessages().catch(() => {});
+      syncConnectedAccountsQuietly().finally(() => loadMessages().catch(() => {}));
     }
   }, seconds * 1000);
+  syncConnectedAccountsQuietly(true).then(() => {
+    if (currentFolder !== 'accounts' && currentFolder !== 'settings') loadMessages().catch(() => {});
+  }).catch(() => {});
 }
 
 function showMailbox() {
@@ -188,7 +207,7 @@ function stopRealtime() {
 }
 
 async function loadMessages() {
-  if (currentFolder === 'accounts') { renderConnectedAccounts(); return; }
+  if (currentFolder === 'accounts') { await renderConnectedAccounts(); return; }
   if (currentFolder === 'settings') { await renderSettings(); return; }
   const query = new URLSearchParams({ folder: currentFolder });
   const search = $('search').value.trim();
@@ -213,34 +232,73 @@ function formatDate(value) {
 }
 
 
-function renderConnectedAccounts() {
+async function loadConnectedAccounts() {
+  const result = await request('/accounts');
+  mailAccounts = result.accounts || [];
+  mailProviders = result.providers || {};
+  mailStatus.externalProviders = {
+    ...(mailStatus.externalProviders || {}),
+    gmail: mailProviders.gmail || { configured: false, connected: false },
+    outlook: mailProviders.outlook || { configured: false, connected: false }
+  };
+  mailStatus.oauthOutboundEnabled = mailAccounts.length > 0;
+  mailStatus.oauthInboundEnabled = mailAccounts.some(account => account.canSync === true);
+  updateCapabilityText();
+  return result;
+}
+
+async function renderConnectedAccounts(feedback = '') {
+  const result = await loadConnectedAccounts();
   const providers = [
-    { key: 'gmail', name: 'Gmail', description: 'Google mailbox sync through user-approved OAuth.' },
-    { key: 'yahoo', name: 'Yahoo Mail', description: 'Yahoo mailbox sync through user-approved OAuth.' },
-    { key: 'outlook', name: 'Outlook', description: 'Microsoft mailbox sync through Microsoft identity.' },
-    { key: 'icloud', name: 'iCloud Mail', description: 'Apple mail access through supported account authorization.' }
+    { key: 'gmail', name: 'Gmail', description: 'Connect Gmail to send from your address. Inbox sync is excluded from the zero-cost server integration because Google classifies inbox-reading scopes as restricted.' },
+    { key: 'outlook', name: 'Outlook', description: 'Connect Outlook or Microsoft 365. MailHarbor can sync your inbox and send from your address.' },
+    { key: 'yahoo', name: 'Yahoo Mail', description: 'Yahoo account sync is not implemented in this version.' },
+    { key: 'icloud', name: 'iCloud Mail', description: 'iCloud account sync is not implemented in this version.' }
   ];
-  const connections = mailStatus.externalProviders || {};
   $('heading').textContent = 'Connected accounts';
-  $('subheading').textContent = 'See which mail providers are connected to your Minglora mailbox.';
-  $('count').textContent = '1 active mailbox';
+  $('subheading').textContent = 'Connect an existing mailbox. MailHarbor never sees your provider password.';
+  $('count').textContent = mailAccounts.length + (mailAccounts.length === 1 ? ' connected account' : ' connected accounts');
   $('toolbar').classList.add('is-hidden');
   $('folders').querySelectorAll('[data-folder]').forEach(button => button.classList.toggle('active', button.dataset.folder === 'accounts'));
-  const resend = connections.resend || {};
+  const resend = result.resend || mailStatus.externalProviders?.resend || {};
   const resendConnected = resend.connected === true;
+  const connectedCards = mailAccounts.map(account =>
+    '<article class="provider-card"><div class="provider-card-icon">' + mailIcon('external-link') + '</div>' +
+    '<div class="provider-card-copy"><h3>' + escapeHtml(account.provider === 'gmail' ? 'Gmail' : 'Outlook') + '</h3>' +
+    '<p>' + escapeHtml(account.email) + (account.isDefault ? ' · Default sender' : '') + '</p>' +
+    '<span class="provider-state active">Connected</span>' +
+    (account.lastSyncedAt ? '<p>Last synced: ' + escapeHtml(formatDate(account.lastSyncedAt)) + '</p>' : '') +
+    (account.lastError ? '<p class="provider-notice">' + escapeHtml(account.lastError) + '</p>' : '') +
+    (account.canSync ? '<div class="provider-actions"><button type="button" class="secondary" data-oauth-sync="' + escapeHtml(account.id) + '">Sync inbox</button>' :
+      '<p class="provider-notice">Sending is available. Inbox sync is not enabled on the zero-cost Gmail integration.</p>') +
+    '<div class="provider-actions"><button type="button" class="secondary" data-oauth-disconnect="' + escapeHtml(account.id) + '">Disconnect</button></div></div></article>'
+  ).join('');
+  const providerCards = providers.map(provider => {
+    const state = mailProviders[provider.key] || {};
+    const connected = mailAccounts.some(account => account.provider === provider.key);
+    if (connected || provider.key === 'gmail' && mailAccounts.some(account => account.provider === 'gmail') ||
+        provider.key === 'outlook' && mailAccounts.some(account => account.provider === 'outlook')) return '';
+    const enabled = ['gmail', 'outlook'].includes(provider.key) && state.configured === true;
+    const label = enabled ? 'Ready to connect' : ['gmail', 'outlook'].includes(provider.key) ? 'OAuth setup required' : 'Not available yet';
+    const button = enabled
+      ? '<button type="button" class="secondary provider-connect" data-oauth-connect="' + provider.key + '">Connect ' + provider.name + '</button>'
+      : '<button type="button" class="secondary provider-connect" disabled>' + (['gmail', 'outlook'].includes(provider.key) ? 'Setup required' : 'Unavailable') + '</button>';
+    const callback = state.callbackUrl
+      ? '<p class="provider-callback">Callback URL: <code>' + escapeHtml(state.callbackUrl) + '</code></p>' : '';
+    return '<article class="provider-card"><div class="provider-card-icon">' + mailIcon('external-link') + '</div>' +
+      '<div class="provider-card-copy"><h3>' + provider.name + '</h3><p>' + provider.description + '</p>' +
+      '<span class="provider-state pending">' + label + '</span>' + callback + button + '</div></article>';
+  }).join('');
   $('messages').innerHTML =
     '<section class="provider-overview"><div class="provider-overview-icon">' + mailIcon('mailharbor') + '</div><div><strong>Minglora Mailbox</strong><p>' + escapeHtml(mailboxDisplayAddress()) + '</p></div><span class="provider-state active">Active</span></section>' +
-    '<div class="provider-section-heading"><div><h2>MailHarbor delivery provider</h2><p>Outbound and inbound Internet mail through the verified MailHarbor domain.</p></div></div>' +
-    '<div class="provider-grid"><article class="provider-card"><div class="provider-card-icon">' + mailIcon('delivery') + '</div><div class="provider-card-copy"><h3>Resend delivery</h3><p>External sending, receiving and signed delivery receipts.</p><span class="provider-state ' + (resendConnected ? 'active' : 'pending') + '">' + (resendConnected ? 'Connected' : 'Awaiting API key and verified domain') + '</span></div></article></div>' +
-    '<div class="provider-section-heading"><div><h2>External mailbox sync</h2><p>Third-party accounts connect separately through each provider’s OAuth authorization.</p></div></div>' +
-    '<div class="provider-grid">' + providers.map(provider => {
-      const state = connections[provider.key] || {};
-      const connected = state.connected === true;
-      const configured = state.configured === true;
-      const label = connected ? 'Connected' : configured ? 'Ready for authorization' : 'Not connected';
-      return '<article class="provider-card"><div class="provider-card-icon">' + mailIcon('external-link') + '</div><div class="provider-card-copy"><h3>' + provider.name + '</h3><p>' + provider.description + '</p><span class="provider-state ' + (connected ? 'active' : 'pending') + '">' + label + '</span></div><button type="button" class="secondary provider-connect" disabled title="Provider OAuth credentials and authorization callback are not configured">Unavailable</button></article>';
-    }).join('') + '</div>' +
-    '<p class="provider-notice" role="note">Gmail, Yahoo, Outlook and iCloud are not being represented as connected. Their account data will only sync after the required provider credentials, callback routes, scopes and your explicit authorization are in place.</p>';
+    '<div class="provider-section-heading"><div><h2>MailHarbor delivery provider</h2><p>Optional server-side sending through a verified MailHarbor domain.</p></div></div>' +
+    '<div class="provider-grid"><article class="provider-card"><div class="provider-card-icon">' + mailIcon('delivery') + '</div><div class="provider-card-copy"><h3>Resend delivery</h3><p>Domain-based external sending and inbound routes.</p><span class="provider-state ' + (resendConnected ? 'active' : 'pending') + '">' + (resendConnected ? 'Connected' : 'Not configured') + '</span></div></article></div>' +
+    '<div class="provider-section-heading"><div><h2>Your external mailboxes</h2><p>Connected accounts use your approval and can be disconnected at any time.</p></div></div>' +
+    (connectedCards ? '<div class="provider-grid">' + connectedCards + '</div>' : '<p class="provider-notice">No external accounts connected yet.</p>') +
+    '<div class="provider-section-heading"><div><h2>Connect an account</h2><p>Gmail sending and Outlook sending/inbox sync require private application credentials. Google inbox sync is excluded from the $0 setup; see the notes on this page.</p></div></div>' +
+    '<div class="provider-grid">' + providerCards + '</div>' +
+    '<p class="provider-notice" role="status">' + escapeHtml(feedback) + '</p>' +
+    '<p class="provider-notice" role="note">Gmail and Outlook use encrypted server-side OAuth tokens. MailHarbor does not ask for or store your provider password. Yahoo and iCloud are not yet integrated.</p>';
 }
 
 async function renderSettings(settings, feedback = '') {
@@ -308,6 +366,10 @@ function renderMessages() {
       : (message.sender_name ? message.sender_name + ' · ' : '') + message.sender_email;
     const status = message.delivery_channel === 'minglora_internal' && message.delivery_status === 'delivered'
       ? '<span class="delivery sent">Delivered internally</span>'
+      : ['gmail', 'outlook'].includes(message.delivery_channel) && message.delivery_status === 'sent'
+        ? '<span class="delivery queued">Accepted by ' + escapeHtml(message.delivery_channel === 'gmail' ? 'Gmail' : 'Outlook') + '</span>'
+      : ['gmail', 'outlook'].includes(message.delivery_channel) && message.delivery_status === 'failed'
+        ? '<span class="delivery failed">External send failed</span>'
       : message.delivery_channel === 'resend' && message.delivery_status === 'delivered'
         ? '<span class="delivery sent">Delivered externally</span>'
         : message.delivery_status === 'queued' ? '<span class="delivery queued">Queued for delivery</span>'
@@ -334,6 +396,10 @@ async function openMessage(id) {
     const message = result.message;
     if (message.folder === 'drafts') {
       currentDraftId = Number(message.id);
+      pendingAttachments = Array.isArray(message.attachments) ? message.attachments : [];
+      $('attachments').value = '';
+      renderComposeAttachments();
+      populateFromAccountSelect();
       $('to').value = (message.recipients?.to || []).join(', ');
       $('cc').value = (message.recipients?.cc || []).join(', ');
       $('bcc').value = (message.recipients?.bcc || []).join(', ');
@@ -343,7 +409,10 @@ async function openMessage(id) {
       $('composer').showModal();
       return;
     }
+    activeMessage = message;
     $('detail-subject').textContent = message.subject || '(no subject)';
+    renderDetailAttachments(message.attachments || []);
+
     $('detail-date').textContent = formatDate(message.created_at);
     $('detail-from').textContent = (message.sender_name ? message.sender_name + ' · ' : '') + (message.sender_email || '');
     const recipients = message.recipients || {};
@@ -378,14 +447,113 @@ async function mutateSelected(action) {
 }
 
 
-function composePayload() {
-  return {
+async function selectedFileAttachments() {
+  const files = Array.from($('attachments')?.files || []);
+  if (pendingAttachments.length + files.length > 5) throw new Error('Attach up to 5 files per message.');
+  const knownBytes = pendingAttachments.reduce((sum, item) => sum + Number(item.size || 0), 0);
+  const newBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (knownBytes + newBytes > 4000000) throw new Error('The combined attachment size must be 4 MB or smaller.');
+  if (files.some(file => file.size > 1500000)) throw new Error('Each attachment must be 1.5 MB or smaller.');
+  return Promise.all(files.map(file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the selected attachment.'));
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const separator = result.indexOf(',');
+      if (separator < 0) return reject(new Error('Could not encode the selected attachment.'));
+      resolve({
+        filename: file.name,
+        contentType: file.type || 'application/octet-stream',
+        size: file.size,
+        contentBase64: result.slice(separator + 1)
+      });
+    };
+    reader.readAsDataURL(file);
+  })));
+}
+
+function renderComposeAttachments() {
+  const input = $('attachments');
+  const selectedFiles = Array.from(input?.files || []);
+  const items = [...pendingAttachments, ...selectedFiles.map(file => ({ filename: file.name, size: file.size }))];
+  $('compose-attachments').innerHTML = items.length
+    ? '<div class="attachment-chip-list">' + items.map(item =>
+        '<span class="attachment-chip">' + mailIcon('compose') + '<span>' + escapeHtml(item.filename || 'Attachment') +
+        '</span><small>' + Math.max(0, Math.round(Number(item.size || 0) / 1024)) + ' KB</small></span>'
+      ).join('') + '</div>'
+    : '';
+}
+
+function renderDetailAttachments(attachments) {
+  const items = Array.isArray(attachments) ? attachments : [];
+  const container = $('detail-attachments');
+  if (!items.length) {
+    container.innerHTML = '';
+    container.classList.add('is-hidden');
+    return;
+  }
+  container.classList.remove('is-hidden');
+  container.innerHTML = '<strong>Attachments</strong><div class="attachment-chip-list">' + items.map(item => {
+    const filename = escapeHtml(item.filename || 'Attachment');
+    const size = Math.max(0, Number(item.size || 0));
+    return item.contentBase64
+      ? '<a class="attachment-chip attachment-download" download="' + filename + '" href="data:application/octet-stream;base64,' + item.contentBase64 + '">' +
+        mailIcon('compose') + '<span>' + filename + '</span><small>' + Math.round(size / 1024) + ' KB · Download</small></a>'
+      : '<span class="attachment-chip">' + mailIcon('compose') + '<span>' + filename + '</span><small>' +
+        Math.round(size / 1024) + ' KB · Not downloadable</small></span>';
+  }).join('') + '</div>';
+}
+
+async function composePayload() {
+  const newlySelected = await selectedFileAttachments();
+  const attachments = [...pendingAttachments, ...newlySelected].filter(item => item.contentBase64);
+  const payload = {
     to: $('to').value,
     cc: $('cc').value,
     bcc: $('bcc').value,
     subject: $('subject').value,
-    body: $('body').value
+    body: $('body').value,
+    fromAccountId: $('from-account')?.value || ''
   };
+  if (attachments.length) payload.attachments = attachments;
+  return payload;
+}
+
+function resetComposerState() {
+  pendingAttachments = [];
+  $('attachments').value = '';
+  renderComposeAttachments();
+  currentDraftId = null;
+}
+
+function composeFromMessage(mode) {
+  if (!activeMessage) return;
+  const message = activeMessage;
+  resetComposerState();
+  $('compose-form').reset();
+  populateFromAccountSelect();
+  const recipients = message.recipients || {};
+  if (mode === 'reply') {
+    const target = message.folder === 'sent'
+      ? ((recipients.to || [])[0] || '')
+      : (message.sender_email || '');
+    $('to').value = target;
+    const original = String(message.subject || '');
+    $('subject').value = /^re:\s*/i.test(original) ? original : 'Re: ' + original;
+    $('body').value = '\n\nOn ' + formatDate(message.created_at) + ', ' + (message.sender_email || 'the sender') + ' wrote:\n' +
+      String(message.body_text || '').split('\n').map(line => '> ' + line).join('\n');
+  } else {
+    $('to').value = '';
+    const original = String(message.subject || '');
+    $('subject').value = /^fwd?:\s*/i.test(original) ? original : 'Fwd: ' + original;
+    $('body').value = '\n\n---------- Forwarded message ----------\nFrom: ' + (message.sender_email || '') +
+      '\nDate: ' + formatDate(message.created_at) + '\nSubject: ' + original + '\n\n' + String(message.body_text || '');
+    pendingAttachments = (message.attachments || []).filter(item => item.contentBase64);
+  }
+  renderComposeAttachments();
+  $('message-view').close();
+  setFeedback($('compose-feedback'), mode === 'reply' ? 'Replying to message.' : 'Forwarding message and available attachments.');
+  $('composer').showModal();
 }
 
 async function saveDraft() {
@@ -393,14 +561,14 @@ async function saveDraft() {
   button.disabled = true;
   setFeedback($('compose-feedback'), 'Saving draft…');
   try {
-    const payload = composePayload();
+    const payload = await composePayload();
     const result = currentDraftId
       ? await request('/messages/' + encodeURIComponent(currentDraftId), { method: 'PATCH', body: payload })
       : await request('/drafts', { method: 'POST', body: payload });
     currentDraftId = Number(result.message?.id || currentDraftId);
     $('composer').close();
     $('compose-form').reset();
-    currentDraftId = null;
+    resetComposerState();
     currentFolder = 'drafts';
     await loadMessages();
   } catch (error) {
@@ -418,8 +586,18 @@ async function init() {
     currentUser = result.user;
     const savedSettings = await request('/settings');
     mailSettingsState = { ...savedSettings.settings };
+    await loadConnectedAccounts();
+    const callbackParams = new URLSearchParams(window.location.search);
+    const oauthResult = callbackParams.get('oauth');
+    const oauthMessage = callbackParams.get('message') || '';
+    if (oauthResult) {
+      currentFolder = 'accounts';
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     showMailbox();
     await loadMessages();
+    if (oauthResult === 'connected') await renderConnectedAccounts('Your external mailbox is connected.');
+    if (oauthResult === 'error') await renderConnectedAccounts('Connection failed: ' + oauthMessage);
   } catch (error) {
     showAuth();
     $('auth-feedback').textContent = error.status === 401
@@ -428,6 +606,67 @@ async function init() {
     $('auth-capability').textContent = 'MailHarbor connects through your existing Minglora account and checks its mailbox service live.';
   }
 }
+
+function populateFromAccountSelect() {
+  const select = $('from-account');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">Use default sending account</option>' +
+    mailAccounts.map(account => '<option value="' + escapeHtml(account.id) + '">' +
+      escapeHtml(account.provider === 'gmail' ? 'Gmail' : 'Outlook') + ' · ' + escapeHtml(account.email) + '</option>').join('');
+  if (mailAccounts.some(account => account.id === current)) select.value = current;
+  else {
+    const defaultAccount = mailAccounts.find(account => account.isDefault) || mailAccounts[0];
+    if (defaultAccount) select.value = defaultAccount.id;
+  }
+}
+
+$('messages').addEventListener('click', async (event) => {
+  const connect = event.target.closest('[data-oauth-connect]');
+  if (connect) {
+    const provider = connect.dataset.oauthConnect;
+    connect.disabled = true;
+    try {
+      const result = await request('/oauth/' + encodeURIComponent(provider) + '/start', { method: 'POST', body: {} });
+      const popup = window.open(result.authorizationUrl, 'mailharbor-oauth', 'popup,width=640,height=760');
+      if (!popup) window.top.location.assign(result.authorizationUrl);
+    } catch (error) {
+      await renderConnectedAccounts(error.message);
+    }
+    return;
+  }
+  const sync = event.target.closest('[data-oauth-sync]');
+  if (sync) {
+    sync.disabled = true;
+    try {
+      const result = await request('/accounts/' + encodeURIComponent(sync.dataset.oauthSync) + '/sync', { method: 'POST', body: {} });
+      await renderConnectedAccounts('Synced ' + result.checked + ' messages; imported ' + result.imported + '.');
+    } catch (error) {
+      await renderConnectedAccounts(error.message);
+    }
+    return;
+  }
+  const disconnect = event.target.closest('[data-oauth-disconnect]');
+  if (disconnect) {
+    if (!window.confirm('Disconnect this mailbox from MailHarbor? Messages already synced will remain in Minglora.')) return;
+    disconnect.disabled = true;
+    try {
+      await request('/accounts/' + encodeURIComponent(disconnect.dataset.oauthDisconnect), { method: 'DELETE' });
+      await renderConnectedAccounts('The external mailbox was disconnected.');
+    } catch (error) {
+      await renderConnectedAccounts(error.message);
+    }
+  }
+});
+
+window.addEventListener('message', async event => {
+  if (event.origin !== window.location.origin || !event.data || event.data.type !== 'mailharbor-oauth-result') return;
+  currentFolder = 'accounts';
+  const status = event.data.status === 'connected'
+    ? 'Your ' + (event.data.provider === 'gmail' ? 'Gmail' : 'Outlook') + ' account is connected.'
+    : 'Connection failed: ' + String(event.data.message || 'The provider authorization did not complete.');
+  await renderConnectedAccounts(status).catch(error => window.alert(error.message));
+});
 
 $('folders').addEventListener('click', async (event) => {
   const button = event.target.closest('[data-folder]');
@@ -499,50 +738,57 @@ $('spam').addEventListener('click', () => mutateSelected('spam'));
 $('restore').addEventListener('click', () => mutateSelected('restore'));
 $('delete').addEventListener('click', () => mutateSelected('delete'));
 $('compose').addEventListener('click', () => {
-  currentDraftId = null;
   $('compose-form').reset();
+  resetComposerState();
+  populateFromAccountSelect();
   const signature = String(mailSettingsState.signature || '').trim();
   $('body').value = signature ? '\n\n--\n' + signature : '';
   setFeedback($('compose-feedback'), '');
   $('composer').showModal();
 });
+$('attachments').addEventListener('change', () => {
+  renderComposeAttachments();
+  const files = Array.from($('attachments').files || []);
+  if (pendingAttachments.length + files.length > 5 || files.some(file => file.size > 1500000) ||
+      pendingAttachments.reduce((sum, item) => sum + Number(item.size || 0), 0) + files.reduce((sum, file) => sum + file.size, 0) > 4000000) {
+    $('attachments').value = '';
+    renderComposeAttachments();
+    setFeedback($('compose-feedback'), 'The attachment limit is 5 files, 1.5 MB each and 4 MB total.', true);
+  } else setFeedback($('compose-feedback'), files.length ? files.length + ' attachment(s) selected.' : '');
+});
+$('reply-message').addEventListener('click', () => composeFromMessage('reply'));
+$('forward-message').addEventListener('click', () => composeFromMessage('forward'));
 $('save-draft').addEventListener('click', saveDraft);
 $('close-compose').addEventListener('click', () => $('composer').close());
 $('close-detail').addEventListener('click', () => $('message-view').close());
 
 $('compose-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (!mailStatus.outboundEmailConfigured && !mailStatus.internalMessagingEnabled) {
+  if (!mailStatus.outboundEmailConfigured && !mailStatus.oauthOutboundEnabled && !mailStatus.internalMessagingEnabled) {
     setFeedback($('compose-feedback'), 'Mail delivery is not enabled. No message was sent.', true);
     return;
   }
-  const internalOnly = Boolean(mailStatus.internalMessagingEnabled && !mailStatus.outboundEmailConfigured);
+  const internalOnly = Boolean(mailStatus.internalMessagingEnabled &&
+    !mailStatus.outboundEmailConfigured && !mailStatus.oauthOutboundEnabled);
   $('send').disabled = true;
-  setFeedback($('compose-feedback'), internalOnly ? 'Delivering inside Minglora…' : 'Queueing message…');
+  setFeedback($('compose-feedback'), 'Preparing message and attachments…');
   try {
-    const result = await request('/messages', {
-      method: 'POST',
-      body: {
-        to: $('to').value,
-        cc: $('cc').value,
-        bcc: $('bcc').value,
-        subject: $('subject').value,
-        body: $('body').value,
-        draftId: currentDraftId
-      }
-    });
+    const payload = await composePayload();
+    payload.draftId = currentDraftId;
+    setFeedback($('compose-feedback'), internalOnly ? 'Delivering inside Minglora…' : 'Queueing message…');
+    const result = await request('/messages', { method: 'POST', body: payload });
     $('composer').close();
     $('compose-form').reset();
-    currentDraftId = null;
+    resetComposerState();
     currentFolder = 'sent';
     await loadMessages();
     window.alert(internalOnly
       ? 'Message delivered to Minglora member mailboxes. External email was not sent. Message ID: ' + result.message.id
-      : 'Message queued. It will show as sent only after the mail provider accepts it. Message ID: ' + result.message.id);
+      : 'Message queued. It will show as accepted only after the connected mail provider accepts it. Message ID: ' + result.message.id);
   } catch (error) {
     setFeedback($('compose-feedback'), error.message, true);
   } finally {
-    $('send').disabled = !(mailStatus.outboundEmailConfigured || mailStatus.internalMessagingEnabled);
+    $('send').disabled = !(mailStatus.outboundEmailConfigured || mailStatus.oauthOutboundEnabled || mailStatus.internalMessagingEnabled);
   }
 });
 

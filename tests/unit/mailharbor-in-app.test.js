@@ -53,13 +53,23 @@ test('mail actions are wired to real backend operations', () => {
   assert.match(mailApp, /draftId: currentDraftId/);
 });
 
-test('external account status is explicit and never faked as connected', () => {
+test('Gmail and Outlook have real owner-scoped OAuth connect, sync and disconnect flows', () => {
   for (const provider of ['gmail', 'yahoo', 'outlook', 'icloud']) {
     assert.match(mailApp, new RegExp("key: '" + provider + "'"));
   }
-  assert.match(mailApp, /state\.connected === true/);
-  assert.match(mailApp, /not being represented as connected/);
+  assert.match(mailApp, /state\.configured === true/);
+  assert.match(mailApp, /data-oauth-connect/);
+  assert.match(mailApp, /data-oauth-sync/);
+  assert.match(mailApp, /data-oauth-disconnect/);
+  assert.match(mailApp, /encrypted server-side OAuth tokens/);
   assert.match(mailHtml, /Connected accounts/);
+  assert.match(mailHtml, /id="from-account"/);
+  assert.match(mailHtml, /id="attachments"/);
+  assert.match(mailHtml, /id="reply-message"/);
+  assert.match(mailHtml, /id="forward-message"/);
+  assert.match(mailApp, /async function selectedFileAttachments/);
+  assert.match(mailApp, /function composeFromMessage/);
+  assert.match(server, /result\.redirectTo/);
 });
 
 
@@ -93,3 +103,12 @@ test('free MailHarbor member addressing uses @username and labels internal-only 
   assert.match(mailApp, /Minglora only/);
 });
 
+test('MailHarbor uses the app-wide durable state for encrypted external mailbox accounts', async () => {
+  const store = await read('src/store.js');
+  assert.match(store, /'mailOAuthStates', 'mailExternalAccounts'/);
+  const oauth = await read('backend/modules/mailharbor/oauth.js');
+  assert.match(oauth, /createCipheriv\('aes-256-gcm'/);
+  assert.match(oauth, /code_challenge_method: 'S256'/);
+  assert.match(oauth, /memberId: String\(memberId\)/);
+  assert.match(oauth, /function safeAccount\(/);
+});

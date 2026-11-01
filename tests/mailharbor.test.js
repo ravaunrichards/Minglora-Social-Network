@@ -335,3 +335,121 @@ test('MailHarbor address aliases cannot claim another member username', async ()
   assert.equal(saved.body.user.email, 'alice@' + INTERNAL_MAIL_DOMAIN);
 });
 
+
+test('MailHarbor sends an external message through the member-selected connected Gmail account', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  state.db.mailExternalAccounts = [{
+    id: 'account-gmail-alice',
+    memberId: 'member-alice',
+    provider: 'gmail',
+    email: 'alice@gmail.com',
+    displayName: 'Alice',
+    status: 'connected',
+    isDefault: true
+  }];
+  const queued = await call(state, state.db.users[0], 'POST', '/messages', {
+    to: 'person@example.net',
+    subject: 'External through Gmail',
+    body: 'A real Gmail delivery is queued after account authorization.'
+  });
+  assert.equal(queued.status, 202);
+  const saved = state.db.mailMessages.find(item => item.id === queued.body.message.id);
+  assert.equal(saved.delivery_channel, 'gmail');
+  assert.equal(saved.externalDelivery.provider, 'gmail');
+  assert.equal(saved.externalDelivery.accountId, 'account-gmail-alice');
+  let sentThrough = '';
+  const processed = await processMailHarborOutbox({
+    db: state.db,
+    saveStore: state.saveStore,
+    sendOAuthEmail: async input => {
+      sentThrough = input.accountId;
+      assert.equal(input.memberId, 'member-alice');
+      assert.equal(input.message.externalDelivery.to[0], 'person@example.net');
+      return { id: 'gmail-provider-message' };
+    }
+  });
+  assert.equal(sentThrough, 'account-gmail-alice');
+  assert.equal(processed.status, 'sent');
+  assert.equal(state.db.mailMessages.find(item => item.id === queued.body.message.id).delivery_channel, 'gmail');
+  assert.equal(state.db.mailMessages.find(item => item.id === queued.body.message.id).provider_message_id, 'gmail-provider-message');
+});
+
+test('MailHarbor validates, persists, displays and delivers attachment files to internal recipients', async () => {
+  const state = setup();
+  const file = Buffer.from('MailHarbor attachment payload', 'utf8').toString('base64');
+  const sent = await call(state, state.db.users[0], 'POST', '/messages', {
+    to: 'bob',
+    subject: 'Attachment test',
+    body: 'Please see the file.',
+    attachments: [{
+      filename: 'support-notes.txt',
+      contentType: 'text/plain',
+      size: Buffer.from(file, 'base64').length,
+      contentBase64: file
+    }]
+  });
+  assert.equal(sent.status, 202);
+  const delivered = state.db.mailMessages.find(item => item.owner_id === 'member-bob');
+  assert.equal(delivered.attachments.length, 1);
+  assert.equal(delivered.attachments[0].filename, 'support-notes.txt');
+  assert.equal(Buffer.from(delivered.attachments[0].contentBase64, 'base64').toString('utf8'), 'MailHarbor attachment payload');
+
+  const list = await call(state, state.db.users[1], 'GET', '/messages', {}, '?folder=inbox');
+  assert.equal(list.body.messages[0].attachments[0].available, true);
+  assert.equal('contentBase64' in list.body.messages[0].attachments[0], false);
+
+  const detail = await call(state, state.db.users[1], 'GET', '/messages/' + delivered.id);
+  assert.equal(detail.body.message.attachments[0].contentBase64, file);
+});
+
+test('MailHarbor rejects unsafe or oversized attachment payloads before storing messages', async () => {
+  const state = setup();
+  const invalid = await call(state, state.db.users[0], 'POST', '/messages', {
+    to: 'bob',
+    subject: 'Bad attachment',
+    body: 'Do not store this.',
+    attachments: [{ filename: 'bad.bin', contentType: 'application/octet-stream', contentBase64: 'not base64!' }]
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(state.db.mailMessages.length, 0);
+
+  const tooLarge = await call(state, state.db.users[0], 'POST', '/messages', {
+    to: 'bob',
+    subject: 'Large attachment',
+    body: 'Do not store this.',
+    attachments: [{
+      filename: 'large.bin',
+      contentType: 'application/octet-stream',
+      contentBase64: Buffer.alloc(1500001, 1).toString('base64')
+    }]
+  });
+  assert.equal(tooLarge.status, 400);
+  assert.equal(state.db.mailMessages.length, 0);
+});
+
+test('MailHarbor keeps attachments in drafts and sends the saved files with the draft', async () => {
+  const state = setup();
+  const file = Buffer.from('draft attachment', 'utf8').toString('base64');
+  const draft = await call(state, state.db.users[0], 'POST', '/drafts', {
+    to: '@bob',
+    subject: 'Draft with attachment',
+    body: 'Ready to send.',
+    attachments: [{
+      filename: 'draft.txt', contentType: 'text/plain',
+      size: Buffer.from(file, 'base64').length, contentBase64: file
+    }]
+  });
+  assert.equal(draft.status, 201);
+  const draftId = draft.body.message.id;
+  const sent = await call(state, state.db.users[0], 'POST', '/messages', {
+    draftId,
+    to: '@bob',
+    subject: 'Draft with attachment',
+    body: 'Ready to send.'
+  });
+  assert.equal(sent.status, 202);
+  const delivered = state.db.mailMessages.find(item => item.owner_id === 'member-bob');
+  assert.equal(delivered.attachments[0].filename, 'draft.txt');
+  assert.equal(delivered.attachments[0].contentBase64, file);
+});
