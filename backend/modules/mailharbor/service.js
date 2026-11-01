@@ -503,12 +503,10 @@ export async function processMailHarborOutbox({ db, saveStore, sendEmail = sendM
 }
 
 function stripHtmlToText(value) {
-  return String(value || '').replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')
-    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')
-    .replace(/<\\/(p|div|br|li|tr|h[1-6])>/gi, '\\n')
-    .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
-    .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/[ \\t]+/g, ' ').replace(/\\n{3,}/g, '\\n\\n').trim();
+  return String(value || '').replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>').replace(/&#39;/g, "'").replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ').trim();
 }
 
 export async function handleMailHarborWebhook({ headers = {}, rawBody, db, saveStore, retrieveEmail = retrieveResendReceivedEmail } = {}) {

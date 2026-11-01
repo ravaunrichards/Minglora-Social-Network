@@ -30,7 +30,11 @@ export async function sendMailHarborExternal(message,idempotencyKey) {
   if(sender.split('@')[1]!==status.mailDomain)throw new Error('Sender mailbox is outside the verified MailHarbor domain.');
   const name=String(message.sender_name||'Minglora member').replace(/[\\r\\n<>"]/g,'').slice(0,120);
   const ext=message.externalDelivery||{};
-  return request('/emails',{method:'POST',idempotencyKey,body:{from:name+' <'+sender+'>',to:ext.to||[],cc:ext.cc||[],bcc:ext.bcc||[],reply_to:message.reply_to||sender,subject:String(message.subject||''),text:String(message.body_text||'')}});
+  let to=[...(ext.to||[])], cc=[...(ext.cc||[])], bcc=[...(ext.bcc||[])];
+  if(!to.length&&cc.length)to=[cc.shift()];
+  if(!to.length&&bcc.length)to=[bcc.shift()];
+  if(!to.length)throw new Error('At least one external recipient is required.');
+  return request('/emails',{method:'POST',idempotencyKey,body:{from:name+' <'+sender+'>',to,cc,bcc,reply_to:message.reply_to||sender,subject:String(message.subject||''),text:String(message.body_text||'')}});
 }
 export async function retrieveResendReceivedEmail(id) {
   if(!/^[a-z0-9-]{16,80}$/i.test(String(id||'')))throw new Error('Invalid Resend inbound email ID.');
@@ -39,7 +43,7 @@ export async function retrieveResendReceivedEmail(id) {
 export function verifyResendWebhook({rawBody,headers={},secret,now=Date.now()}) {
   if(!Buffer.isBuffer(rawBody)||!secret||!secret.startsWith('whsec_'))return false;
   const id=String(headers['svix-id']||headers['Svix-Id']||''),ts=String(headers['svix-timestamp']||headers['Svix-Timestamp']||''),sig=String(headers['svix-signature']||headers['Svix-Signature']||'');
-  if(!id||!/^\\d+$/.test(ts)||!sig)return false;
+  if(!id||!ts||!ts.split('').every(char=>char>='0'&&char<='9')||!sig)return false;
   const seconds=Number(ts);if(!Number.isFinite(seconds)||Math.abs(now-seconds*1000)>300000)return false;
   const key=Buffer.from(secret.slice(6),'base64');if(!key.length)return false;
   const expected=crypto.createHmac('sha256',key).update(Buffer.concat([Buffer.from(id+'.'+ts+'.'),rawBody])).digest('base64');

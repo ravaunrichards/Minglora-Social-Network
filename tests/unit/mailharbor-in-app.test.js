@@ -78,10 +78,10 @@ test('MailHarbor has per-mailbox settings and authenticated automatic refresh', 
 
 
 test('MailHarbor signed provider webhook and external outbox worker are mounted in Minglora', () => {
-  assert.match(server, /handleMailHarborWebhook/);
-  assert.match(server, /api\\/mailharbor\\/webhooks\\/resend/);
-  assert.match(server, /processMailHarborOutbox/);
-  assert.match(server, /req\\.rawBody = Buffer\\.concat/);
-  assert.match(mailApp, /Delivered externally/);
-  assert.match(mailApp, /Resend delivery/);
+  assert.ok(server.includes('handleMailHarborWebhook'));
+  assert.ok(server.includes("p === '/api/mailharbor/webhooks/resend'"));
+  assert.ok(server.includes('processMailHarborOutbox'));
+  assert.ok(server.includes('req.rawBody = Buffer.concat(chunks)'));
+  assert.ok(mailApp.includes('Delivered externally'));
+  assert.ok(mailApp.includes('Resend delivery'));
 });
