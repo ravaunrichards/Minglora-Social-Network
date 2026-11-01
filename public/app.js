@@ -3030,7 +3030,7 @@ function renderMessageContent(messages=[]){
 }
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(',')].join(':')).join('|');}
 function syncMessageRefreshPolling(){
-  const enabled=Boolean(state.user)&&(state.view==='messages'||state.messageWindows.length>0);
+  const enabled=Boolean(state.user)&&(state.view==='messages'||state.messageWindows.length>0||state.messengerPanelOpen);
   if(enabled&&!messageRefreshTimer)messageRefreshTimer=setInterval(refreshMessageConversations,5000);
   if(!enabled&&messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;}
 }
@@ -3056,6 +3056,7 @@ async function refreshMessageConversations(){
     }
     state.conversations=result.conversations||[];
     paintMessengerBadge(state.conversations);
+    if(state.messengerPanelOpen)renderMessengerPanelList();
     const activeIds=new Set(state.messageWindows.filter(win=>!win.minimized).map(win=>win.user.id));
     const unread=state.conversations.filter(conversation=>activeIds.has(conversation.user.id)&&(conversation.unreadCount||0)>0);
     if(unread.length){
@@ -3338,11 +3339,13 @@ function closeMessengerPanel(){
   state.messengerPanelOpen=false;state.messengerOptionsOpen=false;
   const panel=$('#messenger-panel');if(panel){panel.hidden=true;panel.classList.remove('is-open');panel.setAttribute('aria-hidden','true');}
   $('#messenger-btn')?.setAttribute('aria-expanded','false');
+  syncMessageRefreshPolling();
 }
 async function openMessengerPanel(){
   const panel=ensureMessengerPanel();
   state.messengerPanelOpen=true;panel.hidden=false;panel.classList.add('is-open');panel.setAttribute('aria-hidden','false');
   $('#messenger-btn')?.setAttribute('aria-expanded','true');
+  syncMessageRefreshPolling();
   renderMessengerPanel();
   try{const result=await api('/messages');state.conversations=result.conversations||[];paintMessengerBadge(state.conversations);renderMessengerPanelList();}
   catch(error){const list=$('#messenger-panel-list');if(list)list.innerHTML='<div class="messenger-empty-state"><span>⚠️</span><strong>Chats could not load</strong><p>'+esc(error.message)+'</p></div>';}
