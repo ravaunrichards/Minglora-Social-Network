@@ -42,3 +42,5 @@ after update of email, email_confirmed_at on auth.users
 for each row execute procedure private.harborpay_sync_auth_user_profile();
 
 commit;
+
+-- This trigger runs only after Supabase Auth changes the user's email or confirmation state.
