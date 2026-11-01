@@ -94,7 +94,7 @@ values
   ('11111111-1111-4111-8111-111111111111', 'owner-one@example.test', '{"full_name":"CI Owner One"}'::jsonb),
   ('22222222-2222-4222-8222-222222222222', 'owner-two@example.test', '{"full_name":"CI Owner Two"}'::jsonb);
 
-do $
+do $verify$
 begin
   if not exists (
     select 1 from public.profiles
@@ -105,7 +105,7 @@ begin
     raise exception 'Auth user creation did not create the matching HarborPay profile';
   end if;
 end;
-$;
+$verify$;
 
 -- A verified Supabase Auth email must flow into the dedicated HarborPay profile.
 update auth.users
@@ -113,7 +113,7 @@ set email = 'owner-one-confirmed@example.test',
     email_confirmed_at = now()
 where id = '11111111-1111-4111-8111-111111111111';
 
-do $
+do $verify$
 begin
   if not exists (
     select 1 from public.profiles
@@ -124,7 +124,7 @@ begin
     raise exception 'HarborPay Auth email verification did not synchronize to the user profile';
   end if;
 end;
-$;
+$verify$;
 
 
 
