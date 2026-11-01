@@ -10,16 +10,30 @@
 </head>
 <body>
   <main id="auth-shell" class="auth-shell">
-    <section class="auth-card mailharbor-sso-card">
-      <div class="brand auth-brand"><span class="mark mail-mark-3d">M</span><span>MailHarbor</span></div>
-      <p class="eyebrow">BUILT INTO MINGLORA</p>
-      <h1 id="auth-title">Open your mailbox</h1>
-      <p class="auth-copy">MailHarbor uses your existing Minglora account. There is no second password to create or remember.</p>
-      <a class="primary full-width mailharbor-home-link" href="/">← Return to Minglora</a>
+    <section class="auth-card">
+      <a class="brand auth-brand" href="/" aria-label="MailHarbor home">
+        <span class="mark">M</span><span>MailHarbor</span>
+      </a>
+      <p class="eyebrow">YOUR MAIL, IN GOOD HANDS</p>
+      <h1 id="auth-title">Welcome back</h1>
+      <p class="auth-copy" id="auth-copy">Sign in to open your mailbox.</p>
+      <form id="auth-form">
+        <label id="name-field" class="field is-hidden">Display name
+          <input id="display-name" name="displayName" autocomplete="name" maxlength="120" placeholder="Your name">
+        </label>
+        <label class="field">Email address
+          <input id="auth-email" name="email" type="email" autocomplete="username" maxlength="254" required placeholder="you@example.com">
+        </label>
+        <label class="field">Password
+          <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required placeholder="At least 12 characters">
+        </label>
+        <button class="primary full-width" id="auth-submit" type="submit">Sign in</button>
+      </form>
+      <p class="auth-switch"><span id="mode-copy">New to MailHarbor?</span> <button id="mode-toggle" type="button">Create an account</button></p>
       <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
-      <p id="auth-capability" class="capability-note">Connecting to MailHarbor…</p>
+      <p id="auth-capability" class="capability-note">Checking MailHarbor services…</p>
     </section>
-    <footer class="auth-footer">MailHarbor · Your Minglora mailbox</footer>
+    <footer class="auth-footer">MailHarbor · Secure mailbox services</footer>
   </main>
 
   <div class="app is-hidden" id="mail-app">
@@ -43,7 +57,7 @@
       <header class="topbar">
         <button id="menu" class="iconbtn mobile-menu" type="button" aria-label="Open navigation">☰</button>
         <div class="search">⌕ <input id="search" type="search" placeholder="Search your mail" aria-label="Search your mail"></div>
-        <div class="account-area"><span id="signed-email"></span><button id="manage-address" class="signout" type="button">Email address</button><a id="signout" class="signout" href="/">Minglora</a></div>
+        <div class="account-area"><span id="signed-email"></span><button id="signout" class="signout" type="button">Sign out</button></div>
       </header>
       <section class="content">
         <div id="service-banner" class="service-banner is-hidden" role="status"></div>

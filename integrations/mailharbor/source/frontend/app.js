@@ -1,8 +1,8 @@
 'use strict';
 
-const API_BASE = '/api/mailharbor';
+const API_BASE = window.MAILHARBOR_API_BASE || '';
 const $ = (id) => document.getElementById(id);
-let token = '';
+let token = sessionStorage.getItem('mailharbor-token') || '';
 let currentUser = null;
 let currentFolder = 'inbox';
 let messageList = [];
@@ -33,8 +33,8 @@ function setFeedback(element, message, isError = false) {
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (options.body !== undefined) headers.set('Content-Type', 'application/json');
-  // Minglora authenticates this request with its existing HttpOnly session cookie.
-  const response = await fetch(API_BASE + path, {
+  if (token && options.auth !== false) headers.set('Authorization', 'Bearer ' + token);
+  const response = await fetch(API_BASE + '/api' + path, {
     method: options.method || 'GET',
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -65,18 +65,18 @@ function setAuthMode(mode) {
 }
 
 function updateCapabilityText() {
-  const outbound = Boolean(mailStatus.outboundEmailConfigured);
-  const inbound = Boolean(mailStatus.inboundEmailConfigured);
-  $('auth-capability').textContent = currentUser?.email
-    ? 'Your MailHarbor address: ' + currentUser.email + ' · ' + (outbound ? 'Sending enabled.' : 'Sending awaiting provider setup.')
-    : 'Mailbox status is checked against the live MailHarbor service.';
-  $('compose').disabled = !outbound;
-  $('send').disabled = !outbound;
-  $('service-banner').classList.toggle('is-hidden', outbound && inbound);
-  if (!outbound) {
-    $('service-banner').textContent = 'Your mailbox is connected. Sending remains disabled until SMTP credentials and a verified sender domain are configured.';
-  } else if (!inbound) {
-    $('service-banner').textContent = 'Outbound delivery is configured. Receiving is awaiting an inbound provider, signed webhook and matching MX records.';
+  if (mailStatus.outboundEmailConfigured) {
+    $('auth-capability').textContent = 'Email delivery is configured. New accounts require email verification.';
+  } else {
+    $('auth-capability').textContent = 'Email registration and sending are disabled until a real SMTP provider is configured.';
+  }
+  $('compose').disabled = !mailStatus.outboundEmailConfigured;
+  $('send').disabled = !mailStatus.outboundEmailConfigured;
+  $('service-banner').classList.toggle('is-hidden', mailStatus.outboundEmailConfigured && mailStatus.inboundEmailConfigured);
+  if (!mailStatus.outboundEmailConfigured) {
+    $('service-banner').textContent = 'Outbound mail is not configured. No messages can be sent yet. Add verified SMTP credentials to enable sending and account verification.';
+  } else if (!mailStatus.inboundEmailConfigured) {
+    $('service-banner').textContent = 'Outbound mail is configured. Inbound mail is waiting for a signed provider webhook and verified MX routing.';
   }
 }
 
@@ -90,7 +90,6 @@ function showMailbox() {
   $('auth-shell').classList.add('is-hidden');
   $('mail-app').classList.remove('is-hidden');
   $('signed-email').textContent = currentUser.email;
-  updateCapabilityText();
   if (mailStatus.realtimeUrl) {
     realtimeStopped = false;
     connectRealtime();
@@ -98,7 +97,7 @@ function showMailbox() {
 }
 
 function scheduleRealtimeReconnect() {
-  if (realtimeStopped || !currentUser || !mailStatus.realtimeUrl || realtimeReconnectTimer) return;
+  if (realtimeStopped || !token || !mailStatus.realtimeUrl || realtimeReconnectTimer) return;
   const delay = realtimeRetryDelay;
   realtimeRetryDelay = Math.min(30000, realtimeRetryDelay * 2);
   realtimeReconnectTimer = setTimeout(() => {
@@ -108,7 +107,7 @@ function scheduleRealtimeReconnect() {
 }
 
 async function connectRealtime() {
-  if (realtimeStopped || !currentUser || !mailStatus.realtimeUrl || realtimeSocket) return;
+  if (realtimeStopped || !token || !mailStatus.realtimeUrl || realtimeSocket) return;
   try {
     const auth = await request('/realtime/ticket', { method: 'POST', body: {} });
     if (realtimeStopped || !token) return;
@@ -245,21 +244,83 @@ async function mutateSelected(action) {
   }
 }
 
+async function signIn() {
+  const result = await request('/auth/login', {
+    method: 'POST',
+    auth: false,
+    body: { email: $('auth-email').value.trim(), password: $('auth-password').value }
+  });
+  token = result.accessToken;
+  sessionStorage.setItem('mailharbor-token', token);
+  currentUser = result.user;
+  showMailbox();
+  await loadMessages();
+}
+
+async function registerAccount() {
+  const result = await request('/auth/register', {
+    method: 'POST',
+    auth: false,
+    body: {
+      email: $('auth-email').value.trim(),
+      displayName: $('display-name').value.trim(),
+      password: $('auth-password').value
+    }
+  });
+  setFeedback($('auth-feedback'), result.message || 'Account created. Check your email to verify it.');
+}
+
 async function init() {
   try {
-    mailStatus = await request('/status');
-    const result = await request('/me');
-    currentUser = result.user;
-    showMailbox();
-    await loadMessages();
-  } catch (error) {
-    showAuth();
-    $('auth-feedback').textContent = error.status === 401
-      ? 'Sign in to Minglora first, then reopen MailHarbor.'
-      : error.message;
-    $('auth-capability').textContent = 'MailHarbor connects through your existing Minglora account and checks its mailbox service live.';
+    mailStatus = await request('/status', { auth: false });
+    updateCapabilityText();
+  } catch (_error) {
+    $('auth-capability').textContent = 'MailHarbor services are not reachable. Check the API deployment.';
+    return;
   }
+
+  const verifyToken = new URLSearchParams(window.location.search).get('verify');
+  if (verifyToken) {
+    try {
+      const result = await request('/auth/verify', { method: 'POST', auth: false, body: { token: verifyToken } });
+      setFeedback($('auth-feedback'), result.message);
+    } catch (error) {
+      setFeedback($('auth-feedback'), error.message, true);
+    }
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  if (token) {
+    try {
+      const result = await request('/me');
+      currentUser = result.user;
+      showMailbox();
+      await loadMessages();
+      return;
+    } catch (_error) {
+      token = '';
+      sessionStorage.removeItem('mailharbor-token');
+    }
+  }
+  showAuth();
 }
+
+$('mode-toggle').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
+
+$('auth-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = $('auth-submit');
+  button.disabled = true;
+  setFeedback($('auth-feedback'), authMode === 'register' ? 'Creating account…' : 'Signing in…');
+  try {
+    if (authMode === 'register') await registerAccount();
+    else await signIn();
+  } catch (error) {
+    setFeedback($('auth-feedback'), error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $('folders').addEventListener('click', async (event) => {
   const button = event.target.closest('[data-folder]');
@@ -338,20 +399,18 @@ $('compose-form').addEventListener('submit', async (event) => {
   }
 });
 
-$('manage-address').addEventListener('click', async () => {
-  const current = String(currentUser?.email || '').split('@')[0];
-  const username = window.prompt('Choose your MailHarbor email name:', current);
-  if (!username || username.trim().toLowerCase() === current.toLowerCase()) return;
-  try {
-    const result = await request('/account/address', { method: 'PATCH', body: { username: username.trim() } });
-    currentUser.email = result.user.email;
-    $('signed-email').textContent = currentUser.email;
-    updateCapabilityText();
-    window.alert('Your MailHarbor address is now ' + currentUser.email);
-  } catch (error) { window.alert(error.message); }
+$('signout').addEventListener('click', () => {
+  stopRealtime();
+  token = '';
+  currentUser = null;
+  sessionStorage.removeItem('mailharbor-token');
+  messageList = [];
+  selected.clear();
+  $('search').value = '';
+  showAuth();
 });
-$('signout').addEventListener('click', () => stopRealtime());
 
 $('menu').addEventListener('click', () => $('sidebar').classList.toggle('open'));
 
+setAuthMode('login');
 init();
