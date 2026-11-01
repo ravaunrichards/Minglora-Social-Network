@@ -9,3 +9,55 @@
 .message{transition:transform .18s ease,box-shadow .18s ease}
 .message:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(23,51,91,.08)}
 @media(prefers-reduced-motion:reduce){.message{transition:none}.message:hover{transform:none}}
+
+
+/* Consistent dimensional icon system for the MailHarbor workspace. */
+.mail-3d-icon{display:block;width:29px;height:29px;flex:0 0 auto;overflow:visible;filter:drop-shadow(0 2px 2px rgba(16,46,84,.2)) drop-shadow(0 5px 6px rgba(36,91,185,.12));}
+.brand-mail-icon{width:36px;height:36px}
+.mail-mark-3d .mail-3d-icon{width:45px;height:45px}
+.sidebar nav button .mail-3d-icon{width:29px;height:29px}
+.sidebar nav button{min-height:46px;gap:12px}
+.sidebar nav button.active .mail-3d-icon{transform:translateY(-1px);filter:drop-shadow(0 3px 3px rgba(16,46,84,.25)) drop-shadow(0 6px 8px rgba(36,91,185,.2))}
+.compose{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:8px 17px}
+.compose .mail-3d-icon{width:30px;height:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+.iconbtn{display:grid;place-items:center}
+.search-3d-icon{width:24px;height:24px}
+.refresh .mail-3d-icon{width:31px;height:31px}
+.star{display:grid;place-items:center;width:30px;height:30px}
+.star .mail-3d-icon{width:25px;height:25px;filter:drop-shadow(0 2px 2px rgba(103,72,17,.18))}
+.star.on .mail-3d-icon{filter:drop-shadow(0 2px 3px rgba(188,126,22,.32))}
+.empty-mark{width:58px;height:58px;margin:0 auto 14px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,#f5faff,#dceaff);box-shadow:inset 0 1px 0 #fff,0 7px 18px rgba(34,78,125,.1)}
+.empty-mark .mail-3d-icon{width:45px;height:45px}
+.toolbar button{display:inline-flex;align-items:center;gap:6px}
+.toolbar button:focus-visible,.sidebar nav button:focus-visible,.compose:focus-visible{outline:3px solid #93b9ed;outline-offset:2px}
+.provider-overview{display:flex;align-items:center;gap:16px;padding:18px;border:1px solid #dbe8f7;border-radius:16px;background:linear-gradient(145deg,#fff,#eff6ff);box-shadow:0 9px 24px rgba(25,70,123,.07)}
+.provider-overview-icon,.provider-card-icon{display:grid;place-items:center;width:52px;height:52px;flex:0 0 52px;border-radius:15px;background:linear-gradient(145deg,#eaf4ff,#c6ddfb);box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(28,73,132,.12)}
+.provider-overview-icon .mail-3d-icon,.provider-card-icon .mail-3d-icon{width:38px;height:38px}
+.provider-overview>div:nth-child(2){min-width:0;flex:1}
+.provider-overview strong{display:block;color:#203b5d;font-size:15px}
+.provider-overview p{margin:4px 0 0;color:#7c8da2;font-size:12px;overflow-wrap:anywhere}
+.provider-state{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:800;letter-spacing:.25px}
+.provider-state:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.provider-state.active{background:#e5f6ed;color:#28734e}
+.provider-state.pending{background:#fff4df;color:#94651b}
+.provider-section-heading{display:flex;align-items:end;justify-content:space-between;margin:25px 0 13px}
+.provider-section-heading h2{margin:0;color:#273e59;font-size:17px}
+.provider-section-heading p{margin:5px 0 0;color:#8492a3;font-size:12px}
+.provider-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.provider-card{display:flex;align-items:center;gap:12px;min-width:0;padding:15px;border:1px solid #e1e9f3;border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(28,59,99,.045)}
+.provider-card-copy{min-width:0;flex:1}
+.provider-card-copy h3{margin:0 0 4px;color:#344b66;font-size:14px}
+.provider-card-copy p{margin:0 0 9px;color:#8795a6;font-size:11px;line-height:1.45}
+.provider-connect{flex:0 0 auto;padding:8px 10px;font-size:10px}
+.provider-notice{margin:18px 0 0;padding:13px 15px;border:1px solid #f0dfbd;border-radius:12px;background:#fff8eb;color:#82601c;font-size:11px;line-height:1.6}
+.mailharbor-embedded .auth-footer{display:none}
+@media(max-width:760px){
+  .provider-grid{grid-template-columns:minmax(0,1fr)}
+  .provider-card{align-items:flex-start;flex-wrap:wrap}
+  .provider-card-copy{flex:1 1 calc(100% - 66px)}
+  .provider-connect{margin-left:64px}
+  .provider-overview{align-items:flex-start;flex-wrap:wrap}
+  .provider-overview .provider-state{margin-left:68px}
+  .content{padding-top:19px}
+}
+@media(prefers-reduced-motion:reduce){.mail-3d-icon{filter:none}}
