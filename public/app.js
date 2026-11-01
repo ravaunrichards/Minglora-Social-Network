@@ -3044,10 +3044,11 @@ async function refreshMessageConversations(){
     else{
       const fresh=received.filter(item=>!messageRefreshKnownIncomingIds.has(item.message.id));
       if(fresh.length){
-        if(state.settings?.preferences?.messengerMessageSounds!==false)playMessengerMessageSound();
-        if(state.settings?.preferences?.messengerAutoOpenNewMessages===true){
-          const restricted=new Set(state.settings?.preferences?.messengerRestrictedUserIds||[]);
-          const peers=[...new Map(fresh.filter(item=>!item.conversation.isRequest&&!restricted.has(item.conversation.user.id)).map(item=>[item.conversation.user.id,item.conversation.user])).values()];
+        const restricted=new Set(state.settings?.preferences?.messengerRestrictedUserIds||[]);
+        const eligibleFresh=fresh.filter(item=>!item.conversation.isRequest&&!restricted.has(item.conversation.user.id));
+        if(eligibleFresh.length&&state.settings?.preferences?.messengerMessageSounds!==false)playMessengerMessageSound();
+        if(eligibleFresh.length&&state.settings?.preferences?.messengerAutoOpenNewMessages===true){
+          const peers=[...new Map(eligibleFresh.map(item=>[item.conversation.user.id,item.conversation.user])).values()];
           peers.forEach(member=>{if(!state.messageWindows.some(win=>win.user.id===member.id))openMessageWindow(member);});
         }
       }
@@ -3303,8 +3304,14 @@ function paintMessengerBadge(conversations=[]){
 }
 async function updateMessengerBadge(){
   if(!state.user)return;
-  try{const result=await api('/messages');paintMessengerBadge(result.conversations||[]);}
-  catch(error){console.warn('Messenger unread count unavailable:',error.message);}
+  try{
+    const conversations=(await api('/messages')).conversations||[];
+    paintMessengerBadge(conversations);
+    if(!messageRefreshKnownIncomingPrimed){
+      messageRefreshKnownIncomingIds=new Set(conversations.flatMap(conversation=>(conversation.messages||[]).filter(message=>message.to===state.user.id).map(message=>message.id)));
+      messageRefreshKnownIncomingPrimed=true;
+    }
+  }catch(error){console.warn('Messenger unread count unavailable:',error.message);}
 }
 
 function messengerPreferences(){return state.settings?.preferences||{};}
