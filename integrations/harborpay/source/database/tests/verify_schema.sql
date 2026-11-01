@@ -60,6 +60,31 @@ begin
     or to_regclass('public.customer_wallets') is not null then
     raise exception 'This schema must not create unapproved stored-value balances';
   end if;
+
+  if not exists (
+    select 1 from information_schema.triggers
+    where event_object_schema = 'auth'
+      and event_object_table = 'users'
+      and trigger_name = 'harborpay_auth_user_profile_updated'
+      and event_manipulation = 'UPDATE'
+  ) then
+    raise exception 'HarborPay Auth profile verification sync trigger is missing';
+  end if;
+
+  if has_function_privilege('authenticated',
+       'private.harborpay_sync_auth_user_profile()', 'EXECUTE')
+    or has_function_privilege('anon',
+       'private.harborpay_sync_auth_user_profile()', 'EXECUTE') then
+    raise exception 'Client roles must not execute the Auth profile synchronization function';
+  end if;
+
+  if to_regclass('public.merchant_members_invited_by_idx') is null
+    or to_regclass('public.minglora_link_handoffs_linked_auth_user_id_idx') is null
+    or to_regclass('public.payment_links_created_by_idx') is null
+    or to_regclass('public.webhook_events_claimable_idx') is null
+    or to_regclass('public.webhook_events_unprocessed_idx') is not null then
+    raise exception 'HarborPay supporting indexes are missing or duplicate webhook index remains';
+  end if;
 end;
 $$;
 
