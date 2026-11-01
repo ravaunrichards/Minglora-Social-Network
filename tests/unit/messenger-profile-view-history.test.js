@@ -17,7 +17,7 @@ test('Messenger is available beside notifications and displays actual unread con
   const notifications=html.indexOf('id="notifications-btn"');
   assert.ok(messenger>=0&&notifications>messenger,'Messenger must be immediately before Notifications in the header');
   assert.match(html,/id="messenger-unread-count"/);
-  assert.match(app,/\$\('#messenger-btn'\)\?\.addEventListener\('click',\(\)=>activateNav\('messages'\)\)/);
+  assert.match(app,/\$\('#messenger-btn'\)\?\.addEventListener\('click',toggleMessengerPanel\)/);
   assert.match(app,/function paintMessengerBadge\(conversations=\[\]\)/);
   assert.match(app,/Number\(item\.unreadCount\)\|\|0/);
   assert.match(app,/api\('\/messages'\)/);
