@@ -85,8 +85,8 @@ async function loadVideos(){
   $('#videoGrid').innerHTML='<div class="loading">Loading videos…</div>';
   try{
     let rows=[];
+    if(['subscriptions','history','uploads'].includes(state.route)&&!requireSignedIn())return;
     if(state.route==='history'){
-      if(!requireSignedIn())return;
       rows=(await api('/api/streambay/history')).videos||[];
     }else{
       const sort=state.route==='subscriptions'?'subscriptions':state.route==='explore'?'popular':'recent';
@@ -327,11 +327,7 @@ async function init(){
     const result=await api('/api/auth/me');
     state.user=result.user||null;
   }catch{state.user=null;}
-  if(!state.user){
-    $('#signInRequired').classList.remove('hidden');
-    $('#streambayContent').classList.add('hidden');
-    return;
-  }
+  // Public discovery, channels and playback remain available without signing in.
   $('#signInRequired').classList.add('hidden');
   $('#streambayContent').classList.remove('hidden');
   if(!location.hash)location.hash='home';else await route();

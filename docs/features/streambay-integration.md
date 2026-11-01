@@ -4,7 +4,7 @@ StreamBay is an independent video feature inside the Minglora application. Its i
 
 ## Integrated identity and storage
 
-- StreamBay does not create or store separate accounts, passwords, or session tokens.
+- StreamBay does not create or store separate accounts, passwords, or session tokens. Public Home, Explore, video playback, search and public channels are viewable without logging in; subscriptions, history, creator tools, likes, comments and uploads require the signed-in Minglora account.
 - The page reads the signed-in Minglora session through /api/auth/me.
 - Channel identity is based on the Minglora user ID and username. Optional StreamBay channel name and biography are saved as channel presentation settings, not as a second user profile.
 - Video binaries use Minglora's signed resumable media-upload endpoints and media storage (slot: post); a completed media asset is attached to its StreamBay video record.

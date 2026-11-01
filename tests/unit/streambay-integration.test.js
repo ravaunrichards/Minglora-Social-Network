@@ -114,6 +114,9 @@ test('StreamBay UI has six dedicated areas, Minglora session auth, and no second
   ]);
   for(const section of ['Home','Explore','Subscriptions','History','Your channel','Your videos'])assert.ok(html.includes(section),section+' navigation exists');
   assert.ok(app.includes("api('/api/auth/me')"));
+  assert.ok(app.includes('Public discovery, channels and playback remain available without signing in.'));
+  assert.ok(app.includes("['subscriptions','history','uploads'].includes(state.route)"));
+  assert.ok(!app.includes("if(!state.user){\n    $('#signInRequired').classList.remove('hidden');\n    $('#streambayContent').classList.add('hidden');\n    return;\n  }"));
   assert.ok(app.includes("api('/api/streambay/subscriptions')"));
   assert.ok(app.includes('data-subscription-channel'));
   assert.ok(html.includes('id="subscriptionChannels"'));
