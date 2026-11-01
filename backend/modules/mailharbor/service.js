@@ -216,7 +216,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     }
     if (input.checkForNewMailSeconds !== undefined) {
       const seconds = Number(input.checkForNewMailSeconds);
-      if (![15, 30, 60].includes(seconds)) return { status: 400, body: { error: 'Mailbox refresh must be 15, 30 or 60 seconds.' } };
+      if (![15, 20, 30, 60].includes(seconds)) return { status: 400, body: { error: 'Mailbox refresh must be 15, 30 or 60 seconds.' } };
       next.checkForNewMailSeconds = seconds;
     }
     const before = structuredClone(mailbox);

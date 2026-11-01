@@ -102,7 +102,7 @@ function showAuth() {
 
 function startMailPolling() {
   if (mailPollingTimer) window.clearInterval(mailPollingTimer);
-  const seconds = [15, 30, 60].includes(Number(mailSettingsState.checkForNewMailSeconds))
+  const seconds = [15, 20, 30, 60].includes(Number(mailSettingsState.checkForNewMailSeconds))
     ? Number(mailSettingsState.checkForNewMailSeconds) : 20;
   mailPollingTimer = window.setInterval(() => {
     if (document.visibilityState !== 'hidden' && currentUser && !['accounts', 'settings'].includes(currentFolder)) {
@@ -251,7 +251,7 @@ async function renderSettings(settings, feedback = '') {
       '</section>' +
       '<section class="mail-settings-card"><div class="mail-settings-heading">' + mailIcon('inbox') + '<div><h2>Inbox behaviour</h2><p>Control refresh and message display.</p></div></div>' +
         '<label class="mail-setting-field">Check for new mail<select id="mail-refresh-seconds">' +
-          [15, 30, 60].map(seconds => '<option value="' + seconds + '"' + (Number(mailSettingsState.checkForNewMailSeconds) === seconds ? ' selected' : '') + '>' + seconds + ' seconds</option>').join('') +
+          [15, 20, 30, 60].map(seconds => '<option value="' + seconds + '"' + (Number(mailSettingsState.checkForNewMailSeconds) === seconds ? ' selected' : '') + '>' + seconds + ' seconds</option>').join('') +
         '</select></label>' +
         '<label class="mail-setting-toggle"><input id="mail-mark-read" type="checkbox"' + checked('markReadOnOpen') + '> Mark messages as read when opened</label>' +
         '<label class="mail-setting-toggle"><input id="mail-show-preview" type="checkbox"' + checked('showMessagePreview') + '> Show message previews in the list</label>' +
@@ -398,6 +398,8 @@ async function init() {
     if (mailStatus.mailDomain) $('to').placeholder = 'member@' + mailStatus.mailDomain;
     const result = await request('/me');
     currentUser = result.user;
+    const savedSettings = await request('/settings');
+    mailSettingsState = { ...savedSettings.settings };
     showMailbox();
     await loadMessages();
   } catch (error) {

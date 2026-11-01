@@ -69,6 +69,7 @@ test('MailHarbor has per-mailbox settings and authenticated automatic refresh', 
   assert.match(mailApp, /function startMailPolling\(/);
   assert.match(mailApp, /mailPollingTimer = window\.setInterval/);
   assert.match(mailApp, /checkForNewMailSeconds/);
+  assert.match(mailApp, /\[15, 20, 30, 60\]/);
   assert.match(mailApp, /markReadOnOpen/);
   assert.match(mailApp, /showMessagePreview/);
   assert.match(mailApp, /compactView/);
