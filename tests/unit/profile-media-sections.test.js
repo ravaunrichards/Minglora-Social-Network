@@ -36,3 +36,15 @@ test('profile Photos and Reels use media actually attached to the member profile
   assert.match(app, /accept:'image\/jpeg,image\/png,image\/webp,image\/avif'/);
   assert.match(app, /accept:'video\/mp4,video\/webm,video\/quicktime'/);
 });
+
+test('profile More exposes Check-ins, Events, Groups and owner section management', async () => {
+  const [app, server] = await Promise.all([read('../../public/app.js'), read('../../src/server.js')]);
+  for (const key of ['checkins','events','groups','manage']) {
+    assert.ok(app.includes('data-profile-tab="'+key+'"'), key+' must be reachable from More');
+    assert.ok(app.includes("if(tab==='"+key+"')"), key+' must have a profile view');
+  }
+  assert.match(app, /function getProfileSectionPrefs/);
+  assert.match(app, /profile-section-manager/);
+  assert.match(app, /data-open-group/);
+  assert.match(server, /groups:\(db\.groups\|\|\[\]\)\.filter\(group=>group\.ownerId===target\.id/);
+});
