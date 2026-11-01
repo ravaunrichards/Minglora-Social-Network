@@ -23,7 +23,7 @@ import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdateP
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
 import { handleMailHarborApi, handleMailHarborWebhook, processMailHarborOutbox } from '../backend/modules/mailharbor/service.js';
 import { getMailHarborProviderStatus } from '../backend/modules/mailharbor/provider.js';
-import { createHarborPayLaunch, HARBORPAY_MINGLORA_CONSENT_VERSION, harborPayBridgeConfigured } from './harborpay-bridge.js';
+import { createHarborPayLaunch, getHarborPayBridgeStatus, HARBORPAY_MINGLORA_CONSENT_VERSION } from './harborpay-bridge.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
