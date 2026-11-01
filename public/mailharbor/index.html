@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#173c68">
   <meta name="description" content="MailHarbor — a secure, connected mailbox built into Minglora.">
   <title>MailHarbor · Minglora</title>
-  <link rel="stylesheet" href="styles.css?v=20261101-mailharbor-2">
+  <link rel="stylesheet" href="styles.css?v=20261101-mailharbor-settings-1">
 </head>
 <body>
   <main id="auth-shell" class="auth-shell">
@@ -37,6 +37,7 @@
         <button data-folder="trash" type="button"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#trash"></use></svg><span>Trash</span></button>
         <button data-folder="archive" type="button"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#archive"></use></svg><span>Archive</span></button>
         <button data-folder="accounts" type="button"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#profile"></use></svg><span>Connected accounts</span></button>
+        <button data-folder="settings" type="button"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#settings"></use></svg><span>Mail settings</span></button>
       </nav>
       <div class="sidefoot">Minglora session · MailHarbor</div>
     </aside>
@@ -62,7 +63,7 @@
           <span id="count">0 messages</span>
         </div>
         <div id="messages" class="messages" aria-live="polite"></div>
-        <p class="footnote">Internal Minglora mail is active. External delivery and third-party account sync are enabled only after their provider setup is completed.</p>
+        <p class="footnote">Internal Minglora send and receive are active. External Internet mail and third-party mailbox sync show their real connection status.</p>
       </section>
     </section>
   </div>
@@ -87,6 +88,6 @@
   </dialog>
 
   <script>if(new URLSearchParams(location.search).get('embedded')==='1')document.body.classList.add('mailharbor-embedded');</script>
-  <script src="app.js?v=20261101-mailharbor-2" defer></script>
+  <script src="app.js?v=20261101-mailharbor-settings-1" defer></script>
 </body>
 </html>

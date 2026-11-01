@@ -34,6 +34,10 @@ test('MailHarbor opens a durable Minglora member mailbox without a separate data
   const result = await call(state, state.db.users[0], 'GET', '/status');
   assert.equal(result.status, 200);
   assert.equal(result.body.internalMessagingEnabled, true);
+  assert.equal(result.body.internalOutboundEnabled, true);
+  assert.equal(result.body.internalInboundEnabled, true);
+  assert.equal(result.body.mailboxSettingsEnabled, true);
+  assert.equal(result.body.mailboxRefreshMode, 'authenticated-polling');
   assert.equal(result.body.outboundEmailConfigured, false);
   assert.equal(result.body.mailboxMode, 'minglora-internal');
   assert.equal(result.body.externalProviders.gmail.connected, false);
@@ -52,12 +56,14 @@ test('MailHarbor delivers member-to-member messages into the recipient inbox', a
     body: 'This message stays inside Minglora.'
   });
   assert.equal(sent.status, 202);
-  assert.equal(sent.body.message.delivery_status, 'sent');
+  assert.equal(sent.body.message.delivery_status, 'delivered');
   assert.equal(sent.body.message.delivery_channel, 'minglora_internal');
 
   const aliceSent = await call(state, state.db.users[0], 'GET', '/messages', {}, '?folder=sent');
   const bobInbox = await call(state, state.db.users[1], 'GET', '/messages', {}, '?folder=inbox');
   assert.equal(aliceSent.body.messages.length, 1);
+  assert.equal(aliceSent.body.messages[0].delivery_status, 'delivered');
+  assert.equal(aliceSent.body.messages[0].sender_name, 'Alice Example');
   assert.equal(bobInbox.body.messages.length, 1);
   assert.equal(bobInbox.body.messages[0].sender_email, 'alice@' + INTERNAL_MAIL_DOMAIN);
   assert.equal(bobInbox.body.messages[0].body_text, 'This message stays inside Minglora.');
@@ -184,4 +190,39 @@ test('MailHarbor restores its in-memory state when Supabase persistence fails', 
   assert.match(result.body.error, /No delivery was confirmed/);
   assert.equal(state.db.mailMessages.length, 0);
   assert.equal(state.db.mailboxes.length, 1);
+});
+
+
+test('MailHarbor settings are saved per member and control mailbox preferences', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const initial = await call(state, state.db.users[0], 'GET', '/settings');
+  assert.equal(initial.status, 200);
+  assert.equal(initial.body.settings.displayName, 'Alice Example');
+  assert.equal(initial.body.settings.checkForNewMailSeconds, 20);
+  assert.equal(initial.body.settings.markReadOnOpen, true);
+  const updated = await call(state, state.db.users[0], 'PATCH', '/settings', {
+    displayName: 'Alice on Minglora', signature: 'Sent with MailHarbor', checkForNewMailSeconds: 30,
+    markReadOnOpen: false, showMessagePreview: false, compactView: true
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.settings.displayName, 'Alice on Minglora');
+  assert.equal(updated.body.settings.signature, 'Sent with MailHarbor');
+  assert.equal(updated.body.settings.checkForNewMailSeconds, 30);
+  assert.equal(updated.body.settings.markReadOnOpen, false);
+  assert.equal(updated.body.settings.showMessagePreview, false);
+  assert.equal(updated.body.settings.compactView, true);
+  const bob = await call(state, state.db.users[1], 'GET', '/settings');
+  assert.equal(bob.body.settings.displayName, 'Bob Example');
+  assert.equal(bob.body.settings.signature, '');
+});
+
+test('MailHarbor rejects invalid settings without changing stored preferences', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const bad = await call(state, state.db.users[0], 'PATCH', '/settings', { displayName: '  ', checkForNewMailSeconds: 5 });
+  assert.equal(bad.status, 400);
+  const saved = await call(state, state.db.users[0], 'GET', '/settings');
+  assert.equal(saved.body.settings.displayName, 'Alice Example');
+  assert.equal(saved.body.settings.checkForNewMailSeconds, 20);
 });

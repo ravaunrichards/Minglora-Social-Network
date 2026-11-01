@@ -66,3 +66,33 @@
 .signout .mail-3d-icon{display:inline-block;width:18px;height:18px;vertical-align:middle}
 .modalfoot .mail-3d-icon{display:inline-block;width:22px;height:22px;vertical-align:middle}
 .provider-overview .mail-3d-icon,.provider-card .mail-3d-icon{max-width:100%}
+
+
+/* MailHarbor's own authenticated per-mailbox settings workspace. */
+.mail-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;align-items:start}
+.mail-settings-card{min-width:0;padding:18px;border:1px solid #dfe9f5;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(28,59,99,.045)}
+.mail-settings-heading{display:flex;align-items:center;gap:11px;margin:0 0 16px}
+.mail-settings-heading>.mail-3d-icon{width:34px;height:34px}
+.mail-settings-heading h2{margin:0;color:#263f5d;font-size:15px}
+.mail-settings-heading p{margin:4px 0 0;color:#8291a4;font-size:11px;line-height:1.45}
+.mail-setting-field{display:grid;gap:7px;margin:13px 0;color:#4b6079;font-size:12px;font-weight:700}
+.mail-setting-field input,.mail-setting-field textarea,.mail-setting-field select{width:100%;min-width:0;border:1px solid #d6e1ef;border-radius:10px;padding:11px 12px;background:#fbfdff;color:#243b58;font:inherit;font-weight:500}
+.mail-setting-field input[readonly]{background:#f2f6fb;color:#6c7d91}
+.mail-setting-field textarea{resize:vertical;line-height:1.5}
+.mail-setting-toggle{display:flex;align-items:center;gap:10px;margin:14px 0;color:#405873;font-size:12px;line-height:1.4}
+.mail-setting-toggle input{width:17px;height:17px;accent-color:#3477cf}
+.mail-settings-status{grid-column:span 2}
+.mail-capability-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #edf1f6;color:#526780;font-size:12px}
+.mail-capability-row:last-of-type{border-bottom:0}
+.mail-capability-row .provider-state{font-size:9px}
+.mail-settings-status .provider-notice{margin-bottom:0}
+.mail-settings-actions{grid-column:span 2;display:flex;align-items:center;justify-content:flex-end;gap:14px;flex-wrap:wrap}
+.mail-settings-actions .feedback{margin-right:auto}
+.compact-mail .message{min-height:52px;padding-top:8px;padding-bottom:8px}
+.compact-mail .summary>span{display:none}
+@media(max-width:760px){
+ .mail-settings{grid-template-columns:minmax(0,1fr)}
+ .mail-settings-status,.mail-settings-actions{grid-column:span 1}
+ .mail-settings-actions{align-items:stretch}
+ .mail-settings-actions .primary{width:100%}
+}

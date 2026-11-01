@@ -13,6 +13,8 @@ let messageList = [];
 let selected = new Set();
 let currentDraftId = null;
 let mailStatus = { outboundEmailConfigured: false, inboundEmailConfigured: false };
+let mailSettingsState = { signature: '', checkForNewMailSeconds: 20, markReadOnOpen: true, showMessagePreview: true, compactView: false };
+let mailPollingTimer = null;
 let authMode = 'login';
 let searchTimer = null;
 let realtimeSocket = null;
@@ -29,7 +31,8 @@ const folderNames = {
   spam: 'Spam',
   trash: 'Trash',
   archive: 'Archive',
-  accounts: 'Connected accounts'
+  accounts: 'Connected accounts',
+  settings: 'Mail settings'
 };
 
 function setFeedback(element, message, isError = false) {
@@ -82,12 +85,12 @@ function updateCapabilityText() {
   $('compose').disabled = !canCompose;
   $('send').disabled = !canCompose;
   $('service-banner').classList.toggle('is-hidden', outbound && inbound);
-  if (internal && !outbound) {
-    $('service-banner').textContent = 'MailHarbor is active inside Minglora. Messages to Minglora member mailboxes are delivered internally. External email sending and receiving are not enabled yet.';
+  if (internal && !outbound && !inbound) {
+    $('service-banner').textContent = 'MailHarbor is active inside Minglora: internal sending and receiving are enabled. External Internet email is not connected yet.';
   } else if (!outbound) {
-    $('service-banner').textContent = 'External sending is awaiting a verified sender domain and provider setup.';
+    $('service-banner').textContent = 'External sending is awaiting a verified MailHarbor sender domain and delivery provider.';
   } else if (!inbound) {
-    $('service-banner').textContent = 'External sending is configured. External receiving is awaiting an inbound provider, signed webhook and matching MX records.';
+    $('service-banner').textContent = 'External sending is configured. External receiving is awaiting inbound routing, signed webhook verification and matching MX records.';
   }
 }
 
@@ -97,11 +100,23 @@ function showAuth() {
   $('mail-app').classList.add('is-hidden');
 }
 
+function startMailPolling() {
+  if (mailPollingTimer) window.clearInterval(mailPollingTimer);
+  const seconds = [15, 30, 60].includes(Number(mailSettingsState.checkForNewMailSeconds))
+    ? Number(mailSettingsState.checkForNewMailSeconds) : 20;
+  mailPollingTimer = window.setInterval(() => {
+    if (document.visibilityState !== 'hidden' && currentUser && !['accounts', 'settings'].includes(currentFolder)) {
+      loadMessages().catch(() => {});
+    }
+  }, seconds * 1000);
+}
+
 function showMailbox() {
   $('auth-shell').classList.add('is-hidden');
   $('mail-app').classList.remove('is-hidden');
   $('signed-email').textContent = currentUser.email;
   updateCapabilityText();
+  startMailPolling();
   if (mailStatus.realtimeUrl) {
     realtimeStopped = false;
     connectRealtime();
@@ -150,6 +165,8 @@ async function connectRealtime() {
 
 function stopRealtime() {
   realtimeStopped = true;
+  if (mailPollingTimer) window.clearInterval(mailPollingTimer);
+  mailPollingTimer = null;
   clearTimeout(realtimeReconnectTimer);
   clearTimeout(realtimeRefreshTimer);
   realtimeReconnectTimer = null;
@@ -163,6 +180,7 @@ function stopRealtime() {
 
 async function loadMessages() {
   if (currentFolder === 'accounts') { renderConnectedAccounts(); return; }
+  if (currentFolder === 'settings') { await renderSettings(); return; }
   const query = new URLSearchParams({ folder: currentFolder });
   const search = $('search').value.trim();
   if (search) query.set('search', search);
@@ -212,6 +230,45 @@ function renderConnectedAccounts() {
     '<p class="provider-notice" role="note">Gmail, Yahoo, Outlook and iCloud are not being represented as connected. Their account data will only sync after the required provider credentials, callback routes, scopes and your explicit authorization are in place.</p>';
 }
 
+async function renderSettings(settings, feedback = '') {
+  const data = settings ? { settings } : await request('/settings');
+  mailSettingsState = { ...data.settings };
+  $('heading').textContent = 'MailHarbor settings';
+  $('subheading').textContent = 'Manage your mailbox identity, writing and inbox behaviour.';
+  $('count').textContent = 'Settings';
+  $('toolbar').classList.add('is-hidden');
+  $('folders').querySelectorAll('[data-folder]').forEach(button => button.classList.toggle('active', button.dataset.folder === 'settings'));
+  $('mail-app').classList.toggle('compact-mail', mailSettingsState.compactView === true);
+  const checked = key => mailSettingsState[key] === true ? ' checked' : '';
+  $('messages').innerHTML =
+    '<form id="mail-settings-form" class="mail-settings">' +
+      '<section class="mail-settings-card"><div class="mail-settings-heading">' + mailIcon('profile') + '<div><h2>Mailbox identity</h2><p>Your address is linked to your signed-in Minglora member.</p></div></div>' +
+        '<label class="mail-setting-field">Mailbox address<input value="' + escapeHtml(currentUser?.email || '') + '" readonly></label>' +
+        '<label class="mail-setting-field">Display name<input id="mail-display-name" maxlength="120" value="' + escapeHtml(mailSettingsState.displayName || currentUser?.name || '') + '" required></label>' +
+      '</section>' +
+      '<section class="mail-settings-card"><div class="mail-settings-heading">' + mailIcon('compose') + '<div><h2>Writing preferences</h2><p>Your signature is added to new messages; you can edit it before sending.</p></div></div>' +
+        '<label class="mail-setting-field">Email signature<textarea id="mail-signature" maxlength="5000" rows="5" placeholder="Your name and contact details">' + escapeHtml(mailSettingsState.signature || '') + '</textarea></label>' +
+      '</section>' +
+      '<section class="mail-settings-card"><div class="mail-settings-heading">' + mailIcon('inbox') + '<div><h2>Inbox behaviour</h2><p>Control refresh and message display.</p></div></div>' +
+        '<label class="mail-setting-field">Check for new mail<select id="mail-refresh-seconds">' +
+          [15, 30, 60].map(seconds => '<option value="' + seconds + '"' + (Number(mailSettingsState.checkForNewMailSeconds) === seconds ? ' selected' : '') + '>' + seconds + ' seconds</option>').join('') +
+        '</select></label>' +
+        '<label class="mail-setting-toggle"><input id="mail-mark-read" type="checkbox"' + checked('markReadOnOpen') + '> Mark messages as read when opened</label>' +
+        '<label class="mail-setting-toggle"><input id="mail-show-preview" type="checkbox"' + checked('showMessagePreview') + '> Show message previews in the list</label>' +
+        '<label class="mail-setting-toggle"><input id="mail-compact-view" type="checkbox"' + checked('compactView') + '> Use compact message rows</label>' +
+      '</section>' +
+      '<section class="mail-settings-card mail-settings-status"><div class="mail-settings-heading">' + mailIcon('delivery') + '<div><h2>Mail service status</h2><p>Capability state reported by the live MailHarbor API.</p></div></div>' +
+        '<div class="mail-capability-row"><span>Internal sending</span><strong class="provider-state active">Active</strong></div>' +
+        '<div class="mail-capability-row"><span>Internal receiving</span><strong class="provider-state active">Active</strong></div>' +
+        '<div class="mail-capability-row"><span>Mailbox persistence</span><strong class="provider-state active">Minglora state store</strong></div>' +
+        '<div class="mail-capability-row"><span>External sending</span><strong class="provider-state ' + (mailStatus.outboundEmailConfigured ? 'active' : 'pending') + '">' + (mailStatus.outboundEmailConfigured ? 'Connected' : 'Awaiting provider/domain') + '</strong></div>' +
+        '<div class="mail-capability-row"><span>External receiving</span><strong class="provider-state ' + (mailStatus.inboundEmailConfigured ? 'active' : 'pending') + '">' + (mailStatus.inboundEmailConfigured ? 'Connected' : 'Awaiting MX/inbound route') + '</strong></div>' +
+        '<p class="provider-notice">External mail requires a verified Minglora mail domain, authenticated outbound delivery, inbound MX/webhook routing and real provider credentials.</p>' +
+      '</section>' +
+      '<div class="mail-settings-actions"><span id="mail-settings-feedback" class="feedback" role="status">' + escapeHtml(feedback) + '</span><button class="primary" type="submit">Save MailHarbor settings</button></div>' +
+    '</form>';
+}
+
 function renderMessages() {
   $('toolbar').classList.remove('is-hidden');
   $('spam').classList.toggle('is-hidden', currentFolder === 'spam' || currentFolder === 'trash');
@@ -235,17 +292,19 @@ function renderMessages() {
     const starred = message.is_starred ? ' on' : '';
     const sender = currentFolder === 'sent'
       ? 'To: ' + ((message.recipients && message.recipients.to) || []).join(', ')
-      : message.sender_email;
-    const status = message.delivery_channel === 'minglora_internal' && message.delivery_status === 'sent'
+      : (message.sender_name ? message.sender_name + ' · ' : '') + message.sender_email;
+    const status = message.delivery_channel === 'minglora_internal' && (message.delivery_status === 'sent' || message.delivery_status === 'delivered')
       ? '<span class="delivery sent">Delivered internally</span>'
       : message.delivery_status === 'queued' ? '<span class="delivery queued">Queued</span>'
       : message.delivery_status === 'failed' ? '<span class="delivery failed">Failed</span>'
+      : message.delivery_status === 'received' ? '<span class="delivery sent">Received</span>'
       : message.delivery_status === 'sent' ? '<span class="delivery sent">Sent</span>' : '';
+    const preview = mailSettingsState.showMessagePreview === false ? '' : '<span>' + escapeHtml(message.body_text || '') + '</span>';
     return '<article class="message' + unread + '" data-id="' + id + '">' +
       '<input class="select-message" type="checkbox" aria-label="Select message"' + checked + '>' +
       '<button class="star' + starred + '" data-star="' + id + '" type="button" aria-label="Toggle star">' + mailIcon('star') + '</button>' +
       '<div class="sender">' + escapeHtml(sender) + '</div>' +
-      '<div class="summary"><strong>' + escapeHtml(message.subject || '(no subject)') + '</strong><span>' + escapeHtml(message.body_text || '') + '</span>' + status + '</div>' +
+      '<div class="summary"><strong>' + escapeHtml(message.subject || '(no subject)') + '</strong>' + preview + status + '</div>' +
       '<time class="time">' + escapeHtml(formatDate(message.created_at)) + '</time>' +
       '</article>';
   }).join('');
@@ -268,7 +327,7 @@ async function openMessage(id) {
     }
     $('detail-subject').textContent = message.subject || '(no subject)';
     $('detail-date').textContent = formatDate(message.created_at);
-    $('detail-from').textContent = message.sender_email || '';
+    $('detail-from').textContent = (message.sender_name ? message.sender_name + ' · ' : '') + (message.sender_email || '');
     const recipients = message.recipients || {};
     $('detail-to').textContent = [...(recipients.to || []), ...(recipients.cc || [])].join(', ');
     $('detail-status').textContent = message.delivery_status || '';
@@ -276,7 +335,7 @@ async function openMessage(id) {
     $('detail-error').textContent = message.last_error || '';
     $('detail-error').classList.toggle('is-hidden', !message.last_error);
     $('message-view').showModal();
-    if (!message.is_read) {
+    if (!message.is_read && mailSettingsState.markReadOnOpen !== false) {
       await request('/messages/' + id, { method: 'PATCH', body: { isRead: true } });
       await loadMessages();
     }
@@ -358,6 +417,34 @@ $('folders').addEventListener('click', async (event) => {
   try { await loadMessages(); } catch (error) { window.alert(error.message); }
 });
 
+$('messages').addEventListener('submit', async (event) => {
+  if (!event.target.matches('#mail-settings-form')) return;
+  event.preventDefault();
+  const button = event.target.querySelector('button[type="submit"]');
+  if (button) button.disabled = true;
+  try {
+    const result = await request('/settings', {
+      method: 'PATCH',
+      body: {
+        displayName: $('mail-display-name').value,
+        signature: $('mail-signature').value,
+        checkForNewMailSeconds: Number($('mail-refresh-seconds').value),
+        markReadOnOpen: $('mail-mark-read').checked,
+        showMessagePreview: $('mail-show-preview').checked,
+        compactView: $('mail-compact-view').checked
+      }
+    });
+    await renderSettings(result.settings, 'Your MailHarbor settings have been saved.');
+    startMailPolling();
+  } catch (error) {
+    const feedback = $('mail-settings-feedback');
+    if (feedback) setFeedback(feedback, error.message, true);
+  } finally {
+    const currentButton = event.target.querySelector('button[type="submit"]');
+    if (currentButton) currentButton.disabled = false;
+  }
+});
+
 $('messages').addEventListener('click', async (event) => {
   const star = event.target.closest('[data-star]');
   if (star) {
@@ -394,6 +481,8 @@ $('delete').addEventListener('click', () => mutateSelected('delete'));
 $('compose').addEventListener('click', () => {
   currentDraftId = null;
   $('compose-form').reset();
+  const signature = String(mailSettingsState.signature || '').trim();
+  $('body').value = signature ? '\n\n--\n' + signature : '';
   setFeedback($('compose-feedback'), '');
   $('composer').showModal();
 });

@@ -6,6 +6,7 @@ const MESSAGE_FOLDERS = new Set(['inbox', 'sent', 'drafts', 'spam', 'trash', 'ar
 const MAX_RECIPIENTS = 50;
 const MAX_BODY_LENGTH = 100000;
 const MAX_SUBJECT_LENGTH = 998;
+const DEFAULT_MAILBOX_SETTINGS = Object.freeze({ signature: '', checkForNewMailSeconds: 20, markReadOnOpen: true, showMessagePreview: true, compactView: false });
 
 function ensureCollections(db) {
   if (!Array.isArray(db.mailboxes)) db.mailboxes = [];
@@ -46,18 +47,26 @@ function ensureMailbox(db, member) {
   let mailbox = db.mailboxes.find(item => String(item.memberId) === memberId);
   if (!mailbox) {
     mailbox = {
-      id: memberId,
-      memberId,
-      username,
-      email: mailboxEmail(username),
-      displayName,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      id: memberId, memberId, username, email: mailboxEmail(username), displayName,
+      mailSettings: { ...DEFAULT_MAILBOX_SETTINGS },
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
     db.mailboxes.push(mailbox);
     return { mailbox, changed: true };
   }
-  return { mailbox, changed: false };
+  let changed = false;
+  if (!mailbox.mailSettings || typeof mailbox.mailSettings !== 'object' || Array.isArray(mailbox.mailSettings)) {
+    mailbox.mailSettings = { ...DEFAULT_MAILBOX_SETTINGS };
+    changed = true;
+  } else {
+    for (const [key, value] of Object.entries(DEFAULT_MAILBOX_SETTINGS)) {
+      if (!Object.hasOwn(mailbox.mailSettings, key)) {
+        mailbox.mailSettings[key] = value;
+        changed = true;
+      }
+    }
+  }
+  return { mailbox, changed };
 }
 
 function memberIsBlocked(db, firstId, secondId) {
@@ -159,9 +168,15 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     status: 'ready',
     mailboxMode: 'minglora-internal',
     mailDomain: currentMailboxDomain(),
+    mailboxSettingsEnabled: true,
     internalMessagingEnabled: true,
+    internalOutboundEnabled: true,
+    internalInboundEnabled: true,
     outboundEmailConfigured: false,
     inboundEmailConfigured: false,
+    externalOutboundConfigured: false,
+    externalInboundConfigured: false,
+    mailboxRefreshMode: 'authenticated-polling',
     externalProviders: {
       gmail: { configured: false, connected: false },
       yahoo: { configured: false, connected: false },
@@ -169,7 +184,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
       icloud: { configured: false, connected: false }
     },
     realtimeUrl: null,
-    deliveryNote: 'MailHarbor member-to-member delivery is active inside Minglora. External email sending and receiving are not enabled until a verified sender domain and provider are connected.'
+    deliveryNote: 'Internal Minglora send and receive are active and persisted. External Internet email and third-party account sync remain off until a verified mail domain, delivery provider, inbound routing and provider authorization are configured.'
   };
 
   if (verb === 'GET' && route === '/status') return { status: 200, body: internalStatus };
@@ -178,6 +193,42 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
       status: 200,
       body: { user: { id: mailbox.memberId, username: mailbox.username, name: mailbox.displayName, email: mailbox.email } }
     };
+  }
+  if (verb === 'GET' && route === '/settings') {
+    return { status: 200, body: { settings: { ...DEFAULT_MAILBOX_SETTINGS, ...(mailbox.mailSettings || {}), displayName: mailbox.displayName } } };
+  }
+  if (verb === 'PATCH' && route === '/settings') {
+    const next = { ...(mailbox.mailSettings || {}) };
+    let displayName = mailbox.displayName;
+    if (input.displayName !== undefined) {
+      displayName = cleanText(input.displayName, 120);
+      if (!displayName) return { status: 400, body: { error: 'Display name cannot be empty.' } };
+    }
+    if (input.signature !== undefined) {
+      if (typeof input.signature !== 'string' || input.signature.length > 5000) return { status: 400, body: { error: 'Signature must be text and 5,000 characters or fewer.' } };
+      next.signature = input.signature;
+    }
+    for (const key of ['markReadOnOpen', 'showMessagePreview', 'compactView']) {
+      if (input[key] !== undefined) {
+        if (typeof input[key] !== 'boolean') return { status: 400, body: { error: key + ' must be true or false.' } };
+        next[key] = input[key];
+      }
+    }
+    if (input.checkForNewMailSeconds !== undefined) {
+      const seconds = Number(input.checkForNewMailSeconds);
+      if (![15, 30, 60].includes(seconds)) return { status: 400, body: { error: 'Mailbox refresh must be 15, 30 or 60 seconds.' } };
+      next.checkForNewMailSeconds = seconds;
+    }
+    const before = structuredClone(mailbox);
+    mailbox.displayName = displayName;
+    mailbox.mailSettings = { ...DEFAULT_MAILBOX_SETTINGS, ...next };
+    mailbox.updatedAt = new Date().toISOString();
+    try { await saveStore(); }
+    catch (_error) {
+      Object.assign(mailbox, before);
+      return { status: 503, body: { error: 'Minglora could not save your MailHarbor settings. Try again.' } };
+    }
+    return { status: 200, body: { settings: { ...mailbox.mailSettings, displayName: mailbox.displayName } } };
   }
 
   if (verb === 'GET' && route === '/messages') {
@@ -278,6 +329,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
       id: messageId,
       owner_id: mailbox.memberId,
       sender_email: mailbox.email,
+      sender_name: mailbox.displayName,
       reply_to: mailbox.email,
       recipients,
       subject,
@@ -285,11 +337,12 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
       folder: 'sent',
       is_read: true,
       is_starred: false,
-      delivery_status: 'sent',
+      delivery_status: 'delivered',
       delivery_channel: 'minglora_internal',
       last_error: null,
       created_at: createdAt,
-      sent_at: createdAt
+      sent_at: createdAt,
+      delivered_at: createdAt
     });
 
     for (const { email, recipient } of resolved) {
@@ -297,12 +350,9 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
         id: makeMessageId(db),
         owner_id: recipient.memberId,
         sender_email: mailbox.email,
+        sender_name: mailbox.displayName,
         reply_to: mailbox.email,
-        recipients: {
-          to: recipients.to,
-          cc: recipients.cc,
-          bcc: []
-        },
+        recipients: { to: recipients.to, cc: recipients.cc, bcc: [] },
         subject,
         body_text: bodyText,
         folder: 'inbox',
@@ -312,7 +362,8 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
         delivery_channel: 'minglora_internal',
         last_error: null,
         created_at: createdAt,
-        sent_at: null
+        sent_at: null,
+        received_at: createdAt
       });
     }
 
@@ -328,7 +379,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
       body: {
         message: {
           id: messageId,
-          delivery_status: 'sent',
+          delivery_status: 'delivered',
           delivery_channel: 'minglora_internal',
           created_at: createdAt
         }

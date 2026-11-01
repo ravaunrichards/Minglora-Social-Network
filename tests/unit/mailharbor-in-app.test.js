@@ -32,7 +32,7 @@ test('MailHarbor frame is allowed only from the same Minglora origin', () => {
 });
 
 test('all mailbox destinations are real tabs with matching dimensional SVG symbols', () => {
-  const folders = ['inbox', 'starred', 'sent', 'drafts', 'spam', 'trash', 'archive', 'accounts'];
+  const folders = ['inbox', 'starred', 'sent', 'drafts', 'spam', 'trash', 'archive', 'accounts', 'settings'];
   for (const folder of folders) {
     assert.match(mailHtml, new RegExp('data-folder="' + folder + '"'));
   }
@@ -60,4 +60,17 @@ test('external account status is explicit and never faked as connected', () => {
   assert.match(mailApp, /state\.connected === true/);
   assert.match(mailApp, /not being represented as connected/);
   assert.match(mailHtml, /Connected accounts/);
+});
+
+
+test('MailHarbor has per-mailbox settings and authenticated automatic refresh', () => {
+  assert.match(mailHtml, /data-folder="settings"/);
+  assert.match(mailApp, /request\('\/settings'/);
+  assert.match(mailApp, /function startMailPolling\(/);
+  assert.match(mailApp, /mailPollingTimer = window\.setInterval/);
+  assert.match(mailApp, /checkForNewMailSeconds/);
+  assert.match(mailApp, /markReadOnOpen/);
+  assert.match(mailApp, /showMessagePreview/);
+  assert.match(mailApp, /compactView/);
+  assert.match(mailCss, /\.mail-settings-card/);
 });
