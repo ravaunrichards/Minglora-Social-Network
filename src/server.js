@@ -151,13 +151,13 @@ function safeUser(u,viewerId=null){
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false}};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -327,7 +327,7 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':'Minglora notification',
+    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':notification.type==='profile_view'?'Profile view':'Minglora notification',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
     data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id}
@@ -350,7 +350,7 @@ async function deliverUserPush(userId,notification){
 const notify = (userId, actorId, type, text, extra = {}) => {
   const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
   const prefs=getUserSettings(recipient).notifications;
-  if((type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;
+  if((type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(type==='profile_view'&&!prefs.profileViews)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;
   const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
   if(prefs.inApp)db.notifications.unshift(notification);
   if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
@@ -1955,6 +1955,24 @@ async function route(req, res) {
         await saveStore();return json(res,200,{blocked:method==='POST'});
       }
       if(method==='GET'&&p==='/api/blocks')return json(res,200,{users:(db.blocks||[]).filter(b=>b.blockerId===user.id).map(b=>safeUser(db.users.find(u=>u.id===b.blockedId))).filter(Boolean)});
+      if(method==='GET'&&p==='/api/profile-views'){
+        const enabled=getUserSettings(user).notifications.profileViews===true;
+        if(!enabled)return json(res,200,{enabled:false,viewers:[]});
+        const cutoff=Date.now()-30*24*60*60*1000;
+        const recent=(db.profileViews||[]).filter(view=>
+          view.targetUserId===user.id&&view.historyEligible===true&&view.viewerUserId!==user.id&&
+          Number.isFinite(new Date(view.viewedAt).getTime())&&new Date(view.viewedAt).getTime()>=cutoff
+        ).sort((a,b)=>new Date(b.viewedAt)-new Date(a.viewedAt));
+        const latestByViewer=new Map();
+        for(const view of recent){
+          const viewer=db.users.find(member=>member.id===view.viewerUserId);
+          if(!viewer||blockedBetween(user.id,viewer.id)||!canViewProfile(user.id,viewer)||getUserSettings(viewer).notifications.profileViews!==true)continue;
+          const current=latestByViewer.get(view.viewerUserId);
+          if(current)current.visitCount+=1;
+          else latestByViewer.set(view.viewerUserId,{user:safeUser(viewer,user.id),lastViewedAt:view.viewedAt,visitCount:1});
+        }
+        return json(res,200,{enabled:true,windowDays:30,viewers:[...latestByViewer.values()]});
+      }
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|friends)$/);
       if(method==='GET'&&m){
         const target=db.users.find(u=>u.id===m[1]);
@@ -2033,9 +2051,15 @@ async function route(req, res) {
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         db.profileViews ||= [];
         db.profileViewPresence ||= [];
-        if(recordProfileView(db.profileViews,{targetUserId:target.id,viewerUserId:user.id,at:new Date()}))await saveStore();
+        const mayRecordProfileView=target.id!==user.id&&getUserSettings(user).notifications.profileViews===true&&getUserSettings(target).notifications.profileViews===true;
+        if(mayRecordProfileView&&recordProfileView(db.profileViews,{targetUserId:target.id,viewerUserId:user.id,at:new Date()})){
+          const recordedView=db.profileViews.at(-1);
+          recordedView.historyEligible=true;
+          notify(target.id,user.id,'profile_view',(user.name||'A Minglora member')+' viewed your profile',{profileViewAt:recordedView.viewedAt});
+          await saveStore();
+        }
         const profileInsights=target.id===user.id
-          ?getProfileViewStats({views:db.profileViews,presence:db.profileViewPresence,targetUserId:target.id})
+          ?getProfileViewStats({views:db.profileViews.filter(view=>view.historyEligible===true),presence:db.profileViewPresence,targetUserId:target.id})
           :undefined;
         const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&post.userId===target.id&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
         const viewerIsFriend=isFriend(user.id,target.id);
@@ -2785,7 +2809,7 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
       }
-      if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
+      if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id))),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
       return json(res,404,{error:'API route not found.'});
