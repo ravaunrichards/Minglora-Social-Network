@@ -51,9 +51,9 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261101-messenger-profile-view-2/);
-  assert.match(html, /app\.js\?v=20261101-messenger-profile-view-2/);
-  assert.match(html, /settings\.js\?v=20261101-messenger-profile-view-2/);
-  assert.match(sw, /minglora-shell-v52-messenger-profile-view/);
-  assert.match(sw, /settings\.js\?v=20261101-messenger-profile-view-2/);
+  assert.match(html, /styles\.css\?v=20261101-inline-profile-edit-3/);
+  assert.match(html, /app\.js\?v=20261101-inline-profile-edit-3/);
+  assert.match(html, /settings\.js\?v=20261101-inline-profile-edit-3/);
+  assert.match(sw, /minglora-shell-v53-inline-profile-edit/);
+  assert.match(sw, /settings\.js\?v=20261101-inline-profile-edit-3/);
 });
