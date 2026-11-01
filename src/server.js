@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
-import { CALL_RING_TIMEOUT_MS, CALL_CONNECT_GRACE_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
+import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -2895,7 +2895,7 @@ async function route(req, res) {
           const busyElsewhere=(db.callParticipants||[]).some(item=>item.userId===user.id&&item.callId!==call.id&&isCallParticipantBusy((db.calls||[]).find(entry=>entry.id===item.callId),item));
           if(busyElsewhere)return json(res,409,{error:'Finish your current Minglora call before answering another call.'});
           if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now())){await saveStore();await cleanupCallRoom(call,'ring-timeout');}
-          if(['ended','cancelled','declined','missed'].includes(call.status)||!participant||['declined','left','missed','cancelled'].includes(participant.status))return json(res,404,{error:'This call invitation is no longer active.'});
+          if(['ended','cancelled','declined','missed'].includes(call.status)||!participant||['declined','missed','cancelled'].includes(participant.status)||(participant.status==='left'&&call.status!=='active'))return json(res,404,{error:'This call invitation is no longer active.'});
           if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
           if(participant.status==='calling'&&call.status==='ringing')return json(res,409,{error:'Waiting for the other member to answer.'});
           if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer ringing.'});
