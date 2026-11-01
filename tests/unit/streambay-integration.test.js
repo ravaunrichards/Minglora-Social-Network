@@ -67,6 +67,7 @@ test('StreamBay uses Minglora users for channel subscriptions, likes and comment
 
 test('StreamBay video edits and deletes require the owning Minglora account',async()=>{
   const context=makeContext();
+  context.user=owner;
   context.method='PATCH';context.path='/api/streambay/videos/video-1';
   context.input={title:'Updated title',description:'Updated details',category:'Music'};
   const updated=await handleStreamBayApi(context);
@@ -74,7 +75,7 @@ test('StreamBay video edits and deletes require the owning Minglora account',asy
   assert.equal(updated.body.video.title,'Updated title');
   context.user={...viewer,id:'someone-else'};
   await assert.rejects(()=>handleStreamBayApi(context),error=>error.status===403);
-  context.user=viewer;
+  context.user=owner;
   context.method='DELETE';context.path='/api/streambay/videos/video-1';
   context.deleteMediaAsset=async()=>{};
   const deleted=await handleStreamBayApi(context);
