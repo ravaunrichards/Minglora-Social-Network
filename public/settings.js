@@ -450,10 +450,11 @@
       });
 
       const settingsForm = document.querySelector('#settings-form');
-      document.querySelectorAll('[data-profile-viewer]').forEach(button=>button.addEventListener('click',()=>{
-        const userId=button.dataset.profileViewer;
+      document.querySelector('#settings-profile-view-history')?.addEventListener('click',event=>{
+        const button=event.target.closest('[data-profile-viewer]');
+        const userId=button?.dataset.profileViewer;
         if(userId)window.dispatchEvent(new CustomEvent('minglora:open-profile',{detail:{userId}}));
-      }));
+      });
 
       const settingsSaveStatus = document.querySelector('#settings-save-status');
       let settingsSaveTimer = null;
