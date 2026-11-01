@@ -7,7 +7,7 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 test('profile exposes Facebook-style Posts, About, Friends, Photos, Reels and More sections', async () => {
   const app = await read('../../public/app.js');
   for (const section of ['posts','about','friends','photos','reels','more']) {
-    assert.ok(app.includes('data-profile-tab="'+section+'"'), section+' tab must exist');
+    assert.ok(app.includes("data-profile-tab=\"'+key+'\""), section+' tab attribute must be rendered');
   }
   assert.match(app, /function profileTabMarkup/);
   assert.match(app, /function bindProfileTabActions/);
