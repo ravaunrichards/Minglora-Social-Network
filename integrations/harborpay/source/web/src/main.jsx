@@ -3,16 +3,23 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Building2,
   CheckCircle2,
+  ClipboardList,
   CircleAlert,
   CreditCard,
   History,
+  Link2,
   LogOut,
   ShieldCheck,
+  UserRoundCog,
+  Users,
   Wallet,
   X
 } from "lucide-react";
 import { supabase, supabaseConfigured } from "./lib/supabase.js";
+import MerchantWorkspace from "./merchant-workspace.jsx";
+import ProfileWorkspace from "./profile-workspace.jsx";
 import "./styles.css";
 
 const rawApiUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:4000" : "");
@@ -61,11 +68,12 @@ function Brand() {
   );
 }
 
-function AuthScreen({ prefill = null }) {
-  const [mode, setMode] = useState("signin");
+function AuthScreen({ prefill = null, recovery = false, onRecoveryComplete = () => {} }) {
+  const [mode, setMode] = useState(recovery ? "update" : "signin");
   const [fullName, setFullName] = useState(prefill?.fullName || "");
   const [email, setEmail] = useState(prefill?.email || "");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,14 +97,30 @@ function AuthScreen({ prefill = null }) {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { full_name: fullName.trim() } }
+          options: {
+            data: { full_name: fullName.trim() },
+            emailRedirectTo: window.location.origin + "/"
+          }
         });
         if (authError) throw authError;
-        if (!data.session) {
-          setNotice("Your account request was received. Confirm your email address before signing in.");
-        } else {
-          setNotice("Your HarborPay account is ready.");
-        }
+        setNotice(!data.session
+          ? "Your account was created. Open the confirmation email to verify your HarborPay email before signing in. If it does not arrive, check spam or contact support."
+          : "Your HarborPay account is ready.");
+      } else if (mode === "recover") {
+        const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin + "/"
+        });
+        if (authError) throw authError;
+        setNotice("If an account exists for that address, a password-reset email has been requested. Follow its secure link to choose a new password.");
+      } else if (mode === "update") {
+        if (password.length < 8) throw new Error("Your new password must be at least 8 characters.");
+        if (password !== confirmPassword) throw new Error("The new passwords do not match.");
+        const { error: authError } = await supabase.auth.updateUser({ password });
+        if (authError) throw authError;
+        setPassword("");
+        setConfirmPassword("");
+        setNotice("Your HarborPay password has been updated.");
+        onRecoveryComplete();
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -111,41 +135,62 @@ function AuthScreen({ prefill = null }) {
     }
   }
 
+  const heading = mode === "signup" ? "Create your account"
+    : mode === "recover" ? "Reset your password"
+    : mode === "update" ? "Choose a new password"
+    : "Welcome back";
+
   return (
     <main className="auth-page">
       <section className="auth-card">
         <Brand />
         <div className="auth-copy">
           <p className="eyebrow">SECURE PAYMENTS</p>
-          <h1>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
-          <p>Sign in securely to manage your HarborPay payments.</p>
+          <h1>{heading}</h1>
+          <p>{mode === "update" ? "Create a new password for your independent HarborPay account."
+            : mode === "recover" ? "Request a secure password-reset email."
+            : "Sign in securely to manage your HarborPay payments and merchant services."}</p>
           {prefill && <p className="message success">Your name and email were prefilled from Minglora with your permission. HarborPay account verification is separate.</p>}
         </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "signup" && (
             <label>
               Full name
-              <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required />
+              <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" minLength={2} maxLength={120} required />
             </label>
           )}
-          <label>
-            Email address
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
-          </label>
-          <label>
-            Password
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={8} required />
-          </label>
+          {mode !== "update" && (
+            <label>
+              Email address
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+            </label>
+          )}
+          {mode !== "recover" && (
+            <label>
+              {mode === "update" ? "New password" : "Password"}
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "signup" || mode === "update" ? "new-password" : "current-password"} minLength={8} required />
+            </label>
+          )}
+          {mode === "update" && (
+            <label>
+              Confirm new password
+              <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} required />
+            </label>
+          )}
           {error && <p className="message error">{error}</p>}
           {notice && <p className="message success">{notice}</p>}
           <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
+            {busy ? "Please wait…" : mode === "signup" ? "Create account"
+              : mode === "recover" ? "Send reset email"
+              : mode === "update" ? "Update password" : "Sign in"}
           </button>
         </form>
-        <button className="link-button" type="button" onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(""); setNotice(""); }}>
+        {mode === "signin" && <button className="link-button" type="button" onClick={() => { setMode("recover"); setError(""); setNotice(""); }}>Forgot password?</button>}
+        {!recovery && <button className="link-button" type="button" onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(""); setNotice(""); }}>
           {mode === "signup" ? "Already registered? Sign in" : "New to HarborPay? Create an account"}
-        </button>
-        <p className="auth-foot"><ShieldCheck size={15} /> Account access is protected by Supabase Auth.</p>
+        </button>}
+        {mode === "recover" && <button className="link-button" type="button" onClick={() => { setMode("signin"); setError(""); setNotice(""); }}>Back to sign in</button>}
+        <p className="auth-foot"><ShieldCheck size={15} /> Account access is protected by HarborPay Supabase Auth.</p>
       </section>
     </main>
   );
@@ -208,6 +253,7 @@ function PaymentModal({ onClose, onSubmit, busy, error }) {
 function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [authRecovery, setAuthRecovery] = useState(false);
   const [payments, setPayments] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [health, setHealth] = useState(null);
@@ -251,13 +297,17 @@ function App() {
       return undefined;
     }
 
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    if (hashParams.get("type") === "recovery") setAuthRecovery(true);
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthReady(true);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      if (event === "PASSWORD_RECOVERY") setAuthRecovery(true);
       setAuthReady(true);
     });
 
@@ -390,6 +440,7 @@ function App() {
   }
 
   if (!supabaseConfigured) return <SetupScreen />;
+  if (authRecovery) return <AuthScreen recovery onRecoveryComplete={() => setAuthRecovery(false)} />;
   if (!session) return <AuthScreen prefill={mingloraPrefill} />;
 
   const completedCount = payments.filter((payment) => payment.status === "completed").length;
@@ -407,6 +458,12 @@ function App() {
         <nav className="side-nav">
           <button className={section === "Overview" ? "active" : ""} onClick={() => setSection("Overview")}><Wallet size={18} /> Overview</button>
           <button className={section === "Transactions" ? "active" : ""} onClick={() => setSection("Transactions")}><History size={18} /> Transactions</button>
+          <p className="nav-caption hp-nav-subcaption">MERCHANT SERVICES</p>
+          <button className={section === "Business" ? "active" : ""} onClick={() => setSection("Business")}><Building2 size={18} /> Business</button>
+          <button className={section === "Customers" ? "active" : ""} onClick={() => setSection("Customers")}><Users size={18} /> Customers</button>
+          <button className={section === "Orders" ? "active" : ""} onClick={() => setSection("Orders")}><ClipboardList size={18} /> Orders</button>
+          <button className={section === "Payment links" ? "active" : ""} onClick={() => setSection("Payment links")}><Link2 size={18} /> Payment links</button>
+          <button className={section === "Profile" ? "active" : ""} onClick={() => setSection("Profile")}><UserRoundCog size={18} /> My profile</button>
         </nav>
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={19} /><span><strong>Provider-secured checkout</strong><small>Payment approval stays on PayPal.</small></span></div>
@@ -431,8 +488,8 @@ function App() {
           <section className="page-heading">
             <div>
               <p className="eyebrow">YOUR PAYMENT SPACE</p>
-              <h1>{section === "Overview" ? "Welcome to HarborPay" : "Your transactions"}</h1>
-              <p>Secure checkout, clear payment records, and real provider status.</p>
+              <h1>{({ Overview: "Welcome to HarborPay", Transactions: "Your transactions", Business: "Merchant business", Customers: "Merchant customers", Orders: "Merchant orders", "Payment links": "Payment links", Profile: "My HarborPay profile" })[section] || section}</h1>
+              <p>{section === "Business" || section === "Customers" || section === "Orders" || section === "Payment links" ? "Manage real records in your HarborPay merchant database." : "Secure checkout, clear payment records, and real provider status."}</p>
             </div>
             {section === "Overview" && <button className="primary-button top-pay" onClick={() => { setPaymentError(""); setShowPayment(true); }}>Make a payment <ArrowUpRight size={17} /></button>}
           </section>
@@ -467,7 +524,7 @@ function App() {
             </>
           )}
 
-          <section className="activity-section">
+          {(section === "Overview" || section === "Transactions") && <section className="activity-section">
             <div className="section-heading">
               <div><h2>{section === "Overview" ? "Recent transactions" : "Transaction history"}</h2><p>Records associated with your signed-in account.</p></div>
               <button className="text-button" onClick={() => loadPayments(session.access_token)} disabled={paymentsLoading}>{paymentsLoading ? "Refreshing…" : "Refresh"} <ArrowDownLeft size={15} /></button>
@@ -486,7 +543,10 @@ function App() {
               ))}
               <div className="table-foot">Payment statuses come from PayPal capture responses and verified webhook events.</div>
             </div>
-          </section>
+          </section>}
+          {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} notify={(message) => setNotice(message)} />}
+          {section === "Profile" && <ProfileWorkspace session={session} notify={(message) => setNotice(message)} />}
+
           <footer className="app-footer"><span>HarborPay</span><span>Secure payments · No fabricated balances</span></footer>
         </div>
       </main>
