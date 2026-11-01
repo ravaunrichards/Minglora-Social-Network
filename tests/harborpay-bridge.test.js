@@ -4,6 +4,7 @@ import { createHash, createHmac } from "node:crypto";
 import {
   HARBORPAY_MINGLORA_CONSENT_VERSION,
   buildMingloraHarborPayLaunchRequest,
+  getHarborPayBridgeStatus,
   harborPayBridgeConfigured
 } from "../src/harborpay-bridge.js";
 
@@ -40,4 +41,63 @@ test("bridge readiness fails closed without both origins and a strong secret", (
   assert.equal(harborPayBridgeConfigured({ HARBORPAY_API_URL: "https://api.harborpay.example", HARBORPAY_WEB_URL: "https://harborpay.example", HARBORPAY_SSO_SECRET: secret, NODE_ENV: "production" }), true);
   assert.equal(harborPayBridgeConfigured({ HARBORPAY_API_URL: "", HARBORPAY_WEB_URL: "https://harborpay.example", HARBORPAY_SSO_SECRET: secret, NODE_ENV: "production" }), false);
   assert.equal(harborPayBridgeConfigured({ HARBORPAY_API_URL: "https://api.harborpay.example", HARBORPAY_WEB_URL: "https://harborpay.example", HARBORPAY_SSO_SECRET: "short", NODE_ENV: "production" }), false);
+});
+
+
+test("HarborPay readiness checks the remote API and identifies missing bridge configuration", async () => {
+  const env = {
+    NODE_ENV: "production",
+    HARBORPAY_API_URL: "https://api.harborpay.example",
+    HARBORPAY_WEB_URL: "https://harborpay.example",
+    HARBORPAY_SSO_SECRET: secret
+  };
+  const unavailable = await getHarborPayBridgeStatus({
+    env,
+    fetchImpl: async () => {
+      throw new Error("connection refused");
+    }
+  });
+  assert.equal(unavailable.configured, false);
+  assert.equal(unavailable.apiReachable, false);
+  assert.match(unavailable.message, /not responding/i);
+
+  const missingRemoteSecret = await getHarborPayBridgeStatus({
+    env,
+    fetchImpl: async () => new Response(JSON.stringify({
+      service: "harborpay-api",
+      configured: { supabase: true, mingloraIdentityBridge: false }
+    }), { status: 200, headers: { "Content-Type": "application/json" } })
+  });
+  assert.equal(missingRemoteSecret.apiReachable, true);
+  assert.equal(missingRemoteSecret.configured, false);
+  assert.match(missingRemoteSecret.message, /MINGLORA_SSO_SECRET/i);
+
+  const ready = await getHarborPayBridgeStatus({
+    env,
+    fetchImpl: async () => new Response(JSON.stringify({
+      service: "harborpay-api",
+      configured: { supabase: true, mingloraIdentityBridge: true }
+    }), { status: 200, headers: { "Content-Type": "application/json" } })
+  });
+  assert.equal(ready.configured, true);
+  assert.equal(ready.apiReachable, true);
+  assert.match(ready.message, /ready/i);
+});
+
+test("HarborPay readiness returns a useful error for a non-JSON deployment response", async () => {
+  const status = await getHarborPayBridgeStatus({
+    env: {
+      NODE_ENV: "production",
+      HARBORPAY_API_URL: "https://api.harborpay.example",
+      HARBORPAY_WEB_URL: "https://harborpay.example",
+      HARBORPAY_SSO_SECRET: secret
+    },
+    fetchImpl: async () => new Response("<html>service unavailable</html>", {
+      status: 503,
+      headers: { "Content-Type": "text/html" }
+    })
+  });
+  assert.equal(status.configured, false);
+  assert.equal(status.apiReachable, false);
+  assert.match(status.message, /HTTP 503/i);
 });
