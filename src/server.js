@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
-import { canAccessMeetWaveRoom, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
+import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -110,19 +110,20 @@ function safeUser(u,viewerId=null){
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false}};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
       if(!allowed[section].includes(key))return {valid:false,error:'Unsupported setting: '+key};
       if(section==='privacy'&&key==='profileVisibility'&&!['public','friends','private'].includes(value))return {valid:false,error:'Profile visibility must be public, friends or private.'};
       if(section==='privacy'&&key==='messageAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Message audience must be everyone, friends or nobody.'};
+      if(section==='privacy'&&key==='meetWaveAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'MeetWave invitation audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
       if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
       if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
@@ -2150,20 +2151,31 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/meetwave/status'){
         requireAuth(user);
         const health=await verifyLiveKitConnection();
-        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,maxParticipants:8});
+        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,error:health.error||null,maxParticipants:8});
       }
       if(method==='GET'&&p==='/api/meetwave/rooms'){
         requireAuth(user);
-        const rooms=(db.meetWaveRooms||[])
+        const accessibleRooms=(db.meetWaveRooms||[])
           .filter(room=>room.status!=='ended'&&canUserAccessMeetWaveRoom(room,user.id))
           .sort((a,b)=>new Date(a.scheduledAt||a.createdAt)-new Date(b.scheduledAt||b.createdAt))
-          .slice(0,100)
-          .map(room=>meetWaveRoomView(room,user.id));
+          .slice(0,30);
+        const rooms=await Promise.all(accessibleRooms.map(async room=>{
+          const view=meetWaveRoomView(room,user.id);
+          if(room.status!=='active')return {...view,participantCount:0,participantCountVerified:true};
+          if(!isLiveKitConfigured())return {...view,participantCount:null,participantCountVerified:false};
+          try{
+            const participants=await listLiveKitParticipants(room.roomName);
+            return {...view,participantCount:participants.length,participantCountVerified:true};
+          }catch{
+            return {...view,participantCount:null,participantCountVerified:false};
+          }
+        }));
         return json(res,200,{rooms});
       }
       if(method==='POST'&&p==='/api/meetwave/rooms'){
         requireAuth(user);
-        if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave needs the Minglora LiveKit service to be configured before rooms can be created.'});
+        const providerHealth=await verifyLiveKitConnection();
+        if(!providerHealth.connected)return json(res,503,{error:providerHealth.configured?'Minglora could not reach LiveKit. MeetWave rooms cannot be created until the media service is connected.':'MeetWave needs the Minglora LiveKit service to be configured before rooms can be created.'});
         const validation=validateMeetWaveRoomInput(input);
         if(!validation.valid)return json(res,400,{error:validation.error});
         db.meetWaveRooms||=[];
@@ -2212,6 +2224,7 @@ async function route(req, res) {
         const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveRoomMatch[1]);
         const action=meetWaveRoomMatch[2]||'';
         if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(room.status==='ended')return json(res,410,{error:'This MeetWave meeting has ended.'});
         if(blockedBetween(user.id,room.ownerId)&&room.ownerId!==user.id)return json(res,403,{error:'This meeting room is unavailable.'});
         if(!canUserAccessMeetWaveRoom(room,user.id))return json(res,403,{error:'You do not have access to this MeetWave room.'});
         if(method==='GET'&&!action){
@@ -2227,12 +2240,18 @@ async function route(req, res) {
           const availability=meetWaveRoomJoinAvailability(room);
           if(availability==='ended')return json(res,410,{error:'This meeting has ended.'});
           if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
-          await ensureLiveKitRoom(room.roomName,room.participantLimit||8);
-          const participants=await listLiveKitParticipants(room.roomName);
-          if(participants.length>=(room.participantLimit||8)&&!participants.some(participant=>participant.identity===user.id)){
-            return json(res,409,{error:'This MeetWave room is full. The current limit is eight participants.'});
+          let participants=[],liveKit;
+          try{
+            await ensureLiveKitRoom(room.roomName,room.participantLimit||8);
+            participants=await listLiveKitParticipants(room.roomName);
+            if(participants.length>=(room.participantLimit||8)&&!participants.some(participant=>participant.identity===user.id)){
+              return json(res,409,{error:'This MeetWave room is full. The current limit is eight participants.'});
+            }
+            liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
+          }catch(error){
+            console.warn('[MeetWave] LiveKit join preparation failed.',{roomId:room.id,status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare the LiveKit meeting connection. Check the media service and try again.'});
           }
-          const liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
           db.meetWaveAttendance||=[];
           let attendance=db.meetWaveAttendance.find(item=>item.roomId===room.id&&item.userId===user.id);
           if(!attendance){attendance={id:uid(),roomId:room.id,userId:user.id,role:room.ownerId===user.id?'host':'participant',status:'joined',joinedAt:now(),leftAt:null};db.meetWaveAttendance.push(attendance);}
@@ -2260,8 +2279,8 @@ async function route(req, res) {
           db.meetWaveInvitations||=[];
           const sent=[];
           for(const member of invitees){
-            const settings=getUserSettings(member).privacy;
-            if(settings.messageAudience==='nobody'||(settings.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
+            const memberSettings=getUserSettings(member);
+            if(!canReceiveMeetWaveInvitation(memberSettings,{isFriend:isFriend(user.id,member.id)}))continue;
             let invitation=db.meetWaveInvitations.find(item=>item.roomId===room.id&&item.userId===member.id);
             if(invitation&&invitation.status==='accepted')continue;
             if(!invitation){invitation={id:uid(),roomId:room.id,userId:member.id,invitedBy:user.id,status:'pending',createdAt:now(),respondedAt:null};db.meetWaveInvitations.push(invitation);}
