@@ -2229,11 +2229,12 @@ async function route(req, res) {
         if(!canUserAccessMeetWaveRoom(room,user.id))return json(res,403,{error:'You do not have access to this MeetWave room.'});
         if(method==='GET'&&!action){
           let participants=[];
-          if(isLiveKitConfigured()&&room.status==='active'){
+          if(room.status==='active'){
+            if(!isLiveKitConfigured())return json(res,503,{error:'Minglora cannot verify this active meeting while LiveKit is unavailable.'});
             try{participants=await listLiveKitParticipants(room.roomName);}
             catch(error){return json(res,503,{error:'Minglora could not verify the live participant list for this room.'});}
           }
-          return json(res,200,{room:meetWaveRoomView(room,user.id),participants,participantCount:participants.length});
+          return json(res,200,{room:meetWaveRoomView(room,user.id),participants,participantCount:participants.length,participantCountVerified:true});
         }
         if(method==='POST'&&action==='join'){
           if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot connect because Minglora LiveKit is not configured.'});
