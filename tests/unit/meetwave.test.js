@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   canAccessMeetWaveRoom,
+  canReceiveMeetWaveInvitation,
   meetWaveRoomJoinAvailability,
   normalizeMeetWaveMessage,
   validateMeetWaveRoomInput
@@ -39,6 +40,13 @@ test('scheduled MeetWave rooms open fifteen minutes before the start', () => {
   assert.equal(meetWaveRoomJoinAvailability(room, start - 16 * 60 * 1000), 'too-early');
   assert.equal(meetWaveRoomJoinAvailability(room, start - 15 * 60 * 1000), 'open');
   assert.equal(meetWaveRoomJoinAvailability({ ...room, status: 'ended' }, start), 'ended');
+});
+
+test('MeetWave invitation privacy is independent from direct-message privacy', () => {
+  assert.equal(canReceiveMeetWaveInvitation({ privacy: { meetWaveAudience: 'everyone', messageAudience: 'nobody' } }), true);
+  assert.equal(canReceiveMeetWaveInvitation({ privacy: { meetWaveAudience: 'friends', messageAudience: 'everyone' } }, { isFriend: true }), true);
+  assert.equal(canReceiveMeetWaveInvitation({ privacy: { meetWaveAudience: 'friends', messageAudience: 'everyone' } }, { isFriend: false }), false);
+  assert.equal(canReceiveMeetWaveInvitation({ privacy: { meetWaveAudience: 'nobody', messageAudience: 'everyone' } }, { isFriend: true }), false);
 });
 
 test('MeetWave chat trims whitespace and rejects empty or oversized messages', () => {
