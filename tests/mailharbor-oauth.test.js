@@ -88,7 +88,9 @@ test('Gmail OAuth is PKCE-protected, encrypts tokens, supports sending and avoid
           assert.match(raw, /To: receiver@example\.net/);
           assert.match(raw, /Bcc: hidden@example\.net/);
           assert.match(raw, /Subject: Test from Gmail/);
-          assert.match(raw, /Hello from MailHarbor/);
+          const bodyBase64 = raw.match(/Content-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+/=\r\n]+)\r\n--minglora-/)?.[1]?.replace(/\r\n/g, '');
+          assert.ok(bodyBase64, 'Gmail MIME message contains a base64 text body');
+          assert.equal(Buffer.from(bodyBase64, 'base64').toString('utf8'), 'Hello from MailHarbor');
           return json({ id: 'gmail-sent-message-001' });
         }
         throw new Error('Unexpected mocked Google request: ' + String(url));

@@ -50,7 +50,7 @@ test('mail actions are wired to real backend operations', () => {
   assert.match(mailApp, /request\('\/drafts'/);
   assert.match(mailApp, /mutateSelected\('spam'\)/);
   assert.match(mailApp, /mutateSelected\('restore'\)/);
-  assert.match(mailApp, /draftId: currentDraftId/);
+  assert.match(mailApp, /payload\.draftId = currentDraftId/);
 });
 
 test('Gmail and Outlook have real owner-scoped OAuth connect, sync and disconnect flows', () => {

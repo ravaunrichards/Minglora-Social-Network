@@ -79,7 +79,7 @@ test('MailHarbor never reports external email as delivered', async () => {
     body: 'This must not be queued.'
   });
   assert.equal(result.status, 503);
-  assert.match(result.body.error, /Resend API key and verify a public MailHarbor sender domain/);
+  assert.match(result.body.error, /External email is not connected/);
   assert.equal(state.db.mailMessages.length, 0);
 });
 
@@ -170,7 +170,7 @@ test('MailHarbor lets an external address remain in a draft but never sends it',
     body: 'Not delivered.'
   });
   assert.equal(result.status, 503);
-  assert.match(result.body.error, /External email delivery is not active/);
+  assert.match(result.body.error, /External email is not connected/);
   assert.equal(state.db.mailMessages.find(message => message.id === saved.body.message.id).folder, 'drafts');
 });
 

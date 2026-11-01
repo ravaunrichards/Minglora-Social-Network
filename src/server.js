@@ -786,6 +786,15 @@ async function route(req, res) {
           db,
           saveStore
         });
+        if (result.redirectTo) {
+          res.writeHead(302, {
+            ...SECURITY_HEADERS,
+            'Cache-Control': 'no-store',
+            'Location': result.redirectTo
+          });
+          res.end();
+          return;
+        }
         return json(res, result.status, result.body, { 'Cache-Control': 'no-store' });
       }
       if(method==='GET'&&p==='/api/marketplace/seller'){
