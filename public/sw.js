@@ -1,6 +1,6 @@
-/* Minglora service worker: versioned shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v35-marketplace-commerce-4';
-const SHELL=['/','/styles.css?v=20261101-marketplace-core-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261031-marketplace-commerce-3','/settings.js?v=20261031-settings-flat-2','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
+/* Minglora service worker: update-friendly shell caching and background Web Push. */
+const CACHE_NAME='minglora-shell-v36-android-update-ready';
+const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-marketplace-core-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261031-marketplace-commerce-3','/settings.js?v=20261031-settings-flat-2','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
@@ -12,10 +12,17 @@ self.addEventListener('fetch',event=>{
   const url=new URL(request.url);
   if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return;
   if(request.mode==='navigate'){
-    event.respondWith(fetch(request).catch(()=>caches.match('/')));
+    event.respondWith(fetch(request,{cache:'no-cache'}).catch(()=>caches.match('/')));
     return;
   }
-  if(['style','script','font','image'].includes(request.destination)){
+  if(['style','script','font'].includes(request.destination)){
+    event.respondWith(fetch(request,{cache:'no-cache'}).then(response=>{
+      if(response.ok){const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(request,copy));}
+      return response;
+    }).catch(()=>caches.match(request)));
+    return;
+  }
+  if(request.destination==='image'){
     event.respondWith(caches.match(request).then(cached=>cached||fetch(request).then(response=>{
       if(response.ok){const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(request,copy));}
       return response;
