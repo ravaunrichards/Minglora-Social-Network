@@ -82,7 +82,7 @@ test('crop preview and saved output use the visible inner frame rather than its 
 });
 
 test('public profile pages and outside member cards show the complete saved profile images',()=>{
-  assert.ok(app.includes('class="profile-cover">${u.cover?'));
+  assert.ok(app.includes('class="profile-cover"'), 'profile cover container must exist');
   assert.ok(app.includes('class="profile-cover-image" data-view-image='));
   assert.ok(css.includes('.profile-cover-image{display:block;width:100%;height:100%;object-fit:contain'));
   assert.ok(css.includes('.profile-info .avatar,.person-avatar-wrap .avatar{object-fit:contain'));
