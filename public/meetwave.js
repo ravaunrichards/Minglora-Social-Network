@@ -31,11 +31,43 @@
     $('#mw-code-form').onsubmit=event=>{event.preventDefault();joinRoom($('#mw-code').value.trim().toUpperCase());};
   }
   async function createRoom(mode){
-    const title=prompt('Meeting title:',mode==='personal'?'My personal room':'Minglora meeting');if(!title)return;
-    const visibility=(prompt('Access: private, friends or public','private')||'private').toLowerCase();
-    const payload={title,mode,visibility,description:''};
-    if(mode==='scheduled'){const time=prompt('Scheduled date/time (ISO format):');if(!time)return;const timestamp=Date.parse(time);if(!Number.isFinite(timestamp)){note('Enter a valid date and time.',true);return;}payload.scheduledAt=new Date(timestamp).toISOString();}
-    try{const result=await api('/meetwave/rooms',{method:'POST',body:JSON.stringify(payload)});await joinRoom(result.room.id);}catch(error){note(error.message,true);}
+    document.querySelector('.mw-modal-backdrop')?.remove();
+    const scheduled=mode==='scheduled';
+    const minimumDate=new Date(Date.now()+60_000);
+    minimumDate.setMinutes(minimumDate.getMinutes()-minimumDate.getTimezoneOffset());
+    const minimum=minimumDate.toISOString().slice(0,16);
+    const title=mode==='personal'?'My personal room':'Minglora meeting';
+    const heading=scheduled?'Schedule a meeting':mode==='personal'?'Set up your personal room':'Start an instant meeting';
+    const modal=document.createElement('div');
+    modal.className='mw-modal-backdrop';
+    modal.innerHTML='<section class="mw-create-dialog" role="dialog" aria-modal="true" aria-labelledby="mw-create-title"><header><div><span class="mw-eyebrow">MEETWAVE SETUP</span><h2 id="mw-create-title">'+heading+'</h2></div><button type="button" class="mw-modal-close" aria-label="Close" data-close>×</button></header><form id="mw-create-form"><label>Meeting name<input name="title" minlength="2" maxlength="100" value="'+esc(title)+'" required autocomplete="off"></label><label>Description <span>(optional)</span><textarea name="description" maxlength="1000" rows="3" placeholder="What is this meeting about?"></textarea></label><label>Who can access this room<select name="visibility"><option value="private">Invite only</option><option value="friends">Friends</option><option value="public">Public</option></select></label>'+(scheduled?'<label>Meeting date and time<input type="datetime-local" name="scheduledAt" min="'+minimum+'" required><small>Participants can join 15 minutes before the scheduled start.</small></label>':'')+'<p class="mw-modal-error" id="mw-create-error" role="alert"></p><div class="mw-modal-actions"><button type="button" class="mw-secondary" data-close>Cancel</button><button type="submit" class="mw-primary" id="mw-create-submit">'+(scheduled?'Save meeting':mode==='personal'?'Save personal room':'Create meeting')+'</button></div></form></section>';
+    document.body.append(modal);
+    const close=()=>modal.remove();
+    modal.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',close));
+    modal.addEventListener('click',event=>{if(event.target===modal)close();});
+    modal.addEventListener('keydown',event=>{if(event.key==='Escape')close();});
+    const form=modal.querySelector('#mw-create-form');
+    form.elements.title.focus();
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const formData=new FormData(form);
+      const payload={title:String(formData.get('title')||'').trim(),description:String(formData.get('description')||'').trim(),mode,visibility:String(formData.get('visibility')||'private')};
+      if(scheduled){
+        const timestamp=Date.parse(String(formData.get('scheduledAt')||''));
+        if(!Number.isFinite(timestamp)||timestamp<Date.now()+60_000){$('#mw-create-error').textContent='Choose a meeting time at least one minute in the future.';return;}
+        payload.scheduledAt=new Date(timestamp).toISOString();
+      }
+      const submit=modal.querySelector('#mw-create-submit');
+      submit.disabled=true;submit.textContent='Creating…';
+      try{
+        const result=await api('/meetwave/rooms',{method:'POST',body:JSON.stringify(payload)});
+        close();await joinRoom(result.room.id);
+      }catch(error){
+        const message=modal.isConnected?modal.querySelector('#mw-create-error'):null;
+        if(message)message.textContent=error.message;
+        submit.disabled=false;submit.textContent=scheduled?'Save meeting':mode==='personal'?'Save personal room':'Create meeting';
+      }
+    });
   }
   async function copyInvite(id){
     const url=location.origin+'/?meetwave='+encodeURIComponent(id);
