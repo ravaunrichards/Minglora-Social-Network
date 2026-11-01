@@ -406,6 +406,58 @@ app.get("/api/payments", requireAuth, asyncRoute(async (request, response) => {
   response.json({ items: data || [] });
 }));
 
+
+app.get("/api/profile", requireAuth, asyncRoute(async (request, response) => {
+  const { data, error } = await getDatabase().from("profiles")
+    .select("id, email, full_name, country_code, phone_e164, locale, timezone, email_verified_at, account_status, created_at, updated_at")
+    .eq("id", request.user.id)
+    .maybeSingle();
+  if (error) throw httpError(503, "Your HarborPay profile could not be loaded.");
+  if (!data) throw httpError(404, "Your HarborPay profile is not ready yet. Contact support.");
+  response.set("Cache-Control", "no-store").json({ profile: data });
+}));
+
+app.post("/api/profile", requireAuth, asyncRoute(async (request, response) => {
+  const body = request.body || {};
+  const updates = {};
+  if (body.fullName !== undefined) {
+    const fullName = String(body.fullName || "").trim();
+    if (fullName.length < 2 || fullName.length > 120) throw httpError(400, "Full name must contain 2–120 characters.");
+    updates.full_name = fullName;
+  }
+  if (body.phoneE164 !== undefined) {
+    const phone = String(body.phoneE164 || "").trim();
+    if (phone && !/^\\+[1-9]\\d{7,14}$/.test(phone)) throw httpError(400, "Phone number must use international E.164 format.");
+    updates.phone_e164 = phone || null;
+  }
+  if (body.countryCode !== undefined) {
+    const country = String(body.countryCode || "").trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(country)) throw httpError(400, "Country code must be a two-letter ISO code.");
+    updates.country_code = country;
+  }
+  if (body.locale !== undefined) {
+    const locale = String(body.locale || "").trim();
+    if (locale.length < 2 || locale.length > 20) throw httpError(400, "Enter a valid locale.");
+    try { Intl.getCanonicalLocales(locale); } catch { throw httpError(400, "Enter a valid locale."); }
+    updates.locale = locale;
+  }
+  if (body.timezone !== undefined) {
+    const timezone = String(body.timezone || "").trim();
+    if (!timezone || timezone.length > 80) throw httpError(400, "Enter a valid time zone.");
+    try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }); } catch { throw httpError(400, "Enter a valid IANA time zone."); }
+    updates.timezone = timezone;
+  }
+  if (!Object.keys(updates).length) throw httpError(400, "There are no profile changes to save.");
+  const database = getDatabase();
+  const { data, error } = await database.from("profiles")
+    .update(updates)
+    .eq("id", request.user.id)
+    .select("id, email, full_name, country_code, phone_e164, locale, timezone, email_verified_at, account_status, created_at, updated_at")
+    .single();
+  if (error || !data) throw httpError(503, "Your profile changes could not be saved.");
+  response.set("Cache-Control", "no-store").json({ profile: data });
+}));
+
 app.post("/api/payments/orders", requireAuth, asyncRoute(async (request, response) => {
   if (!isPayPalConfigured()) throw httpError(503, "PayPal checkout is not configured on the server.");
 
@@ -635,6 +687,30 @@ app.post("/api/merchants", requireAuth, asyncRoute(async (request, response) => 
   response.status(201).json({ merchant: { ...data, role: "owner" } });
 }));
 
+
+app.post("/api/merchants/:merchantId/profile", requireAuth, asyncRoute(async (request, response) => {
+  const database = getDatabase();
+  await requireMerchantRole(database, request.params.merchantId, request.user.id, ["owner", "admin"]);
+  const body = request.body || {};
+  const updates = {};
+  if (body.displayName !== undefined) updates.display_name = validateMerchantName(body.displayName);
+  if (body.legalName !== undefined) {
+    const legalName = String(body.legalName || "").trim();
+    if (legalName.length > 120) throw httpError(400, "Legal name must be 120 characters or fewer.");
+    updates.legal_name = legalName || null;
+  }
+  if (body.businessEmail !== undefined) updates.business_email = body.businessEmail ? validateEmail(body.businessEmail) : null;
+  if (body.websiteUrl !== undefined) updates.website_url = validateOptionalUrl(body.websiteUrl);
+  if (!Object.keys(updates).length) throw httpError(400, "There are no merchant profile changes to save.");
+  const { data, error } = await database.from("merchant_accounts")
+    .update(updates)
+    .eq("id", request.params.merchantId)
+    .select("id, display_name, legal_name, country_code, settlement_currency, business_email, website_url, status, payouts_enabled, created_at")
+    .single();
+  if (error || !data) throw httpError(503, "Merchant profile could not be updated.");
+  response.json({ merchant: data });
+}));
+
 app.get("/api/merchants/:merchantId/customers", requireAuth, asyncRoute(async (request, response) => {
   const database = getDatabase();
   await requireMerchantRole(database, request.params.merchantId, request.user.id, ["owner", "admin", "finance", "support"]);
@@ -779,6 +855,35 @@ app.post("/api/merchants/:merchantId/payment-links", requireAuth, asyncRoute(asy
     checkoutAvailable: false,
     message: "The payment link is recorded. Public checkout activation requires the merchant PayPal onboarding and checkout flow."
   });
+}));
+
+
+app.post("/api/merchants/:merchantId/payment-links/:linkId/status", requireAuth, asyncRoute(async (request, response) => {
+  const database = getDatabase();
+  await requireMerchantRole(database, request.params.merchantId, request.user.id, ["owner", "admin"]);
+  const status = String(request.body?.status || "");
+  if (!["active", "disabled"].includes(status)) throw httpError(400, "Payment links can only be activated or disabled.");
+  const { data: current, error: lookupError } = await database.from("payment_links")
+    .select("id, expires_at, max_uses, use_count")
+    .eq("id", request.params.linkId)
+    .eq("merchant_id", request.params.merchantId)
+    .maybeSingle();
+  if (lookupError) throw httpError(503, "The payment link could not be loaded.");
+  if (!current) throw httpError(404, "Payment link not found.");
+  if (status === "active" && current.expires_at && new Date(current.expires_at).getTime() <= Date.now()) {
+    throw httpError(409, "This payment link has expired and cannot be reactivated.");
+  }
+  if (status === "active" && current.max_uses !== null && current.use_count >= current.max_uses) {
+    throw httpError(409, "This payment link has reached its maximum number of uses.");
+  }
+  const { data, error } = await database.from("payment_links")
+    .update({ status })
+    .eq("id", request.params.linkId)
+    .eq("merchant_id", request.params.merchantId)
+    .select("id, slug, title, status, expires_at, max_uses, use_count")
+    .single();
+  if (error || !data) throw httpError(503, "Payment link status could not be changed.");
+  response.json({ paymentLink: data });
 }));
 
 app.post("/api/admin/payouts", requireAuth, asyncRoute(async (request, response) => {
