@@ -53,10 +53,10 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 
 test('the refreshed shell and service worker load the profile crop editor and its styles',()=>{
   assert.match(html,/styles\.css\?v=20261101-layout-overlap-1/);
-  assert.match(html,/app\.js\?v=20261101-profile-crop-1/);
+  assert.match(html,/app\.js\?v=20261101-profile-crop-2/);
   assert.match(worker,/minglora-shell-v40-profile-crop-alignment/);
   assert.match(worker,/styles\.css\?v=20261101-layout-overlap-1/);
-  assert.match(worker,/app\.js\?v=20261101-profile-crop-1/);
+  assert.match(worker,/app\.js\?v=20261101-profile-crop-2/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
@@ -71,5 +71,5 @@ test('crop preview and saved output use the visible inner frame rather than its 
   const exportScale=Math.max(1080/sourceW,1080/sourceH);
   assert.equal((visible/previewScale),(1080/exportScale));
   const previewOffset=14,exportOffset=previewOffset*(1080/visible);
-  assert.equal(exportOffset/exportScale,previewOffset/previewScale);
+  assert.ok(Math.abs(exportOffset/exportScale-previewOffset/previewScale)<1e-9);
 });
