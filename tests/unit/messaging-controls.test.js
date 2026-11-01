@@ -46,3 +46,26 @@ test('Small media files use the signed-upload URL route and large files retain T
   assert.ok(app.includes('invalid compact jws'));
   assert.ok(edge.includes('action === "media_delete"'));
 });
+
+
+test('Messenger top-right control opens a left chats panel with filters, quick actions and individual settings switches', async()=>{
+  const [app,css,html,server,settings]=await Promise.all([
+    read('../../public/app.js'),read('../../public/styles.css'),read('../../public/index.html'),
+    read('../../src/server.js'),read('../../public/settings.js')
+  ]);
+  assert.ok(app.includes("$('#messenger-btn')?.addEventListener('click',toggleMessengerPanel)"));
+  assert.ok(app.includes('data-messenger-new'));
+  assert.ok(app.includes('data-messenger-see'));
+  assert.ok(app.includes('data-messenger-options'));
+  for(const label of ['all','unread','groups','communities'])assert.ok(app.includes('data-messenger-filter="'+label+'"'));
+  for(const label of ['Incoming call sounds','Message sounds','Automatically open new messages','Privacy settings','Active status','Message requests','Archived chats','Message delivery settings','Restricted accounts','Block settings'])assert.ok(app.includes(label));
+  assert.ok(app.includes('data-messenger-setting='));
+  assert.ok(app.includes('data-messenger-archive=')&&app.includes('data-messenger-restrict='));
+  assert.ok(app.includes('data-messenger-destination='));
+  assert.ok(css.includes('.messenger-panel{position:fixed')&&css.includes('left:max(14px'));
+  assert.ok(css.includes('.messenger-switch.is-on'));
+  assert.ok(html.includes('20261101-messenger-left-panel-1'));
+  assert.ok(server.includes('messengerAutoOpenNewMessages')&&server.includes('messengerArchivedConversationIds'));
+  assert.ok(server.includes('isRequest:!isFriend'));
+  assert.ok(settings.includes('messengerActiveStatus: true'));
+});
