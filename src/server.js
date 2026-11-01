@@ -127,16 +127,20 @@ function safeUser(u,viewerId=null){
     aboutSections[key]={...(u.aboutSections?.[key]||{})};
   }
   const legacyPersonal={
-    currentCity:u.city||u.location||'',country:u.country||'',county:u.county||'',parish:u.parish||'',
-    gender:u.gender||'',relationshipStatus:u.relationshipStatus||''
+    currentCity:(own||visibility.city===true||visibility.location===true)?(u.city||u.location||''):'',
+    country:(own||visibility.country===true)?(u.country||''):'',
+    county:(own||visibility.county===true)?(u.county||''):'',
+    parish:(own||visibility.parish===true)?(u.parish||''):'',
+    gender:(own||visibility.gender===true)?(u.gender||''):'',
+    relationshipStatus:(own||visibility.relationshipStatus===true)?(u.relationshipStatus||''):''
   };
   if(aboutSections.personalDetails){
     for(const [key,value] of Object.entries(legacyPersonal)){
       if(!Object.hasOwn(aboutSections.personalDetails,key))aboutSections.personalDetails[key]=value;
     }
   }
-  if(aboutSections.intro&&!Object.hasOwn(aboutSections.intro,'bio'))aboutSections.intro.bio=u.bio||'';
-  if(aboutSections.contactInfo&&!Object.hasOwn(aboutSections.contactInfo,'phone'))aboutSections.contactInfo.phone=u.contactPhone||'';
+  if(aboutSections.intro&&!Object.hasOwn(aboutSections.intro,'bio')&&(own||visibility.bio===true))aboutSections.intro.bio=u.bio||'';
+  if(aboutSections.contactInfo&&!Object.hasOwn(aboutSections.contactInfo,'phone')&&(own||visibility.contactPhone===true))aboutSections.contactInfo.phone=u.contactPhone||'';
   result.aboutSections=aboutSections;
   if(own){
     result.email=u.email||'';
