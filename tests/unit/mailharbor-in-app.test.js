@@ -87,9 +87,9 @@ test('MailHarbor signed provider webhook and external outbox worker are mounted 
 });
 
 test('free MailHarbor member addressing uses @username and labels internal-only mailbox handles', () => {
-  assert.match(mailHtml, /placeholder="@username or name@example\\.com"/);
+  assert.match(mailHtml, /placeholder="@username or name@example\.com"/);
   assert.match(mailHtml, /using @username/);
-  assert.match(mailApp, /function mailboxDisplayAddress\\(/);
+  assert.match(mailApp, /function mailboxDisplayAddress\(/);
   assert.match(mailApp, /Minglora only/);
 });
 
