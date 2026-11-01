@@ -127,7 +127,7 @@ function safeUser(u,viewerId=null){
     aboutSections[key]={...(u.aboutSections?.[key]||{})};
   }
   const legacyPersonal={
-    currentCity:(own||visibility.city===true||visibility.location===true)?(u.city||u.location||''):'',
+    currentCity:own?(u.city||u.location||''):visibility.city===true?(u.city||''):visibility.location===true?(u.location||''):'',
     country:(own||visibility.country===true)?(u.country||''):'',
     county:(own||visibility.county===true)?(u.county||''):'',
     parish:(own||visibility.parish===true)?(u.parish||''):'',
