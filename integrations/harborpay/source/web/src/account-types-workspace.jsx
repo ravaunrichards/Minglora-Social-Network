@@ -40,7 +40,7 @@ function Panel({ title, description, children }) {
   return <section className="hp-work-panel"><div className="hp-work-panel-heading"><div><h2>{title}</h2><p>{description}</p></div></div>{children}</section>;
 }
 
-export default function AccountTypesWorkspace({ session, initialType = "", onProfile, notify }) {
+export default function AccountTypesWorkspace({ session, initialType = "", onProfile, onOpenWorkspace, notify }) {
   const [selectedType, setSelectedType] = useState(TYPES.some((item) => item.id === initialType) ? initialType : "");
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -165,7 +165,7 @@ export default function AccountTypesWorkspace({ session, initialType = "", onPro
         <div className="hp-data-list">{applications.map((item) => <article className="hp-application-row" key={item.id}>
           <div className="hp-data-icon">{item.accountType === "enterprise" ? <Building2 size={18} /> : item.accountType === "merchant" ? <Store size={18} /> : <BriefcaseBusiness size={18} />}</div>
           <div className="hp-data-primary"><strong>{item.organizationName}</strong><small>{label(item.accountType)} · Submitted {date(item.createdAt)} · {item.countryCode}</small><small>Application {item.id}</small></div>
-          <div className="hp-data-trailing"><em className={"status-pill " + item.status}>{label(item.status)}</em><small>{money(item.expectedMonthlyVolumeMinor, item.settlementCurrency)}</small></div>
+          <div className="hp-data-trailing"><em className={"status-pill " + item.status}>{label(item.status)}</em><small>{money(item.expectedMonthlyVolumeMinor, item.settlementCurrency)}</small><button className="hp-small-button" type="button" onClick={() => item.merchantId && onOpenWorkspace?.(item.merchantId)}>Open workspace <ArrowRight size={13} /></button></div>
         </article>)}</div>}
     </Panel>
   </div>;
