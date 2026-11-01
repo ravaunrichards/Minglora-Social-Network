@@ -28,7 +28,7 @@ The latest application does not yet perform production Marketplace payment captu
 - Payment webhook verification, provider reconciliation, refund/return/dispute operations and financial audit.
 - Backup/restore tests, migration verification, privacy/accessibility review and production operational readiness.
 
-The repository contains Marketplace migrations 029–034, including seller and checkout configuration, quote/order data, seller sub-orders, immutable financial evidence, inventory reservations, idempotency, fulfilment, bookings, returns, payouts, reviews and job applications. Marketplace-specific server actions use the Supabase Edge Function and normalized Postgres/RPC path. Verify these migrations and the matching Edge Function are deployed to the active Supabase project; a migration file in GitHub alone does not prove deployment.
+The repository contains Marketplace migrations 029–038, including seller and checkout configuration, quote/order data, seller sub-orders, immutable financial evidence, inventory reservations, idempotency, fulfilment, bookings, returns, payouts, reviews, job applications, PayPal merchant registry/capture reconciliation, index hygiene and the distinct PayPal-connection audit event. Migrations 035–038 are applied to the active Minglora Supabase project and `minglora-runtime-state` is deployed at version 18. The existence of the PayPal helper and internal Edge actions does not mean the buyer/seller Node routes or browser controls are complete.
 
 General social-domain persistence still has a durable single-row JSONB compatibility adapter and remains a separate scaling constraint. Marketplace's relational path does not make every Minglora data domain horizontally scalable.
 
