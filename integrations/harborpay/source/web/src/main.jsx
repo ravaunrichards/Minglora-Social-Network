@@ -260,7 +260,11 @@ function App() {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [health, setHealth] = useState(null);
   const [section, setSection] = useState("Overview");
-  const [initialAccountType, setInitialAccountType] = useState("");
+  const [initialAccountType, setInitialAccountType] = useState(() => {
+    const pending = window.sessionStorage.getItem("harborpay_pending_account_type") || "";
+    return ["personal", "business", "merchant", "enterprise"].includes(pending) ? pending : "";
+  });
+  const [selectedMerchantId, setSelectedMerchantId] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -278,6 +282,7 @@ function App() {
     const requestedType = url.searchParams.get("account_type") || "";
     if (["personal", "business", "merchant", "enterprise"].includes(requestedType)) {
       setInitialAccountType(requestedType);
+      window.sessionStorage.setItem("harborpay_pending_account_type", requestedType);
     }
     if (!code) return undefined;
     url.searchParams.delete("minglora_handoff");
@@ -336,6 +341,7 @@ function App() {
   useEffect(() => {
     if (!session?.user?.id || !initialAccountType) return;
     setSection(initialAccountType === "personal" ? "Profile" : "Accounts");
+    window.sessionStorage.removeItem("harborpay_pending_account_type");
   }, [session?.user?.id, initialAccountType]);
 
   useEffect(() => {
@@ -559,8 +565,8 @@ function App() {
               <div className="table-foot">Payment statuses come from PayPal capture responses and verified webhook events.</div>
             </div>
           </section>}
-          {section === "Accounts" && <AccountTypesWorkspace session={session} initialType={initialAccountType} onProfile={() => setSection("Profile")} notify={notify} />}
-          {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} notify={notify} />}
+          {section === "Accounts" && <AccountTypesWorkspace session={session} initialType={initialAccountType} onProfile={() => setSection("Profile")} onOpenWorkspace={(merchantId) => { setSelectedMerchantId(merchantId); setSection("Business"); }} notify={notify} />}
+          {["Business", "Customers", "Orders", "Payment links"].includes(section) && <MerchantWorkspace session={session} section={section} initialMerchantId={selectedMerchantId} notify={notify} />}
           {section === "Profile" && <ProfileWorkspace session={session} notify={notify} />}
 
           <footer className="app-footer"><span>HarborPay</span><span>Secure payments · No fabricated balances</span></footer>
