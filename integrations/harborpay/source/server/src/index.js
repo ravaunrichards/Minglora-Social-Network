@@ -657,7 +657,7 @@ app.get("/api/merchants", requireAuth, asyncRoute(async (request, response) => {
 
   const ids = memberships.map((item) => item.merchant_id);
   const { data: merchants, error } = await database.from("merchant_accounts")
-    .select("id, display_name, legal_name, country_code, settlement_currency, business_email, website_url, status, payouts_enabled, created_at")
+    .select("id, account_type, display_name, legal_name, country_code, settlement_currency, business_email, website_url, status, payouts_enabled, created_at")
     .in("id", ids)
     .order("created_at", { ascending: false });
 
@@ -884,6 +884,220 @@ app.post("/api/merchants/:merchantId/payment-links/:linkId/status", requireAuth,
     .single();
   if (error || !data) throw httpError(503, "Payment link status could not be changed.");
   response.json({ paymentLink: data });
+}));
+
+
+function isHarborPayAdmin(userId) {
+  const allowed = new Set(
+    String(process.env.HARBORPAY_ADMIN_USER_IDS || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+  return allowed.has(String(userId || ""));
+}
+
+function publicAccountApplication(row) {
+  return {
+    id: row.id,
+    accountType: row.account_type,
+    organizationName: row.organization_name,
+    legalName: row.legal_name,
+    countryCode: row.country_code,
+    contactName: row.contact_name,
+    contactEmail: row.contact_email,
+    industry: row.industry,
+    websiteUrl: row.website_url,
+    expectedMonthlyVolumeMinor: row.expected_monthly_volume_minor,
+    expectedMonthlyTransactions: row.expected_monthly_transactions,
+    countriesServed: row.countries_served,
+    settlementCurrency: row.settlement_currency,
+    merchantId: row.merchant_id,
+    status: row.status,
+    reviewedAt: row.reviewed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+app.get("/api/account-applications", requireAuth, asyncRoute(async (request, response) => {
+  const { data, error } = await getDatabase().from("account_applications")
+    .select("id, account_type, organization_name, legal_name, country_code, contact_name, contact_email, industry, website_url, expected_monthly_volume_minor, expected_monthly_transactions, countries_served, settlement_currency, merchant_id, status, reviewed_at, created_at, updated_at")
+    .eq("applicant_user_id", request.user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw httpError(503, "Your account applications could not be loaded.");
+  response.set("Cache-Control", "no-store").json({ items: (data || []).map(publicAccountApplication) });
+}));
+
+app.post("/api/account-applications", requireAuth, asyncRoute(async (request, response) => {
+  const body = request.body || {};
+  const accountType = String(body.accountType || "").trim().toLowerCase();
+  if (!["business", "merchant", "enterprise"].includes(accountType)) {
+    throw httpError(400, "Choose Business, Merchant or Enterprise account setup.");
+  }
+
+  const organizationName = validateMerchantName(body.organizationName);
+  const legalName = body.legalName == null || body.legalName === ""
+    ? null
+    : String(body.legalName).trim();
+  if (legalName && (legalName.length < 2 || legalName.length > 160)) {
+    throw httpError(400, "Legal name must contain 2–160 characters.");
+  }
+
+  const contactName = String(body.contactName || request.user.user_metadata?.full_name || "").trim();
+  if (contactName.length < 2 || contactName.length > 120) {
+    throw httpError(400, "Contact name must contain 2–120 characters.");
+  }
+
+  const contactEmail = validateEmail(body.contactEmail || request.user.email || "");
+  const countryCode = String(body.countryCode || "JM").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(countryCode)) throw httpError(400, "Use a two-letter country code.");
+
+  const industry = String(body.industry || "").trim().slice(0, 100) || null;
+  const registrationNumber = String(body.registrationNumber || "").trim().slice(0, 100) || null;
+  const businessDescription = String(body.businessDescription || "").trim();
+  const useCase = String(body.useCase || "").trim();
+  if (businessDescription.length < 30 || businessDescription.length > 4000) {
+    throw httpError(400, "Describe the organization in 30–4,000 characters.");
+  }
+  if (useCase.length < 10 || useCase.length > 2000) {
+    throw httpError(400, "Describe how you plan to use HarborPay in 10–2,000 characters.");
+  }
+
+  const websiteUrl = validateOptionalUrl(body.websiteUrl);
+  const expectedMonthlyVolumeMinor = body.expectedMonthlyVolume == null || body.expectedMonthlyVolume === ""
+    ? null
+    : parseAmountToMinor(body.expectedMonthlyVolume);
+  const expectedMonthlyTransactions = body.expectedMonthlyTransactions == null || body.expectedMonthlyTransactions === ""
+    ? null
+    : Number(body.expectedMonthlyTransactions);
+  if (expectedMonthlyTransactions !== null &&
+      (!Number.isSafeInteger(expectedMonthlyTransactions) || expectedMonthlyTransactions < 0 || expectedMonthlyTransactions > 10000000)) {
+    throw httpError(400, "Expected monthly transactions must be a non-negative whole number.");
+  }
+
+  const countriesServed = Array.isArray(body.countriesServed)
+    ? [...new Set(body.countriesServed.map((value) => String(value).trim().toUpperCase()))]
+    : [countryCode];
+  if (!countriesServed.length || countriesServed.length > 40 ||
+      countriesServed.some((value) => !/^[A-Z]{2}$/.test(value))) {
+    throw httpError(400, "Choose between 1 and 40 valid country codes.");
+  }
+
+  const settlementCurrency = String(body.settlementCurrency || "USD").trim().toUpperCase();
+  if (!["USD", "JMD", "CAD", "GBP", "EUR"].includes(settlementCurrency)) {
+    throw httpError(400, "Choose a supported settlement currency.");
+  }
+
+  const database = getDatabase();
+  const { data: existing, error: existingError } = await database.from("account_applications")
+    .select("id, status")
+    .eq("applicant_user_id", request.user.id)
+    .eq("account_type", accountType)
+    .in("status", ["submitted", "in_review", "needs_information"])
+    .limit(1);
+  if (existingError) throw httpError(503, "Existing account applications could not be checked.");
+  if (existing?.length) {
+    throw httpError(409, "You already have an active " + accountType + " application. Open Account types to check its status.");
+  }
+
+  const { data: account, error: accountError } = await database.from("merchant_accounts")
+    .insert({
+      owner_user_id: request.user.id,
+      account_type: accountType,
+      display_name: organizationName,
+      legal_name: legalName,
+      business_email: contactEmail,
+      website_url: websiteUrl,
+      country_code: countryCode,
+      settlement_currency: settlementCurrency,
+      status: "draft"
+    })
+    .select("id, account_type, display_name, status, country_code, settlement_currency, created_at")
+    .single();
+  if (accountError || !account) {
+    throw httpError(503, "Your " + accountType + " account workspace could not be created.");
+  }
+
+  const { data: application, error } = await database.from("account_applications")
+    .insert({
+      applicant_user_id: request.user.id,
+      account_type: accountType,
+      organization_name: organizationName,
+      legal_name: legalName,
+      contact_name: contactName,
+      contact_email: contactEmail,
+      country_code: countryCode,
+      registration_number: registrationNumber,
+      industry,
+      website_url: websiteUrl,
+      business_description: businessDescription,
+      use_case: useCase,
+      expected_monthly_volume_minor: expectedMonthlyVolumeMinor,
+      expected_monthly_transactions: expectedMonthlyTransactions,
+      countries_served: countriesServed,
+      settlement_currency: settlementCurrency,
+      merchant_id: account.id,
+      metadata: { submitted_from: "harborpay_web" }
+    })
+    .select("id, account_type, organization_name, legal_name, country_code, contact_name, contact_email, industry, website_url, expected_monthly_volume_minor, expected_monthly_transactions, countries_served, settlement_currency, merchant_id, status, reviewed_at, created_at, updated_at")
+    .single();
+
+  if (error || !application) {
+    await database.from("merchant_accounts").delete().eq("id", account.id).eq("owner_user_id", request.user.id);
+    throw httpError(503, "Your account application could not be saved. Your account workspace was not retained.");
+  }
+
+  response.status(201).set("Cache-Control", "no-store").json({
+    application: publicAccountApplication(application),
+    account: {
+      id: account.id,
+      accountType: account.account_type,
+      displayName: account.display_name,
+      status: account.status
+    },
+    message: "Your " + accountType + " account workspace was created and the application was saved for review. Financial processing remains disabled until the required verification and provider approval are complete."
+  });
+}));
+
+app.get("/api/admin/account-applications", requireAuth, asyncRoute(async (request, response) => {
+  if (!isHarborPayAdmin(request.user.id)) throw httpError(403, "HarborPay administrator access is required.");
+  const status = String(request.query.status || "submitted").trim();
+  const allowed = ["submitted", "in_review", "needs_information", "approved", "rejected", "withdrawn"];
+  if (status && !allowed.includes(status)) throw httpError(400, "Unknown application status.");
+  let query = getDatabase().from("account_applications")
+    .select("id, applicant_user_id, account_type, organization_name, legal_name, country_code, contact_name, contact_email, registration_number, industry, website_url, business_description, use_case, expected_monthly_volume_minor, expected_monthly_transactions, countries_served, settlement_currency, merchant_id, status, reviewed_by, reviewed_at, review_notes, created_at, updated_at")
+    .order("created_at", { ascending: true })
+    .limit(100);
+  if (status) query = query.eq("status", status);
+  const { data, error } = await query;
+  if (error) throw httpError(503, "HarborPay account applications could not be loaded.");
+  response.set("Cache-Control", "no-store").json({ items: data || [] });
+}));
+
+app.post("/api/admin/account-applications/:applicationId/review", requireAuth, asyncRoute(async (request, response) => {
+  if (!isHarborPayAdmin(request.user.id)) throw httpError(403, "HarborPay administrator access is required.");
+  const applicationId = validateUuid(request.params.applicationId, "application ID");
+  const status = String(request.body?.status || "").trim();
+  if (!["in_review", "needs_information", "approved", "rejected"].includes(status)) {
+    throw httpError(400, "Choose a valid application review outcome.");
+  }
+  const reviewNotes = String(request.body?.reviewNotes || "").trim();
+  if (reviewNotes.length > 4000) throw httpError(400, "Review notes must be 4,000 characters or fewer.");
+  const database = getDatabase();
+  const { data, error } = await database.from("account_applications")
+    .update({
+      status,
+      reviewed_by: request.user.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: reviewNotes || null
+    })
+    .eq("id", applicationId)
+    .select("id, applicant_user_id, account_type, organization_name, merchant_id, status, reviewed_by, reviewed_at")
+    .single();
+  if (error || !data) throw httpError(503, "The account application review could not be saved.");
+  response.set("Cache-Control", "no-store").json({ application: data });
 }));
 
 app.post("/api/admin/payouts", requireAuth, asyncRoute(async (request, response) => {
