@@ -64,8 +64,9 @@ test('static shell cache is versioned for the upgraded discovery cards', async (
 test('outside profile cards preserve the full 3:1 saved cover and uncropped avatar',async()=>{
   const app=await read('public/app.js');
   const css=await read('public/styles.css');
-  assert.match(app,/person-cover-image/);
-  assert.match(css,/\\.person-card--immersive \\.person-cover\\{[^}]*aspect-ratio:3\\/1/);
-  assert.match(css,/\\.person-cover-image\\{object-fit:contain!important/);
-  assert.match(css,/\\.person-avatar-wrap \\.avatar\\{object-fit:contain/);
+  assert.ok(app.includes('person-cover-image'));
+  assert.ok(css.includes('.person-card--immersive .person-cover{'));
+  assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
+  assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
+  assert.ok(css.includes('.person-avatar-wrap .avatar{object-fit:contain'));
 });
