@@ -70,10 +70,10 @@
 
   <dialog id="composer" class="dialog">
     <form id="compose-form">
-      <div class="modalhead"><div><b>New message</b><p>Send to a Minglora member mailbox or save your work as a draft.</p></div><button class="iconbtn" id="close-compose" type="button" aria-label="Close"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#close"></use></svg></button></div>
-      <label class="field">To<input id="to" type="text" placeholder="member@members.minglora.invalid"></label>
-      <label class="field">Cc <span class="optional">(optional)</span><input id="cc" type="text" placeholder="name@example.com"></label>
-      <label class="field">Bcc <span class="optional">(optional)</span><input id="bcc" type="text" placeholder="name@example.com"></label>
+      <div class="modalhead"><div><b>New message</b><p>Send to a Minglora member using @username. Internet email activates when the external provider is configured.</p></div><button class="iconbtn" id="close-compose" type="button" aria-label="Close"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#close"></use></svg></button></div>
+      <label class="field">To<input id="to" type="text" placeholder="@username or name@example.com"></label>
+      <label class="field">Cc <span class="optional">(optional)</span><input id="cc" type="text" placeholder="@username or name@example.com"></label>
+      <label class="field">Bcc <span class="optional">(optional)</span><input id="bcc" type="text" placeholder="@username or name@example.com"></label>
       <label class="field">Subject<input id="subject" type="text" maxlength="998" placeholder="Subject"></label>
       <label class="field">Message<textarea id="body" rows="8" maxlength="100000" placeholder="Write your message…"></textarea></label>
       <div class="modalfoot"><span id="compose-feedback" class="feedback" role="status"></span><button class="secondary" id="save-draft" type="button"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#drafts"></use></svg> Save draft</button><button class="primary" id="send" type="submit"><svg class="mail-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1#sent"></use></svg> Send message</button></div>
