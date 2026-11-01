@@ -367,7 +367,7 @@ function openPostOptions(post){
 }
 async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;state.feed=(await api(`/feed?scope=${encodeURIComponent(state.feedScope)}`)).posts;}
 async function loadStories(){state.stories=(await api('/stories')).stories;}
-function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):('<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>'))+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story">＋ Add story</button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
+function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):('<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>'))+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 function openComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
@@ -2003,11 +2003,11 @@ async function handleProfileOverflowAction(action,u,data){
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
-    ?'<button class="secondary profile-edit" id="edit-profile">Edit profile</button>'
+    ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
     :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const tab=state.profileTab||'posts';
-  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div><div class="profile-info"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt=""><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong> friends</button><span><strong>'+(data.posts||[]).length+'</strong> posts</span></p>'+(isMe?'<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">'+Number(data.profileInsights?.profileViews30d||0).toLocaleString()+'</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">'+Number(data.profileInsights?.activeViewersCount||0).toLocaleString()+'</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>':'')+'</div>'+relationshipActions+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['groups','Groups'],['checkins','Check-ins'],['events','Events'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status"><span aria-hidden="true">✎</span><span>Profile status</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
+  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+(isMe?'<button type="button" class="profile-media-edit-button profile-cover-edit-button" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button>':'')+'</div><div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">'+(isMe?'<button type="button" class="profile-avatar-edit-button" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit</span></button>':'')+'</div><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong> friends</button><span><strong>'+(data.posts||[]).length+'</strong> posts</span></p>'+(isMe?'<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">'+Number(data.profileInsights?.profileViews30d||0).toLocaleString()+'</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">'+Number(data.profileInsights?.activeViewersCount||0).toLocaleString()+'</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>':'')+'</div>'+relationshipActions+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['groups','Groups'],['checkins','Check-ins'],['events','Events'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status"><span aria-hidden="true">✎</span><span>Profile status</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab;button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
@@ -2031,6 +2031,9 @@ function renderProfile(data){
   overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>handleProfileOverflowAction(button.dataset.profileOverflowAction,u,data)));
 
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
+  $('#profile-edit-avatar')?.addEventListener('click',()=>openEditProfile(u,'avatar'));
+  $('#profile-edit-cover')?.addEventListener('click',()=>openEditProfile(u,'cover'));
+  $('#profile-add-story')?.addEventListener('click',()=>openStoryComposer());
   $('#profile-follow')?.addEventListener('click',async()=>{
     const following=$('#profile-follow')?.dataset.following==='true';
     try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
@@ -2418,12 +2421,14 @@ async function transformProfileCrop(file,edit,stage,slot){
   }finally{bitmap.close?.();}
 }
 
-function openEditProfile(u){
+function openEditProfile(u,mediaOnly=null){
+  if(!['avatar','cover'].includes(mediaOnly))mediaOnly=null;
   const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
   const modal=document.createElement('div');modal.className='modal-backdrop profile-editor-backdrop';
   modal.innerHTML=`<section class="modal profile-editor-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
-    <div class="modal-head"><h2 id="edit-profile-title">Edit profile</h2><button class="modal-close" aria-label="Close">×</button></div>
+    <div class="modal-head"><h2 id="edit-profile-title">${mediaOnly==='avatar'?'Edit profile picture':mediaOnly==='cover'?'Edit cover picture':'Edit profile'}</h2><button class="modal-close" aria-label="Close">×</button></div>
     <form class="modal-body" id="edit-profile-form">
+      <div class="profile-editor-details">
       <div class="field"><label for="edit-profile-name">Display name</label><input id="edit-profile-name" name="name" maxlength="120" value="${esc(u.name)}" required></div><div class="field"><label for="edit-profile-username">Username</label><input id="edit-profile-username" name="username" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" value="${esc(u.username)}" required><small class="muted">3–30 letters, numbers or underscores. Usernames are case-insensitive.</small></div>
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
       <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"><label class="about-toggle"><input type="checkbox" name="show_location" ${aboutVisibility.location?'checked':''}> Display location on my profile</label></div>
@@ -2439,7 +2444,8 @@ function openEditProfile(u){
         </div>
         <div class="field"><label class="about-toggle"><input type="checkbox" name="show_bio" ${aboutVisibility.bio?'checked':''}> Display my bio on my profile</label></div>
       </section>
-      <div class="profile-upload-section">
+      </div>
+      <div class="profile-upload-section" data-profile-media-section="avatar">
         <h3>Profile picture</h3>
         <div class="profile-crop-workspace profile-crop-workspace--avatar">
           <div class="profile-crop-visual">
@@ -2455,7 +2461,7 @@ function openEditProfile(u){
           </div>
         </div>
       </div>
-      <div class="profile-upload-section">
+      <div class="profile-upload-section" data-profile-media-section="cover">
         <h3>Cover photo</h3>
         <div class="profile-crop-workspace profile-crop-workspace--cover">
           <div id="edit-cover-preview" class="profile-crop-preview profile-crop-preview--cover" role="img" aria-label="Wide rectangular cover photo crop preview"><img id="edit-cover-crop-image" src="${esc(u.cover||'data:,')}" alt=""></div>
@@ -2473,6 +2479,17 @@ function openEditProfile(u){
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
     </form></section>`;
   document.body.append(modal);
+  if(mediaOnly){
+    modal.classList.add('profile-editor-media-only','profile-editor-media-only--'+mediaOnly);
+    modal.querySelector('.profile-editor-details').hidden=true;
+    modal.querySelectorAll('[data-profile-media-section]').forEach(section=>{
+      section.hidden=section.dataset.profileMediaSection!==mediaOnly;
+    });
+    modal.querySelector('#save-profile-button').textContent=mediaOnly==='avatar'?'Save profile picture':'Save cover picture';
+    modal.querySelector('#profile-upload-status').textContent=mediaOnly==='avatar'
+      ?'Choose or take a profile picture, adjust its circular crop, then save only the profile picture.'
+      :'Choose or take a cover picture, adjust its wide crop, then save only the cover picture.';
+  }
   const avatarInput=modal.querySelector('#edit-avatar-file');
   const coverInput=modal.querySelector('#edit-cover-file');
   const avatarEdit={zoom:1,rotation:0,offsetX:0,offsetY:0,imageWidth:0,imageHeight:0,fileSelected:false};
@@ -2601,23 +2618,35 @@ function openEditProfile(u){
     button.disabled=true;
     try{
       await profileSaveQueue.catch(()=>{});
-      if(avatarInput.files?.[0]){
+      const targetInput=mediaOnly==='avatar'?avatarInput:mediaOnly==='cover'?coverInput:null;
+      if(mediaOnly&&!targetInput?.files?.[0]){
+        const label=mediaOnly==='avatar'?'profile picture':'cover picture';
+        status.textContent='Choose a '+label+' before saving.';
+        toast('Choose a '+label+' before saving.');
+        button.disabled=false;
+        return;
+      }
+      if((!mediaOnly||mediaOnly==='avatar')&&avatarInput.files?.[0]){
         status.textContent='Uploading profile picture…';
         const edited=await transformProfileCrop(avatarInput.files[0],avatarEdit,avatarPreview,'avatar');
-        await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});
+        const uploaded=await uploadProfileImage('avatar',edited,1,0,update=>{status.textContent='Uploading profile picture… '+update.percentage+'%';});
+        if(uploaded?.url)state.user={...state.user,avatar:uploaded.url};
       }
-      if(coverInput.files?.[0]){
+      if((!mediaOnly||mediaOnly==='cover')&&coverInput.files?.[0]){
         status.textContent='Uploading cover photo…';
         const edited=await transformProfileCrop(coverInput.files[0],coverEdit,coverPreview,'cover');
-        await uploadProfileImage('cover',edited,1,0,update=>{status.textContent='Uploading cover photo… '+update.percentage+'%';});
+        const uploaded=await uploadProfileImage('cover',edited,1,0,update=>{status.textContent='Uploading cover photo… '+update.percentage+'%';});
+        if(uploaded?.url)state.user={...state.user,cover:uploaded.url};
       }
-      status.textContent='Saving profile details…';
-      const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
-      state.user=result.user;
+      if(!mediaOnly){
+        status.textContent='Saving profile details…';
+        const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
+        state.user=result.user;
+      }
       close();
       showApp();
       await openProfile(state.user.id);
-      toast('Profile updated and saved.');
+      toast(mediaOnly==='avatar'?'Profile picture updated.':mediaOnly==='cover'?'Cover picture updated.':'Profile updated and saved.');
     }catch(error){
       status.textContent='Profile changes were not saved. '+error.message;
       toast(error.message);
