@@ -334,7 +334,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.id && initialAccountType) setSection("Accounts");
+    if (!session?.user?.id || !initialAccountType) return;
+    setSection(initialAccountType === "personal" ? "Profile" : "Accounts");
   }, [session?.user?.id, initialAccountType]);
 
   useEffect(() => {
