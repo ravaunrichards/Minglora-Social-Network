@@ -1,6 +1,6 @@
 # HarborPay — Minglora financial service integration
 
-**Status:** HarborPay's dedicated database schema is applied; the Minglora consent bridge and user-facing HarborPay account/merchant workspaces are implemented in source. Separate service deployment, Auth email/URL settings, PayPal credentials/webhook and browser-level production verification remain release gates. This is not a production wallet and does not claim any bank, payment provider, regulator, or live-money capability has been approved.
+**Status:** HarborPay's dedicated database schema is applied; the Minglora consent bridge, remote API readiness diagnostics, and interactive Personal/Business/Merchant/Enterprise account journeys are implemented in source. The new organization applications persist to HarborPay and each has an owner-controlled workspace. Separate service deployment, Auth email/URL settings, matching SSO secret configuration, PayPal credentials/webhook and browser-level production verification remain release gates. This is not a production wallet and does not claim any bank, payment provider, regulator, or live-money capability has been approved.
 
 ## Product decision
 
@@ -69,6 +69,7 @@ The `source/` directory is a text-source snapshot of `ravaunrichards/harborpay-p
 ## Implementation sequence
 
 1. Preserve and audit the HarborPay source and existing Minglora financial flows.
+2. Complete remote API readiness verification and configure the exact same high-entropy HARBORPAY_SSO_SECRET/MINGLORA_SSO_SECRET on both server environments.
 2. Finalize the identity-linking and consent protocol, independent environment, data ownership, and provider/ledger interfaces.
 3. Design and verify the financial ledger, accounts, multi-currency model, transfer state machine, risk controls, KYC/KYB, reconciliation, and audit model.
 4. Complete partner and regulatory route selection for Jamaica and each additional country/corridor.
