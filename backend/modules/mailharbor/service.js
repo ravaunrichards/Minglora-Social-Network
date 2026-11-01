@@ -87,6 +87,23 @@ function mailboxForAddress(db, email) {
   return ensureMailbox(db, member).mailbox;
 }
 
+
+function validateDraftRecipients(input, existing = {}) {
+  const recipients = {
+    to: parseAddressList(input.to === undefined ? existing.to || [] : input.to),
+    cc: parseAddressList(input.cc === undefined ? existing.cc || [] : input.cc),
+    bcc: parseAddressList(input.bcc === undefined ? existing.bcc || [] : input.bcc)
+  };
+  const all = [...recipients.to, ...recipients.cc, ...recipients.bcc];
+  const unique = [...new Set(all)];
+  if (unique.length > MAX_RECIPIENTS) return { error: 'A draft can have up to 50 recipients.' };
+  if (all.some(email => !EMAIL_RE.test(email))) return { error: 'One or more draft email addresses are invalid.' };
+  recipients.to = [...new Set(recipients.to)];
+  recipients.cc = [...new Set(recipients.cc)].filter(email => !recipients.to.includes(email));
+  recipients.bcc = [...new Set(recipients.bcc)].filter(email => !recipients.to.includes(email) && !recipients.cc.includes(email));
+  return { recipients };
+}
+
 function validateRecipients(input) {
   const recipients = {
     to: parseAddressList(input.to),
@@ -190,6 +207,39 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
       : { status: 404, body: { error: 'Message not found.' } };
   }
 
+
+  if (route === '/drafts' && verb === 'POST') {
+    const parsed = validateDraftRecipients(input);
+    if (parsed.error) return { status: 400, body: { error: parsed.error } };
+
+    const draftId = input.draftId === undefined || input.draftId === null || input.draftId === '' ? null : Number(input.draftId);
+    const draft = draftId === null ? null : db.mailMessages.find(item =>
+      Number(item.id) === draftId && String(item.owner_id) === String(mailbox.memberId) && item.folder === 'drafts'
+    );
+    if (draftId !== null && (!Number.isSafeInteger(draftId) || !draft)) {
+      return { status: 404, body: { error: 'Draft not found in your mailbox.' } };
+    }
+    const subject = String(input.subject ?? '').trim();
+    const bodyText = String(input.body ?? '');
+    if (subject.length > MAX_SUBJECT_LENGTH) return { status: 400, body: { error: 'Subject must be 998 characters or fewer.' } };
+    if (bodyText.length > MAX_BODY_LENGTH) return { status: 400, body: { error: 'Draft is too long.' } };
+    const before = structuredClone(db.mailMessages);
+    const createdAt = new Date().toISOString();
+    const id = makeMessageId(db);
+    db.mailMessages.push({
+      id, owner_id: mailbox.memberId, sender_email: mailbox.email, reply_to: mailbox.email,
+      recipients: parsed.recipients, subject, body_text: bodyText, folder: 'drafts',
+      is_read: true, is_starred: false, delivery_status: 'draft', delivery_channel: 'drafts',
+      last_error: null, created_at: createdAt, updated_at: createdAt
+    });
+    try { await saveStore(); }
+    catch (_error) {
+      db.mailMessages.splice(0, db.mailMessages.length, ...before);
+      return { status: 503, body: { error: 'Minglora could not save your draft. Try again.' } };
+    }
+    return { status: 201, body: { message: { id, folder: 'drafts', delivery_status: 'draft', created_at: createdAt } } };
+  }
+
   if (route === '/messages' && verb === 'POST') {
     const parsed = validateRecipients(input);
     if (parsed.error) return { status: 400, body: { error: parsed.error } };
@@ -214,6 +264,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     }
 
     const before = beforeSend;
+    if (draft) { const draftIndex = db.mailMessages.findIndex(item => Number(item.id) === draftId && String(item.owner_id) === String(mailbox.memberId)); if (draftIndex >= 0) db.mailMessages.splice(draftIndex, 1); }
     const createdAt = new Date().toISOString();
     const recipients = parsed.recipients;
     const messageId = makeMessageId(db);
@@ -296,6 +347,24 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     if (input.folder !== undefined) {
       if (!MESSAGE_FOLDERS.has(String(input.folder))) return { status: 400, body: { error: 'Unsupported mailbox folder.' } };
       patch.folder = String(input.folder);
+    }
+
+    if (message.folder === 'drafts') {
+      if (input.subject !== undefined) {
+        const subject = String(input.subject ?? '').trim();
+        if (subject.length > MAX_SUBJECT_LENGTH) return { status: 400, body: { error: 'Subject must be 998 characters or fewer.' } };
+        patch.subject = subject;
+      }
+      if (input.body !== undefined) {
+        const bodyText = String(input.body ?? '');
+        if (bodyText.length > MAX_BODY_LENGTH) return { status: 400, body: { error: 'Draft is too long.' } };
+        patch.body_text = bodyText;
+      }
+      if (input.to !== undefined || input.cc !== undefined || input.bcc !== undefined) {
+        const parsed = validateDraftRecipients(input, message.recipients || {});
+        if (parsed.error) return { status: 400, body: { error: parsed.error } };
+        patch.recipients = parsed.recipients;
+      }
     }
     if (!Object.keys(patch).length) return { status: 400, body: { error: 'No supported message changes were provided.' } };
     const before = {
