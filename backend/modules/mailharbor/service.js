@@ -352,7 +352,7 @@ export async function handleMailHarborApi({ method, pathname, search = '', input
     catch (_error) {
       db.mailboxes.splice(0, db.mailboxes.length, ...before.mailboxes);
       db.mailMessages.splice(0, db.mailMessages.length, ...before.mailMessages);
-      return { status: 503, body: { error: 'Minglora could not save the message. Nothing was queued for external delivery; refresh before retrying.' } };
+      return { status: 503, body: { error: 'Minglora could not save the message. No delivery was confirmed and nothing was queued for external delivery; refresh before retrying.' } };
     }
     return { status: 202, body: { message: {
       id: messageId, delivery_status: hasExternal ? 'queued' : 'delivered',
