@@ -31,6 +31,11 @@ test('Messenger controls connect to conversation, user, settings and read-receip
   ]);
 
   assert.ok(app.includes("$('#messenger-btn')?.addEventListener('click',toggleMessengerPanel)"));
+  assert.ok(app.includes("panel.querySelector('[data-messenger-close]')?.addEventListener('click',closeMessengerPanel)"));
+  assert.ok(app.includes("function activateNav(view){if(state.view==='meetwave'"), 'navigation must not dismiss pinned chats');
+  assert.ok(app.includes('Keep Chats pinned while the user works elsewhere.'));
+  assert.ok(!app.includes("if(event.key==='Escape'&&state.messengerPanelOpen)closeMessengerPanel()"), 'Escape must not dismiss pinned chats');
+  assert.ok(!app.includes("!panel.contains(event.target)&&!button?.contains(event.target))closeMessengerPanel()"), 'outside clicks must not dismiss pinned chats');
   assert.ok(app.includes("panel.querySelectorAll('[data-messenger-destination]').forEach(button=>button.onclick=()=>openMessengerDestination(button.dataset.messengerDestination))"));
   assert.ok(app.includes("const settingsRoutes={"));
   assert.ok(app.includes("privacy:{section:'#settings-privacy'}"));
