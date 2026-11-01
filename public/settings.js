@@ -1,7 +1,7 @@
 (() => {
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
-    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true },
+    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false },
     preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false }
   };
 
@@ -71,18 +71,30 @@
     return `<h2 class="settings-section-title">${title}</h2>`;
   }
 
+  function profileViewersMarkup(result) {
+    if(!result?.enabled)return '<p class="settings-note">Turn on Profile view history to see signed-in members who also have this setting enabled. Your visits will be visible to them too.</p>';
+    const viewers=Array.isArray(result.viewers)?result.viewers:[];
+    if(!viewers.length)return '<p class="settings-empty">No eligible profile views recorded in the last 30 days yet.</p>';
+    return '<div class="settings-profile-viewer-list">'+viewers.map(item=>{
+      const member=item.user||{},date=item.lastViewedAt?new Date(item.lastViewedAt):null;
+      const lastViewed=date&&!Number.isNaN(date.getTime())?date.toLocaleString():'Time unavailable';
+      return '<button type="button" class="settings-profile-viewer" data-profile-viewer="'+escapeHtml(member.id||'')+'"><img src="'+escapeHtml(member.avatar||'')+'" alt=""><span><strong>'+escapeHtml(member.name||'Minglora member')+'</strong><small>@'+escapeHtml(member.username||'')+' · Last viewed '+escapeHtml(lastViewed)+'</small></span>'+(Number(item.visitCount)>1?'<em>'+Number(item.visitCount)+' visits</em>':'')+'</button>';
+    }).join('')+'</div>';
+  }
+
   async function openSettings() {
     const main = document.querySelector('#main-content');
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, ringtoneResult] = await Promise.all([
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, ringtoneResult, profileViewsResult] = await Promise.all([
         api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
         api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
         api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
         api('/reports/mine').catch(error=>({error:error.message,reports:[]})),
         api('/moderation/access').catch(()=>({canModerate:false})),
-        api('/calls/ringtone').catch(error=>({error:error.message,ringtone:null}))
+        api('/calls/ringtone').catch(error=>({error:error.message,ringtone:null})),
+        api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message}))
       ]);
       const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],canModerate=moderationAccess.canModerate===true;
       const settings = {
@@ -131,6 +143,8 @@
               <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
+              <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
             </section>
             <section class="settings-card" id="settings-calls">
               ${sectionHeading('Voice &amp; video calls')}
@@ -436,6 +450,11 @@
       });
 
       const settingsForm = document.querySelector('#settings-form');
+      document.querySelectorAll('[data-profile-viewer]').forEach(button=>button.addEventListener('click',()=>{
+        const userId=button.dataset.profileViewer;
+        if(userId)window.dispatchEvent(new CustomEvent('minglora:open-profile',{detail:{userId}}));
+      }));
+
       const settingsSaveStatus = document.querySelector('#settings-save-status');
       let settingsSaveTimer = null;
       let settingsSaveQueue = Promise.resolve();
@@ -454,7 +473,8 @@
             friendRequests: formData.has('notificationFriendRequests'),
             messages: formData.has('notificationMessages'),
             interactions: formData.has('notificationInteractions'),
-            push: formData.has('notificationPush')
+            push: formData.has('notificationPush'),
+            profileViews: formData.has('notificationProfileViews')
           },
           preferences: {
             theme: formData.get('theme'),
@@ -470,6 +490,11 @@
         const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(collectSettingsPayload()) });
         applyPreferences(saved.settings);
         window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: saved.settings }));
+        if(settingsForm?.querySelector('[name="notificationProfileViews"]')){
+          const profileViews=await api('/profile-views').catch(()=>({enabled:false,viewers:[]}));
+          const history=document.querySelector('#settings-profile-view-history');
+          if(history)history.innerHTML=profileViewersMarkup(profileViews);
+        }
         settingsSaveStatus.textContent = 'All changes saved to your Minglora account.';
       }
 
