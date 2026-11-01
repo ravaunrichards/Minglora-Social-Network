@@ -71,6 +71,8 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   assert.equal((await request(alice.cookie,'/api/profile/archive',{method:'POST',body:JSON.stringify({postId:post.body.post.id})})).status,200);
   assert.equal((await request(alice.cookie,'/api/profile/archive')).body.posts.length,1);
   assert.equal((await request(alice.cookie,'/api/feed')).body.posts.some(item=>item.id===post.body.post.id),false);
+  assert.equal((await request(alice.cookie,'/api/search?q=archived')).body.posts.some(item=>item.id===post.body.post.id),false);
+  assert.equal((await request(alice.cookie,'/api/saved-posts')).body.posts.some(item=>item.id===post.body.post.id),false);
   assert.equal((await request(alice.cookie,'/api/profile/archive/'+post.body.post.id,{method:'DELETE',body:'{}'})).status,200);
   assert.equal((await request(alice.cookie,'/api/feed')).body.posts.some(item=>item.id===post.body.post.id),true);
 
