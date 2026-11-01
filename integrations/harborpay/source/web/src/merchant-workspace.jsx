@@ -290,7 +290,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
       <div className="hp-merchant-select-wrap">
         <Building2 size={17} />
         <select value={merchantId} onChange={(event) => setMerchantId(event.target.value)} aria-label="Choose merchant">
-          {merchants.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}
+          {merchants.map((item) => <option key={item.id} value={item.id}>{item.display_name} — {String(item.account_type || "merchant").replaceAll("_", " ")}</option>)}
         </select>
         <ChevronDown size={15} />
       </div>
@@ -301,7 +301,7 @@ export default function MerchantWorkspace({ session, section, notify }) {
     </div>
 
     {section === "Business" && selected && <div className="hp-workspace-grid">
-      <Panel title="Business profile" description="Your merchant account details and verification state.">
+      <Panel title={(selected.account_type === "enterprise" ? "Enterprise organization" : selected.account_type === "business" ? "Business profile" : "Merchant profile")} description="Your HarborPay organization record and review state.">
         <form className="hp-form-grid" onSubmit={saveMerchant}>
           <Field label="Display name"><input name="displayName" defaultValue={selected.display_name} minLength="2" maxLength="120" required /></Field>
           <Field label="Legal name"><input name="legalName" defaultValue={selected.legal_name || ""} maxLength="120" placeholder="Registered legal name" /></Field>
