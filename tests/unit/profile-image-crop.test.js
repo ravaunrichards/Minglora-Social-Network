@@ -51,5 +51,5 @@ test('the refreshed shell and service worker load the profile crop editor and it
   assert.match(html,/app\.js\?v=20261101-profile-crop-1/);
   assert.match(worker,/minglora-shell-v39-layout-overlap-audit/);
   assert.match(worker,/styles\.css\?v=20261101-layout-overlap-1/);
-  assert.match(worker,/app\.js\?v=20261101-layout-overlap-1/);
+  assert.match(worker,/app\.js\?v=20261101-profile-crop-1/);
 });
