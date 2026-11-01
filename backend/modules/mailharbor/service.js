@@ -25,11 +25,6 @@ function parseAddressList(value) {
   return source.map(item => String(item ?? '').trim().toLowerCase()).filter(Boolean);
 }
 
-function parseAddressList(value) {
-  const source = Array.isArray(value) ? value : String(value ?? '').split(/[;,\n]/);
-  return source.map(item => String(item ?? '').trim().toLowerCase()).filter(Boolean);
-}
-
 function parseRecipientAddressList(value) {
   const source = Array.isArray(value) ? value : String(value ?? '').split(/[;,\n]/);
   return source.map(item => {
