@@ -19,7 +19,7 @@ export function isCallRingExpired(call,nowMs=Date.now()){
  const deadline=Date.parse(String(call.ringExpiresAt||""));
  if(Number.isFinite(deadline))return deadline<=nowMs;
  const created=Date.parse(String(call.createdAt||""));
- return Number.isFinite(created)&&created+CALL_RING_TIMEOUT_MS<=nowMs;
+ return !Number.isFinite(created)||created+CALL_RING_TIMEOUT_MS<=nowMs;
 }
 export function expireRingingCall(call,participants,stamp,nowMs=Date.now()){
  if(!isCallRingExpired(call,nowMs))return false;
