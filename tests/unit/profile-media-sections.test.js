@@ -7,7 +7,7 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 test('profile exposes Facebook-style Posts, About, Friends, Photos, Reels and More sections', async () => {
   const app = await read('../../public/app.js');
   for (const section of ['posts','about','friends','photos','reels','more']) {
-    assert.match(app, new RegExp("data-profile-tab=\\""+section+"\\""));
+    assert.ok(app.includes('data-profile-tab="'+section+'"'), section+' tab must exist');
   }
   assert.match(app, /function profileTabMarkup/);
   assert.match(app, /function bindProfileTabActions/);
@@ -32,6 +32,7 @@ test('profile Photos and Reels use media actually attached to the member profile
   assert.match(server, /const profileVideos=profileMedia\.filter\(media=>media\.mediaType==='video'\)/);
   assert.match(server, /reels:profileVideos/);
   assert.match(app, /function openProfileAlbumEditor/);
+  assert.match(app, /function openProfilePhotoComposer/);
   assert.match(app, /function openProfileReelComposer/);
   assert.match(app, /accept:'image\/jpeg,image\/png,image\/webp,image\/avif'/);
   assert.match(app, /accept:'video\/mp4,video\/webm,video\/quicktime'/);
