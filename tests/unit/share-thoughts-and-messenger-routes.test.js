@@ -20,7 +20,7 @@ test('Share thoughts is a real post composer connected to the authenticated post
   assert.ok(server.includes("if(method==='POST'&&p==='/api/posts')"));
   assert.ok(server.includes('validatePostInput(input)'));
   assert.ok(server.includes('publicPost(post,user.id)'));
-  assert.ok(html.includes('app.js?v=20261101-messenger-right-panel-2'));
+  assert.ok(html.includes('app.js?v=20261101-mailharbor-in-app-1'));
 });
 
 test('Messenger controls connect to conversation, user, settings and read-receipt routes', async () => {
@@ -84,7 +84,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     read('../../public/sw.js')
   ]);
 
-  assert.ok(app.includes("MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2'"));
+  assert.ok(app.includes("MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261101-mailharbor-3d-1'"));
   assert.ok(app.includes("function messenger3dIcon(id"));
   assert.ok(css.includes('.messenger-3d-icon{'));
   assert.ok(css.includes('drop-shadow('));
@@ -96,6 +96,6 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     assert.match(sprite, new RegExp('<symbol id="' + id + '" viewBox="0 0 64 64">'));
     assert.ok(app.includes("messenger3dIcon('" + id + "'") || app.includes("'" + id + "'"), id + ' is used by the client');
   }
-  assert.ok(serviceWorker.includes('minglora-shell-v56-messenger-right-panel-2'));
-  assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261101-messenger-right-panel-2'));
+  assert.ok(serviceWorker.includes('minglora-shell-v57-mailharbor-in-app-1'));
+  assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261101-mailharbor-3d-1'));
 });
