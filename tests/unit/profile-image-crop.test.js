@@ -56,11 +56,11 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 });
 
 test('the refreshed shell and service worker load the profile crop editor and its styles',()=>{
-  assert.match(html,/styles\.css\?v=20261101-messenger-profile-view-2/);
-  assert.match(html,/app\.js\?v=20261101-messenger-profile-view-2/);
-  assert.match(worker,/minglora-shell-v52-messenger-profile-view/);
-  assert.match(worker,/styles\.css\?v=20261101-messenger-profile-view-2/);
-  assert.match(worker,/app\.js\?v=20261101-messenger-profile-view-2/);
+  assert.match(html,/styles\.css\?v=20261101-inline-profile-edit-3/);
+  assert.match(html,/app\.js\?v=20261101-inline-profile-edit-3/);
+  assert.match(worker,/minglora-shell-v53-inline-profile-edit/);
+  assert.match(worker,/styles\.css\?v=20261101-inline-profile-edit-3/);
+  assert.match(worker,/app\.js\?v=20261101-inline-profile-edit-3/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
