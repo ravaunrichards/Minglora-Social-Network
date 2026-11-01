@@ -1926,6 +1926,7 @@ function profileAboutMarkup(u,isMe){
     hobbies:aboutChipsMarkup(sections.hobbies?.items),
     interests:aboutChipsMarkup(sections.interests?.items),
     travel:[
+      (Array.isArray(travel.placesLived)&&travel.placesLived.length)?'<div class="about-list-group"><strong>Places lived</strong>'+aboutChipsMarkup(travel.placesLived)+'</div>':'',
       (Array.isArray(travel.visited)&&travel.visited.length)?'<div class="about-list-group"><strong>Places visited</strong>'+aboutChipsMarkup(travel.visited)+'</div>':'',
       (Array.isArray(travel.wantToVisit)&&travel.wantToVisit.length)?'<div class="about-list-group"><strong>Want to visit</strong>'+aboutChipsMarkup(travel.wantToVisit)+'</div>':''
     ].join(''),
@@ -2017,7 +2018,8 @@ function openAboutSectionEditor(sectionKey,u){
   }else if(sectionKey==='interests'){
     fields=aboutEditorTextarea('items','Your interests',aboutLines(saved.items),'Add music, movies, TV, books, sports, games, artists, teams and more — one per line');
   }else if(sectionKey==='travel'){
-    fields=aboutEditorTextarea('visited','Places you have visited',aboutLines(saved.visited),'Add one place per line')+
+    fields=aboutEditorTextarea('placesLived','Places you have lived',aboutLines(saved.placesLived),'Add one town, city or country per line')+
+      aboutEditorTextarea('visited','Places you have visited',aboutLines(saved.visited),'Add one place per line')+
       aboutEditorTextarea('wantToVisit','Places you want to visit',aboutLines(saved.wantToVisit),'Add one destination per line');
   }else if(sectionKey==='links'){
     fields='<div class="about-social-editor-list" data-about-link-list>'+(saved.items||[]).map(aboutSocialLinkRow).join('')+'</div><button type="button" class="secondary about-editor-add" id="about-add-social-link">＋ Add social media or website link</button><p class="about-editor-note">Add full profile URLs for Instagram, Facebook, TikTok, YouTube, X, Threads, LinkedIn and other services. Links open in a new tab.</p>';
@@ -2084,7 +2086,7 @@ function openAboutSectionEditor(sectionKey,u){
       }else if(sectionKey==='hobbies'||sectionKey==='interests'){
         section.items=fieldLines('items');
       }else if(sectionKey==='travel'){
-        section.visited=fieldLines('visited');section.wantToVisit=fieldLines('wantToVisit');
+        section.placesLived=fieldLines('placesLived');section.visited=fieldLines('visited');section.wantToVisit=fieldLines('wantToVisit');
       }else if(sectionKey==='links'){
         section.items=[...form.querySelectorAll('[data-about-link-row]')].map(row=>({
           platform:String(row.querySelector('[data-link-field="platform"]')?.value||'Website'),
