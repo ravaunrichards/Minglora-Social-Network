@@ -1,6 +1,6 @@
 /* Minglora service worker: update-friendly shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v36-android-update-ready';
-const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-marketplace-core-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261031-marketplace-commerce-3','/settings.js?v=20261031-settings-flat-2','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
+const CACHE_NAME='minglora-shell-v37-phone-call-ringing';
+const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-call-ringing-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261101-call-ringing-1','/settings.js?v=20261101-call-ringtones-1','/assets/icons/navigation-3d.svg?v=20261101-meetwave-icon-1'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
@@ -40,12 +40,16 @@ self.addEventListener('push',event=>{
   const actions=type==='call'?[{action:'answer',title:'Answer'},{action:'decline',title:'Decline'}]:
     type==='live'?[{action:'watch',title:'Watch LIVE'}]:
     type==='message'?[{action:'open',title:'Open message'}]:[];
+  const isCall=type==='call';
   event.waitUntil(self.registration.showNotification(payload.title||'Minglora', {
     body:payload.body||'You have a new notification.',
-    tag:payload.tag||'minglora-notification',
+    tag:payload.tag||(isCall?'minglora-call-'+String(data.callId||'incoming'):'minglora-notification'),
     icon:'/assets/icons/minglora-push.svg',
     badge:'/assets/icons/minglora-push.svg',
-    renotify:false,
+    renotify:isCall,
+    requireInteraction:isCall,
+    silent:false,
+    vibrate:isCall?[900,450,900,450,1200]:[180,100,180],
     data:{url,type,...data},
     actions
   }));
@@ -56,6 +60,7 @@ self.addEventListener('notificationclick',event=>{
   const params=new URLSearchParams({'minglora-push':String(data.type||'notification')});
   for(const key of ['callId','liveSessionId','actorId','notificationId'])if(data[key])params.set(key,String(data[key]));
   if(event.action==='decline'&&data.callId)params.set('minglora-push','decline-call');
+  else if(event.action==='answer'&&data.callId)params.set('minglora-push','answer-call');
   const target=new URL('/?'+params.toString(),self.location.origin).href;
   event.waitUntil((async()=>{
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
