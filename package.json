@@ -11,10 +11,19 @@
     "check:repo": "node scripts/check-repository.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "livekit-server-sdk": "2.19.2",
-    "web-push": "3.6.7"
+    "nodemailer": "^7.0.10",
+    "pg": "^8.16.3",
+    "web-push": "3.6.7",
+    "ws": "^8.18.3"
   }
 }
