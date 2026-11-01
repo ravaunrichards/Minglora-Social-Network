@@ -16,6 +16,29 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Audit production and development dependencies
+        run: |
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/npm-audit.json', 'utf8'));
+          const rows = Object.entries(report.vulnerabilities || {}).map(([name, item]) => ({
+            name,
+            severity: item.severity,
+            direct: item.isDirect,
+            range: item.range,
+            fixAvailable: item.fixAvailable,
+            advisories: (item.via || []).map(entry => typeof entry === 'string' ? entry : ({
+              title: entry.title,
+              url: entry.url,
+              range: entry.range,
+              cwe: entry.cwe,
+              cvss: entry.cvss?.score
+            }))
+          }));
+          console.log(JSON.stringify({ summary: report.metadata?.vulnerabilities || {}, vulnerabilities: rows }, null, 2));
+          if (rows.length) process.exitCode = 1;
+          NODE
       - name: Check repository structure
         run: npm run check:repo
       - name: Check JavaScript syntax
