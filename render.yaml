@@ -1,0 +1,60 @@
+# Separate MailHarbor service and dedicated database for the Minglora integration.
+# Review current Render pricing before creating paid resources.
+services:
+  - type: web
+    name: minglora-mailharbor
+    runtime: node
+    plan: starter
+    region: virginia
+    branch: main
+    rootDir: integrations/mailharbor/source
+    autoDeploy: true
+    buildCommand: npm install --prefix backend --omit=dev
+    startCommand: npm --prefix backend start
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_SSL
+        value: "true"
+      - key: PG_POOL_MAX
+        value: "5"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: minglora-mailharbor-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MINGLORA_SSO_SECRET
+        sync: false
+      - key: MAILHARBOR_MAIL_DOMAIN
+        sync: false
+      - key: INBOUND_WEBHOOK_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://minglora-social-network.onrender.com
+      - key: REALTIME_ALLOWED_ORIGINS
+        value: https://minglora-social-network.onrender.com
+
+databases:
+  - name: minglora-mailharbor-db
+    databaseName: mailharbor
+    user: mailharbor
+    plan: basic-256mb
+    region: virginia
