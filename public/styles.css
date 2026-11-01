@@ -2857,3 +2857,6 @@ body.auth-mode .auth-screen{
  .profile-video-row video{width:100px}
 }
 @media(max-width:390px){.profile-media-section .page-heading{align-items:flex-start;flex-direction:column}.profile-media-section .page-heading .primary{width:100%}.profile-reels-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.profile-photo-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:760px){.profile-photo-actions{width:100%;justify-content:stretch}.profile-photo-actions button{flex:1;min-width:0;padding:10px 8px;font-size:11px}}
