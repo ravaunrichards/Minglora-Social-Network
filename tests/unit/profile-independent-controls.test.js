@@ -54,9 +54,9 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-avatar-edit-wrap\{[^}]*flex:0 0/);
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
-  assert.match(html,/styles\.css\?v=20261101-profile-edit-controls-2/);
-  assert.match(html,/app\.js\?v=20261101-profile-edit-controls-3/);
-  assert.match(worker,/minglora-shell-v50-profile-edit-controls/);
-  assert.match(worker,/styles\.css\?v=20261101-profile-edit-controls-2/);
-  assert.match(worker,/app\.js\?v=20261101-profile-edit-controls-3/);
+  assert.match(html,/styles\.css\?v=20261101-messenger-profile-view-2/);
+  assert.match(html,/app\.js\?v=20261101-messenger-profile-view-2/);
+  assert.match(worker,/minglora-shell-v52-messenger-profile-view/);
+  assert.match(worker,/styles\.css\?v=20261101-messenger-profile-view-2/);
+  assert.match(worker,/app\.js\?v=20261101-messenger-profile-view-2/);
 });
