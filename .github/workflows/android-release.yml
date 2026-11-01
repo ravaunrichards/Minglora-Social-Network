@@ -38,26 +38,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Prepare Android SDK environment
+      - name: Install Android SDK packages
         run: |
-          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
-          if [[ -z "$SDK_ROOT" || ! -d "$SDK_ROOT" ]]; then
+          if [[ -z "$ANDROID_HOME" || ! -d "$ANDROID_HOME" ]]; then
             echo "Android SDK is not present on this runner." >&2
             exit 1
           fi
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           if [[ -z "$SDKMANAGER" ]]; then
             echo "Android sdkmanager was not found." >&2
             exit 1
           fi
-          echo "ANDROID_SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
-      - name: Accept Android SDK licenses
-        run: yes | "$ANDROID_SDKMANAGER" --licenses >/dev/null
-      - name: Install Android SDK packages
-        run: "$ANDROID_SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
       - name: Build debug APK
         working-directory: apps/android
