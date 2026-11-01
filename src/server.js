@@ -2778,7 +2778,9 @@ async function route(req, res) {
         if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
         if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
         if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message, attach a file, or select a sticker or GIF.'});
-        const audience=getUserSettings(recipient).privacy.messageAudience;
+        const recipientSettings=getUserSettings(recipient);
+        if((recipientSettings.preferences.messengerRestrictedUserIds||[]).includes(user.id))return json(res,403,{error:'This member has restricted messages from your account.'});
+        const audience=recipientSettings.privacy.messageAudience;
         if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});
         const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
