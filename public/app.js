@@ -2016,12 +2016,13 @@ function openAboutSectionEditor(sectionKey,u){
   }else if(sectionKey==='aboutYou'){
     fields=aboutEditorTextarea('description','About you',saved.description,'Tell people a little more about yourself');
   }
-  const modal=document.createElement('div');modal.className='modal-backdrop about-section-editor-backdrop';
-  modal.innerHTML='<section class="modal about-section-editor-modal" role="dialog" aria-modal="true" aria-labelledby="about-section-editor-title"><div class="modal-head"><div><h2 id="about-section-editor-title">Edit '+esc(label)+'</h2><small class="muted">'+esc(description)+'</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="about-section-editor-form">'+fields+'<label class="field about-audience-field"><span>Who can see this section?</span><select name="audience"><option value="public" '+(audience==='public'?'selected':'')+'>Public — everyone</option><option value="friends" '+(audience==='friends'?'selected':'')+'>Friends</option><option value="private" '+(audience==='private'?'selected':'')+'>Only me</option></select></label><p class="about-editor-status muted" role="status"></p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Save '+esc(label)+'</button></div></form></section>';
-  document.body.append(modal);
+  const modal=document.createElement('section');modal.className='card profile-inline-editor about-section-inline-editor';
+  modal.innerHTML='<div class="about-section-inline-head"><div><h2 id="about-section-editor-title">Edit '+esc(label)+'</h2><small class="muted">'+esc(description)+'</small></div><button type="button" class="secondary about-inline-close">Close editor</button></div><form class="modal-body" id="about-section-editor-form">'+fields+'<label class="field about-audience-field"><span>Who can see this section?</span><select name="audience"><option value="public" '+(audience==='public'?'selected':'')+'>Public — everyone</option><option value="friends" '+(audience==='friends'?'selected':'')+'>Friends</option><option value="private" '+(audience==='private'?'selected':'')+'>Only me</option></select></label><p class="about-editor-status muted" role="status"></p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Save '+esc(label)+'</button></div></form>';
+  const profilePanel=$('#profile-tab-panel');
+  if(profilePanel)profilePanel.append(modal);else $('#main-content').append(modal);
   const close=()=>modal.remove();
-  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
-  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelectorAll('.about-inline-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
+  modal.scrollIntoView({behavior:'smooth',block:'start'});
   const entryList=modal.querySelector('[data-about-repeater]');
   modal.querySelectorAll('[data-add-about-entry]').forEach(button=>button.addEventListener('click',()=>{
     entryList?.insertAdjacentHTML('beforeend',aboutEditorEntryRow(button.dataset.addAboutEntry,{}));
@@ -2681,8 +2682,8 @@ async function transformProfileCrop(file,edit,stage,slot){
 function openEditProfile(u,mediaOnly=null){
   if(!['avatar','cover'].includes(mediaOnly))mediaOnly=null;
   const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
-  const modal=document.createElement('div');modal.className='modal-backdrop profile-editor-backdrop';
-  modal.innerHTML=`<section class="modal profile-editor-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
+  const modal=document.createElement('section');modal.className='card profile-inline-editor';
+  modal.innerHTML=`<div class="profile-inline-editor-content" aria-labelledby="edit-profile-title">
     <div class="modal-head"><h2 id="edit-profile-title">${mediaOnly==='avatar'?'Edit profile picture':mediaOnly==='cover'?'Edit cover picture':'Edit profile'}</h2><button class="modal-close" aria-label="Close">×</button></div>
     <form class="modal-body" id="edit-profile-form">
       <div class="profile-editor-details">
@@ -2734,8 +2735,10 @@ function openEditProfile(u,mediaOnly=null){
       </div>
       <p class="profile-upload-status muted" id="profile-upload-status" role="status">Profile details save automatically. Selected profile and cover photos upload securely when you select Save changes.</p>
       <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
-    </form></section>`;
-  document.body.append(modal);
+    </form></div>`;
+  const profileHeader=$('#main-content .profile-header-card');
+  if(profileHeader)profileHeader.insertAdjacentElement('afterend',modal);else $('#main-content').append(modal);
+  modal.scrollIntoView({behavior:'smooth',block:'start'});
   if(mediaOnly){
     modal.classList.add('profile-editor-media-only','profile-editor-media-only--'+mediaOnly);
     modal.querySelector('.profile-editor-details').hidden=true;
@@ -2823,9 +2826,8 @@ function openEditProfile(u,mediaOnly=null){
   modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;updateCoverCrop();};
   modal.querySelector('#edit-avatar-reset').onclick=()=>resetProfileCrop(avatarEdit,avatarZoom,updateAvatarCrop);
   modal.querySelector('#edit-cover-reset').onclick=()=>resetProfileCrop(coverEdit,coverZoom,updateCoverCrop);
-  const close=()=>{window.removeEventListener('resize',updateBothCrops);previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
+  const close=()=>{clearTimeout(profileSaveTimer);window.removeEventListener('resize',updateBothCrops);previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
-  modal.addEventListener('click',event=>{if(event.target===modal)close();});
   const profileForm=modal.querySelector('#edit-profile-form');
   const collectProfilePayload=()=>{
     const values=new FormData(profileForm);
