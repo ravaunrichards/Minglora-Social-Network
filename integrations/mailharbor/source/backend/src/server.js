@@ -76,8 +76,8 @@ function createApp(options = {}) {
       status: 'ready',
       service: 'mailharbor-api',
       database: 'connected',
-      outboundEmailConfigured: config.smtp.configured,
-      inboundEmailConfigured: Boolean(config.inboundWebhookSecret),
+      outboundEmailConfigured: config.smtp.configured && (!config.mingloraSsoSecret || Boolean(config.mailDomain && config.mailDomainVerified)),
+      inboundEmailConfigured: Boolean(config.inboundWebhookSecret && config.inboundMailEnabled),
       postgresNotifications: options.realtime ? options.realtime.isReady : false,
       deliveryLoop: 'running-in-process'
     });
@@ -90,6 +90,7 @@ function createApp(options = {}) {
       inboundEmailConfigured: Boolean(config.inboundWebhookSecret),
       mingloraSsoConfigured: Boolean(config.mingloraSsoSecret),
       mailDomainConfigured: Boolean(config.mailDomain),
+      mailDomainVerified: Boolean(config.mailDomainVerified),
       mailDomain: config.mailDomain || null,
       realtimeConfigured: Boolean(config.realtimePublicUrl),
       realtimeUrl: config.realtimePublicUrl,
@@ -101,7 +102,7 @@ function createApp(options = {}) {
   });
 
   app.post('/api/sso/provision', asyncRoute(async (req, res) => {
-    if (!config.mingloraSsoSecret || !config.mailDomain) return res.status(503).json({ error: 'Minglora SSO and a verified MailHarbor email domain must be configured.' });
+    if (!config.mingloraSsoSecret || !config.mailDomain || !config.mailDomainVerified) return res.status(503).json({ error: 'Minglora SSO and a domain verified with the MailHarbor provider must be configured before creating a mailbox.' });
     if (!verifyMingloraRequest(req, config.mingloraSsoSecret)) return res.status(401).json({ error: 'Minglora service signature is invalid or expired.' });
     const mingloraUserId = String(req.get('x-minglora-user-id') || '');
     const username = String(req.body?.username || '').trim().toLowerCase();
@@ -232,7 +233,7 @@ function createApp(options = {}) {
     const username = String(req.body?.username || '').trim().toLowerCase();
     const reserved = ['admin','administrator','abuse','billing','contact','help','hostmaster','mailer-daemon','no-reply','noreply','postmaster','root','security','support','webmaster'];
     if (!/^[a-z0-9_]{3,30}$/.test(username) || reserved.includes(username)) return res.status(400).json({ error: 'Choose a non-reserved address name with 3–30 letters, numbers or underscores.' });
-    if (!config.mailDomain) return res.status(503).json({ error: 'A MailHarbor email domain is not configured.' });
+    if (!config.mailDomain || !config.mailDomainVerified) return res.status(503).json({ error: 'The MailHarbor email domain has not been verified yet.' });
     try {
       const result = await db.query('UPDATE mail_users SET email = $1, minglora_username = $2, updated_at = now() WHERE id = $3 RETURNING id, email, minglora_username', [username + '@' + config.mailDomain, username, req.user.id]);
       if (!result.rowCount) return res.status(404).json({ error: 'MailHarbor account not found.' });
@@ -301,8 +302,8 @@ function createApp(options = {}) {
   app.post('/api/messages', auth, sendLimiter, asyncRoute(async (req, res) => {
     const validation = validateCompose(req.body);
     if (!validation.ok) return res.status(400).json({ error: validation.error });
-    if (!config.smtp.configured) {
-      return res.status(503).json({ error: 'Outbound email is not configured. No message was saved or sent.' });
+    if (!config.smtp.configured || (config.mingloraSsoSecret && (!config.mailDomain || !config.mailDomainVerified))) {
+      return res.status(503).json({ error: 'Outbound email is not configured for a verified MailHarbor sender domain. No message was saved or sent.' });
     }
     const { to, cc, bcc, subject, body } = validation.value;
     const client = await db.connect();
@@ -358,7 +359,7 @@ function createApp(options = {}) {
   }));
 
   app.post('/api/webhooks/inbound', asyncRoute(async (req, res) => {
-    if (!config.inboundWebhookSecret) return res.status(503).json({ error: 'Inbound email processing is not configured.' });
+    if (!config.inboundWebhookSecret || !config.inboundMailEnabled) return res.status(503).json({ error: 'Inbound email processing is not enabled. Verify the domain, MX records and provider webhook first.' });
     const signature = String(req.get('x-mailharbor-signature') || '');
     const expected = 'sha256=' + crypto.createHmac('sha256', config.inboundWebhookSecret).update(req.rawBody || Buffer.alloc(0)).digest('hex');
     const suppliedBuffer = Buffer.from(signature);

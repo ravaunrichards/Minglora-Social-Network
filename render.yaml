@@ -33,6 +33,10 @@ services:
         sync: false
       - key: MAILHARBOR_MAIL_DOMAIN
         sync: false
+      - key: MAILHARBOR_DOMAIN_VERIFIED
+        value: "false"
+      - key: INBOUND_MAIL_ENABLED
+        value: "false"
       - key: INBOUND_WEBHOOK_SECRET
         sync: false
       - key: SMTP_HOST

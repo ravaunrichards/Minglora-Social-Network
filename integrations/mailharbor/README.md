@@ -28,6 +28,8 @@ On the MailHarbor service:
 
 - `MINGLORA_SSO_SECRET`: exactly the same secret as the Minglora setting.
 - `MAILHARBOR_MAIL_DOMAIN`: the email domain you control and intend to verify with the mail provider.
+- `MAILHARBOR_DOMAIN_VERIFIED=true`: change from `false` only after your mail provider confirms domain ownership and sender DNS records.
+- `INBOUND_MAIL_ENABLED=true`: change from `false` only after inbound routing, MX records and the signed webhook have been verified.
 - `DATABASE_URL` and `DATABASE_SSL=true`: the new dedicated MailHarbor PostgreSQL database. The Render blueprint injects the URL.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`: the real outbound SMTP credentials and verified sender supplied by the mail provider.
 - `INBOUND_WEBHOOK_SECRET`: a separate random webhook HMAC secret also entered at the inbound mail provider.
@@ -39,7 +41,7 @@ Do not commit any secret values. Use different secrets for SSO and inbound webho
 
 MailHarbor is not itself an MX operator or a self-hosted SMTP network. The chosen provider must accept outbound mail for the verified MailHarbor domain and route inbound messages to the signed webhook endpoint `/api/webhooks/inbound`. Publish only the exact MX, SPF, DKIM and DMARC records supplied by that provider. Configure bounce/complaint handling and sender reputation policies before production traffic.
 
-The app deliberately reports sending and receiving as unavailable while those real provider connections are missing. It does not fabricate delivered status, inbox messages or mailbox balances.
+The app deliberately reports sending and receiving as unavailable while those real provider connections are missing. Mailbox provisioning and sending are blocked until `MAILHARBOR_DOMAIN_VERIFIED=true`; inbound webhook ingestion is blocked until `INBOUND_MAIL_ENABLED=true` in addition to its signature secret. It does not fabricate delivered status, inbox messages or mailbox balances.
 
 ## Current functionality and remaining Gmail-like scope
 

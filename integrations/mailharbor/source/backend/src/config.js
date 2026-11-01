@@ -22,6 +22,8 @@ function loadConfig(env = process.env) {
 
   const mingloraSsoSecret = env.MINGLORA_SSO_SECRET || '';
   const mailDomain = String(env.MAILHARBOR_MAIL_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
+  const mailDomainVerified = bool(env.MAILHARBOR_DOMAIN_VERIFIED, false);
+  const inboundMailEnabled = bool(env.INBOUND_MAIL_ENABLED, false);
   if (mailDomain && !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(mailDomain)) {
     throw new Error('MAILHARBOR_MAIL_DOMAIN must be a valid domain name.');
   }
@@ -54,6 +56,8 @@ function loadConfig(env = process.env) {
     inboundWebhookSecret: env.INBOUND_WEBHOOK_SECRET || '',
     mingloraSsoSecret,
     mailDomain,
+    mailDomainVerified,
+    inboundMailEnabled,
     smtp: {
       host: smtpHost,
       port: Number(env.SMTP_PORT || 587),
