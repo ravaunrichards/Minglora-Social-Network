@@ -13,11 +13,12 @@ const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
 test('profile identity stays compact and About information is shown in its own section cards',()=>{
   const renderAt=app.indexOf('function renderProfile(data)');
   const headerStart=app.indexOf('<div class="profile-info-main">',renderAt);
-  const headerEnd=app.indexOf('<p class="profile-counts">',headerStart);
+  const headerEnd=app.indexOf("</div>'+relationshipActions",headerStart);
   assert.notEqual(renderAt,-1);
   assert.notEqual(headerStart,-1);
   assert.notEqual(headerEnd,-1);
   const identity=app.slice(headerStart,headerEnd);
+  assert.match(app.slice(renderAt,app.indexOf('const showTab=',renderAt)),/class="profile-counts"/);
   assert.match(identity,/u\.name/);
   assert.match(identity,/u\.username/);
   assert.doesNotMatch(identity,/u\.(bio|location)/);
