@@ -1,6 +1,6 @@
 /* Minglora service worker: update-friendly shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v36-android-update-ready';
-const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-marketplace-core-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261031-marketplace-commerce-3','/settings.js?v=20261031-settings-flat-2','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
+const CACHE_NAME='minglora-shell-v37-profile-expansion';
+const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-marketplace-core-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261031-profile-expansion-1','/settings.js?v=20261031-settings-flat-2','/assets/icons/navigation-3d.svg?v=20261031-creator-stage-sticky-fallback-2'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });

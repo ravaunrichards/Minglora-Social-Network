@@ -12,15 +12,16 @@ The local JSON store includes narrowly scoped cleanup for explicitly identified 
 
 - Responsive browser interface and account registration/sign-in/sign-out (Supabase Auth when configured)
 - Signed HttpOnly application session cookies; Supabase Auth owns production passwords, while salted scrypt hashes remain only for legacy-account migration
-- Profile editing for display name, unique username, bio and location; avatar/cover gallery, file and camera selection with image zoom/crop/rotation and Supabase Storage delivery
+- Expanded profile with All, About, Friends, Photos, Reels and More; View as, profile search, Highlights, Profile status, Archive, Story archive, Activity log and Manage Sections
 - All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination; posts accept uploaded images, video, audio and interactive GLB 3D files (no pasted image URLs)
-- Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
+- Create, edit and delete posts; publish 1–3 clip Reels; browse profile photo galleries; archive/restore posts; add reactions/comments and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, automatic friendship on reciprocal follow, clickable follower/following lists, block/unblock and profile counts
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
 - Marketplace product and service listings with seller ownership, signed photo uploads, discovery, saved listings, seller status controls, seller enquiries and listing reports
 - Marketplace seller applications and moderator review, server-calculated informational checkout quotes, verified-provider-gated checkout status, and service booking requests with participant-controlled transitions
 - Separate Jobs area with moderated employer vacancy submissions, searchable published vacancies, candidate applications, employer review/shortlist/reject/hire actions and candidate withdrawal
 - Public Pages with unique handles, Page follows, Page details, owner publishing with device-uploaded media and deletion
+- Profile check-ins, event creation and RSVP, section controls, persistent Story archive, reusable Highlights, profile status and owner-only activity history
 - Text and uploaded photo/video Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Direct one-to-one messaging with uploaded media/documents, browser-recorded voice notes, a curated sticker pack, Tenor GIF search/send when configured, emoji composer, compact Messenger-style chat popups, unread counts and read receipts; active windows refresh every five seconds (polling, not WebSocket delivery)
 - In-app notifications for supported actions, with persisted account-level notification controls
