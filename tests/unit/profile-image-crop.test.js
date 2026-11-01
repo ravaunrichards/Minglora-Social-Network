@@ -56,11 +56,11 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 });
 
 test('the refreshed shell and service worker load the profile crop editor and its styles',()=>{
-  assert.match(html,/styles\.css\?v=20261101-profile-crop-2/);
-  assert.match(html,/app\.js\?v=20261101-profile-crop-2/);
-  assert.match(worker,/minglora-shell-v41-profile-crop-precision/);
-  assert.match(worker,/styles\.css\?v=20261101-profile-crop-2/);
-  assert.match(worker,/app\.js\?v=20261101-profile-crop-2/);
+  assert.match(html,/styles\.css\?v=20261101-profile-display-1/);
+  assert.match(html,/app\.js\?v=20261101-profile-display-1/);
+  assert.match(worker,/minglora-shell-v42-public-profile-image-display/);
+  assert.match(worker,/styles\.css\?v=20261101-profile-display-1/);
+  assert.match(worker,/app\.js\?v=20261101-profile-display-1/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
@@ -79,4 +79,14 @@ test('crop preview and saved output use the visible inner frame rather than its 
   assert.equal((visible/previewScale),(1080/exportScale));
   const previewOffset=14,exportOffset=previewOffset*(1080/visible);
   assert.ok(Math.abs(exportOffset/exportScale-previewOffset/previewScale)<1e-9);
+});
+
+test('public profile pages and outside member cards show the complete saved profile images',()=>{
+  assert.ok(app.includes('class="profile-cover">${u.cover?'));
+  assert.ok(app.includes('class="profile-cover-image" data-view-image='));
+  assert.ok(css.includes('.profile-cover-image{display:block;width:100%;height:100%;object-fit:contain'));
+  assert.ok(css.includes('.profile-info .avatar,.person-avatar-wrap .avatar{object-fit:contain'));
+  assert.ok(css.includes('.person-card--immersive .person-cover{'));
+  assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
+  assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
 });

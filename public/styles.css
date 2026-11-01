@@ -2791,3 +2791,14 @@ body.auth-mode .auth-screen{
  .profile-crop-workspace .profile-upload-controls{align-items:stretch}
  .profile-crop-actions button{flex:1}
 }
+
+
+/* Public profiles must display the crop saved by the profile editor without cropping it again. */
+.profile-cover{position:relative;overflow:hidden}
+.profile-cover-image{display:block;width:100%;height:100%;object-fit:contain;object-position:center;background:transparent}
+.profile-info .avatar,.person-avatar-wrap .avatar{object-fit:contain;object-position:center}
+.person-card--immersive .person-cover{
+  height:auto!important;min-height:0!important;max-height:none!important;
+  aspect-ratio:3/1;padding:0!important;
+}
+.person-cover-image{object-fit:contain!important;object-position:center;filter:none}
