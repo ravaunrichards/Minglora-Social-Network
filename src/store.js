@@ -28,6 +28,10 @@ if (!['json', 'supabase'].includes(persistenceDriver)) {
 const stateApiUrl = String(process.env.SUPABASE_STATE_API_URL || '').trim().replace(/\/+$/, '');
 const stateApiKey = String(process.env.SUPABASE_STATE_API_KEY || '').trim();
 const publishableKey = String(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+const SUPABASE_REQUEST_MAX_ATTEMPTS = 3;
+const SUPABASE_RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504, 520, 522, 524]);
+const SUPABASE_RETRY_DELAYS_MS = [200, 600];
+const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 let supabaseRevision = null;
 let lastPersistedSnapshot = null;
 let saveQueue = Promise.resolve();
@@ -95,34 +99,49 @@ function stripLegacyDemoData(state) {
 
 export async function requestSupabaseState(action, extra = {}) {
   // Local JSON-mode tests and development do not call the hosted Supabase gateway.
-  // Production requires Supabase persistence and continues through the guarded request below.
   if (persistenceDriver !== 'supabase') return { ok: true, skipped: true };
   if (!stateApiUrl || !stateApiKey || !publishableKey) {
     throw new Error('Supabase persistence requires SUPABASE_STATE_API_URL, SUPABASE_STATE_API_KEY and SUPABASE_PUBLISHABLE_KEY.');
   }
 
-  let response;
-  try {
-    response = await fetch(stateApiUrl, {
-      method: 'POST',
-      headers: {
-        apikey: publishableKey,
-        'x-minglora-api-key': stateApiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ action, ...extra })
-    });
-  } catch {
-    throw new Error('Could not reach the Minglora Supabase runtime gateway.');
-  }
+  for (let attempt = 1; attempt <= SUPABASE_REQUEST_MAX_ATTEMPTS; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(stateApiUrl, {
+        method: 'POST',
+        headers: {
+          apikey: publishableKey,
+          'x-minglora-api-key': stateApiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action, ...extra }),
+        signal: AbortSignal.timeout(15000)
+      });
+    } catch (cause) {
+      if (attempt < SUPABASE_REQUEST_MAX_ATTEMPTS) {
+        await wait(SUPABASE_RETRY_DELAYS_MS[attempt - 1] || 600);
+        continue;
+      }
+      throw Object.assign(
+        new Error('Could not reach the Minglora Supabase runtime gateway after bounded retries.'),
+        { status: 503, cause }
+      );
+    }
 
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error || 'Minglora Supabase persistence request failed.');
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) return payload;
+
+    if (SUPABASE_RETRYABLE_STATUSES.has(response.status) && attempt < SUPABASE_REQUEST_MAX_ATTEMPTS) {
+      await wait(SUPABASE_RETRY_DELAYS_MS[attempt - 1] || 600);
+      continue;
+    }
+
+    const error = new Error(payload.error || ('Minglora Supabase persistence request failed (HTTP ' + response.status + ').'));
     error.status = response.status;
     throw error;
   }
-  return payload;
+
+  throw new Error('Minglora Supabase persistence request exhausted its retry policy.');
 }
 
 async function persistSupabaseState(state) {
