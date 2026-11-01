@@ -40,6 +40,13 @@ export function meetWaveRoomJoinAvailability(room, now = Date.now()) {
   return now < start - 15 * 60 * 1000 ? 'too-early' : 'open';
 }
 
+export function canReceiveMeetWaveInvitation(settings, { isFriend = false } = {}) {
+  const audience = String(settings?.privacy?.meetWaveAudience || 'everyone');
+  if (audience === 'everyone') return true;
+  if (audience === 'friends') return Boolean(isFriend);
+  return false;
+}
+
 export function normalizeMeetWaveMessage(value) {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
   return text.length > 0 && text.length <= 1000 ? text : '';
