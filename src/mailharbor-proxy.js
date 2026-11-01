@@ -6,7 +6,7 @@ const sha256 = value => crypto.createHash('sha256').update(value || Buffer.alloc
 function signedHeaders({ secret, userId, method, path, body = '' }) {
   const timestamp = String(Date.now());
   const bodyHash = sha256(body);
-  const signed = [timestamp, String(method).toUpperCase(), path, String(userId), bodyHash].join('\n');
+  const signed = [timestamp, String(method).toUpperCase(), path, String(userId), bodyHash].join('\\n');
   const signature = crypto.createHmac('sha256', secret).update(signed).digest('hex');
   return {
     'x-minglora-user-id': String(userId),
@@ -16,12 +16,14 @@ function signedHeaders({ secret, userId, method, path, body = '' }) {
 }
 
 function settings() {
-  const base = String(process.env.MAILHARBOR_API_URL || '').trim().replace(/\/+$/, '');
+  const base = String(process.env.MAILHARBOR_API_URL || '').trim().replace(/\\/+$/, '');
   const secret = String(process.env.MAILHARBOR_SSO_SECRET || '');
   if (!base || Buffer.byteLength(secret) < 32) return null;
   let parsed;
   try { parsed = new URL(base); } catch { return null; }
-  if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') return null;
+  const localEmbeddedApi = parsed.protocol === 'http:' &&
+    parsed.hostname === '127.0.0.1' && parsed.port === '3211';
+  if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:' && !localEmbeddedApi) return null;
   return { base, secret };
 }
 
@@ -48,7 +50,7 @@ export async function proxyMailHarbor({ method, pathname, search = '', input = {
   const config = settings();
   if (!config) return {
     status: 503,
-    body: { error: 'MailHarbor is not connected yet. Configure MAILHARBOR_API_URL and the matching private MAILHARBOR_SSO_SECRET on both services.' }
+    body: { error: 'MailHarbor is not connected inside Minglora. Configure its local API and private SSO secret.' }
   };
   if (!user?.id || !user?.username || !user?.name) {
     return { status: 401, body: { error: 'A complete Minglora member session is required to open MailHarbor.' } };
@@ -78,7 +80,7 @@ export async function proxyMailHarbor({ method, pathname, search = '', input = {
       input
     });
   } catch (error) {
-    console.error('[Minglora MailHarbor proxy]', String(error?.message || error).slice(0,180));
-    return { status: 503, body: { error: 'MailHarbor is temporarily unreachable. Your message request was not confirmed.' } };
+    console.error('[Minglora MailHarbor]', String(error?.message || error).slice(0,180));
+    return { status: 503, body: { error: 'MailHarbor is temporarily unavailable inside Minglora. Your message request was not confirmed.' } };
   }
 }
