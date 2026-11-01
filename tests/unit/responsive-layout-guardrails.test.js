@@ -27,7 +27,7 @@ test('shared content containers can shrink without pushing the page out of align
   }
   assert.ok(ruleFor(css, '.page-heading').includes('flex-wrap:wrap'));
   assert.ok(ruleFor(css, '.profile-counts').includes('flex-wrap:wrap'));
-  assert.ok(ruleFor(css, '.profile-tabs').includes('overflow-x:auto'));
+  assert.ok(ruleFor(css, '.profile-tabs-list').includes('overflow-x:auto'));
 });
 
 test('phone overlays stay clear of the fixed bottom navigation and device safe areas', async () => {
@@ -83,7 +83,7 @@ test('the responsive stylesheet and service-worker shell are versioned together'
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
   assert.ok(html.includes('styles.css?v=20261101-profile-more-4'));
-  assert.ok(worker.includes('minglora-shell-v46-profile-more-sections'));
+  assert.ok(worker.includes('minglora-shell-v47-profile-overflow-menu'));
   assert.ok(worker.includes('styles.css?v=20261101-profile-more-4'));
 });
 

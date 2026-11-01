@@ -48,3 +48,22 @@ test('profile More exposes Check-ins, Events, Groups and owner section managemen
   assert.match(app, /data-open-group/);
   assert.match(server, /groups:\(db\.groups\|\|\[\]\)\.filter\(group=>group\.ownerId===target\.id/);
 });
+
+test('profile tabs include a right-aligned three-dot overflow menu with requested profile actions', async () => {
+  const [app, css, html, sw] = await Promise.all([
+    read('../../public/app.js'), read('../../public/styles.css'),
+    read('../../public/index.html'), read('../../public/sw.js')
+  ]);
+  assert.match(app, /profile-tabs-overflow/);
+  assert.match(app, /id="profile-overflow-trigger"/);
+  assert.match(app, /role="menu" aria-label="Profile actions"/);
+  for (const label of ['View as','Search','Add Highlights','Profile status','Archive','Story archive','Activity log','Profile and tagging settings','Minglora Verified']) {
+    assert.ok(app.includes(label), label+' profile action must be present');
+  }
+  assert.match(app, /data-profile-overflow-action="lock-toggle"/);
+  assert.match(app, /profileVisibility:next/);
+  assert.match(css, /\.profile-tabs-overflow\{[^}]*align-items:center/);
+  assert.match(css, /\.profile-overflow-trigger\{[^}]*align-self:center/);
+  assert.match(html, /styles\.css\?v=20261101-profile-more-4/);
+  assert.match(sw, /minglora-shell-v47-profile-overflow-menu/);
+});

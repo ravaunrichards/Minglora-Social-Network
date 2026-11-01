@@ -54,6 +54,6 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /styles\.css\?v=20261101-profile-more-4/);
   assert.match(html, /app\.js\?v=20261101-profile-more-4/);
   assert.match(html, /settings\.js\?v=20261101-call-ringtones-1/);
-  assert.match(sw, /minglora-shell-v46-profile-more-sections/);
+  assert.match(sw, /minglora-shell-v47-profile-overflow-menu/);
   assert.match(sw, /settings\.js\?v=20261101-call-ringtones-1/);
 });

@@ -1929,6 +1929,77 @@ function openProfileReelComposer(profileId){
     }catch(error){toast(error.message);submit.disabled=false;}
   });
 }
+
+function closeProfileOverflowMenu(){
+  const menu=$('#profile-overflow-menu'),trigger=$('#profile-overflow-trigger');
+  if(menu)menu.hidden=true;
+  trigger?.setAttribute('aria-expanded','false');
+}
+function openProfileMenuInfo(title,message){
+  const modal=document.createElement('div');modal.className='modal-backdrop profile-menu-modal-backdrop';
+  modal.innerHTML='<section class="modal profile-menu-modal" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="modal-head"><h2>'+esc(title)+'</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><p>'+esc(message)+'</p><div class="modal-actions"><button type="button" class="primary" data-profile-menu-close>Done</button></div></div></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close')?.addEventListener('click',close);
+  modal.querySelector('[data-profile-menu-close]')?.addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+}
+function openProfileViewAsPreview(u,data){
+  const bioVisible=u.aboutVisibility?.bio!==false;
+  const cover=u.cover?'<img src="'+esc(u.cover)+'" alt="" class="profile-view-as-cover-image">':'';
+  const bio=bioVisible&&u.bio?'<p class="profile-view-as-bio">'+esc(u.bio)+'</p>':'';
+  const modal=document.createElement('div');modal.className='modal-backdrop profile-menu-modal-backdrop';
+  modal.innerHTML='<section class="modal profile-view-as-modal" role="dialog" aria-modal="true" aria-label="Public profile preview"><div class="modal-head"><div><h2>View as</h2><small class="muted">Public profile preview</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="profile-view-as-card"><div class="profile-view-as-cover">'+cover+'</div><div class="profile-view-as-person"><img src="'+esc(avatar(u))+'" alt="" class="avatar"><div><strong>'+esc(u.name)+'</strong><small>@'+esc(u.username)+'</small></div></div>'+bio+'<div class="profile-view-as-counts"><span><strong>'+Number(data.followersCount||0).toLocaleString()+'</strong> followers</span><span><strong>'+Number(data.followingCount||0).toLocaleString()+'</strong> following</span><span><strong>'+(data.posts||[]).length+'</strong> posts</span></div></div><p class="profile-view-as-note">This is a read-only preview of your profile header. It does not simulate every audience or privacy rule.</p><div class="modal-actions"><button type="button" class="primary" data-profile-menu-close>Done</button></div></div></section>';
+  document.body.append(modal);const close=()=>modal.remove();
+  modal.querySelector('.modal-close')?.addEventListener('click',close);
+  modal.querySelector('[data-profile-menu-close]')?.addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+}
+async function openProfilePrivacySettings(){
+  try{
+    const result=await api('/settings');const settings=result.settings||{},privacy=settings.privacy||{};
+    const modal=document.createElement('div');modal.className='modal-backdrop profile-menu-modal-backdrop';
+    modal.innerHTML='<section class="modal profile-menu-modal" role="dialog" aria-modal="true" aria-label="Profile and tagging settings"><div class="modal-head"><h2>Profile and tagging settings</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form id="profile-tagging-settings-form" class="modal-body"><div class="field"><label for="profile-visibility-setting">Who can see your profile?</label><select id="profile-visibility-setting" name="profileVisibility"><option value="public">Everyone</option><option value="friends">Friends</option><option value="private">Only me</option></select></div><p class="muted">Profile visibility is enforced by Minglora. Tag review and audience controls are not available yet.</p><div class="modal-actions"><button type="button" class="secondary" data-profile-menu-cancel>Cancel</button><button type="submit" class="primary">Save settings</button></div></form></section>';
+    document.body.append(modal);
+    const select=modal.querySelector('#profile-visibility-setting');if(select)select.value=['public','friends','private'].includes(privacy.profileVisibility)?privacy.profileVisibility:'public';
+    const close=()=>modal.remove();
+    modal.querySelector('.modal-close')?.addEventListener('click',close);
+    modal.querySelector('[data-profile-menu-cancel]')?.addEventListener('click',close);
+    modal.addEventListener('click',event=>{if(event.target===modal)close();});
+    modal.querySelector('#profile-tagging-settings-form')?.addEventListener('submit',async event=>{
+      event.preventDefault();const save=event.currentTarget.querySelector('[type="submit"]');save.disabled=true;
+      try{const saved=await api('/settings',{method:'PATCH',body:JSON.stringify({privacy:{profileVisibility:select.value}})});state.settings=saved.settings;toast('Profile visibility settings saved.');close();}
+      catch(error){toast(error.message);save.disabled=false;}
+    });
+  }catch(error){toast(error.message||'Could not load profile settings.');}
+}
+async function toggleProfilePrivacyLock(){
+  try{
+    const current=await api('/settings');const locked=current.settings?.privacy?.profileVisibility==='private';
+    const next=locked?'public':'private';
+    const saved=await api('/settings',{method:'PATCH',body:JSON.stringify({privacy:{profileVisibility:next}})});state.settings=saved.settings;
+    const label=$('#profile-overflow-menu [data-profile-overflow-action="lock-toggle"] span:last-child');
+    if(label)label.textContent=next==='private'?'Unlock profile':'Lock profile';
+    toast(next==='private'?'Your profile is now locked.':'Your profile is public again.');
+  }catch(error){toast(error.message||'Could not update profile visibility.');}
+}
+async function handleProfileOverflowAction(action,u,data){
+  closeProfileOverflowMenu();
+  if(action==='view-as'){openProfileViewAsPreview(u,data);return;}
+  if(action==='search'){
+    const query=window.prompt('Search Minglora for people, posts, groups or Pages:','');
+    if(query?.trim())try{await renderSearch(query.trim());}catch(error){toast(error.message);}
+    return;
+  }
+  if(action==='highlights'){openStoryComposer();toast('Story composer opened. Saving Stories as permanent profile Highlights is not available yet.');return;}
+  if(action==='status'){openEditProfile(u);toast('Update your bio and profile details here. A separate temporary profile-status feature is not available yet.');return;}
+  if(action==='archive'){openProfileMenuInfo('Archive','Post archiving and restore controls are not available yet. No posts have been moved or hidden.');return;}
+  if(action==='story-archive'){openProfileMenuInfo('Story archive','A saved Story archive is not available yet. Stories currently expire after 24 hours and are then removed.');return;}
+  if(action==='activity'){state.profileTab='posts';renderProfile(data);toast('The All tab shows your published posts. A full interaction activity log is not available yet.');return;}
+  if(action==='privacy'){await openProfilePrivacySettings();return;}
+  if(action==='lock-toggle'){await toggleProfilePrivacyLock();return;}
+  if(action==='verified'){openProfileMenuInfo('Minglora Verified','Account verification and profile verification badges are not available yet. This menu item does not grant a verified badge.');}
+}
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
@@ -1936,7 +2007,7 @@ function renderProfile(data){
     :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const tab=state.profileTab||'posts';
-  setContent('<section class="card profile-header-card" style="padding:0;overflow:hidden"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div><div class="profile-info"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt=""><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong> friends</button><span><strong>'+(data.posts||[]).length+'</strong> posts</span></p>'+(isMe?'<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">'+Number(data.profileInsights?.profileViews30d||0).toLocaleString()+'</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">'+Number(data.profileInsights?.activeViewersCount||0).toLocaleString()+'</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>':'')+'</div>'+relationshipActions+'</div><nav class="profile-tabs" aria-label="Profile sections">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['groups','Groups'],['checkins','Check-ins'],['events','Events'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</nav></section><div id="profile-tab-panel"></div>');
+  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div><div class="profile-info"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt=""><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p>@'+esc(u.username)+'</p><p class="profile-counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong> followers</button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong> following</button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong> friends</button><span><strong>'+(data.posts||[]).length+'</strong> posts</span></p>'+(isMe?'<div class="profile-live-insights" aria-label="Profile analytics"><span><strong id="profile-views-count">'+Number(data.profileInsights?.profileViews30d||0).toLocaleString()+'</strong><small>Profile views · 30 days</small></span><span class="profile-viewing-now"><i aria-hidden="true"></i><strong id="profile-active-viewers-count">'+Number(data.profileInsights?.activeViewersCount||0).toLocaleString()+'</strong><small>Viewing now</small></span></div><p class="profile-insights-note">Visits from signed-in members. Each member counts once per day.</p>':'')+'</div>'+relationshipActions+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['groups','Groups'],['checkins','Check-ins'],['events','Events'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status"><span aria-hidden="true">✎</span><span>Profile status</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab;button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
@@ -1945,6 +2016,20 @@ function renderProfile(data){
     bindProfileTabActions(panel);
   };
   document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.profileTab)));
+  const overflowTrigger=$('#profile-overflow-trigger'),overflowMenu=$('#profile-overflow-menu');
+  overflowTrigger?.addEventListener('click',async event=>{
+    event.stopPropagation();if(!overflowMenu)return;
+    const opening=overflowMenu.hidden;overflowMenu.hidden=!opening;
+    overflowTrigger.setAttribute('aria-expanded',opening?'true':'false');
+    if(opening){
+      try{const settings=await api('/settings');const locked=settings.settings?.privacy?.profileVisibility==='private';
+        const label=overflowMenu.querySelector('[data-profile-overflow-action="lock-toggle"] span:last-child');
+        if(label)label.textContent=locked?'Unlock profile':'Lock profile';
+      }catch{}
+    }
+  });
+  overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>handleProfileOverflowAction(button.dataset.profileOverflowAction,u,data)));
+
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
   $('#profile-follow')?.addEventListener('click',async()=>{
     const following=$('#profile-follow')?.dataset.following==='true';
