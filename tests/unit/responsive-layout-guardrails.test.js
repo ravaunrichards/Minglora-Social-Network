@@ -151,7 +151,7 @@ test('routine profile editors stay in document flow and do not create modal over
   assert.ok(css.includes('.about-section-inline-editor{'));
   assert.doesNotMatch(css, /\\.profile-editor-backdrop|\\.profile-editor-modal|\\.about-section-editor-modal/);
   assert.doesNotMatch(app, /modal-backdrop profile-editor-backdrop|modal-backdrop about-section-editor-backdrop/);
-  assert.match(app, /profileHeader\\.insertAdjacentElement\\('afterend',modal\\)/);
-  assert.match(app, /profilePanel\\.append\\(modal\\)/);
+  assert.ok(app.includes("profileHeader.insertAdjacentElement('afterend',modal)"));
+  assert.ok(app.includes('profilePanel.append(modal)'));
 });
 
