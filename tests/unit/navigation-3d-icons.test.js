@@ -23,7 +23,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
     ['live', 'live', 'LIVE'],
     ['creator', 'creator', 'Studio'],
     ['friends', 'friends', 'Friends'],
-    ['messages', 'messages', 'Messages'],
+    ['messages', 'messages', 'Messenger'],
     ['coins', 'coins', 'Coins']
   ]) {
     assert.match(nav, new RegExp(`data-view="${view}"`));
