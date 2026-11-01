@@ -872,8 +872,9 @@ async function route(req, res) {
         return json(res,200,{launchUrl:launch.launchUrl,expiresAt:launch.expiresAt},{'Cache-Control':'no-store'});
       }
       if (method === 'GET' && p === '/api/harborpay/status') {
+        const status = await getHarborPayBridgeStatus();
         return json(res,200,{
-          configured:harborPayBridgeConfigured(),
+          ...status,
           consentVersion:HARBORPAY_MINGLORA_CONSENT_VERSION
         },{'Cache-Control':'no-store'});
       }
