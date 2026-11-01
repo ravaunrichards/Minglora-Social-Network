@@ -60,3 +60,12 @@ test('static shell cache is versioned for the upgraded discovery cards', async (
   assert.match(html, /20261031-creator-stage-sticky-fallback-2/);
   assert.match(worker, /minglora-shell-v41-profile-crop-precision/);
 });
+
+test('outside profile cards preserve the full 3:1 saved cover and uncropped avatar',async()=>{
+  const app=await read('public/app.js');
+  const css=await read('public/styles.css');
+  assert.match(app,/person-cover-image/);
+  assert.match(css,/\\.person-card--immersive \\.person-cover\\{[^}]*aspect-ratio:3\\/1/);
+  assert.match(css,/\\.person-cover-image\\{object-fit:contain!important/);
+  assert.match(css,/\\.person-avatar-wrap \\.avatar\\{object-fit:contain/);
+});
