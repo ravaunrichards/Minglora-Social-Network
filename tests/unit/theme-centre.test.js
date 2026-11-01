@@ -51,9 +51,9 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261101-profile-media-controls-1/);
-  assert.match(html, /app\.js\?v=20261101-profile-media-controls-1/);
+  assert.match(html, /styles\.css\?v=20261101-about-sections-1/);
+  assert.match(html, /app\.js\?v=20261101-about-sections-1/);
   assert.match(html, /settings\.js\?v=20261101-call-ringtones-1/);
-  assert.match(sw, /minglora-shell-v48-profile-media-controls/);
+  assert.match(sw, /minglora-shell-v49-about-sections/);
   assert.match(sw, /settings\.js\?v=20261101-call-ringtones-1/);
 });
