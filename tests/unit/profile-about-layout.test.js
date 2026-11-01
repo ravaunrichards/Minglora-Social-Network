@@ -42,9 +42,22 @@ test('browser reloads the corrected profile script and replaces the old service-
   const indexHtml = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
   const serverSource = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
-  assert.match(indexHtml, /src="\/app\.js\?v=20261031-marketplace-commerce-3"/);
-  assert.match(serviceWorker, /minglora-shell-v36-android-update-ready/);
-  assert.match(serviceWorker, /\/app\.js\?v=20261031-marketplace-commerce-3/);
+  assert.match(indexHtml, /src="\/app\.js\?v=20261031-profile-expansion-1"/);
+  assert.match(serviceWorker, /minglora-shell-v37-profile-expansion/);
+  assert.match(serviceWorker, /\/app\.js\?v=20261031-profile-expansion-1/);
   assert.match(serverSource, /'Cache-Control':'no-store'/);
   assert.match(serverSource, /'Cache-Control':'no-cache, max-age=0, must-revalidate'/);
+});
+
+test('profile navigation has All, About, Friends, Photos, Reels, More and a three-dot menu',()=>{
+ const start=appSource.indexOf('function renderProfile(data){'),end=appSource.indexOf('function mediaMaxBytes(',start),profile=appSource.slice(start,end);
+ for(const label of ["'All'","'About'","'Friends'","'Photos'","'Reels'","'More'"])assert.ok(profile.includes(label),label+' tab must exist');
+ assert.match(profile,/profile-overflow/);assert.match(profile,/profileSection==='photos'/);assert.match(profile,/profileSection==='reels'/);
+});
+test('profile overflow has View as, Search, Highlights, status, archives and activity log',()=>{
+ for(const label of ['View as','Search','Add highlights','Profile status','Archive','Story archive','Activity log'])assert.ok(appSource.includes(label),label+' must exist');
+});
+test('profile additions call persisted feature APIs and publish Reels separately',()=>{
+ for(const route of ['/profile-sections','/profile-status','/check-ins','/events','/highlights','/story-archive','/profile/archive','/activity'])assert.ok(appSource.includes(route),route+' must be wired');
+ assert.match(appSource,/format:reel\?'reel':'post'/);
 });
