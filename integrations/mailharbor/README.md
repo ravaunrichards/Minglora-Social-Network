@@ -41,7 +41,7 @@ Until a public mail domain is verified, internal member addresses use the reserv
 
 ## $0 external email path
 
-The intended zero-cost provider is Resend's Free plan. Its published limits currently show 3,000 transactional emails per month, 100 per day, up to three custom sending domains, and three inbound inboxes. Inbound email is supported by Resend's receiving API and webhook flow. Check the live plan limits before enabling production traffic:
+The intended zero-cost provider is Resend's Free plan: $0 per month, 3,000 transactional email events per month, with a 100-per-day cap, three custom domains, three inboxes, one webhook endpoint and 30-day data retention. Each incoming message also consumes the transactional email quota. Resend says Free-plan accounts that exceed their quota are notified and offered an upgrade; pay-as-you-go overages are available only on paid subscriptions. Keep this project on Free and do not enable paid overages. Inbound email is supported by Resend's receiving API and webhook flow. Check the live plan limits before enabling production traffic:
 - Pricing: https://resend.com/pricing
 - Receiving: https://resend.com/features/inbound
 
