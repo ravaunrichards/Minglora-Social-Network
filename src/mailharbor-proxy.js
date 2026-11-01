@@ -16,7 +16,7 @@ function signedHeaders({ secret, userId, method, path, body = '' }) {
 }
 
 function settings() {
-  const base = String(process.env.MAILHARBOR_API_URL || '').trim().replace(/\\/+$/, '');
+  const base = String(process.env.MAILHARBOR_API_URL || '').trim().replace(/\/+$/, '');
   const secret = String(process.env.MAILHARBOR_SSO_SECRET || '');
   if (!base || Buffer.byteLength(secret) < 32) return null;
   let parsed;
