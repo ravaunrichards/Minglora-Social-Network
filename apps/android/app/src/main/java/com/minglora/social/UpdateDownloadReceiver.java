@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.widget.Toast;
 import java.io.InputStream;
+import java.io.FileInputStream;
 import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.util.Locale;
@@ -59,7 +60,8 @@ public final class UpdateDownloadReceiver extends BroadcastReceiver {
 
         try {
             String actualSha;
-            try (InputStream input = manager.openDownloadedFile(completedId)) {
+            try (ParcelFileDescriptor downloadedFile = manager.openDownloadedFile(completedId);
+                 InputStream input = new FileInputStream(downloadedFile.getFileDescriptor())) {
                 actualSha = sha256(input);
             }
             if (!MessageDigest.isEqual(expectedSha.toLowerCase(Locale.ROOT).getBytes("US-ASCII"),
@@ -75,7 +77,8 @@ public final class UpdateDownloadReceiver extends BroadcastReceiver {
             int sessionId = installer.createSession(params);
 
             try (PackageInstaller.Session session = installer.openSession(sessionId);
-                 InputStream input = manager.openDownloadedFile(completedId);
+                 ParcelFileDescriptor downloadedFile = manager.openDownloadedFile(completedId);
+                 InputStream input = new FileInputStream(downloadedFile.getFileDescriptor());
                  OutputStream output = session.openWrite("minglora-update.apk", 0L, apkSize)) {
                 byte[] buffer = new byte[64 * 1024];
                 int count;
