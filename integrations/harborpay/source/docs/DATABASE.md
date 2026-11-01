@@ -38,6 +38,7 @@ HarborPay is a PayPal-backed payment-processing application. This schema records
 1. `20261029000100_harborpay_core.sql` — profiles, payments, payouts, and inbound webhook records.
 2. `20261030000200_harborpay_merchant_operations.sql` — merchant accounts/team roles, customers, orders, payment links, refunds, disputes, status history, API keys, outbound webhooks, audit trail, and webhook processing leases.
 3. `20261101000300_harborpay_minglora_identity_bridge.sql` — consented Minglora handoffs, replay protection, one-to-one external identity links, RLS and service-role-only RPCs.
+4. `20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql` — Auth email-verification sync, foreign-key indexes, and duplicate webhook index removal.
 
 The complete reference SQL is in `database/schema.sql`.
 
