@@ -24,6 +24,8 @@ HarborPay is a payment application built around real provider transactions. The 
 - `GET/POST /api/profile` — read/update the signed-in HarborPay profile.
 - `POST /api/merchants/:merchantId/profile` — owner/admin business-profile updates.
 - `POST /api/merchants/:merchantId/payment-links/:linkId/status` — owner/admin activation or disabling of a payment-link record.
+- `GET/POST /api/account-applications` — create and list the signed-in user's Business, Merchant and Enterprise account applications.
+- `GET /api/admin/account-applications`, `POST /api/admin/account-applications/:applicationId/review` — administrator review routes guarded by `HARBORPAY_ADMIN_USER_IDS`.
 
 Every merchant resource request checks the caller's merchant membership and role in the API. The API service role bypasses database RLS, so server-side authorization is mandatory. Payment links are records only until a merchant-specific public checkout flow is implemented and tested.
 
