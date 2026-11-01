@@ -156,6 +156,24 @@ const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
+const DEFAULT_PROFILE_SECTIONS={about:true,friends:true,photos:true,reels:true,groups:true,events:true,checkIns:true,highlights:true};
+function readProfileSections(userId){
+  const saved=(db.profileSections||[]).find(item=>item.userId===userId);
+  return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
+}
+function canViewProfileAudience(viewerId,ownerId,audience='public'){
+  if(viewerId===ownerId)return true;
+  if(audience==='public')return true;
+  if(audience==='friends')return isFriend(viewerId,ownerId);
+  if(audience==='followers')return (db.follows||[]).some(edge=>edge.followerId===viewerId&&edge.followedId===ownerId);
+  return false;
+}
+function recordProfileActivity(userId,action,summary,targetType='profile',targetId=userId){
+  db.profileActivity ||= [];
+  db.profileActivity.unshift({id:uid(),userId,actorId:userId,action:String(action||'activity').slice(0,64),summary:String(summary||'').slice(0,240),targetType:String(targetType||'profile').slice(0,64),targetId:String(targetId||userId).slice(0,128),createdAt:now()});
+  if(db.profileActivity.length>500)db.profileActivity.length=500;
+}
+
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
   const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','messengerArchivedConversationIds','messengerRestrictedUserIds']};
@@ -2056,6 +2074,167 @@ async function route(req, res) {
         if(album.coverAssetId===m[2])album.coverAssetId=album.items[0]?.assetId||null;
         album.updatedAt=now();await saveStore();return json(res,200,{album});
       }
+      const profileSectionsMatch=p.match(/^\/api\/users\/([^/]+)\/profile-sections$/);
+      if(method==='GET'&&profileSectionsMatch){
+        const target=db.users.find(member=>member.id===profileSectionsMatch[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        return json(res,200,{sections:readProfileSections(target.id)});
+      }
+      if(method==='PATCH'&&p==='/api/profile-sections'){
+        if(!input.sections||typeof input.sections!=='object'||Array.isArray(input.sections))return json(res,400,{error:'Profile sections must be an object.'});
+        const allowed=Object.keys(DEFAULT_PROFILE_SECTIONS);
+        for(const [key,value] of Object.entries(input.sections)){
+          if(!allowed.includes(key)||typeof value!=='boolean')return json(res,400,{error:'Unsupported profile section preference.'});
+        }
+        db.profileSections ||= [];
+        let saved=db.profileSections.find(item=>item.userId===user.id);
+        if(!saved){saved={userId:user.id,sections:{...DEFAULT_PROFILE_SECTIONS},updatedAt:now()};db.profileSections.push(saved);}
+        saved.sections={...DEFAULT_PROFILE_SECTIONS,...saved.sections,...input.sections};saved.updatedAt=now();
+        recordProfileActivity(user.id,'profile_sections_updated','Updated profile section visibility.');
+        await saveStore();return json(res,200,{sections:saved.sections});
+      }
+      const profileStatusMatch=p.match(/^\/api\/users\/([^/]+)\/profile-status$/);
+      if(method==='GET'&&profileStatusMatch){
+        const target=db.users.find(member=>member.id===profileStatusMatch[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const status=(db.profileStatuses||[]).filter(item=>item.userId===target.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(user.id,target.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]||null;
+        return json(res,200,{status:status?{text:status.text,mood:status.mood,audience:status.audience,expiresAt:status.expiresAt,createdAt:status.createdAt}:null});
+      }
+      if(method==='POST'&&p==='/api/profile-status'){
+        const text=String(input.text||'').trim(),mood=String(input.mood||'').trim().slice(0,24),audience=String(input.audience||'public');
+        if(!text||text.length>120)return json(res,400,{error:'Profile status must contain 1–120 characters.'});
+        if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported profile status audience.'});
+        const expiresInHours=Math.max(1,Math.min(168,Number(input.expiresInHours)||24));
+        db.profileStatuses ||= [];
+        db.profileStatuses=db.profileStatuses.filter(item=>item.userId!==user.id);
+        const status={id:uid(),userId:user.id,text,mood,audience,createdAt:now(),expiresAt:new Date(Date.now()+expiresInHours*60*60*1000).toISOString()};
+        db.profileStatuses.unshift(status);recordProfileActivity(user.id,'profile_status_updated','Updated profile status.');
+        await saveStore();return json(res,201,{status});
+      }
+      const checkInsMatch=p.match(/^\/api\/users\/([^/]+)\/check-ins$/);
+      if(method==='GET'&&checkInsMatch){
+        const target=db.users.find(member=>member.id===checkInsMatch[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const checkIns=(db.checkIns||[]).filter(item=>item.userId===target.id&&canViewProfileAudience(user.id,target.id,item.visibility)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,100);
+        return json(res,200,{checkIns});
+      }
+      if(method==='POST'&&p==='/api/check-ins'){
+        const place=String(input.place||'').trim(),note=String(input.note||'').trim(),visibility=String(input.visibility||'public');
+        if(place.length<2||place.length>120||note.length>500)return json(res,400,{error:'Place must be 2–120 characters and the note must be 500 characters or fewer.'});
+        if(!['public','friends','followers','private'].includes(visibility))return json(res,400,{error:'Unsupported check-in audience.'});
+        db.checkIns ||= [];
+        const checkIn={id:uid(),userId:user.id,place,note,visibility,createdAt:now()};
+        db.checkIns.unshift(checkIn);recordProfileActivity(user.id,'check_in_created','Checked in at '+place+'.','check_in',checkIn.id);
+        await saveStore();return json(res,201,{checkIn});
+      }
+      const profileEventsMatch=p.match(/^\/api\/users\/([^/]+)\/events$/);
+      if(method==='GET'&&profileEventsMatch){
+        const target=db.users.find(member=>member.id===profileEventsMatch[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const events=(db.events||[]).filter(event=>(event.hostId===target.id||(db.eventRsvps||[]).some(rsvp=>rsvp.eventId===event.id&&rsvp.userId===target.id))&&canViewProfileAudience(user.id,event.hostId,event.visibility)).map(event=>({...event,host:safeUser(db.users.find(member=>member.id===event.hostId),user.id),rsvpCount:(db.eventRsvps||[]).filter(rsvp=>rsvp.eventId===event.id&&rsvp.status==='going').length,myRsvp:(db.eventRsvps||[]).find(rsvp=>rsvp.eventId===event.id&&rsvp.userId===user.id)?.status||null})).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).slice(0,100);
+        return json(res,200,{events});
+      }
+      if(method==='POST'&&p==='/api/events'){
+        const title=String(input.title||'').trim(),description=String(input.description||'').trim(),location=String(input.location||'').trim(),visibility=String(input.visibility||'public');
+        const startTime=Date.parse(input.startAt||''),endTime=input.endAt?Date.parse(input.endAt):null;
+        if(title.length<3||title.length>100||description.length>2000||location.length>160||!Number.isFinite(startTime)||startTime<Date.now()-60000||(endTime!==null&&(!Number.isFinite(endTime)||endTime<=startTime)))return json(res,400,{error:'Enter an event title, valid future start time, optional later end time, and valid details.'});
+        if(!['public','friends','private'].includes(visibility))return json(res,400,{error:'Unsupported event audience.'});
+        db.events ||= [];db.eventRsvps ||= [];
+        const event={id:uid(),hostId:user.id,title,description,location,visibility,startAt:new Date(startTime).toISOString(),endAt:endTime?new Date(endTime).toISOString():null,createdAt:now()};
+        db.events.unshift(event);db.eventRsvps.unshift({id:uid(),eventId:event.id,userId:user.id,status:'going',createdAt:now()});
+        recordProfileActivity(user.id,'event_created','Created event: '+title+'.','event',event.id);
+        await saveStore();return json(res,201,{event});
+      }
+      const eventRsvpMatch=p.match(/^\/api\/events\/([^/]+)\/rsvp$/);
+      if(eventRsvpMatch&&(method==='POST'||method==='DELETE')){
+        const event=(db.events||[]).find(item=>item.id===eventRsvpMatch[1]);
+        if(!event)return json(res,404,{error:'Event not found.'});
+        if(!canViewProfileAudience(user.id,event.hostId,event.visibility))return json(res,404,{error:'Event not found.'});
+        db.eventRsvps ||= [];
+        if(method==='DELETE'){
+          db.eventRsvps=db.eventRsvps.filter(item=>!(item.eventId===event.id&&item.userId===user.id));
+          await saveStore();return json(res,200,{rsvp:null});
+        }
+        const status=String(input.status||'going');
+        if(!['going','interested'].includes(status))return json(res,400,{error:'RSVP must be going or interested.'});
+        let rsvp=db.eventRsvps.find(item=>item.eventId===event.id&&item.userId===user.id);
+        if(!rsvp){rsvp={id:uid(),eventId:event.id,userId:user.id,status,createdAt:now()};db.eventRsvps.unshift(rsvp);}else rsvp.status=status;
+        recordProfileActivity(user.id,'event_rsvp_updated','Responded '+status+' to '+event.title+'.','event',event.id);
+        await saveStore();return json(res,200,{rsvp});
+      }
+      const profileHighlightsMatch=p.match(/^\/api\/users\/([^/]+)\/highlights$/);
+      if(method==='GET'&&profileHighlightsMatch){
+        const target=db.users.find(member=>member.id===profileHighlightsMatch[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const highlights=await Promise.all((db.profileHighlights||[]).filter(item=>item.userId===target.id).map(async item=>{
+          const source=(item.storyIds||[]).map(id=>(db.stories||[]).find(story=>story.id===id)||(db.storyArchives||[]).find(story=>story.id===id)).filter(story=>story&&canViewStory(user.id,story));
+          if(!source.length)return null;
+          const first=source[0],asset=first?.mediaId?(db.mediaAssets||[]).find(media=>media.id===first.mediaId&&media.ownerId===target.id):null;
+          let coverUrl=null;if(asset){try{coverUrl=await resolveAssetUrl(asset);}catch{}}
+          return {id:item.id,title:item.title,storyCount:source.length,createdAt:item.createdAt,coverUrl};
+        }));
+        return json(res,200,{highlights:highlights.filter(Boolean)});
+      }
+      if(method==='POST'&&p==='/api/highlights'){
+        const title=String(input.title||'').trim(),storyIds=Array.isArray(input.storyIds)?[...new Set(input.storyIds.map(String))]:[];
+        if(title.length<1||title.length>50||storyIds.length<1||storyIds.length>20)return json(res,400,{error:'A highlight needs a title and 1–20 of your stories.'});
+        const ownedIds=new Set([...(db.stories||[]),...(db.storyArchives||[])].filter(story=>story.userId===user.id).map(story=>story.id));
+        if(storyIds.some(id=>!ownedIds.has(id)))return json(res,400,{error:'Choose only stories from your own story archive.'});
+        db.profileHighlights ||= [];
+        const highlight={id:uid(),userId:user.id,title,storyIds,createdAt:now()};
+        db.profileHighlights.unshift(highlight);recordProfileActivity(user.id,'profile_highlight_created','Added profile highlight: '+title+'.','highlight',highlight.id);
+        await saveStore();return json(res,201,{highlight});
+      }
+      const highlightDeleteMatch=p.match(/^\/api\/highlights\/([^/]+)$/);
+      if(method==='DELETE'&&highlightDeleteMatch){
+        const highlight=(db.profileHighlights||[]).find(item=>item.id===highlightDeleteMatch[1]);
+        if(!highlight)return json(res,404,{error:'Highlight not found.'});
+        if(highlight.userId!==user.id)return json(res,403,{error:'Only the profile owner can remove this highlight.'});
+        db.profileHighlights=db.profileHighlights.filter(item=>item.id!==highlight.id);
+        recordProfileActivity(user.id,'profile_highlight_deleted','Removed profile highlight: '+highlight.title+'.','highlight',highlight.id);
+        await saveStore();return json(res,200,{ok:true});
+      }
+      const storyArchiveMatch=p.match(/^\/api\/users\/([^/]+)\/story-archive$/);
+      if(method==='GET'&&storyArchiveMatch){
+        await pruneExpiredStories();
+        const target=db.users.find(member=>member.id===storyArchiveMatch[1]);
+        if(!target||target.id!==user.id)return json(res,404,{error:'Story archive is private to its owner.'});
+        const archived=await Promise.all((db.storyArchives||[]).filter(story=>story.userId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async story=>{
+          const asset=story.mediaId?(db.mediaAssets||[]).find(item=>item.id===story.mediaId&&item.ownerId===user.id):null;
+          let media=null;if(asset){try{media={mediaType:asset.mediaType,url:await resolveAssetUrl(asset)};}catch{}}
+          return {id:story.id,text:story.text||'',createdAt:story.createdAt,archivedAt:story.archivedAt||story.expiresAt,media};
+        }));
+        return json(res,200,{stories:archived});
+      }
+      if(method==='GET'&&p==='/api/profile/archive'){
+        const posts=await Promise.all((db.posts||[]).filter(post=>post.userId===user.id&&post.archivedAt).sort((a,b)=>new Date(b.archivedAt)-new Date(a.archivedAt)).map(post=>publicPost(post,user.id)));
+        return json(res,200,{posts});
+      }
+      if(method==='POST'&&p==='/api/profile/archive'){
+        const post=(db.posts||[]).find(item=>item.id===String(input.postId||''));
+        if(!post)return json(res,404,{error:'Post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only your own posts can be archived.'});
+        if(post.archivedAt)return json(res,409,{error:'This post is already archived.'});
+        post.archivedAt=now();recordProfileActivity(user.id,'post_archived','Archived a post.','post',post.id);
+        await saveStore();return json(res,200,{ok:true});
+      }
+      const restoreArchiveMatch=p.match(/^\/api\/profile\/archive\/([^/]+)$/);
+      if(method==='DELETE'&&restoreArchiveMatch){
+        const post=(db.posts||[]).find(item=>item.id===restoreArchiveMatch[1]&&item.userId===user.id);
+        if(!post||!post.archivedAt)return json(res,404,{error:'Archived post not found.'});
+        delete post.archivedAt;recordProfileActivity(user.id,'post_restored','Restored an archived post.','post',post.id);
+        await saveStore();return json(res,200,{ok:true});
+      }
+      const profileActivityMatch=p.match(/^\/api\/users\/([^/]+)\/activity$/);
+      if(method==='GET'&&profileActivityMatch){
+        const target=db.users.find(member=>member.id===profileActivityMatch[1]);
+        if(!target||target.id!==user.id)return json(res,404,{error:'Activity log is private to its owner.'});
+        const activity=[
+          ...(db.profileActivity||[]).filter(item=>item.userId===user.id),
+          ...(db.auditLog||[]).filter(item=>item.actorId===user.id).map(item=>({id:item.id,userId:user.id,action:item.action,summary:item.action.replace(/_/g,' '),targetType:item.targetType,targetId:item.targetId,createdAt:item.createdAt}))
+        ].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,250);
+        return json(res,200,{activity});
+      }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
@@ -2072,7 +2251,7 @@ async function route(req, res) {
         const profileInsights=target.id===user.id
           ?getProfileViewStats({views:db.profileViews.filter(view=>view.historyEligible===true),presence:db.profileViewPresence,targetUserId:target.id})
           :undefined;
-        const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&post.userId===target.id&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&post.userId===target.id&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
         const viewerIsFriend=isFriend(user.id,target.id);
         const profileAlbums=await Promise.all((db.albums||[]).filter(album=>album.ownerId===target.id&&(user.id===target.id||album.visibility==='public'||(album.visibility==='friends'&&viewerIsFriend))).map(async album=>{
           const ordered=[...(album.items||[])].sort((a,b)=>new Date(a.addedAt||0)-new Date(b.addedAt||0));
@@ -2093,6 +2272,7 @@ async function route(req, res) {
         return json(res,200,{
           user:safeUser(target,user.id),
           posts:profilePosts,
+          profileSections:readProfileSections(target.id),
           albums:profileAlbums,
           photos:profilePhotos,
           reels:profileVideos,
