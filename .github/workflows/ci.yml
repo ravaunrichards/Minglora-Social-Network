@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Generate and commit reproducible npm lockfiles
+      - name: Regenerate locked dependencies after security updates
         run:
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm install --prefix integrations/mailharbor/source/backend --package-lock-only --ignore-scripts --no-audit --no-fund
