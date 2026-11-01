@@ -427,7 +427,7 @@ app.post("/api/profile", requireAuth, asyncRoute(async (request, response) => {
   }
   if (body.phoneE164 !== undefined) {
     const phone = String(body.phoneE164 || "").trim();
-    if (phone && !/^\\+[1-9]\\d{7,14}$/.test(phone)) throw httpError(400, "Phone number must use international E.164 format.");
+    if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) throw httpError(400, "Phone number must use international E.164 format.");
     updates.phone_e164 = phone || null;
   }
   if (body.countryCode !== undefined) {
@@ -731,7 +731,7 @@ app.post("/api/merchants/:merchantId/customers", requireAuth, asyncRoute(async (
   const phoneE164 = request.body?.phoneE164 == null || request.body.phoneE164 === ""
     ? null
     : String(request.body.phoneE164).trim();
-  if (phoneE164 && !/^\\+[1-9]\\d{7,14}$/.test(phoneE164)) {
+  if (phoneE164 && !/^\+[1-9]\d{7,14}$/.test(phoneE164)) {
     throw httpError(400, "Phone number must use international E.164 format.");
   }
   const countryCode = request.body?.countryCode == null || request.body.countryCode === ""
