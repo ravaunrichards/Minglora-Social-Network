@@ -3166,3 +3166,23 @@ body.auth-mode .auth-screen{
   .top-nav .streambay-entry{min-width:50px}
   .mobile-nav .streambay-mobile-entry{min-width:0;flex:1}
 }
+
+/* Universal search: consistent discovery cards across Minglora domains. */
+.search-category{margin:16px 0;overflow:hidden}
+.search-category-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.search-category-heading h2{margin:0;font-size:1.05rem}
+.search-category-heading>span{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:var(--surface-soft,#eef3fb);color:var(--text-muted,#64748b);font-size:.8rem;font-weight:700}
+.search-result-list{display:grid;gap:10px}
+.search-result-row{display:flex;align-items:center;gap:12px;min-width:0;padding:10px;border:1px solid var(--border,#e4eaf2);border-radius:14px;background:var(--surface,#fff)}
+.search-result-symbol{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:13px;background:var(--surface-soft,#eef3fb);font-size:1.2rem;color:var(--accent,#1769e0)}
+.search-result-copy{display:grid;gap:4px;min-width:0;flex:1}
+.search-result-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-result-copy small{color:var(--text-muted,#64748b);overflow-wrap:anywhere}
+.search-result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+.search-result-tile{display:flex;align-items:center;gap:12px;min-width:0;padding:12px;border:1px solid var(--border,#e4eaf2);border-radius:14px;background:var(--surface,#fff);color:inherit;text-decoration:none;transition:border-color .16s ease,transform .16s ease}
+.search-result-tile:hover{border-color:var(--accent,#1769e0);transform:translateY(-1px)}
+.search-result-avatar{width:54px;height:54px;flex:0 0 54px;border-radius:50%;object-fit:cover;background:var(--surface-soft,#eef3fb)}
+.search-video-thumb{display:grid;place-items:center;width:92px;height:64px;flex:0 0 92px;object-fit:cover;border-radius:10px;background:linear-gradient(135deg,#182b52,#2379b8);color:#fff}
+.search-video-placeholder{font-size:1.5rem}
+.search-video-result{align-items:flex-start}
+@media(max-width:560px){.search-result-row{gap:9px;padding:9px}.search-result-symbol{flex-basis:36px;width:36px;height:36px}.search-result-grid{grid-template-columns:1fr}.search-video-thumb{width:84px;flex-basis:84px}}

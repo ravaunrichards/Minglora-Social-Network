@@ -452,6 +452,12 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const pageSearch = await request('/api/search?q=Minglora%20Labs');
   assert.equal(pageSearch.status, 200);
   assert.equal(pageSearch.body.pages.some(item => item.id === page.body.page.id), true);
+  const creatorChannel = await request('/api/streambay/channel', { method: 'PATCH', body: JSON.stringify({ name: 'Minglora Labs Video', handle: 'mingloralabs' }) });
+  assert.equal(creatorChannel.status, 200);
+  const universalSearch = await request('/api/search?q=%40mingloralabs');
+  assert.equal(universalSearch.status, 200);
+  assert.equal(universalSearch.body.channels.some(item => item.handle === 'mingloralabs'), true);
+  for (const category of ['users', 'posts', 'groups', 'pages', 'channels', 'videos', 'listings', 'jobs']) assert.equal(Array.isArray(universalSearch.body[category]), true);
   const deniedPagePublish = await request(`/api/pages/${page.body.page.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'Not an editor' }) });
   assert.equal(deniedPagePublish.status, 403);
   const deniedPagePostDelete = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });

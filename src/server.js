@@ -2825,7 +2825,38 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
-      if(method==='GET'&&p==='/api/search'){const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);if(!q)return json(res,200,{users:[],posts:[],groups:[],pages:[]});return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)&&(u.name.toLowerCase().includes(q)||u.username.includes(q))).map(safeUser),posts:await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&!blockedBetween(user.id,x.userId)&&x.text.toLowerCase().includes(q)).map(x=>publicPost(x,user.id))),groups:db.groups.filter(g=>(g.name+' '+g.description).toLowerCase().includes(q)),pages:(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id)}))});}
+      if(method==='GET'&&p==='/api/search'){
+        const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        const q=rawQuery.replace(/^@/,'').trim();
+        const empty={users:[],posts:[],groups:[],pages:[],channels:[],videos:[],listings:[],jobs:[]};
+        if(!q)return json(res,200,empty);
+        const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
+        const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
+        const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
+        let channels=[],videos=[],listings=[],jobs=[];
+        const streamBayContext={method:'GET',input:{},user,db,saveStore,uid,now,requireAuth,safeUser,resolveAssetUrl,blockedBetween,deleteMediaAsset:async()=>{}};
+        try{
+          const videoUrl=new URL('https://minglora.internal/api/streambay/videos');videoUrl.searchParams.set('q',q);
+          const channelUrl=new URL('https://minglora.internal/api/streambay/channels');channelUrl.searchParams.set('q',q);channelUrl.searchParams.set('limit','8');
+          const [videoResult,channelResult]=await Promise.all([handleStreamBayApi({...streamBayContext,path:'/api/streambay/videos',url:videoUrl}),handleStreamBayApi({...streamBayContext,path:'/api/streambay/channels',url:channelUrl})]);
+          videos=(videoResult?.body?.videos||[]).slice(0,8);
+          channels=(channelResult?.body?.channels||[]).slice(0,8);
+        }catch(error){console.warn('[Minglora search] StreamBay discovery unavailable:',String(error?.message||error).slice(0,160));}
+        try{
+          let sourceListings=[];
+          if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'browse',q,kind:'',category:'',location:'',sort:'recent',limit:8});sourceListings=(result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId));}
+          else sourceListings=(db.marketplaceListings||[]).filter(item=>isMarketplaceListingActive(item)&&!blockedBetween(user.id,item.sellerId)&&(String(item.title||'')+' '+String(item.description||'')+' '+String(item.category||'')+' '+(item.tags||[]).join(' ')+' '+String(item.location||'')).toLowerCase().includes(q)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
+          listings=await Promise.all(sourceListings.map(item=>publicMarketplaceListing(item,user.id)));
+        }catch(error){console.warn('[Minglora search] Marketplace discovery unavailable:',String(error?.message||error).slice(0,160));}
+        try{
+          let sourceJobs=[];
+          if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_list',{userId:user.id,q,category:'',location:''});sourceJobs=result.jobs||[];}
+          else sourceJobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(String(item.title||'')+' '+String(item.companyName||'')+' '+String(item.description||'')).toLowerCase().includes(q));
+          jobs=sourceJobs.filter(item=>!blockedBetween(user.id,item.employerId)).slice(0,8);
+        }catch(error){console.warn('[Minglora search] Job discovery unavailable:',String(error?.message||error).slice(0,160));}
+        return json(res,200,{users,posts,groups,pages,channels,videos,listings,jobs});
+      }
       return json(res,404,{error:'API route not found.'});
     } catch(e) { if(process.env.NODE_ENV==='test')return json(res,e.status||500,{error:e.message,stack:e.stack}); console.error('[Minglora API error]',e); return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
   }
