@@ -41,7 +41,8 @@ test('profile picture editor is in the avatar column directly below the image',(
 test('profile count row shows five real aligned profile metrics',()=>{
   for(const kind of ['followers','following','friends'])assert.match(app,new RegExp('data-open-connections="'+kind+'"'));
   assert.match(app,/profile-count-item/);
-  assert.match(app,/<span>Posts<\/span><\/div><div class="profile-count-item"><strong>\+'\+Number\(data\.likesCount\|\|0\)/);
+  assert.match(app,/Number\\(data\\.likesCount\\|\\|0\\)\\.toLocaleString\\(\\)/);
+  assert.ok(app.indexOf('Posts</span>')<app.indexOf('Likes</span>'),'Likes follows Posts in the profile metric row');
   assert.match(css,/\.profile-counts\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(app,/profile-live-insights|Profile views · 30 days|Viewing now/);
 });
