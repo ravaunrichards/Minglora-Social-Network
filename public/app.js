@@ -3321,12 +3321,13 @@ function playMessengerMessageSound(){
   try{
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
     if(!AudioContextClass)return;
-    if(!messengerMessageSoundContext)messengerMessageSoundContext=new AudioContextClass();
-    if(messengerMessageSoundContext.state!=='running')return;
-    const oscillator=messengerMessageSoundContext.createOscillator(),gain=messengerMessageSoundContext.createGain(),start=messengerMessageSoundContext.currentTime;
+    const context=callToneContext||messengerMessageSoundContext||new AudioContextClass();
+    messengerMessageSoundContext=context;
+    if(context.state!=='running')return;
+    const oscillator=context.createOscillator(),gain=context.createGain(),start=context.currentTime;
     oscillator.type='sine';oscillator.frequency.setValueAtTime(740,start);oscillator.frequency.setValueAtTime(990,start+.075);
     gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.075,start+.018);gain.gain.linearRampToValueAtTime(0,start+.17);
-    oscillator.connect(gain);gain.connect(messengerMessageSoundContext.destination);oscillator.start(start);oscillator.stop(start+.18);
+    oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+.18);
     oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
   }catch{}
 }
@@ -3504,11 +3505,13 @@ async function renderMessages(){
   const messageData=await api('/messages');
   state.conversations=messageData.conversations||[];
   paintMessengerBadge(state.conversations);
-  const conversationRows=state.conversations.length?state.conversations.map(conversation=>{
+  const archivedIds=new Set(messengerPreferences().messengerArchivedConversationIds||[]);
+  const visibleConversations=state.conversations.filter(conversation=>!archivedIds.has(conversation.user.id));
+  const conversationRows=visibleConversations.length?visibleConversations.map(conversation=>{
     const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':'Open chat');
     return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><div class="message-inbox-row-actions"><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button><button class="secondary" type="button" data-remove-inbox-chat="'+esc(conversation.user.id)+'">Remove</button></div></div>';
   }).join(''):'<div class="message-inbox-empty"><div class="empty-icon">✉</div><h3>No conversations yet</h3><p>Open another member’s profile and select Message to start a private chat.</p></div>';
-  setContent('<div class="page-heading"><div><h1>Messenger</h1><p class="muted">Private conversations from your Minglora account, shared across your signed-in devices.</p></div><span class="eyebrow">'+state.conversations.length+' conversations</span></div><section class="card"><div class="inbox-people-list">'+conversationRows+'</div></section>');
+  setContent('<div class="page-heading"><div><h1>Messenger</h1><p class="muted">Private conversations from your Minglora account, shared across your signed-in devices.</p></div><span class="eyebrow">'+visibleConversations.length+' conversations</span></div><section class="card"><div class="inbox-people-list">'+conversationRows+'</div></section>');
   document.querySelectorAll('[data-open-inbox-chat]').forEach(button=>button.onclick=()=>{
     const conversation=state.conversations.find(item=>item.user.id===button.dataset.openInboxChat);
     if(conversation)openMessageWindow(conversation.user);
