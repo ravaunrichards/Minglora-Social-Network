@@ -3112,3 +3112,40 @@ body.auth-mode .auth-screen{
   .messenger-panel-icon{width:32px;height:32px}
 }
 @media(prefers-reduced-motion:reduce){.messenger-panel{animation:none}.messenger-switch span{transition:none}}
+
+
+/* Share thoughts and Messenger share the same dimensional icon language. */
+.composer-open{display:flex;align-items:center;gap:10px;min-width:0}
+.composer-open span{min-width:0}
+.composer-share-icon{width:31px;height:31px;flex:0 0 31px;filter:drop-shadow(0 3px 3px rgba(20,54,96,.24))}
+.composer-actions button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0}
+.composer-action-icon{width:24px;height:24px;flex:0 0 24px;filter:drop-shadow(0 2px 2px rgba(20,54,96,.2))}
+.modal-close-icon{width:21px;height:21px;display:block;filter:drop-shadow(0 2px 2px rgba(20,54,96,.22))}
+.messenger-3d-icon{display:inline-block;width:22px;height:22px;flex:0 0 auto;vertical-align:middle;overflow:visible;filter:drop-shadow(0 2px 2px rgba(16,48,88,.24))}
+.messenger-panel-icon .messenger-3d-icon{width:25px;height:25px}
+.messenger-search>span{display:grid;place-items:center;width:23px;height:23px;flex:0 0 23px}
+.messenger-search>span .messenger-3d-icon{width:22px;height:22px}
+.messenger-filter-tabs button{display:flex;align-items:center;justify-content:center;gap:5px}
+.messenger-filter-tabs button>span:first-child{display:grid;place-items:center}
+.messenger-filter-tabs button .messenger-3d-icon{width:19px;height:19px}
+.messenger-panel-footer button{display:flex;align-items:center;justify-content:center;gap:7px}
+.messenger-panel-footer button .messenger-3d-icon{width:20px;height:20px}
+.messenger-option-icon{overflow:visible}
+.messenger-option-icon .messenger-3d-icon{width:27px;height:27px}
+.messenger-option-chevron{width:21px;height:21px;display:grid;place-items:center}
+.messenger-option-chevron .messenger-3d-icon{width:20px;height:20px}
+.messenger-chat-row-action .messenger-3d-icon{width:20px;height:20px}
+.messenger-compose-arrow .messenger-3d-icon{width:21px;height:21px}
+.messenger-subview-head button{display:grid;place-items:center}
+.messenger-subview-head button .messenger-3d-icon{width:21px;height:21px}
+.messenger-empty-state>span{display:grid;place-items:center;min-height:34px}
+.messenger-empty-state>span .messenger-3d-icon{width:34px;height:34px}
+.message-inbox-empty .empty-icon .messenger-3d-icon{width:42px;height:42px}
+@media(max-width:700px){
+  .composer-open{gap:8px;padding:10px 12px;font-size:12px}
+  .composer-share-icon{width:28px;height:28px;flex-basis:28px}
+  .composer-actions button{font-size:11px;gap:4px}
+  .composer-action-icon{width:21px;height:21px;flex-basis:21px}
+  .messenger-filter-tabs button{gap:3px;font-size:10px}
+  .messenger-filter-tabs button .messenger-3d-icon{width:17px;height:17px}
+}
