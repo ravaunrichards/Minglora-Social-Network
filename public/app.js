@@ -188,7 +188,7 @@ async function handleMingloraPushNavigation(){
     await renderNotifications();
   }catch(error){toast(error.message);}
 }
-function activateNav(view){if(state.messengerPanelOpen)closeMessengerPanel();if(state.view==='meetwave'&&view!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
+function activateNav(view){if(state.view==='meetwave'&&view!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
@@ -4060,8 +4060,8 @@ function bindNavigation(){
   $('#messenger-btn')?.addEventListener('click',toggleMessengerPanel);
   if(!document.documentElement.dataset.messengerOutsideBound){
     document.documentElement.dataset.messengerOutsideBound='true';
-    document.addEventListener('click',event=>{const panel=$('#messenger-panel'),button=$('#messenger-btn');if(state.messengerPanelOpen&&panel&&!panel.contains(event.target)&&!button?.contains(event.target))closeMessengerPanel();});
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.messengerPanelOpen)closeMessengerPanel();});
+    // Keep Chats pinned while the user works elsewhere. Only explicit close controls
+    // (the panel close button or Messenger toggle) may dismiss the panel.
   }
   $('#see-people').onclick=()=>activateNav('friends');
   $('#see-groups').onclick=()=>activateNav('groups');
