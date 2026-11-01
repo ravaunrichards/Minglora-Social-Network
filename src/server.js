@@ -21,8 +21,7 @@ import { validateJobPostingInput, validateJobApplicationInput, transitionJobAppl
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
-import { proxyMailHarbor } from './mailharbor-proxy.js';
-import { startMailHarborRuntime } from './mailharbor-runtime.js';
+import { handleMailHarborApi } from '../backend/modules/mailharbor/service.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -763,12 +762,14 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
       if (p.startsWith('/api/mailharbor/')) {
-        const result = await proxyMailHarbor({
+        const result = await handleMailHarborApi({
           method,
           pathname: p.slice('/api/mailharbor'.length),
           search: url.search,
           input,
-          user
+          user,
+          db,
+          saveStore
         });
         return json(res, result.status, result.body, { 'Cache-Control': 'no-store' });
       }
@@ -3057,26 +3058,7 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
-let mailHarborRuntime = null;
-const mailHarborDatabaseUrl = String(
-  process.env.MAILHARBOR_DATABASE_URL || process.env.DATABASE_URL || ''
-).trim();
-const mailHarborSsoReady =
-  Buffer.byteLength(String(process.env.MAILHARBOR_SSO_SECRET || '')) >= 32;
-if (mailHarborDatabaseUrl && mailHarborSsoReady) {
-  try {
-    mailHarborRuntime = await startMailHarborRuntime({ publicServer: server });
-  } catch (error) {
-    console.error('[Minglora MailHarbor startup]', String(error?.message || error).slice(0, 240));
-  }
-} else {
-  const missing = [];
-  if (!mailHarborDatabaseUrl) {
-    missing.push('MAILHARBOR_DATABASE_URL (or DATABASE_URL for the existing Minglora Supabase project)');
-  }
-  if (!mailHarborSsoReady) missing.push('MAILHARBOR_SSO_SECRET');
-  console.info(`[Minglora MailHarbor] Waiting for ${missing.join(' and ')}.`);
-}
+console.info('[Minglora MailHarbor] Native mailbox module uses Minglora Supabase state persistence. Internal member-to-member mail is enabled; external provider delivery remains disabled.');
 server.listen(PORT,'0.0.0.0',async()=>{
   liveSessionCleanupReady = cleanupPersistedLiveSessions();
   const liveCleanup = await liveSessionCleanupReady;
