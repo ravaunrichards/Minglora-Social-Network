@@ -22,6 +22,7 @@ import { recordProfileView, touchProfilePresence, getProfileViewStats } from '..
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
 import { handleMailHarborApi, handleMailHarborWebhook, processMailHarborOutbox } from '../backend/modules/mailharbor/service.js';
+import { getMailHarborProviderStatus } from '../backend/modules/mailharbor/provider.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -3075,7 +3076,18 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...routeSecurityHeaders});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
-console.info('[Minglora MailHarbor] Native mailbox module uses Minglora Supabase state persistence. Internal member-to-member mail is enabled; external provider delivery remains disabled.');
+const mailHarborProviderReadiness = getMailHarborProviderStatus();
+console.info('[Minglora MailHarbor readiness]', JSON.stringify({
+  internalSendingEnabled: true,
+  internalReceivingEnabled: true,
+  outboundEmailConfigured: mailHarborProviderReadiness.outboundEmailConfigured,
+  inboundEmailConfigured: mailHarborProviderReadiness.inboundEmailConfigured,
+  resendApiKeyConfigured: mailHarborProviderReadiness.apiKeyConfigured,
+  publicMailDomainConfigured: !mailHarborProviderReadiness.mailDomain.endsWith('.invalid') && !mailHarborProviderReadiness.mailDomain.endsWith('.test'),
+  mailDomainVerified: mailHarborProviderReadiness.domainVerified,
+  inboundWebhookConfigured: Boolean(process.env.MAILHARBOR_RESEND_WEBHOOK_SECRET || process.env.RESEND_WEBHOOK_SECRET),
+  inboundReceivingEnabled: String(process.env.MAILHARBOR_INBOUND_ENABLED || '').toLowerCase() === 'true'
+}));
 server.listen(PORT,'0.0.0.0',async()=>{
   liveSessionCleanupReady = cleanupPersistedLiveSessions();
   const liveCleanup = await liveSessionCleanupReady;
