@@ -157,6 +157,23 @@ Stories expire after 24 hours; expired records and their view records are remove
 
 Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with an explicit admin/moderator role. Do not add arbitrary member IDs to this list.
 
+## Voice and video calls
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/calls/incoming` | List unexpired invitations for the signed-in member; ringing invitations expire after 45 seconds |
+| POST | `/api/calls` | Start an audio or video call with one to seven other members; the server provisions an eight-person LiveKit room and checks participant availability/privacy |
+| GET | `/api/calls/:id/status` | Read call and participant state for a caller or invited/joined participant |
+| POST | `/api/calls/:id/join` | Accept an invitation or reconnect a participant and receive a short-lived LiveKit token |
+| POST | `/api/calls/:id/decline` | Decline an invitation |
+| POST | `/api/calls/:id/cancel` | Cancel a ringing call as its creator |
+| POST | `/api/calls/:id/leave` | Leave a call without ending it for other participants; the room ends when no participant remains |
+| POST | `/api/calls/:id/end` | End the call for everyone as its creator |
+| POST | `/api/calls/:id/invite` | Invite additional members while joined, subject to the eight-person room limit |
+| GET/POST/DELETE | `/api/calls/ringtone` | Read, select or remove the signed-in member's private uploaded ringtone |
+
+Calls require configured and reachable LiveKit credentials. The browser uses LiveKit for encrypted real-time audio/video transport, while Minglora stores invitation and participant lifecycle state. Web Push can display incoming-call notifications in the background when push is configured; custom uploaded songs play while the app is open because browsers do not allow a web service worker to install arbitrary operating-system ringtones. Provider rooms are removed on cancellation, decline, expiry, host end and final participant departure.
+
 ## LIVE streaming
 
 | Method | Path | Purpose |

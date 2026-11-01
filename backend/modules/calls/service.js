@@ -1,4 +1,7 @@
 export const CALL_RING_TIMEOUT_MS=45_000;
+export const CALL_MAX_PARTICIPANTS=8;
+export const CALL_ACTIVE_PARTICIPANT_STATUSES=Object.freeze(["calling","invited","joined"]);
+export const CALL_TERMINAL_STATUSES=Object.freeze(["ended","cancelled","declined","missed"]);
 export const CALL_RINGTONE_MAX_BYTES=20*1024*1024;
 export const CALL_RINGTONE_MIME_TYPES=Object.freeze({
  "audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm",
@@ -30,3 +33,7 @@ export function expireRingingCall(call,participants,stamp,nowMs=Date.now()){
 export function canAnswerCall(call,participant,userId){
  return Boolean(call&&participant&&participant.userId===userId&&participant.status==="invited"&&["ringing","active"].includes(call.status));
 }
+export function isCallTerminalStatus(status){return CALL_TERMINAL_STATUSES.includes(String(status||""));}
+export function isCallParticipantActive(participant){return Boolean(participant&&CALL_ACTIVE_PARTICIPANT_STATUSES.includes(participant.status));}
+export function isCallParticipantBusy(call,participant){return Boolean(call&&["ringing","active"].includes(call.status)&&isCallParticipantActive(participant));}
+export function countCallParticipants(participants,callId){return (participants||[]).filter(item=>item.callId===callId&&isCallParticipantActive(item)).length;}

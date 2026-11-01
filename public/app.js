@@ -2734,12 +2734,16 @@ async function openMingloraCall(call,liveKit){
   closeIncomingCallOverlay();closeOutgoingCallOverlay();
   if(activeCallRoom){toast('A call is already open.');return;}
   const client=window.LivekitClient;
-  if(!client?.Room||!client?.RoomEvent){toast('The call player could not load. Refresh Minglora and try again.');return;}
+  if(!client?.Room||!client?.RoomEvent){
+    const action=call.createdBy===state.user.id?'end':'leave';
+    await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'}).catch(()=>{});
+    toast('The call player could not load. Refresh Minglora and try again.');return;
+  }
   const overlay=document.createElement('div');overlay.className='call-overlay';
   overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">End call</button></footer></section>';
   document.body.append(overlay);activeCallOverlay=overlay;
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeCallRoom=room;
-  let microphoneEnabled=true,cameraEnabled=call.kind==='video';
+  let microphoneEnabled=true,cameraEnabled=call.kind==='video',intentionallyLeaving=false;
   const status=overlay.querySelector('#call-connection-status'),count=overlay.querySelector('#call-participant-count'),stage=overlay.querySelector('#call-video-stage');
   const attach=(track,participant,local=false)=>{
     if(!track)return;
@@ -2758,6 +2762,7 @@ async function openMingloraCall(call,liveKit){
     try{
       const action=call.createdBy===state.user.id?'end':'leave';
       await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'});
+      intentionallyLeaving=true;
     }catch(error){toast(error.message);}
     await room.disconnect();if(activeCallRoom===room)activeCallRoom=null;closeOverlay();
   };
@@ -2781,7 +2786,16 @@ async function openMingloraCall(call,liveKit){
       toast(result.count+' call invitation(s) sent.');
     }catch(error){toast(error.message);}
   };
-  room.on(client.RoomEvent.Disconnected,()=>{if(activeCallRoom===room){activeCallRoom=null;closeOverlay();toast('The call connection ended.');}});
+  room.on(client.RoomEvent.Disconnected,()=>{
+    if(activeCallRoom===room){
+      activeCallRoom=null;closeOverlay();
+      if(!intentionallyLeaving){
+        const action=call.createdBy===state.user.id?'end':'leave';
+        void api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'}).catch(error=>console.warn('Could not update call state after disconnect:',error.message));
+        toast('The call connection ended.');
+      }
+    }
+  });
   try{
     status.textContent='Connecting securely…';
     let timeout;
@@ -2795,6 +2809,7 @@ async function openMingloraCall(call,liveKit){
     overlay.querySelector('#call-microphone').disabled=false;
     overlay.querySelector('#call-camera').disabled=false;
   }catch(error){
+    intentionallyLeaving=true;
     await room.disconnect().catch(()=>{});
     if(activeCallRoom===room)activeCallRoom=null;closeOverlay();toast(error.message||'The call could not connect.');
     if(call.createdBy===state.user.id)await api('/calls/'+encodeURIComponent(call.id)+'/end',{method:'POST',body:'{}'}).catch(()=>{});
