@@ -254,6 +254,7 @@ async function mutateSelected(action) {
 async function init() {
   try {
     mailStatus = await request('/status');
+    if (mailStatus.mailDomain) $('to').placeholder = 'member@' + mailStatus.mailDomain;
     const result = await request('/me');
     currentUser = result.user;
     showMailbox();
