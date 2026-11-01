@@ -97,16 +97,40 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()'
 };
 const DEFAULT_ABOUT_VISIBILITY={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false};
+const ABOUT_SECTION_KEYS=['personalDetails','intro','work','education','hobbies','interests','travel','links','contactInfo','names','details','aboutYou'];
+const DEFAULT_ABOUT_SECTION_VISIBILITY={
+  personalDetails:'friends',intro:'public',work:'public',education:'public',hobbies:'public',
+  interests:'public',travel:'public',links:'public',contactInfo:'private',names:'friends',
+  details:'friends',aboutYou:'public'
+};
+function canViewAboutSection(viewerId,target,visibility){
+  if(viewerId===target?.id)return true;
+  if(visibility==='public')return true;
+  if(visibility==='friends')return Boolean(viewerId&&isFriend(viewerId,target.id));
+  return false;
+}
 function safeUser(u,viewerId=null){
   if(!u)return null;
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
+  const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
   const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt};
+  const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
-    if(own||visibility[key]===true)result[key]=u[key]||'';
+    const section=legacySection[key];
+    if(own||(visibility[key]===true&&canViewAboutSection(viewerId,u,sectionVisibility[section])))result[key]=u[key]||'';
   }
-  if(own)result.aboutVisibility=visibility;
+  const aboutSections={};
+  for(const key of ABOUT_SECTION_KEYS){
+    if(canViewAboutSection(viewerId,u,sectionVisibility[key]))aboutSections[key]=u.aboutSections?.[key]||{};
+  }
+  result.aboutSections=aboutSections;
+  if(own){
+    result.email=u.email||'';
+    result.aboutVisibility=visibility;
+    result.aboutSectionVisibility=sectionVisibility;
+  }
   return result;
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
@@ -197,7 +221,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
-    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), createdAt:authUser.created_at || now() };
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, aboutSections:metadata.about_sections||metadata.aboutSections||{}, aboutSectionVisibility:metadata.about_section_visibility||metadata.aboutSectionVisibility||DEFAULT_ABOUT_SECTION_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), createdAt:authUser.created_at || now() };
     db.users.push(user);
   } else {
     user.name = name || user.name;
@@ -209,6 +233,8 @@ function ensureLocalUser(authUser, fallback = {}) {
     }
     if(metadata.relationship_status!==undefined||metadata.relationshipStatus!==undefined)user.relationshipStatus=String(metadata.relationship_status||metadata.relationshipStatus||'');
     if(metadata.about_visibility||metadata.aboutVisibility)user.aboutVisibility=metadata.about_visibility||metadata.aboutVisibility;
+    if(metadata.about_sections||metadata.aboutSections)user.aboutSections=metadata.about_sections||metadata.aboutSections;
+    if(metadata.about_section_visibility||metadata.aboutSectionVisibility)user.aboutSectionVisibility=metadata.about_section_visibility||metadata.aboutSectionVisibility;
     if(metadata.avatar_url!==undefined)user.avatar=String(metadata.avatar_url||'');
     if(metadata.cover_url!==undefined)user.cover=String(metadata.cover_url||'');
     if(metadata.account_status!==undefined)user.status=String(metadata.account_status||'active');
@@ -2033,14 +2059,19 @@ async function route(req, res) {
       if(method==='PATCH'&&p==='/api/users/me'){
         const validation=validateProfilePatch(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         if(validation.value.username&&db.users.some(item=>item.id!==user.id&&normalizeUsername(item.username)===validation.value.username))return json(res,409,{error:'That username is already in use.'});
-        const next={...user,...validation.value,aboutVisibility:{...DEFAULT_ABOUT_VISIBILITY,...(user.aboutVisibility||{}),...(validation.value.aboutVisibility||{})}};
+        const next={...user,...validation.value,
+          aboutVisibility:{...DEFAULT_ABOUT_VISIBILITY,...(user.aboutVisibility||{}),...(validation.value.aboutVisibility||{})},
+          aboutSections:{...(user.aboutSections||{}),...(validation.value.aboutSections||{})},
+          aboutSectionVisibility:{...DEFAULT_ABOUT_SECTION_VISIBILITY,...(user.aboutSectionVisibility||{}),...(validation.value.aboutSectionVisibility||{})}
+        };
         if(AUTH_PROVIDER==='supabase'){
           const currentSession=sessionFromRequest(req),auth=await sessionAuth(currentSession);
           if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
           const metadata={
             name:next.name,username:next.username,avatar_url:next.avatar||'',cover_url:next.cover||'',contact_phone:next.contactPhone||'',phone_number:next.contactPhone||'',
             bio:next.bio||'',location:next.location||'',country:next.country||'',county:next.county||'',parish:next.parish||'',city:next.city||'',
-            gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility
+            gender:next.gender||'',relationship_status:next.relationshipStatus||'',about_visibility:next.aboutVisibility,
+            about_sections:next.aboutSections,about_section_visibility:next.aboutSectionVisibility
           };
           await supabaseUpdateUserMetadata(auth.access_token,metadata);
           await supabaseUpdateProfile(auth.access_token,user.id,{
