@@ -114,6 +114,58 @@ test('Mailbox updates are owner-scoped and persist read, star, archive and trash
   assert.equal(state.db.mailMessages.find(message => message.id === id).folder, 'trash');
 });
 
+
+test('MailHarbor saves, edits and sends owner-scoped drafts', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const saved = await call(state, state.db.users[0], 'POST', '/drafts', {
+    to: 'bob@' + INTERNAL_MAIL_DOMAIN,
+    subject: 'First draft',
+    body: 'Draft body.'
+  });
+  assert.equal(saved.status, 201);
+  const draftId = saved.body.message.id;
+  assert.equal(state.db.mailMessages.find(message => message.id === draftId).folder, 'drafts');
+
+  const edited = await call(state, state.db.users[0], 'PATCH', '/messages/' + draftId, {
+    subject: 'Updated draft',
+    body: 'Updated draft body.',
+    to: 'bob@' + INTERNAL_MAIL_DOMAIN
+  });
+  assert.equal(edited.status, 200);
+  assert.equal(state.db.mailMessages.find(message => message.id === draftId).subject, 'Updated draft');
+
+  const sent = await call(state, state.db.users[0], 'POST', '/messages', {
+    draftId,
+    to: 'bob@' + INTERNAL_MAIL_DOMAIN,
+    subject: 'Updated draft',
+    body: 'Updated draft body.'
+  });
+  assert.equal(sent.status, 202);
+  assert.equal(state.db.mailMessages.some(message => message.id === draftId && message.folder === 'drafts'), false);
+  assert.equal(state.db.mailMessages.some(message => message.owner_id === 'member-bob' && message.body_text === 'Updated draft body.'), true);
+});
+
+test('MailHarbor lets an external address remain in a draft but never sends it', async () => {
+  const state = setup();
+  await call(state, state.db.users[0], 'GET', '/me');
+  const saved = await call(state, state.db.users[0], 'POST', '/drafts', {
+    to: 'person@example.com',
+    subject: 'External draft',
+    body: 'Not delivered.'
+  });
+  assert.equal(saved.status, 201);
+  const result = await call(state, state.db.users[0], 'POST', '/messages', {
+    draftId: saved.body.message.id,
+    to: 'person@example.com',
+    subject: 'External draft',
+    body: 'Not delivered.'
+  });
+  assert.equal(result.status, 400);
+  assert.match(result.body.error, /External email is not connected/);
+  assert.equal(state.db.mailMessages.find(message => message.id === saved.body.message.id).folder, 'drafts');
+});
+
 test('MailHarbor restores its in-memory state when Supabase persistence fails', async () => {
   const state = setup();
   await call(state, state.db.users[0], 'GET', '/me');
