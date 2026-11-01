@@ -72,6 +72,70 @@ export function harborPayBridgeConfigured(env = process.env) {
   }
 }
 
+export async function getHarborPayBridgeStatus({ fetchImpl = fetch, env = process.env } = {}) {
+  if (!harborPayBridgeConfigured(env)) {
+    return {
+      configured: false,
+      apiReachable: false,
+      identityBridge: false,
+      databaseConfigured: false,
+      message: "HarborPay connection is not configured on the Minglora server. The API URL, web URL and matching server-only signing secret must be set before account activation can start."
+    };
+  }
+
+  let apiOrigin;
+  try {
+    apiOrigin = parseOrigin(env.HARBORPAY_API_URL, "HarborPay API URL", env.NODE_ENV === "production");
+  } catch (error) {
+    return { configured: false, apiReachable: false, identityBridge: false, databaseConfigured: false, message: error.message };
+  }
+
+  let response;
+  try {
+    response = await fetchImpl(apiOrigin + "/api/health", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(7000)
+    });
+  } catch {
+    return {
+      configured: false,
+      apiReachable: false,
+      identityBridge: false,
+      databaseConfigured: false,
+      message: "The HarborPay API is not responding. Its separate service must be deployed and healthy before Minglora can open it."
+    };
+  }
+
+  const raw = await response.text().catch(() => "");
+  let health = {};
+  try { health = JSON.parse(raw); } catch {}
+  if (!response.ok || health?.service !== "harborpay-api") {
+    return {
+      configured: false,
+      apiReachable: false,
+      identityBridge: false,
+      databaseConfigured: false,
+      message: "The configured HarborPay API address did not return a valid HarborPay health response (HTTP " + response.status + "). Check the HarborPay API deployment and its health route."
+    };
+  }
+
+  const identityBridge = health.configured?.mingloraIdentityBridge === true;
+  const databaseConfigured = health.configured?.supabase === true;
+  const configured = identityBridge && databaseConfigured;
+  return {
+    configured,
+    apiReachable: true,
+    identityBridge,
+    databaseConfigured,
+    message: !identityBridge
+      ? "HarborPay is online, but its MINGLORA_SSO_SECRET is missing or too short. Set it to the exact same private value as Minglora's HARBORPAY_SSO_SECRET."
+      : !databaseConfigured
+        ? "HarborPay is online, but its dedicated Supabase URL or server-only service-role key is not configured."
+        : "HarborPay is online and the account activation bridge is ready."
+  };
+}
+
 export async function createHarborPayLaunch({ user, fetchImpl = fetch, env = process.env }) {
   const production = env.NODE_ENV === "production";
   const apiOrigin = parseOrigin(env.HARBORPAY_API_URL, "HarborPay API URL", production);
@@ -92,9 +156,14 @@ export async function createHarborPayLaunch({ user, fetchImpl = fetch, env = pro
   } catch {
     throw Object.assign(new Error("HarborPay could not be reached. No account activation or payment was started."), { status: 503 });
   }
-  const payload = await response.json().catch(() => ({}));
+  const rawResponse = await response.text().catch(() => "");
+  let payload = {};
+  try { payload = JSON.parse(rawResponse); } catch {}
   if (!response.ok) {
-    const message = String(payload.error || "HarborPay could not create a secure account activation link.");
+    const message = String(
+      payload.error ||
+      "HarborPay API returned HTTP " + response.status + " without a JSON error. Check that the HarborPay API service is deployed and its routes are running."
+    );
     throw Object.assign(new Error(message), { status: response.status >= 500 ? 503 : response.status });
   }
   let launch;
