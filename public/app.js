@@ -2101,10 +2101,13 @@ function createMediaPicker(root,options={}){
 }
 
 function profileCropViewport(stage){
-  // Absolute-positioned crop content is laid out inside the padding box.
-  // clientWidth/clientHeight exclude the visible border; getBoundingClientRect()
-  // includes it and therefore produces a different crop from the pixels users see.
-  return {width:stage.clientWidth,height:stage.clientHeight};
+  // Absolute-positioned crop content is laid out in the padding box, not the
+  // outer border box. Subtract the actual CSS borders while retaining fractions.
+  const rect=stage.getBoundingClientRect();
+  const style=getComputedStyle(stage);
+  const borderX=(parseFloat(style.borderLeftWidth)||0)+(parseFloat(style.borderRightWidth)||0);
+  const borderY=(parseFloat(style.borderTopWidth)||0)+(parseFloat(style.borderBottomWidth)||0);
+  return {width:Math.max(0,rect.width-borderX),height:Math.max(0,rect.height-borderY)};
 }
 function clampProfileCropPosition(stage,edit){
   const viewport=profileCropViewport(stage);
