@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS mail_users (
   display_name VARCHAR(120) NOT NULL,
   password_hash TEXT,
   email_verified_at TIMESTAMPTZ,
-  minglora_user_id TEXT UNIQUE,
+  minglora_user_id TEXT,
   minglora_username VARCHAR(30),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS mail_email_verifications (
   consumed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS mail_users_minglora_user_idx ON mail_users(minglora_user_id);
+
 CREATE INDEX IF NOT EXISTS mail_email_verifications_expiry_idx
   ON mail_email_verifications(expires_at) WHERE consumed_at IS NULL;
 

@@ -16,7 +16,7 @@ function verifyMingloraRequest(req, secret, now = Date.now()) {
   const userId = String(req.get('x-minglora-user-id') || '');
   const timestamp = String(req.get('x-minglora-timestamp') || '');
   const supplied = String(req.get('x-minglora-signature') || '');
-  if (!userId || !/^[a-f0-9-]{16,64}$/i.test(userId) || !/^\\d{13}$/.test(timestamp) || !/^[a-f0-9]{64}$/i.test(supplied)) return false;
+  if (!userId || !/^[a-f0-9-]{16,64}$/i.test(userId) || !/^\d{13}$/.test(timestamp) || !/^[a-f0-9]{64}$/i.test(supplied)) return false;
   const age = Math.abs(now - Number(timestamp));
   if (!Number.isFinite(age) || age > 120000) return false;
   const requestPath = String(req.originalUrl || req.url || '/');
