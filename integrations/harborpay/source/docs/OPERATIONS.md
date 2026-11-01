@@ -90,7 +90,7 @@ Payouts are disabled by default. To enable them, first complete merchant onboard
 
 The endpoint is POST /api/admin/payouts. It is not a customer wallet withdrawal endpoint and does not promise or calculate a customer's HarborPay balance. It sends money from the merchant's PayPal business account to an email recipient. Review the merchant's legal, contractual, tax, AML, fraud, and consumer-protection duties before enabling it.
 
-## 7. Jamaica regulatory boundary
+## 8. Jamaica regulatory boundary
 
 The Bank of Jamaica describes Payment Service Providers as entities authorized to provide electronic retail payment instruments and services. Its current public PSP page says it is working on amendments to establish a PSP licensing/supervision regime and identifies the FinTech Regulatory Sandbox as the interim controlled testing route. The Bank also publishes a separate remittance licensing framework.
 
@@ -101,7 +101,7 @@ References:
 
 This repository does not establish HarborPay's legal authorization. Do not offer public stored-value accounts, custodial balances, money transmission, or remittance services until a qualified Jamaican regulatory/legal review confirms the operating model and required approvals or regulated partners.
 
-## 8. Minglora identity-link bridge
+## 9. Minglora identity-link bridge
 
 The bridge uses two separate server-only values: Minglora's HARBORPAY_SSO_SECRET and HarborPay's MINGLORA_SSO_SECRET. They must match and must be a unique random secret of at least 32 bytes, unrelated to other app secrets. Minglora sends a signed, timestamped request to HarborPay only after the user accepts the data-sharing notice. HarborPay verifies the HMAC over the exact request body, rejects stale requests, stores a SHA-256 token hash, and returns a ten-minute single-use URL. HarborPay exchanges the code once, prefills only name/email, and links the accounts only after a verified HarborPay email matches the consented Minglora email. Never add identity credentials, tokens, passwords, payment methods or KYC documents to the payload.
 
@@ -109,7 +109,7 @@ Deploy the static HarborPay site with a Content-Security-Policy frame-ancestors 
 
 The Minglora integration does not make profile data KYC, does not automatically open an account, and does not grant transaction permissions. HarborPay's own Auth, email verification, KYC/KYB and transaction risk gates remain authoritative.
 
-## 9. Sandbox verification checklist
+## 10. Sandbox verification checklist
 
 1. Register a new HarborPay test user.
 2. Confirm the user is created in the HarborPay Supabase Auth project and the profile trigger creates their profile.
