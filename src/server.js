@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
-import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
+import { CALL_RING_TIMEOUT_MS, CALL_CONNECT_GRACE_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -321,6 +321,74 @@ async function cleanupCallRoom(call,reason='ended'){
   catch(error){
     const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
     if(status!==404)console.warn('[Minglora calls] LiveKit room cleanup will need attention.',{callId:call.id,reason,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
+  }
+}
+const CALL_PRESENCE_REFRESH_INTERVAL_MS=2500;
+const callPresenceLastCheckedAt=new Map();
+let callPresenceRefreshQueue=Promise.resolve();
+const callCreationReservations=new Set();
+let callSessionCleanupReady=Promise.resolve({ended:0,expired:0,verified:true});
+
+async function reconcileCallPresenceForUsers(userIds,{force=false}={}){
+  let release;
+  const previous=callPresenceRefreshQueue;
+  callPresenceRefreshQueue=new Promise(resolve=>{release=resolve;});
+  await previous;
+  try{
+    const allUsers=!Array.isArray(userIds)||userIds.length===0;
+    const selectedUsers=new Set((userIds||[]).map(String));
+    const stamp=now(),nowMs=Date.now();
+    let changed=false,expired=0,ended=0;
+    const expiredCalls=[];
+    for(const call of (db.calls||[])){
+      if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],stamp,nowMs)){
+        changed=true;expired++;expiredCalls.push(call);
+      }
+    }
+    const activeCalls=(db.calls||[]).filter(call=>call.status==='active'&&(
+      allUsers||(db.callParticipants||[]).some(item=>item.callId===call.id&&selectedUsers.has(String(item.userId)))
+    ));
+    const toCheck=activeCalls.filter(call=>force||nowMs-(callPresenceLastCheckedAt.get(call.id)||0)>=CALL_PRESENCE_REFRESH_INTERVAL_MS);
+    if(toCheck.length){
+      if(!isLiveKitConfigured()){
+        const error=new Error('Minglora cannot verify whether an earlier call is still connected. Check the LiveKit service and refresh call availability.');
+        error.status=503;throw error;
+      }
+      const health=await verifyLiveKitConnection({force:true});
+      if(!health.connected){
+        const error=new Error(health.error||'Minglora could not verify call availability with LiveKit. Try again shortly.');
+        error.status=503;throw error;
+      }
+      for(const call of toCheck){
+        let providerParticipants=[];
+        try{providerParticipants=await listLiveKitParticipants(call.roomName);}
+        catch(error){
+          if(!isMissingLiveKitRoom(error)) {
+            const unavailable=new Error('Minglora could not refresh the call connection. Try again shortly.');
+            unavailable.status=503;throw unavailable;
+          }
+        }
+        const result=reconcileCallPresence(call,db.callParticipants||[],providerParticipants,stamp,nowMs);
+        if(result.changed)changed=true;
+        if(result.ended){ended++;expiredCalls.push(call);}
+        callPresenceLastCheckedAt.set(call.id,nowMs);
+      }
+    }
+    if(changed)await saveStore();
+    await Promise.all(expiredCalls.map(call=>cleanupCallRoom(call,call.status==='missed'?'ring-timeout':'presence-ended')));
+    return {ended,expired,verified:true};
+  }finally{
+    release();
+  }
+}
+async function cleanupPersistedCalls(){
+  try{
+    const result=await reconcileCallPresenceForUsers(null,{force:true});
+    console.info('[Minglora calls cleanup]',JSON.stringify(result));
+    return result;
+  }catch(error){
+    console.warn('[Minglora calls cleanup] Active call presence could not be verified; saved call records were preserved.',String(error?.message||error).slice(0,180));
+    return {ended:0,expired:0,verified:false};
   }
 }
 function meetWaveRoomView(room,viewerId){
@@ -2741,10 +2809,9 @@ async function route(req, res) {
         return json(res,200,{ok:true,ringtone:null});
       }
       if(method==='GET'&&p==='/api/calls/incoming'){
-        let changed=false;const stamp=now(),expiredCalls=[];
-        for(const call of (db.calls||[]))if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],stamp)){changed=true;expiredCalls.push(call);}
-        if(changed)await saveStore();
-        await Promise.all(expiredCalls.map(call=>cleanupCallRoom(call,'ring-timeout')));
+        await callSessionCleanupReady;
+        try{await reconcileCallPresenceForUsers([user.id]);}
+        catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
         const incoming=(db.calls||[]).filter(call=>['ringing','active'].includes(call.status)&&!blockedBetween(user.id,call.createdBy))
           .map(call=>{
             const participant=(db.callParticipants||[]).find(item=>item.callId===call.id&&item.userId===user.id);
@@ -2755,6 +2822,9 @@ async function route(req, res) {
       }
       const callStatusMatch=p.match(/^\/api\/calls\/([^/]+)\/status$/);
       if(method==='GET'&&callStatusMatch){
+        await callSessionCleanupReady;
+        try{await reconcileCallPresenceForUsers([user.id]);}
+        catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
         const call=(db.calls||[]).find(item=>item.id===callStatusMatch[1]);
         const participant=(db.callParticipants||[]).find(item=>item.callId===callStatusMatch[1]&&item.userId===user.id);
         if(!call)return json(res,404,{error:'Call not found.'});
@@ -2770,43 +2840,60 @@ async function route(req, res) {
         const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
         if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
         if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
-        const stamp=now(),expiredCalls=[];
-        for(const existing of (db.calls||[]))if(existing.status==='ringing'&&expireRingingCall(existing,db.callParticipants||[],stamp))expiredCalls.push(existing);
-        if(expiredCalls.length){await saveStore();await Promise.all(expiredCalls.map(call=>cleanupCallRoom(call,'ring-timeout')));}
-        const busyIds=new Set((db.callParticipants||[]).filter(item=>isCallParticipantBusy((db.calls||[]).find(call=>call.id===item.callId),item)).map(item=>item.userId));
-        if(busyIds.has(user.id))return json(res,409,{error:'Finish your current Minglora call before starting another.'});
-        if(recipients.some(member=>busyIds.has(member.id)))return json(res,409,{error:'One or more members are already in another call.'});
-        const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
-        try{await ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS);}
-        catch(error){
-          console.warn('[Minglora calls] Could not provision LiveKit room.',{status:Number(error?.statusCode||error?.status||0)});
-          return json(res,503,{error:'Minglora could not prepare the call room. Check the LiveKit connection and try again.'});
-        }
-        const createdAt=now();
-        const call={id,roomName,createdBy:user.id,kind,status:'ringing',createdAt,ringExpiresAt:new Date(Date.now()+CALL_RING_TIMEOUT_MS).toISOString(),answeredAt:null,endedAt:null};
-        db.calls||=[];db.callParticipants||=[];db.calls.unshift(call);
-        db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'calling',joinedAt:null,leftAt:null});
-        for(const recipient of recipients){
-          db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
-          notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
-        }
-        try{await saveStore();}
-        catch(error){
-          db.calls=db.calls.filter(item=>item.id!==id);
-          db.callParticipants=db.callParticipants.filter(item=>item.callId!==id);
-          await cleanupCallRoom(call,'create-persistence-failed');
+        const reservationIds=[...new Set([user.id,...recipientIds])];
+        if(reservationIds.some(id=>callCreationReservations.has(id)))return json(res,409,{error:'A call is already being started for one of these members. Finish or cancel it before starting another.'});
+        reservationIds.forEach(id=>callCreationReservations.add(id));
+        try{
+          await callSessionCleanupReady;
+          await reconcileCallPresenceForUsers(reservationIds,{force:true});
+          const busyIds=new Set((db.callParticipants||[]).filter(item=>isCallParticipantBusy((db.calls||[]).find(call=>call.id===item.callId),item)).map(item=>item.userId));
+          if(busyIds.has(user.id))return json(res,409,{error:'Finish your current Minglora call before starting another.'});
+          if(recipients.some(member=>busyIds.has(member.id)))return json(res,409,{error:'One or more members are already in another call.'});
+          const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
+          try{await ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS);}
+          catch(error){
+            console.warn('[Minglora calls] Could not provision LiveKit room.',{status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare the call room. Check the LiveKit connection and try again.'});
+          }
+          const createdAt=now();
+          const call={id,roomName,createdBy:user.id,kind,status:'ringing',createdAt,ringExpiresAt:new Date(Date.now()+CALL_RING_TIMEOUT_MS).toISOString(),answeredAt:null,endedAt:null};
+          db.calls||=[];db.callParticipants||=[];db.calls.unshift(call);
+          db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'calling',joinedAt:null,leftAt:null});
+          for(const recipient of recipients){
+            db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
+          }
+          try{await saveStore();}
+          catch(error){
+            db.calls=db.calls.filter(item=>item.id!==id);
+            db.callParticipants=db.callParticipants.filter(item=>item.callId!==id);
+            await cleanupCallRoom(call,'create-persistence-failed');
+            throw error;
+          }
+          return json(res,201,{call});
+        }catch(error){
+          if(Number(error?.status)===503)return json(res,503,{error:error.message||'Minglora could not verify call availability. Try again shortly.'});
           throw error;
+        }finally{
+          reservationIds.forEach(id=>callCreationReservations.delete(id));
         }
-        return json(res,201,{call});
       }
-      let callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end|decline|cancel)$/);
+      const callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end|decline|cancel)$/);
       if(callMatch&&method==='POST'){
         if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
-        const call=db.calls.find(item=>item.id===callMatch[1]);
-        const participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+        let call=db.calls.find(item=>item.id===callMatch[1]);
+        let participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
         const action=callMatch[2];
         if(!call)return json(res,404,{error:'Call not found.'});
         if(action==='join'){
+          await callSessionCleanupReady;
+          try{await reconcileCallPresenceForUsers([user.id],{force:true});}
+          catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
+          call=db.calls.find(item=>item.id===callMatch[1]);
+          participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+          if(!call||!participant)return json(res,404,{error:'This call invitation is no longer active.'});
+          const busyElsewhere=(db.callParticipants||[]).some(item=>item.userId===user.id&&item.callId!==call.id&&isCallParticipantBusy((db.calls||[]).find(entry=>entry.id===item.callId),item));
+          if(busyElsewhere)return json(res,409,{error:'Finish your current Minglora call before answering another call.'});
           if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now())){await saveStore();await cleanupCallRoom(call,'ring-timeout');}
           if(['ended','cancelled','declined','missed'].includes(call.status)||!participant||['declined','left','missed','cancelled'].includes(participant.status))return json(res,404,{error:'This call invitation is no longer active.'});
           if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
@@ -2868,14 +2955,14 @@ async function route(req, res) {
           const endedNow=user.id===call.createdBy||(joined.length===0&&!stillInvited);
           if(endedNow){
             call.status='ended';call.endedAt=now();
-            (db.callParticipants||[]).filter(item=>item.callId===call.id&&['invited','calling'].includes(item.status)).forEach(item=>{item.status='cancelled';item.leftAt=call.endedAt;});
+            (db.callParticipants||[]).filter(item=>item.callId===call.id&&['invited','calling','joined'].includes(item.status)).forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=item.leftAt||call.endedAt;});
           }
           await saveStore();if(endedNow)await cleanupCallRoom(call,'last-participant-left');return json(res,200,{ok:true,call});
         }
         if(action==='end'){
           if(user.id!==call.createdBy)return json(res,403,{error:'Only the call creator can end this call for everyone.'});
           call.status='ended';call.endedAt=now();
-          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status='left';item.leftAt=call.endedAt;});
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=call.endedAt;});
           await saveStore();await cleanupCallRoom(call,'ended-by-host');return json(res,200,{ok:true,call});
         }
       }
@@ -3049,7 +3136,14 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
       }
-      if(method==='GET'&&p==='/api/notifications'){const prefs=getUserSettings(user).notifications;const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});}
+      if(method==='GET'&&p==='/api/notifications'){
+        const prefs=getUserSettings(user).notifications;
+        const activeCallIds=new Set((db.callParticipants||[]).filter(item=>item.userId===user.id&&item.status==='invited'&&['ringing','active'].includes((db.calls||[]).find(call=>call.id===item.callId)?.status)).map(item=>item.callId));
+        const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
+        if(db.notifications.length!==before)await saveStore();
+        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});
+      }
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){
         const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
@@ -3121,6 +3215,9 @@ console.info('[Minglora MailHarbor readiness]', JSON.stringify({
   inboundReceivingEnabled: String(process.env.MAILHARBOR_INBOUND_ENABLED || '').toLowerCase() === 'true'
 }));
 server.listen(PORT,'0.0.0.0',async()=>{
+  callSessionCleanupReady = cleanupPersistedCalls();
+  const callCleanup = await callSessionCleanupReady;
+  console.info('[Minglora calls cleanup]', JSON.stringify(callCleanup));
   liveSessionCleanupReady = cleanupPersistedLiveSessions();
   const liveCleanup = await liveSessionCleanupReady;
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
