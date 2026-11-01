@@ -66,17 +66,21 @@ function setAuthMode(mode) {
 
 function updateCapabilityText() {
   const outbound = Boolean(mailStatus.outboundEmailConfigured);
+  const internal = Boolean(mailStatus.internalMessagingEnabled);
   const inbound = Boolean(mailStatus.inboundEmailConfigured);
+  const canCompose = outbound || internal;
   $('auth-capability').textContent = currentUser?.email
-    ? 'Your MailHarbor address: ' + currentUser.email + ' · ' + (outbound ? 'Sending enabled.' : 'Sending awaiting provider setup.')
-    : 'Mailbox status is checked against the live MailHarbor service.';
-  $('compose').disabled = !outbound;
-  $('send').disabled = !outbound;
+    ? 'Your Minglora mailbox: ' + currentUser.email + (internal ? ' · Member-to-member mail is active.' : ' · Mail service status verified.')
+    : 'Mailbox status is checked against the live Minglora service.';
+  $('compose').disabled = !canCompose;
+  $('send').disabled = !canCompose;
   $('service-banner').classList.toggle('is-hidden', outbound && inbound);
-  if (!outbound) {
-    $('service-banner').textContent = 'Your mailbox is connected. Sending remains disabled until SMTP credentials and a verified sender domain are configured.';
+  if (internal && !outbound) {
+    $('service-banner').textContent = 'MailHarbor is active inside Minglora. Messages to Minglora member mailboxes are delivered internally. External email sending and receiving are not enabled yet.';
+  } else if (!outbound) {
+    $('service-banner').textContent = 'External sending is awaiting a verified sender domain and provider setup.';
   } else if (!inbound) {
-    $('service-banner').textContent = 'Outbound delivery is configured. Receiving is awaiting an inbound provider, signed webhook and matching MX records.';
+    $('service-banner').textContent = 'External sending is configured. External receiving is awaiting an inbound provider, signed webhook and matching MX records.';
   }
 }
 
@@ -182,7 +186,7 @@ function renderMessages() {
   $('count').textContent = messageList.length + (messageList.length === 1 ? ' message' : ' messages');
 
   if (!messageList.length) {
-    $('messages').innerHTML = '<div class="empty"><span class="empty-mark">✉</span><strong>This folder is empty</strong><p>Messages received by your configured mail provider will appear here.</p></div>';
+    $('messages').innerHTML = '<div class="empty"><span class="empty-mark">✉</span><strong>This folder is empty</strong><p>Messages sent to your Minglora mailbox by other members will appear here.</p></div>';
     return;
   }
 
@@ -194,7 +198,9 @@ function renderMessages() {
     const sender = currentFolder === 'sent'
       ? 'To: ' + ((message.recipients && message.recipients.to) || []).join(', ')
       : message.sender_email;
-    const status = message.delivery_status === 'queued' ? '<span class="delivery queued">Queued</span>'
+    const status = message.delivery_channel === 'minglora_internal' && message.delivery_status === 'sent'
+      ? '<span class="delivery sent">Delivered internally</span>'
+      : message.delivery_status === 'queued' ? '<span class="delivery queued">Queued</span>'
       : message.delivery_status === 'failed' ? '<span class="delivery failed">Failed</span>'
       : message.delivery_status === 'sent' ? '<span class="delivery sent">Sent</span>' : '';
     return '<article class="message' + unread + '" data-id="' + id + '">' +
@@ -309,12 +315,13 @@ $('close-detail').addEventListener('click', () => $('message-view').close());
 
 $('compose-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (!mailStatus.outboundEmailConfigured) {
-    setFeedback($('compose-feedback'), 'SMTP is not configured. No message was sent.', true);
+  if (!mailStatus.outboundEmailConfigured && !mailStatus.internalMessagingEnabled) {
+    setFeedback($('compose-feedback'), 'Mail delivery is not enabled. No message was sent.', true);
     return;
   }
+  const internalOnly = Boolean(mailStatus.internalMessagingEnabled && !mailStatus.outboundEmailConfigured);
   $('send').disabled = true;
-  setFeedback($('compose-feedback'), 'Queueing message…');
+  setFeedback($('compose-feedback'), internalOnly ? 'Delivering inside Minglora…' : 'Queueing message…');
   try {
     const result = await request('/messages', {
       method: 'POST',
@@ -330,11 +337,13 @@ $('compose-form').addEventListener('submit', async (event) => {
     $('compose-form').reset();
     currentFolder = 'sent';
     await loadMessages();
-    window.alert('Message queued. It will show as sent only after the mail provider accepts it. Message ID: ' + result.message.id);
+    window.alert(internalOnly
+      ? 'Message delivered to Minglora member mailboxes. External email was not sent. Message ID: ' + result.message.id
+      : 'Message queued. It will show as sent only after the mail provider accepts it. Message ID: ' + result.message.id);
   } catch (error) {
     setFeedback($('compose-feedback'), error.message, true);
   } finally {
-    $('send').disabled = !mailStatus.outboundEmailConfigured;
+    $('send').disabled = !(mailStatus.outboundEmailConfigured || mailStatus.internalMessagingEnabled);
   }
 });
 
