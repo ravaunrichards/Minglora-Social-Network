@@ -73,17 +73,13 @@ test("HarborPay readiness checks the remote API and identifies missing bridge co
   assert.match(missingRemoteSecret.message, /MINGLORA_SSO_SECRET/i);
 
   let healthcheckCalls = 0;
+  let healthcheckRequest = null;
   const ready = await getHarborPayBridgeStatus({
     env,
     fetchImpl: async (url, options = {}) => {
       if (options.method === "POST") {
         healthcheckCalls += 1;
-        assert.match(url, /\/api\/integrations\/minglora\/healthcheck$/);
-        assert.equal(options.body, "{}");
-        const bodyHash = createHash("sha256").update(options.body, "utf8").digest("hex");
-        const canonical = [options.headers["x-harborpay-timestamp"], "POST", "/api/integrations/minglora/healthcheck", bodyHash].join("\n");
-        const expected = createHmac("sha256", secret).update(canonical, "utf8").digest("hex");
-        assert.equal(options.headers["x-harborpay-signature"], expected);
+        healthcheckRequest = { url, options };
         return new Response(JSON.stringify({
           ready: true,
           service: "harborpay-api",
@@ -100,6 +96,18 @@ test("HarborPay readiness checks the remote API and identifies missing bridge co
   assert.equal(ready.configured, true);
   assert.equal(ready.apiReachable, true);
   assert.equal(healthcheckCalls, 1);
+  assert.ok(healthcheckRequest, "HarborPay health must issue a signed POST challenge");
+  assert.match(String(healthcheckRequest.url), /\\/api\\/integrations\\/minglora\\/healthcheck$/);
+  assert.equal(healthcheckRequest.options.body, "{}");
+  const healthBodyHash = createHash("sha256").update(healthcheckRequest.options.body, "utf8").digest("hex");
+  const healthCanonical = [
+    healthcheckRequest.options.headers["x-harborpay-timestamp"],
+    "POST",
+    "/api/integrations/minglora/healthcheck",
+    healthBodyHash
+  ].join("\\n");
+  const healthSignature = createHmac("sha256", secret).update(healthCanonical, "utf8").digest("hex");
+  assert.equal(healthcheckRequest.options.headers["x-harborpay-signature"], healthSignature);
   assert.match(ready.message, /secret matches/i);
 });
 
