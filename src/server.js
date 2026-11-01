@@ -3075,7 +3075,21 @@ async function route(req, res) {
         return json(res,200,{users,posts,groups,pages,channels,videos,listings,jobs});
       }
       return json(res,404,{error:'API route not found.'});
-    } catch(e) { if(process.env.NODE_ENV==='test')return json(res,e.status||500,{error:e.message,stack:e.stack}); console.error('[Minglora API error]',e); return json(res,e.status||500,{error:e.status?e.message:'Internal server error.'}); }
+    } catch(e) {
+      if (process.env.NODE_ENV === 'test') return json(res, e.status || 500, { error: e.message, stack: e.stack });
+      const status = Number(e.status || 500);
+      if (status >= 500) {
+        console.error('[Minglora API error]', e);
+      } else {
+        // Expected authentication and validation rejections are client outcomes,
+        // not server faults; keep them out of the error-level incident stream.
+        console.info('[Minglora API client response]', JSON.stringify({
+          status,
+          message: String(e.message || 'Request rejected').slice(0, 160)
+        }));
+      }
+      return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
+    }
   }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
   const routeSecurityHeaders = rel === 'mailharbor/index.html'
