@@ -2872,3 +2872,43 @@ body.auth-mode .auth-screen{
 .profile-section-manager button{grid-column:1/-1;justify-self:start}
 .profile-section-note{margin:12px 0 0;font-size:11px}
 @media(max-width:480px){.profile-section-manager{grid-template-columns:1fr}}
+
+/* Profile overflow menu: keep the three-dot control centered inside the tabs row. */
+.profile-header-card{overflow:visible!important;z-index:31}
+.profile-cover{overflow:hidden;border-radius:14px 14px 0 0}
+.profile-tabs{position:sticky;top:66px;z-index:35;display:flex;align-items:center;gap:8px;overflow:visible!important;min-width:0}
+.profile-tabs-list{display:flex;align-items:stretch;gap:15px;flex:1 1 auto;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+.profile-tabs-list::-webkit-scrollbar{display:none}
+.profile-tabs-list button{flex:0 0 auto;white-space:nowrap}
+.profile-tabs-overflow{position:relative;display:flex;align-items:center;align-self:stretch;flex:0 0 auto;margin-left:4px;padding-left:12px}
+.profile-tabs-overflow:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:1px;background:var(--line)}
+.profile-overflow-trigger{display:grid!important;place-items:center;width:38px;height:34px;align-self:center;margin:0!important;padding:0!important;border:1px solid var(--line)!important;border-radius:9px!important;background:var(--surface-soft)!important;color:var(--ink)!important;font-size:20px!important;font-weight:800!important;line-height:1!important;letter-spacing:1px}
+.profile-overflow-trigger span{display:block;line-height:1;transform:translateY(-2px)}
+.profile-overflow-trigger:hover,.profile-overflow-trigger[aria-expanded=true]{background:var(--surface)!important;border-color:var(--blue)!important;color:var(--blue)!important}
+.profile-overflow-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:1200;width:min(290px,calc(100vw - 28px));max-height:min(70vh,560px);overflow:auto;padding:7px;background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:0 16px 44px #101b2f2b}
+.profile-overflow-menu[hidden]{display:none!important}
+.profile-overflow-menu button{display:flex!important;align-items:center;gap:12px;width:100%;min-height:42px;padding:9px 11px!important;border:0!important;border-radius:8px!important;background:transparent!important;color:var(--ink)!important;text-align:left;font-size:13px!important;font-weight:650!important}
+.profile-overflow-menu button:hover,.profile-overflow-menu button:focus-visible{background:var(--surface-soft)!important;outline:none}
+.profile-overflow-menu button>span:first-child{display:grid;place-items:center;width:22px;flex:0 0 22px;color:var(--muted);font-size:17px}
+.profile-overflow-divider{height:1px;margin:5px 7px;background:var(--line)}
+.profile-menu-modal-backdrop{z-index:2800}
+.profile-menu-modal .modal-body>p{line-height:1.55}
+.profile-view-as-card{overflow:hidden;border:1px solid var(--line);border-radius:13px;background:var(--card)}
+.profile-view-as-cover{height:115px;background:var(--surface-soft);overflow:hidden}
+.profile-view-as-cover-image{display:block;width:100%;height:100%;object-fit:cover}
+.profile-view-as-person{display:flex;align-items:center;gap:11px;padding:0 15px;margin-top:-23px;position:relative}
+.profile-view-as-person .avatar{width:62px;height:62px;border:4px solid var(--card);object-fit:contain;background:var(--card)}
+.profile-view-as-person strong,.profile-view-as-person small{display:block}
+.profile-view-as-person small{margin-top:3px;color:var(--muted);font-size:12px}
+.profile-view-as-bio{padding:0 15px;margin:12px 0 0!important;color:var(--ink)!important}
+.profile-view-as-counts{display:flex;flex-wrap:wrap;gap:16px;padding:13px 15px 15px;color:var(--muted);font-size:12px}
+.profile-view-as-counts strong{color:var(--ink)}
+.profile-view-as-note{font-size:12px;color:var(--muted)}
+@media(max-width:680px){
+  .profile-tabs{gap:5px;padding-left:12px;padding-right:10px}
+  .profile-tabs-list{gap:10px}
+  .profile-tabs-list button{padding:12px 4px}
+  .profile-tabs-overflow{margin-left:1px;padding-left:9px}
+  .profile-overflow-trigger{width:35px;height:32px}
+  .profile-overflow-menu{right:-1px}
+}
