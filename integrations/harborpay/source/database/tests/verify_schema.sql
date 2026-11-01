@@ -241,17 +241,17 @@ $verify$;
 insert into public.merchant_customers (merchant_id, email)
 select id, 'buyer@example.test'
 from public.merchant_accounts
-where owner_user_id = '11111111-1111-4111-8111-111111111111';
+where display_name = 'CI Merchant One';
 
 insert into public.orders (merchant_id, order_reference, amount_minor, currency, description, idempotency_key)
 select id, 'CI-ORDER-1', 1250, 'USD', 'CI ownership test', 'ci-order-idempotency-0001'
 from public.merchant_accounts
-where owner_user_id = '11111111-1111-4111-8111-111111111111';
+where display_name = 'CI Merchant One';
 
 insert into public.payment_links (merchant_id, created_by, slug, title, amount_minor)
 select id, owner_user_id, 'ci-link-one', 'CI fixed payment link', 1250
 from public.merchant_accounts
-where owner_user_id = '11111111-1111-4111-8111-111111111111';
+where display_name = 'CI Merchant One';
 
 insert into public.payments (user_id, idempotency_key, amount_minor, currency, description)
 values
@@ -281,7 +281,7 @@ begin
 
   if profiles_visible <> 1 then raise exception 'Profile RLS exposed % rows', profiles_visible; end if;
   if payments_visible <> 1 then raise exception 'Payment RLS exposed % rows', payments_visible; end if;
-  if merchants_visible <> 1 then raise exception 'Merchant RLS exposed % rows', merchants_visible; end if;
+  if merchants_visible <> 2 then raise exception 'Merchant RLS exposed % rows; the signed-in owner should see exactly their two merchant/business workspaces', merchants_visible; end if;
   if customers_visible <> 1 then raise exception 'Customer RLS exposed % rows', customers_visible; end if;
   if orders_visible <> 1 then raise exception 'Order RLS exposed % rows', orders_visible; end if;
   if links_visible <> 1 then raise exception 'Payment-link RLS exposed % rows', links_visible; end if;
