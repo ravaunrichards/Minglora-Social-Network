@@ -1872,7 +1872,8 @@ function aboutLinkMarkup(link){
   return '<a class="about-social-link" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer"><span>'+esc(label)+'</span><small>'+esc(link.platform||'Website')+'</small><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"></path><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"></path></svg></a>';
 }
 function aboutWorkMarkup(entries){
-  return (entries||[]).filter(item=>item&&Object.values(item).some(value=>value&&value!==false)).map(item=>
+  const list=Array.isArray(entries)?entries:[];
+  return list.filter(item=>item&&typeof item==='object'&&Object.values(item).some(value=>value&&value!==false)).map(item=>
     '<article class="about-entry-display"><strong>'+esc(item.position||item.company||'Work experience')+'</strong>'+
     (item.company?'<span>'+esc(item.company)+'</span>':'')+
     (item.city?'<small>'+esc(item.city)+'</small>':'')+
@@ -1882,7 +1883,8 @@ function aboutWorkMarkup(entries){
   ).join('');
 }
 function aboutEducationMarkup(entries){
-  return (entries||[]).filter(item=>item&&Object.values(item).some(value=>value&&value!==false)).map(item=>
+  const list=Array.isArray(entries)?entries:[];
+  return list.filter(item=>item&&typeof item==='object'&&Object.values(item).some(value=>value&&value!==false)).map(item=>
     '<article class="about-entry-display"><strong>'+esc(item.school||'Education')+'</strong>'+
     (item.degree||item.fieldOfStudy?'<span>'+esc([item.degree,item.fieldOfStudy].filter(Boolean).join(' · '))+'</span>':'')+
     (item.city?'<small>'+esc(item.city)+'</small>':'')+
@@ -1924,10 +1926,10 @@ function profileAboutMarkup(u,isMe){
     hobbies:aboutChipsMarkup(sections.hobbies?.items),
     interests:aboutChipsMarkup(sections.interests?.items),
     travel:[
-      (travel.visited||[]).length?'<div class="about-list-group"><strong>Places visited</strong>'+aboutChipsMarkup(travel.visited)+'</div>':'',
-      (travel.wantToVisit||[]).length?'<div class="about-list-group"><strong>Want to visit</strong>'+aboutChipsMarkup(travel.wantToVisit)+'</div>':''
+      (Array.isArray(travel.visited)&&travel.visited.length)?'<div class="about-list-group"><strong>Places visited</strong>'+aboutChipsMarkup(travel.visited)+'</div>':'',
+      (Array.isArray(travel.wantToVisit)&&travel.wantToVisit.length)?'<div class="about-list-group"><strong>Want to visit</strong>'+aboutChipsMarkup(travel.wantToVisit)+'</div>':''
     ].join(''),
-    links:(sections.links?.items||[]).map(aboutLinkMarkup).join(''),
+    links:(Array.isArray(sections.links?.items)?sections.links.items:[]).map(aboutLinkMarkup).join(''),
     contactInfo:[
       contact.email?'<div class="about-row"><span>Email</span><strong><a href="mailto:'+esc(contact.email)+'">'+esc(contact.email)+'</a></strong></div>':'',
       contact.phone?'<div class="about-row"><span>Phone</span><strong><a href="tel:'+esc(contact.phone)+'">'+esc(contact.phone)+'</a></strong></div>':'',
@@ -1942,7 +1944,7 @@ function profileAboutMarkup(u,isMe){
       aboutRowMarkup('Former name',sections.names?.formerName)
     ].join(''),
     details:[
-      (details.languages||[]).length?'<div class="about-list-group"><strong>Languages</strong>'+aboutChipsMarkup(details.languages)+'</div>':'',
+      (Array.isArray(details.languages)&&details.languages.length)?'<div class="about-list-group"><strong>Languages</strong>'+aboutChipsMarkup(details.languages)+'</div>':'',
       details.favoriteQuote?aboutRowMarkup('Favourite quote',details.favoriteQuote,'about-row-bio'):'',
       details.otherDetails?aboutRowMarkup('Other details',details.otherDetails,'about-row-bio'):'',
       u.createdAt?aboutRowMarkup('Joined Minglora',new Date(u.createdAt).toLocaleDateString(undefined,{month:'long',year:'numeric'})):''
