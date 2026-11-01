@@ -145,10 +145,13 @@ test('profile cover preview, saved cover and phone layout use the same wide crop
   assert.match(css, /\.profile-crop-preview--cover\{[^}]*aspect-ratio:3\/1;min-height:0/);
 });
 
-test('profile editing dialogs scroll instead of clipping controls on short screens', async () => {
-  const css = await read('public/styles.css');
-  assert.ok(ruleFor(css, '.profile-editor-backdrop').includes('overflow-y:auto'));
-  assert.ok(ruleFor(css, '.profile-editor-modal').includes('overflow:visible'));
-  assert.ok(ruleFor(css, '.profile-editor-modal .modal-body').includes('overflow:visible'));
+test('routine profile editors stay in document flow and do not create modal overlays', async () => {
+  const [css, app] = await Promise.all([read('public/styles.css'), read('public/app.js')]);
+  assert.ok(css.includes('.profile-inline-editor{'));
+  assert.ok(css.includes('.about-section-inline-editor{'));
+  assert.doesNotMatch(css, /\\.profile-editor-backdrop|\\.profile-editor-modal|\\.about-section-editor-modal/);
+  assert.doesNotMatch(app, /modal-backdrop profile-editor-backdrop|modal-backdrop about-section-editor-backdrop/);
+  assert.match(app, /profileHeader\\.insertAdjacentElement\\('afterend',modal\\)/);
+  assert.match(app, /profilePanel\\.append\\(modal\\)/);
 });
 
