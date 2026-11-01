@@ -1,7 +1,7 @@
 {
   "project": "HarborPay",
   "version": "1.0.0",
-  "status": "HarborPay's dedicated Supabase database is migrated and the consent-based Minglora identity bridge plus customer and merchant user workspaces are implemented in source. Auth email/URL settings, dedicated API/web deployment, PayPal credentials/webhook and live browser verification remain external release requirements. Customer-held stored value, P2P transfers, international remittance and public merchant checkout remain disabled/not implemented.",
+  "status": "HarborPay's dedicated Supabase database is migrated through seven versions. The Minglora consent bridge now performs a remote API readiness check, and the standalone client contains separate Personal, Business, Merchant and Enterprise account pages. Business, Merchant and Enterprise applications and owner-controlled organization workspaces persist to the HarborPay database. Separate Render deployment, matching SSO secret configuration, Supabase Auth Site/redirect/SMTP configuration, PayPal credentials/webhook and live browser verification remain external release requirements. Stored-value wallet, P2P transfers, international remittance and public merchant checkout remain disabled/not implemented.",
   "generated_files": [
     ".gitignore",
     "PROJECT_MANIFEST.json",
@@ -36,7 +36,11 @@
     "database/migrations/20261101000300_harborpay_minglora_identity_bridge.sql",
     "database/migrations/20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql",
     "web/src/merchant-workspace.jsx",
-    "web/src/profile-workspace.jsx"
+    "web/src/profile-workspace.jsx",
+    "database/migrations/20261101000500_harborpay_account_applications_and_reviews.sql",
+    "database/migrations/20261101000600_harborpay_account_types.sql",
+    "database/migrations/20261101000700_harborpay_account_application_account_types_fix.sql",
+    "web/src/account-types-workspace.jsx"
   ],
   "integrations": [
     "Supabase Auth",
@@ -55,7 +59,7 @@
     "Synthetic wallet and sample activity display"
   ],
   "activation_requirements": [
-    "Dedicated HarborPay Supabase database is provisioned; all four tracked migrations are applied and verified",
+    "Dedicated HarborPay Supabase database is provisioned; all seven tracked migrations are applied and verified",
     "Configure HarborPay Auth Site URL, Minglora/HarborPay redirect URLs, email confirmation and custom SMTP",
     "Deploy the separate HarborPay API and web services and configure the Minglora consent handoff",
     "Complete PayPal Sandbox checkout, webhook and account email-confirmation browser tests",
@@ -68,6 +72,7 @@
     "Complete Jamaican regulatory/legal review before offering stored-value or money-transmission services",
     "Configure the matching HARBORPAY_SSO_SECRET and MINGLORA_SSO_SECRET as distinct server-only values",
     "Deploy separate HarborPay API and web services and configure the approved Minglora frame-ancestor origin",
-    "Complete country-by-country KYC/KYB, licensing, partner and reconciliation review before stored-value or remittance capabilities"
+    "Complete country-by-country KYC/KYB, licensing, partner and reconciliation review before stored-value or remittance capabilities",
+    "Configure matching HARBORPAY_SSO_SECRET and MINGLORA_SSO_SECRET on the two server services and verify the live HarborPay /api/health response"
   ]
 }
