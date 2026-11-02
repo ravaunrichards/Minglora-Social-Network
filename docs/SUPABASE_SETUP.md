@@ -38,6 +38,16 @@ Both values must belong to this Minglora project. Publishable/anon keys are suit
 
 In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to the actual deployed Minglora origin and add only the actual Minglora callback/redirect URLs used by the application. Configure email confirmation according to the launch policy. Before relying on confirmation or recovery emails, configure and test a transactional SMTP provider with an appropriate sender domain and delivery limits. These Auth dashboard settings cannot be set by the database migration.
 
+## Account access across devices
+
+Minglora creates a separate signed application session for each successful sign-in. The same account can therefore be active in more than one browser/device at the same time. The Settings & Privacy session manager lists active sessions and supports revoking one device or all other devices. Signing out should remove only the current device's session.
+
+In Supabase Dashboard → Authentication → Sessions, keep **Single session per user** disabled. Enabling that optional restriction would terminate other sessions when the member signs in elsewhere and would conflict with Minglora's multi-device requirement. Do not configure a maximum of one active session.
+
+## Email and recovery delivery
+
+New Minglora accounts are created by the trusted Edge Function with `email_confirm: true`; members can sign in immediately after registration without waiting for an email confirmation link. Password recovery is different: configure a verified custom SMTP sender in Supabase Auth, set the Site URL to `https://minglora-social-network.onrender.com`, and allow the exact recovery redirect `https://minglora-social-network.onrender.com/?password-recovery=1`. Test delivery to external Gmail, Outlook and iCloud mailboxes before opening registration widely. Supabase's built-in email sender has restrictive rate limits and is not intended for production volume.
+
 ## Storage
 
 The migration created these 11 buckets:
