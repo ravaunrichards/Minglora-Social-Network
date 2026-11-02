@@ -84,8 +84,8 @@ function AuthScreen({ prefill = null, recovery = false, onRecoveryComplete = () 
     if (!prefill) return;
     if (prefill.fullName) setFullName(prefill.fullName);
     if (prefill.email) setEmail(prefill.email);
-    setMode("signup");
-    setNotice("Minglora shared your name and email after you approved the data-sharing notice. Confirm your HarborPay email before linking accounts.");
+    setMode("signin");
+    setNotice("Continue with your existing Minglora account. HarborPay now uses the same sign-in and Supabase account.");
   }, [prefill]);
 
   async function submit(event) {
@@ -152,7 +152,7 @@ function AuthScreen({ prefill = null, recovery = false, onRecoveryComplete = () 
           <p>{mode === "update" ? "Create a new password for your independent HarborPay account."
             : mode === "recover" ? "Request a secure password-reset email."
             : "Sign in securely to manage your HarborPay payments and merchant services."}</p>
-          {prefill && <p className="message success">Your name and email were prefilled from Minglora with your permission. HarborPay account verification is separate.</p>}
+          {prefill && <p className="message success">Your Minglora identity was confirmed for this launch. Sign in with the same Minglora email and password; no second account is needed.</p>}
         </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "signup" && (
@@ -188,11 +188,11 @@ function AuthScreen({ prefill = null, recovery = false, onRecoveryComplete = () 
           </button>
         </form>
         {mode === "signin" && <button className="link-button" type="button" onClick={() => { setMode("recover"); setError(""); setNotice(""); }}>Forgot password?</button>}
-        {!recovery && <button className="link-button" type="button" onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(""); setNotice(""); }}>
+        {!recovery && !prefill && <button className="link-button" type="button" onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(""); setNotice(""); }}>
           {mode === "signup" ? "Already registered? Sign in" : "New to HarborPay? Create an account"}
         </button>}
         {mode === "recover" && <button className="link-button" type="button" onClick={() => { setMode("signin"); setError(""); setNotice(""); }}>Back to sign in</button>}
-        <p className="auth-foot"><ShieldCheck size={15} /> Account access is protected by HarborPay Supabase Auth.</p>
+        <p className="auth-foot"><ShieldCheck size={15} /> Account access uses your shared Minglora sign-in.</p>
       </section>
     </main>
   );
