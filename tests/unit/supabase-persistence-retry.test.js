@@ -13,9 +13,6 @@ const collections = [
   'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',
   'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance',
   'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
-  'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions',
-  'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems',
-  'streambayWatchLater',
   'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
@@ -35,7 +32,7 @@ function runIsolated(script) {
   });
 }
 
-test('legacy mailbox collections are removed from persisted state on startup', () => {
+test('retired mailbox and video-platform collections are removed from persisted state on startup', () => {
   const script = `
     import assert from 'node:assert/strict';
     const legacyState = {
@@ -43,7 +40,17 @@ test('legacy mailbox collections are removed from persisted state on startup', (
       mailboxes: [{ id: 'retired-mailbox' }],
       mailMessages: [],
       mailOAuthStates: [],
-      mailExternalAccounts: []
+      mailExternalAccounts: [],
+      streambayChannels: [{ id: 'retired-channel' }],
+      streambayVideos: [{ id: 'retired-video' }],
+      streambayComments: [],
+      streambaySubscriptions: [],
+      streambayLikes: [],
+      streambayHistory: [],
+      streambayPlaylists: [],
+      streambayPlaylistItems: [],
+      streambayWatchLater: [],
+      mediaAssets: [{ id: 'retired-video-asset', attachedTo: 'streambay:retired-video' }]
     };
     let saveCalls = 0;
     let savedState;
@@ -64,10 +71,12 @@ test('legacy mailbox collections are removed from persisted state on startup', (
       throw new Error('Unexpected Supabase action: ' + request.action);
     };
     const { db } = await import(__STORE_URL__);
-    for (const key of ['mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts']) {
+    for (const key of ['mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts', 'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions', 'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems', 'streambayWatchLater']) {
       assert.equal(Object.hasOwn(db, key), false);
       assert.equal(Object.hasOwn(savedState, key), false);
     }
+    assert.deepEqual(db.mediaAssets, []);
+    assert.deepEqual(savedState.mediaAssets, []);
     assert.equal(saveCalls, 1);
   `;
   assert.doesNotThrow(() => runIsolated(script));
