@@ -40,6 +40,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
       PERSISTENCE_DRIVER: 'json',
       DATA_DIR: testDataDir,
       SESSION_SECRET: 'test-secret-with-enough-entropy-for-isolated-tests',
+      APP_ORIGIN: 'https://minglora-social-network.onrender.com',
       TENOR_API_KEY: ''
     },
     stdio: 'ignore'
