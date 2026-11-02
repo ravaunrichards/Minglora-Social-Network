@@ -20,7 +20,6 @@ import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote
 import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
-import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -726,14 +725,6 @@ async function route(req, res) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
-      if (p.startsWith('/api/streambay/')) {
-        const streamBayResponse = await handleStreamBayApi({
-          method, path:p, url, input, user, db, saveStore, uid, now,
-          requireAuth, safeUser, resolveAssetUrl, blockedBetween,
-          deleteMediaAsset: asset => mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path})
-        });
-        if (streamBayResponse) return json(res, streamBayResponse.status, streamBayResponse.body);
-      }
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
@@ -3120,21 +3111,13 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/search'){
         const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
         const q=rawQuery.replace(/^@/,'').trim();
-        const empty={users:[],posts:[],groups:[],pages:[],channels:[],videos:[],listings:[],jobs:[]};
+        const empty={users:[],posts:[],groups:[],pages:[],listings:[],jobs:[]};
         if(!q)return json(res,200,empty);
         const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
         const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
         const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
         const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
-        let channels=[],videos=[],listings=[],jobs=[];
-        const streamBayContext={method:'GET',input:{},user,db,saveStore,uid,now,requireAuth,safeUser,resolveAssetUrl,blockedBetween,deleteMediaAsset:async()=>{}};
-        try{
-          const videoUrl=new URL('https://minglora.internal/api/streambay/videos');videoUrl.searchParams.set('q',q);
-          const channelUrl=new URL('https://minglora.internal/api/streambay/channels');channelUrl.searchParams.set('q',q);channelUrl.searchParams.set('limit','8');
-          const [videoResult,channelResult]=await Promise.all([handleStreamBayApi({...streamBayContext,path:'/api/streambay/videos',url:videoUrl}),handleStreamBayApi({...streamBayContext,path:'/api/streambay/channels',url:channelUrl})]);
-          videos=(videoResult?.body?.videos||[]).slice(0,8);
-          channels=(channelResult?.body?.channels||[]).slice(0,8);
-        }catch(error){console.warn('[Minglora search] StreamBay discovery unavailable:',String(error?.message||error).slice(0,160));}
+        let listings=[],jobs=[];
         try{
           let sourceListings=[];
           if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'browse',q,kind:'',category:'',location:'',sort:'recent',limit:8});sourceListings=(result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId));}
@@ -3147,7 +3130,7 @@ async function route(req, res) {
           else sourceJobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(String(item.title||'')+' '+String(item.companyName||'')+' '+String(item.description||'')).toLowerCase().includes(q));
           jobs=sourceJobs.filter(item=>!blockedBetween(user.id,item.employerId)).slice(0,8);
         }catch(error){console.warn('[Minglora search] Job discovery unavailable:',String(error?.message||error).slice(0,160));}
-        return json(res,200,{users,posts,groups,pages,channels,videos,listings,jobs});
+        return json(res,200,{users,posts,groups,pages,listings,jobs});
       }
       return json(res,404,{error:'API route not found.'});
     } catch(e) {
@@ -3172,6 +3155,14 @@ async function route(req, res) {
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
 server.listen(PORT,'0.0.0.0',async()=>{
+  try {
+    if (isSupabasePersistence()) {
+      const retiredStreamBayCleanup = await requestSupabaseState('streambay_cleanup');
+      console.info('[Minglora retired StreamBay cleanup]', JSON.stringify(retiredStreamBayCleanup));
+    }
+  } catch (error) {
+    console.error('[Minglora retired StreamBay cleanup] Pending retry.', { message: error?.message || String(error) });
+  }
   callSessionCleanupReady = cleanupPersistedCalls();
   const callCleanup = await callSessionCleanupReady;
   console.info('[Minglora calls cleanup]', JSON.stringify(callCleanup));
