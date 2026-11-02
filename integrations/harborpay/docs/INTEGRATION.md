@@ -1,10 +1,8 @@
 # HarborPay inside Minglora — integration and release boundaries
 
-## Independence model
+## Shared infrastructure boundary
 
-HarborPay is a first-class Minglora feature, but it is a separate financial system. Its React application, Express API, Supabase Auth project, Postgres database, provider credentials, financial records, operational tools, webhook handlers, release lifecycle, and regulatory gates are independently managed.
-
-Minglora supplies its signed-in social-network session and presents the feature in its own navigation. HarborPay does not use the Minglora database, MailHarbor tables, Minglora Coins ledger, creator payout records, or Marketplace checkout records.
+HarborPay is a financial-service feature inside Minglora, not a second Supabase project. Its React client and Express API live in `integrations/harborpay/source/`, but use the existing Minglora Supabase project, shared `auth.users`, shared `public.profiles`, and the same Postgres database. HarborPay's payments, payouts, webhook events, merchant accounts, customers, orders, payment links, and account applications are separate domain tables inside that one database. RLS remains enabled, and the API performs server-side authorization for every privileged operation. Never create another Supabase project for HarborPay.
 
 ## User activation and data sharing
 
@@ -14,8 +12,8 @@ Minglora supplies its signed-in social-network session and presents the feature 
 4. Minglora's server signs the exact JSON request body with HMAC-SHA256, a timestamp and a unique request ID. No secret is sent to the browser.
 5. HarborPay checks the signature and timestamp, rejects requests older than 90 seconds, and stores only a hash of a randomly generated 256-bit single-use handoff code.
 6. The one-time URL expires after ten minutes. HarborPay exchanges the code once and uses the name/email only to prefill registration; it does not automatically create a financial account.
-7. The member registers/signs in to HarborPay using HarborPay Auth and confirms the HarborPay email.
-8. HarborPay links the identities only if the verified HarborPay email matches the email in the consented handoff. Both external IDs are stored in HarborPay's database, with uniqueness constraints. A mismatch, expired code, duplicate link or replay fails closed.
+7. The member signs in using the existing Minglora account credentials. HarborPay does not create a second Auth identity.
+8. HarborPay confirms the signed-in shared Auth user matches the consented Minglora user and email, then records the one-time identity-link audit row in the shared database. A mismatch, expired code, duplicate link or replay fails closed.
 
 The bridge never passes passwords, Minglora access/refresh tokens, social profile fields beyond the listed values, phone number, address, date of birth, identity documents, business ownership evidence, card details or bank credentials. No Minglora profile field is accepted as KYC or KYB evidence.
 
@@ -39,12 +37,12 @@ The bridge never passes passwords, Minglora access/refresh tokens, social profil
 
 - MINGLORA_SSO_SECRET: exactly the same value as Minglora's HARBORPAY_SSO_SECRET.
 - HARBORPAY_WEB_URL: exact HarborPay web origin used when creating the single-use launch URL.
-- Its own SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, from HarborPay's dedicated Supabase project only.
+- The same SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY used by the Minglora backend, from the existing Minglora Supabase project.
 
 ### HarborPay web
 
 - VITE_API_URL: HarborPay API origin; this is a build-time Vite variable.
-- VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY: public values from HarborPay's own Supabase project only.
+- VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY: the same public Minglora Supabase URL and publishable/anon key used by the Minglora client.
 
 Do not reuse Minglora's project URL/key, MailHarbor database credentials, SESSION_SECRET, PayPal secrets, or marketplace partner credentials.
 
@@ -58,13 +56,13 @@ Personal, business, merchant and enterprise account categories are product scope
 
 Planned capabilities include person-to-person transfers, payment requests, receive money, bank/card funding, wallet accounts, withdrawals, merchant checkout and payment links, invoices, subscriptions, refunds, disputes, FX, supported international corridors, enterprise payment operations, tax/report exports, developer APIs and reconciliation. These must be delivered via real authorized providers and partner arrangements; listing them in scope does not mean they are currently active.
 
-The implemented HarborPay client and API provide independent Supabase Auth sign-up/sign-in/password recovery, customer PayPal Orders checkout/capture, payment history, signed PayPal webhooks, a restricted admin payout endpoint, personal profile management, clickable Business/Merchant/Enterprise application flows saved to `account_applications`, distinct owner-controlled organization workspaces, merchant customer records, order records, payment-link records, refund/dispute record structures and the consent-based Minglora handoff/link flow. The Minglora page now checks the remote HarborPay health endpoint before enabling activation and reports whether the API is unreachable, the SSO bridge is unset or the database is missing. Merchant payment-link records can be created and disabled, but they are not public payable checkout URLs yet because merchant-specific PayPal onboarding/settlement has not been implemented. There is no customer-held stored-value ledger or P2P wallet transfer service.
+The implemented HarborPay client and API use the shared Minglora Supabase Auth sign-in/password recovery, customer PayPal Orders checkout/capture, payment history, signed PayPal webhooks, a restricted admin payout endpoint, personal profile management, clickable Business/Merchant/Enterprise application flows saved to `account_applications`, distinct owner-controlled organization workspaces, merchant customer records, order records, payment-link records, refund/dispute record structures and the consent-based Minglora handoff/link flow. The Minglora page now checks the remote HarborPay health endpoint before enabling activation and reports whether the API is unreachable, the SSO bridge is unset or the database is missing. Merchant payment-link records can be created and disabled, but they are not public payable checkout URLs yet because merchant-specific PayPal onboarding/settlement has not been implemented. There is no customer-held stored-value ledger or P2P wallet transfer service.
 
 ## Verification required before release
 
 - Test HMAC tampering, old timestamps, invalid secret, duplicate request IDs, expired links, replayed exchanges, cross-user email mismatch and duplicate identity linking.
 - Verify all new HarborPay tables have RLS enabled and no direct client write grant; RPCs are service-role-only.
-- Confirm HarborPay migrations are applied only to the dedicated HarborPay project.
+- Confirm the HarborPay domain tables and RPCs exist in the existing Minglora Supabase project; do not provision a second project.
 - Run the HarborPay API tests, Web build, Minglora test suite, security/advisor checks and real browser iframe/new-tab tests.
 - Test account signup, email confirmation, first-time account link and an existing HarborPay account link.
 - Verify no data-sharing request can be triggered without the Minglora consent checkbox and server-side user session.
