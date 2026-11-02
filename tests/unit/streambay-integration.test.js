@@ -10,5 +10,7 @@ test('StreamBay is retired from Minglora navigation, APIs, and persisted state',
   ]);
   assert.doesNotMatch(html, /streambay/i);
   assert.doesNotMatch(server, /handleStreamBayApi|\/api\/streambay/i);
-  assert.doesNotMatch(store, /streambayChannels|streambayVideos/);
+  const collections = store.slice(store.indexOf('const COLLECTIONS'), store.indexOf('const requestedDriver'));
+  assert.doesNotMatch(collections, /streambayChannels|streambayVideos/);
+  assert.match(store, /Permanently retire StreamBay-only collections/);
 });
