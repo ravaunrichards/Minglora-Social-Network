@@ -1,80 +1,18 @@
-# HarborPay
+# HarborPay source snapshot — shared Minglora database
 
-HarborPay is a payment application built around real provider transactions. The repository no longer contains sample customer accounts, sample balances, or seeded transaction activity.
+This folder contains the HarborPay React client and Express API source. It is deployed as a feature module of Minglora and **must use the existing Minglora Supabase project**.
 
-## What the application implements
+## Shared Supabase configuration
 
-- Supabase Auth for customer registration, login, and authenticated API requests.
-- Supabase Postgres records for payment orders, provider capture references, payout records, and verified webhook events.
-- PayPal Orders v2 checkout created and captured by the server, never by browser-side secret calls.
-- PayPal webhook signature verification and idempotent event storage.
-- A restricted server-side PayPal Payouts endpoint for authorized administrators.
-- A customer transaction history that reads only records belonging to the signed-in user.
-- HarborPay personal profile management, including phone, country, locale, time zone and Auth verification status.
-- A merchant workspace for creating business profiles, maintaining business details, and managing customers, order records and payment-link records with role checks on every API call.
-- Supabase Auth email-confirmation, sign-in, password-recovery and password-update flows in the HarborPay web client.
-- PostgreSQL migration/RLS/webhook tests, API tests, and a production build check.
+- API: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` must match the existing Minglora backend project.
+- Web: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must match the Minglora client public configuration.
+- Auth: use the same Minglora `auth.users` identities. When launched from Minglora, sign in with the existing Minglora email and password; do not create a second account.
+- Profiles: HarborPay maps its personal profile view to Minglora's `public.profiles` table. Do not create a second profiles table.
 
-## Merchant API
+The canonical HarborPay database objects are provisioned by the Minglora database migrations and live alongside Minglora's social, creator and marketplace tables. The historical migrations in this source snapshot describe the original standalone HarborPay development database only; **do not apply them to the shared Minglora project**.
 
-- `GET/POST /api/merchants` — list merchant memberships and create a draft merchant account.
-- `GET/POST /api/merchants/:merchantId/customers` — manage merchant customer records.
-- `GET/POST /api/merchants/:merchantId/orders` — manage merchant order records. Creating an order does not mean it has been paid.
-- `GET/POST /api/merchants/:merchantId/payment-links` — create and list payment-link records. Public checkout is not yet activated.
-- `GET/POST /api/profile` — read/update the signed-in HarborPay profile.
-- `POST /api/merchants/:merchantId/profile` — owner/admin business-profile updates.
-- `POST /api/merchants/:merchantId/payment-links/:linkId/status` — owner/admin activation or disabling of a payment-link record.
-- `GET/POST /api/account-applications` — create and list the signed-in user's Business, Merchant and Enterprise account applications.
-- `GET /api/admin/account-applications`, `POST /api/admin/account-applications/:applicationId/review` — administrator review routes guarded by `HARBORPAY_ADMIN_USER_IDS`.
+## Operational boundaries
 
-Every merchant resource request checks the caller's merchant membership and role in the API. The API service role bypasses database RLS, so server-side authorization is mandatory. Payment links are records only until a merchant-specific public checkout flow is implemented and tested.
+PayPal provider secrets and the Supabase service-role key remain server-only. The web client receives only the shared public Supabase URL and publishable/anon key. RLS is enabled on HarborPay domain tables; server routes must continue checking the authenticated user and merchant role before privileged operations.
 
-## Important product boundary
-
-This release is a PayPal checkout and controlled-disbursement integration. It does **not** claim to be a licensed stored-value wallet, does not hold customer funds in an internal HarborPay balance, and does not display a pretend available balance. Checkout payments settle to the merchant's PayPal account. Payouts are disbursements from that merchant account and are disabled until the PayPal account has Payouts access and an administrator explicitly enables the feature.
-
-A customer-held wallet, peer-to-peer stored balances, escrow, or redeemable e-money must not be switched on merely by adding a database column. Get the required Jamaican regulatory advice, authorization, and regulated banking/payment partner arrangements before offering those services. See the Bank of Jamaica references in docs/OPERATIONS.md.
-
-## Repository layout
-
-- web/ — React customer application.
-- server/ — Express API, Supabase authentication, PayPal Orders, Payouts, and webhooks.
-- database/migrations/ — versioned Supabase core, merchant-operations, Minglora identity-bridge, and Auth/profile-index migrations.
-- database/schema.sql — complete schema reference matching all three migrations.
-- database/tests/ — PostgreSQL schema, RLS, merchant ownership and webhook concurrency checks.
-- docs/DATABASE.md — table map and database security boundaries.
-- docs/ — architecture and deployment runbook.
-- .github/workflows/ — CI checks.
-
-## Local setup
-
-Requirements: Node.js 20 or newer and npm.
-
-1. Create a separate Supabase project for HarborPay. Do not reuse a database belonging to another application.
-2. Apply the four migrations in order: 20261029000100_harborpay_core.sql, 20261030000200_harborpay_merchant_operations.sql, 20261101000300_harborpay_minglora_identity_bridge.sql, and 20261101000400_harborpay_auth_profile_sync_and_index_cleanup.sql. The dedicated Minglora HarborPay database has all four applied.
-3. Create a PayPal REST application in the PayPal Developer Dashboard. Start with Sandbox credentials.
-4. Copy server/.env.example to server/.env and fill in the server-only secrets.
-5. Copy web/.env.example to web/.env.local and set the public Supabase URL/key and API URL.
-6. Install dependencies with npm install followed by npm run install:all.
-7. Start the API and web client with npm run dev.
-8. Run npm test before deployment.
-
-The frontend uses the Supabase publishable/anon key. The API uses the Supabase service-role key. Never put a service-role key, PayPal client secret, or webhook secret in the web environment or source control.
-
-## PayPal checkout flow
-
-1. The signed-in customer submits an amount and description.
-2. The API validates the amount and creates a HarborPay payment record.
-3. The API creates a PayPal Orders v2 order and returns the provider approval URL.
-4. The customer approves the transaction on PayPal.
-5. PayPal returns the customer to HarborPay and the API captures the order.
-6. The application marks the payment completed only when PayPal returns a completed capture with the expected amount and currency.
-7. A verified webhook independently reconciles later provider events.
-
-A browser redirect alone is never treated as proof of payment.
-
-## Configuration and release
-
-See docs/OPERATIONS.md for the exact Supabase, PayPal, webhook, Render, and release configuration.
-
-The repository contains integration code, not your private merchant credentials. Real-money activity cannot be activated until your own Supabase project, PayPal app, webhook, merchant review, and live credentials are configured and verified. Sandbox mode is the default. Do not set PayPal to live mode until your merchant account is approved and end-to-end tests pass.
+The feature does not claim to be a licensed stored-value wallet, does not create fake balances, and does not enable P2P transfers or international remittance. PayPal checkout/capture and webhook reconciliation require configured provider credentials and verified webhook setup. Payouts remain disabled until explicitly approved and enabled.
