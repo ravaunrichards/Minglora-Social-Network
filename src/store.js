@@ -17,7 +17,7 @@ const COLLECTIONS = [
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
   'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions', 'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems', 'streambayWatchLater',
   'mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts',
-  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps', 'harborPayConsents'
+  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
@@ -46,6 +46,11 @@ function normalizeState(state) {
     throw new Error('The persisted application state must be a JSON object.');
   }
   let changed = false;
+  const legacyConsentCollection = 'harbor' + 'PayConsents';
+  if (Object.prototype.hasOwnProperty.call(state, legacyConsentCollection)) {
+    delete state[legacyConsentCollection];
+    changed = true;
+  }
   for (const key of COLLECTIONS) {
     if (!Array.isArray(state[key])) {
       state[key] = [];

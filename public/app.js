@@ -4170,77 +4170,7 @@ function renderMailHarbor(){
   });
 }
 
-async function renderHarborPay(){
-  activateSilent('harborpay');
-  const status=await api('/harborpay/status').catch(error=>({
-    configured:false,
-    apiReachable:false,
-    message:error.message||'The HarborPay connection could not be checked.'
-  }));
-  const accountTypes=[
-    {id:'personal',label:'Personal',description:'Individual profile, payment activity and personal account settings.'},
-    {id:'business',label:'Business',description:'Create a business account, submit organization details and track review.'},
-    {id:'merchant',label:'Merchant',description:'Create a merchant workspace for customers, orders and payment records.'},
-    {id:'enterprise',label:'Enterprise',description:'Submit an enterprise onboarding application for larger organizations.'}
-  ];
-  let selectedAccountType='personal';
-  const accountChoices=accountTypes.map(item=>{
-    const selected=item.id==='personal';
-    const glyph=item.id==='personal'?'♙':item.id==='business'?'▣':item.id==='merchant'?'▤':'▥';
-    return '<button type="button" class="harborpay-account-choice '+(selected?'selected':'')+'" data-hp-account-type="'+item.id+'" aria-pressed="'+(selected?'true':'false')+'"><span class="harborpay-choice-icon">'+glyph+'</span><strong>'+item.label+'</strong><small>'+item.description+'</small><span class="harborpay-choice-action">Choose '+item.label+' <span aria-hidden="true">→</span></span></button>';
-  }).join('');
-  setContent(
-    "<section class=\"harborpay-route\">" +
-      "<header class=\"harborpay-route-heading\"><div><span class=\"eyebrow\">INDEPENDENT FINANCIAL SERVICE</span><h1>HarborPay</h1><p>Choose an account type and open its actual account page. Your financial account is separate from Minglora.</p></div>" +
-      "<span class=\"harborpay-status "+(status.configured?'ready':'setup')+"\">"+(status.configured?'Activation service ready':'Activation service unavailable')+"</span></header>" +
-      "<section class=\"card harborpay-hero\"><div class=\"harborpay-hero-copy\"><span class=\"harborpay-eyebrow\">OPEN YOUR ACCOUNT</span><h2>Which HarborPay account do you need?</h2><p>Choose one below. HarborPay will open the matching account journey after you approve the limited Minglora data handoff.</p></div>" +
-      "<div class=\"harborpay-capability-grid harborpay-account-choice-grid\">"+accountChoices+"</div>" +
-      "<div class=\"harborpay-data-notice\"><strong>Approve account prefill</strong><p>Minglora will send only your Minglora account reference, display name and email address to prefill your HarborPay registration. It will not send your Minglora password or treat your social profile as financial identity verification.</p>" +
-      "<label class=\"harborpay-consent\"><input type=\"checkbox\" id=\"harborpay-consent\"><span>I approve this limited data sharing and account-link request. I understand HarborPay has its own sign-in, email verification and business/identity review.</span></label>" +
-      "<button class=\"primary\" type=\"button\" id=\"harborpay-open\" "+(status.configured?'':'disabled')+">Continue to Personal account</button>" +
-      "<p class=\"harborpay-inline-status\" id=\"harborpay-launch-message\" role=\"status\">"+(status.configured?'Select an account type and approve the notice to continue.':esc(status.message||'HarborPay is not ready to accept account activation requests.'))+"</p></div></section>" +
-      "<section class=\"harborpay-boundary-note\"><strong>Service availability</strong><p>Personal PayPal checkout, profile and payment history are available when the provider is configured. Business, Merchant and Enterprise applications are saved and tracked. Merchant customer/order tools are available in the merchant workspace, but public merchant checkout, customer-held balances, person-to-person stored-value transfers and international remittance are not active and are not represented as working services.</p></section>" +
-      "<div id=\"harborpay-embedded-app\"></div></section>"
-  );
-  document.querySelectorAll('[data-hp-account-type]').forEach(button=>button.addEventListener('click',()=>{
-    selectedAccountType=button.dataset.hpAccountType;
-    document.querySelectorAll('[data-hp-account-type]').forEach(item=>{
-      const active=item.dataset.hpAccountType===selectedAccountType;
-      item.classList.toggle('selected',active);
-      item.setAttribute('aria-pressed',active?'true':'false');
-    });
-    const title=accountTypes.find(item=>item.id===selectedAccountType)?.label||'Personal';
-    $('#harborpay-open').textContent='Continue to '+title+' account';
-    $('#harborpay-launch-message').textContent=status.configured
-      ? 'You selected '+title+'. Approve the data-sharing notice to open this account journey.'
-      : (status.message||'HarborPay account activation is not ready.');
-  }));
-  $('#harborpay-open')?.addEventListener('click',async()=>{
-    const consent=$('#harborpay-consent');
-    const message=$('#harborpay-launch-message');
-    const button=$('#harborpay-open');
-    const frameHost=$('#harborpay-embedded-app');
-    if(!consent?.checked){message.textContent='Approve the data-sharing notice before continuing.';return;}
-    if(!status.configured){message.textContent=status.message||'HarborPay activation is not ready. No information has been shared.';return;}
-    button.disabled=true;message.textContent='Checking HarborPay and preparing a one-time secure account link…';
-    try{
-      const result=await api('/harborpay/launch',{method:'POST',body:JSON.stringify({consent:true,consentVersion:'2026-11-01'})});
-      const launchUrl=new URL(result.launchUrl);
-      if(launchUrl.protocol!=='https:'&&location.protocol==='https:')throw new Error('HarborPay returned a non-secure web address.');
-      launchUrl.searchParams.set('account_type',selectedAccountType);
-      const allowedOrigin=new URL(result.launchUrl).origin;
-      if(launchUrl.origin!==allowedOrigin)throw new Error('HarborPay returned an unexpected account address.');
-      frameHost.innerHTML='<section class="harborpay-embed-panel"><div class="harborpay-embed-heading"><div><strong>HarborPay secure account portal</strong><p>Your selected account journey is opening.</p></div><a class="secondary" href="'+esc(launchUrl.toString())+'" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a></div><iframe class="harborpay-embedded-frame" title="HarborPay account portal" src="'+esc(launchUrl.toString())+'" loading="eager" referrerpolicy="strict-origin"></iframe></section>';
-      message.textContent='The secure account link was created. HarborPay will open the '+selectedAccountType+' account page.';
-      frameHost.scrollIntoView({behavior:'smooth',block:'start'});
-    }catch(error){
-      message.textContent=error.message||'HarborPay could not create the secure account link. No payment was started.';
-      button.disabled=false;
-    }
-  });
-}
-
-async function renderView(){try{if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='live')await renderLive();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='mailharbor')renderMailHarbor();else if(state.view==='harborpay')await renderHarborPay();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='marketplace')await renderMarketplace();else if(state.view==='jobs')await renderJobs();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='live')await renderLive();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='mailharbor')renderMailHarbor();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='marketplace')await renderMarketplace();else if(state.view==='jobs')await renderJobs();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));

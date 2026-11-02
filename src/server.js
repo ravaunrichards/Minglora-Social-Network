@@ -23,7 +23,6 @@ import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdateP
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
 import { handleMailHarborApi, handleMailHarborWebhook, processMailHarborOutbox } from '../backend/modules/mailharbor/service.js';
 import { getMailHarborProviderStatus } from '../backend/modules/mailharbor/provider.js';
-import { createHarborPayLaunch, getHarborPayBridgeStatus, HARBORPAY_MINGLORA_CONSENT_VERSION } from './harborpay-bridge.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -853,30 +852,6 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
-      if (method === 'POST' && p === '/api/harborpay/launch') {
-        if (input?.consent !== true || input?.consentVersion !== HARBORPAY_MINGLORA_CONSENT_VERSION) {
-          return json(res,400,{error:'Review and accept the HarborPay data-sharing notice before continuing.'},{'Cache-Control':'no-store'});
-        }
-        const launch = await createHarborPayLaunch({user});
-        db.harborPayConsents ||= [];
-        db.harborPayConsents = db.harborPayConsents.filter(item => item.userId !== user.id);
-        db.harborPayConsents.unshift({
-          userId:user.id,
-          consentVersion:HARBORPAY_MINGLORA_CONSENT_VERSION,
-          sharedFields:['minglora_user_id','email','full_name'],
-          grantedAt:now(),
-          status:'active'
-        });
-        await saveStore();
-        return json(res,200,{launchUrl:launch.launchUrl,expiresAt:launch.expiresAt},{'Cache-Control':'no-store'});
-      }
-      if (method === 'GET' && p === '/api/harborpay/status') {
-        const status = await getHarborPayBridgeStatus();
-        return json(res,200,{
-          ...status,
-          consentVersion:HARBORPAY_MINGLORA_CONSENT_VERSION
-        },{'Cache-Control':'no-store'});
-      }
       if (p.startsWith('/api/mailharbor/')) {
         const result = await handleMailHarborApi({
           method,
