@@ -15,7 +15,6 @@ const COLLECTIONS = [
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
-  'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions', 'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems', 'streambayWatchLater',
     'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
