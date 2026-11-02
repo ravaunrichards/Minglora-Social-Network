@@ -16,7 +16,7 @@ const collections = [
   'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions',
   'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems',
   'streambayWatchLater', 'mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts',
-  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps', 'harborPayConsents'
+  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
 
