@@ -323,7 +323,7 @@ function verifyMingloraLaunch(request, endpoint = "/api/integrations/minglora/la
 app.post("/api/integrations/minglora/healthcheck", asyncRoute(async (request, response) => {
   verifyMingloraLaunch(request, "/api/integrations/minglora/healthcheck");
   const { error } = await getDatabase().from("profiles").select("id").limit(1);
-  if (error) throw httpError(503, "HarborPay cannot read its dedicated Supabase database.");
+  if (error) throw httpError(503, "HarborPay cannot read the shared Minglora Supabase database.");
   response.set("Cache-Control", "no-store").json({
     ready: true,
     service: "harborpay-api",
@@ -419,14 +419,30 @@ app.get("/api/payments", requireAuth, asyncRoute(async (request, response) => {
 }));
 
 
+function publicHarborPayProfile(row, user) {
+  return {
+    id: row.id,
+    email: user.email || "",
+    full_name: row.display_name || user.user_metadata?.full_name || "",
+    country_code: row.country || "JM",
+    phone_e164: row.contact_phone || "",
+    locale: row.locale || "en",
+    timezone: row.timezone || "America/Jamaica",
+    email_verified_at: user.email_confirmed_at || null,
+    account_status: "active",
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
 app.get("/api/profile", requireAuth, asyncRoute(async (request, response) => {
   const { data, error } = await getDatabase().from("profiles")
-    .select("id, email, full_name, country_code, phone_e164, locale, timezone, email_verified_at, account_status, created_at, updated_at")
+    .select("id, display_name, country, contact_phone, locale, timezone, created_at, updated_at")
     .eq("id", request.user.id)
     .maybeSingle();
-  if (error) throw httpError(503, "Your HarborPay profile could not be loaded.");
-  if (!data) throw httpError(404, "Your HarborPay profile is not ready yet. Contact support.");
-  response.set("Cache-Control", "no-store").json({ profile: data });
+  if (error) throw httpError(503, "Your Minglora profile could not be loaded.");
+  if (!data) throw httpError(404, "Your Minglora profile is not ready yet. Contact support.");
+  response.set("Cache-Control", "no-store").json({ profile: publicHarborPayProfile(data, request.user) });
 }));
 
 app.post("/api/profile", requireAuth, asyncRoute(async (request, response) => {
@@ -435,17 +451,17 @@ app.post("/api/profile", requireAuth, asyncRoute(async (request, response) => {
   if (body.fullName !== undefined) {
     const fullName = String(body.fullName || "").trim();
     if (fullName.length < 2 || fullName.length > 120) throw httpError(400, "Full name must contain 2–120 characters.");
-    updates.full_name = fullName;
+    updates.display_name = fullName;
   }
   if (body.phoneE164 !== undefined) {
     const phone = String(body.phoneE164 || "").trim();
-    if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) throw httpError(400, "Phone number must use international E.164 format.");
-    updates.phone_e164 = phone || null;
+    if (phone && !/^\\+[1-9]\\d{7,14}$/.test(phone)) throw httpError(400, "Phone number must use international E.164 format.");
+    updates.contact_phone = phone;
   }
   if (body.countryCode !== undefined) {
     const country = String(body.countryCode || "").trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(country)) throw httpError(400, "Country code must be a two-letter ISO code.");
-    updates.country_code = country;
+    updates.country = country;
   }
   if (body.locale !== undefined) {
     const locale = String(body.locale || "").trim();
@@ -460,14 +476,13 @@ app.post("/api/profile", requireAuth, asyncRoute(async (request, response) => {
     updates.timezone = timezone;
   }
   if (!Object.keys(updates).length) throw httpError(400, "There are no profile changes to save.");
-  const database = getDatabase();
-  const { data, error } = await database.from("profiles")
+  const { data, error } = await getDatabase().from("profiles")
     .update(updates)
     .eq("id", request.user.id)
-    .select("id, email, full_name, country_code, phone_e164, locale, timezone, email_verified_at, account_status, created_at, updated_at")
+    .select("id, display_name, country, contact_phone, locale, timezone, created_at, updated_at")
     .single();
   if (error || !data) throw httpError(503, "Your profile changes could not be saved.");
-  response.set("Cache-Control", "no-store").json({ profile: data });
+  response.set("Cache-Control", "no-store").json({ profile: publicHarborPayProfile(data, request.user) });
 }));
 
 app.post("/api/payments/orders", requireAuth, asyncRoute(async (request, response) => {
