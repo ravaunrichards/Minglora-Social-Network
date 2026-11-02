@@ -51,6 +51,24 @@ function normalizeState(state) {
       changed = true;
     }
   }
+  // Permanently retire StreamBay-only collections and their tagged media references.
+  for (const key of [
+    'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions',
+    'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems',
+    'streambayWatchLater'
+  ]) {
+    if (Object.prototype.hasOwnProperty.call(state, key)) {
+      delete state[key];
+      changed = true;
+    }
+  }
+  if (Array.isArray(state.mediaAssets)) {
+    const retainedAssets = state.mediaAssets.filter(asset => !String(asset?.attachedTo || '').startsWith('streambay:'));
+    if (retainedAssets.length !== state.mediaAssets.length) {
+      state.mediaAssets = retainedAssets;
+      changed = true;
+    }
+  }
   const legacyConsentCollection = 'harbor' + 'PayConsents';
   if (Object.prototype.hasOwnProperty.call(state, legacyConsentCollection)) {
     delete state[legacyConsentCollection];
