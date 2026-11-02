@@ -3187,20 +3187,6 @@ body.auth-mode .auth-screen{
 .search-video-result{align-items:flex-start}
 @media(max-width:560px){.search-result-row{gap:9px;padding:9px}.search-result-symbol{flex-basis:36px;width:36px;height:36px}.search-result-grid{grid-template-columns:1fr}.search-video-thumb{width:84px;flex-basis:84px}}
  
-/* MailHarbor runs as an authenticated, in-app Minglora workspace. */
-.mailharbor-route{width:100%;min-width:0}
-.mailharbor-route-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:4px 0 14px}
-.mailharbor-route-heading h1{margin:4px 0;font-size:clamp(25px,3vw,34px);letter-spacing:-.7px}
-.mailharbor-route-heading p{margin:4px 0 0;color:var(--muted);font-size:13px}
-.mailharbor-refresh{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto}
-.mailharbor-route-icon{width:25px;height:25px;filter:drop-shadow(0 2px 3px rgba(18,57,111,.22))}
-.mailharbor-embedded-frame{display:block;width:100%;height:calc(100dvh - 152px);min-height:760px;border:1px solid var(--line);border-radius:18px;background:var(--bg);box-shadow:0 10px 35px rgba(16,39,72,.09);overflow:hidden}
-@media(max-width:760px){
-  .mailharbor-route-heading{align-items:flex-start;flex-direction:column}
-  .mailharbor-embedded-frame{height:calc(100dvh - 164px);min-height:740px;border-radius:13px}
-}
-
-
 .profile-status-badge{display:inline-flex;align-items:center;gap:5px;max-width:100%;margin:7px 0 0!important;padding:6px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);font-size:12px;overflow-wrap:anywhere}
 .profile-checkin-list,.profile-event-list{display:grid;gap:10px}.profile-checkin-card,.profile-event-card,.profile-archive-item{display:flex;gap:12px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff)}.profile-checkin-card{display:block}
 .profile-checkin-card p,.profile-event-main p,.profile-archive-copy p{margin:5px 0;overflow-wrap:anywhere}.profile-checkin-card small,.profile-event-main small,.profile-archive-copy small,.profile-highlight-item small{display:block;color:var(--muted);font-size:11px}

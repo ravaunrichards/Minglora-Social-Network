@@ -15,7 +15,7 @@ const collections = [
   'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
   'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions',
   'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems',
-  'streambayWatchLater', 'mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts',
+  'streambayWatchLater',
   'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
@@ -34,6 +34,44 @@ function runIsolated(script) {
     timeout: 10000
   });
 }
+
+test('legacy mailbox collections are removed from persisted state on startup', () => {
+  const script = `
+    import assert from 'node:assert/strict';
+    const legacyState = {
+      ...${JSON.stringify(baseState)},
+      mailboxes: [{ id: 'retired-mailbox' }],
+      mailMessages: [],
+      mailOAuthStates: [],
+      mailExternalAccounts: []
+    };
+    let saveCalls = 0;
+    let savedState;
+    globalThis.fetch = async (_url, options) => {
+      const request = JSON.parse(options.body);
+      if (request.action === 'load') {
+        return new Response(JSON.stringify({ state: legacyState, revision: 6 }), {
+          status: 200, headers: { 'content-type': 'application/json' }
+        });
+      }
+      if (request.action === 'save') {
+        saveCalls += 1;
+        savedState = request.state;
+        return new Response(JSON.stringify({ revision: 7 }), {
+          status: 200, headers: { 'content-type': 'application/json' }
+        });
+      }
+      throw new Error('Unexpected Supabase action: ' + request.action);
+    };
+    const { db } = await import(__STORE_URL__);
+    for (const key of ['mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts']) {
+      assert.equal(Object.hasOwn(db, key), false);
+      assert.equal(Object.hasOwn(savedState, key), false);
+    }
+    assert.equal(saveCalls, 1);
+  `;
+  assert.doesNotThrow(() => runIsolated(script));
+});
 
 test('Supabase save retries a transient HTTP 520 and persists the pending update', () => {
   const script = `

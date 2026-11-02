@@ -27,12 +27,10 @@ jobs:
       - name: Generate dependency audit report
         run: |
           npm audit --json > "$RUNNER_TEMP/root-npm-audit.json" || true
-          npm audit --prefix integrations/mailharbor/source/backend --json > "$RUNNER_TEMP/mailharbor-npm-audit.json" || true
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const reports = [
             ['Minglora', process.env.RUNNER_TEMP + '/root-npm-audit.json'],
-            ['MailHarbor', process.env.RUNNER_TEMP + '/mailharbor-npm-audit.json']
           ];
           let markdown = '# Dependency security audit\n\n';
           for (const [label, file] of reports) {
@@ -68,7 +66,6 @@ jobs:
           let failed = false;
           for (const [label, file] of [
             ['Minglora', process.env.RUNNER_TEMP + '/root-npm-audit.json'],
-            ['MailHarbor', process.env.RUNNER_TEMP + '/mailharbor-npm-audit.json']
           ]) {
             const report = JSON.parse(fs.readFileSync(file, 'utf8'));
             if (report.error || !report.metadata) {
@@ -89,16 +86,7 @@ jobs:
           node --check public/app.js
           node --check public/settings.js
           node --check src/server.js
-          node --check src/mailharbor-proxy.js
-          node --check src/mailharbor-runtime.js
           node --check src/store.js
-          node --check backend/modules/mailharbor/service.js
-          node --check backend/modules/mailharbor/oauth.js
-          node --check backend/modules/mailharbor/provider.js
-          node --check public/mailharbor/app.js
-          node --check public/mailharbor/oauth-complete.js
-          node --check tests/mailharbor.test.js
-          node --check tests/mailharbor-oauth.test.js
           node --check tests/unit/supabase-persistence-retry.test.js
           node --check backend/modules/live/livekit.js
           node --check backend/modules/calls/service.js
@@ -113,24 +101,3 @@ jobs:
           node --check src/domain/relationships.js
       - name: Run automated tests
         run: npm test
-
-
-  mailharbor:
-    name: MailHarbor service tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - name: Install locked MailHarbor backend dependencies
-        run: npm ci --prefix integrations/mailharbor/source/backend --no-audit --no-fund
-      - name: Run MailHarbor API and SSO tests
-        run: npm test --prefix integrations/mailharbor/source/backend
-      - name: Check integrated proxy and web client syntax
-        run: |
-          node --check src/mailharbor-proxy.js
-          node --check public/mailharbor/app.js

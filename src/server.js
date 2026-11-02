@@ -21,8 +21,6 @@ import { validateJobPostingInput, validateJobApplicationInput, transitionJobAppl
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 import { handleStreamBayApi } from '../backend/modules/streambay/service.js';
-import { handleMailHarborApi, handleMailHarborWebhook, processMailHarborOutbox } from '../backend/modules/mailharbor/service.js';
-import { getMailHarborProviderStatus } from '../backend/modules/mailharbor/provider.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -725,13 +723,9 @@ async function route(req, res) {
   }
 
   if (p.startsWith('/api/')) {
-    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,p.startsWith('/api/mailharbor/')?7_000_000:1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
-      if (method === 'POST' && p === '/api/mailharbor/webhooks/resend') {
-        const webhook = await handleMailHarborWebhook({ headers: req.headers, rawBody: req.rawBody, db, saveStore });
-        return json(res, webhook.status, webhook.body, { 'Cache-Control': 'no-store' });
-      }
       if (p.startsWith('/api/streambay/')) {
         const streamBayResponse = await handleStreamBayApi({
           method, path:p, url, input, user, db, saveStore, uid, now,
@@ -852,27 +846,6 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
-      if (p.startsWith('/api/mailharbor/')) {
-        const result = await handleMailHarborApi({
-          method,
-          pathname: p.slice('/api/mailharbor'.length),
-          search: url.search,
-          input,
-          user,
-          db,
-          saveStore
-        });
-        if (result.redirectTo) {
-          res.writeHead(302, {
-            ...SECURITY_HEADERS,
-            'Cache-Control': 'no-store',
-            'Location': result.redirectTo
-          });
-          res.end();
-          return;
-        }
-        return json(res, result.status, result.body, { 'Cache-Control': 'no-store' });
-      }
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
@@ -3194,25 +3167,10 @@ async function route(req, res) {
     }
   }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
-  const routeSecurityHeaders = rel === 'mailharbor/index.html'
-    ? { ...SECURITY_HEADERS, 'X-Frame-Options': 'SAMEORIGIN' }
-    : SECURITY_HEADERS;
   if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
-  fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...routeSecurityHeaders});res.end(data);});
+  fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
-const mailHarborProviderReadiness = getMailHarborProviderStatus();
-console.info('[Minglora MailHarbor readiness]', JSON.stringify({
-  internalSendingEnabled: true,
-  internalReceivingEnabled: true,
-  outboundEmailConfigured: mailHarborProviderReadiness.outboundEmailConfigured,
-  inboundEmailConfigured: mailHarborProviderReadiness.inboundEmailConfigured,
-  resendApiKeyConfigured: mailHarborProviderReadiness.apiKeyConfigured,
-  publicMailDomainConfigured: !mailHarborProviderReadiness.mailDomain.endsWith('.invalid') && !mailHarborProviderReadiness.mailDomain.endsWith('.test'),
-  mailDomainVerified: mailHarborProviderReadiness.domainVerified,
-  inboundWebhookConfigured: Boolean(process.env.MAILHARBOR_RESEND_WEBHOOK_SECRET || process.env.RESEND_WEBHOOK_SECRET),
-  inboundReceivingEnabled: String(process.env.MAILHARBOR_INBOUND_ENABLED || '').toLowerCase() === 'true'
-}));
 server.listen(PORT,'0.0.0.0',async()=>{
   callSessionCleanupReady = cleanupPersistedCalls();
   const callCleanup = await callSessionCleanupReady;
@@ -3221,12 +3179,6 @@ server.listen(PORT,'0.0.0.0',async()=>{
   const liveCleanup = await liveSessionCleanupReady;
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   console.log(`Minglora listening on port ${PORT}`);
-  const mailHarborWorker = setInterval(() => {
-    processMailHarborOutbox({ db, saveStore }).catch(error => {
-      console.error('[Minglora MailHarbor worker] External delivery worker error:', String(error?.message || error).slice(0, 240));
-    });
-  }, 3000);
-  mailHarborWorker.unref?.();
   const persistence = await persistenceHealth();
   console.info('[Minglora readiness]', JSON.stringify({
     authProvider: AUTH_PROVIDER,

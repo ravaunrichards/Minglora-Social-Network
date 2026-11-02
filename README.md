@@ -142,12 +142,3 @@ Copy `.env.example` to a private environment file and replace each `YOUR_PROJECT
 
 - Product: **Minglora**
 - Repository: [ravaunrichards/Minglora-Social-Network](https://github.com/ravaunrichards/Minglora-Social-Network)
-
-
-## MailHarbor — built-in email
-
-Minglora includes MailHarbor as a native in-app mailbox module. Signed-in members can open it from the desktop top navigation, mobile navigation or utility rail. The Minglora router displays the mailbox UI inside the main app shell and reuses the existing authenticated session; it is not just a static link.
-
-The active UI is served from /mailharbor/index.html and calls the authenticated /api/mailharbor/* routes handled by backend/modules/mailharbor/service.js. Current capabilities include Inbox, Starred, Sent, Drafts, Spam, Trash and Archive; search; To/Cc/Bcc composition; saved/editable drafts; read/star/archive/spam/trash/restore actions; and a Connections screen with real provider status. MailHarbor uses the same Minglora persistence layer and does not require a separate application deployment.
-
-MailHarbor currently delivers messages to Minglora member mailboxes. Gmail, Yahoo Mail, Outlook and iCloud are displayed as not connected until their real OAuth credentials, callback routes, token handling and member authorization are implemented and verified. External Internet mail also requires a verified Minglora-owned mail domain, outbound provider, DNS records and inbound routing. No external delivery or provider sync is claimed as active before those requirements pass.

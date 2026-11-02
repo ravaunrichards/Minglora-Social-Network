@@ -16,8 +16,7 @@ const COLLECTIONS = [
   'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
   'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions', 'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems', 'streambayWatchLater',
-  'mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts',
-  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
+    'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
@@ -46,6 +45,13 @@ function normalizeState(state) {
     throw new Error('The persisted application state must be a JSON object.');
   }
   let changed = false;
+  // Discard persisted mailbox collections retired from the social app.
+  for (const key of ['mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts']) {
+    if (Object.prototype.hasOwnProperty.call(state, key)) {
+      delete state[key];
+      changed = true;
+    }
+  }
   const legacyConsentCollection = 'harbor' + 'PayConsents';
   if (Object.prototype.hasOwnProperty.call(state, legacyConsentCollection)) {
     delete state[legacyConsentCollection];
