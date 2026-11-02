@@ -89,7 +89,9 @@ async function paypalRequest(path,method='POST',payload={},requestId){
   return data;
 }
 function appOrigin(req){
-  if(process.env.APP_ORIGIN)return new URL(process.env.APP_ORIGIN).origin;
+  // APP_ORIGIN is the canonical origin in production. Local/test instances must
+  // derive their own origin so a deployed value cannot block local sign-in.
+  if(process.env.NODE_ENV==='production'&&process.env.APP_ORIGIN)return new URL(process.env.APP_ORIGIN).origin;
   const proto=String(req.headers['x-forwarded-proto']||(req.socket?.encrypted?'https':'http')).split(',')[0].trim();
   const host=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim();
   return new URL(proto+'://'+host).origin;
@@ -230,13 +232,8 @@ function isSameOriginApiWrite(req) {
   const suppliedOrigin = req.headers.origin;
   if (!suppliedOrigin) return true;
   try {
-    const forwardedProto = String(req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http')).split(',')[0].trim();
-    const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-    const expectedOrigin = process.env.APP_ORIGIN
-      ? new URL(process.env.APP_ORIGIN).origin
-      : new URL(`${forwardedProto}://${forwardedHost}`).origin;
     const origin = new URL(String(suppliedOrigin));
-    return ['http:', 'https:'].includes(origin.protocol) && origin.origin === expectedOrigin;
+    return ['http:', 'https:'].includes(origin.protocol) && origin.origin === appOrigin(req);
   } catch {
     return false;
   }
@@ -773,8 +770,7 @@ async function route(req, res) {
         const email=normalizeEmail(input.email);
         if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid email address.'});
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
-        const origin=String(process.env.APP_ORIGIN||process.env.SUPABASE_AUTH_REDIRECT_URL||'').trim();
-        const redirectTo=origin?new URL('/?password-recovery=1',origin).toString():undefined;
+        const redirectTo=new URL('/?password-recovery=1',appOrigin(req)).toString();
         try{await supabaseRequestPasswordReset(email,redirectTo);}catch(error){if(error.status===429)return json(res,429,{error:'Too many recovery requests. Please wait before trying again.'});if(error.status>=500||!error.status)return json(res,503,{error:'Password recovery is temporarily unavailable. Please try again shortly.'});}
         return json(res,200,{ok:true,message:'If that account exists, Minglora has requested a password recovery email.'});
       }
