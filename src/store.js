@@ -15,7 +15,6 @@ const COLLECTIONS = [
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
-  'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions', 'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems', 'streambayWatchLater',
     'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
@@ -49,6 +48,24 @@ function normalizeState(state) {
   for (const key of ['mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts']) {
     if (Object.prototype.hasOwnProperty.call(state, key)) {
       delete state[key];
+      changed = true;
+    }
+  }
+  // Permanently retire StreamBay-only collections and their tagged media references.
+  for (const key of [
+    'streambayChannels', 'streambayVideos', 'streambayComments', 'streambaySubscriptions',
+    'streambayLikes', 'streambayHistory', 'streambayPlaylists', 'streambayPlaylistItems',
+    'streambayWatchLater'
+  ]) {
+    if (Object.prototype.hasOwnProperty.call(state, key)) {
+      delete state[key];
+      changed = true;
+    }
+  }
+  if (Array.isArray(state.mediaAssets)) {
+    const retainedAssets = state.mediaAssets.filter(asset => !String(asset?.attachedTo || '').startsWith('streambay:'));
+    if (retainedAssets.length !== state.mediaAssets.length) {
+      state.mediaAssets = retainedAssets;
       changed = true;
     }
   }

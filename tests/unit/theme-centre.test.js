@@ -54,6 +54,6 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /styles\.css\?v=20261101-profile-tools-1/);
   assert.match(html, /app\.js\?v=20261101-call-recovery-1/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
-  assert.match(sw, /minglora-shell-v60-platform-cleanup-1/);
+  assert.match(sw, /minglora-shell-v61-streambay-removal-1/);
   assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
 });
