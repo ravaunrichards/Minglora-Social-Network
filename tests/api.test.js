@@ -93,6 +93,39 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
+
+  // A second device gets its own session cookie without replacing the first device's session.
+  const firstDeviceCookie = cookie;
+  cookie = '';
+  const secondDeviceLogin = await request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'test-user@example.test', password: 'TestPassword123!' })
+  });
+  assert.equal(secondDeviceLogin.status, 200, JSON.stringify(secondDeviceLogin.body));
+  const secondDeviceCookie = cookie;
+  assert.ok(secondDeviceCookie);
+  assert.notEqual(secondDeviceCookie, firstDeviceCookie, 'each device receives a distinct session cookie');
+
+  cookie = firstDeviceCookie;
+  const firstDeviceMe = await request('/api/auth/me');
+  assert.equal(firstDeviceMe.body.user.id, registration.body.user.id);
+
+  cookie = secondDeviceCookie;
+  const secondDeviceMe = await request('/api/auth/me');
+  assert.equal(secondDeviceMe.body.user.id, registration.body.user.id);
+  const simultaneousSessions = await request('/api/security/sessions');
+  assert.equal(simultaneousSessions.status, 200);
+  assert.equal(simultaneousSessions.body.sessions.length, 2);
+  assert.equal(simultaneousSessions.body.sessions.filter(session => session.current).length, 1);
+  assert.equal(new Set(simultaneousSessions.body.sessions.map(session => session.id)).size, 2);
+
+  // Logging out on one device revokes only that device's session.
+  cookie = firstDeviceCookie;
+  const firstDeviceLogout = await request('/api/auth/logout', { method: 'POST', body: '{}' });
+  assert.equal(firstDeviceLogout.status, 200);
+  cookie = secondDeviceCookie;
+  const secondDeviceStillSignedIn = await request('/api/auth/me');
+  assert.equal(secondDeviceStillSignedIn.body.user.id, registration.body.user.id);
   const meetWaveStatus = await request('/api/meetwave/status');
   assert.equal(meetWaveStatus.status, 200);
   assert.equal(meetWaveStatus.body.enabled, true);

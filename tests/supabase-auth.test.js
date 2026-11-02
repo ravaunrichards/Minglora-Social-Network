@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { supabaseAuthConfigured } from '../src/supabase-auth.js';
+import { supabaseAuthConfigured, supabaseRequestPasswordReset } from '../src/supabase-auth.js';
 
 const ENV_KEYS = [
   'SUPABASE_URL',
@@ -77,4 +77,50 @@ test('retains legacy anon-key compatibility only with SUPABASE_URL', () => {
     SUPABASE_URL: 'https://minglora-project.supabase.co',
     SUPABASE_ANON_KEY: 'legacy-anon-test-key'
   }, () => assert.equal(supabaseAuthConfigured(), true));
+});
+
+
+test('password recovery reports a temporary provider/network outage instead of a false success', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async () => { throw new TypeError('Network unavailable'); };
+    await assert.rejects(
+      supabaseRequestPasswordReset('member@example.test', 'https://minglora.example/?password-recovery=1'),
+      error => error.status === 503 && /could not reach minglora password recovery/i.test(error.message)
+    );
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
+});
+
+test('password recovery preserves Supabase rate-limit responses', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async () => new Response(JSON.stringify({ msg: 'Too many requests' }), {
+      status: 429,
+      headers: { 'content-type': 'application/json' }
+    });
+    await assert.rejects(
+      supabaseRequestPasswordReset('member@example.test'),
+      error => error.status === 429 && /too many requests/i.test(error.message)
+    );
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
 });

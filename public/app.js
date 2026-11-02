@@ -11,7 +11,7 @@ const fallbackAvatar = name => {
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
-async function api(path, options={}) { const res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
+async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
 function stopProfilePresence(){}
 const APP_PALETTE_OPTIONS=[
   {value:'minglora',label:'Minglora Blue',color:'#1769e0'},
@@ -4319,6 +4319,29 @@ async function finishPasswordRecoveryFromLink(){
     catch(error){status.textContent=error.message;button.disabled=false;}
   });
 }
-$('#login-form').addEventListener('submit',async e=>{e.preventDefault();const error=$('#login-error');error.textContent='';try{const data=await api('/auth/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(data.mfaRequired){openMfaLogin(data.challengeId);return;}await enterMingloraApp(data.user)}catch(err){error.textContent=err.message}});
-$('#register-form').addEventListener('submit',async e=>{e.preventDefault();const error=$('#register-error');error.textContent='';try{const data=await api('/auth/register',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(data.confirmationRequired){error.textContent=data.message||'Check your email to confirm your account, then log in.';return;}if(!data.user)throw new Error('Account registration did not return a user profile.');state.user=data.user;showApp();bindNavigation();await renderSidebar();activateNav('feed');toast('Welcome to Minglora!')}catch(err){error.textContent=err.message}});
+$('#login-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const form=e.currentTarget,error=$('#login-error'),button=form.querySelector('button[type="submit"]');
+  if(button.disabled)return;
+  error.textContent='';button.disabled=true;button.setAttribute('aria-busy','true');
+  try{
+    const data=await api('/auth/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});
+    if(data.mfaRequired){openMfaLogin(data.challengeId);return;}
+    await enterMingloraApp(data.user);
+  }catch(err){error.textContent=err.message;}
+  finally{button.disabled=false;button.removeAttribute('aria-busy');}
+});
+$('#register-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const form=e.currentTarget,error=$('#register-error'),button=form.querySelector('button[type="submit"]');
+  if(button.disabled)return;
+  error.textContent='';button.disabled=true;button.setAttribute('aria-busy','true');
+  try{
+    const data=await api('/auth/register',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});
+    if(data.confirmationRequired){error.textContent=data.message||'Check your email to confirm your account, then log in.';return;}
+    if(!data.user)throw new Error('Account registration did not return a user profile.');
+    state.user=data.user;showApp();bindNavigation();await renderSidebar();activateNav('feed');toast('Welcome to Minglora!');
+  }catch(err){error.textContent=err.message;}
+  finally{button.disabled=false;button.removeAttribute('aria-busy');}
+});
 (async()=>{await finishPasswordRecoveryFromLink();try{const me=await api('/auth/me');if(me.user){await enterMingloraApp(me.user);}else showAuth()}catch{showAuth()}})();

@@ -244,9 +244,12 @@ function isSameOriginApiWrite(req) {
 function appSessionCookie(sid) {
   return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
+function clearAppSessionCookie() {
+  return `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`;
+}
 async function createAppSession(user,authTokens=null,req=null) {
   const sid=uid();const createdAt=now();
-  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240),mfaVerified:true});
+  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
   await saveStore();return appSessionCookie(sid);
 }
 function ensureLocalUser(authUser, fallback = {}) {
@@ -772,7 +775,7 @@ async function route(req, res) {
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
         const origin=String(process.env.APP_ORIGIN||process.env.SUPABASE_AUTH_REDIRECT_URL||'').trim();
         const redirectTo=origin?new URL('/?password-recovery=1',origin).toString():undefined;
-        try{await supabaseRequestPasswordReset(email,redirectTo);}catch(error){if(error.status===429)return json(res,429,{error:'Too many recovery requests. Please wait before trying again.'});}
+        try{await supabaseRequestPasswordReset(email,redirectTo);}catch(error){if(error.status===429)return json(res,429,{error:'Too many recovery requests. Please wait before trying again.'});if(error.status>=500||!error.status)return json(res,503,{error:'Password recovery is temporarily unavailable. Please try again shortly.'});}
         return json(res,200,{ok:true,message:'If that account exists, Minglora has requested a password recovery email.'});
       }
       if(method==='POST'&&p==='/api/auth/password/reset/complete'){
@@ -851,7 +854,7 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
       }
-      if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}); }
+      if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
       if (method === 'POST' && p === '/api/harborpay/launch') {
@@ -1264,7 +1267,7 @@ async function route(req, res) {
         db.sessions=(db.sessions||[]).filter(item=>item.userId!==user.id);
         db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==user.id);
         await saveStore();
-        return json(res,200,{ok:true,message:'Your Minglora account is deactivated. Sign in again to reactivate it.'},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'});
+        return json(res,200,{ok:true,message:'Your Minglora account is deactivated. Sign in again to reactivate it.'},{'Set-Cookie':clearAppSessionCookie()});
       }
       if(method==='POST'&&p==='/api/account/deletion-request'){
         const currentPassword=String(input.currentPassword||'');
@@ -1359,7 +1362,7 @@ async function route(req, res) {
         const target=(db.sessions||[]).find(item=>item.id===sessionId&&item.userId===user.id);
         if(!target)return json(res,404,{error:'Session not found.'});
         db.sessions=db.sessions.filter(item=>item.id!==sessionId);await saveStore();
-        return json(res,200,{ok:true,current:target.id===currentSession?.id},target.id===currentSession?.id?{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'}:{});
+        return json(res,200,{ok:true,current:target.id===currentSession?.id},target.id===currentSession?.id?{'Set-Cookie':clearAppSessionCookie()}:{});
       }
       if(method==='POST'&&p==='/api/security/sessions/revoke-others'){
         db.sessions=db.sessions.filter(item=>item.userId!==user.id||item.id===currentSession?.id);
@@ -1443,7 +1446,7 @@ async function route(req, res) {
         }catch{
           currentSession.authSealed=null;currentSession.authExpiresAt=null;currentSession.authInvalidatedAt=now();currentSession.mfaVerified=false;
           await saveStore();
-          return json(res,200,{ok:true,reauthenticationRequired:true,message:'Authenticator removed. Sign in again to renew your security session.'},{'Set-Cookie':'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'});
+          return json(res,200,{ok:true,reauthenticationRequired:true,message:'Authenticator removed. Sign in again to renew your security session.'},{'Set-Cookie':clearAppSessionCookie()});
         }
       }
       if(method==='POST'&&p==='/api/reports'){

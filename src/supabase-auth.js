@@ -201,13 +201,24 @@ export function supabaseUnenrollFactor(accessToken,factorId) {
 export function supabaseRefreshSession(refreshToken) {
   return authRequest('token?grant_type=refresh_token',{refresh_token:refreshToken});
 }
-export function supabaseRequestPasswordReset(email,redirectTo) {
+export async function supabaseRequestPasswordReset(email,redirectTo) {
   requireConfig();
   const {url:baseUrl,key:apiKey}=supabaseConfig();
   const target=new URL(baseUrl+'/auth/v1/recover');
   if(redirectTo)target.searchParams.set('redirect_to',redirectTo);
-  return fetch(target,{method:'POST',headers:{apikey:apiKey,Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({email})})
-    .then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok){const error=new Error(String(data.msg||data.message||data.error_description||data.error||'Password reset request failed.'));error.status=response.status===429?429:response.status>=500?503:response.status;throw error;}return data;});
+  let response;
+  try {
+    response=await fetch(target,{method:'POST',headers:{apikey:apiKey,Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({email})});
+  } catch {
+    throw Object.assign(new Error('Could not reach Minglora password recovery. Check your connection and try again.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const error=new Error(String(data.msg||data.message||data.error_description||data.error||'Password reset request failed.'));
+    error.status=response.status===429?429:response.status>=500?503:response.status;
+    throw error;
+  }
+  return data;
 }
 export function supabaseCompletePasswordReset(accessToken,password) {
   return supabaseUpdatePassword(accessToken,password);
