@@ -201,7 +201,7 @@ export function supabaseUnenrollFactor(accessToken,factorId) {
 export function supabaseRefreshSession(refreshToken) {
   return authRequest('token?grant_type=refresh_token',{refresh_token:refreshToken});
 }
-export function supabaseRequestPasswordReset(email,redirectTo) {
+export async function supabaseRequestPasswordReset(email,redirectTo) {
   requireConfig();
   const {url:baseUrl,key:apiKey}=supabaseConfig();
   const target=new URL(baseUrl+'/auth/v1/recover');
