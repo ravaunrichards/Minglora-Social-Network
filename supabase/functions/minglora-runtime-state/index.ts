@@ -749,92 +749,190 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "marketplace_paypal_seller_start") {
-    const userId=String(input.userId||""),trackingId=String(input.trackingId||"");
-    const referralId=String(input.partnerReferralId||""),nonceHash=String(input.callbackNonceHash||"");
-    if(!validUuid(userId)||trackingId!==userId||!referralId||referralId.length>256||!/^[a-f0-9]{64}$/i.test(nonceHash)){
-      return json(400,{error:"Invalid PayPal seller onboarding reference."});
+    const userId=String(input.userId||"");
+    const callbackState=String(input.callbackState||"");
+    const returnUrl=String(input.returnUrl||"");
+    const shareDataConsent=input.shareDataConsent===true;
+    if(!validUuid(userId)||!shareDataConsent||callbackState.length<48||callbackState.length>160||
+       !/^[a-zA-Z0-9_-]+$/.test(callbackState)||!/^https:\/\//i.test(returnUrl)){
+      return json(400,{error:"A secure onboarding state, HTTPS return URL and explicit PayPal data-sharing consent are required."});
     }
     const {data:seller,error:sellerError}=await admin.from("marketplace_seller_profiles")
-      .select("user_id,seller_type,status,identity_status,country_code").eq("user_id",userId).maybeSingle();
+      .select("user_id,seller_type,status,identity_status,country_code,contact_email")
+      .eq("user_id",userId).maybeSingle();
     if(sellerError)return json(503,{error:"Seller eligibility could not be checked."});
     if(!seller||seller.status!=="approved"||seller.identity_status!=="verified"){
       return json(403,{error:"Minglora seller approval and identity verification are required before connecting PayPal."});
     }
     if(seller.seller_type!=="business"){
-      return json(409,{error:"PayPal marketplace onboarding requires a verified PayPal Business account. Upgrade your PayPal account to Business before continuing."});
+      return json(409,{error:"This PayPal marketplace route currently requires an approved registered-business seller profile and a PayPal Business account."});
     }
-    const requestedFeatures=["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"];
     const {data:existing,error:existingError}=await admin.from("marketplace_seller_paypal_accounts")
       .select("onboarding_status,merchant_id").eq("user_id",userId).maybeSingle();
     if(existingError)return json(503,{error:"Existing PayPal seller connection could not be checked."});
-    if(existing?.onboarding_status==="verified"&&existing.merchant_id)return json(409,{error:"This seller already has a verified PayPal Business connection."});
-    const {error}=await admin.from("marketplace_seller_paypal_accounts").upsert({
-      user_id:userId,tracking_id:trackingId,partner_referral_id:referralId,
+    if(existing?.onboarding_status==="verified"&&existing.merchant_id){
+      return json(409,{error:"This seller already has a verified PayPal connection."});
+    }
+    const cfg=marketplacePayPalConfig();
+    if(!cfg.clientId||!cfg.clientSecret||!cfg.attributionId){
+      return json(503,{error:"Marketplace-specific PayPal partner credentials and attribution ID are not configured."});
+    }
+    const callback=new URL(returnUrl);
+    callback.searchParams.set("marketplacePayPal","complete");
+    callback.searchParams.set("state",callbackState);
+    const requestedFeatures=["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"];
+    let referralResponse:Response;
+    try {
+      const token=await getMarketplacePayPalToken();
+      referralResponse=await fetch(cfg.base+"/v2/customer/partner-referrals",{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer "+token,
+          "Content-Type":"application/json",
+          "PayPal-Partner-Attribution-Id":cfg.attributionId
+        },
+        body:JSON.stringify({
+          tracking_id:userId,
+          email:String(seller.contact_email||"").trim().toLowerCase(),
+          partner_config_override:{
+            return_url:callback.toString(),
+            return_url_description:"Return to Minglora Seller Centre after PayPal verification"
+          },
+          operations:[{
+            operation:"API_INTEGRATION",
+            api_integration_preference:{
+              rest_api_integration:{
+                integration_method:"PAYPAL",
+                integration_type:"THIRD_PARTY",
+                third_party_details:{features:requestedFeatures}
+              }
+            }
+          }],
+          products:["EXPRESS_CHECKOUT"],
+          legal_consents:[{type:"SHARE_DATA_CONSENT",granted:true}]
+        })
+      });
+    } catch {
+      return json(503,{error:"Minglora could not reach PayPal seller onboarding. No payout account was connected."});
+    }
+    const referral=await referralResponse.json().catch(()=>({}));
+    if(!referralResponse.ok){
+      return json(502,{error:"PayPal did not create the seller onboarding referral.",providerIssue:String(referral?.name||referral?.message||"PARTNER_REFERRAL_FAILED").slice(0,160)});
+    }
+    const actionLink=Array.isArray(referral?.links)?referral.links.find((item:any)=>item?.rel==="action_url"):null;
+    let actionUrl="";
+    try {
+      const parsed=new URL(String(actionLink?.href||""));
+      if(parsed.protocol==="https:"&&["www.paypal.com","www.sandbox.paypal.com","paypal.com","sandbox.paypal.com"].includes(parsed.hostname))actionUrl=parsed.toString();
+    } catch {}
+    if(!referral?.id||!actionUrl)return json(502,{error:"PayPal did not return a valid seller onboarding action URL."});
+    const nonceHash=await sha256(callbackState);
+    const {error:saveError}=await admin.from("marketplace_seller_paypal_accounts").upsert({
+      user_id:userId,tracking_id:userId,partner_referral_id:String(referral.id),
+      merchant_id:null,paypal_payer_id:null,paypal_account_email:null,
       onboarding_status:"started",account_type:"unknown",permissions_granted:false,
-      consent_granted:false,primary_email_confirmed:false,payments_receivable:false,
+      consent_granted:true,primary_email_confirmed:false,payments_receivable:false,
       requested_features:requestedFeatures,granted_features:[],products:["EXPRESS_CHECKOUT"],
-      callback_nonce_hash:nonceHash,status_reason:"Waiting for the seller to complete PayPal onboarding.",
+      callback_nonce_hash:nonceHash,last_checked_at:null,
+      status_reason:"Seller has been redirected to PayPal to grant the requested marketplace permissions.",
       updated_at:new Date().toISOString()
     },{onConflict:"user_id"});
-    if(error)return json(503,{error:"PayPal seller onboarding could not be saved."});
-    return json(201,{ok:true,trackingId,requestedFeatures});
-  }
-
-  if (action === "marketplace_paypal_seller_callback_state") {
-    const userId=String(input.userId||"");
-    if(!validUuid(userId))return json(400,{error:"Invalid seller account."});
-    const {data,error}=await admin.from("marketplace_seller_paypal_accounts")
-      .select("tracking_id,partner_referral_id,callback_nonce_hash,onboarding_status,requested_features")
-      .eq("user_id",userId).maybeSingle();
-    if(error)return json(503,{error:"PayPal onboarding state could not be loaded."});
-    if(!data)return json(404,{error:"No PayPal seller onboarding request was found."});
-    return json(200,{trackingId:data.tracking_id,partnerReferralId:data.partner_referral_id,
-      callbackNonceHash:data.callback_nonce_hash,status:data.onboarding_status,requestedFeatures:data.requested_features});
+    if(saveError)return fail(saveError,"PayPal referral was created but Minglora could not save the onboarding state.");
+    return json(201,{ok:true,trackingId:userId,partnerReferralId:String(referral.id),actionUrl,requestedFeatures});
   }
 
   if (action === "marketplace_paypal_seller_complete") {
-    const userId=String(input.userId||""),trackingId=String(input.trackingId||"");
+    const userId=String(input.userId||"");
+    const trackingId=String(input.trackingId||"");
     const merchantId=String(input.merchantId||"").trim();
-    const nonceHash=String(input.callbackNonceHash||"").trim().toLowerCase();
-    const stateHash=String(input.stateHash||"").trim().toLowerCase();
-    const accountType=String(input.accountType||"");
+    const callbackState=String(input.callbackState||"");
     const permissionsGranted=input.permissionsGranted===true;
     const consentGranted=input.consentGranted===true;
     const emailConfirmed=input.emailConfirmed===true;
-    const paymentsReceivable=input.paymentsReceivable===true;
-    const grantedFeatures=Array.isArray(input.grantedFeatures)?input.grantedFeatures.map(String):[];
-    const products=Array.isArray(input.products)?input.products.map(String):[];
+    const accountType=String(input.accountType||"");
     if(!validUuid(userId)||trackingId!==userId||!merchantId||merchantId.length>64||
-       !/^[a-f0-9]{64}$/i.test(nonceHash)||!stateHash||
-       accountType!=="BUSINESS_ACCOUNT"||!permissionsGranted||!consentGranted||
-       !emailConfirmed||!paymentsReceivable||
-       !["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every(feature=>grantedFeatures.includes(feature))){
-      return json(409,{error:"PayPal has not confirmed all required Business account, payment, refund and platform-fee permissions."});
+       callbackState.length<48||callbackState.length>160||!/^[a-zA-Z0-9_-]+$/.test(callbackState)||
+       !permissionsGranted||!consentGranted||!emailConfirmed||accountType!=="BUSINESS_ACCOUNT"){
+      return json(409,{error:"PayPal's seller onboarding return is incomplete. Complete the Business account setup, confirm the email and grant the requested permissions."});
     }
+    const nonceHash=await sha256(callbackState);
     const {data:current,error:lookupError}=await admin.from("marketplace_seller_paypal_accounts")
       .select("tracking_id,callback_nonce_hash,onboarding_status,requested_features")
       .eq("user_id",userId).maybeSingle();
     if(lookupError)return json(503,{error:"Saved PayPal seller onboarding could not be checked."});
-    if(!current||current.tracking_id!==trackingId||current.callback_nonce_hash!==nonceHash||stateHash!==nonceHash||current.onboarding_status!=="started"){
-      return json(403,{error:"The PayPal onboarding callback state has expired or does not match this seller."});
+    if(!current||current.tracking_id!==trackingId||!current.callback_nonce_hash||
+       !constantTimeEqual(current.callback_nonce_hash,nonceHash)||current.onboarding_status!=="started"){
+      return json(403,{error:"The PayPal onboarding state has expired or does not match this seller."});
     }
     const {data:existingMerchant,error:merchantError}=await admin.from("marketplace_seller_paypal_accounts")
       .select("user_id").eq("merchant_id",merchantId).maybeSingle();
     if(merchantError)return json(503,{error:"PayPal merchant account ownership could not be checked."});
     if(existingMerchant&&existingMerchant.user_id!==userId)return json(409,{error:"That PayPal merchant account is already connected to a different Minglora seller."});
+    const cfg=marketplacePayPalConfig();
+    const partnerMerchantId=Deno.env.get("MARKETPLACE_PAYPAL_PARTNER_MERCHANT_ID")||"";
+    if(!cfg.clientId||!cfg.clientSecret||!cfg.attributionId||!partnerMerchantId){
+      return json(503,{error:"Marketplace PayPal partner credentials are not configured for merchant verification."});
+    }
+    let verifiedResponse:Response;
+    try {
+      const token=await getMarketplacePayPalToken();
+      verifiedResponse=await fetch(cfg.base+"/v1/customer/partners/"+encodeURIComponent(partnerMerchantId)+"/merchant-integrations/"+encodeURIComponent(merchantId),{
+        method:"GET",
+        headers:{
+          "Authorization":"Bearer "+token,
+          "Content-Type":"application/json",
+          "PayPal-Partner-Attribution-Id":cfg.attributionId
+        }
+      });
+    } catch {
+      return json(503,{error:"Minglora could not verify the seller's PayPal merchant integration. The connection remains pending."});
+    }
+    const merchant=await verifiedResponse.json().catch(()=>({}));
+    if(!verifiedResponse.ok)return json(502,{error:"PayPal could not confirm the seller's merchant integration.",providerIssue:String(merchant?.name||merchant?.message||"MERCHANT_STATUS_UNAVAILABLE").slice(0,160)});
+    if(String(merchant?.merchant_id||"")!==merchantId||
+       String(merchant?.tracking_id||"")!==userId||
+       merchant?.payments_receivable!==true||
+       merchant?.primary_email_confirmed!==true){
+      return json(409,{error:"PayPal's merchant-integration status does not confirm this seller, receivable payments and a confirmed primary email."});
+    }
+    const primaryEmail=String(merchant?.primary_email||"").trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(primaryEmail)||primaryEmail.length>254){
+      return json(409,{error:"PayPal did not return a verified primary email for the seller. Payout setup remains pending."});
+    }
+    const products=Array.isArray(merchant?.products)?merchant.products:[];
+    const express=products.find((item:any)=>String(item?.name||"").toUpperCase()==="EXPRESS_CHECKOUT");
+    if(express&&String(express.status||"").toUpperCase()!=="ACTIVE"){
+      return json(409,{error:"PayPal has not activated Express Checkout for this seller yet."});
+    }
+    const integrations=Array.isArray(merchant?.oauth_integrations)?merchant.oauth_integrations:[];
+    const scopes=integrations.flatMap((integration:any)=>
+      (Array.isArray(integration?.oauth_third_party)?integration.oauth_third_party:[])
+        .flatMap((item:any)=>Array.isArray(item?.scopes)?item.scopes:[])
+    );
+    const paymentScope=scopes.some((scope:string)=>scope.includes("/services/payments/realtimepayment")||scope.includes("/services/payments/payment/authcapture"));
+    const refundScope=scopes.some((scope:string)=>scope.includes("/services/payments/refund"));
+    if(!paymentScope||!refundScope){
+      return json(409,{error:"PayPal has not returned the required payment and refund permissions for this seller."});
+    }
+    const requested=current.requested_features||[];
+    if(!["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every((feature:string)=>requested.includes(feature))){
+      return json(409,{error:"The saved PayPal referral did not request all marketplace payment, platform-fee and delayed-disbursement permissions."});
+    }
     const stamp=new Date().toISOString();
     const {data,error}=await admin.from("marketplace_seller_paypal_accounts").update({
-      merchant_id:merchantId,paypal_payer_id:String(input.paypalPayerId||"").trim()||null,onboarding_status:"verified",account_type:"business",
+      merchant_id:merchantId,paypal_payer_id:null,paypal_account_email:primaryEmail,
+      onboarding_status:"verified",account_type:"business",
       permissions_granted:true,consent_granted:true,primary_email_confirmed:true,
-      payments_receivable:true,granted_features:grantedFeatures,products,
-      callback_nonce_hash:null,last_checked_at:stamp,status_reason:"PayPal merchant-integrations confirmed payment eligibility.",
+      payments_receivable:true,granted_features:requested,products:products.map((item:any)=>String(item?.name||"")).filter(Boolean),
+      callback_nonce_hash:null,last_checked_at:stamp,
+      status_reason:"PayPal's merchant-integrations API confirmed seller ownership, payment/refund scopes, receivable status and primary email.",
       updated_at:stamp
     }).eq("user_id",userId).select("user_id,onboarding_status,account_type,payments_receivable,primary_email_confirmed").single();
     if(error)return fail(error,"Verified PayPal seller connection could not be saved.");
     await admin.from("marketplace_seller_profiles").update({payout_status:"verified",updated_at:stamp}).eq("user_id",userId);
     await admin.from("marketplace_seller_verification_events").insert({
       seller_id:userId,actor_id:userId,event_type:"paypal_connected",
-      reason:"PayPal Business merchant connection verified by PayPal merchant-integrations API."
+      reason:"PayPal merchant-integrations API verified the seller account and payment/refund permissions."
     });
     return json(200,{paypal:{status:data.onboarding_status,accountType:data.account_type,
       paymentsReceivable:data.payments_receivable,emailConfirmed:data.primary_email_confirmed}});
@@ -895,7 +993,7 @@ Deno.serve(async (req: Request) => {
     const sellerIds=sellerOrders.map(row=>row.seller_id);
     const [sellerResult,accountResult]=await Promise.all([
       admin.from("marketplace_seller_profiles").select("user_id,status,identity_status,seller_type,payout_status").in("user_id",sellerIds),
-      admin.from("marketplace_seller_paypal_accounts").select("user_id,merchant_id,onboarding_status,account_type,permissions_granted,consent_granted,payments_receivable,primary_email_confirmed,granted_features").in("user_id",sellerIds)
+      admin.from("marketplace_seller_paypal_accounts").select("user_id,merchant_id,paypal_account_email,onboarding_status,account_type,permissions_granted,consent_granted,payments_receivable,primary_email_confirmed,granted_features").in("user_id",sellerIds)
     ]);
     if(sellerResult.error||accountResult.error)return json(503,{error:"Seller payment eligibility could not be loaded."});
     const sellers=new Map((sellerResult.data||[]).map((row:any)=>[row.user_id,row]));
@@ -913,6 +1011,7 @@ Deno.serve(async (req: Request) => {
       paymentSellers.push({
         sellerOrderId:sellerOrder.id,
         merchantId:account.merchant_id,
+        sellerEmail:account.paypal_account_email,
         grossMinor:Number(sellerOrder.gross_minor),
         platformFeeMinor:Number(sellerOrder.commission_minor),
         currency:order.currency,
@@ -951,7 +1050,7 @@ Deno.serve(async (req: Request) => {
         reference_id:seller.sellerOrderId,
         custom_id:orderId,
         description:seller.description,
-        payee:{merchant_id:seller.merchantId},
+        payee:{merchant_id:seller.merchantId,email_address:seller.sellerEmail},
         amount:{currency_code:order.currency,value:gross},
         payment_instruction:{disbursement_mode:"DELAYED"}
       };
@@ -1202,7 +1301,7 @@ Deno.serve(async (req: Request) => {
     });
     if(claimError)return fail(claimError,"Seller payout could not be claimed.");
     if(claim?.status==="paid")return json(200,{paid:true,idempotent:true,payoutId});
-    if(!claim?.providerCaptureId||!claim?.requestId)return json(409,{error:"The delayed PayPal capture reference or payout request ID is missing."});
+    if(!claim?.providerCaptureId||!claim?.requestId||!claim?.sellerEmail)return json(409,{error:"The delayed PayPal capture reference, verified seller email or payout request ID is missing."});
     let response: Response;
     try {
       const token=await getMarketplacePayPalToken();
@@ -1315,16 +1414,29 @@ Deno.serve(async (req: Request) => {
   if (action === "marketplace_seller_get") {
     const userId=String(input.userId||"");
     if(!validUuid(userId))return json(400,{error:"Invalid seller account."});
-    const {data,error}=await admin.from("marketplace_seller_profiles")
-      .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,terms_version,terms_accepted_at,created_at,updated_at")
-      .eq("user_id",userId).maybeSingle();
-    if(error)return json(503,{error:"Seller profile could not be loaded."});
-    return json(200,{seller:data?{
-      userId:data.user_id,sellerType:data.seller_type,storeName:data.store_name,description:data.description,
-      countryCode:data.country_code,contactEmail:data.contact_email,status:data.status,
-      identityStatus:data.identity_status,payoutStatus:data.payout_status,termsVersion:data.terms_version,
-      termsAcceptedAt:data.terms_accepted_at,createdAt:data.created_at,updatedAt:data.updated_at
-    }:null});
+    const [sellerResult,paypalResult]=await Promise.all([
+      admin.from("marketplace_seller_profiles").select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,terms_version,terms_accepted_at,created_at,updated_at").eq("user_id",userId).maybeSingle(),
+      admin.from("marketplace_seller_paypal_accounts").select("onboarding_status,account_type,permissions_granted,consent_granted,primary_email_confirmed,payments_receivable,requested_features,granted_features,products,last_checked_at,status_reason").eq("user_id",userId).maybeSingle()
+    ]);
+    if(sellerResult.error)return json(503,{error:"Seller profile could not be loaded."});
+    if(paypalResult.error)return json(503,{error:"PayPal seller connection status could not be loaded."});
+    const data=sellerResult.data,paypal=paypalResult.data;
+    return json(200,{
+      seller:data?{
+        userId:data.user_id,sellerType:data.seller_type,storeName:data.store_name,description:data.description,
+        countryCode:data.country_code,contactEmail:data.contact_email,status:data.status,
+        identityStatus:data.identity_status,payoutStatus:data.payout_status,termsVersion:data.terms_version,
+        termsAcceptedAt:data.terms_accepted_at,createdAt:data.created_at,updatedAt:data.updated_at
+      }:null,
+      paypal:paypal?{
+        status:paypal.onboarding_status,accountType:paypal.account_type,
+        permissionsGranted:paypal.permissions_granted,consentGranted:paypal.consent_granted,
+        emailConfirmed:paypal.primary_email_confirmed,paymentsReceivable:paypal.payments_receivable,
+        requestedFeatures:paypal.requested_features,grantedFeatures:paypal.granted_features,
+        products:paypal.products,lastCheckedAt:paypal.last_checked_at,reason:paypal.status_reason
+      }:{status:"not_started",accountType:"unknown",permissionsGranted:false,consentGranted:false,
+        emailConfirmed:false,paymentsReceivable:false,requestedFeatures:[],grantedFeatures:[],products:[]}
+    });
   }
 
   if (action === "marketplace_seller_apply") {
