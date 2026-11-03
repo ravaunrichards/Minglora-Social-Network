@@ -1411,6 +1411,72 @@ Deno.serve(async (req: Request) => {
             if(updateError)throw new Error("Could not save the PayPal merchant reference for onboarding verification.");
           }
         }
+      } else if(eventType==="PAYMENT.CAPTURE.REFUNDED"){
+        // PayPal's refund webhook is a second, independent confirmation path.
+        // It safely finalizes only an already-approved Minglora refund.
+        const providerRefundId=String(resource.id||"");
+        const providerStatus=String(resource.status||"").toUpperCase();
+        const amountMinor=Math.round(Number(resource.amount?.value||0)*100);
+        const currency=String(resource.amount?.currency_code||"").toUpperCase();
+        const captureId=String(
+          resource.supplementary_data?.related_ids?.capture_id||
+          event.resource?.supplementary_data?.related_ids?.capture_id||""
+        );
+        if(!providerRefundId||!Number.isSafeInteger(amountMinor)||amountMinor<=0||!currency){
+          throw new Error("PayPal refund webhook is missing its refund ID, amount or currency.");
+        }
+        let refundQuery=admin.from("marketplace_refunds")
+          .select("id,status,provider_refund_reference,seller_order_id")
+          .eq("provider","paypal")
+          .eq("provider_refund_reference",providerRefundId)
+          .maybeSingle();
+        let {data:refund,error:refundError}=await refundQuery;
+        if(refundError)throw new Error("Could not match the PayPal refund webhook to a Minglora refund.");
+        if(!refund&&captureId){
+          const {data:payment,error:paymentError}=await admin.from("marketplace_seller_payment_transactions")
+            .select("seller_order_id")
+            .eq("provider","paypal").eq("provider_capture_id",captureId)
+            .maybeSingle();
+          if(paymentError)throw new Error("Could not match the PayPal refund to its original seller capture.");
+          if(payment){
+            const {data:pending,error:pendingError}=await admin.from("marketplace_refunds")
+              .select("id,status,provider_refund_reference,seller_order_id")
+              .eq("seller_order_id",payment.seller_order_id)
+              .eq("provider","paypal").eq("status","processing")
+              .maybeSingle();
+            if(pendingError)throw new Error("Could not find the approved Minglora refund awaiting PayPal confirmation.");
+            refund=pending;
+          }
+        }
+        if(!refund){
+          const {error:ignoredError}=await admin.from("marketplace_webhook_events").update({
+            processing_status:"ignored",processed_at:new Date().toISOString()
+          }).eq("provider","paypal").eq("provider_event_id",eventId);
+          if(ignoredError)throw new Error("Could not record an unmatched PayPal refund webhook.");
+          return json(200,{received:true,ignored:true,eventId,providerRefundId,reason:"No approved Minglora refund matches this PayPal refund."});
+        }
+        if(refund.status==="succeeded"){
+          const {error:doneError}=await admin.from("marketplace_webhook_events").update({
+            processing_status:"processed",processed_at:new Date().toISOString()
+          }).eq("provider","paypal").eq("provider_event_id",eventId);
+          if(doneError)throw new Error("Could not mark the duplicate refund webhook processed.");
+          return json(200,{received:true,duplicate:true,eventId,refundId:refund.id});
+        }
+        if(refund.status!=="processing"){
+          throw new Error("PayPal refund webhook matched a Minglora refund that was not approved for processing.");
+        }
+        const {data:finalized,error:finalizeError}=await admin.rpc("finalize_marketplace_refund",{
+          p_refund_id:refund.id,
+          p_provider_refund_reference:providerRefundId,
+          p_provider_status:providerStatus,
+          p_amount_minor:amountMinor,
+          p_currency:currency,
+          p_response_snapshot:event
+        });
+        if(finalizeError)throw new Error("PayPal refund webhook could not be posted to Minglora's refund ledger.");
+        if(!["succeeded","processing"].includes(String(finalized?.status||""))){
+          throw new Error("The PayPal refund webhook did not finalize the approved Minglora refund.");
+        }
       } else if(eventType==="PAYMENT.CAPTURE.COMPLETED"){
         // Reconcile completed capture events even when the buyer closes the return tab.
         const captureId=String(resource.id||"");
@@ -1667,6 +1733,13 @@ Deno.serve(async (req: Request) => {
     const paidAmount=Math.round(Number(providerPayload?.amount?.value||0)*100);
     const paidCurrency=String(providerPayload?.amount?.currency_code||"").toUpperCase();
     if(!providerRefundId||paidAmount!==Number(claim.amountMinor)||paidCurrency!==String(claim.currency).toUpperCase()){
+      const {error:pendingSaveError}=await admin.from("marketplace_refunds").update({
+        provider_refund_reference:providerRefundId||null,
+        provider_status:providerStatus||"PROVIDER_RESPONSE_REQUIRES_REVIEW",
+        provider_response_snapshot:providerPayload||{},
+        updated_at:new Date().toISOString()
+      }).eq("id",refundId).eq("status","processing");
+      if(pendingSaveError)return fail(pendingSaveError,"PayPal responded, but Minglora could not save the pending refund details.");
       return json(202,{accepted:true,processing:true,refundId,providerRefundId:providerRefundId||null,
         notice:"PayPal accepted a response, but the refund ID, amount or currency is not yet fully verified. The refund remains on hold for reconciliation."});
     }
