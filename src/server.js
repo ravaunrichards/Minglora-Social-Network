@@ -683,9 +683,30 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && p !== '/api/webhooks/marketplace-paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
+  if (method === 'POST' && p === '/api/webhooks/marketplace-paypal') {
+    let event;
+    try { event = await body(req, 1_000_000); }
+    catch (error) { return json(res, error.status || 400, { error: error.message }); }
+    if (!isSupabasePersistence()) {
+      return json(res, 503, { error: 'Marketplace PayPal webhook requires the hosted Minglora database.' });
+    }
+    const headers=req.headers||{};
+    const result=await requestSupabaseState('marketplace_paypal_webhook_receive',{
+      event,
+      headers:{
+        authAlgo:String(headers['paypal-auth-algo']||''),
+        certUrl:String(headers['paypal-cert-url']||''),
+        transmissionId:String(headers['paypal-transmission-id']||''),
+        transmissionSig:String(headers['paypal-transmission-sig']||''),
+        transmissionTime:String(headers['paypal-transmission-time']||'')
+      }
+    });
+    return json(res,200,result);
+  }
+
   if (method === 'POST' && p === '/api/webhooks/paypal') {
     let event;
     try { event = await body(req, 1_000_000); }
