@@ -4721,6 +4721,22 @@ function startPasswordRecoveryCooldown(button,seconds){
   passwordRecoveryCooldownTimer=window.setInterval(tick,1000);
   return true;
 }
+$('#email-magic-link')?.addEventListener('click',async()=>{
+  const button=$('#email-magic-link');
+  if(button?.disabled)return;
+  const email=String($('#login-form')?.elements.email?.value||'').trim();
+  if(!email){window.alert('Enter your email address first, then choose Email me a sign-in link.');$('#login-form')?.elements.email?.focus();return;}
+  if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
+  try{
+    const result=await api('/auth/magic-link/request',{method:'POST',body:JSON.stringify({email})});
+    window.alert(result.message||'Check your email for a secure Minglora sign-in link.');
+    startPasswordRecoveryCooldown(button,60);
+  }catch(error){
+    window.alert(error.message);
+    startPasswordRecoveryCooldown(button,error.retryAfterSeconds||(error.status===429?60:0));
+    if(button&&passwordRecoveryCooldownTimer===null){button.disabled=false;button.removeAttribute('aria-busy');}
+  }
+});
 $('#forgot-password')?.addEventListener('click',async()=>{
   const button=$('#forgot-password');
   if(button?.disabled)return;
