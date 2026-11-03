@@ -4753,6 +4753,35 @@ async function finishPasswordRecoveryFromLink(){
     catch(error){status.textContent=error.message;button.disabled=false;}
   });
 }
+async function finishMagicLinkFromUrl(){
+  const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
+  if(hash.get('type')!=='magiclink')return false;
+  const accessToken=hash.get('access_token')||'';
+  const refreshToken=hash.get('refresh_token')||'';
+  const expiresIn=Number(hash.get('expires_in'))||3600;
+  const authError=hash.get('error_description')||hash.get('error_code')||'';
+  // Remove one-time bearer credentials from the address bar and browser history
+  // before sending them to Minglora's same-origin session exchange endpoint.
+  window.history.replaceState(null,'',window.location.pathname+window.location.search);
+  try{
+    if(authError)throw new Error(authError.replace(/\\+/g,' '));
+    if(!accessToken||!refreshToken)throw new Error('This sign-in link is incomplete or expired. Request a new Minglora sign-in link.');
+    const result=await api('/auth/magic-link/complete',{
+      method:'POST',
+      body:JSON.stringify({accessToken,refreshToken,expiresIn})
+    });
+    if(result.mfaRequired){openMfaLogin(result.challengeId);return true;}
+    if(!result.user)throw new Error('Minglora could not finish your magic-link sign-in.');
+    await enterMingloraApp(result.user);
+  }catch(error){
+    showAuth();
+    const status=$('#login-error');
+    if(status)status.textContent=error.message||'This sign-in link could not be verified. Request a new one.';
+    else window.alert(error.message||'This sign-in link could not be verified. Request a new one.');
+  }
+  return true;
+}
+
 $('#login-form').addEventListener('submit',async e=>{
   e.preventDefault();
   const form=e.currentTarget,error=$('#login-error'),button=form.querySelector('button[type="submit"]');
@@ -4778,4 +4807,4 @@ $('#register-form').addEventListener('submit',async e=>{
   }catch(err){error.textContent=err.message;}
   finally{button.disabled=false;button.removeAttribute('aria-busy');}
 });
-(async()=>{await finishPasswordRecoveryFromLink();try{const me=await api('/auth/me');if(me.user){await enterMingloraApp(me.user);}else showAuth()}catch{showAuth()}})();
+(async()=>{await finishPasswordRecoveryFromLink();if(await finishMagicLinkFromUrl())return;try{const me=await api('/auth/me');if(me.user){await enterMingloraApp(me.user);}else showAuth()}catch{showAuth()}})();
