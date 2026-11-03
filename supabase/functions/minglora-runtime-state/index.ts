@@ -2065,6 +2065,13 @@ Deno.serve(async (req: Request) => {
     const allVerified=totalRecords>0&&totalExceptions===0&&results.every(row=>row.status==="completed");
     return json(200,{
       provider:"paypal",range:{startAt,endAt},runs:results,
+      byCurrency:[...byCurrency.values()].map(bucket=>({
+        currency:bucket.currency,captures:bucket.captureCount,capturesVerified:bucket.captureVerified,
+        payouts:bucket.payoutCount,payoutsVerified:bucket.payoutVerified,
+        internalCaptureMinor:bucket.internalCaptureMinor,providerCaptureMinor:bucket.providerCaptureMinor,
+        internalPayoutMinor:bucket.internalPayoutMinor,providerPayoutMinor:bucket.providerPayoutMinor,
+        exceptions:bucket.exceptions
+      })),
       providerRecordsVerified:allVerified,
       providerStatementVerified:false,
       externalProviderStatementVerified:false,
