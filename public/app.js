@@ -2369,7 +2369,7 @@ async function removeProfileEventRsvp(eventId){
   try{await api('/events/'+encodeURIComponent(eventId)+'/rsvp',{method:'DELETE',body:'{}'});await openProfile(state.profile.user.id);state.profileTab='events';renderProfile(state.profile);toast('Event response removed.');}catch(error){toast(error.message);}
 }
 
-async async function openProfileVerificationManager(){
+async function openProfileVerificationManager(){
   let data;
   try{data=await api('/profile-verification');}
   catch(error){toast(error.message);return;}
@@ -2453,7 +2453,7 @@ async function openProfileVerificationReviewDesk(){
   }));
 }
 
-function handleProfileOverflowAction(action,u,data){
+async function handleProfileOverflowAction(action,u,data){
   closeProfileOverflowMenu();
   if(action==='view-as'){openProfileViewAsPreview(u,data);return;}
   if(action==='search'){
