@@ -205,7 +205,7 @@ export function parseMarketplacePayPalCapture(response, expectedSellerOrders) {
     throw new Error('PayPal returned an unexpected order capture status.');
   }
   if (expected.size < 1 || purchaseUnits.length !== expected.size) {
-    throw new Error('PayPal did not return one result for every seller order.');
+    throw new Error('PayPal did not capture every seller order; it must return one result for every seller.');
   }
 
   const seen = new Set();
