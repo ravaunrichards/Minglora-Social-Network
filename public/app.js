@@ -4780,7 +4780,7 @@ async function finishMagicLinkFromUrl(){
   // before sending them to Minglora's same-origin session exchange endpoint.
   window.history.replaceState(null,'',window.location.pathname+window.location.search);
   try{
-    if(authError)throw new Error(authError.replace(/\\+/g,' '));
+    if(authError)throw new Error(authError);
     if(!accessToken||!refreshToken)throw new Error('This sign-in link is incomplete or expired. Request a new Minglora sign-in link.');
     const result=await api('/auth/magic-link/complete',{
       method:'POST',
