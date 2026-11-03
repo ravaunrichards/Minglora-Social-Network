@@ -2430,6 +2430,137 @@ Deno.serve(async (req: Request) => {
     return json(200,{seller:{userId:data.user_id,status:data.status,identityStatus:data.identity_status,payoutStatus:data.payout_status,storeName:data.store_name}});
   }
 
+  if (action === "marketplace_business_identity_submit") {
+    const userId=String(input.userId||"");
+    const legalBusinessName=String(input.legalBusinessName||"").trim().slice(0,160);
+    const registrationType=String(input.registrationType||"");
+    const registrationNumber=String(input.registrationNumber||"").trim().slice(0,100);
+    const registeredAddress=String(input.registeredAddress||"").trim().slice(0,500);
+    const countryCode=String(input.countryCode||"").trim().toUpperCase();
+    const contactEmail=String(input.contactEmail||"").trim().toLowerCase();
+    if(!validUuid(userId)||legalBusinessName.length<2||
+       !["registered_company","sole_trader","partnership","other"].includes(registrationType)||
+       (["registered_company","partnership"].includes(registrationType)&&registrationNumber.length<3)||
+       (registrationNumber&&!/^[a-zA-Z0-9\s\-\/]{3,100}$/.test(registrationNumber))||
+       registeredAddress.length<5||!/^[A-Z]{2}$/.test(countryCode)||
+       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)){
+      return json(400,{error:"Enter the legal business name, business type, registered address and valid contact details. Company/partnership applications also require a registration number."});
+    }
+    const {data:seller,error:sellerError}=await admin.from("marketplace_seller_profiles")
+      .select("user_id,status,country_code,contact_email,store_name")
+      .eq("user_id",userId).maybeSingle();
+    if(sellerError)return json(503,{error:"Seller application could not be checked."});
+    if(!seller||!["pending","rejected"].includes(seller.status))return json(409,{error:"Business identity can only be submitted for a pending or returned seller application."});
+    if(seller.country_code!==countryCode)return json(409,{error:"Business country must match the seller application country. Update the seller country through support if it is incorrect."});
+    const {data:authResult}=await admin.auth.admin.getUserById(userId);
+    const authUser=authResult?.user;
+    if(!authUser?.email_confirmed_at)return json(403,{error:"Verify the account email before submitting business identity."});
+    const now=new Date(),stamp=now.toISOString(),priority=userId==="28e1df97-3fe1-488e-bb84-bdc353c58653"?"urgent":"high";
+    const identityPayload={
+      user_id:userId,legal_business_name:legalBusinessName,registration_type:registrationType,
+      registration_number:registrationNumber||null,registered_address:registeredAddress,
+      country_code:countryCode,contact_email:contactEmail,status:"pending",
+      submitted_at:stamp,reviewed_at:null,reviewed_by:null,review_reason:"",updated_at:stamp
+    };
+    const {data:identity,error:identityError}=await admin.from("marketplace_business_identity_submissions")
+      .upsert(identityPayload,{onConflict:"user_id"})
+      .select("user_id,legal_business_name,registration_type,country_code,status,submitted_at").single();
+    if(identityError)return fail(identityError,"Business identity submission could not be saved.");
+    const flags=[
+      {code:"human_identity_review_required",severity:"high",message:"Business identity must be checked against official evidence."},
+      {code:"business_document_evidence_required",severity:"high",message:"Supporting registration or sole-trader evidence must be reviewed before approval."}
+    ];
+    const {error:updateError}=await admin.from("marketplace_seller_profiles").update({
+      seller_type:"business",identity_status:"pending",status:"pending",
+      review_priority:priority,review_due_at:new Date(now.getTime()+4*60*60*1000).toISOString(),
+      auto_review_status:"needs_human_review",auto_review_score:40,auto_review_flags:flags,
+      reviewed_at:null,reviewed_by:null,review_reason:"",updated_at:stamp
+    }).eq("user_id",userId);
+    if(updateError)return fail(updateError,"Business identity was saved but seller status could not be synchronized.");
+    const {error:eventError}=await admin.from("marketplace_seller_verification_events").insert({
+      seller_id:userId,actor_id:userId,event_type:"submitted",
+      reason:"Business identity details submitted for independent verification."
+    });
+    if(eventError)return json(503,{error:"Business identity was saved but the audit event could not be written."});
+    const {data:staff,error:staffError}=await admin.from("minglora_platform_staff")
+      .select("user_id").eq("active",true).in("role",["owner","admin","moderator","reviewer"]);
+    if(staffError)return json(503,{error:"Business identity was saved but reviewer alerts could not be queued."});
+    const dueAt=new Date(now.getTime()+4*60*60*1000).toISOString();
+    if((staff||[]).length){
+      const alertRows=(staff||[]).map((row:any)=>({
+        recipient_id:row.user_id,application_user_id:userId,event_type:"business_identity_submitted",
+        priority,due_at:dueAt,title:"Business identity needs review",
+        body:legalBusinessName+" submitted identity details. Check the legal name and supporting evidence."
+      }));
+      const {error:alertError}=await admin.from("marketplace_application_review_alerts").insert(alertRows);
+      if(alertError)return json(503,{error:"Business identity was saved but reviewer alerts could not be queued."});
+      const {error:notificationError}=await admin.from("notifications").insert((staff||[]).map((row:any)=>({
+        recipient_id:row.user_id,actor_id:userId,kind:"marketplace_business_identity_review",
+        entity_type:"marketplace_seller",entity_id:userId,
+        payload:{title:"Business identity needs review",body:legalBusinessName+" submitted identity details.",priority,dueAt}
+      })));
+      if(notificationError)return json(503,{error:"Business identity was saved but in-app notifications could not be queued."});
+    }
+    return json(201,{businessIdentity:{
+      legalBusinessName:identity.legal_business_name,registrationType:identity.registration_type,
+      countryCode:identity.country_code,status:identity.status,submittedAt:identity.submitted_at
+    },seller:{status:"pending",sellerType:"business",identityStatus:"pending",reviewPriority:priority,reviewDueAt:dueAt},
+    notice:"Business identity details are queued. Minglora's automated checks do not replace review of original documents."});
+  }
+
+  if (action === "marketplace_business_identity_review") {
+    const actorId=String(input.actorId||""),sellerId=String(input.sellerId||"");
+    const status=String(input.status||""),reason=String(input.reason||"").trim().slice(0,1000);
+    if(!validUuid(actorId)||!validUuid(sellerId)||!["verified","needs_information","rejected"].includes(status)||reason.length<5){
+      return json(400,{error:"Choose a valid business identity decision and provide an audit reason."});
+    }
+    if(actorId===sellerId)return json(403,{error:"You cannot verify your own business identity."});
+    const {data:identity,error:lookupError}=await admin.from("marketplace_business_identity_submissions")
+      .select("user_id,legal_business_name,registration_type,country_code,status")
+      .eq("user_id",sellerId).maybeSingle();
+    if(lookupError)return json(503,{error:"Business identity submission could not be loaded."});
+    if(!identity)return json(404,{error:"Business identity submission not found."});
+    const stamp=new Date().toISOString();
+    const {data:updated,error}=await admin.from("marketplace_business_identity_submissions").update({
+      status,reviewed_at:stamp,reviewed_by:actorId,review_reason:reason,updated_at:stamp
+    }).eq("user_id",sellerId)
+      .select("user_id,legal_business_name,registration_type,country_code,status").single();
+    if(error)return fail(error,"Business identity decision could not be saved.");
+    const sellerIdentityStatus=status==="verified"?"verified":status==="rejected"?"rejected":"pending";
+    const {error:sellerUpdateError}=await admin.from("marketplace_seller_profiles").update({
+      identity_status:sellerIdentityStatus,auto_review_status:status==="verified"?"clear_for_human_review":"flagged",
+      updated_at:stamp
+    }).eq("user_id",sellerId);
+    if(sellerUpdateError)return fail(sellerUpdateError,"Business identity was updated but seller status could not be synchronized.");
+    await admin.from("marketplace_seller_verification_events").insert({
+      seller_id:sellerId,actor_id:actorId,
+      event_type:status==="verified"?"identity_verified":status==="rejected"?"rejected":"document_requested",
+      reason
+    });
+    await admin.from("audit_log").insert({
+      actor_id:actorId,action:"marketplace_business_identity_reviewed",target_type:"marketplace_seller",
+      target_id:sellerId,metadata:{status,reason}
+    });
+    await admin.from("notifications").insert({
+      recipient_id:sellerId,actor_id:actorId,kind:"marketplace_business_identity_status",
+      entity_type:"marketplace_seller",entity_id:sellerId,
+      payload:{status,reason,title:"Business identity review update"}
+    });
+    return json(200,{businessIdentity:{userId:updated.user_id,legalBusinessName:updated.legal_business_name,
+      registrationType:updated.registration_type,countryCode:updated.country_code,status:updated.status}});
+  }
+
+  if (action === "marketplace_review_alert_mark_read") {
+    const reviewerId=String(input.reviewerId||""),alertId=String(input.alertId||"");
+    if(!validUuid(reviewerId)||!validUuid(alertId))return json(400,{error:"A valid alert and reviewer are required."});
+    const {data,error}=await admin.from("marketplace_application_review_alerts").update({
+      read_at:new Date().toISOString()
+    }).eq("id",alertId).eq("recipient_id",reviewerId).is("read_at",null)
+      .select("id,application_user_id,read_at").maybeSingle();
+    if(error)return json(503,{error:"Review alert could not be marked as read."});
+    return json(200,{ok:true,alert:data||null});
+  }
+
   if (action === "marketplace_seller_admin_list") {
     const status=String(input.status||"pending");
     if(!["pending","approved","rejected","suspended"].includes(status))return json(400,{error:"Invalid seller application filter."});
