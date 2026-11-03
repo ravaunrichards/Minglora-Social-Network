@@ -883,6 +883,37 @@ async function route(req, res) {
         });
         return json(res,200,result);
       }
+      if(method==='GET'&&p==='/api/marketplace/cart'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        return json(res,200,await requestSupabaseState('marketplace_cart_get',{buyerId:user.id}));
+      }
+      if(method==='POST'&&p==='/api/marketplace/cart/items'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_add',{
+          buyerId:user.id,listingId:String(input.listingId||''),quantity:input.quantity===undefined?1:Number(input.quantity),
+          fulfillmentMethod:String(input.fulfillmentMethod||'pickup')
+        });
+        return json(res,200,result);
+      }
+      const cartItemMatch=p.match(/^\/api\/marketplace\/cart\/items\/([0-9a-f-]{36})$/i);
+      if(cartItemMatch&&method==='PATCH'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_update',{
+          buyerId:user.id,listingId:cartItemMatch[1],quantity:Number(input.quantity),
+          fulfillmentMethod:String(input.fulfillmentMethod||'pickup')
+        });
+        return json(res,200,result);
+      }
+      if(cartItemMatch&&method==='DELETE'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_remove',{buyerId:user.id,listingId:cartItemMatch[1]});
+        return json(res,200,result);
+      }
+      if(method==='DELETE'&&p==='/api/marketplace/cart'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_clear',{buyerId:user.id});
+        return json(res,200,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
