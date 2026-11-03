@@ -6,7 +6,7 @@ const app = fs.readFileSync(new URL('../../public/app.js', import.meta.url), 'ut
 
 test('updates the application service worker before the signed-out auth bootstrap', () => {
   const updateCall = app.indexOf('void prepareMingloraServiceWorker();');
-  const authBootstrap = app.indexOf("(async()=>{await finishPasswordRecoveryFromLink();try{const me=await api('/auth/me')");
+  const authBootstrap = app.indexOf("(async()=>{await finishPasswordRecoveryFromLink();if(await finishMagicLinkFromUrl())return;try{const me=await api('/auth/me')");
   assert.notEqual(updateCall, -1, 'service-worker update must start at app boot');
   assert.notEqual(authBootstrap, -1, 'auth bootstrap must exist');
   assert.ok(updateCall < authBootstrap, 'service-worker update must start before auth bootstrap');
