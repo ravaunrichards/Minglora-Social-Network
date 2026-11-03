@@ -21,7 +21,7 @@ import { MARKETPLACE_PRODUCT_CATEGORIES, MARKETPLACE_SERVICE_CATEGORIES, MARKETP
 import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote, validateMarketplaceServiceBookingInput, transitionMarketplaceBooking } from '../backend/modules/marketplace/commerce.js';
 import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -855,6 +855,27 @@ async function route(req, res) {
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',contactPhone:phoneNumber,country:'',county:'',parish:'',city:'',gender:'',relationshipStatus:'',aboutVisibility:DEFAULT_ABOUT_VISIBILITY,avatar:'',cover:'',createdAt:now()}; db.users.push(created);
         const sessionCookie = await createAppSession(created);
         return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
+      }
+
+      if(method==='POST'&&p==='/api/auth/magic-link/request'){
+        const email=normalizeEmail(input.email);
+        if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid email address.'});
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Email sign-in links are not configured for this account provider.'});
+        const redirectTo=new URL('/',appOrigin(req)).toString();
+        try{
+          await supabaseRequestMagicLink(email,redirectTo);
+        }catch(error){
+          if(error.status===429){
+            const retryAfterSeconds=Number(error.retryAfterSeconds)||60;
+            return json(res,429,{
+              error:'Please wait '+retryAfterSeconds+' seconds before requesting another sign-in link.',
+              code:'email_rate_limited',retryAfterSeconds
+            },{'Retry-After':String(retryAfterSeconds)});
+          }
+          if(error.status>=500||!error.status)return json(res,503,{error:'Minglora could not send a sign-in link right now. Please try again shortly.'});
+          return json(res,502,{error:'Minglora could not request a sign-in link. Please try again.'});
+        }
+        return json(res,200,{ok:true,message:'If that email belongs to a Minglora account, a secure sign-in link has been requested.'});
       }
       if(method==='POST'&&p==='/api/auth/password/reset/request'){
         const email=normalizeEmail(input.email);
