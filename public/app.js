@@ -4070,7 +4070,22 @@ async function renderMarketplaceAdmin(){
       html+=data.jobs.map(item=>'<article class="marketplace-review-item"><div><strong>'+esc(item.title)+'</strong><p>'+esc(item.companyName)+' · '+esc(item.location||'Remote')+'</p><small>'+esc(item.description.slice(0,220))+'</small></div><div class="marketplace-card-actions"><button class="primary" data-approve-job="'+esc(item.id)+'">Publish vacancy</button><button class="secondary" data-reject-job="'+esc(item.id)+'">Reject</button></div></article>').join('');
     }else html+='<p class="muted">No job vacancies are awaiting review.</p>';
     html+='</section><section class="card marketplace-admin-panel"><h2>Commerce activation</h2><span class="marketplace-status">Live checkout disabled</span><ul>'+data.commerce.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul></section>';
+     html+='<section class="card marketplace-admin-panel"><h2>Financial integrity</h2><p class="muted">Internal journal and payout checks, grouped by currency. This is not a PayPal settlement statement.</p><button type="button" class="secondary" id="marketplace-financial-reconcile">Run internal reconciliation</button><div id="marketplace-financial-reconcile-result" aria-live="polite"></div></section>';
     setContent(html);
+     $('#marketplace-financial-reconcile')?.addEventListener('click',async()=>{
+       const button=$('#marketplace-financial-reconcile'),target=$('#marketplace-financial-reconcile-result');
+       if(!button||!target)return;button.disabled=true;target.textContent='Checking internal marketplace ledger records…';
+       try{
+         const response=await api('/marketplace/admin/financial-reconciliation'),snapshot=response.snapshot||{};
+         const byCurrency=snapshot.byCurrency||{};
+         const amounts=Object.entries(byCurrency).map(([currency,values])=>{
+           const money=value=>currency+' '+(Number(value||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+           return '<article class="marketplace-review-item"><div><strong>'+esc(currency)+'</strong><p>Captured gross '+esc(money(values.capturedGrossMinor))+' · Seller net '+esc(money(values.sellerNetCapturedMinor))+'</p><small>Platform fees '+esc(money(values.platformFeesMinor))+' · Processor fees '+esc(money(values.processorFeesMinor))+'</small><small>Payouts queued '+Number(values.queuedPayouts||0)+' · processing '+Number(values.processingPayouts||0)+' · paid '+Number(values.paidPayouts||0)+'</small></div></article>';
+         }).join('');
+         const exceptions=Number(snapshot.unbalancedJournals||0)+Number(snapshot.captureJournalsMissing||0)+Number(snapshot.payoutJournalsMissing||0)+Number(snapshot.unconfirmedPaidPayouts||0);
+         target.innerHTML='<div class="marketplace-order-summary"><div><small>Journals</small><strong>'+Number(snapshot.totalJournals||0)+'</strong></div><div><small>Ledger entries</small><strong>'+Number(snapshot.totalLedgerEntries||0)+'</strong></div><div><small>Unbalanced journals</small><strong>'+Number(snapshot.unbalancedJournals||0)+'</strong></div><div><small>Missing capture journals</small><strong>'+Number(snapshot.captureJournalsMissing||0)+'</strong></div><div><small>Missing payout journals</small><strong>'+Number(snapshot.payoutJournalsMissing||0)+'</strong></div><div><small>Unconfirmed paid payouts</small><strong>'+Number(snapshot.unconfirmedPaidPayouts||0)+'</strong></div></div>'+(amounts||'<p class="muted">No Marketplace financial transactions have been recorded yet.</p>')+'<p class="muted">Checked '+esc(new Date(snapshot.checkedAt||Date.now()).toLocaleString())+' · '+(exceptions?'Exceptions require investigation.':'No internal ledger integrity exceptions detected.')+'</p>';
+       }catch(error){target.textContent=error.message;}finally{button.disabled=false;}
+     });
     $('#admin-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
     document.querySelectorAll('[data-review-seller]').forEach(button=>button.addEventListener('click',async()=>{
       const userId=button.dataset.reviewSeller;
