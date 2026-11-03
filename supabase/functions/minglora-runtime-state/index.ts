@@ -129,7 +129,7 @@ Deno.serve(async (req: Request) => {
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
-    "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_receive", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_seller_payouts",
+    "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_receive", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_financial_provider_reconcile", "marketplace_seller_payouts",
     "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
@@ -1852,6 +1852,225 @@ Deno.serve(async (req: Request) => {
       }).eq("id",payoutId);
     }
     return json(200,{received:true,paid:false,payoutId,duplicate:!event});
+  }
+
+  if (action === "marketplace_financial_provider_reconcile") {
+    const startInput=String(input.startAt||"");
+    const endInput=String(input.endAt||"");
+    const startDate=new Date(startInput);
+    const endDate=new Date(endInput);
+    if(!startInput||!endInput||!Number.isFinite(startDate.getTime())||!Number.isFinite(endDate.getTime())||
+       startDate>=endDate||endDate.getTime()-startDate.getTime()>31*24*60*60*1000){
+      return json(400,{error:"Choose a valid date range of no more than 31 days."});
+    }
+    const startAt=startDate.toISOString(),endAt=endDate.toISOString();
+    const config=marketplacePayPalConfig();
+    if(!config.clientId||!config.clientSecret||!config.attributionId){
+      return json(409,{error:"Marketplace PayPal credentials and attribution ID are not configured. No provider query was attempted."});
+    }
+    let token:string;
+    try{token=await getMarketplacePayPalToken();}
+    catch{return json(503,{error:"Minglora could not authenticate to the Marketplace PayPal API. No financial records were changed."});}
+
+    const [capturesResult,payoutsResult]=await Promise.all([
+      admin.from("marketplace_seller_payment_transactions")
+        .select("id,seller_id,seller_order_id,provider_order_id,provider_capture_id,currency,amount_minor,platform_fee_minor,processor_fee_minor,seller_net_minor,status,disbursement_mode,captured_at")
+        .eq("provider","paypal").eq("status","captured")
+        .gte("captured_at",startAt).lte("captured_at",endAt)
+        .order("captured_at",{ascending:true}).limit(500),
+      admin.from("marketplace_payouts")
+        .select("id,seller_id,seller_order_id,provider_disbursement_id,provider_disbursement_status,currency,amount_minor,status,initiated_at,completed_at")
+        .eq("provider","paypal")
+        .not("provider_disbursement_id","is",null)
+        .gte("initiated_at",startAt).lte("initiated_at",endAt)
+        .order("initiated_at",{ascending:true}).limit(500)
+    ]);
+    if(capturesResult.error||payoutsResult.error)return json(503,{error:"Minglora's captured payments and payout records could not be loaded for reconciliation."});
+    const captures=capturesResult.data||[];
+    const payouts=payoutsResult.data||[];
+    if(captures.length>=500||payouts.length>=500){
+      return json(409,{error:"This date range contains at least 500 provider records in a query. Narrow the date range to ensure all transactions are reconciled."});
+    }
+    const sellerIds=[...new Set([
+      ...captures.map((row:any)=>row.seller_id),
+      ...payouts.map((row:any)=>row.seller_id)
+    ])];
+    const {data:accounts,error:accountsError}=sellerIds.length
+      ? await admin.from("marketplace_seller_paypal_accounts")
+          .select("user_id,paypal_account_email").in("user_id",sellerIds)
+      : {data:[],error:null};
+    if(accountsError)return json(503,{error:"Verified seller PayPal identities could not be loaded for reconciliation."});
+    const emailBySeller=new Map((accounts||[]).map((row:any)=>[row.user_id,row.paypal_account_email]));
+    const byCurrency=new Map<string,any>();
+    const getBucket=(currency:string)=>{
+      const code=String(currency||"").trim().toUpperCase();
+      if(!/^[A-Z]{3}$/.test(code))return null;
+      if(!byCurrency.has(code))byCurrency.set(code,{
+        currency:code,internalCaptureMinor:0,providerCaptureMinor:0,
+        internalPayoutMinor:0,providerPayoutMinor:0,
+        captureCount:0,captureVerified:0,payoutCount:0,payoutVerified:0,
+        exceptions:[],captureDetails:[],payoutDetails:[]
+      });
+      return byCurrency.get(code);
+    };
+    for(const row of captures){
+      const currency=String(row.currency||"").trim().toUpperCase();
+      const bucket=getBucket(currency);
+      if(!bucket)continue;
+      bucket.internalCaptureMinor+=Number(row.amount_minor||0);
+      bucket.captureCount++;
+      const sellerEmail=String(emailBySeller.get(row.seller_id)||"");
+      if(!row.provider_capture_id||!sellerEmail){
+        const exception={type:"capture",reference:row.provider_capture_id||row.id,reason:"Missing capture ID or verified seller PayPal email."};
+        bucket.exceptions.push(exception);bucket.captureDetails.push({...exception,matched:false});continue;
+      }
+      let response:Response|undefined,payload:any={};
+      try{
+        response=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/payments/captures/"+encodeURIComponent(String(row.provider_capture_id)),{
+          method:"GET",
+          headers:{
+            "Authorization":"Bearer "+token,
+            "Content-Type":"application/json",
+            "PayPal-Partner-Attribution-Id":config.attributionId,
+            "PayPal-Auth-Assertion":marketplacePayPalAuthAssertion(sellerEmail)
+          }
+        });
+        payload=await response.json().catch(()=>({}));
+      }catch{
+        const exception={type:"capture",reference:row.provider_capture_id,reason:"PayPal captured-payment detail could not be reached."};
+        bucket.exceptions.push(exception);bucket.captureDetails.push({...exception,matched:false});continue;
+      }
+      if(!response?.ok){
+        const exception={type:"capture",reference:row.provider_capture_id,reason:"PayPal captured-payment lookup failed.",providerStatus:response?.status||0};
+        bucket.exceptions.push(exception);bucket.captureDetails.push({...exception,matched:false});continue;
+      }
+      const providerAmount=Math.round(Number(payload?.amount?.value||0)*100);
+      const providerCurrency=String(payload?.amount?.currency_code||"").toUpperCase();
+      const providerStatus=String(payload?.status||"").toUpperCase();
+      const breakdown=payload?.seller_receivable_breakdown||{};
+      const providerFee=breakdown.paypal_fee?.value==null?null:Math.round(Number(breakdown.paypal_fee.value)*100);
+      const providerNet=breakdown.net_amount?.value==null?null:Math.round(Number(breakdown.net_amount.value)*100);
+      const mismatches:string[]=[];
+      if(String(payload?.id||"")!==String(row.provider_capture_id))mismatches.push("Provider capture ID does not match.");
+      if(providerStatus!=="COMPLETED")mismatches.push("PayPal capture is not completed.");
+      if(providerCurrency!==currency)mismatches.push("Captured payment currency differs from the ledger.");
+      if(providerAmount!==Number(row.amount_minor))mismatches.push("Captured payment amount differs from the ledger.");
+      if(providerFee!==null&&providerFee!==Number(row.processor_fee_minor))mismatches.push("PayPal processing fee differs from the ledger.");
+      if(providerNet!==null&&providerNet!==Number(row.seller_net_minor))mismatches.push("PayPal seller net differs from the ledger.");
+      if(String(row.disbursement_mode||"").toUpperCase()!=="DELAYED")mismatches.push("Internal capture is not tagged DELAYED.");
+      if(providerStatus==="COMPLETED"&&providerCurrency===currency)bucket.providerCaptureMinor+=providerAmount;
+      if(!mismatches.length)bucket.captureVerified++;
+      else bucket.exceptions.push({type:"capture",reference:row.provider_capture_id,reasons:mismatches});
+      bucket.captureDetails.push({
+        reference:row.provider_capture_id,matched:mismatches.length===0,
+        providerStatus,providerAmountMinor:providerAmount,providerCurrency,
+        providerFeeMinor:providerFee,providerSellerNetMinor:providerNet,
+        internalAmountMinor:Number(row.amount_minor),internalFeeMinor:Number(row.processor_fee_minor),
+        internalSellerNetMinor:Number(row.seller_net_minor),mismatches
+      });
+    }
+
+    for(const row of payouts){
+      const currency=String(row.currency||"").trim().toUpperCase();
+      const bucket=getBucket(currency);
+      if(!bucket)continue;
+      if(row.status==="paid")bucket.internalPayoutMinor+=Number(row.amount_minor||0);
+      bucket.payoutCount++;
+      if(!row.provider_disbursement_id){
+        const exception={type:"payout",reference:row.id,reason:"Missing PayPal referenced-payout item ID."};
+        bucket.exceptions.push(exception);bucket.payoutDetails.push({...exception,matched:false});continue;
+      }
+      let response:Response|undefined,payload:any={};
+      try{
+        response=await fetch(MARKETPLACE_PAYPAL_BASE+"/v1/payments/referenced-payouts-items/"+encodeURIComponent(String(row.provider_disbursement_id)),{
+          method:"GET",
+          headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json","PayPal-Partner-Attribution-Id":config.attributionId}
+        });
+        payload=await response.json().catch(()=>({}));
+      }catch{
+        const exception={type:"payout",reference:row.provider_disbursement_id,reason:"PayPal referenced-payout item detail could not be reached."};
+        bucket.exceptions.push(exception);bucket.payoutDetails.push({...exception,matched:false});continue;
+      }
+      if(!response?.ok){
+        const exception={type:"payout",reference:row.provider_disbursement_id,reason:"PayPal referenced-payout item lookup failed.",providerStatus:response?.status||0};
+        bucket.exceptions.push(exception);bucket.payoutDetails.push({...exception,matched:false});continue;
+      }
+      const item=payload?.payout_item_details||payload?.payout_item||payload;
+      const money=item?.amount||item?.payout_amount||payload?.amount||{};
+      const providerAmount=Math.round(Number(money?.value||0)*100);
+      const providerCurrency=String(money?.currency||money?.currency_code||"").toUpperCase();
+      const providerStatus=String(item?.transaction_status||payload?.transaction_status||item?.status||payload?.status||"").toUpperCase();
+      const providerId=String(item?.payout_item_id||payload?.payout_item_id||"");
+      const mismatches:string[]=[];
+      if(providerId&&providerId!==String(row.provider_disbursement_id))mismatches.push("PayPal payout item ID does not match.");
+      if(providerCurrency!==currency)mismatches.push("Payout currency differs from the ledger.");
+      if(providerAmount!==Number(row.amount_minor))mismatches.push("Payout amount differs from the ledger.");
+      if(row.status==="paid"&&providerStatus!=="SUCCESS")mismatches.push("PayPal has not confirmed payout success.");
+      if(row.status!=="paid"&&providerStatus==="SUCCESS")mismatches.push("PayPal shows payout success, but Minglora has not recorded it as paid.");
+      if(providerStatus==="SUCCESS"&&providerCurrency===currency)bucket.providerPayoutMinor+=providerAmount;
+      if(!mismatches.length)bucket.payoutVerified++;
+      else bucket.exceptions.push({type:"payout",reference:row.provider_disbursement_id,reasons:mismatches});
+      bucket.payoutDetails.push({
+        reference:row.provider_disbursement_id,matched:mismatches.length===0,
+        providerStatus,providerAmountMinor:providerAmount,providerCurrency,
+        internalAmountMinor:Number(row.amount_minor),internalStatus:row.status,mismatches
+      });
+    }
+
+    const results=[];
+    for(const bucket of byCurrency.values()){
+      const exceptionCount=bucket.exceptions.length;
+      const variance=(bucket.providerCaptureMinor-bucket.internalCaptureMinor)+
+        (bucket.providerPayoutMinor-bucket.internalPayoutMinor);
+      const details={
+        range:{startAt,endAt},
+        counts:{captures:bucket.captureCount,capturesVerified:bucket.captureVerified,payouts:bucket.payoutCount,payoutsVerified:bucket.payoutVerified},
+        captures:bucket.captureDetails,payouts:bucket.payoutDetails,
+        exceptions:bucket.exceptions,
+        providerStatementVerified:false,
+        providerStatementNote:"This run checks each PayPal capture and referenced-payout item by its provider ID. It is not a downloadable PayPal balance statement or bank settlement statement."
+      };
+      const status=exceptionCount?"completed_with_exceptions":"completed";
+      const {data:run,error:runError}=await admin.from("marketplace_financial_reconciliation_runs").insert({
+        provider:"paypal",run_type:"manual",status,currency:bucket.currency,
+        provider_report_reference:"paypal-api-verification:"+startAt+":"+endAt,
+        internal_capture_minor:bucket.internalCaptureMinor,
+        internal_payout_minor:bucket.internalPayoutMinor,
+        provider_capture_minor:bucket.providerCaptureMinor,
+        provider_payout_minor:bucket.providerPayoutMinor,
+        variance_minor:variance,exception_count:exceptionCount,details,
+        completed_at:new Date().toISOString()
+      }).select("id,status,currency,variance_minor,exception_count,started_at,completed_at").single();
+      if(runError)return fail(runError,"PayPal provider reconciliation result could not be saved.");
+      results.push(run);
+    }
+    if(!results.length){
+      const details={
+        range:{startAt,endAt},counts:{captures:0,capturesVerified:0,payouts:0,payoutsVerified:0},
+        captures:[],payouts:[],exceptions:[],providerStatementVerified:false,
+        providerStatementNote:"No captured Marketplace payments or seller payouts exist in this date range. No external statement has been verified."
+      };
+      const {data:run,error:runError}=await admin.from("marketplace_financial_reconciliation_runs").insert({
+        provider:"paypal",run_type:"manual",status:"completed",currency:null,
+        provider_report_reference:"paypal-api-verification:"+startAt+":"+endAt,
+        internal_capture_minor:0,internal_payout_minor:0,provider_capture_minor:0,
+        provider_payout_minor:0,variance_minor:0,exception_count:0,details,
+        completed_at:new Date().toISOString()
+      }).select("id,status,currency,variance_minor,exception_count,started_at,completed_at").single();
+      if(runError)return fail(runError,"Empty PayPal reconciliation result could not be saved.");
+      results.push(run);
+    }
+    const totalExceptions=results.reduce((sum,row)=>sum+Number(row.exception_count||0),0);
+    const totalRecords=[...byCurrency.values()].reduce((sum,bucket)=>sum+bucket.captureCount+bucket.payoutCount,0);
+    const allVerified=totalRecords>0&&totalExceptions===0&&results.every(row=>row.status==="completed");
+    return json(200,{
+      provider:"paypal",range:{startAt,endAt},runs:results,
+      providerRecordsVerified:allVerified,
+      providerStatementVerified:false,
+      externalProviderStatementVerified:false,
+      totalExceptions,
+      notice:"PayPal provider records were checked by exact transaction and payout-item IDs. A PayPal balance statement or bank statement has not been downloaded or verified."
+    });
   }
 
   if (action === "marketplace_financial_reconcile") {
