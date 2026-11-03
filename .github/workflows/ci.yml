@@ -84,6 +84,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/auth-login.js
+          node --check public/sw.js
           node --check public/settings.js
           node --check src/server.js
           node --check src/store.js
