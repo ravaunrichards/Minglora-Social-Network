@@ -832,7 +832,10 @@ async function route(req, res) {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
         if(phoneNumber&&!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter a valid international phone number, including + and country code.'});
-        if (db.users.some(u=>normalizeEmail(u.email)===email || u.username===username)) return json(res,409,{error:'That email or username is already registered. Log in instead.'});
+        if (AUTH_PROVIDER !== 'supabase') {
+          if (db.users.some(u=>normalizeEmail(u.email)===email)) return json(res,409,{error:'An account with this email already exists. Log in instead.',code:'email_already_registered'});
+          if (db.users.some(u=>u.username===username)) return json(res,409,{error:'That username is already taken. Choose another username.',code:'username_already_taken'});
+        }
         if (AUTH_PROVIDER === 'supabase') {
           const registration = await requestSupabaseState('auth_register_user', {
             email, password, name, username, phoneNumber
