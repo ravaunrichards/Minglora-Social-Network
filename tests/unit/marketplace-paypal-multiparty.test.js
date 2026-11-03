@@ -153,7 +153,7 @@ test('capture reconciliation verifies every seller reference, amount and complet
       }]}},
       {reference_id:sellerOrder2.sellerOrderId,payments:{captures:[{
         id:'CAPTURE-TWO',status:'COMPLETED',disbursement_mode:'DELAYED',amount:{currency_code:'USD',value:'75.00'},
-        seller_receivable_breakdown:{paypal_fee:{value:'2.50'},net_amount:{value:'65.25'}}
+        seller_receivable_breakdown:{paypal_fee:{value:'2.50'},net_amount:{value:'65.00'}}
       }]}}
     ]
   },[
