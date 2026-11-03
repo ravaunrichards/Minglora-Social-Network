@@ -1348,18 +1348,27 @@ Deno.serve(async (req: Request) => {
     const eventId=String(event.id).slice(0,128);
     const eventType=String(event.event_type).slice(0,128);
     const resource=event.resource||{};
-    const {data:stored,error:storeError}=await admin.from("marketplace_webhook_events").upsert({
-      provider:"paypal",
-      provider_event_id:eventId,
-      event_type:eventType,
-      signature_verified:true,
-      processing_status:"received",
-      payload:event,
+    const {data:inserted,error:storeError}=await admin.from("marketplace_webhook_events").upsert({
+      provider:"paypal",provider_event_id:eventId,event_type:eventType,
+      signature_verified:true,processing_status:"processing",payload:event,
       received_at:new Date().toISOString()
     },{onConflict:"provider,provider_event_id",ignoreDuplicates:true})
       .select("id,processing_status").maybeSingle();
     if(storeError)return fail(storeError,"Verified Marketplace PayPal webhook could not be persisted.");
-    if(!stored)return json(200,{received:true,duplicate:true,eventId});
+    if(!inserted){
+      const {data:existing,error:existingError}=await admin.from("marketplace_webhook_events")
+        .select("id,processing_status").eq("provider","paypal").eq("provider_event_id",eventId).maybeSingle();
+      if(existingError||!existing)return json(503,{error:"Duplicate Marketplace webhook could not be checked."});
+      if(existing.processing_status==="processed"||existing.processing_status==="ignored"){
+        return json(200,{received:true,duplicate:true,eventId,status:existing.processing_status});
+      }
+      const {data:claimed,error:claimError}=await admin.from("marketplace_webhook_events")
+        .update({processing_status:"processing",signature_verified:true,payload:event,event_type:eventType})
+        .eq("id",existing.id).in("processing_status",["received","failed"])
+        .select("id").maybeSingle();
+      if(claimError)return fail(claimError,"Failed Marketplace webhook could not be claimed for retry.");
+      if(!claimed)return json(202,{received:true,duplicate:true,processing:true,eventId,notice:"This PayPal event is already being processed."});
+    }
 
     try{
       if(eventType==="MERCHANT.PARTNER-CONSENT.REVOKED"){
@@ -1390,13 +1399,15 @@ Deno.serve(async (req: Request) => {
         const trackingId=String(resource.tracking_id||"");
         if(merchantId&&trackingId){
           const {data:account,error:accountError}=await admin.from("marketplace_seller_paypal_accounts")
-            .select("user_id,tracking_id,onboarding_status").eq("merchant_id",merchantId).maybeSingle();
+            .select("user_id,tracking_id,onboarding_status").eq("tracking_id",trackingId).maybeSingle();
           if(accountError)throw new Error("Could not load the seller account for PayPal onboarding completion.");
-          if(account&&account.tracking_id===trackingId&&account.onboarding_status!=="verified"){
-            await admin.from("marketplace_seller_paypal_accounts").update({
-              onboarding_status:"pending",status_reason:"PayPal reports onboarding complete; Minglora is checking the merchant-integrations API response.",
+          if(account&&account.onboarding_status!=="verified"){
+            const {error:updateError}=await admin.from("marketplace_seller_paypal_accounts").update({
+              merchant_id:merchantId,onboarding_status:"pending",
+              status_reason:"PayPal reports onboarding complete; Minglora is checking the merchant-integrations API response.",
               updated_at:new Date().toISOString()
             }).eq("user_id",account.user_id);
+            if(updateError)throw new Error("Could not save the PayPal merchant reference for onboarding verification.");
           }
         }
       } else if([
@@ -1411,6 +1422,11 @@ Deno.serve(async (req: Request) => {
             .eq("provider_disbursement_id",payoutItemId).maybeSingle();
           if(payoutError)throw new Error("Could not match the PayPal payout event to a Minglora seller payout.");
           if(payout){
+            const {error:auditError}=await admin.from("marketplace_payout_events").upsert({
+              payout_id:payout.id,provider_event_id:eventId,event_type:eventType,
+              signature_verified:true,payload:event,received_at:new Date().toISOString()
+            },{onConflict:"provider_event_id",ignoreDuplicates:true});
+            if(auditError)throw new Error("Verified PayPal payout event could not be saved to the payout audit trail.");
             const status=String(resource.transaction_status||"").toUpperCase();
             if(eventType==="PAYMENT.PAYOUTS-ITEM.SUCCEEDED"||status==="SUCCESS"){
               const {error:confirmError}=await admin.rpc("confirm_marketplace_payout",{
@@ -1420,26 +1436,36 @@ Deno.serve(async (req: Request) => {
                 p_response_snapshot:event
               });
               if(confirmError)throw new Error("Could not reconcile the confirmed seller payout.");
-            }else if(["PAYMENT.PAYOUTS-ITEM.FAILED","PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.RETURNED","PAYMENT.PAYOUTS-ITEM.UNCLAIMED"].includes(eventType)){
+            }else if(eventType==="PAYMENT.PAYOUTS-ITEM.HELD"||status==="ONHOLD"){
               const {error:updateError}=await admin.from("marketplace_payouts").update({
-                status:eventType==="PAYMENT.PAYOUTS-ITEM.HELD"?"held":"failed",
-                provider_disbursement_status:status||eventType,
-                response_snapshot:event,
-                last_attempt_at:new Date().toISOString()
+                status:"held",provider_disbursement_status:status||eventType,
+                response_snapshot:event,last_attempt_at:new Date().toISOString()
+              }).eq("id",payout.id);
+              if(updateError)throw new Error("Could not place the seller payout on provider hold.");
+              const {error:sellerOrderError}=await admin.from("marketplace_seller_orders")
+                .update({payout_status:"held",updated_at:new Date().toISOString()}).eq("id",payout.seller_order_id);
+              if(sellerOrderError)throw new Error("Could not place the seller order payout on hold.");
+            }else if(["PAYMENT.PAYOUTS-ITEM.FAILED","PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.RETURNED","PAYMENT.PAYOUTS-ITEM.UNCLAIMED"].includes(eventType)){
+              const payoutStatus=eventType==="PAYMENT.PAYOUTS-ITEM.RETURNED"?"returned":"failed";
+              const {error:updateError}=await admin.from("marketplace_payouts").update({
+                status:payoutStatus,provider_disbursement_status:status||eventType,
+                response_snapshot:event,last_attempt_at:new Date().toISOString()
               }).eq("id",payout.id);
               if(updateError)throw new Error("Could not update the failed seller payout.");
-              if(eventType!=="PAYMENT.PAYOUTS-ITEM.HELD"){
-                const {error:sellerOrderError}=await admin.from("marketplace_seller_orders")
-                  .update({payout_status:"failed",updated_at:new Date().toISOString()})
-                  .eq("id",payout.seller_order_id);
-                if(sellerOrderError)throw new Error("Could not update the seller order payout state after provider failure.");
-              }
+              const {error:sellerOrderError}=await admin.from("marketplace_seller_orders")
+                .update({payout_status:"failed",updated_at:new Date().toISOString()})
+                .eq("id",payout.seller_order_id);
+              if(sellerOrderError)throw new Error("Could not update the seller order payout state after provider failure.");
             }else{
               await admin.from("marketplace_payouts").update({
                 status:"processing",provider_disbursement_status:status||eventType,
                 response_snapshot:event,last_attempt_at:new Date().toISOString()
               }).eq("id",payout.id);
             }
+            const {error:payoutEventDoneError}=await admin.from("marketplace_payout_events").update({
+              processed_at:new Date().toISOString()
+            }).eq("provider_event_id",eventId);
+            if(payoutEventDoneError)throw new Error("Could not mark the verified payout audit event processed.");
           }
         }
       }
