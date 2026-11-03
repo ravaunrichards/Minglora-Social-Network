@@ -27,12 +27,15 @@ function marketplacePayPalConfig() {
   };
 }
 
-function marketplacePayPalAuthAssertion(payerId:string):string {
+function marketplacePayPalAuthAssertion(sellerEmail:string):string {
   const cfg=marketplacePayPalConfig();
-  if(!cfg.clientId||!payerId||payerId.length>128)throw new Error("A verified PayPal seller payer ID and marketplace client ID are required.");
-  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value));
+  const email=String(sellerEmail||"").trim().toLowerCase();
+  if(!cfg.clientId||!/^\\S+@\\S+\\.\\S+$/.test(email)||email.length>254){
+    throw new Error("A verified PayPal seller email and marketplace client ID are required.");
+  }
+  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value)).replace(/=+$/,"").replace(/\\+/g,"-").replace(/\\//g,"_");
   const header=encode({alg:"none"});
-  const payload=encode({iss:cfg.clientId,payer_id:payerId});
+  const payload=encode({iss:cfg.clientId,email});
   return header+"."+payload+".";
 }
 let marketplacePayPalToken: { value: string; expiresAt: number } | null = null;
@@ -1010,8 +1013,8 @@ Deno.serve(async (req: Request) => {
       .eq("order_id",orderId).order("seller_id",{ascending:true});
     if(sellerOrdersError)return json(503,{error:"Marketplace seller orders could not be loaded."});
     if(!sellerOrders?.length||sellerOrders.length>10)return json(409,{error:"PayPal multi-seller checkout supports one to ten verified seller orders."});
-    if(sellerOrders.length>1&&(Deno.env.get("MARKETPLACE_PAYPAL_MULTI_SELLER_DELAYED_APPROVED")||"").toLowerCase()!=="true"){
-      return json(409,{error:"Multi-seller delayed disbursement requires PayPal's explicit approval for this combined integration. No payment was created."});
+    if(sellerOrders.length>1){
+      return json(409,{error:"One secure PayPal Auth Assertion is available per delayed-disbursement request. This cart contains multiple sellers; split checkout by seller until PayPal approves and Minglora verifies the multi-seller delayed-settlement flow. No payment was created."});
     }
     const sumGross=sellerOrders.reduce((total,row)=>total+Number(row.gross_minor||0),0);
     if(sumGross!==Number(order.total_minor))return json(409,{error:"Seller order totals do not match the buyer order total. Tax and fulfilment must be allocated before payment."});
@@ -1075,7 +1078,7 @@ Deno.serve(async (req: Request) => {
         reference_id:seller.sellerOrderId,
         custom_id:orderId,
         description:seller.description,
-        payee:{merchant_id:seller.merchantId,email_address:seller.sellerEmail},
+        payee:{email_address:seller.sellerEmail},
         amount:{currency_code:order.currency,value:gross},
         payment_instruction:{disbursement_mode:"DELAYED"}
       };
@@ -1091,7 +1094,7 @@ Deno.serve(async (req: Request) => {
           "Authorization":"Bearer "+token,
           "Content-Type":"application/json",
           "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
-          ...(paymentSellers.length===1?{"PayPal-Auth-Assertion":marketplacePayPalAuthAssertion(paymentSellers[0].merchantId)}:{}),
+          ...(paymentSellers.length===1?{"PayPal-Auth-Assertion":marketplacePayPalAuthAssertion(paymentSellers[0].sellerEmail)}:{}),
           "PayPal-Request-Id":String(attempt.provider_request_id).slice(0,108)
         },
         body:JSON.stringify({
@@ -1166,15 +1169,15 @@ Deno.serve(async (req: Request) => {
       .select("id,seller_id,gross_minor,commission_minor")
       .eq("order_id",orderId);
     if(sellerOrdersError||!sellerOrders?.length)return json(503,{error:"Marketplace seller orders are unavailable for capture reconciliation."});
-    if(sellerOrders.length>1&&(Deno.env.get("MARKETPLACE_PAYPAL_MULTI_SELLER_DELAYED_APPROVED")||"").toLowerCase()!=="true"){
-      return json(409,{error:"Multi-seller delayed disbursement has not been approved for this PayPal integration."});
+    if(sellerOrders.length>1){
+      return json(409,{error:"Multi-seller delayed disbursement capture is disabled until PayPal confirms the multi-merchant identity and settlement flow. No capture was attempted."});
     }
     let authAssertion="";
     if(sellerOrders.length===1){
       const {data:payee,error:payeeError}=await admin.from("marketplace_seller_paypal_accounts")
-        .select("merchant_id").eq("user_id",sellerOrders[0].seller_id).maybeSingle();
-      if(payeeError||!payee?.merchant_id)return json(409,{error:"The verified PayPal seller identity could not be loaded for capture."});
-      authAssertion=marketplacePayPalAuthAssertion(String(payee.merchant_id));
+        .select("paypal_account_email").eq("user_id",sellerOrders[0].seller_id).maybeSingle();
+      if(payeeError||!payee?.paypal_account_email)return json(409,{error:"The verified PayPal seller identity could not be loaded for capture."});
+      authAssertion=marketplacePayPalAuthAssertion(String(payee.paypal_account_email));
     }
     let captureResponse:Response|undefined;
     let providerOrder:any=null;
@@ -1404,7 +1407,7 @@ Deno.serve(async (req: Request) => {
         const payoutItemId=String(resource.payout_item_id||resource.payout_item?.payout_item_id||"");
         if(payoutItemId){
           const {data:payout,error:payoutError}=await admin.from("marketplace_payouts")
-            .select("id,status,provider_disbursement_id")
+            .select("id,status,provider_disbursement_id,seller_order_id")
             .eq("provider_disbursement_id",payoutItemId).maybeSingle();
           if(payoutError)throw new Error("Could not match the PayPal payout event to a Minglora seller payout.");
           if(payout){
@@ -1426,8 +1429,10 @@ Deno.serve(async (req: Request) => {
               }).eq("id",payout.id);
               if(updateError)throw new Error("Could not update the failed seller payout.");
               if(eventType!=="PAYMENT.PAYOUTS-ITEM.HELD"){
-                await admin.from("marketplace_seller_orders").update({payout_status:"failed",updated_at:new Date().toISOString()})
-                  .eq("id",resource.custom_id||"__no_matching_seller_order__");
+                const {error:sellerOrderError}=await admin.from("marketplace_seller_orders")
+                  .update({payout_status:"failed",updated_at:new Date().toISOString()})
+                  .eq("id",payout.seller_order_id);
+                if(sellerOrderError)throw new Error("Could not update the seller order payout state after provider failure.");
               }
             }else{
               await admin.from("marketplace_payouts").update({
