@@ -4012,6 +4012,7 @@ async function renderMarketplaceOrderDetail(orderId){
 async function renderMarketplaceSeller(){
   activateSilent('marketplace');
   const data=await api('/marketplace/seller'),seller=data.seller;
+  const payoutData=seller?await api('/marketplace/payouts').catch(()=>({payouts:[]})):{payouts:[]};
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="seller-back-marketplace">← Marketplace</button></div><section class="card marketplace-commerce-panel"><span class="marketplace-eyebrow">MINGLORA SELLER CENTRE</span><h1>Build your shop on Minglora</h1><p>Seller approval and identity/business checks are required before publishing. Payout setup is a separate verified process.</p>';
   if(!seller){
     html+='<form id="marketplace-seller-application" class="marketplace-form-grid"><label>Seller type<select name="sellerType"><option value="individual">Individual seller</option><option value="business">Registered business</option></select></label><label>Store or business name<input name="storeName" minlength="2" maxlength="100" required placeholder="Your store name"></label><label>Country code<input name="countryCode" minlength="2" maxlength="2" value="JM" required></label><label>Seller contact email<input name="contactEmail" type="email" required value="'+esc(state.user.email||'')+'" placeholder="seller@example.com"></label><label class="marketplace-full-field">What do you sell?<textarea name="description" minlength="20" maxlength="1000" required placeholder="Describe your products or services and the customers you serve."></textarea></label><label class="marketplace-full-field marketplace-terms"><input type="checkbox" name="acceptTerms" value="true" required> I accept the current Minglora Seller Terms (version 2026-01).</label><input type="hidden" name="termsVersion" value="2026-01"><div class="marketplace-full-field"><button class="primary" type="submit">Submit seller application</button></div></form>';
@@ -4019,7 +4020,17 @@ async function renderMarketplaceSeller(){
     const statuses={pending:'Application under review',approved:'Seller approved',rejected:'Application rejected',suspended:'Seller account suspended'};
     const identity={not_started:'Not started',pending:'Verification pending',verified:'Verified',rejected:'Verification rejected'};
     const payout={not_connected:'Not connected',pending:'Setup pending',verified:'Verified',restricted:'Restricted'};
-    html+='<div class="marketplace-seller-status-grid"><div><small>Store</small><strong>'+esc(seller.storeName)+'</strong></div><div><small>Application</small><strong>'+esc(statuses[seller.status]||seller.status)+'</strong></div><div><small>Identity / business</small><strong>'+esc(identity[seller.identityStatus]||seller.identityStatus)+'</strong></div><div><small>Payout setup</small><strong>'+esc(payout[seller.payoutStatus]||seller.payoutStatus)+'</strong></div></div>';
+     html+='<div class="marketplace-seller-status-grid"><div><small>Store</small><strong>'+esc(seller.storeName)+'</strong></div><div><small>Application</small><strong>'+esc(statuses[seller.status]||seller.status)+'</strong></div><div><small>Identity / business</small><strong>'+esc(identity[seller.identityStatus]||seller.identityStatus)+'</strong></div><div><small>Payout setup</small><strong>'+esc(payout[seller.payoutStatus]||seller.payoutStatus)+'</strong></div></div>';
+     const sellerPayouts=payoutData.payouts||[];
+     html+='<section class="marketplace-admin-panel"><h2>Your seller payouts</h2><p class="muted">Captured funds are not the same as a payout. A payout is marked paid only after PayPal confirms the disbursement.</p>';
+     if(sellerPayouts.length){
+       html+=sellerPayouts.map(item=>{
+         const amount=(Number(item.amount_minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+         const canRelease=['delivered','completed'].includes(item.seller_order_status)&&['queued','failed'].includes(item.status);
+         return '<article class="marketplace-review-item"><div><strong>'+esc(item.currency)+' '+amount+'</strong><p>Seller order '+esc(String(item.seller_order_id||'').slice(0,8).toUpperCase())+'</p><small>Order: '+esc(String(item.seller_order_status||'unknown').replaceAll('_',' '))+' · Payout: '+esc(String(item.status||'unknown').replaceAll('_',' '))+'</small></div><div class="marketplace-card-actions">'+(canRelease?'<button class="primary" data-release-marketplace-payout="'+esc(item.id)+'">Release payout</button>':'<span class="marketplace-status">'+esc(item.status==='processing'?'Awaiting PayPal confirmation':String(item.status||'unknown').replaceAll('_',' '))+'</span>')+'</div></article>';
+       }).join('');
+     }else html+='<p class="muted">No seller payouts have been recorded yet. Real captured proceeds will appear here after checkout is approved and a buyer payment completes.</p>';
+     html+='</section>';
     if(seller.status==='approved'&&seller.identityStatus==='verified')html+='<p class="muted">Your seller profile is approved. You can publish products and services. Marketplace payments and seller payouts are not yet enabled.</p><button class="primary" id="seller-create-listing">＋ Create a listing</button>';
     else html+='<p class="muted">Your application cannot publish listings until the Minglora team completes the required review. Payout setup is not activated by submitting this application.</p>';
     html+='<p class="marketplace-safety-note">Never send passwords, card details or full banking credentials through Minglora messages. Verification documents and payout connection must use approved secure flows.</p>';
@@ -4028,6 +4039,16 @@ async function renderMarketplaceSeller(){
   setContent(html);
   $('#seller-back-marketplace')?.addEventListener('click',()=>renderMarketplace('browse'));
   $('#seller-create-listing')?.addEventListener('click',openMarketplaceComposer);
+  document.querySelectorAll('[data-release-marketplace-payout]').forEach(button=>button.addEventListener('click',async()=>{
+    const payoutId=button.dataset.releaseMarketplacePayout;
+    if(!window.confirm('Request the approved PayPal release for this delivered seller order? Minglora will not mark the payout paid until PayPal confirms it.'))return;
+    button.disabled=true;
+    try{
+      const result=await api('/marketplace/payouts/'+encodeURIComponent(payoutId)+'/release',{method:'POST',body:'{}'});
+      toast(result.paid?'PayPal confirmed the seller payout.':'Payout release submitted; awaiting PayPal confirmation.');
+      await renderMarketplaceSeller();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
   $('#marketplace-seller-application')?.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;
     try{const values=new FormData(form),payload=Object.fromEntries(values.entries());payload.acceptTerms=values.get('acceptTerms')==='true';const result=await api('/marketplace/seller',{method:'POST',body:JSON.stringify(payload)});toast('Seller application submitted for review.');await renderMarketplaceSeller();}
