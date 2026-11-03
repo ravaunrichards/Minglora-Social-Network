@@ -109,18 +109,22 @@ Authenticated object paths are owner-scoped: the first folder segment must be th
 
 After configuring Auth URLs and SMTP, create a real test account through Minglora and verify that it appears in Authentication → Users and has a `public.profiles` row with the same UUID. Test a confirmed login, profile update, and a rejected attempt to update another member's profile. Do not seed fake accounts to simulate this.
 
-## Runtime database credential
+## Production persistence architecture
 
-Minglora has a dedicated `minglora_runtime` database role with access only to the protected compatibility-state table. Migration 013 leaves it `NOLOGIN` until a private password is set. In the Minglora Supabase SQL Editor, run the following with a newly generated long random password; do not commit it or paste it into chat:
+Minglora's live Render service uses its dedicated Supabase project through the HTTPS Edge Function gateway. It does **not** open a direct PostgreSQL connection from Node.
 
-```sql
-ALTER ROLE minglora_runtime WITH LOGIN PASSWORD '<new-long-random-password>';
-```
+- Render uses `PERSISTENCE_DRIVER=supabase`.
+- `SUPABASE_STATE_API_URL` points to the Minglora-only `minglora-runtime-state` Edge Function.
+- `SUPABASE_STATE_API_KEY` is a private Render-to-Edge-Function credential. The Edge Function validates it against a SHA-256 digest in `public.minglora_runtime_api_secrets`.
+- The Edge Function's server-only Supabase secret key remains inside the Supabase function environment. Never copy it into Render, GitHub, a browser bundle or chat.
+- The gateway reads and revision-checks writes to `public.minglora_runtime_state`. The application uses this protected JSONB compatibility store for durable persistence.
 
-Then set the existing Render service's `DATABASE_URL` to the Minglora Session Pooler connection for this restricted role. The required connection string format is documented in `infrastructure/render/README.md`.
+**Do not configure `DATABASE_URL`, `PGSSLMODE`, `PG_POOL_MAX`, or enable the old `minglora_runtime` database login.** The current application does not use a direct PostgreSQL pool. The connected Render service should remain at one instance while the single-row compatibility adapter is in use; do not add independent writers or horizontally scale it.
 
-## Application integration still required
+The production Render startup logs on 2026-11-03 reported `persistenceDriver=supabase`, `persistenceDurable=true`, and `persistenceReady=true`. The `/api/ready` endpoint derives readiness from the live Supabase gateway health check and configured Auth provider.
 
-The Supabase schema is deployed, but the existing Node application still uses the single-row `public.minglora_runtime_state` compatibility store. The normalized domain tables are not yet the active data adapter for all application routes. The server already has its Minglora Supabase URL and publishable key configured. Its durable persistence remains unconfigured until the runtime-role password is set privately and the corresponding `DATABASE_URL`, `PERSISTENCE_DRIVER=postgres`, and `PGSSLMODE=require` are added to Render. Production readiness must remain false until `/api/ready` reports a connected PostgreSQL driver and configured Supabase Auth.
+## Application integration status
+
+The normalized relational schema, RLS policies, storage buckets and domain tables are deployed. However, the Node route layer still serializes its in-memory application model into the single `public.minglora_runtime_state` JSONB row; the normalized domain tables are **not yet the active repository adapter for every application route**. This is durable persistence, but it is not yet a normalized, transaction-oriented route/data layer. Migrate route domains incrementally to the relational tables and transactional RPCs before adding multiple API instances or independent writers.
 
 The generated database types are maintained at `database/types/database.types.ts`.
