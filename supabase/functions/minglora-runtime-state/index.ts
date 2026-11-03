@@ -41,11 +41,7 @@ function marketplacePayPalAuthAssertion(sellerEmail:string):string {
   const payload=encode({iss:cfg.clientId,email});
   return header+"."+payload+".";
 }
-  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value));
-  const header=encode({alg:"none"});
-  const payload=encode({iss:cfg.clientId,email});
-  return header+"."+payload+".";
-}
+
 let marketplacePayPalToken: { value: string; expiresAt: number } | null = null;
 async function getMarketplacePayPalToken(): Promise<string> {
   const clientId=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")||"";
