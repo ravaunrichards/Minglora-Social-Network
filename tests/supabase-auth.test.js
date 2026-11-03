@@ -101,7 +101,7 @@ test('password recovery reports a temporary provider/network outage instead of a
   }
 });
 
-test('password recovery preserves Supabase rate-limit responses', async () => {
+test('password recovery preserves Supabase rate-limit interval and error code', async () => {
   const saved = {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_PUBLISHABLE_KEY,
@@ -110,13 +110,43 @@ test('password recovery preserves Supabase rate-limit responses', async () => {
   try {
     process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
     process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
-    globalThis.fetch = async () => new Response(JSON.stringify({ msg: 'Too many requests' }), {
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      msg: 'For security purposes, you can only request this after 52 seconds.',
+      code: 'over_email_send_rate_limit'
+    }), {
       status: 429,
       headers: { 'content-type': 'application/json' }
     });
     await assert.rejects(
       supabaseRequestPasswordReset('member@example.test'),
-      error => error.status === 429 && /too many requests/i.test(error.message)
+      error => error.status === 429
+        && error.retryAfterSeconds === 52
+        && error.code === 'over_email_send_rate_limit'
+        && /52 seconds/i.test(error.message)
+    );
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
+});
+
+test('password recovery prefers the Retry-After response header', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async () => new Response(JSON.stringify({ msg: 'email rate limit exceeded' }), {
+      status: 429,
+      headers: { 'content-type': 'application/json', 'retry-after': '3600' }
+    });
+    await assert.rejects(
+      supabaseRequestPasswordReset('member@example.test'),
+      error => error.status === 429 && error.retryAfterSeconds === 3600
     );
   } finally {
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
