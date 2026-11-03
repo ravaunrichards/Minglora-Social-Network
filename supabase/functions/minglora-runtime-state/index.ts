@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
-    "marketplace_paypal_payment_prepare", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile",
+    "marketplace_paypal_payment_prepare", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_seller_payouts",
     "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
@@ -1088,6 +1088,17 @@ Deno.serve(async (req: Request) => {
     return json(200,{snapshot:data});
   }
 
+
+  if (action === "marketplace_seller_payouts") {
+    const sellerId=String(input.sellerId||"");
+    if(!validUuid(sellerId))return json(400,{error:"Invalid seller account."});
+    const {data,error}=await admin.from("marketplace_payouts")
+      .select("id,seller_order_id,amount_minor,currency,status,provider_disbursement_status,initiated_at,completed_at,failure_code")
+      .eq("seller_id",sellerId).order("initiated_at",{ascending:false}).limit(100);
+    if(error)return json(503,{error:"Marketplace seller payouts could not be loaded."});
+    return json(200,{payouts:data||[]});
+  }
+
   if (action === "marketplace_seller_get") {
     const userId=String(input.userId||"");
     if(!validUuid(userId))return json(400,{error:"Invalid seller account."});
@@ -1383,18 +1394,41 @@ Deno.serve(async (req: Request) => {
 
   if (action === "marketplace_checkout_status") {
     const {data,error}=await admin.from("marketplace_payment_configuration")
-      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled")
+      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled,delayed_disbursement_enabled,card_payments_enabled")
       .eq("singleton",true).maybeSingle();
     if(error||!data)return json(503,{error:"Marketplace payment configuration is unavailable."});
     const blockers=[];
+    const envConfigured=Boolean(
+      Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_SECRET")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_WEBHOOK_ID")
+    );
+    const envEnabled=(Deno.env.get("MARKETPLACE_PAYPAL_ENABLED")||"").toLowerCase()==="true";
+    const partnerApproved=(Deno.env.get("MARKETPLACE_PAYPAL_PARTNER_APPROVED")||"").toLowerCase()==="true";
+    const delayedApproved=(Deno.env.get("MARKETPLACE_PAYPAL_DELAYED_DISBURSEMENT_APPROVED")||"").toLowerCase()==="true";
+    const liveApproved=(Deno.env.get("MARKETPLACE_PAYPAL_LIVE_APPROVED")||"").toLowerCase()==="true";
+    const cardApproved=(Deno.env.get("MARKETPLACE_PAYPAL_ADVANCED_CARDS_APPROVED")||"").toLowerCase()==="true";
     if(data.marketplace_approval_status!=="approved")blockers.push("Marketplace provider approval has not been confirmed.");
     if(!data.checkout_enabled)blockers.push("Buyer checkout is disabled.");
     if(!data.payouts_enabled)blockers.push("Seller payouts are disabled.");
     if(!data.tax_calculation_enabled)blockers.push("Tax and customs calculation is not configured.");
+    if(!data.delayed_disbursement_enabled)blockers.push("Delayed seller disbursement is not approved and enabled.");
     if(!data.provider)blockers.push("No marketplace payment provider is configured.");
-    return json(200,{enabled:Boolean(data.checkout_enabled&&data.marketplace_approval_status==="approved"&&data.provider&&data.tax_calculation_enabled),
-      orderCreationEnabled:false,payoutsEnabled:Boolean(data.payouts_enabled&&data.marketplace_approval_status==="approved"),
-      provider:data.provider||null,blockers});
+    if(!envConfigured)blockers.push("Marketplace-specific PayPal credentials, attribution ID and webhook ID are not configured.");
+    if(!envEnabled)blockers.push("Marketplace PayPal transactions are disabled.");
+    if(!partnerApproved)blockers.push("PayPal has not approved Minglora as a marketplace partner.");
+    if(!delayedApproved)blockers.push("PayPal delayed disbursement has not been approved for the marketplace.");
+    if(MARKETPLACE_PAYPAL_MODE==="live"&&!liveApproved)blockers.push("Production PayPal Marketplace use is not approved.");
+    if(data.card_payments_enabled&&!cardApproved)blockers.push("PayPal Advanced Credit and Debit Card Payments underwriting is not approved.");
+    const baseReady=Boolean(data.marketplace_approval_status==="approved"&&data.provider==="paypal"&&data.checkout_enabled&&data.payouts_enabled&&data.tax_calculation_enabled&&data.delayed_disbursement_enabled&&envConfigured&&envEnabled&&partnerApproved&&delayedApproved&&(MARKETPLACE_PAYPAL_MODE!=="live"||liveApproved));
+    return json(200,{
+      enabled:baseReady,
+      orderCreationEnabled:false,
+      payoutsEnabled:Boolean(data.payouts_enabled&&data.marketplace_approval_status==="approved"&&data.delayed_disbursement_enabled&&delayedApproved),
+      cardPaymentsEnabled:Boolean(baseReady&&data.card_payments_enabled&&cardApproved),
+      provider:data.provider||null,blockers
+    });
   }
 
 
