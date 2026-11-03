@@ -4324,8 +4324,30 @@ async function renderMarketplaceAdmin(){
     }else html+='<p class="muted">No Marketplace refund requests need review.</p>';
     html+='</section>';
     html+='</section><section class="card marketplace-admin-panel"><h2>Commerce activation</h2><span class="marketplace-status">Live checkout disabled</span><ul>'+data.commerce.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul></section>';
-     html+='<section class="card marketplace-admin-panel"><h2>Financial integrity</h2><p class="muted">Internal journal and payout checks, grouped by currency. This is not a PayPal settlement statement.</p><button type="button" class="secondary" id="marketplace-financial-reconcile">Run internal reconciliation</button><div id="marketplace-financial-reconcile-result" aria-live="polite"></div></section>';
+      const todayUtc=new Date().toISOString().slice(0,10);
+      const startUtc=new Date(Date.now()-6*24*60*60*1000).toISOString().slice(0,10);
+      html+='<section class="card marketplace-admin-panel"><h2>Financial integrity</h2><p class="muted">Internal journal, capture and payout checks grouped by currency. Internal consistency is separate from external PayPal verification.</p><button type="button" class="secondary" id="marketplace-financial-reconcile">Run internal reconciliation</button><div id="marketplace-financial-reconcile-result" aria-live="polite"></div><div class="marketplace-provider-reconcile"><h3>Verify PayPal transactions</h3><p class="muted">Checks captured-payment and referenced-payout records individually against PayPal. Choose up to 31 days; this is not a downloaded PayPal balance statement.</p><div class="marketplace-form-grid"><label>Start date<input id="marketplace-provider-start" type="date" value="'+startUtc+'" max="'+todayUtc+'"></label><label>End date<input id="marketplace-provider-end" type="date" value="'+todayUtc+'" max="'+todayUtc+'"></label></div><button type="button" class="primary" id="marketplace-provider-reconcile">Verify provider records</button><div id="marketplace-provider-reconcile-result" aria-live="polite"></div></div></section>';
     setContent(html);
+      $('#marketplace-provider-reconcile')?.addEventListener('click',async()=>{
+        const button=$('#marketplace-provider-reconcile'),target=$('#marketplace-provider-reconcile-result');
+        const startValue=$('#marketplace-provider-start')?.value||'',endValue=$('#marketplace-provider-end')?.value||'';
+        if(!button||!target)return;
+        if(!startValue||!endValue||startValue>endValue){toast('Choose a valid provider reconciliation date range.');return;}
+        const startAt=new Date(startValue+'T00:00:00.000Z').toISOString();
+        const endAt=new Date(endValue+'T23:59:59.999Z').toISOString();
+        if(Date.parse(endAt)-Date.parse(startAt)>31*24*60*60*1000){toast('Provider reconciliation is limited to 31 days per run.');return;}
+        button.disabled=true;target.textContent='Verifying captured payments and payout items with PayPal…';
+        try{
+          const result=await api('/marketplace/admin/financial-reconciliation/provider',{method:'POST',body:JSON.stringify({startAt,endAt})});
+          const currencyRows=(result.byCurrency||[]).map(row=>{
+            const fmt=value=>row.currency+' '+(Number(value||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+            return '<article class="marketplace-review-item"><div><strong>'+esc(row.currency)+'</strong><p>Captures '+Number(row.capturesVerified||0)+' / '+Number(row.captures||0)+' verified · PayPal '+esc(fmt(row.providerCaptureMinor))+' · ledger '+esc(fmt(row.internalCaptureMinor))+'</p><p>Payouts '+Number(row.payoutsVerified||0)+' / '+Number(row.payouts||0)+' verified · PayPal '+esc(fmt(row.providerPayoutMinor))+' · ledger '+esc(fmt(row.internalPayoutMinor))+'</p><small>Exceptions: '+(row.exceptions||[]).length+'</small></div></article>';
+          }).join('');
+          const exceptionHtml=(result.byCurrency||[]).flatMap(row=>(row.exceptions||[]).map(item=>'<li>'+esc(row.currency+' · '+(item.reference||'unreferenced')+' · '+(item.reason||((item.reasons||[]).join(' '))))+'</li>')).join('');
+          target.innerHTML='<div class="marketplace-order-summary"><div><small>Verified records</small><strong>'+(result.providerRecordsVerified?'All matched':'Review required')+'</strong></div><div><small>Exceptions</small><strong>'+Number(result.totalExceptions||0)+'</strong></div><div><small>External statement</small><strong>Not verified</strong></div></div>'+(currencyRows||'<p class="muted">No provider transactions or payouts were found in this date range.</p>')+(exceptionHtml?'<h4>Reconciliation exceptions</h4><ul>'+exceptionHtml+'</ul>':'')+'<p class="muted">'+esc(result.notice||'PayPal API records checked; a PayPal balance or bank statement has not been verified.')+'</p>';
+        }catch(error){target.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
      $('#marketplace-financial-reconcile')?.addEventListener('click',async()=>{
        const button=$('#marketplace-financial-reconcile'),target=$('#marketplace-financial-reconcile-result');
        if(!button||!target)return;button.disabled=true;target.textContent='Checking internal marketplace ledger records…';
