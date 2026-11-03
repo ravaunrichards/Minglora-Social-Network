@@ -905,6 +905,13 @@ async function route(req, res) {
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
       
+      if(method==='GET'&&p==='/api/marketplace/payouts'){
+        if(isSupabasePersistence()){
+          const result=await requestSupabaseState('marketplace_seller_payouts',{sellerId:user.id});
+          return json(res,200,result);
+        }
+        return json(res,200,{payouts:[]});
+      }
       const payoutReleaseParts=p.split('/');
       if(method==='POST'&&payoutReleaseParts.length===6&&payoutReleaseParts[1]==='api'&&payoutReleaseParts[2]==='marketplace'&&payoutReleaseParts[3]==='payouts'&&payoutReleaseParts[5]==='release'){
         const payoutId=String(payoutReleaseParts[4]||'');
