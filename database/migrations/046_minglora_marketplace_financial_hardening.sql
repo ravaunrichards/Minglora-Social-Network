@@ -433,7 +433,8 @@ BEGIN
      OR v_seller.payout_status<>'verified'
      OR v_account.onboarding_status<>'verified'
      OR NOT v_account.payments_receivable
-     OR NOT (v_account.granted_features @> ARRAY['DELAY_FUNDS_DISBURSEMENT']::text[]) THEN
+     OR nullif(v_account.paypal_payer_id,'') IS NULL
+     OR NOT (v_account.granted_features @> ARRAY['DELAY_FUNDS_DISBURSEMENT','PARTNER_FEE']::text[]) THEN
     RAISE EXCEPTION 'Seller PayPal account is not approved for delayed disbursement';
   END IF;
 
@@ -449,6 +450,7 @@ BEGIN
     'sellerOrderId',v_order.id,
     'providerCaptureId',v_tx.provider_capture_id,
     'merchantId',v_account.merchant_id,
+    'payerId',v_account.paypal_payer_id,
     'currency',v_payout.currency,
     'amountMinor',v_payout.amount_minor,
     'status',v_payout.status,
