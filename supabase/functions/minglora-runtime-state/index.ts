@@ -13,7 +13,7 @@ const admin = SUPABASE_URL && adminKey
 
 const MARKETPLACE_PAYPAL_MODE = (Deno.env.get("MARKETPLACE_PAYPAL_MODE") || "sandbox").toLowerCase();
 const MARKETPLACE_PAYPAL_BASE = (Deno.env.get("MARKETPLACE_PAYPAL_API_BASE_URL") ||
-  (MARKETPLACE_PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com")).replace(/\\/+$/, "");
+  (MARKETPLACE_PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com")).replace(/\/+$/, "");
 let marketplacePayPalToken: { value: string; expiresAt: number } | null = null;
 async function getMarketplacePayPalToken(): Promise<string> {
   const clientId=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")||"";
