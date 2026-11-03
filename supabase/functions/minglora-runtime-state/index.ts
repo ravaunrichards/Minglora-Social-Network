@@ -1410,6 +1410,79 @@ Deno.serve(async (req: Request) => {
             if(updateError)throw new Error("Could not save the PayPal merchant reference for onboarding verification.");
           }
         }
+      } else if(eventType==="PAYMENT.CAPTURE.COMPLETED"){
+        // Reconcile completed capture events even when the buyer closes the return tab.
+        const captureId=String(resource.id||"");
+        const providerOrderId=String(resource.supplementary_data?.related_ids?.order_id||resource.order_id||"");
+        if(!captureId||!providerOrderId)throw new Error("PayPal capture event is missing its capture or order reference.");
+        const {data:attempt,error:attemptError}=await admin.from("marketplace_payment_attempts")
+          .select("id,order_id,provider_order_id,status")
+          .eq("provider","paypal").eq("provider_order_id",providerOrderId)
+          .order("created_at",{ascending:false}).limit(1).maybeSingle();
+        if(attemptError)throw new Error("Could not match the completed PayPal capture to a Minglora payment attempt.");
+        if(!attempt){
+          await admin.from("marketplace_webhook_events").update({
+            processing_status:"ignored",processed_at:new Date().toISOString()
+          }).eq("provider","paypal").eq("provider_event_id",eventId);
+          return json(200,{received:true,ignored:true,eventId,reason:"No Minglora payment attempt matches this PayPal order."});
+        }
+        if(["captured","partially_captured","failed"].includes(attempt.status)){
+          await admin.from("marketplace_webhook_events").update({
+            processing_status:"processed",processed_at:new Date().toISOString()
+          }).eq("provider","paypal").eq("provider_event_id",eventId);
+          return json(200,{received:true,duplicate:true,eventId,orderId:attempt.order_id});
+        }
+        const {data:order,error:orderError}=await admin.from("marketplace_orders")
+          .select("id,buyer_id,currency,status,payment_status,total_minor")
+          .eq("id",attempt.order_id).maybeSingle();
+        if(orderError||!order)throw new Error("Could not load the Minglora order for PayPal capture reconciliation.");
+        const {data:sellerOrders,error:sellerOrdersError}=await admin.from("marketplace_seller_orders")
+          .select("id,seller_id,gross_minor,commission_minor").eq("order_id",order.id);
+        if(sellerOrdersError||!sellerOrders?.length)throw new Error("Could not load seller orders for PayPal capture reconciliation.");
+        if(sellerOrders.length!==1)throw new Error("Automatic capture-webhook reconciliation is limited to one seller per delayed-disbursement order.");
+        const {data:sellerAccount,error:sellerAccountError}=await admin.from("marketplace_seller_paypal_accounts")
+          .select("paypal_account_email").eq("user_id",sellerOrders[0].seller_id).maybeSingle();
+        if(sellerAccountError||!sellerAccount?.paypal_account_email)throw new Error("The verified PayPal seller email is not available for capture reconciliation.");
+        const accessToken=await getMarketplacePayPalToken();
+        const providerResponse=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/checkout/orders/"+encodeURIComponent(providerOrderId),{
+          headers:{
+            "Authorization":"Bearer "+accessToken,
+            "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+            "PayPal-Auth-Assertion":marketplacePayPalAuthAssertion(String(sellerAccount.paypal_account_email))
+          }
+        });
+        const providerOrder=await providerResponse.json().catch(()=>({}));
+        if(!providerResponse.ok)throw new Error("PayPal could not verify the order associated with the capture event.");
+        const unit=(providerOrder.purchase_units||[]).find((row:any)=>String(row.reference_id||"")===sellerOrders[0].id);
+        const captures=Array.isArray(unit?.payments?.captures)?unit.payments.captures:[];
+        const capture=captures.find((row:any)=>String(row.id||"")===captureId&&String(row.status||"").toUpperCase()==="COMPLETED");
+        if(!capture)throw new Error("The exact capture ID from the webhook was not confirmed in the PayPal order.");
+        const currency=String(capture.amount?.currency_code||"").toUpperCase();
+        const amountMinor=Math.round(Number(capture.amount?.value||0)*100);
+        const breakdown=capture.seller_receivable_breakdown||{};
+        const processorFeeMinor=breakdown.paypal_fee?.value==null?0:Math.round(Number(breakdown.paypal_fee.value)*100);
+        const sellerNetMinor=breakdown.net_amount?.value==null
+          ? Number(sellerOrders[0].gross_minor)-Number(sellerOrders[0].commission_minor)-processorFeeMinor
+          : Math.round(Number(breakdown.net_amount.value)*100);
+        const disbursementMode=String(capture.disbursement_mode||unit?.payment_instruction?.disbursement_mode||"").toUpperCase();
+        if(currency!==String(order.currency).toUpperCase()||
+           amountMinor!==Number(sellerOrders[0].gross_minor)||
+           disbursementMode!=="DELAYED"||
+           !Number.isSafeInteger(processorFeeMinor)||processorFeeMinor<0||
+           sellerNetMinor!==Number(sellerOrders[0].gross_minor)-Number(sellerOrders[0].commission_minor)-processorFeeMinor||
+           sellerNetMinor<=0){
+          throw new Error("PayPal capture amount, currency, delayed disbursement or seller net did not reconcile to Minglora.");
+        }
+        const {error:reconcileError}=await admin.rpc("complete_marketplace_paypal_capture",{
+          p_buyer_id:order.buyer_id,p_order_id:order.id,p_attempt_id:attempt.id,
+          p_provider_order_id:providerOrderId,
+          p_capture_rows:[{
+            sellerOrderId:sellerOrders[0].id,providerCaptureId:captureId,
+            amountMinor,platformFeeMinor:Number(sellerOrders[0].commission_minor),
+            processorFeeMinor,sellerNetMinor,status:"captured",providerStatus:"COMPLETED"
+          }]
+        });
+        if(reconcileError)throw new Error("The completed PayPal capture could not be posted to Minglora's ledger.");
       } else if([
         "PAYMENT.PAYOUTS-ITEM.SUCCEEDED","PAYMENT.PAYOUTS-ITEM.FAILED",
         "PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.RETURNED",
