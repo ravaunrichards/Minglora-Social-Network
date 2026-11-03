@@ -39,12 +39,17 @@ test('Marketplace PayPal credentials are isolated from creator PayPal credential
     MARKETPLACE_PAYPAL_WEBHOOK_ID:'market-webhook',
     MARKETPLACE_PAYPAL_ENABLED:'true',
     MARKETPLACE_PAYPAL_PARTNER_APPROVED:'true',
+    MARKETPLACE_PAYPAL_DELAYED_DISBURSEMENT_APPROVED:'true',
+    MARKETPLACE_PAYPAL_ADVANCED_CARDS_APPROVED:'true',
     MARKETPLACE_PAYPAL_MODE:'sandbox'
   };
   const config=marketplacePayPalConfig(env);
   assert.equal(config.clientId,'market-client');
   assert.equal(config.enabledForTransactions,true);
+  assert.equal(config.delayedDisbursementApproved,true);
+  assert.equal(config.advancedCardsApproved,true);
   assert.equal(config.base,'https://api-m.sandbox.paypal.com');
+  assert.equal(marketplacePayPalReadiness(env).cardPaymentsEnabled,true);
   assert.deepEqual(marketplacePayPalReadiness(env).blockers,[]);
   assert.equal(marketplacePayPalReadiness({...env,MARKETPLACE_PAYPAL_PARTNER_APPROVED:'false'}).enabled,false);
   assert.equal(marketplacePayPalReadiness({...env,MARKETPLACE_PAYPAL_MODE:'live'}).enabled,false);
@@ -69,7 +74,7 @@ test('seller referral requests business marketplace payment and refund capabilit
   assert.equal(payload.tracking_id,'seller-123');
   assert.deepEqual(payload.products,['EXPRESS_CHECKOUT']);
   assert.deepEqual(payload.operations[0].api_integration_preference.rest_api_integration.third_party_details.features,
-    ['PAYMENT','REFUND']);
+    ['PAYMENT','REFUND','PARTNER_FEE','DELAY_FUNDS_DISBURSEMENT']);
   assert.equal(payload.legal_consents[0].granted,true);
   assert.throws(()=>buildMarketplacePayPalReferralPayload({
     trackingId:'seller-123',
@@ -112,7 +117,7 @@ test('multi-seller checkout creates one PayPal purchase unit and platform fee pe
   assert.equal(result.purchase_units[0].reference_id,sellerOrder1.sellerOrderId);
   assert.equal(result.purchase_units[0].payee.merchant_id,sellerOrder1.merchantId);
   assert.equal(result.purchase_units[0].amount.value,'125.00');
-  assert.equal(result.purchase_units[0].payment_instruction.disbursement_mode,'INSTANT');
+  assert.equal(result.purchase_units[0].payment_instruction.disbursement_mode,'DELAYED');
   assert.equal(result.purchase_units[0].payment_instruction.platform_fees[0].amount.value,'12.50');
   assert.equal(result.purchase_units[1].amount.value,'75.00');
   assert.throws(()=>buildMarketplacePayPalOrderPayload({
@@ -143,11 +148,11 @@ test('capture reconciliation verifies every seller reference, amount and complet
     status:'COMPLETED',
     purchase_units:[
       {reference_id:sellerOrder1.sellerOrderId,payments:{captures:[{
-        id:'CAPTURE-ONE',status:'COMPLETED',amount:{currency_code:'USD',value:'125.00'},
+        id:'CAPTURE-ONE',status:'COMPLETED',disbursement_mode:'DELAYED',amount:{currency_code:'USD',value:'125.00'},
         seller_receivable_breakdown:{paypal_fee:{value:'4.00'},net_amount:{value:'108.50'}}
       }]}},
       {reference_id:sellerOrder2.sellerOrderId,payments:{captures:[{
-        id:'CAPTURE-TWO',status:'COMPLETED',amount:{currency_code:'USD',value:'75.00'},
+        id:'CAPTURE-TWO',status:'COMPLETED',disbursement_mode:'DELAYED',amount:{currency_code:'USD',value:'75.00'},
         seller_receivable_breakdown:{paypal_fee:{value:'2.50'},net_amount:{value:'65.25'}}
       }]}}
     ]
@@ -166,4 +171,41 @@ test('capture reconciliation verifies every seller reference, amount and complet
     }]}}]
   },[sellerOrder1]),/amount did not match/);
   assert.throws(()=>parseMarketplacePayPalCapture({status:'PARTIALLY_COMPLETED',purchase_units:[]},[sellerOrder1]),/did not capture every seller order/);
+});
+
+
+test('partial capture preserves completed seller units and records declined seller units independently',()=>{
+  const parsed=parseMarketplacePayPalCapture({
+    status:'PARTIALLY_COMPLETED',
+    purchase_units:[
+      {reference_id:sellerOrder1.sellerOrderId,payments:{captures:[{
+        id:'CAPTURE-ONE-PARTIAL',status:'COMPLETED',disbursement_mode:'DELAYED',
+        amount:{currency_code:'USD',value:'125.00'},
+        seller_receivable_breakdown:{paypal_fee:{value:'4.00'},net_amount:{value:'108.50'}}
+      }]}},
+      {reference_id:sellerOrder2.sellerOrderId,payments:{captures:[{
+        status:'DECLINED',
+        error:{name:'UNPROCESSABLE_ENTITY',details:[{issue:'TRANSACTION_REFUSED'}]}
+      }]}}
+    ]
+  },[
+    {...sellerOrder1,currency:'USD'},
+    {...sellerOrder2,currency:'USD'}
+  ]);
+  assert.equal(parsed.length,2);
+  assert.equal(parsed[0].status,'captured');
+  assert.equal(parsed[0].providerStatus,'COMPLETED');
+  assert.equal(parsed[1].status,'declined');
+  assert.equal(parsed[1].providerStatus,'DECLINED');
+  assert.equal(parsed[1].failureCode,'TRANSACTION_REFUSED');
+});
+test('captured seller units must confirm delayed disbursement',()=>{
+  assert.throws(()=>parseMarketplacePayPalCapture({
+    status:'COMPLETED',
+    purchase_units:[{reference_id:sellerOrder1.sellerOrderId,payments:{captures:[{
+      id:'CAPTURE-INSTANT',status:'COMPLETED',disbursement_mode:'INSTANT',
+      amount:{currency_code:'USD',value:'125.00'},
+      seller_receivable_breakdown:{paypal_fee:{value:'4.00'},net_amount:{value:'108.50'}}
+    }]}}]
+  },[{...sellerOrder1,currency:'USD'}]),/DELAYED disbursement/);
 });
