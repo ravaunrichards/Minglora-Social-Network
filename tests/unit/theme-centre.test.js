@@ -52,10 +52,12 @@ test('all advertised themes have previews and responsive visual treatment', () =
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
   assert.match(html, /styles\.css\?v=20261101-profile-tools-1/);
-  assert.match(html, /app\\.js\\?v=20261103-auth-register-independent-1/);
+  assert.match(html, /app\.js\?v=20261103-auth-register-independent-1/);
   assert.match(html, /auth-login\.js\?v=20261103-auth-refresh-2/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
   assert.match(sw, /minglora-shell-v64-auth-register-independent-1/);
   assert.match(sw, /auth-login\.js\?v=20261103-auth-refresh-2/);
+  assert.match(html, /auth-register\.js\?v=20261103-independent-1/);
+  assert.match(sw, /auth-register\.js\?v=20261103-independent-1/);
   assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
 });
