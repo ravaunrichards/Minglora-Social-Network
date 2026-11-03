@@ -125,6 +125,7 @@ Deno.serve(async (req: Request) => {
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "marketplace_cart_get", "marketplace_cart_add", "marketplace_cart_update", "marketplace_cart_remove", "marketplace_cart_clear",
+    "marketplace_refund_request", "marketplace_refunds_admin_list", "marketplace_refund_approve",
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
@@ -1571,6 +1572,116 @@ Deno.serve(async (req: Request) => {
     return json(200,{received:true,duplicate:!data,eventId});
   }
 
+
+  if (action === "marketplace_refund_request") {
+    const buyerId=String(input.buyerId||"");
+    const sellerOrderId=String(input.sellerOrderId||"");
+    const amountMinor=Number(input.amountMinor);
+    const reason=String(input.reason||"").trim();
+    const idempotencyKey=String(input.idempotencyKey||"");
+    if(!validUuid(buyerId)||!validUuid(sellerOrderId)||
+       !Number.isSafeInteger(amountMinor)||amountMinor<1||
+       reason.length<10||reason.length>1000||
+       idempotencyKey.length<8||idempotencyKey.length>128){
+      return json(400,{error:"Provide a valid seller order, refund amount, reason and unique request key."});
+    }
+    const {data,error}=await admin.rpc("request_marketplace_refund",{
+      p_buyer_id:buyerId,p_seller_order_id:sellerOrderId,
+      p_amount_minor:amountMinor,p_reason:reason,p_idempotency_key:idempotencyKey
+    });
+    if(error)return fail(error,"Marketplace refund request could not be recorded.");
+    return json(201,{refund:data});
+  }
+
+  if (action === "marketplace_refunds_admin_list") {
+    const {data,error}=await admin.from("marketplace_refunds")
+      .select("id,order_id,seller_order_id,case_id,provider,provider_refund_reference,amount_minor,currency,status,reason,failure_code,provider_status,requested_by,approved_by,approved_at,created_at,updated_at,completed_at")
+      .order("created_at",{ascending:false}).limit(100);
+    if(error)return json(503,{error:"Marketplace refund queue could not be loaded."});
+    return json(200,{refunds:data||[]});
+  }
+
+  if (action === "marketplace_refund_approve") {
+    const refundId=String(input.refundId||""),actorId=String(input.actorId||"");
+    if(!validUuid(refundId)||!validUuid(actorId))return json(400,{error:"Invalid refund approval reference."});
+    const {data:config,error:configError}=await admin.from("marketplace_payment_configuration")
+      .select("provider,marketplace_approval_status").eq("singleton",true).maybeSingle();
+    if(configError||!config)return json(503,{error:"Marketplace refund provider configuration is unavailable."});
+    if(config.provider!=="paypal"||config.marketplace_approval_status!=="approved"||
+       (Deno.env.get("MARKETPLACE_PAYPAL_ENABLED")||"").toLowerCase()!=="true"||
+       (Deno.env.get("MARKETPLACE_PAYPAL_PARTNER_APPROVED")||"").toLowerCase()!=="true"){
+      return json(409,{error:"PayPal Marketplace refund processing is not approved and enabled."});
+    }
+    const {data:claim,error:claimError}=await admin.rpc("claim_marketplace_refund",{
+      p_refund_id:refundId,p_actor_id:actorId
+    });
+    if(claimError)return fail(claimError,"Marketplace refund could not be approved.");
+    if(claim?.status==="succeeded"||claim?.idempotent){
+      return json(200,{paid:true,refundId,status:"succeeded",idempotent:true});
+    }
+    if(!claim?.captureId||!claim?.sellerEmail||!claim?.idempotencyKey||
+       !Number.isSafeInteger(Number(claim.amountMinor))){
+      return json(409,{error:"The approved refund is missing a verified PayPal capture, seller email or amount."});
+    }
+    let providerResponse:Response;
+    try{
+      const token=await getMarketplacePayPalToken();
+      providerResponse=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/payments/captures/"+encodeURIComponent(String(claim.captureId))+"/refund",{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer "+token,
+          "Content-Type":"application/json",
+          "Prefer":"return=representation",
+          "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+          "PayPal-Auth-Assertion":marketplacePayPalAuthAssertion(String(claim.sellerEmail)),
+          "PayPal-Request-Id":("MINGLORA-REFUND-"+String(refundId)).slice(0,108)
+        },
+        body:JSON.stringify({
+          amount:{
+            value:(Number(claim.amountMinor)/100).toFixed(2),
+            currency_code:String(claim.currency).toUpperCase()
+          },
+          invoice_id:"MINGLORA-REFUND-"+String(refundId),
+          custom_id:String(claim.orderId),
+          note_to_payer:"Minglora Marketplace refund"
+        })
+      });
+    }catch{
+      // The provider may have received the request. Keep the refund processing and
+      // reuse the exact same request ID on retry to avoid issuing a second refund.
+      return json(202,{accepted:true,processing:true,refundId,notice:"PayPal's response is uncertain. Minglora will verify the same refund request before retrying."});
+    }
+    const providerPayload=await providerResponse.json().catch(()=>({}));
+    if(!providerResponse.ok){
+      const providerCode=String(providerPayload?.name||providerPayload?.details?.[0]?.issue||"PAYPAL_REFUND_FAILED");
+      const {data:finalized,error:finalizeError}=await admin.rpc("finalize_marketplace_refund",{
+        p_refund_id:refundId,p_provider_refund_reference:"",
+        p_provider_status:"FAILED",p_amount_minor:Number(claim.amountMinor),
+        p_currency:String(claim.currency),p_response_snapshot:{httpStatus:providerResponse.status,providerCode,payload:providerPayload}
+      });
+      if(finalizeError)return fail(finalizeError,"PayPal rejected the refund and Minglora could not release the refund hold.");
+      return json(502,{error:"PayPal did not accept the marketplace refund.",providerCode,refund:finalized});
+    }
+    const providerRefundId=String(providerPayload?.id||"");
+    const providerStatus=String(providerPayload?.status||"").toUpperCase();
+    const paidAmount=Math.round(Number(providerPayload?.amount?.value||0)*100);
+    const paidCurrency=String(providerPayload?.amount?.currency_code||"").toUpperCase();
+    if(!providerRefundId||paidAmount!==Number(claim.amountMinor)||paidCurrency!==String(claim.currency).toUpperCase()){
+      return json(202,{accepted:true,processing:true,refundId,providerRefundId:providerRefundId||null,
+        notice:"PayPal accepted a response, but the refund ID, amount or currency is not yet fully verified. The refund remains on hold for reconciliation."});
+    }
+    const {data:finalized,error:finalizeError}=await admin.rpc("finalize_marketplace_refund",{
+      p_refund_id:refundId,p_provider_refund_reference:providerRefundId,
+      p_provider_status:providerStatus,p_amount_minor:paidAmount,
+      p_currency:paidCurrency,p_response_snapshot:providerPayload
+    });
+    if(finalizeError)return fail(finalizeError,"PayPal responded to the refund but Minglora could not finalize the financial ledger.");
+    const status=String(finalized?.status||providerStatus).toLowerCase();
+    return json(status==="succeeded"?200:202,{
+      accepted:true,paid:status==="succeeded",processing:status==="processing",
+      refundId,providerRefundId,status,refund:finalized
+    });
+  }
 
   if (action === "marketplace_paypal_payout_release") {
     const payoutId=String(input.payoutId||""),sellerId=String(input.sellerId||"");
