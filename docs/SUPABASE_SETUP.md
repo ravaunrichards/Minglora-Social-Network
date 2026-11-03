@@ -46,7 +46,24 @@ In Supabase Dashboard → Authentication → Sessions, keep **Single session per
 
 ## Email and recovery delivery
 
-New Minglora accounts are created by the trusted Edge Function with `email_confirm: true`; members can sign in immediately after registration without waiting for an email confirmation link. Password recovery is different: configure a verified custom SMTP sender in Supabase Auth, set the Site URL to `https://minglora-social-network.onrender.com`, and allow the exact recovery redirect `https://minglora-social-network.onrender.com/?password-recovery=1`. Test delivery to external Gmail, Outlook and iCloud mailboxes before opening registration widely. Supabase's built-in email sender has restrictive rate limits and is not intended for production volume.
+New Minglora accounts are created by the trusted Edge Function with `email_confirm: true`; members can sign in immediately after registration without waiting for an email confirmation link. Password recovery is different.
+
+### Current hosted email-provider limitation
+
+The hosted Minglora project was verified on 2026-11-03 as using Supabase's default sender (`noreply@mail.app.supabase.io`), not a custom SMTP provider. The default sender is a development/testing service: it only sends to addresses belonging to the Supabase organization team and is limited to **2 Auth emails per hour across the entire project** while email confirmation is enabled. Supabase returns HTTP 429 with `over_email_send_rate_limit` when the hourly project quota is exhausted. A separate per-user resend cooldown also applies. Changing to another recipient address does not bypass the project-wide quota.
+
+**Do not disable Confirm email to bypass this limit.** That marks arbitrary signup email addresses as confirmed without proving ownership. Keep the current account-security behavior and configure a real sender instead.
+
+### Required production SMTP setup
+
+1. Create an account with a transactional email provider that supports SMTP (for example Resend, AWS SES, Postmark, SendGrid, ZeptoMail or Brevo).
+2. Verify a Minglora sending domain with that provider. Publish its SPF and DKIM records, and add a DMARC policy before sending production authentication email.
+3. In Supabase Dashboard, open **Authentication → SMTP Settings** and enable custom SMTP. Enter the provider's SMTP host, port, username, password, sender email and sender name. Keep the SMTP password only in Supabase's private Auth configuration; never commit it to Git or put it in browser-visible environment variables.
+4. After custom SMTP is enabled, open **Authentication → Rate Limits** and set the email quota to the value supported by the provider and Minglora's expected traffic. Do not remove reasonable per-address cooldowns.
+5. Keep the Site URL set to `https://minglora-social-network.onrender.com` and allow the exact recovery redirect `https://minglora-social-network.onrender.com/?password-recovery=1`.
+6. Send real test recovery messages to external Gmail, Outlook and iCloud inboxes. Verify inbox delivery, spam placement, sender authentication, link destination, token validation and password update before opening registration widely.
+
+Supabase also supports configuring custom SMTP through its Management API at `PATCH /v1/projects/{project_ref}/config/auth`; that requires a Supabase personal access token and the SMTP provider credentials. Those credentials are not present in this repository or the connected project tools, so the live sender cannot safely be switched until the owner supplies/configures them.
 
 ## Storage
 

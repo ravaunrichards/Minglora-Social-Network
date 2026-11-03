@@ -864,7 +864,26 @@ async function route(req, res) {
         if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid email address.'});
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
         const redirectTo=new URL('/?password-recovery=1',appOrigin(req)).toString();
-        try{await supabaseRequestPasswordReset(email,redirectTo);}catch(error){if(error.status===429)return json(res,429,{error:'Too many recovery requests. Please wait before trying again.'});if(error.status>=500||!error.status)return json(res,503,{error:'Password recovery is temporarily unavailable. Please try again shortly.'});}
+        try{
+          await supabaseRequestPasswordReset(email,redirectTo);
+        }catch(error){
+          if(error.status===429){
+            const retryAfterSeconds=Number(error.retryAfterSeconds)||0;
+            const projectEmailQuota=/email rate limit exceeded/i.test(error.message);
+            const message=projectEmailQuota
+              ? "Minglora's email provider has reached its project sending limit. Reliable password recovery requires custom SMTP to be configured."
+              : retryAfterSeconds>0
+                ? `Please wait ${retryAfterSeconds} seconds before requesting another recovery email.`
+                : 'Minglora is temporarily limiting recovery-email requests. Please try again later.';
+            return json(res,429,{
+              error:message,
+              code:projectEmailQuota?'email_provider_quota_exceeded':'email_rate_limited',
+              retryAfterSeconds:retryAfterSeconds||null
+            },retryAfterSeconds>0?{'Retry-After':String(retryAfterSeconds)}:{});
+          }
+          if(error.status>=500||!error.status)return json(res,503,{error:'Password recovery is temporarily unavailable. Please try again shortly.'});
+          return json(res,502,{error:'Minglora could not hand off the recovery email. Please try again or contact support.'});
+        }
         return json(res,200,{ok:true,message:'If that account exists, Minglora has requested a password recovery email.'});
       }
       if(method==='POST'&&p==='/api/auth/password/reset/complete'){

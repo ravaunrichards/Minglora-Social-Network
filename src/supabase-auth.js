@@ -214,8 +214,19 @@ export async function supabaseRequestPasswordReset(email,redirectTo) {
   }
   const data=await response.json().catch(()=>({}));
   if(!response.ok){
-    const error=new Error(String(data.msg||data.message||data.error_description||data.error||'Password reset request failed.'));
+    const message=String(data.msg||data.message||data.error_description||data.error||'Password reset request failed.');
+    const error=new Error(message);
     error.status=response.status===429?429:response.status>=500?503:response.status;
+    error.code=String(data.code||data.error_code||'');
+    if(error.status===429){
+      const headerSeconds=Number(response.headers?.get?.('retry-after'));
+      const messageMatch=message.match(/after\s+(\d+)\s+seconds?/i);
+      const messageSeconds=messageMatch?Number(messageMatch[1]):0;
+      const retryAfterSeconds=Number.isFinite(headerSeconds)&&headerSeconds>0
+        ? Math.ceil(headerSeconds)
+        : messageSeconds;
+      if(retryAfterSeconds>0)error.retryAfterSeconds=retryAfterSeconds;
+    }
     throw error;
   }
   return data;
