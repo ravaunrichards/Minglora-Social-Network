@@ -3931,6 +3931,18 @@ async function renderSearch(q){
   document.querySelectorAll('[data-open-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openGroup)));
   document.querySelectorAll('[data-open-page]').forEach(button=>button.addEventListener('click',()=>renderPage(button.dataset.openPage)));
   document.querySelectorAll('[data-open-marketplace-listing]').forEach(button=>button.addEventListener('click',()=>renderMarketplaceListing(button.dataset.openMarketplaceListing)));
+  document.querySelectorAll('[data-cart-add]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart/items',{method:'POST',body:JSON.stringify({
+        listingId:button.dataset.cartAdd,quantity:1,fulfillmentMethod:button.dataset.cartFulfillment||'pickup'
+      })});
+      toast('Added to your Minglora cart.');
+      button.textContent='Added';
+    }catch(error){toast(error.message);}
+    finally{button.disabled=false;}
+  }));
+
   document.querySelectorAll('[data-search-jobs]').forEach(button=>button.addEventListener('click',()=>renderJobs('browse',q)));
 }
 const MARKETPLACE_PRODUCT_CATEGORY_OPTIONS=[['electronics','Electronics'],['phones_computing','Phones & computing'],['fashion','Fashion & accessories'],['home_furniture','Home & furniture'],['vehicles','Vehicles'],['property','Property'],['beauty_health','Beauty & health'],['sports_outdoors','Sports & outdoors'],['toys_games','Toys & games'],['books_media','Books & media'],['food_grocery','Food & groceries'],['handmade_crafts','Handmade & crafts'],['collectibles','Collectibles'],['other','Other']];
@@ -3940,9 +3952,12 @@ function marketplaceMoney(listing){if(listing.priceType==='quote')return 'Reques
 function marketplaceCategoryLabel(kind,category){const options=kind==='service'?MARKETPLACE_SERVICE_CATEGORY_OPTIONS:MARKETPLACE_PRODUCT_CATEGORY_OPTIONS;return options.find(item=>item[0]===category)?.[1]||'Marketplace';}
 function marketplaceCard(listing){
   const image=listing.media?.[0]?.url;
-  return '<article class="marketplace-listing-card"><button type="button" class="marketplace-card-open" data-open-marketplace-listing="'+esc(listing.id)+'" aria-label="Open '+esc(listing.title)+'"><div class="marketplace-card-image">'+(image?'<img loading="lazy" src="'+esc(image)+'" alt="'+esc(listing.title)+'">':'<div class="marketplace-image-placeholder"><span>'+(listing.kind==='service'?'✦':'◇')+'</span><small>'+esc(listing.kind==='service'?'Minglora Services':'Minglora Marketplace')+'</small></div>')+'<span class="marketplace-type-pill">'+(listing.kind==='service'?'Service':'Product')+'</span></div><div class="marketplace-card-copy"><small class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</small><h3>'+esc(listing.title)+'</h3><strong class="marketplace-price">'+esc(marketplaceMoney(listing))+'</strong><span class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Available on Minglora')+'</span><span class="marketplace-seller"><img src="'+avatar(listing.seller)+'" alt=""><span>'+esc(listing.seller?.name||'Minglora seller')+'</span></span></div></button><div class="marketplace-card-actions"><button type="button" class="secondary" data-open-marketplace-listing="'+esc(listing.id)+'">View details</button><button type="button" class="marketplace-save '+(listing.isSaved?'is-saved':'')+'" data-save-marketplace-listing="'+esc(listing.id)+'" data-saved="'+(listing.isSaved?'true':'false')+'">'+(listing.isSaved?'♥ Saved':'♡ Save')+'</button></div></article>';
+  const canCart=listing.kind==='product'&&listing.sellerId!==state.user.id;
+  const defaultFulfillment=(listing.fulfillment||[])[0]||'pickup';
+  return '<article class="marketplace-listing-card"><button type="button" class="marketplace-card-open" data-open-marketplace-listing="'+esc(listing.id)+'" aria-label="Open '+esc(listing.title)+'"><div class="marketplace-card-image">'+(image?'<img loading="lazy" src="'+esc(image)+'" alt="'+esc(listing.title)+'">':'<div class="marketplace-image-placeholder"><span>'+(listing.kind==='service'?'✦':'◇')+'</span><small>'+esc(listing.kind==='service'?'Minglora Services':'Minglora Marketplace')+'</small></div>')+'<span class="marketplace-type-pill">'+(listing.kind==='service'?'Service':'Product')+'</span></div><div class="marketplace-card-copy"><small class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</small><h3>'+esc(listing.title)+'</h3><strong class="marketplace-price">'+esc(marketplaceMoney(listing))+'</strong><span class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Available on Minglora')+'</span><span class="marketplace-seller"><img src="'+avatar(listing.seller)+'" alt=""><span>'+esc(listing.seller?.name||'Minglora seller')+'</span></span></div></button><div class="marketplace-card-actions"><button type="button" class="secondary" data-open-marketplace-listing="'+esc(listing.id)+'">View details</button>'+(canCart?'<button type="button" class="secondary" data-cart-add="'+esc(listing.id)+'" data-cart-fulfillment="'+esc(defaultFulfillment)+'">Add to cart</button>':'')+'<button type="button" class="marketplace-save '+(listing.isSaved?'is-saved':'')+'" data-save-marketplace-listing="'+esc(listing.id)+'" data-saved="'+(listing.isSaved?'true':'false')+'">'+(listing.isSaved?'♥ Saved':'♡ Save')+'</button></div></article>';
 }
 async function renderMarketplace(mode=state.marketplaceMode, initialQuery=''){
+  if(mode==='cart')return renderMarketplaceCart();
   if(mode==='orders')return renderMarketplaceOrders();
   if(mode==='order-detail')return renderMarketplaceOrderDetail(state.activeMarketplaceOrder);
   if(mode==='seller')return renderMarketplaceSeller();
@@ -3954,7 +3969,7 @@ async function renderMarketplace(mode=state.marketplaceMode, initialQuery=''){
   if(kind)params.set('kind',kind);if(query)params.set('q',query);
   if(mode==='saved'||mode==='mine')state.marketplaceListings=(await api(mode==='saved'?'/marketplace/saved':'/marketplace/mine')).listings||[];
   else state.marketplaceListings=(await api('/marketplace/listings'+(params.toString()?'?'+params.toString():''))).listings||[];
-  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['bookings','Bookings'],['orders','Orders'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
+  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['cart','Cart'],['bookings','Bookings'],['orders','Orders'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
   let html='<section class="marketplace-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA MARKETPLACE</span><h1>Discover more. Buy with confidence. Grow together.</h1><p>Explore real products and services from people and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="marketplace-create-listing">＋ Create a listing</button><span>Real sellers · Real listings · No fabricated inventory</span></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✦</span><span class="marketplace-art-spark">✧</span></div></section>';
   html+='<nav class="marketplace-tabs" aria-label="Marketplace sections">'+tabs.map(([key,label])=>'<button type="button" data-marketplace-mode="'+key+'" class="'+(mode===key?'active':'')+'">'+label+'</button>').join('')+'</nav>';
   if(mode!=='saved'&&mode!=='mine')html+='<form class="marketplace-search" id="marketplace-search-form"><label class="marketplace-search-field"><span>⌕</span><input id="marketplace-query" name="q" value="'+esc(query)+'" placeholder="Search products, services, shops and more" aria-label="Search Marketplace"></label><button class="primary" type="submit">Search</button></form>';
@@ -3988,7 +4003,7 @@ async function renderMarketplaceListing(listingId){
   const images=(listing.media||[]).map(media=>renderSingleMedia(media,'marketplace-detail-image')).join('');
   const details=listing.kind==='product'?'<div><span>Condition</span><strong>'+esc(MARKETPLACE_CONDITION_LABELS[listing.condition]||listing.condition)+'</strong></div><div><span>Available</span><strong>'+Number(listing.quantity||0).toLocaleString()+'</strong></div><div><span>Fulfilment</span><strong>'+esc((listing.fulfillment||[]).map(value=>({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[value]||value)).join(', '))+'</strong></div>':'<div><span>Service delivery</span><strong>'+esc(({remote:'Remote',onsite:'On-site',both:'Remote and on-site'}[listing.serviceMode]||'On-site'))+'</strong></div>';
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="marketplace-back">← Back to Marketplace</button><span class="marketplace-status">'+esc(listing.status)+'</span></div><section class="card marketplace-detail"><div class="marketplace-detail-gallery">'+(images||'<div class="marketplace-image-placeholder"><span>◇</span><small>No photos uploaded</small></div>')+'</div><div class="marketplace-detail-copy"><span class="marketplace-eyebrow">'+(listing.kind==='service'?'MINGLORA SERVICES':'MINGLORA MARKETPLACE')+'</span><p class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</p><h1>'+esc(listing.title)+'</h1><strong class="marketplace-detail-price">'+esc(marketplaceMoney(listing))+'</strong><p class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Location not specified')+'</p><div class="marketplace-detail-facts">'+details+'</div><div class="marketplace-description">'+esc(listing.description)+'</div><div class="marketplace-seller-card"><img src="'+avatar(listing.seller)+'" alt=""><div><strong>'+esc(listing.seller?.name||'Minglora seller')+'</strong><small>@'+esc(listing.seller?.username||'member')+'</small></div></div><div class="marketplace-detail-actions">'+(own?'<button class="secondary" id="marketplace-status-toggle">'+(listing.status==='active'?'Pause listing':'Activate listing')+'</button><button class="secondary" id="marketplace-mark-sold" '+(listing.status==='sold'?'disabled':'')+'>Mark sold</button><button class="secondary" id="marketplace-remove">Remove listing</button>':'<button class="secondary" id="marketplace-save-detail">'+(listing.isSaved?'♥ Saved':'♡ Save listing')+'</button><button class="secondary" id="marketplace-report">Report listing</button>')+'</div></div></section>';
-  if(!own&&listing.kind==='product'&&listing.status==='active')html+='<section class="card marketplace-enquiry-card marketplace-commerce-panel"><h2>Review your purchase</h2><p>Get a server-calculated quote before any payment is requested. This does not reserve stock or charge you.</p><form id="marketplace-quote-form"><div class="marketplace-form-grid"><label>Quantity<input name="quantity" type="number" min="1" max="'+Number(listing.quantity||1)+'" value="1" required></label><label>Fulfilment<select name="fulfillment">'+(listing.fulfillment||[]).map(value=>'<option value="'+esc(value)+'">'+esc(({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[value]||value))+'</option>').join('')+'</select></label></div><button type="submit" class="primary">Calculate checkout quote</button></form><div id="marketplace-quote-result" aria-live="polite"></div></section>';
+  if(!own&&listing.kind==='product'&&listing.status==='active')html+='<section class="card marketplace-enquiry-card marketplace-commerce-panel"><h2>Review your purchase</h2><p>Get a server-calculated quote before any payment is requested. This does not reserve stock or charge you.</p><form id="marketplace-quote-form"><div class="marketplace-form-grid"><label>Quantity<input name="quantity" type="number" min="1" max="'+Number(listing.quantity||1)+'" value="1" required></label><label>Fulfilment<select name="fulfillment">'+(listing.fulfillment||[]).map(value=>'<option value="'+esc(value)+'">'+esc(({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[value]||value))+'</option>').join('')+'</select></label></div><button type="button" class="secondary" id="marketplace-add-to-cart-detail">Add to cart</button><button type="submit" class="primary">Calculate checkout quote</button></form><div id="marketplace-quote-result" aria-live="polite"></div></section>';
   if(!own&&listing.kind==='service'&&listing.status==='active')html+='<section class="card marketplace-enquiry-card marketplace-commerce-panel"><h2>Request an appointment</h2><p>Choose a preferred start time. The provider must accept the request. This does not collect payment.</p><form id="marketplace-booking-form"><label>Preferred date and time<input name="startAt" type="datetime-local" required></label><label>Duration<select name="durationMinutes"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">1 hour 30 minutes</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label><label>Notes (optional)<textarea name="message" maxlength="1500" placeholder="Tell the provider what you need."></textarea></label><button type="submit" class="primary">Request appointment</button></form></section>';
   if(!own&&listing.status==='active')html+='<section class="card marketplace-enquiry-card"><h2>Contact the seller</h2><p>Ask a question, request more details or discuss availability. Keep your conversation on Minglora.</p><form id="marketplace-enquiry-form"><textarea name="text" maxlength="2000" minlength="5" required placeholder="Hi, is this still available?"></textarea><button type="submit" class="primary">Send enquiry</button></form></section>';
   setContent(html);$('#marketplace-back')?.addEventListener('click',()=>renderMarketplace());
@@ -3997,6 +4012,15 @@ async function renderMarketplaceListing(listingId){
   $('#marketplace-remove')?.addEventListener('click',async()=>{if(!window.confirm('Remove this listing from Marketplace?'))return;try{await api('/marketplace/listings/'+encodeURIComponent(listing.id),{method:'DELETE',body:'{}'});toast('Listing removed.');await renderMarketplace('mine');}catch(error){toast(error.message);}});
   $('#marketplace-save-detail')?.addEventListener('click',async()=>{try{await api('/marketplace/listings/'+encodeURIComponent(listing.id)+'/save',{method:listing.isSaved?'DELETE':'POST',body:'{}'});toast(listing.isSaved?'Listing removed from Saved.':'Listing saved.');await renderMarketplaceListing(listing.id);}catch(error){toast(error.message);}});
   $('#marketplace-report')?.addEventListener('click',()=>openReportComposer('marketplace_listing',listing.id));
+  $('#marketplace-add-to-cart-detail')?.addEventListener('click',async()=>{
+    const button=$('#marketplace-add-to-cart-detail');if(!button)return;button.disabled=true;
+    try{
+      const fulfillment=$('#marketplace-quote-form')?.elements.fulfillment?.value||listing.fulfillment?.[0]||'pickup';
+      await api('/marketplace/cart/items',{method:'POST',body:JSON.stringify({listingId:listing.id,quantity:1,fulfillmentMethod:fulfillment})});
+      toast('Added to your Minglora cart.');
+      button.textContent='Added to cart';
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
   $('#marketplace-quote-form')?.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),result=$('#marketplace-quote-result');button.disabled=true;
     try{
@@ -4015,6 +4039,102 @@ async function renderMarketplaceListing(listingId){
   $('#marketplace-enquiry-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;try{await api('/marketplace/listings/'+encodeURIComponent(listing.id)+'/enquiries',{method:'POST',body:JSON.stringify({text:new FormData(form).get('text')})});form.reset();toast('Your enquiry was sent to the seller’s Minglora inbox.');}catch(error){toast(error.message);}finally{button.disabled=false;}});
 }
 
+
+async function renderMarketplaceCart(){
+  activateSilent('marketplace');
+  state.marketplaceMode='cart';
+  const data=await api('/marketplace/cart');
+  const items=data.items||[],cart=data.cart||{};
+  const currency=String(cart.currency||items.find(item=>item.listing?.currency)?.listing?.currency||'').trim();
+  const money=minor=>currency+' '+(Number(minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  let subtotal=0,allAvailable=items.length>0;
+  let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="cart-back-marketplace">← Marketplace</button></div>';
+  html+='<section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">YOUR SHOPPING BAG</span><h1>Minglora Cart</h1><p>Update quantities and fulfilment before requesting a fresh server-calculated quote.</p></div><span class="marketplace-results-count">'+items.length+' items</span></section>';
+  if(!items.length){
+    html+='<section class="card empty-state"><h3>Your cart is empty</h3><p>Browse Minglora products and add the items you want to buy. Services are booked separately.</p><button class="primary" id="cart-discover">Discover products</button></section>';
+  }else{
+    html+='<div class="marketplace-cart-list">';
+    html+=items.map(item=>{
+      const listing=item.listing||{};
+      const available=Boolean(item.available&&Number(item.quantity)<=Number(listing.availableQuantity||0));
+      allAvailable=allAvailable&&available;
+      const line=Number(listing.priceMinor||0)*Number(item.quantity||0);
+      subtotal+=line;
+      const options=(listing.fulfillment||[]).map(method=>'<option value="'+esc(method)+'" '+(method===item.fulfillmentMethod?'selected':'')+'>'+esc(({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[method]||method))+'</option>').join('');
+      return '<article class="card marketplace-cart-item"><div class="marketplace-cart-item-copy"><strong>'+esc(listing.title||'Unavailable listing')+'</strong><small>'+(listing.currency?esc(listing.currency)+' '+(Number(listing.priceMinor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' each':'')+'</small><small>'+esc(listing.location||'')+'</small>'+(available?'':'<span class="marketplace-status">Unavailable or insufficient stock</span>')+'</div><div class="marketplace-cart-item-controls"><label>Quantity<input type="number" min="1" max="'+Math.min(100,Math.max(1,Number(listing.availableQuantity||1)))+'" value="'+Number(item.quantity||1)+'" data-cart-quantity="'+esc(item.listingId)+'" '+(available?'':'disabled')+'></label><label>Fulfilment<select data-cart-fulfillment="'+esc(item.listingId)+'" '+(available?'':'disabled')+'>'+options+'</select></label><strong>'+money(line)+'</strong><div class="marketplace-card-actions"><button type="button" class="secondary" data-cart-update="'+esc(item.listingId)+'" '+(available?'':'disabled')+'>Update</button><button type="button" class="secondary" data-cart-remove="'+esc(item.listingId)+'">Remove</button></div></div></article>';
+    }).join('');
+    html+='</div>';
+    html+='<section class="card marketplace-commerce-panel marketplace-cart-summary"><h2>Cart summary</h2><div class="marketplace-order-summary"><div><small>Items subtotal</small><strong>'+money(subtotal)+'</strong></div><div><small>Currency</small><strong>'+esc(currency||'Not set')+'</strong></div><div><small>Tax and fulfilment</small><strong>Calculated in quote</strong></div></div><p class="muted">Minglora recalculates current stock, delivery and applicable taxes before an order can be created. No payment is taken when you request a quote.</p><button type="button" class="primary" id="cart-get-quote" '+(allAvailable?'':'disabled')+'>Calculate secure checkout quote</button><button type="button" class="secondary" id="cart-clear">Clear cart</button><div id="marketplace-cart-quote-result" aria-live="polite"></div></section>';
+  }
+  setContent(html);
+  $('#cart-back-marketplace')?.addEventListener('click',()=>renderMarketplace('browse'));
+  $('#cart-discover')?.addEventListener('click',()=>renderMarketplace('products'));
+  document.querySelectorAll('[data-cart-update]').forEach(button=>button.addEventListener('click',async()=>{
+    const id=button.dataset.cartUpdate;
+    const quantity=Number($('[data-cart-quantity="'+id+'"]')?.value);
+    const fulfillmentMethod=$('[data-cart-fulfillment="'+id+'"]')?.value||'';
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart/items/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({quantity,fulfillmentMethod})});
+      toast('Cart item updated.');
+      await renderMarketplaceCart();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-cart-remove]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart/items/'+encodeURIComponent(button.dataset.cartRemove),{method:'DELETE',body:'{}'});
+      toast('Item removed from your cart.');
+      await renderMarketplaceCart();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  $('#cart-clear')?.addEventListener('click',async()=>{
+    const button=$('#cart-clear');if(!button)return;
+    if(!window.confirm('Remove every item from your Minglora cart?'))return;
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart',{method:'DELETE',body:'{}'});
+      toast('Your cart has been cleared.');
+      await renderMarketplaceCart();
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
+  $('#cart-get-quote')?.addEventListener('click',async()=>{
+    const button=$('#cart-get-quote'),target=$('#marketplace-cart-quote-result');
+    if(!button||!target)return;
+    button.disabled=true;target.textContent='Checking listing prices, stock and fulfilment…';
+    try{
+      const fresh=await api('/marketplace/cart'),freshItems=fresh.items||[];
+      if(!freshItems.length||freshItems.some(item=>!item.available))throw new Error('One or more cart items are no longer available. Refresh your cart before checkout.');
+      const fulfillmentByListing={};
+      const quoteItems=freshItems.map(item=>{
+        fulfillmentByListing[item.listingId]=item.fulfillmentMethod;
+        return {listingId:item.listingId,quantity:item.quantity};
+      });
+      const response=await api('/marketplace/checkout/quote',{method:'POST',body:JSON.stringify({items:quoteItems,fulfillmentByListing})});
+      const quote=response.quote;
+      const format=value=>new Intl.NumberFormat(undefined,{style:'currency',currency:quote.currency,maximumFractionDigits:2}).format(Number(value||0)/100);
+      let quoteHtml='<div class="marketplace-quote-summary"><strong>Cart quote '+esc(quote.id||'')+'</strong><dl><dt>Items</dt><dd>'+format(quote.itemSubtotalMinor)+'</dd><dt>Fulfilment</dt><dd>'+format(quote.fulfillmentMinor)+'</dd><dt>Commission preview</dt><dd>'+format(quote.marketplaceCommissionPreviewMinor)+'</dd><dt>Tax and customs</dt><dd>'+(quote.taxMinor==null?'Not calculated':format(quote.taxMinor))+'</dd><dt>Total before tax</dt><dd>'+format(quote.totalMinorBeforeTax)+'</dd></dl>';
+      if(quote.checkoutReady){
+        quoteHtml+='<button type="button" class="primary" id="marketplace-cart-place-order">Create order</button><small>Stock is reserved only after this order is successfully created. Payment is a separate secure step.</small>';
+      }else{
+        quoteHtml+='<strong>Checkout is not enabled</strong><ul>'+(quote.blockers||[]).map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul><small>This quote is informational only. No payment was taken and no stock was reserved.</small>';
+      }
+      target.innerHTML=quoteHtml+'</div>';
+      $('#marketplace-cart-place-order')?.addEventListener('click',async()=>{
+        const place=$('#marketplace-cart-place-order');if(!place)return;
+        place.disabled=true;
+        try{
+          const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-'+quote.id+'-'+Date.now());
+          const created=await api('/marketplace/orders',{method:'POST',body:JSON.stringify({quoteId:quote.id,idempotencyKey})});
+          await api('/marketplace/cart',{method:'DELETE',body:'{}'});
+          toast(created.notice||'Order created. Payment is not confirmed.');
+          await renderMarketplaceOrderDetail(created.order?.id);
+        }catch(error){toast(error.message);place.disabled=false;}
+      });
+    }catch(error){target.textContent=error.message;}
+    finally{button.disabled=false;}
+  });
+}
 
 async function renderMarketplaceOrders(){
   activateSilent('marketplace');
