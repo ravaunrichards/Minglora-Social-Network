@@ -234,6 +234,42 @@ export async function supabaseRequestPasswordReset(email,redirectTo) {
   }
   return data;
 }
+
+export async function supabaseRequestMagicLink(email,redirectTo) {
+  requireConfig();
+  const {url:baseUrl,key:apiKey}=supabaseConfig();
+  const target=new URL(baseUrl+'/auth/v1/otp');
+  if(redirectTo)target.searchParams.set('redirect_to',redirectTo);
+  let response;
+  try {
+    response=await fetch(target,{
+      method:'POST',
+      headers:{apikey:apiKey,Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},
+      body:JSON.stringify({email,create_user:false})
+    });
+  } catch {
+    throw Object.assign(new Error('Could not reach Minglora sign-in links. Check your connection and try again.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const message=String(data.msg||data.message||data.error_description||data.error||'Sign-in link request failed.');
+    const error=new Error(message);
+    error.status=response.status===429?429:response.status>=500?503:response.status;
+    error.code=String(data.code||data.error_code||'');
+    if(error.status===429){
+      const headerSeconds=Number(response.headers?.get?.('retry-after'));
+      const messageMatch=message.match(/after\s+(\d+)\s+seconds?/i);
+      const messageSeconds=messageMatch?Number(messageMatch[1]):0;
+      const retryAfterSeconds=Number.isFinite(headerSeconds)&&headerSeconds>0
+        ? Math.ceil(headerSeconds)
+        : messageSeconds;
+      if(retryAfterSeconds>0)error.retryAfterSeconds=retryAfterSeconds;
+    }
+    throw error;
+  }
+  return data;
+}
+
 export function supabaseCompletePasswordReset(accessToken,password) {
   return supabaseUpdatePassword(accessToken,password);
 }
