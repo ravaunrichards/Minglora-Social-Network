@@ -837,6 +837,31 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
+      if(method==='POST'&&p==='/api/marketplace/paypal/seller-onboarding'){
+        if(input.shareDataConsent!==true)return json(res,400,{error:'Explicit consent is required before sharing the seller information PayPal needs for onboarding.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'PayPal marketplace onboarding requires Minglora’s hosted PostgreSQL database.'});
+        const callbackState=crypto.randomBytes(48).toString('base64url');
+        const returnUrl=appOrigin(req)+'/?marketplacePayPal=complete';
+        const result=await requestSupabaseState('marketplace_paypal_seller_start',{
+          userId:user.id,callbackState,returnUrl,shareDataConsent:true
+        });
+        if(!result.actionUrl)return json(res,502,{error:'PayPal did not return a seller onboarding link.'});
+        return json(res,201,result);
+      }
+      if(method==='POST'&&p==='/api/marketplace/paypal/seller-complete'){
+        if(!isSupabasePersistence())return json(res,503,{error:'PayPal seller verification requires Minglora’s hosted PostgreSQL database.'});
+        const result=await requestSupabaseState('marketplace_paypal_seller_complete',{
+          userId:user.id,
+          trackingId:String(input.trackingId||''),
+          merchantId:String(input.merchantId||''),
+          callbackState:String(input.callbackState||''),
+          permissionsGranted:input.permissionsGranted===true,
+          consentGranted:input.consentGranted===true,
+          emailConfirmed:input.emailConfirmed===true,
+          accountType:String(input.accountType||'')
+        });
+        return json(res,200,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
