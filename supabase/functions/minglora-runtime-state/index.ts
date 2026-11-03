@@ -30,10 +30,13 @@ function marketplacePayPalConfig() {
 function marketplacePayPalAuthAssertion(sellerEmail:string):string {
   const cfg=marketplacePayPalConfig();
   const email=String(sellerEmail||"").trim().toLowerCase();
-  if(!cfg.clientId||!/^\\S+@\\S+\\.\\S+$/.test(email)||email.length>254){
+  const at=email.indexOf("@");
+  const lastDot=email.lastIndexOf(".");
+  if(!cfg.clientId||email.length>254||at<=0||at!==email.lastIndexOf("@")||
+     lastDot<at+2||lastDot===email.length-1||email.includes(" ")){
     throw new Error("A verified PayPal seller email and marketplace client ID are required.");
   }
-  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value)).replace(/=+$/,"").replace(/\\+/g,"-").replace(/\\//g,"_");
+  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value));
   const header=encode({alg:"none"});
   const payload=encode({iss:cfg.clientId,email});
   return header+"."+payload+".";
