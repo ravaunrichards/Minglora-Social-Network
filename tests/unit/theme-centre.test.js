@@ -55,7 +55,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /app\.js\?v=20261103-auth-refresh-2/);
   assert.match(html, /auth-login\.js\?v=20261103-auth-refresh-2/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
-  assert.match(sw, /minglora-shell-v63-auth-refresh-2/);
+  assert.match(sw, /minglora-shell-v64-magic-link-3/);
   assert.match(sw, /auth-login\.js\?v=20261103-auth-refresh-2/);
   assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
 });
