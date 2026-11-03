@@ -4101,36 +4101,56 @@ async function renderMarketplaceCart(){
   $('#cart-get-quote')?.addEventListener('click',async()=>{
     const button=$('#cart-get-quote'),target=$('#marketplace-cart-quote-result');
     if(!button||!target)return;
-    button.disabled=true;target.textContent='Checking listing prices, stock and fulfilment…';
+    button.disabled=true;target.textContent='Refreshing stock and preparing seller quotes…';
     try{
       const fresh=await api('/marketplace/cart'),freshItems=fresh.items||[];
       if(!freshItems.length||freshItems.some(item=>!item.available))throw new Error('One or more cart items are no longer available. Refresh your cart before checkout.');
-      const fulfillmentByListing={};
-      const quoteItems=freshItems.map(item=>{
-        fulfillmentByListing[item.listingId]=item.fulfillmentMethod;
-        return {listingId:item.listingId,quantity:item.quantity};
-      });
-      const response=await api('/marketplace/checkout/quote',{method:'POST',body:JSON.stringify({items:quoteItems,fulfillmentByListing})});
-      const quote=response.quote;
-      const format=value=>new Intl.NumberFormat(undefined,{style:'currency',currency:quote.currency,maximumFractionDigits:2}).format(Number(value||0)/100);
-      let quoteHtml='<div class="marketplace-quote-summary"><strong>Cart quote '+esc(quote.id||'')+'</strong><dl><dt>Items</dt><dd>'+format(quote.itemSubtotalMinor)+'</dd><dt>Fulfilment</dt><dd>'+format(quote.fulfillmentMinor)+'</dd><dt>Commission preview</dt><dd>'+format(quote.marketplaceCommissionPreviewMinor)+'</dd><dt>Tax and customs</dt><dd>'+(quote.taxMinor==null?'Not calculated':format(quote.taxMinor))+'</dd><dt>Total before tax</dt><dd>'+format(quote.totalMinorBeforeTax)+'</dd></dl>';
-      if(quote.checkoutReady){
-        quoteHtml+='<button type="button" class="primary" id="marketplace-cart-place-order">Create order</button><small>Stock is reserved only after this order is successfully created. Payment is a separate secure step.</small>';
-      }else{
-        quoteHtml+='<strong>Checkout is not enabled</strong><ul>'+(quote.blockers||[]).map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul><small>This quote is informational only. No payment was taken and no stock was reserved.</small>';
+      const groups=new Map();
+      for(const item of freshItems){
+        const sellerId=String(item.listing?.sellerId||'');
+        if(!sellerId)throw new Error('A cart item no longer has a verified seller. Remove it and contact Minglora support.');
+        if(!groups.has(sellerId))groups.set(sellerId,[]);
+        groups.get(sellerId).push(item);
       }
-      target.innerHTML=quoteHtml+'</div>';
-      $('#marketplace-cart-place-order')?.addEventListener('click',async()=>{
-        const place=$('#marketplace-cart-place-order');if(!place)return;
+      const quotes=new Map();
+      let quoteHtml='';
+      if(groups.size>1){
+        quoteHtml+='<p class="muted">Your cart contains products from '+groups.size+' sellers. Each seller receives a separate order and payout record, so Minglora will quote each seller group separately.</p>';
+      }
+      let sellerIndex=0;
+      for(const [sellerId,sellerItems] of groups){
+        sellerIndex++;
+        const fulfillmentByListing={};
+        const quoteItems=sellerItems.map(item=>{
+          fulfillmentByListing[item.listingId]=item.fulfillmentMethod;
+          return {listingId:item.listingId,quantity:item.quantity};
+        });
+        const response=await api('/marketplace/checkout/quote',{method:'POST',body:JSON.stringify({items:quoteItems,fulfillmentByListing})});
+        const quote=response.quote;
+        const format=value=>new Intl.NumberFormat(undefined,{style:'currency',currency:quote.currency,maximumFractionDigits:2}).format(Number(value||0)/100);
+        quotes.set(quote.id,{quote,listingIds:sellerItems.map(item=>item.listingId)});
+        quoteHtml+='<section class="marketplace-quote-summary marketplace-seller-quote"><strong>Seller order '+sellerIndex+'</strong><dl><dt>Items</dt><dd>'+format(quote.itemSubtotalMinor)+'</dd><dt>Fulfilment</dt><dd>'+format(quote.fulfillmentMinor)+'</dd><dt>Marketplace commission preview</dt><dd>'+format(quote.marketplaceCommissionPreviewMinor)+'</dd><dt>Tax and customs</dt><dd>'+(quote.taxMinor==null?'Not calculated':format(quote.taxMinor))+'</dd><dt>Total before tax</dt><dd>'+format(quote.totalMinorBeforeTax)+'</dd></dl>';
+        if(quote.checkoutReady){
+          quoteHtml+='<button type="button" class="primary" data-cart-place-order="'+esc(quote.id)+'">Create this seller order</button><small>Stock is reserved only after this order is successfully created. Payment is a separate secure step.</small>';
+        }else{
+          quoteHtml+='<strong>Order cannot be created yet</strong><ul>'+(quote.blockers||[]).map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul><small>Informational only. No payment was taken and no stock was reserved.</small>';
+        }
+        quoteHtml+='</section>';
+      }
+      target.innerHTML=quoteHtml;
+      target.querySelectorAll('[data-cart-place-order]').forEach(place=>place.addEventListener('click',async()=>{
+        const record=quotes.get(place.dataset.cartPlaceOrder);if(!record)return;
         place.disabled=true;
         try{
-          const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-'+quote.id+'-'+Date.now());
-          const created=await api('/marketplace/orders',{method:'POST',body:JSON.stringify({quoteId:quote.id,idempotencyKey})});
-          await api('/marketplace/cart',{method:'DELETE',body:'{}'});
-          toast(created.notice||'Order created. Payment is not confirmed.');
-          await renderMarketplaceOrderDetail(created.order?.id);
+          const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-'+record.quote.id+'-'+Date.now());
+          const created=await api('/marketplace/orders',{method:'POST',body:JSON.stringify({quoteId:record.quote.id,idempotencyKey})});
+          for(const listingId of record.listingIds){
+            await api('/marketplace/cart/items/'+encodeURIComponent(listingId),{method:'DELETE',body:'{}'});
+          }
+          toast(created.notice||'Seller order created. Payment is not confirmed.');
+          await renderMarketplaceCart();
         }catch(error){toast(error.message);place.disabled=false;}
-      });
+      }));
     }catch(error){target.textContent=error.message;}
     finally{button.disabled=false;}
   });
