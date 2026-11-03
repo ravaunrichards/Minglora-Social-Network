@@ -52,8 +52,10 @@ test('all advertised themes have previews and responsive visual treatment', () =
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
   assert.match(html, /styles\.css\?v=20261101-profile-tools-1/);
-  assert.match(html, /app\.js\?v=20261101-call-recovery-1/);
+  assert.match(html, /app\.js\?v=20261103-auth-fix-1/);
+  assert.match(html, /auth-login\.js\?v=20261103-auth-fix-1/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
-  assert.match(sw, /minglora-shell-v61-streambay-removal-1/);
+  assert.match(sw, /minglora-shell-v62-auth-recovery-1/);
+  assert.match(sw, /auth-login\.js\?v=20261103-auth-fix-1/);
   assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
 });
