@@ -2591,7 +2591,7 @@ Deno.serve(async (req: Request) => {
         .select("id,application_user_id,event_type,priority,due_at,title,body,created_at")
         .eq("recipient_id",reviewerId).is("read_at",null).order("created_at",{ascending:false}).limit(50),
       admin.from("marketplace_business_identity_submissions")
-        .select("user_id,legal_business_name,registration_type,country_code,status,submitted_at")
+        .select("user_id,legal_business_name,registration_type,registration_number,registered_address,contact_email,country_code,status,submitted_at")
         .in("status",["pending","needs_information"]).limit(200)
     ]);
     if(sellerResult.error||jobResult.error||alertResult.error||businessResult.error)return json(503,{error:"Marketplace moderation queue is unavailable."});
@@ -2614,6 +2614,9 @@ Deno.serve(async (req: Request) => {
         businessIdentity:(businessByUser.get(row.user_id)?{
           legalBusinessName:(businessByUser.get(row.user_id) as any).legal_business_name,
           registrationType:(businessByUser.get(row.user_id) as any).registration_type,
+          registrationNumber:(businessByUser.get(row.user_id) as any).registration_number,
+          registeredAddress:(businessByUser.get(row.user_id) as any).registered_address,
+          contactEmail:(businessByUser.get(row.user_id) as any).contact_email,
           countryCode:(businessByUser.get(row.user_id) as any).country_code,
           status:(businessByUser.get(row.user_id) as any).status,
           submittedAt:(businessByUser.get(row.user_id) as any).submitted_at
