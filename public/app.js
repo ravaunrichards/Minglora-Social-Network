@@ -144,7 +144,10 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261103-auth-refresh-2',{scope:'/'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261103-auth-refresh-2',{scope:'/',updateViaCache:'none'});
+    // Keep the installed shell current even while the visitor is signed out.
+    await registration.update().catch(()=>{});
+    if(!state.user)return;
     const subscription=await registration.pushManager.getSubscription();
     if(subscription){
       webPushSubscriptionActive=true;
@@ -152,6 +155,9 @@ async function prepareMingloraServiceWorker(){
     }
   }catch(error){console.warn('Minglora background push setup:',error.message);}
 }
+// Register and update the application shell before the auth bootstrap runs.
+// This prevents an old installed-app cache from trapping the user on stale login code.
+void prepareMingloraServiceWorker();
 async function enableMingloraPush(){
   if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){toast('This browser does not support device push notifications.');return;}
   try{
