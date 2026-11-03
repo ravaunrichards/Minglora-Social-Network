@@ -220,7 +220,7 @@ export async function supabaseRequestPasswordReset(email,redirectTo) {
     error.code=String(data.code||data.error_code||'');
     if(error.status===429){
       const headerSeconds=Number(response.headers?.get?.('retry-after'));
-      const messageMatch=message.match(/after\\s+(\\d+)\\s+seconds?/i);
+      const messageMatch=message.match(/after\s+(\d+)\s+seconds?/i);
       const messageSeconds=messageMatch?Number(messageMatch[1]):0;
       const retryAfterSeconds=Number.isFinite(headerSeconds)&&headerSeconds>0
         ? Math.ceil(headerSeconds)
