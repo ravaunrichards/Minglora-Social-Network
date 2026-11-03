@@ -70,7 +70,7 @@ test('PayPal Auth Assertion supports a verified seller email when payer ID is un
   assert.deepEqual(JSON.parse(Buffer.from(header,'base64').toString()),{alg:'none'});
   assert.deepEqual(JSON.parse(Buffer.from(payload,'base64').toString()),{iss:'platform-client',email:'seller@example.test'});
   assert.equal(signature,'');
-  assert.throws(()=>buildMarketplacePayPalAuthAssertion('platform-client','not-an-identity'));
+  assert.throws(()=>buildMarketplacePayPalAuthAssertion('platform-client','seller@'));
   assert.throws(()=>buildMarketplacePayPalAuthAssertion('','seller@example.test'));
 });
 
