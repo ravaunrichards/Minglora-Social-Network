@@ -14,7 +14,7 @@ const verifiedProfileBadge = member => member?.verificationBadge==='blue'
   ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
   : '';
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
-async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
+async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok){const error=new Error(data.error||`Request failed (${res.status})`);error.status=res.status;error.code=data.code||'';const retryAfter=Number(res.headers?.get?.('Retry-After')||data.retryAfterSeconds);if(Number.isFinite(retryAfter)&&retryAfter>0)error.retryAfterSeconds=Math.ceil(retryAfter);throw error;}return data; }
 function stopProfilePresence(){}
 const APP_PALETTE_OPTIONS=[
   {value:'minglora',label:'Minglora Blue',color:'#1769e0'},
@@ -4694,11 +4694,48 @@ function openMfaLogin(challengeId){
     catch(err){error.textContent=err.message;button.disabled=false;}
   });
 }
+let passwordRecoveryCooldownTimer=null;
+function startPasswordRecoveryCooldown(button,seconds){
+  if(!button)return false;
+  const duration=Math.ceil(Number(seconds));
+  if(!Number.isFinite(duration)||duration<=0)return false;
+  if(passwordRecoveryCooldownTimer!==null)window.clearInterval(passwordRecoveryCooldownTimer);
+  const label=button.dataset.defaultLabel||button.textContent.trim()||'Forgot password?';
+  button.dataset.defaultLabel=label;
+  let remaining=duration;
+  const tick=()=>{
+    if(remaining<=0){
+      window.clearInterval(passwordRecoveryCooldownTimer);
+      passwordRecoveryCooldownTimer=null;
+      button.disabled=false;
+      button.removeAttribute('aria-busy');
+      button.textContent=label;
+      return;
+    }
+    button.disabled=true;
+    button.setAttribute('aria-busy','true');
+    button.textContent=`Try again in ${remaining}s`;
+    remaining-=1;
+  };
+  tick();
+  passwordRecoveryCooldownTimer=window.setInterval(tick,1000);
+  return true;
+}
 $('#forgot-password')?.addEventListener('click',async()=>{
+  const button=$('#forgot-password');
+  if(button?.disabled)return;
   const email=String($('#login-form')?.elements.email?.value||'').trim();
   if(!email){window.alert('Enter your email address first, then choose Forgot password.');$('#login-form')?.elements.email?.focus();return;}
-  try{const result=await api('/auth/password/reset/request',{method:'POST',body:JSON.stringify({email})});window.alert(result.message||'Check your email for a recovery link.');}
-  catch(error){window.alert(error.message);}
+  if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
+  try{
+    const result=await api('/auth/password/reset/request',{method:'POST',body:JSON.stringify({email})});
+    window.alert(result.message||'Check your email for a recovery link.');
+    startPasswordRecoveryCooldown(button,60);
+  }catch(error){
+    window.alert(error.message);
+    startPasswordRecoveryCooldown(button,error.retryAfterSeconds||(error.status===429?60:0));
+    if(button&&passwordRecoveryCooldownTimer===null){button.disabled=false;button.removeAttribute('aria-busy');}
+  }
 });
 async function finishPasswordRecoveryFromLink(){
   const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
