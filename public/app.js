@@ -1739,6 +1739,32 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
+async function finishMarketplacePaypalReturn(){
+  const params=new URLSearchParams(window.location.search);
+  const status=params.get("marketplacePayment"),orderId=params.get("orderId"),providerOrderId=params.get("token");
+  if(!["return","cancel"].includes(status)||!orderId)return;
+  window.history.replaceState(null,"",window.location.pathname);
+  if(status==="cancel"){
+    try{await api("/marketplace/orders/"+encodeURIComponent(orderId)+"/cancel",{method:"POST",body:"{}"});toast("Checkout was cancelled. No payment was taken and reserved stock was released.");}
+    catch(error){toast("Checkout was cancelled. Check the order status before trying again: "+error.message);}
+    await renderMarketplaceOrderDetail(orderId);
+    return;
+  }
+  if(!providerOrderId){
+    toast("PayPal returned without an order token. Check the payment status before retrying.");
+    await renderMarketplaceOrderDetail(orderId);
+    return;
+  }
+  try{
+    const result=await api("/marketplace/paypal/capture",{method:"POST",body:JSON.stringify({orderId,providerOrderId})});
+    if(result.processing)toast("PayPal is still confirming the transaction. Do not pay again; check this order shortly.");
+    else toast("PayPal confirmed payment. Your seller orders are now being processed.");
+  }catch(error){
+    toast("Minglora could not yet confirm the PayPal return: "+error.message+". Do not submit another payment until the order is checked.");
+  }
+  await renderMarketplaceOrderDetail(orderId);
+}
+
 function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
@@ -3990,7 +4016,16 @@ async function renderMarketplaceOrderDetail(orderId){
   const money=minor=>esc(order.currency)+' '+(Number(minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="order-detail-back">← Your orders</button></div>';
   html+='<section class="card marketplace-commerce-panel"><span class="marketplace-eyebrow">ORDER DETAILS</span><h1>Order '+esc(order.id.slice(0,8).toUpperCase())+'</h1><div class="marketplace-order-summary"><div><small>Order status</small><strong>'+esc(order.status.replaceAll('_',' '))+'</strong></div><div><small>Payment status</small><strong>'+esc(order.paymentStatus.replaceAll('_',' '))+'</strong></div><div><small>Order total</small><strong>'+money(order.totalMinor)+'</strong></div><div><small>Refunded</small><strong>'+money(order.refundedMinor)+'</strong></div></div><p class="muted">An order record is not proof of payment. Payment status changes only after the approved payment provider confirms capture.</p>';
-  if(order.status==='awaiting_payment'&&['pending','not_started','failed'].includes(order.paymentStatus))html+='<button type="button" class="secondary" id="cancel-marketplace-order">Cancel unpaid order and release reserved stock</button>';
+  if(order.buyerId===state.user.id&&order.status==='awaiting_payment'&&['pending','not_started','failed'].includes(order.paymentStatus)){
+    let readiness={orderCreationEnabled:false};
+    try{readiness=await api('/marketplace/checkout/status');}catch{}
+    if(readiness.orderCreationEnabled){
+      html+='<section class="marketplace-payment-panel"><h2>Complete your payment</h2><p>Continue to PayPal secure checkout. PayPal will display the payment methods available for your location, which may include eligible debit or credit cards.</p><button type="button" class="primary" id="marketplace-pay-now">Continue to secure payment</button><small>You will return to Minglora after PayPal confirms the payment. Never pay a seller outside this checkout.</small></section>';
+    }else{
+      html+='<section class="marketplace-payment-panel"><h2>Secure checkout unavailable</h2><p>No payment has been requested or taken. This order cannot be paid until marketplace payment and seller settlement checks are enabled.</p></section>';
+    }
+    html+='<button type="button" class="secondary" id="cancel-marketplace-order">Cancel unpaid order and release reserved stock</button>';
+  }
   html+='</section>';
   html+=(order.sellerOrders||[]).map(sellerOrder=>{
     const items=(sellerOrder.items||[]).map(item=>'<div class="marketplace-order-item"><div><strong>'+esc(item.title)+'</strong><small>Qty '+Number(item.quantity)+' · '+money(item.unitPriceMinor)+' each</small></div><strong>'+money(item.lineTotalMinor)+'</strong></div>').join('');
@@ -4001,6 +4036,14 @@ async function renderMarketplaceOrderDetail(orderId){
   html+='<section class="card marketplace-commerce-panel"><h2>Order activity</h2>'+(events.length?'<ol class="marketplace-order-events">'+events.map(item=>'<li><strong>'+esc(item.type.replaceAll('_',' '))+'</strong><small>'+new Date(item.createdAt).toLocaleString()+'</small><p>'+esc(item.note||'')+'</p></li>').join('')+'</ol>':'<p class="muted">No additional activity has been recorded.</p>')+'</section>';
   setContent(html);
   $('#order-detail-back')?.addEventListener('click',()=>renderMarketplaceOrders());
+  $('#marketplace-pay-now')?.addEventListener('click',async()=>{
+    const button=$('#marketplace-pay-now');if(!button)return;button.disabled=true;button.textContent='Connecting to secure checkout…';
+    try{
+      const payment=await api('/marketplace/paypal/create',{method:'POST',body:JSON.stringify({orderId:order.id})});
+      if(!payment.approvalUrl)throw new Error('PayPal did not return a secure approval page.');
+      window.location.assign(payment.approvalUrl);
+    }catch(error){toast(error.message);button.disabled=false;button.textContent='Continue to secure payment';}
+  });
   $('#cancel-marketplace-order')?.addEventListener('click',async()=>{
     const button=$('#cancel-marketplace-order');
     if(!window.confirm('Cancel this unpaid order? Reserved stock will be released.'))return;
@@ -4240,6 +4283,7 @@ async function enterMingloraApp(user,showWelcome=false){
   state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   const params=new URLSearchParams(window.location.search);
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
+  else if(params.get('marketplacePayment')==='return'||params.get('marketplacePayment')==='cancel'){await finishMarketplacePaypalReturn();}
   else activateNav('feed');
   if(showWelcome)toast('Welcome to Minglora!');
 }
