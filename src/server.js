@@ -1044,6 +1044,15 @@ async function route(req, res) {
         }
         return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
       }
+      if(method==='POST'&&p==='/api/marketplace/admin/financial-reconciliation/provider'){
+        if(!isModerator(user))return json(res,403,{error:'Provider reconciliation is restricted to authorized Marketplace moderators.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Provider reconciliation requires the hosted Marketplace financial database.'});
+        const startAt=String(input.startAt||''),endAt=String(input.endAt||'');
+        const result=await requestSupabaseState('marketplace_financial_provider_reconcile',{
+          startAt,endAt,requestedBy:user.id
+        });
+        return json(res,200,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/admin/financial-reconciliation'){
         if(!isModerator(user))return json(res,403,{error:'Marketplace financial reconciliation is restricted to authorized moderators.'});
         if(isSupabasePersistence()){
