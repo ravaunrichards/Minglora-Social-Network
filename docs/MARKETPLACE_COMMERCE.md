@@ -1,53 +1,81 @@
-# Marketplace Commerce and Jobs
+# Marketplace Commerce, Payments and Jobs
 
 ## Product boundary
 
 Minglora Marketplace is a social-commerce and services platform. Jobs is a separate employer-to-candidate workflow and never uses the commerce payment ledger.
 
-## Implemented runtime and database workflows
+## Current implemented workflows
 
-- Seller applications start pending. Moderators can review seller status and identity status with an audit reason; an application cannot approve itself.
-- Product/service listings, discovery, saved listings and Inbox enquiries are part of the current browser/API workflow.
-- Checkout quotes are calculated server-side from database-held listing prices, quantity, currency and seller-maintained fulfilment rates. Quotes are short-lived and informational only; the quote route does not reserve stock or take payment.
-- Relational Supabase tables and database functions exist for carts, quote records, orders, seller sub-orders, idempotency keys and atomic inventory reservations. Order reads are available to buyer/seller participants. The order-creation function enforces provider, checkout, seller-payout, verified-seller and tax gates.
-- The checkout-status API currently reports `orderCreationEnabled: false`. Thus the presence of order tables, an order RPC or buyer/seller order screens must not be represented as live checkout or completed order settlement.
-- Service booking requests support seller acceptance/decline, buyer cancellation and participant confirmation after seller completion. They do not collect payment.
-- Employer job-posting submissions are moderated before publication. Published roles can be searched; candidates can apply; employers can review, shortlist, reject or hire; candidates can withdraw or view their applications.
+- Product/service listings, seller profiles, seller applications, moderator identity/business review and audit reasons.
+- Persistent buyer cart, quantity and fulfilment changes, item removal, same-currency validation, server-side listing/stock checks and per-seller order grouping.
+- Server-calculated expiring checkout quotes, buyer/seller order views, seller sub-orders, order idempotency, inventory reservation, unpaid-order cancellation/expiry and fulfilment states.
+- PayPal Business seller referral onboarding with explicit data-sharing consent and server-side verification of merchant ID, tracking ID, granted payment/refund/partner-fee/delayed-disbursement permissions, verified email and payment-receivable state.
+- Server-side PayPal hosted checkout order creation and capture, single-seller delayed settlement, provider transaction verification and partial-capture reconciliation primitives.
+- Signature-verified PayPal webhooks for seller consent/onboarding changes, capture completion/refund and seller payout events. Webhook processing is idempotent, audited and retryable after a five-minute stale-processing lease.
+- Seller payout list and release request after delivery/completion. A captured amount is a seller payable, not a confirmed payout.
+- Refund requests, moderator approval, provider refund submission/confirmation, seller payable rebalancing and payout re-hold.
+- Immutable balanced financial journals, currency-aware snapshots, moderator internal reconciliation and moderator PayPal provider-record reconciliation.
+- Verified-purchase reviews, service appointment workflows and the separate moderated Jobs area.
 
-## Target transaction lifecycle
+## What is still disabled
 
-1. Seller applies; the platform verifies identity/business details, prohibited-goods compliance and payout eligibility.
-2. Approved seller publishes an offer with truthful stock, currency, condition, service terms and fulfilment options.
-3. Buyer discovers an offer, reviews seller/profile information and receives a server-calculated quote.
-4. Before a live order can be created, the marketplace needs an approved provider contract, enabled buyer payment, a verified seller settlement route, supported shipping/collection rates and tax/duty rules.
-5. Payment must be confirmed through a verified provider event. Browser redirects are never payment evidence. Provider event IDs and order idempotency keys must be unique.
-6. Inventory is reserved transactionally and each seller receives a seller sub-order with its own fulfilment and financial breakdown.
-7. Seller accepts, prepares and dispatches or provides the service. Tracking, collection proof or service completion is recorded.
-8. Buyer confirms receipt or raises a return/dispute. Support reviews evidence and can trigger a provider-supported full/partial refund only after that capability is approved.
-9. Balanced financial journals record gross, processor fee, marketplace fee, seller payable and refund adjustments.
-10. Payouts are sent only through an approved provider route and reconciled against provider references. Retries must never duplicate transfers.
-11. Reviews are limited to completed, verified purchases or services.
+The buyer/seller routes and workflow code are present, but production payment activation remains false in the live Minglora database:
 
-## Payment and custody safeguards
+| Gate | Current value |
+|---|---|
+| PayPal Marketplace approval | Pending |
+| Buyer checkout | Disabled |
+| Seller payouts | Disabled |
+| Tax/customs calculation | Disabled |
+| PayPal delayed disbursement | Disabled |
+| Advanced card fields | Disabled |
 
-A quote is not an order, authorization, capture, proof of delivery or a promise that tax and delivery are final. Database code contains order creation and atomic inventory reservation primitives, but the application checkout-status response currently disables order creation. No buyer payment, seller balance, earnings or payout may be invented. Never call the feature escrow unless the provider and legal structure explicitly support escrow.
+A quote is informational until all blockers are satisfied. It does not reserve stock, authorize a buyer, capture funds or prove payment. Order creation rejects quotes with blockers. Browser redirects are never treated as payment evidence.
 
-Marketplace-specific seller, quote, order, booking and Jobs actions use the Supabase Edge Function with normalized Postgres tables/RPCs. The general social-domain runtime still uses a durable single-row JSONB compatibility adapter; that legacy path is not suitable for independent high-concurrency writes or horizontal scaling. Migrations 029–038 are source-controlled; migrations 035–038 are applied to the active Minglora Supabase project and `minglora-runtime-state` is deployed at version 18.
+## Currency and card rules
 
-## Fulfilment and tax safeguards
+- PayPal's current Orders REST transaction currency allow-list excludes JMD. A Jamaica-dollar listing is therefore not directly chargeable as JMD on the current integration. A verified FX rate/quote into an allowed currency, a transparent JMD display equivalent and a rate expiry are required before JMD checkout can be opened.
+- Standard PayPal Checkout can display PayPal-supported basic card methods where eligible. Jamaica is eligible for Business sellers using standard PayPal Checkout and is listed for PayPal payouts. Jamaica is not listed for Expanded Checkout. Custom branded advanced card fields are not the first-launch card path.
+- The app uses a separate Marketplace PayPal integration and never falls back to creator PayPal credentials.
 
-Pickup can be quoted without a delivery fee. Local delivery and shipping require a server-maintained seller rate. Taxes, customs, shipping insurance and cross-border restrictions must be calculated from buyer/seller jurisdictions and item classifications by approved rules or a trusted service. The server must not accept totals, fees, tax amounts, shipping amounts, seller status or payment status supplied by the browser.
+## Seller settlement safeguards
+
+PayPal's delayed-disbursement feature requires approved partner status and seller permissions DELAY_FUNDS_DISBURSEMENT and PARTNER_FEE. Funds can be automatically disbursed after 28 days. Minglora may request a referenced payout after delivery/completion but does not mark it paid until a successful provider response or verified PayPal webhook supplies an accepted provider reference.
+
+Mixed-seller carts are split into individual seller quotes/orders. Combined multi-merchant delayed settlement remains disabled until the whole merchant-specific identity and settlement path is approved and tested with PayPal.
+
+## Database migrations and production deployment
+
+Migrations 029–058 are source-controlled and the live Minglora Supabase database has applied migrations through 058. Migrations 046–058 extend the original Marketplace schema with balanced-journal triggers, separate payout confirmation, partial-capture recovery, tax/currency guards, buyer cart access controls, refund processing and payout rebalancing, currency-aware external reconciliation and webhook retry leases.
+
+The minglora-runtime-state Edge Function is deployed at version 39. It authenticates calls from the Minglora API gateway with its own secret digest. The public webhook is POST /api/webhooks/marketplace-paypal; PayPal transmission headers and payload are verified through PayPal's webhook verification API before processing.
+
+## Financial reconciliation
+
+The moderator desk has two tools:
+
+1. Internal reconciliation: journal/entry counts, equal debit/credit checks, missing capture/payout journals and unconfirmed paid payout states, grouped by currency.
+2. Provider-record reconciliation: verifies each PayPal capture and referenced-payout item by ID within a maximum 31-day date range, compares status/currency/amount/fees/net and records a run plus exceptions.
+
+The second check is not a PayPal balance report, downloadable settlement statement or bank reconciliation. The live Marketplace currently has zero captures/payouts; an all-zero internal result is an empty-system integrity check, not a claim of external funds verification.
+
+## Competitor-inspired features: delivery plan
+
+The target adaptations are original Minglora features inspired by established marketplace patterns, not copies of proprietary source, graphics or branding.
+
+- Amazon/Walmart: verified seller stores, reviews, shipment/collection tracking, clear returns and buyer protection.
+- Temu/Wish: honest deals/vouchers and personalized discovery (never fake scarcity, countdowns, discounts or sales).
+- AliExpress/Alibaba: international suppliers, wholesale tiers, landed-cost estimates and customs disclosures.
+- eBay: Make Offer, auctions and authenticated categories.
+- Etsy: handmade/custom orders, personalization and digital goods.
+- Depop/Vinted/Mercari: ReLoved resale, condition grading, same-seller bundles and combined shipping.
+- SHEIN: style collections, customer photo/video reviews, trending discovery and disclosed rewards.
+- TikTok Shop/Whatnot: shoppable short video, affiliate attribution, live product demos and live auctions.
+- Shopify: advanced seller storefront, catalog import, fulfilment and order analytics.
+- Rakuten: transparent cashback/referral rewards.
+
+Priority: P0 payment/tax/refund/inventory/security; P1 bundles/offers/shipping/reviews/returns/rewards; P2 shoppable video/LIVE/auctions/affiliates/ads; P3 AI recommendations/visual search/global wholesale. Future roadmap entries are not represented as implemented.
 
 ## Jobs lifecycle
 
-Employer submissions start in moderation review. Published roles can be filtered by category, location, work arrangement and employment type. Candidates submit a cover letter and Minglora profile; employers can review, shortlist, reject or hire. Candidates can withdraw. CV/resume upload, employer verification, interview scheduling, offer documents and payroll are separate workstreams and are not complete.
-
-## Required production gates
-
-- Migrations 029–038 and the corresponding Supabase Edge Function version 18 are verified in the active Minglora project.
-- Complete provider marketplace approval and sandbox/production certification.
-- Complete tax/duty and carrier-rate integrations for each launch jurisdiction.
-- Verify seller KYC/business checks and secure verification-document storage.
-- Implement provider webhook verification and end-to-end payment/payout reconciliation before enabling money movement.
-- Validate returns/disputes, support SLAs, financial audit and backup/restore.
-- Complete prohibited-product rules, abuse controls, privacy checks and accessibility testing.
+Employer submissions start in moderation review. Published roles can be searched; candidates can apply; employers can review, shortlist, reject or hire; candidates can withdraw. CV upload, employer verification, interview scheduling, offer documents and payroll remain separate workstreams.

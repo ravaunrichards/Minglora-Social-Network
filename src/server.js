@@ -683,9 +683,30 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && p !== '/api/webhooks/marketplace-paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
+  if (method === 'POST' && p === '/api/webhooks/marketplace-paypal') {
+    let event;
+    try { event = await body(req, 1_000_000); }
+    catch (error) { return json(res, error.status || 400, { error: error.message }); }
+    if (!isSupabasePersistence()) {
+      return json(res, 503, { error: 'Marketplace PayPal webhook requires the hosted Minglora database.' });
+    }
+    const headers=req.headers||{};
+    const result=await requestSupabaseState('marketplace_paypal_webhook_receive',{
+      event,
+      headers:{
+        authAlgo:String(headers['paypal-auth-algo']||''),
+        certUrl:String(headers['paypal-cert-url']||''),
+        transmissionId:String(headers['paypal-transmission-id']||''),
+        transmissionSig:String(headers['paypal-transmission-sig']||''),
+        transmissionTime:String(headers['paypal-transmission-time']||'')
+      }
+    });
+    return json(res,200,result);
+  }
+
   if (method === 'POST' && p === '/api/webhooks/paypal') {
     let event;
     try { event = await body(req, 1_000_000); }
@@ -837,6 +858,87 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
+      if(method==='POST'&&p==='/api/marketplace/paypal/seller-onboarding'){
+        if(input.shareDataConsent!==true)return json(res,400,{error:'Explicit consent is required before sharing the seller information PayPal needs for onboarding.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'PayPal marketplace onboarding requires Minglora’s hosted PostgreSQL database.'});
+        const callbackState=crypto.randomBytes(48).toString('base64url');
+        const returnUrl=appOrigin(req)+'/?marketplacePayPal=complete';
+        const result=await requestSupabaseState('marketplace_paypal_seller_start',{
+          userId:user.id,callbackState,returnUrl,shareDataConsent:true
+        });
+        if(!result.actionUrl)return json(res,502,{error:'PayPal did not return a seller onboarding link.'});
+        return json(res,201,result);
+      }
+      if(method==='POST'&&p==='/api/marketplace/paypal/seller-complete'){
+        if(!isSupabasePersistence())return json(res,503,{error:'PayPal seller verification requires Minglora’s hosted PostgreSQL database.'});
+        const result=await requestSupabaseState('marketplace_paypal_seller_complete',{
+          userId:user.id,
+          trackingId:String(input.trackingId||''),
+          merchantId:String(input.merchantId||''),
+          callbackState:String(input.callbackState||''),
+          permissionsGranted:input.permissionsGranted===true,
+          consentGranted:input.consentGranted===true,
+          emailConfirmed:input.emailConfirmed===true,
+          accountType:String(input.accountType||'')
+        });
+        return json(res,200,result);
+      }
+      if(method==='GET'&&p==='/api/marketplace/cart'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        return json(res,200,await requestSupabaseState('marketplace_cart_get',{buyerId:user.id}));
+      }
+      if(method==='POST'&&p==='/api/marketplace/cart/items'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_add',{
+          buyerId:user.id,listingId:String(input.listingId||''),quantity:input.quantity===undefined?1:Number(input.quantity),
+          fulfillmentMethod:String(input.fulfillmentMethod||'pickup')
+        });
+        return json(res,200,result);
+      }
+      const cartItemMatch=p.match(/^\/api\/marketplace\/cart\/items\/([0-9a-f-]{36})$/i);
+      if(cartItemMatch&&method==='PATCH'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_update',{
+          buyerId:user.id,listingId:cartItemMatch[1],quantity:Number(input.quantity),
+          fulfillmentMethod:String(input.fulfillmentMethod||'pickup')
+        });
+        return json(res,200,result);
+      }
+      if(cartItemMatch&&method==='DELETE'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_remove',{buyerId:user.id,listingId:cartItemMatch[1]});
+        return json(res,200,result);
+      }
+      if(method==='DELETE'&&p==='/api/marketplace/cart'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
+        const result=await requestSupabaseState('marketplace_cart_clear',{buyerId:user.id});
+        return json(res,200,result);
+      }
+      if(method==='POST'&&p==='/api/marketplace/refunds'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
+        const result=await requestSupabaseState('marketplace_refund_request',{
+          buyerId:user.id,
+          sellerOrderId:String(input.sellerOrderId||''),
+          amountMinor:Number(input.amountMinor),
+          reason:String(input.reason||'').trim(),
+          idempotencyKey:String(input.idempotencyKey||'')
+        });
+        return json(res,201,result);
+      }
+      if(method==='GET'&&p==='/api/marketplace/admin/refunds'){
+        if(!isModerator(user))return json(res,403,{error:'Marketplace refund review is restricted to authorized moderators.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
+        return json(res,200,await requestSupabaseState('marketplace_refunds_admin_list'));
+      }
+      const marketplaceRefundMatch=p.match(/^\/api\/marketplace\/admin\/refunds\/([0-9a-f-]{36})\/approve$/i);
+      if(method==='POST'&&marketplaceRefundMatch){
+        if(!isModerator(user))return json(res,403,{error:'Only an authorized marketplace moderator may approve a refund.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
+        const result=await requestSupabaseState('marketplace_refund_approve',{
+          refundId:marketplaceRefundMatch[1],actorId:user.id
+        });
+        return json(res,result.paid?200:202,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
@@ -905,6 +1007,60 @@ async function route(req, res) {
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
       
+      if(method==='POST'&&p==='/api/marketplace/paypal/create'){
+        const orderId=String(input.orderId||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId))return json(res,400,{error:'A valid marketplace order ID is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Hosted marketplace checkout requires the transactional PostgreSQL database.'});
+        const origin=appOrigin(req);
+        const encoded=encodeURIComponent(orderId);
+        const result=await requestSupabaseState('marketplace_paypal_payment_prepare',{
+          buyerId:user.id,orderId,paymentMethod:'paypal',
+          returnUrl:origin+'/?marketplacePayment=return&orderId='+encoded,
+          cancelUrl:origin+'/?marketplacePayment=cancel&orderId='+encoded
+        });
+        return json(res,200,result);
+      }
+      if(method==='POST'&&p==='/api/marketplace/paypal/capture'){
+        const orderId=String(input.orderId||''),providerOrderId=String(input.providerOrderId||input.token||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)||!providerOrderId||providerOrderId.length>128)return json(res,400,{error:'A valid marketplace order and PayPal order reference are required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Hosted marketplace payment reconciliation requires the transactional PostgreSQL database.'});
+        const result=await requestSupabaseState('marketplace_paypal_capture_execute',{buyerId:user.id,orderId,providerOrderId});
+        return json(res,result.processing?202:200,result);
+      }
+      if(method==='GET'&&p==='/api/marketplace/payouts'){
+        if(isSupabasePersistence()){
+          const result=await requestSupabaseState('marketplace_seller_payouts',{sellerId:user.id});
+          return json(res,200,result);
+        }
+        return json(res,200,{payouts:[]});
+      }
+      const payoutReleaseParts=p.split('/');
+      if(method==='POST'&&payoutReleaseParts.length===6&&payoutReleaseParts[1]==='api'&&payoutReleaseParts[2]==='marketplace'&&payoutReleaseParts[3]==='payouts'&&payoutReleaseParts[5]==='release'){
+        const payoutId=String(payoutReleaseParts[4]||'');
+        if(!/^[0-9a-f-]{36}$/i.test(payoutId))return json(res,400,{error:'Invalid seller payout reference.'});
+        if(isSupabasePersistence()){
+          const result=await requestSupabaseState('marketplace_paypal_payout_release',{sellerId:user.id,payoutId});
+          return json(res,result.paid?200:202,result);
+        }
+        return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
+      }
+      if(method==='POST'&&p==='/api/marketplace/admin/financial-reconciliation/provider'){
+        if(!isModerator(user))return json(res,403,{error:'Provider reconciliation is restricted to authorized Marketplace moderators.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Provider reconciliation requires the hosted Marketplace financial database.'});
+        const startAt=String(input.startAt||''),endAt=String(input.endAt||'');
+        const result=await requestSupabaseState('marketplace_financial_provider_reconcile',{
+          startAt,endAt,requestedBy:user.id
+        });
+        return json(res,200,result);
+      }
+      if(method==='GET'&&p==='/api/marketplace/admin/financial-reconciliation'){
+        if(!isModerator(user))return json(res,403,{error:'Marketplace financial reconciliation is restricted to authorized moderators.'});
+        if(isSupabasePersistence()){
+          const result=await requestSupabaseState('marketplace_financial_reconcile',{requestedBy:user.id});
+          return json(res,200,result);
+        }
+        return json(res,503,{error:'Marketplace financial reconciliation requires the hosted financial ledger.'});
+      }
       if(method==='GET'&&p==='/api/marketplace/orders'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_orders_list',{userId:user.id});return json(res,200,result);}
         return json(res,200,{orders:[]});

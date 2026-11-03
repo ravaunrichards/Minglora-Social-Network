@@ -1739,6 +1739,59 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
+async function finishMarketplacePaypalSellerReturn(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get("marketplacePayPal")!=="complete")return;
+  const callbackState=params.get("state")||"";
+  const trackingId=params.get("merchantId")||"";
+  const merchantId=params.get("merchantIdInPayPal")||"";
+  const permissionsGranted=params.get("permissionsGranted")==="true";
+  const consentGranted=params.get("consentStatus")==="true";
+  const emailConfirmed=params.get("isEmailConfirmed")==="true";
+  const accountType=params.get("accountStatus")||"";
+  window.history.replaceState(null,"",window.location.pathname);
+  if(!trackingId||!merchantId||!callbackState){
+    toast("PayPal returned without all onboarding references. Reopen Seller Centre and check the connection status.");
+    await renderMarketplaceSeller();
+    return;
+  }
+  try{
+    await api("/marketplace/paypal/seller-complete",{method:"POST",body:JSON.stringify({
+      trackingId,merchantId,callbackState,permissionsGranted,consentGranted,emailConfirmed,accountType
+    })});
+    toast("PayPal seller connection verified.");
+  }catch(error){
+    toast("Minglora could not verify all PayPal seller permissions: "+error.message);
+  }
+  await renderMarketplaceSeller();
+}
+
+async function finishMarketplacePaypalReturn(){
+  const params=new URLSearchParams(window.location.search);
+  const status=params.get("marketplacePayment"),orderId=params.get("orderId"),providerOrderId=params.get("token");
+  if(!["return","cancel"].includes(status)||!orderId)return;
+  window.history.replaceState(null,"",window.location.pathname);
+  if(status==="cancel"){
+    try{await api("/marketplace/orders/"+encodeURIComponent(orderId)+"/cancel",{method:"POST",body:"{}"});toast("Checkout was cancelled. No payment was taken and reserved stock was released.");}
+    catch(error){toast("Checkout was cancelled. Check the order status before trying again: "+error.message);}
+    await renderMarketplaceOrderDetail(orderId);
+    return;
+  }
+  if(!providerOrderId){
+    toast("PayPal returned without an order token. Check the payment status before retrying.");
+    await renderMarketplaceOrderDetail(orderId);
+    return;
+  }
+  try{
+    const result=await api("/marketplace/paypal/capture",{method:"POST",body:JSON.stringify({orderId,providerOrderId})});
+    if(result.processing)toast("PayPal is still confirming the transaction. Do not pay again; check this order shortly.");
+    else toast("PayPal confirmed payment. Your seller orders are now being processed.");
+  }catch(error){
+    toast("Minglora could not yet confirm the PayPal return: "+error.message+". Do not submit another payment until the order is checked.");
+  }
+  await renderMarketplaceOrderDetail(orderId);
+}
+
 function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
@@ -3878,6 +3931,18 @@ async function renderSearch(q){
   document.querySelectorAll('[data-open-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openGroup)));
   document.querySelectorAll('[data-open-page]').forEach(button=>button.addEventListener('click',()=>renderPage(button.dataset.openPage)));
   document.querySelectorAll('[data-open-marketplace-listing]').forEach(button=>button.addEventListener('click',()=>renderMarketplaceListing(button.dataset.openMarketplaceListing)));
+  document.querySelectorAll('[data-cart-add]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart/items',{method:'POST',body:JSON.stringify({
+        listingId:button.dataset.cartAdd,quantity:1,fulfillmentMethod:button.dataset.cartFulfillment||'pickup'
+      })});
+      toast('Added to your Minglora cart.');
+      button.textContent='Added';
+    }catch(error){toast(error.message);}
+    finally{button.disabled=false;}
+  }));
+
   document.querySelectorAll('[data-search-jobs]').forEach(button=>button.addEventListener('click',()=>renderJobs('browse',q)));
 }
 const MARKETPLACE_PRODUCT_CATEGORY_OPTIONS=[['electronics','Electronics'],['phones_computing','Phones & computing'],['fashion','Fashion & accessories'],['home_furniture','Home & furniture'],['vehicles','Vehicles'],['property','Property'],['beauty_health','Beauty & health'],['sports_outdoors','Sports & outdoors'],['toys_games','Toys & games'],['books_media','Books & media'],['food_grocery','Food & groceries'],['handmade_crafts','Handmade & crafts'],['collectibles','Collectibles'],['other','Other']];
@@ -3887,9 +3952,12 @@ function marketplaceMoney(listing){if(listing.priceType==='quote')return 'Reques
 function marketplaceCategoryLabel(kind,category){const options=kind==='service'?MARKETPLACE_SERVICE_CATEGORY_OPTIONS:MARKETPLACE_PRODUCT_CATEGORY_OPTIONS;return options.find(item=>item[0]===category)?.[1]||'Marketplace';}
 function marketplaceCard(listing){
   const image=listing.media?.[0]?.url;
-  return '<article class="marketplace-listing-card"><button type="button" class="marketplace-card-open" data-open-marketplace-listing="'+esc(listing.id)+'" aria-label="Open '+esc(listing.title)+'"><div class="marketplace-card-image">'+(image?'<img loading="lazy" src="'+esc(image)+'" alt="'+esc(listing.title)+'">':'<div class="marketplace-image-placeholder"><span>'+(listing.kind==='service'?'✦':'◇')+'</span><small>'+esc(listing.kind==='service'?'Minglora Services':'Minglora Marketplace')+'</small></div>')+'<span class="marketplace-type-pill">'+(listing.kind==='service'?'Service':'Product')+'</span></div><div class="marketplace-card-copy"><small class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</small><h3>'+esc(listing.title)+'</h3><strong class="marketplace-price">'+esc(marketplaceMoney(listing))+'</strong><span class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Available on Minglora')+'</span><span class="marketplace-seller"><img src="'+avatar(listing.seller)+'" alt=""><span>'+esc(listing.seller?.name||'Minglora seller')+'</span></span></div></button><div class="marketplace-card-actions"><button type="button" class="secondary" data-open-marketplace-listing="'+esc(listing.id)+'">View details</button><button type="button" class="marketplace-save '+(listing.isSaved?'is-saved':'')+'" data-save-marketplace-listing="'+esc(listing.id)+'" data-saved="'+(listing.isSaved?'true':'false')+'">'+(listing.isSaved?'♥ Saved':'♡ Save')+'</button></div></article>';
+  const canCart=listing.kind==='product'&&listing.sellerId!==state.user.id;
+  const defaultFulfillment=(listing.fulfillment||[])[0]||'pickup';
+  return '<article class="marketplace-listing-card"><button type="button" class="marketplace-card-open" data-open-marketplace-listing="'+esc(listing.id)+'" aria-label="Open '+esc(listing.title)+'"><div class="marketplace-card-image">'+(image?'<img loading="lazy" src="'+esc(image)+'" alt="'+esc(listing.title)+'">':'<div class="marketplace-image-placeholder"><span>'+(listing.kind==='service'?'✦':'◇')+'</span><small>'+esc(listing.kind==='service'?'Minglora Services':'Minglora Marketplace')+'</small></div>')+'<span class="marketplace-type-pill">'+(listing.kind==='service'?'Service':'Product')+'</span></div><div class="marketplace-card-copy"><small class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</small><h3>'+esc(listing.title)+'</h3><strong class="marketplace-price">'+esc(marketplaceMoney(listing))+'</strong><span class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Available on Minglora')+'</span><span class="marketplace-seller"><img src="'+avatar(listing.seller)+'" alt=""><span>'+esc(listing.seller?.name||'Minglora seller')+'</span></span></div></button><div class="marketplace-card-actions"><button type="button" class="secondary" data-open-marketplace-listing="'+esc(listing.id)+'">View details</button>'+(canCart?'<button type="button" class="secondary" data-cart-add="'+esc(listing.id)+'" data-cart-fulfillment="'+esc(defaultFulfillment)+'">Add to cart</button>':'')+'<button type="button" class="marketplace-save '+(listing.isSaved?'is-saved':'')+'" data-save-marketplace-listing="'+esc(listing.id)+'" data-saved="'+(listing.isSaved?'true':'false')+'">'+(listing.isSaved?'♥ Saved':'♡ Save')+'</button></div></article>';
 }
 async function renderMarketplace(mode=state.marketplaceMode, initialQuery=''){
+  if(mode==='cart')return renderMarketplaceCart();
   if(mode==='orders')return renderMarketplaceOrders();
   if(mode==='order-detail')return renderMarketplaceOrderDetail(state.activeMarketplaceOrder);
   if(mode==='seller')return renderMarketplaceSeller();
@@ -3901,7 +3969,7 @@ async function renderMarketplace(mode=state.marketplaceMode, initialQuery=''){
   if(kind)params.set('kind',kind);if(query)params.set('q',query);
   if(mode==='saved'||mode==='mine')state.marketplaceListings=(await api(mode==='saved'?'/marketplace/saved':'/marketplace/mine')).listings||[];
   else state.marketplaceListings=(await api('/marketplace/listings'+(params.toString()?'?'+params.toString():''))).listings||[];
-  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['bookings','Bookings'],['orders','Orders'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
+  const tabs=[['browse','Discover'],['products','Products'],['services','Services'],['saved','Saved'],['mine','My listings'],['cart','Cart'],['bookings','Bookings'],['orders','Orders'],['seller','Seller centre'],['jobs','Jobs'],['admin','Review desk']];
   let html='<section class="marketplace-hero"><div class="marketplace-hero-copy"><span class="marketplace-eyebrow">MINGLORA MARKETPLACE</span><h1>Discover more. Buy with confidence. Grow together.</h1><p>Explore real products and services from people and businesses in the Minglora community.</p><div class="marketplace-hero-actions"><button class="primary" id="marketplace-create-listing">＋ Create a listing</button><span>Real sellers · Real listings · No fabricated inventory</span></div></div><div class="marketplace-hero-art" aria-hidden="true"><span class="marketplace-art-orbit"></span><span class="marketplace-art-bag">✦</span><span class="marketplace-art-spark">✧</span></div></section>';
   html+='<nav class="marketplace-tabs" aria-label="Marketplace sections">'+tabs.map(([key,label])=>'<button type="button" data-marketplace-mode="'+key+'" class="'+(mode===key?'active':'')+'">'+label+'</button>').join('')+'</nav>';
   if(mode!=='saved'&&mode!=='mine')html+='<form class="marketplace-search" id="marketplace-search-form"><label class="marketplace-search-field"><span>⌕</span><input id="marketplace-query" name="q" value="'+esc(query)+'" placeholder="Search products, services, shops and more" aria-label="Search Marketplace"></label><button class="primary" type="submit">Search</button></form>';
@@ -3935,7 +4003,7 @@ async function renderMarketplaceListing(listingId){
   const images=(listing.media||[]).map(media=>renderSingleMedia(media,'marketplace-detail-image')).join('');
   const details=listing.kind==='product'?'<div><span>Condition</span><strong>'+esc(MARKETPLACE_CONDITION_LABELS[listing.condition]||listing.condition)+'</strong></div><div><span>Available</span><strong>'+Number(listing.quantity||0).toLocaleString()+'</strong></div><div><span>Fulfilment</span><strong>'+esc((listing.fulfillment||[]).map(value=>({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[value]||value)).join(', '))+'</strong></div>':'<div><span>Service delivery</span><strong>'+esc(({remote:'Remote',onsite:'On-site',both:'Remote and on-site'}[listing.serviceMode]||'On-site'))+'</strong></div>';
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="marketplace-back">← Back to Marketplace</button><span class="marketplace-status">'+esc(listing.status)+'</span></div><section class="card marketplace-detail"><div class="marketplace-detail-gallery">'+(images||'<div class="marketplace-image-placeholder"><span>◇</span><small>No photos uploaded</small></div>')+'</div><div class="marketplace-detail-copy"><span class="marketplace-eyebrow">'+(listing.kind==='service'?'MINGLORA SERVICES':'MINGLORA MARKETPLACE')+'</span><p class="marketplace-category">'+esc(marketplaceCategoryLabel(listing.kind,listing.category))+'</p><h1>'+esc(listing.title)+'</h1><strong class="marketplace-detail-price">'+esc(marketplaceMoney(listing))+'</strong><p class="marketplace-location">'+(listing.location?'⌖ '+esc(listing.location):'Location not specified')+'</p><div class="marketplace-detail-facts">'+details+'</div><div class="marketplace-description">'+esc(listing.description)+'</div><div class="marketplace-seller-card"><img src="'+avatar(listing.seller)+'" alt=""><div><strong>'+esc(listing.seller?.name||'Minglora seller')+'</strong><small>@'+esc(listing.seller?.username||'member')+'</small></div></div><div class="marketplace-detail-actions">'+(own?'<button class="secondary" id="marketplace-status-toggle">'+(listing.status==='active'?'Pause listing':'Activate listing')+'</button><button class="secondary" id="marketplace-mark-sold" '+(listing.status==='sold'?'disabled':'')+'>Mark sold</button><button class="secondary" id="marketplace-remove">Remove listing</button>':'<button class="secondary" id="marketplace-save-detail">'+(listing.isSaved?'♥ Saved':'♡ Save listing')+'</button><button class="secondary" id="marketplace-report">Report listing</button>')+'</div></div></section>';
-  if(!own&&listing.kind==='product'&&listing.status==='active')html+='<section class="card marketplace-enquiry-card marketplace-commerce-panel"><h2>Review your purchase</h2><p>Get a server-calculated quote before any payment is requested. This does not reserve stock or charge you.</p><form id="marketplace-quote-form"><div class="marketplace-form-grid"><label>Quantity<input name="quantity" type="number" min="1" max="'+Number(listing.quantity||1)+'" value="1" required></label><label>Fulfilment<select name="fulfillment">'+(listing.fulfillment||[]).map(value=>'<option value="'+esc(value)+'">'+esc(({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[value]||value))+'</option>').join('')+'</select></label></div><button type="submit" class="primary">Calculate checkout quote</button></form><div id="marketplace-quote-result" aria-live="polite"></div></section>';
+  if(!own&&listing.kind==='product'&&listing.status==='active')html+='<section class="card marketplace-enquiry-card marketplace-commerce-panel"><h2>Review your purchase</h2><p>Get a server-calculated quote before any payment is requested. This does not reserve stock or charge you.</p><form id="marketplace-quote-form"><div class="marketplace-form-grid"><label>Quantity<input name="quantity" type="number" min="1" max="'+Number(listing.quantity||1)+'" value="1" required></label><label>Fulfilment<select name="fulfillment">'+(listing.fulfillment||[]).map(value=>'<option value="'+esc(value)+'">'+esc(({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[value]||value))+'</option>').join('')+'</select></label></div><button type="button" class="secondary" id="marketplace-add-to-cart-detail">Add to cart</button><button type="submit" class="primary">Calculate checkout quote</button></form><div id="marketplace-quote-result" aria-live="polite"></div></section>';
   if(!own&&listing.kind==='service'&&listing.status==='active')html+='<section class="card marketplace-enquiry-card marketplace-commerce-panel"><h2>Request an appointment</h2><p>Choose a preferred start time. The provider must accept the request. This does not collect payment.</p><form id="marketplace-booking-form"><label>Preferred date and time<input name="startAt" type="datetime-local" required></label><label>Duration<select name="durationMinutes"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">1 hour 30 minutes</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label><label>Notes (optional)<textarea name="message" maxlength="1500" placeholder="Tell the provider what you need."></textarea></label><button type="submit" class="primary">Request appointment</button></form></section>';
   if(!own&&listing.status==='active')html+='<section class="card marketplace-enquiry-card"><h2>Contact the seller</h2><p>Ask a question, request more details or discuss availability. Keep your conversation on Minglora.</p><form id="marketplace-enquiry-form"><textarea name="text" maxlength="2000" minlength="5" required placeholder="Hi, is this still available?"></textarea><button type="submit" class="primary">Send enquiry</button></form></section>';
   setContent(html);$('#marketplace-back')?.addEventListener('click',()=>renderMarketplace());
@@ -3944,6 +4012,15 @@ async function renderMarketplaceListing(listingId){
   $('#marketplace-remove')?.addEventListener('click',async()=>{if(!window.confirm('Remove this listing from Marketplace?'))return;try{await api('/marketplace/listings/'+encodeURIComponent(listing.id),{method:'DELETE',body:'{}'});toast('Listing removed.');await renderMarketplace('mine');}catch(error){toast(error.message);}});
   $('#marketplace-save-detail')?.addEventListener('click',async()=>{try{await api('/marketplace/listings/'+encodeURIComponent(listing.id)+'/save',{method:listing.isSaved?'DELETE':'POST',body:'{}'});toast(listing.isSaved?'Listing removed from Saved.':'Listing saved.');await renderMarketplaceListing(listing.id);}catch(error){toast(error.message);}});
   $('#marketplace-report')?.addEventListener('click',()=>openReportComposer('marketplace_listing',listing.id));
+  $('#marketplace-add-to-cart-detail')?.addEventListener('click',async()=>{
+    const button=$('#marketplace-add-to-cart-detail');if(!button)return;button.disabled=true;
+    try{
+      const fulfillment=$('#marketplace-quote-form')?.elements.fulfillment?.value||listing.fulfillment?.[0]||'pickup';
+      await api('/marketplace/cart/items',{method:'POST',body:JSON.stringify({listingId:listing.id,quantity:1,fulfillmentMethod:fulfillment})});
+      toast('Added to your Minglora cart.');
+      button.textContent='Added to cart';
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
   $('#marketplace-quote-form')?.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),result=$('#marketplace-quote-result');button.disabled=true;
     try{
@@ -3962,6 +4039,122 @@ async function renderMarketplaceListing(listingId){
   $('#marketplace-enquiry-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;try{await api('/marketplace/listings/'+encodeURIComponent(listing.id)+'/enquiries',{method:'POST',body:JSON.stringify({text:new FormData(form).get('text')})});form.reset();toast('Your enquiry was sent to the seller’s Minglora inbox.');}catch(error){toast(error.message);}finally{button.disabled=false;}});
 }
 
+
+async function renderMarketplaceCart(){
+  activateSilent('marketplace');
+  state.marketplaceMode='cart';
+  const data=await api('/marketplace/cart');
+  const items=data.items||[],cart=data.cart||{};
+  const currency=String(cart.currency||items.find(item=>item.listing?.currency)?.listing?.currency||'').trim();
+  const money=minor=>currency+' '+(Number(minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  let subtotal=0,allAvailable=items.length>0;
+  let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="cart-back-marketplace">← Marketplace</button></div>';
+  html+='<section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">YOUR SHOPPING BAG</span><h1>Minglora Cart</h1><p>Update quantities and fulfilment before requesting a fresh server-calculated quote.</p></div><span class="marketplace-results-count">'+items.length+' items</span></section>';
+  if(!items.length){
+    html+='<section class="card empty-state"><h3>Your cart is empty</h3><p>Browse Minglora products and add the items you want to buy. Services are booked separately.</p><button class="primary" id="cart-discover">Discover products</button></section>';
+  }else{
+    html+='<div class="marketplace-cart-list">';
+    html+=items.map(item=>{
+      const listing=item.listing||{};
+      const available=Boolean(item.available&&Number(item.quantity)<=Number(listing.availableQuantity||0));
+      allAvailable=allAvailable&&available;
+      const line=Number(listing.priceMinor||0)*Number(item.quantity||0);
+      subtotal+=line;
+      const options=(listing.fulfillment||[]).map(method=>'<option value="'+esc(method)+'" '+(method===item.fulfillmentMethod?'selected':'')+'>'+esc(({pickup:'Pickup',local_delivery:'Local delivery',shipping:'Shipping'}[method]||method))+'</option>').join('');
+      return '<article class="card marketplace-cart-item"><div class="marketplace-cart-item-copy"><strong>'+esc(listing.title||'Unavailable listing')+'</strong><small>'+(listing.currency?esc(listing.currency)+' '+(Number(listing.priceMinor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' each':'')+'</small><small>'+esc(listing.location||'')+'</small>'+(available?'':'<span class="marketplace-status">Unavailable or insufficient stock</span>')+'</div><div class="marketplace-cart-item-controls"><label>Quantity<input type="number" min="1" max="'+Math.min(100,Math.max(1,Number(listing.availableQuantity||1)))+'" value="'+Number(item.quantity||1)+'" data-cart-quantity="'+esc(item.listingId)+'" '+(available?'':'disabled')+'></label><label>Fulfilment<select data-cart-fulfillment="'+esc(item.listingId)+'" '+(available?'':'disabled')+'>'+options+'</select></label><strong>'+money(line)+'</strong><div class="marketplace-card-actions"><button type="button" class="secondary" data-cart-update="'+esc(item.listingId)+'" '+(available?'':'disabled')+'>Update</button><button type="button" class="secondary" data-cart-remove="'+esc(item.listingId)+'">Remove</button></div></div></article>';
+    }).join('');
+    html+='</div>';
+    html+='<section class="card marketplace-commerce-panel marketplace-cart-summary"><h2>Cart summary</h2><div class="marketplace-order-summary"><div><small>Items subtotal</small><strong>'+money(subtotal)+'</strong></div><div><small>Currency</small><strong>'+esc(currency||'Not set')+'</strong></div><div><small>Tax and fulfilment</small><strong>Calculated in quote</strong></div></div><p class="muted">Minglora recalculates current stock, delivery and applicable taxes before an order can be created. No payment is taken when you request a quote.</p><button type="button" class="primary" id="cart-get-quote" '+(allAvailable?'':'disabled')+'>Calculate secure checkout quote</button><button type="button" class="secondary" id="cart-clear">Clear cart</button><div id="marketplace-cart-quote-result" aria-live="polite"></div></section>';
+  }
+  setContent(html);
+  $('#cart-back-marketplace')?.addEventListener('click',()=>renderMarketplace('browse'));
+  $('#cart-discover')?.addEventListener('click',()=>renderMarketplace('products'));
+  document.querySelectorAll('[data-cart-update]').forEach(button=>button.addEventListener('click',async()=>{
+    const id=button.dataset.cartUpdate;
+    const quantity=Number($('[data-cart-quantity="'+id+'"]')?.value);
+    const fulfillmentMethod=$('[data-cart-fulfillment="'+id+'"]')?.value||'';
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart/items/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({quantity,fulfillmentMethod})});
+      toast('Cart item updated.');
+      await renderMarketplaceCart();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-cart-remove]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart/items/'+encodeURIComponent(button.dataset.cartRemove),{method:'DELETE',body:'{}'});
+      toast('Item removed from your cart.');
+      await renderMarketplaceCart();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  $('#cart-clear')?.addEventListener('click',async()=>{
+    const button=$('#cart-clear');if(!button)return;
+    if(!window.confirm('Remove every item from your Minglora cart?'))return;
+    button.disabled=true;
+    try{
+      await api('/marketplace/cart',{method:'DELETE',body:'{}'});
+      toast('Your cart has been cleared.');
+      await renderMarketplaceCart();
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
+  $('#cart-get-quote')?.addEventListener('click',async()=>{
+    const button=$('#cart-get-quote'),target=$('#marketplace-cart-quote-result');
+    if(!button||!target)return;
+    button.disabled=true;target.textContent='Refreshing stock and preparing seller quotes…';
+    try{
+      const fresh=await api('/marketplace/cart'),freshItems=fresh.items||[];
+      if(!freshItems.length||freshItems.some(item=>!item.available))throw new Error('One or more cart items are no longer available. Refresh your cart before checkout.');
+      const groups=new Map();
+      for(const item of freshItems){
+        const sellerId=String(item.listing?.sellerId||'');
+        if(!sellerId)throw new Error('A cart item no longer has a verified seller. Remove it and contact Minglora support.');
+        if(!groups.has(sellerId))groups.set(sellerId,[]);
+        groups.get(sellerId).push(item);
+      }
+      const quotes=new Map();
+      let quoteHtml='';
+      if(groups.size>1){
+        quoteHtml+='<p class="muted">Your cart contains products from '+groups.size+' sellers. Each seller receives a separate order and payout record, so Minglora will quote each seller group separately.</p>';
+      }
+      let sellerIndex=0;
+      for(const [sellerId,sellerItems] of groups){
+        sellerIndex++;
+        const fulfillmentByListing={};
+        const quoteItems=sellerItems.map(item=>{
+          fulfillmentByListing[item.listingId]=item.fulfillmentMethod;
+          return {listingId:item.listingId,quantity:item.quantity};
+        });
+        const response=await api('/marketplace/checkout/quote',{method:'POST',body:JSON.stringify({items:quoteItems,fulfillmentByListing})});
+        const quote=response.quote;
+        const format=value=>new Intl.NumberFormat(undefined,{style:'currency',currency:quote.currency,maximumFractionDigits:2}).format(Number(value||0)/100);
+        quotes.set(quote.id,{quote,listingIds:sellerItems.map(item=>item.listingId)});
+        quoteHtml+='<section class="marketplace-quote-summary marketplace-seller-quote"><strong>Seller order '+sellerIndex+'</strong><dl><dt>Items</dt><dd>'+format(quote.itemSubtotalMinor)+'</dd><dt>Fulfilment</dt><dd>'+format(quote.fulfillmentMinor)+'</dd><dt>Marketplace commission preview</dt><dd>'+format(quote.marketplaceCommissionPreviewMinor)+'</dd><dt>Tax and customs</dt><dd>'+(quote.taxMinor==null?'Not calculated':format(quote.taxMinor))+'</dd><dt>Total before tax</dt><dd>'+format(quote.totalMinorBeforeTax)+'</dd></dl>';
+        if(quote.checkoutReady){
+          quoteHtml+='<button type="button" class="primary" data-cart-place-order="'+esc(quote.id)+'">Create this seller order</button><small>Stock is reserved only after this order is successfully created. Payment is a separate secure step.</small>';
+        }else{
+          quoteHtml+='<strong>Order cannot be created yet</strong><ul>'+(quote.blockers||[]).map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul><small>Informational only. No payment was taken and no stock was reserved.</small>';
+        }
+        quoteHtml+='</section>';
+      }
+      target.innerHTML=quoteHtml;
+      target.querySelectorAll('[data-cart-place-order]').forEach(place=>place.addEventListener('click',async()=>{
+        const record=quotes.get(place.dataset.cartPlaceOrder);if(!record)return;
+        place.disabled=true;
+        try{
+          const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-'+record.quote.id+'-'+Date.now());
+          const created=await api('/marketplace/orders',{method:'POST',body:JSON.stringify({quoteId:record.quote.id,idempotencyKey})});
+          for(const listingId of record.listingIds){
+            await api('/marketplace/cart/items/'+encodeURIComponent(listingId),{method:'DELETE',body:'{}'});
+          }
+          toast(created.notice||'Seller order created. Payment is not confirmed.');
+          await renderMarketplaceCart();
+        }catch(error){toast(error.message);place.disabled=false;}
+      }));
+    }catch(error){target.textContent=error.message;}
+    finally{button.disabled=false;}
+  });
+}
 
 async function renderMarketplaceOrders(){
   activateSilent('marketplace');
@@ -3990,17 +4183,61 @@ async function renderMarketplaceOrderDetail(orderId){
   const money=minor=>esc(order.currency)+' '+(Number(minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="order-detail-back">← Your orders</button></div>';
   html+='<section class="card marketplace-commerce-panel"><span class="marketplace-eyebrow">ORDER DETAILS</span><h1>Order '+esc(order.id.slice(0,8).toUpperCase())+'</h1><div class="marketplace-order-summary"><div><small>Order status</small><strong>'+esc(order.status.replaceAll('_',' '))+'</strong></div><div><small>Payment status</small><strong>'+esc(order.paymentStatus.replaceAll('_',' '))+'</strong></div><div><small>Order total</small><strong>'+money(order.totalMinor)+'</strong></div><div><small>Refunded</small><strong>'+money(order.refundedMinor)+'</strong></div></div><p class="muted">An order record is not proof of payment. Payment status changes only after the approved payment provider confirms capture.</p>';
-  if(order.status==='awaiting_payment'&&['pending','not_started','failed'].includes(order.paymentStatus))html+='<button type="button" class="secondary" id="cancel-marketplace-order">Cancel unpaid order and release reserved stock</button>';
+  if(order.buyerId===state.user.id&&order.status==='awaiting_payment'&&['pending','not_started','failed'].includes(order.paymentStatus)){
+    let readiness={orderCreationEnabled:false};
+    try{readiness=await api('/marketplace/checkout/status');}catch{}
+    if(readiness.orderCreationEnabled){
+      html+='<section class="marketplace-payment-panel"><h2>Complete your payment</h2><p>Continue to PayPal secure checkout. PayPal will display the payment methods available for your location, which may include eligible debit or credit cards.</p><button type="button" class="primary" id="marketplace-pay-now">Continue to secure payment</button><small>You will return to Minglora after PayPal confirms the payment. Never pay a seller outside this checkout.</small></section>';
+    }else{
+      html+='<section class="marketplace-payment-panel"><h2>Secure checkout unavailable</h2><p>No payment has been requested or taken. This order cannot be paid until marketplace payment and seller settlement checks are enabled.</p></section>';
+    }
+    html+='<button type="button" class="secondary" id="cancel-marketplace-order">Cancel unpaid order and release reserved stock</button>';
+  }
   html+='</section>';
   html+=(order.sellerOrders||[]).map(sellerOrder=>{
     const items=(sellerOrder.items||[]).map(item=>'<div class="marketplace-order-item"><div><strong>'+esc(item.title)+'</strong><small>Qty '+Number(item.quantity)+' · '+money(item.unitPriceMinor)+' each</small></div><strong>'+money(item.lineTotalMinor)+'</strong></div>').join('');
     const fulfilments=(sellerOrder.fulfillments||[]).map(item=>'<p class="muted">Fulfilment: '+esc(item.method)+' · '+esc(item.status)+(item.carrier?' · '+esc(item.carrier):'')+(item.trackingReference?' · Tracking '+esc(item.trackingReference):'')+'</p>').join('');
-    return '<section class="card marketplace-commerce-panel"><div class="marketplace-order-subhead"><div><span class="marketplace-eyebrow">SELLER ORDER</span><h2>'+esc(sellerOrder.id.slice(0,8).toUpperCase())+'</h2></div><span class="marketplace-status">'+esc(sellerOrder.status.replaceAll('_',' '))+'</span></div><div class="marketplace-order-items">'+items+'</div><div class="marketplace-order-summary"><div><small>Gross</small><strong>'+money(sellerOrder.grossMinor)+'</strong></div><div><small>Marketplace fee</small><strong>'+money(sellerOrder.commissionMinor)+'</strong></div><div><small>Seller net</small><strong>'+money(sellerOrder.sellerNetMinor)+'</strong></div><div><small>Payout status</small><strong>'+esc(sellerOrder.payoutStatus.replaceAll('_',' '))+'</strong></div></div>'+fulfilments+'</section>';
+    const remainingRefundMinor=Math.max(0,Number(sellerOrder.grossMinor||0)-Number(sellerOrder.refundedMinor||0));
+    const refundAction=order.buyerId===state.user.id&&['captured','partially_refunded'].includes(order.paymentStatus)&&remainingRefundMinor>0
+      ?'<div class="marketplace-card-actions"><button type="button" class="secondary" data-request-marketplace-refund="'+esc(sellerOrder.id)+'" data-refund-remaining="'+remainingRefundMinor+'">Request refund</button><small>Remaining refundable amount: '+money(remainingRefundMinor)+'</small></div>':'';
+    return '<section class="card marketplace-commerce-panel"><div class="marketplace-order-subhead"><div><span class="marketplace-eyebrow">SELLER ORDER</span><h2>'+esc(sellerOrder.id.slice(0,8).toUpperCase())+'</h2></div><span class="marketplace-status">'+esc(sellerOrder.status.replaceAll('_',' '))+'</span></div><div class="marketplace-order-items">'+items+'</div><div class="marketplace-order-summary"><div><small>Gross</small><strong>'+money(sellerOrder.grossMinor)+'</strong></div><div><small>Marketplace fee</small><strong>'+money(sellerOrder.commissionMinor)+'</strong></div><div><small>Seller net</small><strong>'+money(sellerOrder.sellerNetMinor)+'</strong></div><div><small>Refunded</small><strong>'+money(sellerOrder.refundedMinor)+'</strong></div><div><small>Payout status</small><strong>'+esc(sellerOrder.payoutStatus.replaceAll('_',' '))+'</strong></div></div>'+fulfilments+refundAction+'</section>';
   }).join('');
   const events=order.events||[];
   html+='<section class="card marketplace-commerce-panel"><h2>Order activity</h2>'+(events.length?'<ol class="marketplace-order-events">'+events.map(item=>'<li><strong>'+esc(item.type.replaceAll('_',' '))+'</strong><small>'+new Date(item.createdAt).toLocaleString()+'</small><p>'+esc(item.note||'')+'</p></li>').join('')+'</ol>':'<p class="muted">No additional activity has been recorded.</p>')+'</section>';
   setContent(html);
   $('#order-detail-back')?.addEventListener('click',()=>renderMarketplaceOrders());
+  document.querySelectorAll('[data-request-marketplace-refund]').forEach(button=>button.addEventListener('click',async()=>{
+    const sellerOrderId=button.dataset.requestMarketplaceRefund;
+    const remainingMinor=Number(button.dataset.refundRemaining||0);
+    if(!sellerOrderId||!Number.isSafeInteger(remainingMinor)||remainingMinor<=0)return;
+    const defaultAmount=(remainingMinor/100).toFixed(2);
+    const requested=window.prompt('Enter the refund amount in '+order.currency+'. Maximum available: '+defaultAmount,defaultAmount);
+    if(requested===null)return;
+    const normalized=String(requested).replace(/,/g,'').trim();
+    if(!/^\d+(\.\d{1,2})?$/.test(normalized)){toast('Enter a valid amount with up to two decimal places.');return;}
+    const amountMinor=Math.round(Number(normalized)*100);
+    if(!Number.isSafeInteger(amountMinor)||amountMinor<1||amountMinor>remainingMinor){toast('The requested amount exceeds the remaining refundable amount.');return;}
+    const reason=window.prompt('Explain why you are requesting this refund (at least 10 characters).');
+    if(reason===null)return;
+    if(String(reason).trim().length<10){toast('Please provide a little more detail for the refund review.');return;}
+    button.disabled=true;
+    try{
+      const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-refund-'+sellerOrderId+'-'+Date.now());
+      const result=await api('/marketplace/refunds',{method:'POST',body:JSON.stringify({
+        sellerOrderId,amountMinor,reason:String(reason).trim(),idempotencyKey
+      })});
+      toast('Refund request '+String(result.refund?.refundId||'').slice(0,8)+' submitted for marketplace review. No refund is marked paid until PayPal confirms it.');
+      await renderMarketplaceOrderDetail(order.id);
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  $('#marketplace-pay-now')?.addEventListener('click',async()=>{
+    const button=$('#marketplace-pay-now');if(!button)return;button.disabled=true;button.textContent='Connecting to secure checkout…';
+    try{
+      const payment=await api('/marketplace/paypal/create',{method:'POST',body:JSON.stringify({orderId:order.id})});
+      if(!payment.approvalUrl)throw new Error('PayPal did not return a secure approval page.');
+      window.location.assign(payment.approvalUrl);
+    }catch(error){toast(error.message);button.disabled=false;button.textContent='Continue to secure payment';}
+  });
   $('#cancel-marketplace-order')?.addEventListener('click',async()=>{
     const button=$('#cancel-marketplace-order');
     if(!window.confirm('Cancel this unpaid order? Reserved stock will be released.'))return;
@@ -4011,7 +4248,8 @@ async function renderMarketplaceOrderDetail(orderId){
 }
 async function renderMarketplaceSeller(){
   activateSilent('marketplace');
-  const data=await api('/marketplace/seller'),seller=data.seller;
+  const data=await api('/marketplace/seller'),seller=data.seller,paypal=data.paypal||{status:'not_started'};
+  const payoutData=seller?await api('/marketplace/payouts').catch(()=>({payouts:[]})):{payouts:[]};
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="seller-back-marketplace">← Marketplace</button></div><section class="card marketplace-commerce-panel"><span class="marketplace-eyebrow">MINGLORA SELLER CENTRE</span><h1>Build your shop on Minglora</h1><p>Seller approval and identity/business checks are required before publishing. Payout setup is a separate verified process.</p>';
   if(!seller){
     html+='<form id="marketplace-seller-application" class="marketplace-form-grid"><label>Seller type<select name="sellerType"><option value="individual">Individual seller</option><option value="business">Registered business</option></select></label><label>Store or business name<input name="storeName" minlength="2" maxlength="100" required placeholder="Your store name"></label><label>Country code<input name="countryCode" minlength="2" maxlength="2" value="JM" required></label><label>Seller contact email<input name="contactEmail" type="email" required value="'+esc(state.user.email||'')+'" placeholder="seller@example.com"></label><label class="marketplace-full-field">What do you sell?<textarea name="description" minlength="20" maxlength="1000" required placeholder="Describe your products or services and the customers you serve."></textarea></label><label class="marketplace-full-field marketplace-terms"><input type="checkbox" name="acceptTerms" value="true" required> I accept the current Minglora Seller Terms (version 2026-01).</label><input type="hidden" name="termsVersion" value="2026-01"><div class="marketplace-full-field"><button class="primary" type="submit">Submit seller application</button></div></form>';
@@ -4019,8 +4257,25 @@ async function renderMarketplaceSeller(){
     const statuses={pending:'Application under review',approved:'Seller approved',rejected:'Application rejected',suspended:'Seller account suspended'};
     const identity={not_started:'Not started',pending:'Verification pending',verified:'Verified',rejected:'Verification rejected'};
     const payout={not_connected:'Not connected',pending:'Setup pending',verified:'Verified',restricted:'Restricted'};
-    html+='<div class="marketplace-seller-status-grid"><div><small>Store</small><strong>'+esc(seller.storeName)+'</strong></div><div><small>Application</small><strong>'+esc(statuses[seller.status]||seller.status)+'</strong></div><div><small>Identity / business</small><strong>'+esc(identity[seller.identityStatus]||seller.identityStatus)+'</strong></div><div><small>Payout setup</small><strong>'+esc(payout[seller.payoutStatus]||seller.payoutStatus)+'</strong></div></div>';
-    if(seller.status==='approved'&&seller.identityStatus==='verified')html+='<p class="muted">Your seller profile is approved. You can publish products and services. Marketplace payments and seller payouts are not yet enabled.</p><button class="primary" id="seller-create-listing">＋ Create a listing</button>';
+     html+='<div class="marketplace-seller-status-grid"><div><small>Store</small><strong>'+esc(seller.storeName)+'</strong></div><div><small>Application</small><strong>'+esc(statuses[seller.status]||seller.status)+'</strong></div><div><small>Identity / business</small><strong>'+esc(identity[seller.identityStatus]||seller.identityStatus)+'</strong></div><div><small>Payout setup</small><strong>'+esc(payout[seller.payoutStatus]||seller.payoutStatus)+'</strong></div></div>';
+     const sellerPayouts=payoutData.payouts||[];
+     html+='<section class="marketplace-admin-panel"><h2>Your seller payouts</h2><p class="muted">Captured funds are not the same as a payout. A payout is marked paid only after PayPal confirms the disbursement.</p>';
+     if(sellerPayouts.length){
+       html+=sellerPayouts.map(item=>{
+         const amount=(Number(item.amount_minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+         const canRelease=['delivered','completed'].includes(item.seller_order_status)&&item.status==='queued';
+         return '<article class="marketplace-review-item"><div><strong>'+esc(item.currency)+' '+amount+'</strong><p>Seller order '+esc(String(item.seller_order_id||'').slice(0,8).toUpperCase())+'</p><small>Order: '+esc(String(item.seller_order_status||'unknown').replaceAll('_',' '))+' · Payout: '+esc(String(item.status||'unknown').replaceAll('_',' '))+'</small></div><div class="marketplace-card-actions">'+(canRelease?'<button class="primary" data-release-marketplace-payout="'+esc(item.id)+'">Release payout</button>':'<span class="marketplace-status">'+esc(item.status==='processing'?'Awaiting PayPal confirmation':item.status==='failed'||item.status==='returned'?'Needs Marketplace support review':String(item.status||'unknown').replaceAll('_',' '))+'</span>')+'</div></article>';
+       }).join('');
+     }else html+='<p class="muted">No seller payouts have been recorded yet. Real captured proceeds will appear here after checkout is approved and a buyer payment completes.</p>';
+     html+='</section>';
+    if(seller.status==='approved'&&seller.identityStatus==='verified'){
+       if(paypal.status==='verified'&&paypal.paymentsReceivable&&paypal.emailConfirmed){
+         html+='<section class="marketplace-payment-panel"><h2>PayPal seller connection</h2><span class="marketplace-status">Business account connected</span><p class="muted">PayPal confirmed your seller account, primary email and ability to receive payments. Checkout still depends on Minglora partner approval and activation checks.</p></section>';
+       }else{
+         html+='<section class="marketplace-payment-panel"><h2>Connect your PayPal Business account</h2><p class="muted">Minglora redirects you to PayPal to grant payment, refund, platform-fee and delayed-disbursement permissions. We verify your account directly with PayPal when you return.</p><form id="marketplace-paypal-onboarding"><label class="marketplace-terms"><input type="checkbox" name="shareDataConsent" value="true" required> I consent to PayPal sharing the account and verification information required to connect my seller account to Minglora.</label><button class="primary" type="submit">Connect PayPal Business</button></form><small class="muted">Connection status: '+esc(String(paypal.status||'not_started').replaceAll('_',' '))+'. '+esc(paypal.reason||'Complete PayPal onboarding to continue.')+'</small></section>';
+       }
+       html+='<p class="muted">Your Minglora seller profile is approved. You can publish products and services.</p><button class="primary" id="seller-create-listing">＋ Create a listing</button>';
+     }
     else html+='<p class="muted">Your application cannot publish listings until the Minglora team completes the required review. Payout setup is not activated by submitting this application.</p>';
     html+='<p class="marketplace-safety-note">Never send passwords, card details or full banking credentials through Minglora messages. Verification documents and payout connection must use approved secure flows.</p>';
   }
@@ -4028,6 +4283,16 @@ async function renderMarketplaceSeller(){
   setContent(html);
   $('#seller-back-marketplace')?.addEventListener('click',()=>renderMarketplace('browse'));
   $('#seller-create-listing')?.addEventListener('click',openMarketplaceComposer);
+  document.querySelectorAll('[data-release-marketplace-payout]').forEach(button=>button.addEventListener('click',async()=>{
+    const payoutId=button.dataset.releaseMarketplacePayout;
+    if(!window.confirm('Request the approved PayPal release for this delivered seller order? Minglora will not mark the payout paid until PayPal confirms it.'))return;
+    button.disabled=true;
+    try{
+      const result=await api('/marketplace/payouts/'+encodeURIComponent(payoutId)+'/release',{method:'POST',body:'{}'});
+      toast(result.paid?'PayPal confirmed the seller payout.':'Payout release submitted; awaiting PayPal confirmation.');
+      await renderMarketplaceSeller();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
   $('#marketplace-seller-application')?.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;
     try{const values=new FormData(form),payload=Object.fromEntries(values.entries());payload.acceptTerms=values.get('acceptTerms')==='true';const result=await api('/marketplace/seller',{method:'POST',body:JSON.stringify(payload)});toast('Seller application submitted for review.');await renderMarketplaceSeller();}
@@ -4039,6 +4304,7 @@ async function renderMarketplaceAdmin(){
   activateSilent('marketplace');
   try{
     const data=await api('/marketplace/admin/queue');
+    const refundQueue=await api('/marketplace/admin/refunds').catch(()=>({refunds:[]}));
     let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="admin-back-marketplace">← Marketplace</button></div><section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">MINGLORA OPERATIONS</span><h1>Marketplace review desk</h1><p>Human review is required before a seller or vacancy is approved.</p></div></section>';
     html+='<section class="card marketplace-admin-panel"><h2>Seller applications · '+data.sellers.length+'</h2>';
     if(data.sellers.length){
@@ -4048,8 +4314,64 @@ async function renderMarketplaceAdmin(){
     if(data.jobs.length){
       html+=data.jobs.map(item=>'<article class="marketplace-review-item"><div><strong>'+esc(item.title)+'</strong><p>'+esc(item.companyName)+' · '+esc(item.location||'Remote')+'</p><small>'+esc(item.description.slice(0,220))+'</small></div><div class="marketplace-card-actions"><button class="primary" data-approve-job="'+esc(item.id)+'">Publish vacancy</button><button class="secondary" data-reject-job="'+esc(item.id)+'">Reject</button></div></article>').join('');
     }else html+='<p class="muted">No job vacancies are awaiting review.</p>';
+    const openRefunds=(refundQueue.refunds||[]).filter(item=>['requested','failed'].includes(item.status));
+    html+='<section class="card marketplace-admin-panel"><h2>Refund requests · '+openRefunds.length+'</h2><p class="muted">Review buyer evidence and seller-order history before approving. PayPal confirmation is required before a refund is marked successful.</p>';
+    if(openRefunds.length){
+      html+=openRefunds.map(item=>{
+        const amount=(Number(item.amount_minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+        return '<article class="marketplace-review-item"><div><strong>'+esc(item.currency)+' '+amount+'</strong><p>Seller order '+esc(String(item.seller_order_id||'').slice(0,8).toUpperCase())+' · Buyer '+esc(String(item.requested_by||'').slice(0,8).toUpperCase())+'</p><small>'+esc(String(item.status||'requested').replaceAll('_',' '))+' · '+new Date(item.created_at).toLocaleString()+'</small><p>'+esc(item.reason||'')+'</p></div><div class="marketplace-card-actions"><button type="button" class="primary" data-approve-marketplace-refund="'+esc(item.id)+'">Approve and issue refund</button></div></article>';
+      }).join('');
+    }else html+='<p class="muted">No Marketplace refund requests need review.</p>';
+    html+='</section>';
     html+='</section><section class="card marketplace-admin-panel"><h2>Commerce activation</h2><span class="marketplace-status">Live checkout disabled</span><ul>'+data.commerce.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul></section>';
+      const todayUtc=new Date().toISOString().slice(0,10);
+      const startUtc=new Date(Date.now()-6*24*60*60*1000).toISOString().slice(0,10);
+      html+='<section class="card marketplace-admin-panel"><h2>Financial integrity</h2><p class="muted">Internal journal, capture and payout checks grouped by currency. Internal consistency is separate from external PayPal verification.</p><button type="button" class="secondary" id="marketplace-financial-reconcile">Run internal reconciliation</button><div id="marketplace-financial-reconcile-result" aria-live="polite"></div><div class="marketplace-provider-reconcile"><h3>Verify PayPal transactions</h3><p class="muted">Checks captured-payment and referenced-payout records individually against PayPal. Choose up to 31 days; this is not a downloaded PayPal balance statement.</p><div class="marketplace-form-grid"><label>Start date<input id="marketplace-provider-start" type="date" value="'+startUtc+'" max="'+todayUtc+'"></label><label>End date<input id="marketplace-provider-end" type="date" value="'+todayUtc+'" max="'+todayUtc+'"></label></div><button type="button" class="primary" id="marketplace-provider-reconcile">Verify provider records</button><div id="marketplace-provider-reconcile-result" aria-live="polite"></div></div></section>';
     setContent(html);
+      $('#marketplace-provider-reconcile')?.addEventListener('click',async()=>{
+        const button=$('#marketplace-provider-reconcile'),target=$('#marketplace-provider-reconcile-result');
+        const startValue=$('#marketplace-provider-start')?.value||'',endValue=$('#marketplace-provider-end')?.value||'';
+        if(!button||!target)return;
+        if(!startValue||!endValue||startValue>endValue){toast('Choose a valid provider reconciliation date range.');return;}
+        const startAt=new Date(startValue+'T00:00:00.000Z').toISOString();
+        const endAt=new Date(endValue+'T23:59:59.999Z').toISOString();
+        if(Date.parse(endAt)-Date.parse(startAt)>31*24*60*60*1000){toast('Provider reconciliation is limited to 31 days per run.');return;}
+        button.disabled=true;target.textContent='Verifying captured payments and payout items with PayPal…';
+        try{
+          const result=await api('/marketplace/admin/financial-reconciliation/provider',{method:'POST',body:JSON.stringify({startAt,endAt})});
+          const currencyRows=(result.byCurrency||[]).map(row=>{
+            const fmt=value=>row.currency+' '+(Number(value||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+            return '<article class="marketplace-review-item"><div><strong>'+esc(row.currency)+'</strong><p>Captures '+Number(row.capturesVerified||0)+' / '+Number(row.captures||0)+' verified · PayPal '+esc(fmt(row.providerCaptureMinor))+' · ledger '+esc(fmt(row.internalCaptureMinor))+'</p><p>Payouts '+Number(row.payoutsVerified||0)+' / '+Number(row.payouts||0)+' verified · PayPal '+esc(fmt(row.providerPayoutMinor))+' · ledger '+esc(fmt(row.internalPayoutMinor))+'</p><small>Exceptions: '+(row.exceptions||[]).length+'</small></div></article>';
+          }).join('');
+          const exceptionHtml=(result.byCurrency||[]).flatMap(row=>(row.exceptions||[]).map(item=>'<li>'+esc(row.currency+' · '+(item.reference||'unreferenced')+' · '+(item.reason||((item.reasons||[]).join(' '))))+'</li>')).join('');
+          target.innerHTML='<div class="marketplace-order-summary"><div><small>Verified records</small><strong>'+(result.providerRecordsVerified?'All matched':'Review required')+'</strong></div><div><small>Exceptions</small><strong>'+Number(result.totalExceptions||0)+'</strong></div><div><small>External statement</small><strong>Not verified</strong></div></div>'+(currencyRows||'<p class="muted">No provider transactions or payouts were found in this date range.</p>')+(exceptionHtml?'<h4>Reconciliation exceptions</h4><ul>'+exceptionHtml+'</ul>':'')+'<p class="muted">'+esc(result.notice||'PayPal API records checked; a PayPal balance or bank statement has not been verified.')+'</p>';
+        }catch(error){target.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+     $('#marketplace-financial-reconcile')?.addEventListener('click',async()=>{
+       const button=$('#marketplace-financial-reconcile'),target=$('#marketplace-financial-reconcile-result');
+       if(!button||!target)return;button.disabled=true;target.textContent='Checking internal marketplace ledger records…';
+       try{
+         const response=await api('/marketplace/admin/financial-reconciliation'),snapshot=response.snapshot||{};
+         const byCurrency=snapshot.byCurrency||{};
+         const amounts=Object.entries(byCurrency).map(([currency,values])=>{
+           const money=value=>currency+' '+(Number(value||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+           return '<article class="marketplace-review-item"><div><strong>'+esc(currency)+'</strong><p>Captured gross '+esc(money(values.capturedGrossMinor))+' · Seller net '+esc(money(values.sellerNetCapturedMinor))+'</p><small>Platform fees '+esc(money(values.platformFeesMinor))+' · Processor fees '+esc(money(values.processorFeesMinor))+'</small><small>Payouts queued '+Number(values.queuedPayouts||0)+' · processing '+Number(values.processingPayouts||0)+' · paid '+Number(values.paidPayouts||0)+'</small></div></article>';
+         }).join('');
+         const exceptions=Number(snapshot.unbalancedJournals||0)+Number(snapshot.captureJournalsMissing||0)+Number(snapshot.payoutJournalsMissing||0)+Number(snapshot.unconfirmedPaidPayouts||0);
+         target.innerHTML='<div class="marketplace-order-summary"><div><small>Journals</small><strong>'+Number(snapshot.totalJournals||0)+'</strong></div><div><small>Ledger entries</small><strong>'+Number(snapshot.totalLedgerEntries||0)+'</strong></div><div><small>Unbalanced journals</small><strong>'+Number(snapshot.unbalancedJournals||0)+'</strong></div><div><small>Missing capture journals</small><strong>'+Number(snapshot.captureJournalsMissing||0)+'</strong></div><div><small>Missing payout journals</small><strong>'+Number(snapshot.payoutJournalsMissing||0)+'</strong></div><div><small>Unconfirmed paid payouts</small><strong>'+Number(snapshot.unconfirmedPaidPayouts||0)+'</strong></div></div>'+(amounts||'<p class="muted">No Marketplace financial transactions have been recorded yet.</p>')+'<p class="muted">Checked '+esc(new Date(snapshot.checkedAt||Date.now()).toLocaleString())+' · '+(exceptions?'Exceptions require investigation.':'No internal ledger integrity exceptions detected.')+'</p>';
+       }catch(error){target.textContent=error.message;}finally{button.disabled=false;}
+     });
+    document.querySelectorAll('[data-approve-marketplace-refund]').forEach(button=>button.addEventListener('click',async()=>{
+      const refundId=button.dataset.approveMarketplaceRefund;
+      if(!window.confirm('Approve this refund and submit it to the original PayPal payment method?'))return;
+      button.disabled=true;button.textContent='Submitting refund…';
+      try{
+        const result=await api('/marketplace/admin/refunds/'+encodeURIComponent(refundId)+'/approve',{method:'POST',body:'{}'});
+        toast(result.paid?'PayPal confirmed the buyer refund.':'Refund submitted; awaiting PayPal confirmation.');
+        await renderMarketplaceAdmin();
+      }catch(error){toast(error.message);button.disabled=false;button.textContent='Approve and issue refund';}
+    }));
     $('#admin-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
     document.querySelectorAll('[data-review-seller]').forEach(button=>button.addEventListener('click',async()=>{
       const userId=button.dataset.reviewSeller;
@@ -4204,6 +4526,8 @@ async function enterMingloraApp(user,showWelcome=false){
   state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   const params=new URLSearchParams(window.location.search);
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
+  else if(params.get('marketplacePayment')==='return'||params.get('marketplacePayment')==='cancel'){await finishMarketplacePaypalReturn();}
+  else if(params.get('marketplacePayPal')==='complete'){await finishMarketplacePaypalSellerReturn();}
   else activateNav('feed');
   if(showWelcome)toast('Welcome to Minglora!');
 }
