@@ -79,7 +79,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v61-streambay-removal-1/);
+  assert.match(serviceWorker, /minglora-shell-v62-auth-recovery-1/);
   assert.match(serviceWorker, /styles\.css\?v=20261101-profile-tools-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });

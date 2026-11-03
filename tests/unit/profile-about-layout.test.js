@@ -91,9 +91,9 @@ test('private contact information is only supplied to its owner or viewers allow
 });
 
 test('profile shell and service worker load the organised About UI without stale cached assets',()=>{
-  assert.match(html,/app\.js\?v=20261101-call-recovery-1/);
+  assert.match(html,/app\.js\?v=20261103-auth-fix-1/);
   assert.match(html,/styles\.css\?v=20261101-profile-tools-1/);
-  assert.match(worker,/minglora-shell-v61-streambay-removal-1/);
-  assert.match(worker,/app\.js\?v=20261101-call-recovery-1/);
+  assert.match(worker,/minglora-shell-v62-auth-recovery-1/);
+  assert.match(worker,/app\.js\?v=20261103-auth-fix-1/);
   assert.match(worker,/styles\.css\?v=20261101-profile-tools-1/);
 });
