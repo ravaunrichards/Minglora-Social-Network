@@ -36,7 +36,9 @@ Both values must belong to this Minglora project. Publishable/anon keys are suit
 
 ## Dashboard settings still required
 
-In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to the actual deployed Minglora origin and add only the actual Minglora callback/redirect URLs used by the application. Configure email confirmation according to the launch policy. Before relying on confirmation or recovery emails, configure and test a transactional SMTP provider with an appropriate sender domain and delivery limits. These Auth dashboard settings cannot be set by the database migration.
+In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to the actual deployed Minglora origin and add only the actual Minglora callback/redirect URLs used by the application. Configure email confirmation according to the launch policy. Before relying on confirmation or recovery emails, configure and test a transactional SMTP provider with an appropriate sender domain and delivery limits.
+
+For the current Render production deployment, set the Render service environment variable `APP_ORIGIN=https://minglora-social-network.onrender.com`. The application now refuses localhost, non-HTTPS, and request-header-derived origins for production auth redirects; if `APP_ORIGIN` is missing or invalid it falls back to the Render production URL. In Supabase Authentication → URL Configuration, set the Site URL to `https://minglora-social-network.onrender.com` and add the exact allowed redirect `https://minglora-social-network.onrender.com/?password-recovery=1`. Remove any stale `http://localhost:3000` Site URL or redirect entries. Supabase only honors redirect destinations that are allow-listed, so both the Site URL and exact recovery redirect must be corrected in the Supabase Dashboard. These Auth dashboard settings cannot be set by the database migration.
 
 ## Account access across devices
 

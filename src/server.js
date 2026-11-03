@@ -6,6 +6,7 @@ import webpush from 'web-push';
 import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { appOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
@@ -85,14 +86,7 @@ async function paypalRequest(path,method='POST',payload={},requestId){
   }
   return data;
 }
-function appOrigin(req){
-  // APP_ORIGIN is the canonical origin in production. Local/test instances must
-  // derive their own origin so a deployed value cannot block local sign-in.
-  if(process.env.NODE_ENV==='production'&&process.env.APP_ORIGIN)return new URL(process.env.APP_ORIGIN).origin;
-  const proto=String(req.headers['x-forwarded-proto']||(req.socket?.encrypted?'https':'http')).split(',')[0].trim();
-  const host=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim();
-  return new URL(proto+'://'+host).origin;
-}
+
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
