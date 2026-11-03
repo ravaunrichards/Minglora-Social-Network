@@ -10,6 +10,9 @@ const fallbackAvatar = name => {
 };
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
+const verifiedProfileBadge = member => member?.verificationBadge==='blue'
+  ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
+  : '';
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
 function stopProfilePresence(){}
@@ -2366,7 +2369,91 @@ async function removeProfileEventRsvp(eventId){
   try{await api('/events/'+encodeURIComponent(eventId)+'/rsvp',{method:'DELETE',body:'{}'});await openProfile(state.profile.user.id);state.profileTab='events';renderProfile(state.profile);toast('Event response removed.');}catch(error){toast(error.message);}
 }
 
-async function handleProfileOverflowAction(action,u,data){
+async async function openProfileVerificationManager(){
+  let data;
+  try{data=await api('/profile-verification');}
+  catch(error){toast(error.message);return;}
+  const status=String(data.verificationStatus||'not_submitted');
+  const labels={
+    not_submitted:'Not applied',pending:'Application under review',
+    needs_information:'More information requested',verified:'Verified',
+    rejected:'Application not approved',suspended:'Verification revoked'
+  };
+  const history=(data.applications||[]).map(item=>{
+    const due=item.reviewDueAt?new Date(item.reviewDueAt).toLocaleString():'Not set';
+    const flags=(item.autoScreeningFlags||[]).map(flag=>'<li>'+esc(flag.message||flag.code||'Review flag')+'</li>').join('');
+    return '<article class="profile-verification-history"><div><strong>'+esc(labels[item.status]||item.status)+'</strong><small>'+esc(item.accountCategory)+' · '+new Date(item.submittedAt).toLocaleString()+'</small></div><p>'+esc(item.decisionNote||'Awaiting reviewer decision.')+'</p><small>Review target: '+esc(due)+'</small>'+(flags?'<ul>'+flags+'</ul>':'')+'</article>';
+  }).join('');
+  const formAvailable=['not_submitted','needs_information','rejected'].includes(status);
+  const modal=document.createElement('div');modal.className='modal-backdrop profile-menu-modal-backdrop';
+  modal.innerHTML='<section class="modal profile-verification-modal" role="dialog" aria-modal="true" aria-label="Minglora profile verification"><div class="modal-head"><div><h2>Minglora Verified</h2><small class="muted">Official blue verification badge</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="profile-verification-current"><span class="profile-blue-verification" aria-hidden="true">✓</span><div><strong>'+esc(labels[status]||status)+'</strong><small>'+ (data.verificationBadge==='blue'?'The blue check appears beside your username.':'A reviewer checks your identity and independent public evidence before a badge is issued.')+'</small></div></div>'+(formAvailable?'<form id="profile-verification-application-form" class="profile-verification-form"><h3>Request profile verification</h3><p class="muted">Verification is for authentic people, creators, public figures, businesses and brands. Submit links that independently connect you or your organization to this Minglora profile. Do not upload passwords, private keys or sensitive identity numbers.</p><label>Account category<select name="accountCategory" required><option value="person">Person</option><option value="creator">Creator</option><option value="business">Business</option><option value="public_figure">Public figure</option><option value="brand">Brand / organization</option></select></label><label>Public name<input name="publicDisplayName" maxlength="120" required value="'+esc(state.profile?.user?.name||state.user?.name||'')+'"></label><label>Official website (HTTPS)<input name="officialWebsite" type="url" placeholder="https://example.com"></label><label>Independent evidence links<textarea name="evidenceLinks" rows="3" maxlength="4000" placeholder="One public HTTPS link per line. Official website, registry listing, verified social page or published coverage."></textarea></label><label>Why should this profile be verified?<textarea name="evidenceSummary" rows="4" minlength="30" maxlength="2000" required placeholder="Explain who you represent, what you are known for and how the links independently confirm this profile."></textarea></label><p class="muted">Minglora automatically checks the submitted information, then a reviewer inspects the evidence. The four-hour target is a review goal, not automatic approval.</p><button type="submit" class="primary full">Submit verification request</button></form>':'<p class="profile-verification-note">'+(status==='verified'?'Your profile is verified. The badge is displayed next to your username.':status==='pending'?'Your application is in the review queue. You will receive a Minglora notification when its status changes.':'Your application needs an update or a new submission. Review the decision note below before applying again.')+'</p>')+'<section class="profile-verification-history-list"><h3>Application history</h3>'+(history||'<p class="muted">No verification applications have been submitted yet.</p>')+'</section></div></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close')?.addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('#profile-verification-application-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');
+    button.disabled=true;button.textContent='Submitting…';
+    try{
+      const values=new FormData(form),payload=Object.fromEntries(values.entries());
+      payload.evidenceLinks=String(values.get('evidenceLinks')||'').split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+      const result=await api('/profile-verification',{method:'POST',body:JSON.stringify(payload)});
+      close();toast(result.notice||'Your profile verification request was submitted.');
+      const refreshed=await api('/profile-verification');
+      if(state.profile?.user?.id===state.user.id){
+        state.profile.user.verificationStatus=refreshed.verificationStatus;
+        state.profile.user.verificationBadge=refreshed.verificationBadge;
+        renderProfile(state.profile);
+      }
+    }catch(error){toast(error.message);button.disabled=false;button.textContent='Submit verification request';}
+  });
+}
+
+async function openProfileVerificationReviewDesk(){
+  let data;
+  try{data=await api('/admin/profile-verification/queue');}
+  catch(error){toast(error.message);return;}
+  const alerts=data.alerts||[],applications=data.applications||[];
+  let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="profile-verification-review-back">← Back to profile</button></div><section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">MINGLORA TRUST & SAFETY</span><h1>Profile verification review</h1><p>Review independent evidence before granting or removing a blue username badge. Applicants cannot review their own requests.</p></div></section>';
+  html+='<section class="card marketplace-admin-panel"><h2>Reviewer alerts · '+alerts.length+'</h2>';
+  html+=alerts.length?alerts.map(alert=>'<article class="marketplace-review-item"><div><strong>'+esc(alert.title)+'</strong><p>'+esc(alert.body)+'</p><small>'+esc(alert.priority)+' priority · Due '+new Date(alert.due_at).toLocaleString()+'</small></div><button type="button" class="secondary" data-profile-verification-alert-read="'+esc(alert.id)+'">Mark read</button></article>').join(''):'<p class="muted">No unread profile verification alerts.</p>';
+  html+='</section><section class="card marketplace-admin-panel"><h2>Applications · '+applications.length+'</h2>';
+  html+=applications.length?applications.map(item=>{
+    const profile=item.profile||{};
+    const overdue=new Date(item.review_due_at).getTime()<Date.now();
+    const flags=(item.auto_screening_flags||[]).map(flag=>'<li>'+esc(flag.message||flag.code||'Review flag')+'</li>').join('');
+    const links=(item.evidence_links||[]).map(url=>'<li><a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(url)+'</a></li>').join('');
+    const locked=item.canReview===false;
+    return '<article class="marketplace-review-item profile-verification-review-card"><div><div class="marketplace-review-title-line"><strong>'+esc(profile.displayName||item.public_display_name)+'</strong><span class="marketplace-priority '+esc(item.review_priority)+'">'+esc(item.review_priority)+' priority</span></div><p>@'+esc(profile.username||'')+' · '+esc(item.account_category)+' · '+esc(item.status)+'</p><small>Automated screening: '+esc(item.auto_screening_status)+' · Score '+Number(item.auto_screening_score||0)+'/100</small><small class="'+(overdue?'marketplace-review-overdue':'')+'">Review target: '+new Date(item.review_due_at).toLocaleString()+(overdue?' · OVERDUE':'')+'</small><p>'+esc(item.evidence_summary)+'</p>'+(item.official_website?'<p>Official website: <a href="'+esc(item.official_website)+'" target="_blank" rel="noopener noreferrer">'+esc(item.official_website)+'</a></p>':'')+(links?'<h4>Evidence links</h4><ul>'+links+'</ul>':'<p class="marketplace-review-overdue">No independent evidence links supplied.</p>')+(flags?'<ul class="marketplace-auto-review-flags">'+flags+'</ul>':'<p class="muted">No automated screening flags; human review is still required.</p>')+'</div><div class="marketplace-card-actions">'+(locked?'<span class="marketplace-status">Your application · independent review required</span>':'<button class="primary" data-profile-verification-decision="verified" data-application-id="'+esc(item.id)+'">Verify profile</button><button class="secondary" data-profile-verification-decision="needs_information" data-application-id="'+esc(item.id)+'">Request information</button><button class="secondary" data-profile-verification-decision="rejected" data-application-id="'+esc(item.id)+'">Reject</button>')+'</div></article>';
+  }).join(''):'<p class="muted">No profile verification applications are waiting for review.</p>';
+  html+='</section>';
+  setContent(html);
+  $('#profile-verification-review-back')?.addEventListener('click',()=>openProfile(state.user.id));
+  document.querySelectorAll('[data-profile-verification-alert-read]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await api('/admin/profile-verification/alerts/'+encodeURIComponent(button.dataset.profileVerificationAlertRead)+'/read',{method:'POST',body:'{}'});await openProfileVerificationReviewDesk();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-profile-verification-decision]').forEach(button=>button.addEventListener('click',async()=>{
+    const decision=button.dataset.profileVerificationDecision;
+    const prompts={
+      verified:'Record the independent evidence checked and why it confirms this profile.',
+      needs_information:'Explain the additional evidence or clarification required.',
+      rejected:'Record the reason this application does not meet verification standards.'
+    };
+    const note=window.prompt(prompts[decision]||'Record the review decision.');
+    if(!note?.trim()||note.trim().length<5)return;
+    if(decision==='verified'&&!window.confirm('Confirm that you independently checked the linked evidence and verified this identity or organization?'))return;
+    button.disabled=true;
+    try{
+      await api('/admin/profile-verification/'+encodeURIComponent(button.dataset.applicationId)+'/review',{method:'PATCH',body:JSON.stringify({decision,note:note.trim()})});
+      toast(decision==='verified'?'Profile verified. The blue tick will appear beside the username.':'Profile verification decision saved.');
+      await openProfileVerificationReviewDesk();
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+}
+
+function handleProfileOverflowAction(action,u,data){
   closeProfileOverflowMenu();
   if(action==='view-as'){openProfileViewAsPreview(u,data);return;}
   if(action==='search'){
@@ -2381,7 +2468,8 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='activity'){await openProfileActivityLog(u.id);return;}
   if(action==='privacy'){await openProfilePrivacySettings();return;}
   if(action==='lock-toggle'){await toggleProfilePrivacyLock();return;}
-  if(action==='verified'){openProfileMenuInfo('Minglora Verified','Account verification and profile verification badges are not available yet. This menu item does not grant a verified badge.');}
+  if(action==='verified'){await openProfileVerificationManager();return;}
+  if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
