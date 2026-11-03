@@ -905,7 +905,7 @@ Deno.serve(async (req: Request) => {
       const seller=sellers.get(sellerOrder.seller_id),account=accounts.get(sellerOrder.seller_id);
       if(!seller||seller.status!=="approved"||seller.identity_status!=="verified"||
          seller.payout_status!=="verified"||!account||account.onboarding_status!=="verified"||
-         !account.merchant_id||!account.permissions_granted||!account.consent_granted||
+         !account.merchant_id||account.account_type!=="business"||!account.permissions_granted||!account.consent_granted||
          !account.payments_receivable||!account.primary_email_confirmed||
          !["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every(feature=>(account.granted_features||[]).includes(feature))){
         return json(409,{error:"Every seller must have an approved Minglora identity and a verified PayPal merchant connection with payment, refund, platform-fee and delayed-disbursement permissions."});
@@ -1637,8 +1637,9 @@ Deno.serve(async (req: Request) => {
     const baseReady=Boolean(data.marketplace_approval_status==="approved"&&data.provider==="paypal"&&data.checkout_enabled&&data.payouts_enabled&&data.tax_calculation_enabled&&data.delayed_disbursement_enabled&&envConfigured&&envEnabled&&partnerApproved&&delayedApproved&&(MARKETPLACE_PAYPAL_MODE!=="live"||liveApproved));
     return json(200,{
       enabled:baseReady,
-      orderCreationEnabled:false,
-      payoutsEnabled:Boolean(data.payouts_enabled&&data.marketplace_approval_status==="approved"&&data.delayed_disbursement_enabled&&delayedApproved),
+      orderCreationEnabled:baseReady,
+      payoutsEnabled:Boolean(baseReady&&data.payouts_enabled),
+      hostedCardOptionsAvailable:baseReady,
       cardPaymentsEnabled:Boolean(baseReady&&data.card_payments_enabled&&cardApproved),
       provider:data.provider||null,blockers
     });
