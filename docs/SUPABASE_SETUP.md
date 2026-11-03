@@ -38,7 +38,34 @@ Both values must belong to this Minglora project. Publishable/anon keys are suit
 
 In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to the actual deployed Minglora origin and add only the actual Minglora callback/redirect URLs used by the application. Configure email confirmation according to the launch policy. Before relying on confirmation or recovery emails, configure and test a transactional SMTP provider with an appropriate sender domain and delivery limits.
 
-For the current Render production deployment, set the Render service environment variable `APP_ORIGIN=https://minglora-social-network.onrender.com`. The application now refuses localhost, non-HTTPS, and request-header-derived origins for production auth redirects; if `APP_ORIGIN` is missing or invalid it falls back to the Render production URL. In Supabase Authentication → URL Configuration, set the Site URL to `https://minglora-social-network.onrender.com` and add the exact allowed redirect `https://minglora-social-network.onrender.com/?password-recovery=1`. Remove any stale `http://localhost:3000` Site URL or redirect entries. Supabase only honors redirect destinations that are allow-listed, so both the Site URL and exact recovery redirect must be corrected in the Supabase Dashboard. These Auth dashboard settings cannot be set by the database migration.
+For the current Render production deployment, set the Render service environment variables:
+- `APP_ORIGIN=https://minglora-social-network.onrender.com`
+- `SUPABASE_AUTH_REDIRECT_URL=https://minglora-social-network.onrender.com/`
+
+The production origin is resolved from these trusted HTTPS settings and never from request or forwarded-host headers. Invalid or localhost values are rejected. Supabase Auth uses its **Site URL** whenever an Auth request does not pass a specific redirect URL, so the hosted project setting must also be corrected.
+
+In Supabase Dashboard → Authentication → URL Configuration, set:
+- **Site URL:** `https://minglora-social-network.onrender.com`
+- **Redirect URLs:** `https://minglora-social-network.onrender.com`
+- **Redirect URLs:** `https://minglora-social-network.onrender.com/**`
+- **Redirect URLs:** `https://minglora-social-network.onrender.com/?password-recovery=1`
+
+Remove the production `http://localhost:3000` Site URL and any localhost redirect entries. The Site URL is the fallback for magic links, email confirmations and recovery when no per-request redirect is supplied. A redirect supplied by code must also match the project's allow-list.
+
+### Supabase Auth email templates
+
+For the Magic Link, Confirm signup, Reset Password, Invite user and Change email templates, use Supabase's generated `{{ .ConfirmationURL }}` for the action link. Do not construct an action link from `{{ .SiteURL }}`, hard-code `localhost:3000`, or replace the Supabase verification host with the Minglora app host. Example Magic Link template:
+
+```html
+<h2>Your Minglora sign-in link</h2>
+<p>Use the secure one-time link below to sign in to Minglora.</p>
+<p><a href="{{ .ConfirmationURL }}">Sign in to Minglora</a></p>
+<p>If you did not request this link, you can ignore this email.</p>
+```
+
+The generated ConfirmationURL performs Supabase verification first and then applies the configured redirect. When a request explicitly supplies `redirectTo`, a custom template that constructs a verification URL may need `{{ .RedirectTo }}`; the safer standard is to link to `{{ .ConfirmationURL }}`. Minglora now recognizes the Supabase `type=magiclink` callback, validates its access token server-side against Supabase Auth, creates the app session, and enforces any verified TOTP MFA factor before opening the account. One-time tokens are removed from the browser URL before the session exchange.
+
+These hosted Auth URL and email-template settings cannot be changed by a database migration or by the current Supabase project connector. Save the dashboard configuration directly. Previously sent links may retain the old destination; request a fresh magic link after saving.
 
 ## Account access across devices
 
