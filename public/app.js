@@ -4197,12 +4197,39 @@ async function renderMarketplaceOrderDetail(orderId){
   html+=(order.sellerOrders||[]).map(sellerOrder=>{
     const items=(sellerOrder.items||[]).map(item=>'<div class="marketplace-order-item"><div><strong>'+esc(item.title)+'</strong><small>Qty '+Number(item.quantity)+' · '+money(item.unitPriceMinor)+' each</small></div><strong>'+money(item.lineTotalMinor)+'</strong></div>').join('');
     const fulfilments=(sellerOrder.fulfillments||[]).map(item=>'<p class="muted">Fulfilment: '+esc(item.method)+' · '+esc(item.status)+(item.carrier?' · '+esc(item.carrier):'')+(item.trackingReference?' · Tracking '+esc(item.trackingReference):'')+'</p>').join('');
-    return '<section class="card marketplace-commerce-panel"><div class="marketplace-order-subhead"><div><span class="marketplace-eyebrow">SELLER ORDER</span><h2>'+esc(sellerOrder.id.slice(0,8).toUpperCase())+'</h2></div><span class="marketplace-status">'+esc(sellerOrder.status.replaceAll('_',' '))+'</span></div><div class="marketplace-order-items">'+items+'</div><div class="marketplace-order-summary"><div><small>Gross</small><strong>'+money(sellerOrder.grossMinor)+'</strong></div><div><small>Marketplace fee</small><strong>'+money(sellerOrder.commissionMinor)+'</strong></div><div><small>Seller net</small><strong>'+money(sellerOrder.sellerNetMinor)+'</strong></div><div><small>Payout status</small><strong>'+esc(sellerOrder.payoutStatus.replaceAll('_',' '))+'</strong></div></div>'+fulfilments+'</section>';
+    const remainingRefundMinor=Math.max(0,Number(sellerOrder.grossMinor||0)-Number(sellerOrder.refundedMinor||0));
+    const refundAction=order.buyerId===state.user.id&&['captured','partially_refunded'].includes(order.paymentStatus)&&remainingRefundMinor>0
+      ?'<div class="marketplace-card-actions"><button type="button" class="secondary" data-request-marketplace-refund="'+esc(sellerOrder.id)+'" data-refund-remaining="'+remainingRefundMinor+'">Request refund</button><small>Remaining refundable amount: '+money(remainingRefundMinor)+'</small></div>':'';
+    return '<section class="card marketplace-commerce-panel"><div class="marketplace-order-subhead"><div><span class="marketplace-eyebrow">SELLER ORDER</span><h2>'+esc(sellerOrder.id.slice(0,8).toUpperCase())+'</h2></div><span class="marketplace-status">'+esc(sellerOrder.status.replaceAll('_',' '))+'</span></div><div class="marketplace-order-items">'+items+'</div><div class="marketplace-order-summary"><div><small>Gross</small><strong>'+money(sellerOrder.grossMinor)+'</strong></div><div><small>Marketplace fee</small><strong>'+money(sellerOrder.commissionMinor)+'</strong></div><div><small>Seller net</small><strong>'+money(sellerOrder.sellerNetMinor)+'</strong></div><div><small>Refunded</small><strong>'+money(sellerOrder.refundedMinor)+'</strong></div><div><small>Payout status</small><strong>'+esc(sellerOrder.payoutStatus.replaceAll('_',' '))+'</strong></div></div>'+fulfilments+refundAction+'</section>';
   }).join('');
   const events=order.events||[];
   html+='<section class="card marketplace-commerce-panel"><h2>Order activity</h2>'+(events.length?'<ol class="marketplace-order-events">'+events.map(item=>'<li><strong>'+esc(item.type.replaceAll('_',' '))+'</strong><small>'+new Date(item.createdAt).toLocaleString()+'</small><p>'+esc(item.note||'')+'</p></li>').join('')+'</ol>':'<p class="muted">No additional activity has been recorded.</p>')+'</section>';
   setContent(html);
   $('#order-detail-back')?.addEventListener('click',()=>renderMarketplaceOrders());
+  document.querySelectorAll('[data-request-marketplace-refund]').forEach(button=>button.addEventListener('click',async()=>{
+    const sellerOrderId=button.dataset.requestMarketplaceRefund;
+    const remainingMinor=Number(button.dataset.refundRemaining||0);
+    if(!sellerOrderId||!Number.isSafeInteger(remainingMinor)||remainingMinor<=0)return;
+    const defaultAmount=(remainingMinor/100).toFixed(2);
+    const requested=window.prompt('Enter the refund amount in '+order.currency+'. Maximum available: '+defaultAmount,defaultAmount);
+    if(requested===null)return;
+    const normalized=String(requested).replace(/,/g,'').trim();
+    if(!/^\d+(\.\d{1,2})?$/.test(normalized)){toast('Enter a valid amount with up to two decimal places.');return;}
+    const amountMinor=Math.round(Number(normalized)*100);
+    if(!Number.isSafeInteger(amountMinor)||amountMinor<1||amountMinor>remainingMinor){toast('The requested amount exceeds the remaining refundable amount.');return;}
+    const reason=window.prompt('Explain why you are requesting this refund (at least 10 characters).');
+    if(reason===null)return;
+    if(String(reason).trim().length<10){toast('Please provide a little more detail for the refund review.');return;}
+    button.disabled=true;
+    try{
+      const idempotencyKey=globalThis.crypto?.randomUUID?.()||('minglora-refund-'+sellerOrderId+'-'+Date.now());
+      const result=await api('/marketplace/refunds',{method:'POST',body:JSON.stringify({
+        sellerOrderId,amountMinor,reason:String(reason).trim(),idempotencyKey
+      })});
+      toast('Refund request '+String(result.refund?.refundId||'').slice(0,8)+' submitted for marketplace review. No refund is marked paid until PayPal confirms it.');
+      await renderMarketplaceOrderDetail(order.id);
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
   $('#marketplace-pay-now')?.addEventListener('click',async()=>{
     const button=$('#marketplace-pay-now');if(!button)return;button.disabled=true;button.textContent='Connecting to secure checkout…';
     try{
