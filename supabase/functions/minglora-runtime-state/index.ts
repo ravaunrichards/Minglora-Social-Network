@@ -27,6 +27,16 @@ function marketplacePayPalConfig() {
   };
 }
 
+function marketplacePayPalPayerAuthAssertion(payerId:string):string {
+  const cfg=marketplacePayPalConfig();
+  const payer=String(payerId||"").trim();
+  if(!cfg.clientId||!payer||payer.length>128||payer.includes(" ")){
+    throw new Error("A verified PayPal seller payer ID and marketplace client ID are required.");
+  }
+  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value));
+  return encode({alg:"none"})+"."+encode({iss:cfg.clientId,payer_id:payer})+".";
+}
+
 function marketplacePayPalAuthAssertion(sellerEmail:string):string {
   const cfg=marketplacePayPalConfig();
   const email=String(sellerEmail||"").trim().toLowerCase();
@@ -911,7 +921,8 @@ Deno.serve(async (req: Request) => {
         headers:{
           "Authorization":"Bearer "+token,
           "Content-Type":"application/json",
-          "PayPal-Partner-Attribution-Id":cfg.attributionId
+          "PayPal-Partner-Attribution-Id":cfg.attributionId,
+          "PayPal-Auth-Assertion":marketplacePayPalPayerAuthAssertion(merchantId)
         }
       });
     } catch {
@@ -950,7 +961,7 @@ Deno.serve(async (req: Request) => {
     }
     const stamp=new Date().toISOString();
     const {data,error}=await admin.from("marketplace_seller_paypal_accounts").update({
-      merchant_id:merchantId,paypal_payer_id:null,paypal_account_email:primaryEmail,
+      merchant_id:merchantId,paypal_payer_id:merchantId,paypal_account_email:primaryEmail,
       onboarding_status:"verified",account_type:"business",
       permissions_granted:true,consent_granted:true,primary_email_confirmed:true,
       payments_receivable:true,granted_features:requested,products:products.map((item:any)=>String(item?.name||"")).filter(Boolean),
