@@ -86,6 +86,9 @@ export function supabaseSignUp({ email, password, name, username, phoneNumber })
 export function supabaseSignIn({ email, password }) {
   return authRequest('token?grant_type=password', { email, password });
 }
+export function supabaseGetUser(accessToken) {
+  return authenticatedRequest('user',accessToken,'GET');
+}
 
 function requireAccessToken(accessToken) {
   if (!accessToken || typeof accessToken !== 'string' || accessToken.length < 20) {
