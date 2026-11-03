@@ -905,13 +905,16 @@ async function route(req, res) {
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
       
-      if(method==='POST'&&/^\\/api\\/marketplace\\/payouts\\/[0-9a-f-]+\\/release$/i.test(p)){
-        const match=p.match(/^\\/api\\/marketplace\\/payouts\\/([0-9a-f-]+)\\/release$/i);
-        if(!match)return json(res,400,{error:'Invalid seller payout reference.'});
+      const payoutReleaseParts=p.split('/');
+      if(method==='POST'&&payoutReleaseParts.length===6&&payoutReleaseParts[1]==='api'&&payoutReleaseParts[2]==='marketplace'&&payoutReleaseParts[3]==='payouts'&&payoutReleaseParts[5]==='release'){
+        const payoutId=String(payoutReleaseParts[4]||'');
+        if(!/^[0-9a-f-]{36}$/i.test(payoutId))return json(res,400,{error:'Invalid seller payout reference.'});
         if(isSupabasePersistence()){
-          const result=await requestSupabaseState('marketplace_paypal_payout_release',{sellerId:user.id,payoutId:match[1]});
+          const result=await requestSupabaseState('marketplace_paypal_payout_release',{sellerId:user.id,payoutId});
           return json(res,result.paid?200:202,result);
         }
+        return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
+      }
         return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
       }
       if(method==='GET'&&p==='/api/marketplace/admin/financial-reconciliation'){
