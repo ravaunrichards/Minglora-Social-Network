@@ -4304,6 +4304,7 @@ async function renderMarketplaceAdmin(){
   activateSilent('marketplace');
   try{
     const data=await api('/marketplace/admin/queue');
+    const refundQueue=await api('/marketplace/admin/refunds').catch(()=>({refunds:[]}));
     let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="admin-back-marketplace">← Marketplace</button></div><section class="marketplace-section-heading"><div><span class="marketplace-eyebrow">MINGLORA OPERATIONS</span><h1>Marketplace review desk</h1><p>Human review is required before a seller or vacancy is approved.</p></div></section>';
     html+='<section class="card marketplace-admin-panel"><h2>Seller applications · '+data.sellers.length+'</h2>';
     if(data.sellers.length){
@@ -4313,6 +4314,15 @@ async function renderMarketplaceAdmin(){
     if(data.jobs.length){
       html+=data.jobs.map(item=>'<article class="marketplace-review-item"><div><strong>'+esc(item.title)+'</strong><p>'+esc(item.companyName)+' · '+esc(item.location||'Remote')+'</p><small>'+esc(item.description.slice(0,220))+'</small></div><div class="marketplace-card-actions"><button class="primary" data-approve-job="'+esc(item.id)+'">Publish vacancy</button><button class="secondary" data-reject-job="'+esc(item.id)+'">Reject</button></div></article>').join('');
     }else html+='<p class="muted">No job vacancies are awaiting review.</p>';
+    const openRefunds=(refundQueue.refunds||[]).filter(item=>['requested','failed'].includes(item.status));
+    html+='<section class="card marketplace-admin-panel"><h2>Refund requests · '+openRefunds.length+'</h2><p class="muted">Review buyer evidence and seller-order history before approving. PayPal confirmation is required before a refund is marked successful.</p>';
+    if(openRefunds.length){
+      html+=openRefunds.map(item=>{
+        const amount=(Number(item.amount_minor||0)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+        return '<article class="marketplace-review-item"><div><strong>'+esc(item.currency)+' '+amount+'</strong><p>Seller order '+esc(String(item.seller_order_id||'').slice(0,8).toUpperCase())+' · Buyer '+esc(String(item.requested_by||'').slice(0,8).toUpperCase())+'</p><small>'+esc(String(item.status||'requested').replaceAll('_',' '))+' · '+new Date(item.created_at).toLocaleString()+'</small><p>'+esc(item.reason||'')+'</p></div><div class="marketplace-card-actions"><button type="button" class="primary" data-approve-marketplace-refund="'+esc(item.id)+'">Approve and issue refund</button></div></article>';
+      }).join('');
+    }else html+='<p class="muted">No Marketplace refund requests need review.</p>';
+    html+='</section>';
     html+='</section><section class="card marketplace-admin-panel"><h2>Commerce activation</h2><span class="marketplace-status">Live checkout disabled</span><ul>'+data.commerce.blockers.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul></section>';
      html+='<section class="card marketplace-admin-panel"><h2>Financial integrity</h2><p class="muted">Internal journal and payout checks, grouped by currency. This is not a PayPal settlement statement.</p><button type="button" class="secondary" id="marketplace-financial-reconcile">Run internal reconciliation</button><div id="marketplace-financial-reconcile-result" aria-live="polite"></div></section>';
     setContent(html);
@@ -4330,6 +4340,16 @@ async function renderMarketplaceAdmin(){
          target.innerHTML='<div class="marketplace-order-summary"><div><small>Journals</small><strong>'+Number(snapshot.totalJournals||0)+'</strong></div><div><small>Ledger entries</small><strong>'+Number(snapshot.totalLedgerEntries||0)+'</strong></div><div><small>Unbalanced journals</small><strong>'+Number(snapshot.unbalancedJournals||0)+'</strong></div><div><small>Missing capture journals</small><strong>'+Number(snapshot.captureJournalsMissing||0)+'</strong></div><div><small>Missing payout journals</small><strong>'+Number(snapshot.payoutJournalsMissing||0)+'</strong></div><div><small>Unconfirmed paid payouts</small><strong>'+Number(snapshot.unconfirmedPaidPayouts||0)+'</strong></div></div>'+(amounts||'<p class="muted">No Marketplace financial transactions have been recorded yet.</p>')+'<p class="muted">Checked '+esc(new Date(snapshot.checkedAt||Date.now()).toLocaleString())+' · '+(exceptions?'Exceptions require investigation.':'No internal ledger integrity exceptions detected.')+'</p>';
        }catch(error){target.textContent=error.message;}finally{button.disabled=false;}
      });
+    document.querySelectorAll('[data-approve-marketplace-refund]').forEach(button=>button.addEventListener('click',async()=>{
+      const refundId=button.dataset.approveMarketplaceRefund;
+      if(!window.confirm('Approve this refund and submit it to the original PayPal payment method?'))return;
+      button.disabled=true;button.textContent='Submitting refund…';
+      try{
+        const result=await api('/marketplace/admin/refunds/'+encodeURIComponent(refundId)+'/approve',{method:'POST',body:'{}'});
+        toast(result.paid?'PayPal confirmed the buyer refund.':'Refund submitted; awaiting PayPal confirmation.');
+        await renderMarketplaceAdmin();
+      }catch(error){toast(error.message);button.disabled=false;button.textContent='Approve and issue refund';}
+    }));
     $('#admin-back-marketplace')?.addEventListener('click',()=>renderMarketplace());
     document.querySelectorAll('[data-review-seller]').forEach(button=>button.addEventListener('click',async()=>{
       const userId=button.dataset.reviewSeller;
