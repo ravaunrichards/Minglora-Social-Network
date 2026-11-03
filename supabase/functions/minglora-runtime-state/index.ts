@@ -141,6 +141,7 @@ Deno.serve(async (req: Request) => {
     "marketplace_cart_get", "marketplace_cart_add", "marketplace_cart_update", "marketplace_cart_remove", "marketplace_cart_clear",
     "marketplace_refund_request", "marketplace_refunds_admin_list", "marketplace_refund_approve",
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list", "marketplace_business_identity_submit", "marketplace_business_identity_review", "marketplace_review_alert_mark_read",
+    "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
     "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_receive", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_financial_provider_reconcile", "marketplace_seller_payouts",
@@ -2276,6 +2277,209 @@ Deno.serve(async (req: Request) => {
       if(clearCurrencyError)return json(503,{error:"Marketplace cart currency could not be cleared."});
     }
     return json(200,{ok:true,removed:(removed||[]).length});
+  }
+
+  if (action === "profile_verification_get") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid profile account."});
+    const [profileResult,applicationResult]=await Promise.all([
+      admin.from("profiles").select("verification_status,verification_badge").eq("id",userId).maybeSingle(),
+      admin.from("profile_verification_applications")
+        .select("id,account_category,public_display_name,official_website,evidence_links,evidence_summary,status,review_priority,review_due_at,auto_screening_status,auto_screening_score,auto_screening_flags,decision_note,submitted_at,reviewed_at,verified_at")
+        .eq("user_id",userId).order("submitted_at",{ascending:false}).limit(10)
+    ]);
+    if(profileResult.error||applicationResult.error)return json(503,{error:"Profile verification status could not be loaded."});
+    return json(200,{
+      verificationStatus:profileResult.data?.verification_status||"not_submitted",
+      verificationBadge:profileResult.data?.verification_badge||"none",
+      applications:applicationResult.data||[]
+    });
+  }
+
+  if (action === "profile_verification_submit") {
+    const userId=String(input.userId||"");
+    const category=String(input.accountCategory||"");
+    const publicDisplayName=String(input.publicDisplayName||"").trim().slice(0,120);
+    const officialWebsite=String(input.officialWebsite||"").trim();
+    const evidenceSummary=String(input.evidenceSummary||"").trim().slice(0,2000);
+    const links=Array.isArray(input.evidenceLinks)?input.evidenceLinks.slice(0,8).map((value:any)=>String(value||"").trim()):[];
+    if(!validUuid(userId)||!["person","creator","business","public_figure","brand"].includes(category)||
+       publicDisplayName.length<2||evidenceSummary.length<30||links.some((value:string)=>value.length>500)){
+      return json(400,{error:"Complete the verification category, public name, explanation and evidence links."});
+    }
+    const safeUrl=(value:string)=>{try{const url=new URL(value);return url.protocol==="https:"&&url.hostname.includes(".")&&!url.username&&!url.password;}catch{return false;}};
+    if(officialWebsite&&!safeUrl(officialWebsite))return json(400,{error:"The official website must be a valid HTTPS address."});
+    if(links.some((value:string)=>!safeUrl(value)))return json(400,{error:"Every evidence link must be a valid HTTPS address."});
+    const {data:authResult}=await admin.auth.admin.getUserById(userId);
+    const authUser=authResult?.user;
+    if(!authUser?.email_confirmed_at)return json(403,{error:"Verify the email address on your Minglora account before applying."});
+    const {data:profile,error:profileError}=await admin.from("profiles")
+      .select("display_name,username,verification_status,verification_badge").eq("id",userId).maybeSingle();
+    if(profileError)return json(503,{error:"Your profile could not be checked."});
+    if(!profile)return json(404,{error:"Minglora profile not found."});
+    if(profile.verification_status==="verified"&&profile.verification_badge==="blue")return json(409,{error:"This profile already has the official blue verification badge."});
+    if(publicDisplayName.toLowerCase()!==String(profile.display_name||"").trim().toLowerCase()&&
+       publicDisplayName.toLowerCase()!==String(profile.username||"").trim().toLowerCase()){
+      return json(409,{error:"The public name must match your current Minglora display name or username."});
+    }
+    const flags:any[]=[];
+    if(!officialWebsite)flags.push({code:"official_website_missing",severity:"medium",message:"No official website was supplied."});
+    if(!links.length)flags.push({code:"independent_evidence_missing",severity:"high",message:"No independent public evidence links were supplied."});
+    if(category==="business"||category==="brand")flags.push({code:"business_registry_check_required",severity:"high",message:"Verify the legal business or brand against an official registry or authorized source."});
+    const score=Math.max(0,100-flags.reduce((total:number,flag:any)=>total+(flag.severity==="high"?30:15),0));
+    const priority=["creator","business","public_figure","brand"].includes(category)?"high":"normal";
+    const dueAt=new Date(Date.now()+4*60*60*1000).toISOString();
+    const {data:existing,error:existingError}=await admin.from("profile_verification_applications")
+      .select("id,status").eq("user_id",userId).in("status",["pending","needs_information"])
+      .order("submitted_at",{ascending:false}).limit(1).maybeSingle();
+    if(existingError)return json(503,{error:"Existing verification applications could not be checked."});
+    if(existing?.status==="pending")return json(409,{error:"A profile verification application is already awaiting review."});
+    const values={
+      account_category:category,public_display_name:publicDisplayName,
+      official_website:officialWebsite||null,evidence_links:links,
+      evidence_summary:evidenceSummary,status:"pending",review_priority:priority,review_due_at:dueAt,
+      auto_screening_status:flags.length?"flagged":"clear_for_human_review",
+      auto_screening_score:score,auto_screening_flags:flags,decision_note:"",
+      submitted_at:new Date().toISOString(),reviewed_at:null,reviewed_by:null,verified_at:null,revoked_at:null,updated_at:new Date().toISOString()
+    };
+    let result;
+    if(existing?.status==="needs_information"){
+      result=await admin.from("profile_verification_applications").update(values).eq("id",existing.id)
+        .select("id,user_id,account_category,public_display_name,status,review_priority,review_due_at,auto_screening_status,auto_screening_score,auto_screening_flags,submitted_at").single();
+      if(result.error)return fail(result.error,"Updated verification application could not be saved.");
+      const {data:staff}=await admin.from("minglora_platform_staff")
+        .select("user_id").eq("active",true).in("role",["owner","admin","moderator","reviewer"]);
+      if((staff||[]).length){
+        const alertRows=(staff||[]).map((row:any)=>({
+          recipient_id:row.user_id,application_id:result.data.id,event_type:"application_submitted",
+          priority,due_at:dueAt,title:"Updated profile verification application",
+          body:publicDisplayName+" resubmitted profile verification evidence."
+        }));
+        await admin.from("profile_verification_review_alerts").insert(alertRows);
+        await admin.from("notifications").insert((staff||[]).map((row:any)=>({
+          recipient_id:row.user_id,actor_id:userId,kind:"profile_verification_review",
+          entity_type:"profile_verification",entity_id:result.data.id,
+          payload:{title:"Updated profile verification application",body:publicDisplayName+" resubmitted verification evidence.",priority,dueAt}
+        })));
+      }
+      await admin.from("profile_verification_review_events").insert({
+        application_id:result.data.id,actor_id:userId,event_type:"resubmitted",
+        details:"Applicant supplied additional information and resubmitted the application.",
+        event_metadata:{category}
+      });
+    }else{
+      result=await admin.from("profile_verification_applications").insert({...values,user_id:userId})
+        .select("id,user_id,account_category,public_display_name,status,review_priority,review_due_at,auto_screening_status,auto_screening_score,auto_screening_flags,submitted_at").single();
+      if(result.error)return fail(result.error,"Profile verification application could not be submitted.");
+    }
+    const {error:statusError}=await admin.from("profiles").update({verification_status:"pending"}).eq("id",userId);
+    if(statusError)return fail(statusError,"Application was saved but the profile verification status could not be updated.");
+    await admin.from("profile_verification_review_events").insert({
+      application_id:result.data.id,actor_id:userId,event_type:"automated_screening",
+      details:"Automated screening completed. A human reviewer must inspect the supporting evidence.",
+      event_metadata:{score,flags}
+    });
+    return json(201,{application:{
+      id:result.data.id,status:result.data.status,accountCategory:result.data.account_category,
+      reviewPriority:result.data.review_priority,reviewDueAt:result.data.review_due_at,
+      autoScreeningStatus:result.data.auto_screening_status,autoScreeningScore:result.data.auto_screening_score,
+      autoScreeningFlags:result.data.auto_screening_flags||[],submittedAt:result.data.submitted_at
+    },notice:"Application submitted. Automated checks only organize the review; they do not grant verification."});
+  }
+
+  if (action === "profile_verification_admin_queue") {
+    const reviewerId=String(input.reviewerId||"");
+    if(!validUuid(reviewerId))return json(400,{error:"A valid reviewer account is required."});
+    const [applicationsResult,alertsResult]=await Promise.all([
+      admin.from("profile_verification_applications")
+        .select("id,user_id,account_category,public_display_name,official_website,evidence_links,evidence_summary,status,review_priority,review_due_at,auto_screening_status,auto_screening_score,auto_screening_flags,submitted_at")
+        .in("status",["pending","needs_information"]).order("review_due_at",{ascending:true}).limit(200),
+      admin.from("profile_verification_review_alerts")
+        .select("id,application_id,event_type,priority,due_at,title,body,created_at")
+        .eq("recipient_id",reviewerId).is("read_at",null).order("created_at",{ascending:false}).limit(50)
+    ]);
+    if(applicationsResult.error||alertsResult.error)return json(503,{error:"Profile verification review queue is unavailable."});
+    const userIds=[...new Set((applicationsResult.data||[]).map((row:any)=>row.user_id))];
+    const {data:profiles,error:profilesError}=userIds.length?await admin.from("profiles")
+      .select("id,username,display_name,avatar_url,verification_status,verification_badge").in("id",userIds):{data:[],error:null};
+    if(profilesError)return json(503,{error:"Applicant profiles could not be loaded."});
+    const profileMap=new Map((profiles||[]).map((row:any)=>[row.id,row]));
+    return json(200,{
+      applications:(applicationsResult.data||[]).map((row:any)=>{
+        const profile:any=profileMap.get(row.user_id)||{};
+        return {...row,profile:{username:profile.username||"",displayName:profile.display_name||row.public_display_name,
+          avatarUrl:profile.avatar_url||"",verificationStatus:profile.verification_status||"not_submitted",
+          verificationBadge:profile.verification_badge||"none"},canReview:row.user_id!==reviewerId};
+      }),
+      alerts:alertsResult.data||[]
+    });
+  }
+
+  if (action === "profile_verification_admin_review") {
+    const actorId=String(input.actorId||""),applicationId=String(input.applicationId||"");
+    const decision=String(input.decision||""),note=String(input.note||"").trim().slice(0,1500);
+    if(!validUuid(actorId)||!validUuid(applicationId)||!["verified","needs_information","rejected","revoked"].includes(decision)||note.length<5){
+      return json(400,{error:"Choose a valid verification decision and write a review note."});
+    }
+    const {data:application,error:applicationError}=await admin.from("profile_verification_applications")
+      .select("id,user_id,public_display_name,account_category,status,evidence_links,evidence_summary")
+      .eq("id",applicationId).maybeSingle();
+    if(applicationError)return json(503,{error:"Verification application could not be loaded."});
+    if(!application)return json(404,{error:"Verification application not found."});
+    if(application.user_id===actorId)return json(403,{error:"Applicants cannot review their own profile verification application."});
+    if(!["pending","needs_information","verified"].includes(application.status)||
+       (decision==="revoked"&&application.status!=="verified")){
+      return json(409,{error:"This application is not in a state that accepts this decision."});
+    }
+    if(decision==="verified"&&(!Array.isArray(application.evidence_links)||application.evidence_links.length===0)){
+      return json(409,{error:"At least one independent public evidence link must be present before verification."});
+    }
+    const stamp=new Date().toISOString();
+    const profileStatus=decision==="verified"?"verified":decision==="needs_information"?"needs_information":decision==="revoked"?"suspended":"rejected";
+    const {data:updated,error:updateError}=await admin.from("profile_verification_applications").update({
+      status:decision,decision_note:note,reviewed_at:stamp,reviewed_by:actorId,
+      verified_at:decision==="verified"?stamp:null,revoked_at:decision==="revoked"?stamp:null,updated_at:stamp
+    }).eq("id",applicationId)
+      .select("id,user_id,status,decision_note,reviewed_at,verified_at").single();
+    if(updateError)return fail(updateError,"Verification decision could not be saved.");
+    const badge=decision==="verified"?"blue":"none";
+    const {error:profileUpdateError}=await admin.from("profiles").update({
+      verification_status:profileStatus,verification_badge:badge
+    }).eq("id",application.user_id);
+    if(profileUpdateError)return fail(profileUpdateError,"Decision saved but profile badge could not be synchronized.");
+    const {data:authResult}=await admin.auth.admin.getUserById(application.user_id);
+    if(authResult?.user){
+      const nextMetadata={...(authResult.user.app_metadata||{}),verification_status:profileStatus,verification_badge:badge};
+      const {error:metadataError}=await admin.auth.admin.updateUserById(application.user_id,{app_metadata:nextMetadata});
+      if(metadataError)return fail(metadataError,"Profile badge was synchronized but authentication metadata could not be refreshed.");
+    }
+    const eventType=decision==="verified"?"verified":decision==="revoked"?"revoked":decision;
+    await admin.from("profile_verification_review_events").insert({
+      application_id:applicationId,actor_id:actorId,event_type:eventType,details:note,
+      event_metadata:{decision,accountCategory:application.account_category,badge}
+    });
+    await admin.from("audit_log").insert({
+      actor_id:actorId,action:"profile_verification_reviewed",target_type:"profile",
+      target_id:application.user_id,metadata:{applicationId,decision,note,badge}
+    });
+    await admin.from("notifications").insert({
+      recipient_id:application.user_id,actor_id:actorId,kind:"profile_verification_status",
+      entity_type:"profile_verification",entity_id:applicationId,
+      payload:{title:"Minglora profile verification update",status:decision,note,badge}
+    });
+    return json(200,{application:{id:updated.id,userId:updated.user_id,status:updated.status,
+      decisionNote:updated.decision_note,reviewedAt:updated.reviewed_at,verificationStatus:profileStatus,
+      verificationBadge:badge}});
+  }
+
+  if (action === "profile_verification_alert_mark_read") {
+    const reviewerId=String(input.reviewerId||""),alertId=String(input.alertId||"");
+    if(!validUuid(reviewerId)||!validUuid(alertId))return json(400,{error:"A valid reviewer alert is required."});
+    const {data,error}=await admin.from("profile_verification_review_alerts").update({read_at:new Date().toISOString()})
+      .eq("id",alertId).eq("recipient_id",reviewerId).is("read_at",null)
+      .select("id,application_id,read_at").maybeSingle();
+    if(error)return json(503,{error:"Verification review alert could not be marked as read."});
+    return json(200,{ok:true,alert:data||null});
   }
 
   if (action === "marketplace_seller_get") {

@@ -3193,3 +3193,27 @@ body.auth-mode .auth-screen{
 .marketplace-review-overdue{color:#b42318!important;font-weight:800}
 .marketplace-auto-review-flags{margin:7px 0 0;padding-left:18px;color:var(--muted);font-size:12px}
 .marketplace-auto-review-flags li{margin:3px 0}
+
+/* TikTok/Facebook-style check adjacent to the public username */
+.profile-username-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:3px 0 0;font-weight:600}
+.profile-blue-verification{display:inline-grid;place-items:center;width:17px;height:17px;flex:0 0 17px;margin-left:3px;border-radius:50%;background:#1877f2;color:#fff;font-size:11px;font-weight:900;line-height:1;vertical-align:middle;box-shadow:0 0 0 2px rgba(24,119,242,.14)}
+.profile-verification-modal{width:min(620px,calc(100vw - 28px));max-height:min(88vh,900px);overflow:hidden;display:flex;flex-direction:column}
+.profile-verification-modal .modal-body{overflow:auto;min-height:0}
+.profile-verification-current{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px;background:var(--soft,#f5f8fc);margin-bottom:15px}
+.profile-verification-current>div{display:grid;gap:3px}.profile-verification-current small{color:var(--muted);font-size:12px}
+.profile-verification-form{display:grid;gap:12px;padding:14px;border:1px solid var(--line);border-radius:13px}
+.profile-verification-form h3,.profile-verification-history-list h3{margin:0}
+.profile-verification-form label{display:grid;gap:6px;font-weight:650;font-size:13px}
+.profile-verification-form input,.profile-verification-form select,.profile-verification-form textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:var(--surface,#fff);color:var(--text);padding:10px;font:inherit}
+.profile-verification-form textarea{resize:vertical;min-height:72px}
+.profile-verification-note{padding:13px;border-radius:10px;background:var(--soft,#f5f8fc)}
+.profile-verification-history-list{display:grid;gap:9px;margin-top:17px}
+.profile-verification-history{display:grid;gap:6px;padding:11px 0;border-bottom:1px solid var(--line)}
+.profile-verification-history>div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.profile-verification-history small{font-size:11px;color:var(--muted)}
+.profile-verification-history p{margin:0;font-size:13px}
+.profile-verification-review-card{align-items:flex-start}
+.profile-verification-review-card a{overflow-wrap:anywhere}
+.profile-verification-review-card .marketplace-card-actions{min-width:150px}
+.profile-verification-review-card .marketplace-card-actions button{white-space:normal}
+.comment-author-username{display:block;margin:2px 0 4px;color:var(--muted);font-size:10px}
