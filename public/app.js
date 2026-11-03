@@ -13,6 +13,9 @@ const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
 const verifiedProfileBadge = member => member?.verificationBadge==='blue'
   ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
   : '';
+const verifiedProfileBadge = member => member?.verificationBadge==='blue'
+  ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
+  : '';
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`Request failed (${res.status})`);return data; }
 function stopProfilePresence(){}
@@ -4007,7 +4010,7 @@ async function renderSearch(q){
   state.searchResults=data;
   const people=data.users||[],posts=data.posts||[],groups=data.groups||[],pages=data.pages||[],listings=data.listings||[],jobs=data.jobs||[];
   const section=(title,count,content)=>count?'<section class="card search-category"><header class="search-category-heading"><h2>'+esc(title)+'</h2><span>'+count+'</span></header>'+content+'</section>':'';
-  const peopleHtml=people.length?'<div class="suggested-list">'+people.map(member=>'<div class="person-row"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="person-meta"><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+'</small></div><button class="mini-btn" data-profile="'+esc(member.id)+'">View</button></div>').join('')+'</div>':'';
+  const peopleHtml=people.length?'<div class="suggested-list">'+people.map(member=>'<div class="person-row"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="person-meta"><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><button class="mini-btn" data-profile="'+esc(member.id)+'">View</button></div>').join('')+'</div>':'';
   const postsHtml=posts.map(post=>postCard(post)).join('');
   const groupsHtml=groups.length?'<div class="search-result-list">'+groups.map(group=>'<article class="search-result-row"><div class="search-result-symbol">◉</div><div class="search-result-copy"><strong>'+esc(group.name)+'</strong><small>'+esc(group.description||'Community')+' · '+Number(group.memberCount||0)+' members</small></div><button class="mini-btn" data-open-group="'+esc(group.id)+'">Open</button></article>').join('')+'</div>':'';
   const pagesHtml=pages.length?'<div class="search-result-list">'+pages.map(page=>'<article class="search-result-row"><div class="page-card-mark">'+esc(String(page.title||'P').slice(0,1).toUpperCase())+'</div><div class="search-result-copy"><strong>'+esc(page.title)+'</strong><small>@'+esc(page.handle)+' · '+Number(page.followerCount||0)+' followers</small></div><button class="mini-btn" data-open-page="'+esc(page.id)+'">Open</button></article>').join('')+'</div>':'';
