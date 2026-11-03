@@ -33,6 +33,16 @@ ALTER TABLE public.marketplace_payment_attempts
   ADD CONSTRAINT marketplace_payment_attempts_payment_method_check
     CHECK (payment_method = ANY (ARRAY['paypal','card','paypal_wallet','alternative']));
 
+ALTER TABLE public.marketplace_payment_configuration
+  ADD COLUMN IF NOT EXISTS delayed_disbursement_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS card_payments_enabled boolean NOT NULL DEFAULT false;
+
+ALTER TABLE public.marketplace_seller_paypal_accounts
+  ADD COLUMN IF NOT EXISTS paypal_payer_id text;
+UPDATE public.marketplace_seller_paypal_accounts
+SET paypal_payer_id=merchant_id
+WHERE paypal_payer_id IS NULL AND merchant_id IS NOT NULL;
+
 ALTER TABLE public.marketplace_payouts
   ADD COLUMN IF NOT EXISTS provider_disbursement_id text,
   ADD COLUMN IF NOT EXISTS provider_disbursement_status text NOT NULL DEFAULT '',
@@ -411,9 +421,15 @@ BEGIN
   END IF;
   SELECT * INTO v_seller FROM public.marketplace_seller_profiles
   WHERE user_id=p_seller_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Seller profile is not available';
+  END IF;
   SELECT * INTO v_account FROM public.marketplace_seller_paypal_accounts
   WHERE user_id=p_seller_id;
-  IF NOT FOUND OR v_seller.status<>'approved' OR v_seller.identity_status<>'verified'
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Seller PayPal account is not available';
+  END IF;
+  IF v_seller.status<>'approved' OR v_seller.identity_status<>'verified'
      OR v_seller.payout_status<>'verified'
      OR v_account.onboarding_status<>'verified'
      OR NOT v_account.payments_receivable
@@ -425,7 +441,7 @@ BEGIN
   SET status='processing',
       attempt_count=attempt_count+CASE WHEN status='queued' THEN 1 ELSE 0 END,
       last_attempt_at=coalesce(last_attempt_at,now())
-  WHERE id=payout_id
+  WHERE id=p_payout_id
   RETURNING * INTO v_payout;
   RETURN jsonb_build_object(
     'payoutId',v_payout.id,
@@ -597,7 +613,7 @@ BEGIN
         WHERE provider='paypal' AND provider_capture_id=v_capture_id
           AND seller_order_id<>v_seller_order_id
       ) THEN RAISE EXCEPTION 'PayPal capture ID is already linked to another seller order'; END IF;
-      IF FOUND AND v_existing_tx.status='captured' THEN
+      IF v_existing_tx.id IS NOT NULL AND v_existing_tx.status='captured' THEN
         IF v_existing_tx.provider_capture_id<>v_capture_id
            OR v_existing_tx.amount_minor<>v_amount
            OR v_existing_tx.seller_net_minor<>v_seller_net THEN
