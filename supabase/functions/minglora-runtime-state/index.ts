@@ -10,6 +10,27 @@ const admin = SUPABASE_URL && adminKey
     })
   : null;
 
+
+const MARKETPLACE_PAYPAL_MODE = (Deno.env.get("MARKETPLACE_PAYPAL_MODE") || "sandbox").toLowerCase();
+const MARKETPLACE_PAYPAL_BASE = (Deno.env.get("MARKETPLACE_PAYPAL_API_BASE_URL") ||
+  (MARKETPLACE_PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com")).replace(/\\/+$/, "");
+let marketplacePayPalToken: { value: string; expiresAt: number } | null = null;
+async function getMarketplacePayPalToken(): Promise<string> {
+  const clientId=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")||"";
+  const clientSecret=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_SECRET")||"";
+  if(!clientId||!clientSecret)throw new Error("Marketplace PayPal credentials are not configured.");
+  if(marketplacePayPalToken&&marketplacePayPalToken.expiresAt>Date.now()+60000)return marketplacePayPalToken.value;
+  const response=await fetch(MARKETPLACE_PAYPAL_BASE+"/v1/oauth2/token",{
+    method:"POST",
+    headers:{"Authorization":"Basic "+btoa(clientId+":"+clientSecret),"Content-Type":"application/x-www-form-urlencoded"},
+    body:"grant_type=client_credentials"
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.access_token)throw new Error("Marketplace PayPal authentication failed.");
+  marketplacePayPalToken={value:String(data.access_token),expiresAt:Date.now()+Math.max(60,Number(data.expires_in||300))*1000};
+  return marketplacePayPalToken.value;
+}
+
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
@@ -70,7 +91,7 @@ Deno.serve(async (req: Request) => {
 
   const action = input.action;
   const supportedActions = [
-    "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -82,7 +103,7 @@ Deno.serve(async (req: Request) => {
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
-    "marketplace_paypal_payment_prepare", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record",
+    "marketplace_paypal_payment_prepare", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile",
     "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
@@ -742,7 +763,7 @@ Deno.serve(async (req: Request) => {
     if(seller.seller_type!=="business"){
       return json(409,{error:"PayPal marketplace onboarding requires a verified PayPal Business account. Upgrade your PayPal account to Business before continuing."});
     }
-    const requestedFeatures=["PAYMENT","REFUND"];
+    const requestedFeatures=["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"];
     const {data:existing,error:existingError}=await admin.from("marketplace_seller_paypal_accounts")
       .select("onboarding_status,merchant_id").eq("user_id",userId).maybeSingle();
     if(existingError)return json(503,{error:"Existing PayPal seller connection could not be checked."});
@@ -787,7 +808,7 @@ Deno.serve(async (req: Request) => {
        !/^[a-f0-9]{64}$/i.test(nonceHash)||!stateHash||
        accountType!=="BUSINESS_ACCOUNT"||!permissionsGranted||!consentGranted||
        !emailConfirmed||!paymentsReceivable||
-       !["PAYMENT","REFUND"].every(feature=>grantedFeatures.includes(feature))){
+       !["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every(feature=>grantedFeatures.includes(feature))){
       return json(409,{error:"PayPal has not confirmed all required Business account, payment, refund and platform-fee permissions."});
     }
     const {data:current,error:lookupError}=await admin.from("marketplace_seller_paypal_accounts")
@@ -803,7 +824,7 @@ Deno.serve(async (req: Request) => {
     if(existingMerchant&&existingMerchant.user_id!==userId)return json(409,{error:"That PayPal merchant account is already connected to a different Minglora seller."});
     const stamp=new Date().toISOString();
     const {data,error}=await admin.from("marketplace_seller_paypal_accounts").update({
-      merchant_id:merchantId,onboarding_status:"verified",account_type:"business",
+      merchant_id:merchantId,paypal_payer_id:String(input.paypalPayerId||"").trim()||null,onboarding_status:"verified",account_type:"business",
       permissions_granted:true,consent_granted:true,primary_email_confirmed:true,
       payments_receivable:true,granted_features:grantedFeatures,products,
       callback_nonce_hash:null,last_checked_at:stamp,status_reason:"PayPal merchant-integrations confirmed payment eligibility.",
@@ -831,7 +852,7 @@ Deno.serve(async (req: Request) => {
       return json(409,{error:"This Marketplace order is not awaiting payment."});
     }
     const {data:config,error:configError}=await admin.from("marketplace_payment_configuration")
-      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled")
+      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled,delayed_disbursement_enabled,card_payments_enabled")
       .eq("singleton",true).maybeSingle();
     if(configError||!config)return json(503,{error:"Marketplace payment configuration could not be loaded."});
     const blockers=[];
@@ -851,7 +872,7 @@ Deno.serve(async (req: Request) => {
     const sellerIds=sellerOrders.map(row=>row.seller_id);
     const [sellerResult,accountResult]=await Promise.all([
       admin.from("marketplace_seller_profiles").select("user_id,status,identity_status,seller_type,payout_status").in("user_id",sellerIds),
-      admin.from("marketplace_seller_paypal_accounts").select("user_id,merchant_id,onboarding_status,account_type,permissions_granted,consent_granted,payments_receivable,primary_email_confirmed,granted_features").in("user_id",sellerIds)
+      admin.from("marketplace_seller_paypal_accounts").select("user_id,merchant_id,paypal_payer_id,onboarding_status,account_type,permissions_granted,consent_granted,payments_receivable,primary_email_confirmed,granted_features").in("user_id",sellerIds)
     ]);
     if(sellerResult.error||accountResult.error)return json(503,{error:"Seller payment eligibility could not be loaded."});
     const sellers=new Map((sellerResult.data||[]).map((row:any)=>[row.user_id,row]));
@@ -863,7 +884,8 @@ Deno.serve(async (req: Request) => {
          seller.payout_status!=="verified"||!account||account.onboarding_status!=="verified"||
          account.account_type!=="business"||!account.merchant_id||!account.permissions_granted||
          !account.consent_granted||!account.payments_receivable||!account.primary_email_confirmed||
-         !["PAYMENT","REFUND"].every(feature=>(account.granted_features||[]).includes(feature))){
+         !account.paypal_payer_id||
+          !["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every(feature=>(account.granted_features||[]).includes(feature))){
         return json(409,{error:"Every seller must have an approved Minglora account and a verified PayPal Business connection with payment, refund and platform-fee permissions."});
       }
       paymentSellers.push({
@@ -880,13 +902,13 @@ Deno.serve(async (req: Request) => {
     if(existingAttempt?.provider_order_id&&existingAttempt.provider_approval_url&&["created","approved"].includes(existingAttempt.status)){
       return json(200,{attemptId:existingAttempt.id,providerOrderId:existingAttempt.provider_order_id,
         approvalUrl:existingAttempt.provider_approval_url,requestId:existingAttempt.provider_request_id,
-        currency:order.currency,totalMinor:order.total_minor,sellerOrders:paymentSellers,reused:true});
+        currency:order.currency,totalMinor:order.total_minor,sellerOrders:paymentSellers,paymentMethod,reused:true});
     }
     const requestId="MINGLORA-"+crypto.randomUUID();
     const attemptValues={
       order_id:orderId,provider:"paypal",status:"created",amount_minor:Number(order.total_minor),
       currency:order.currency,provider_request_id:requestId,attempted_at:new Date().toISOString(),
-      provider_status:"PAYMENT_ORDER_PENDING",failure_code:""
+      provider_status:"PAYMENT_ORDER_PENDING",failure_code:"",payment_method:paymentMethod
     };
     const {data:attempt,error:insertError}=await admin.from("marketplace_payment_attempts")
       .insert(attemptValues).select("id,provider_request_id").single();
@@ -959,6 +981,111 @@ Deno.serve(async (req: Request) => {
     },{onConflict:"provider,provider_event_id",ignoreDuplicates:true}).select("id,processing_status").maybeSingle();
     if(error)return fail(error,"PayPal webhook event could not be stored.");
     return json(200,{received:true,duplicate:!data,eventId});
+  }
+
+
+  if (action === "marketplace_paypal_payout_release") {
+    const payoutId=String(input.payoutId||""),sellerId=String(input.sellerId||"");
+    if(!validUuid(payoutId)||!validUuid(sellerId))return json(400,{error:"Invalid seller payout reference."});
+    const {data:config,error:configError}=await admin.from("marketplace_payment_configuration")
+      .select("provider,marketplace_approval_status,payouts_enabled,delayed_disbursement_enabled")
+      .eq("singleton",true).maybeSingle();
+    if(configError||!config)return json(503,{error:"Marketplace payout configuration is unavailable."});
+    if(config.provider!=="paypal"||config.marketplace_approval_status!=="approved"||
+       !config.payouts_enabled||!config.delayed_disbursement_enabled){
+      return json(409,{error:"Independent seller disbursement is not approved and enabled."});
+    }
+    const {data:claim,error:claimError}=await admin.rpc("claim_marketplace_payout",{
+      p_payout_id:payoutId,p_seller_id:sellerId
+    });
+    if(claimError)return fail(claimError,"Seller payout could not be claimed.");
+    if(claim?.status==="paid")return json(200,{paid:true,idempotent:true,payoutId});
+    if(!claim?.providerCaptureId||!claim?.requestId)return json(409,{error:"The delayed PayPal capture reference or payout request ID is missing."});
+    let response: Response;
+    try {
+      const token=await getMarketplacePayPalToken();
+      response=await fetch(MARKETPLACE_PAYPAL_BASE+"/v1/payments/referenced-payouts-items",{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer "+token,
+          "Content-Type":"application/json",
+          "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+          "PayPal-Request-Id":String(claim.requestId).slice(0,108)
+        },
+        body:JSON.stringify({reference_id:String(claim.providerCaptureId),reference_type:"TRANSACTION_ID"})
+      });
+    } catch {
+      return json(503,{error:"PayPal referenced disbursement could not be reached. The payout remains processing for safe reconciliation."});
+    }
+    const providerPayload=await response.json().catch(()=>({}));
+    if(!response.ok){
+      await admin.from("marketplace_payouts").update({
+        provider_disbursement_status:"SUBMISSION_ERROR",
+        response_snapshot:providerPayload||{},
+        last_attempt_at:new Date().toISOString()
+      }).eq("id",payoutId).eq("seller_id",sellerId);
+      return json(502,{error:"PayPal did not accept the seller disbursement request.",providerStatus:response.status});
+    }
+    const payoutItemId=String(providerPayload?.payout_item_id||providerPayload?.payout_item?.payout_item_id||providerPayload?.id||"");
+    const providerStatus=String(providerPayload?.transaction_status||providerPayload?.status||"PENDING").toUpperCase();
+    await admin.from("marketplace_payouts").update({
+      provider_disbursement_id:payoutItemId||null,
+      provider_disbursement_status:providerStatus,
+      response_snapshot:providerPayload||{},
+      last_attempt_at:new Date().toISOString()
+    }).eq("id",payoutId).eq("seller_id",sellerId);
+    if(["SUCCESS","SUCCEEDED","COMPLETED"].includes(providerStatus)&&payoutItemId){
+      const {data:confirmation,error:confirmationError}=await admin.rpc("confirm_marketplace_payout",{
+        p_payout_id:payoutId,p_provider_disbursement_id:payoutItemId,
+        p_provider_status:providerStatus,p_response_snapshot:providerPayload||{}
+      });
+      if(confirmationError)return fail(confirmationError,"PayPal accepted the disbursement but Minglora could not reconcile the confirmation.");
+      return json(200,{paid:true,payoutId,confirmation});
+    }
+    return json(202,{accepted:true,paid:false,processing:true,payoutId,providerDisbursementId:payoutItemId||null,providerStatus});
+  }
+
+  if (action === "marketplace_paypal_payout_webhook") {
+    const payoutId=String(input.payoutId||""),providerEventId=String(input.providerEventId||"");
+    const providerDisbursementId=String(input.providerDisbursementId||"");
+    const eventType=String(input.eventType||""),providerStatus=String(input.providerStatus||"").toUpperCase();
+    const payload=input.payload;
+    if(!validUuid(payoutId)||!providerEventId||providerEventId.length>160||
+       !providerDisbursementId||providerDisbursementId.length>160||!eventType||eventType.length>160||
+       input.signatureVerified!==true||!payload||typeof payload!=="object"||Array.isArray(payload)){
+      return json(400,{error:"Only signature-verified payout events with known payout references can be reconciled."});
+    }
+    const {data:payout,error:payoutError}=await admin.from("marketplace_payouts")
+      .select("id,seller_id,status").eq("id",payoutId).maybeSingle();
+    if(payoutError||!payout)return json(404,{error:"Marketplace payout was not found."});
+    const {data:event,error:eventError}=await admin.from("marketplace_payout_events").upsert({
+      payout_id:payoutId,provider_event_id:providerEventId,event_type:eventType,
+      signature_verified:true,payload,received_at:new Date().toISOString(),processed_at:new Date().toISOString()
+    },{onConflict:"provider_event_id",ignoreDuplicates:true}).select("id").maybeSingle();
+    if(eventError)return fail(eventError,"Verified PayPal payout event could not be saved.");
+    if(["PAYMENT.PAYOUTS-ITEM.SUCCEEDED","PAYMENT.PAYOUTSBATCH.SUCCESS"].includes(eventType)||
+       ["SUCCESS","SUCCEEDED","COMPLETED"].includes(providerStatus)){
+      const {data:confirmation,error:confirmError}=await admin.rpc("confirm_marketplace_payout",{
+        p_payout_id:payoutId,p_provider_disbursement_id:providerDisbursementId,
+        p_provider_status:"SUCCESS",p_response_snapshot:payload
+      });
+      if(confirmError)return fail(confirmError,"Verified PayPal payout success could not be reconciled.");
+      return json(200,{received:true,paid:true,payoutId,confirmation,duplicate:!event});
+    }
+    if(["PAYMENT.PAYOUTS-ITEM.FAILED","PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.RETURNED"].includes(eventType)){
+      await admin.from("marketplace_payouts").update({
+        status:"failed",provider_disbursement_id:providerDisbursementId,
+        provider_disbursement_status:providerStatus||eventType,
+        response_snapshot:payload,last_attempt_at:new Date().toISOString()
+      }).eq("id",payoutId);
+    }
+    return json(200,{received:true,paid:false,payoutId,duplicate:!event});
+  }
+
+  if (action === "marketplace_financial_reconcile") {
+    const {data,error}=await admin.rpc("marketplace_financial_reconciliation_snapshot");
+    if(error)return fail(error,"Marketplace financial reconciliation snapshot failed.");
+    return json(200,{snapshot:data});
   }
 
   if (action === "marketplace_seller_get") {
@@ -1640,6 +1767,99 @@ Deno.serve(async (req: Request) => {
       if(error)return fail(error,"Marketplace listing could not be removed from Saved.");
     }
     return json(200,{saved:save});
+  }
+
+  if (action === "streambay_cleanup") {
+    const { data: assets, error: assetLookupError } = await admin
+      .from("media_assets")
+      .select("id,storage_bucket,storage_key")
+      .like("attached_to", "streambay:%");
+    if (assetLookupError) return json(503, { error: "StreamBay media inventory could not be read." });
+
+    const allowedBuckets = new Set([
+      "minglora-avatars", "minglora-covers", "minglora-post-media", "minglora-stories",
+      "minglora-message-attachments", "minglora-group-media", "minglora-page-media",
+      "minglora-ringtones", "minglora-short-videos", "minglora-marketplace-media",
+      "minglora-live-thumbnails", "minglora-data-exports"
+    ]);
+    const grouped = new Map<string, string[]>();
+    const assetIds: string[] = [];
+    for (const asset of assets || []) {
+      assetIds.push(String(asset.id));
+      if (!asset.storage_bucket || !asset.storage_key) continue;
+      if (!allowedBuckets.has(asset.storage_bucket) || String(asset.storage_key).includes("..")) {
+        return json(409, { error: "A StreamBay media record contains an invalid storage reference; no metadata was deleted." });
+      }
+      const paths = grouped.get(asset.storage_bucket) || [];
+      paths.push(asset.storage_key);
+      grouped.set(asset.storage_bucket, paths);
+    }
+
+    let deletedStorageObjects = 0;
+    for (const [bucket, paths] of grouped) {
+      for (let offset = 0; offset < paths.length; offset += 1000) {
+        const batch = paths.slice(offset, offset + 1000);
+        const { error } = await admin.storage.from(bucket).remove(batch);
+        if (error) return json(502, { error: "StreamBay files could not be fully removed from Storage." });
+        deletedStorageObjects += batch.length;
+      }
+    }
+
+    let deletedMediaRecords = 0;
+    if (assetIds.length) {
+      const { data: deleted, error } = await admin.from("media_assets")
+        .delete().in("id", assetIds).select("id");
+      if (error) return json(503, { error: "StreamBay media metadata could not be fully removed." });
+      deletedMediaRecords = (deleted || []).length;
+    }
+
+    const stateKeys = [
+      "streambayChannels", "streambayVideos", "streambayComments", "streambaySubscriptions",
+      "streambayLikes", "streambayHistory", "streambayPlaylists", "streambayPlaylistItems",
+      "streambayWatchLater"
+    ];
+    const { data: current, error: stateReadError } = await admin
+      .from("minglora_runtime_state")
+      .select("state,revision")
+      .eq("state_key", "primary")
+      .maybeSingle();
+    if (stateReadError || !current) return json(503, { error: "Minglora application state could not be read for StreamBay cleanup." });
+
+    const state = current.state || {};
+    let removedRuntimeKeys = 0;
+    for (const key of stateKeys) {
+      if (Object.prototype.hasOwnProperty.call(state, key)) {
+        delete state[key];
+        removedRuntimeKeys++;
+      }
+    }
+    let removedRuntimeAssets = 0;
+    if (Array.isArray(state.mediaAssets)) {
+      const before = state.mediaAssets.length;
+      state.mediaAssets = state.mediaAssets.filter((asset: any) => !String(asset?.attachedTo || "").startsWith("streambay:"));
+      removedRuntimeAssets = before - state.mediaAssets.length;
+    }
+
+    let revision = Number(current.revision);
+    if (removedRuntimeKeys || removedRuntimeAssets) {
+      const { data: saved, error } = await admin.from("minglora_runtime_state")
+        .update({ state, revision: revision + 1, updated_at: new Date().toISOString() })
+        .eq("state_key", "primary")
+        .eq("revision", revision)
+        .select("revision")
+        .maybeSingle();
+      if (error || !saved) return json(409, { error: "StreamBay data cleanup needs a retry because Minglora state changed concurrently." });
+      revision = Number(saved.revision);
+    }
+
+    return json(200, {
+      ok: true,
+      deletedStorageObjects,
+      deletedMediaRecords,
+      removedRuntimeKeys,
+      removedRuntimeAssets,
+      revision
+    });
   }
 
   if (action === "load" || action === "health") {
