@@ -67,7 +67,7 @@
     if (!form || typeof form.matches !== 'function' || !form.matches(FORM_SELECTOR)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    void submitRegistration(form);
+    return submitRegistration(form);
   }, true);
 
   document.addEventListener('invalid', event => {
