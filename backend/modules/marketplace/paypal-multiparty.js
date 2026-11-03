@@ -22,7 +22,10 @@ export function marketplacePayPalConfig(env = process.env) {
   const enabled = String(env.MARKETPLACE_PAYPAL_ENABLED || '').trim().toLowerCase() === 'true';
   const partnerApproved = String(env.MARKETPLACE_PAYPAL_PARTNER_APPROVED || '').trim().toLowerCase() === 'true';
   const liveApproved = String(env.MARKETPLACE_PAYPAL_LIVE_APPROVED || '').trim().toLowerCase() === 'true';
-  const enabledForTransactions = enabled && configured && modeValid && partnerApproved && (mode !== 'live' || liveApproved);
+  const delayedDisbursementApproved = String(env.MARKETPLACE_PAYPAL_DELAYED_DISBURSEMENT_APPROVED || '').trim().toLowerCase() === 'true';
+  const advancedCardsApproved = String(env.MARKETPLACE_PAYPAL_ADVANCED_CARDS_APPROVED || '').trim().toLowerCase() === 'true';
+  const enabledForTransactions = enabled && configured && modeValid && partnerApproved &&
+    delayedDisbursementApproved && (mode !== 'live' || liveApproved);
   return {
     mode,
     base,
@@ -35,6 +38,8 @@ export function marketplacePayPalConfig(env = process.env) {
     enabled,
     partnerApproved,
     liveApproved,
+    delayedDisbursementApproved,
+    advancedCardsApproved,
     enabledForTransactions
   };
 }
@@ -45,11 +50,15 @@ export function marketplacePayPalReadiness(env = process.env) {
   if (!config.configured) blockers.push('Marketplace PayPal credentials, partner merchant ID, attribution ID and webhook ID must be configured separately from creator payouts.');
   if (!config.enabled) blockers.push('Marketplace PayPal integration is disabled.');
   if (!config.partnerApproved) blockers.push('PayPal must approve Minglora as a multiparty marketplace partner before seller onboarding and payments.');
+  if (!config.delayedDisbursementApproved) blockers.push('PayPal must approve delayed disbursement and the seller onboarding feature before seller funds can be released independently.');
   if (config.mode === 'live' && !config.liveApproved) blockers.push('Live Marketplace PayPal mode requires an explicit production approval flag.');
   if (!['sandbox', 'live'].includes(config.mode)) blockers.push('Marketplace PayPal mode must be sandbox or live.');
   return {
     configured: config.configured,
     enabled: config.enabledForTransactions,
+    delayedDisbursementApproved: config.delayedDisbursementApproved,
+    cardPaymentsEnabled: config.enabledForTransactions && config.advancedCardsApproved,
+    cardPaymentsBlocker: config.advancedCardsApproved ? null : 'PayPal Advanced Credit and Debit Card Payments requires separate underwriting/approval.',
     mode: config.mode,
     blockers
   };
@@ -95,7 +104,7 @@ export function buildMarketplacePayPalReferralPayload({
           integration_method: 'PAYPAL',
           integration_type: 'THIRD_PARTY',
           third_party_details: {
-            features: ['PAYMENT', 'REFUND']
+            features: ['PAYMENT', 'REFUND', 'PARTNER_FEE', 'DELAY_FUNDS_DISBURSEMENT']
           }
         }
       }
@@ -158,11 +167,11 @@ export function buildMarketplacePayPalOrderPayload({ orderId, currency, sellerOr
     };
     if (fee) {
       unit.payment_instruction = {
-        disbursement_mode: 'INSTANT',
+        disbursement_mode: 'DELAYED',
         platform_fees: [{ amount: { currency_code: code, value: fee } }]
       };
     } else {
-      unit.payment_instruction = { disbursement_mode: 'INSTANT' };
+      unit.payment_instruction = { disbursement_mode: 'DELAYED' };
     }
     if (seller.description) unit.description = String(seller.description).slice(0, 127);
     return unit;
@@ -191,14 +200,45 @@ export function extractMarketplacePayPalApprovalUrl(response) {
 export function parseMarketplacePayPalCapture(response, expectedSellerOrders) {
   const expected = new Map((expectedSellerOrders || []).map(item => [String(item.sellerOrderId), item]));
   const purchaseUnits = Array.isArray(response?.purchase_units) ? response.purchase_units : [];
+  const overallStatus = String(response?.status || '').toUpperCase();
+  if (!['COMPLETED', 'PARTIALLY_COMPLETED'].includes(overallStatus)) {
+    throw new Error('PayPal returned an unexpected order capture status.');
+  }
+  if (expected.size < 1 || purchaseUnits.length !== expected.size) {
+    throw new Error('PayPal did not return one result for every seller order.');
+  }
+
+  const seen = new Set();
   const rows = [];
   for (const unit of purchaseUnits) {
     const reference = String(unit?.reference_id || '');
     const seller = expected.get(reference);
-    if (!seller) throw new Error('PayPal returned an unknown seller order reference.');
+    if (!seller || seen.has(reference)) throw new Error('PayPal returned an unknown or duplicate seller order reference.');
+    seen.add(reference);
     const captures = Array.isArray(unit?.payments?.captures) ? unit.payments.captures : [];
-    if (captures.length !== 1) throw new Error('PayPal did not return exactly one capture for a seller order.');
+    if (captures.length !== 1) throw new Error('PayPal did not return exactly one capture result for a seller order.');
     const capture = captures[0];
+    const providerStatus = String(capture?.status || '').toUpperCase();
+
+    if (providerStatus === 'DECLINED') {
+      if (overallStatus !== 'PARTIALLY_COMPLETED') {
+        throw new Error('PayPal marked a seller unit declined without reporting a partial order capture.');
+      }
+      rows.push({
+        sellerOrderId: reference,
+        status: 'declined',
+        providerStatus: 'DECLINED',
+        failureCode: String(capture?.error?.details?.[0]?.issue || capture?.error?.name || 'PAYMENT_DECLINED').slice(0, 120)
+      });
+      continue;
+    }
+
+    if (providerStatus !== 'COMPLETED' || !capture?.id) {
+      throw new Error('PayPal seller capture is not completed.');
+    }
+    if (String(capture?.disbursement_mode || '').toUpperCase() !== 'DELAYED') {
+      throw new Error('PayPal did not confirm DELAYED disbursement for this seller capture.');
+    }
     const amount = capture?.amount || {};
     if (String(amount.currency_code || '').toUpperCase() !== String(seller.currency).toUpperCase()) {
       throw new Error('PayPal capture currency did not match the Minglora seller order.');
@@ -210,9 +250,13 @@ export function parseMarketplacePayPalCapture(response, expectedSellerOrders) {
     const fee = breakdown.paypal_fee?.value == null ? 0 : Math.round(Number(breakdown.paypal_fee.value) * 100);
     const net = breakdown.net_amount?.value == null ? null : Math.round(Number(breakdown.net_amount.value) * 100);
     const platformFee = Number(seller.platformFeeMinor || 0);
-    if (!capture.id || capture.status !== 'COMPLETED') throw new Error('A seller payment was not completed by PayPal.');
     if (!Number.isSafeInteger(fee) || fee < 0 || (net !== null && (!Number.isSafeInteger(net) || net < 0))) {
       throw new Error('PayPal returned an invalid seller fee breakdown.');
+    }
+    const sellerNetMinor = net === null ? Number(seller.grossMinor) - platformFee - fee : net;
+    if (!Number.isSafeInteger(sellerNetMinor) || sellerNetMinor <= 0 ||
+        sellerNetMinor !== Number(seller.grossMinor) - platformFee - fee) {
+      throw new Error('PayPal seller net did not reconcile to gross, platform and processor fees.');
     }
     rows.push({
       sellerOrderId: reference,
@@ -220,15 +264,19 @@ export function parseMarketplacePayPalCapture(response, expectedSellerOrders) {
       amountMinor: Math.round(Number(captureValue) * 100),
       platformFeeMinor: platformFee,
       processorFeeMinor: fee,
-      sellerNetMinor: net === null ? Math.max(0, Number(seller.grossMinor) - platformFee - fee) : net,
+      sellerNetMinor,
       status: 'captured',
-      providerStatus: String(capture.status)
+      providerStatus: 'COMPLETED'
     });
   }
-  if (rows.length !== expected.size || expected.size !== purchaseUnits.length) {
-    throw new Error('PayPal did not capture every seller order in this Marketplace transaction.');
+
+  const captured = rows.filter(row => row.status === 'captured').length;
+  const declined = rows.filter(row => row.status === 'declined').length;
+  if (captured + declined !== expected.size ||
+      (overallStatus === 'COMPLETED' && declined !== 0) ||
+      (overallStatus === 'PARTIALLY_COMPLETED' && (captured === 0 || declined === 0))) {
+    throw new Error('PayPal capture units do not reconcile to the order status.');
   }
   return rows;
 }
-
 export { PAYPAL_REST_TRANSACTION_CURRENCIES };
