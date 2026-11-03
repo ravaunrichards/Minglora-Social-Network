@@ -121,6 +121,7 @@ Deno.serve(async (req: Request) => {
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
+    "marketplace_cart_get", "marketplace_cart_add", "marketplace_cart_update", "marketplace_cart_remove", "marketplace_cart_clear",
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
@@ -1591,6 +1592,138 @@ Deno.serve(async (req: Request) => {
       seller_order_payout_status:orderById.get(row.seller_order_id)?.payout_status||"not_eligible"
     }));
     return json(200,{payouts});
+  }
+
+  if (action === "marketplace_cart_get") {
+    const buyerId=String(input.buyerId||"");
+    if(!validUuid(buyerId))return json(400,{error:"Invalid buyer account."});
+    let {data:cart,error:cartError}=await admin.from("marketplace_carts")
+      .select("id,buyer_id,currency,status,created_at,updated_at")
+      .eq("buyer_id",buyerId).eq("status","active").maybeSingle();
+    if(cartError)return json(503,{error:"Marketplace cart could not be loaded."});
+    if(!cart){
+      const {data:created,error:createError}=await admin.from("marketplace_carts")
+        .insert({buyer_id:buyerId,status:"active"}).select("id,buyer_id,currency,status,created_at,updated_at").single();
+      if(createError){
+        const retry=await admin.from("marketplace_carts").select("id,buyer_id,currency,status,created_at,updated_at")
+          .eq("buyer_id",buyerId).eq("status","active").maybeSingle();
+        if(retry.error||!retry.data)return json(503,{error:"Marketplace cart could not be created."});
+        cart=retry.data;
+      }else cart=created;
+    }
+    const {data:cartRows,error:rowsError}=await admin.from("marketplace_cart_items")
+      .select("cart_id,listing_id,quantity,fulfillment_method,added_at")
+      .eq("cart_id",cart.id).order("added_at",{ascending:false});
+    if(rowsError)return json(503,{error:"Marketplace cart items could not be loaded."});
+    const listingIds=(cartRows||[]).map((row:any)=>row.listing_id);
+    const {data:listings,error:listingsError}=listingIds.length
+      ? await admin.from("marketplace_listings")
+          .select("id,seller_id,title,description,kind,price_type,price_minor,currency,category,condition,location_label,status,quantity,reserved_quantity,fulfillment_options,tags")
+          .in("id",listingIds)
+      : {data:[],error:null};
+    if(listingsError)return json(503,{error:"Marketplace cart listing details could not be loaded."});
+    const listingById=new Map((listings||[]).map((row:any)=>[row.id,row]));
+    const items=(cartRows||[]).map((row:any)=>{
+      const listing=listingById.get(row.listing_id);
+      return {
+        listingId:row.listing_id,quantity:row.quantity,fulfillmentMethod:row.fulfillment_method,addedAt:row.added_at,
+        available:Boolean(listing&&listing.status==="active"&&listing.kind==="product"&&listing.price_type==="fixed"),
+        listing:listing?{
+          id:listing.id,sellerId:listing.seller_id,title:listing.title,description:listing.description,
+          kind:listing.kind,priceType:listing.price_type,priceMinor:listing.price_minor,currency:listing.currency,
+          category:listing.category,condition:listing.condition,location:listing.location_label,
+          status:listing.status,availableQuantity:Math.max(0,Number(listing.quantity||0)-Number(listing.reserved_quantity||0)),
+          fulfillment:listing.fulfillment_options||[],tags:listing.tags||[]
+        }:null
+      };
+    });
+    return json(200,{cart:{id:cart.id,currency:cart.currency,status:cart.status,updatedAt:cart.updated_at},items});
+  }
+
+  if (action === "marketplace_cart_add" || action === "marketplace_cart_update") {
+    const buyerId=String(input.buyerId||""),listingId=String(input.listingId||"");
+    const quantity=Number(input.quantity),fulfillmentMethod=String(input.fulfillmentMethod||"");
+    if(!validUuid(buyerId)||!validUuid(listingId)||!Number.isSafeInteger(quantity)||quantity<1||quantity>100){
+      return json(400,{error:"Choose a valid product and quantity from 1 to 100."});
+    }
+    if(!["pickup","local_delivery","shipping"].includes(fulfillmentMethod)){
+      return json(400,{error:"Choose a valid product fulfilment method."});
+    }
+    const {data:listing,error:listingError}=await admin.from("marketplace_listings")
+      .select("id,seller_id,kind,price_type,price_minor,currency,status,quantity,reserved_quantity,fulfillment_options")
+      .eq("id",listingId).maybeSingle();
+    if(listingError)return json(503,{error:"Product availability could not be checked."});
+    if(!listing||listing.status!=="active"||listing.kind!=="product"||listing.price_type!=="fixed"||Number(listing.price_minor||0)<=0){
+      return json(409,{error:"Only active, fixed-price products can be added to the cart. Services use appointment requests."});
+    }
+    if(listing.seller_id===buyerId)return json(403,{error:"You cannot buy your own listing from your seller account."});
+    if(!(listing.fulfillment_options||[]).includes(fulfillmentMethod)){
+      return json(409,{error:"That fulfilment method is not available for this product."});
+    }
+    const available=Math.max(0,Number(listing.quantity||0)-Number(listing.reserved_quantity||0));
+    if(available<1)return json(409,{error:"This product is currently out of stock."});
+    const {data:cart,error:cartError}=await admin.from("marketplace_carts")
+      .select("id,currency").eq("buyer_id",buyerId).eq("status","active").maybeSingle();
+    if(cartError)return json(503,{error:"Marketplace cart could not be loaded."});
+    let activeCart=cart;
+    if(!activeCart){
+      const {data:created,error:createError}=await admin.from("marketplace_carts")
+        .insert({buyer_id:buyerId,status:"active",currency:listing.currency})
+        .select("id,currency").single();
+      if(createError){
+        const retry=await admin.from("marketplace_carts").select("id,currency")
+          .eq("buyer_id",buyerId).eq("status","active").maybeSingle();
+        if(retry.error||!retry.data)return json(503,{error:"Marketplace cart could not be created."});
+        activeCart=retry.data;
+      }else activeCart=created;
+    }
+    if(activeCart.currency&&String(activeCart.currency).trim().toUpperCase()!==String(listing.currency||"").trim().toUpperCase()){
+      return json(409,{error:"Your cart currently uses "+String(activeCart.currency).trim().toUpperCase()+". Create a separate order for products in a different currency; Minglora will not apply an unverified exchange rate."});
+    }
+    const {data:existing,error:existingError}=await admin.from("marketplace_cart_items")
+      .select("quantity").eq("cart_id",activeCart.id).eq("listing_id",listingId).maybeSingle();
+    if(existingError)return json(503,{error:"Existing cart quantity could not be checked."});
+    const nextQuantity=action==="marketplace_cart_add"?Number(existing?.quantity||0)+quantity:quantity;
+    if(nextQuantity>100||nextQuantity>available)return json(409,{error:"The requested quantity exceeds available stock ("+available+" available)."});
+    const {error:saveError}=await admin.from("marketplace_cart_items").upsert({
+      cart_id:activeCart.id,listing_id:listingId,quantity:nextQuantity,fulfillment_method:fulfillmentMethod
+    },{onConflict:"cart_id,listing_id"});
+    if(saveError)return json(503,{error:"Marketplace cart item could not be saved."});
+    if(!activeCart.currency){
+      const {error:currencyError}=await admin.from("marketplace_carts").update({
+        currency:listing.currency,updated_at:new Date().toISOString()
+      }).eq("id",activeCart.id).eq("buyer_id",buyerId);
+      if(currencyError)return json(503,{error:"Marketplace cart currency could not be saved."});
+    }else{
+      await admin.from("marketplace_carts").update({updated_at:new Date().toISOString()})
+        .eq("id",activeCart.id).eq("buyer_id",buyerId);
+    }
+    return json(200,{ok:true,quantity:nextQuantity,listingId});
+  }
+
+  if (action === "marketplace_cart_remove" || action === "marketplace_cart_clear") {
+    const buyerId=String(input.buyerId||"");
+    const listingId=String(input.listingId||"");
+    if(!validUuid(buyerId)||(action==="marketplace_cart_remove"&&!validUuid(listingId))){
+      return json(400,{error:"Invalid cart item reference."});
+    }
+    const {data:cart,error:cartError}=await admin.from("marketplace_carts")
+      .select("id").eq("buyer_id",buyerId).eq("status","active").maybeSingle();
+    if(cartError)return json(503,{error:"Marketplace cart could not be loaded."});
+    if(!cart)return json(200,{ok:true,removed:0});
+    let query=admin.from("marketplace_cart_items").delete().eq("cart_id",cart.id);
+    if(action==="marketplace_cart_remove")query=query.eq("listing_id",listingId);
+    const {data:removed,error:removeError}=await query.select("listing_id");
+    if(removeError)return json(503,{error:"Marketplace cart item could not be removed."});
+    const {data:remaining,error:remainingError}=await admin.from("marketplace_cart_items")
+      .select("listing_id").eq("cart_id",cart.id).limit(1);
+    if(remainingError)return json(503,{error:"Marketplace cart state could not be refreshed."});
+    if(!remaining?.length){
+      const {error:clearCurrencyError}=await admin.from("marketplace_carts")
+        .update({currency:null,updated_at:new Date().toISOString()}).eq("id",cart.id).eq("buyer_id",buyerId);
+      if(clearCurrencyError)return json(503,{error:"Marketplace cart currency could not be cleared."});
+    }
+    return json(200,{ok:true,removed:(removed||[]).length});
   }
 
   if (action === "marketplace_seller_get") {
