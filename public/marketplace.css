@@ -16,3 +16,28 @@
 .harborpay-inline-status{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:850px){.harborpay-account-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.harborpay-account-choice-grid{grid-template-columns:1fr}.harborpay-account-choice{min-height:0}}
+
+
+/* Minglora buyer cart and secure payment panels */
+.marketplace-cart-list{display:grid;gap:12px}
+.marketplace-cart-item{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,300px);gap:18px;padding:16px}
+.marketplace-cart-item-copy{display:flex;flex-direction:column;gap:6px;min-width:0}
+.marketplace-cart-item-copy>strong{font-size:15px}
+.marketplace-cart-item-copy>small{color:var(--muted);font-size:11px}
+.marketplace-cart-item-controls{display:grid;grid-template-columns:1fr 1fr;align-items:end;gap:10px}
+.marketplace-cart-item-controls label{display:grid;gap:5px;font-size:11px;color:var(--muted)}
+.marketplace-cart-item-controls input,.marketplace-cart-item-controls select{width:100%;min-width:0}
+.marketplace-cart-item-controls>strong{grid-column:1/-1;text-align:right}
+.marketplace-cart-item-controls .marketplace-card-actions{grid-column:1/-1;padding:0;justify-content:flex-end}
+.marketplace-cart-summary{margin-top:16px}
+.marketplace-cart-summary>#cart-clear{margin-left:8px}
+.marketplace-payment-panel{padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft,var(--surface));margin:14px 0}
+.marketplace-payment-panel h2{margin:0 0 8px}
+.marketplace-payment-panel p,.marketplace-payment-panel small{color:var(--muted);font-size:12px;line-height:1.55}
+.marketplace-seller-quote{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+@media(max-width:650px){
+  .marketplace-cart-item{grid-template-columns:1fr}
+  .marketplace-cart-item-controls{grid-template-columns:1fr 1fr}
+  .marketplace-cart-item-controls>strong{text-align:left}
+  .marketplace-cart-item-controls .marketplace-card-actions{justify-content:flex-start}
+}
