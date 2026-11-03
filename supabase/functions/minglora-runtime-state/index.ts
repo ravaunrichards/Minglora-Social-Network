@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
-    "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_seller_payouts",
+    "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_receive", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_seller_payouts",
     "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
@@ -1266,6 +1266,151 @@ Deno.serve(async (req: Request) => {
       .select("id,status").single();
     if(error)return fail(error,"Payment attempt failure could not be recorded.");
     return json(200,{attempt:data});
+  }
+
+
+  if (action === "marketplace_paypal_webhook_receive") {
+    const event=input.event;
+    const headers=input.headers&&typeof input.headers==="object"?input.headers:{};
+    if(!event||typeof event!=="object"||Array.isArray(event)||
+       !event.id||!event.event_type||typeof event.resource!=="object"){
+      return json(400,{error:"Invalid PayPal Marketplace webhook payload."});
+    }
+    const webhookId=Deno.env.get("MARKETPLACE_PAYPAL_WEBHOOK_ID")||"";
+    if(!webhookId)return json(503,{error:"Marketplace PayPal webhook ID is not configured."});
+    const transmission={
+      auth_algo:String(headers.authAlgo||""),
+      cert_url:String(headers.certUrl||""),
+      transmission_id:String(headers.transmissionId||""),
+      transmission_sig:String(headers.transmissionSig||""),
+      transmission_time:String(headers.transmissionTime||""),
+      webhook_id:webhookId,
+      webhook_event:event
+    };
+    if(Object.values(transmission).some(value=>!value))return json(400,{error:"Required PayPal signature headers are missing."});
+    let verificationResponse:Response;
+    try{
+      const token=await getMarketplacePayPalToken();
+      verificationResponse=await fetch(MARKETPLACE_PAYPAL_BASE+"/v1/notifications/verify-webhook-signature",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+        body:JSON.stringify(transmission)
+      });
+    }catch{
+      return json(503,{error:"Minglora could not verify the PayPal Marketplace webhook. PayPal should retry."});
+    }
+    const verification=await verificationResponse.json().catch(()=>({}));
+    if(!verificationResponse.ok||verification?.verification_status!=="SUCCESS"){
+      return json(401,{error:"PayPal Marketplace webhook signature was not verified."});
+    }
+
+    const eventId=String(event.id).slice(0,128);
+    const eventType=String(event.event_type).slice(0,128);
+    const resource=event.resource||{};
+    const {data:stored,error:storeError}=await admin.from("marketplace_webhook_events").upsert({
+      provider:"paypal",
+      provider_event_id:eventId,
+      event_type:eventType,
+      signature_verified:true,
+      processing_status:"received",
+      payload:event,
+      received_at:new Date().toISOString()
+    },{onConflict:"provider,provider_event_id",ignoreDuplicates:true})
+      .select("id,processing_status").maybeSingle();
+    if(storeError)return fail(storeError,"Verified Marketplace PayPal webhook could not be persisted.");
+    if(!stored)return json(200,{received:true,duplicate:true,eventId});
+
+    try{
+      if(eventType==="MERCHANT.PARTNER-CONSENT.REVOKED"){
+        const merchantId=String(resource.merchant_id||resource.merchantId||"");
+        if(!merchantId)throw new Error("PayPal consent-revocation event did not identify the merchant.");
+        const {data:account,error:accountError}=await admin.from("marketplace_seller_paypal_accounts")
+          .select("user_id").eq("merchant_id",merchantId).maybeSingle();
+        if(accountError)throw new Error("Could not find the Minglora seller for the PayPal merchant.");
+        if(account){
+          const stamp=new Date().toISOString();
+          const {error:updateError}=await admin.from("marketplace_seller_paypal_accounts").update({
+            onboarding_status:"restricted",permissions_granted:false,payments_receivable:false,
+            granted_features:[],last_checked_at:stamp,
+            status_reason:"PayPal reported that this seller revoked Minglora's marketplace partner consent.",
+            updated_at:stamp
+          }).eq("user_id",account.user_id);
+          if(updateError)throw new Error("Could not restrict the seller's PayPal connection.");
+          await admin.from("marketplace_seller_profiles").update({payout_status:"restricted",updated_at:stamp}).eq("user_id",account.user_id);
+          await admin.from("marketplace_seller_verification_events").insert({
+            seller_id:account.user_id,actor_id:account.user_id,event_type:"paypal_consent_revoked",
+            reason:"PayPal partner-consent revocation webhook was signature verified."
+          });
+        }
+      } else if(eventType==="MERCHANT.ONBOARDING.COMPLETED"){
+        // Webhook establishes event authenticity; final seller eligibility is still
+        // set by the OAuth return + merchant-integrations status verification path.
+        const merchantId=String(resource.merchant_id||"");
+        const trackingId=String(resource.tracking_id||"");
+        if(merchantId&&trackingId){
+          const {data:account,error:accountError}=await admin.from("marketplace_seller_paypal_accounts")
+            .select("user_id,tracking_id,onboarding_status").eq("merchant_id",merchantId).maybeSingle();
+          if(accountError)throw new Error("Could not load the seller account for PayPal onboarding completion.");
+          if(account&&account.tracking_id===trackingId&&account.onboarding_status!=="verified"){
+            await admin.from("marketplace_seller_paypal_accounts").update({
+              onboarding_status:"pending",status_reason:"PayPal reports onboarding complete; Minglora is checking the merchant-integrations API response.",
+              updated_at:new Date().toISOString()
+            }).eq("user_id",account.user_id);
+          }
+        }
+      } else if([
+        "PAYMENT.PAYOUTS-ITEM.SUCCEEDED","PAYMENT.PAYOUTS-ITEM.FAILED",
+        "PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.RETURNED",
+        "PAYMENT.PAYOUTS-ITEM.UNCLAIMED","PAYMENT.PAYOUTS-ITEM.HELD"
+      ].includes(eventType)){
+        const payoutItemId=String(resource.payout_item_id||resource.payout_item?.payout_item_id||"");
+        if(payoutItemId){
+          const {data:payout,error:payoutError}=await admin.from("marketplace_payouts")
+            .select("id,status,provider_disbursement_id")
+            .eq("provider_disbursement_id",payoutItemId).maybeSingle();
+          if(payoutError)throw new Error("Could not match the PayPal payout event to a Minglora seller payout.");
+          if(payout){
+            const status=String(resource.transaction_status||"").toUpperCase();
+            if(eventType==="PAYMENT.PAYOUTS-ITEM.SUCCEEDED"||status==="SUCCESS"){
+              const {error:confirmError}=await admin.rpc("confirm_marketplace_payout",{
+                p_payout_id:payout.id,
+                p_provider_disbursement_id:payoutItemId,
+                p_provider_status:"SUCCESS",
+                p_response_snapshot:event
+              });
+              if(confirmError)throw new Error("Could not reconcile the confirmed seller payout.");
+            }else if(["PAYMENT.PAYOUTS-ITEM.FAILED","PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.RETURNED","PAYMENT.PAYOUTS-ITEM.UNCLAIMED"].includes(eventType)){
+              const {error:updateError}=await admin.from("marketplace_payouts").update({
+                status:eventType==="PAYMENT.PAYOUTS-ITEM.HELD"?"held":"failed",
+                provider_disbursement_status:status||eventType,
+                response_snapshot:event,
+                last_attempt_at:new Date().toISOString()
+              }).eq("id",payout.id);
+              if(updateError)throw new Error("Could not update the failed seller payout.");
+              if(eventType!=="PAYMENT.PAYOUTS-ITEM.HELD"){
+                await admin.from("marketplace_seller_orders").update({payout_status:"failed",updated_at:new Date().toISOString()})
+                  .eq("id",resource.custom_id||"__no_matching_seller_order__");
+              }
+            }else{
+              await admin.from("marketplace_payouts").update({
+                status:"processing",provider_disbursement_status:status||eventType,
+                response_snapshot:event,last_attempt_at:new Date().toISOString()
+              }).eq("id",payout.id);
+            }
+          }
+        }
+      }
+      const {error:doneError}=await admin.from("marketplace_webhook_events").update({
+        processing_status:"processed",processed_at:new Date().toISOString()
+      }).eq("provider","paypal").eq("provider_event_id",eventId);
+      if(doneError)throw new Error("Could not mark the Marketplace webhook event processed.");
+      return json(200,{received:true,processed:true,eventId,eventType});
+    }catch(error){
+      await admin.from("marketplace_webhook_events").update({
+        processing_status:"failed"
+      }).eq("provider","paypal").eq("provider_event_id",eventId);
+      return json(500,{error:String(error?.message||"Marketplace webhook processing failed").slice(0,240),eventId});
+    }
   }
 
   if (action === "marketplace_paypal_webhook_record") {
