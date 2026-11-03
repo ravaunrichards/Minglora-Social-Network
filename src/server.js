@@ -21,7 +21,7 @@ import { MARKETPLACE_PRODUCT_CATEGORIES, MARKETPLACE_SERVICE_CATEGORIES, MARKETP
 import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote, validateMarketplaceServiceBookingInput, transitionMarketplaceBooking } from '../backend/modules/marketplace/commerce.js';
 import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -886,6 +886,45 @@ async function route(req, res) {
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
         await supabaseCompletePasswordReset(accessToken,password);
         return json(res,200,{ok:true,message:'Your password has been updated. Please log in.'});
+      }
+      if(method==='POST'&&p==='/api/auth/magic-link/complete'){
+        const accessToken=String(input.accessToken||'');
+        const refreshToken=String(input.refreshToken||'');
+        const expiresIn=Number(input.expiresIn)||3600;
+        if(accessToken.length<20||accessToken.length>8192||refreshToken.length<10||refreshToken.length>4096){
+          return json(res,400,{error:'This sign-in link is incomplete or has expired. Request a new Minglora sign-in link.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Magic-link sign-in is not configured for this account provider.'});
+        const verifiedUser=await supabaseGetUser(accessToken);
+        if(!verifiedUser?.id||!verifiedUser?.email)return json(res,401,{error:'Supabase could not validate this sign-in link. Request a new one.'});
+        if(!verifiedUser.email_confirmed_at)return json(res,403,{error:'Confirm your email address before signing in with a magic link.'});
+        const account=ensureLocalUser(verifiedUser);
+        if(account.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        const authenticated={
+          user:verifiedUser,access_token:accessToken,refresh_token:refreshToken,
+          expires_in:Number.isFinite(expiresIn)&&expiresIn>0&&expiresIn<=86400?expiresIn:3600,
+          token_type:'bearer'
+        };
+        const factors=await supabaseListFactors(accessToken);
+        const verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified');
+        if(verifiedTotp&&tokenAal(accessToken)!=='aal2'){
+          const pendingId=uid();
+          db.pendingAuth.push({
+            id:pendingId,userId:account.id,factorId:verifiedTotp.id,
+            authSealed:sealSessionAuth(authenticated),createdAt:now(),
+            expiresAt:new Date(Date.now()+5*60*1000).toISOString(),
+            userAgent:String(req.headers['user-agent']||'').slice(0,240)
+          });
+          await saveStore();
+          return json(res,200,{mfaRequired:true,challengeId:pendingId,message:'Enter the code from your authenticator app to finish signing in.'});
+        }
+        if(account.status==='deactivated'){
+          account.status='active';
+          await supabaseUpdateUserMetadata(accessToken,{account_status:'active'});
+        }
+        const sessionCookie=await createAppSession(account,authenticated,req);
+        await saveStore();
+        return json(res,200,{user:safeUser(account,account.id)},{'Set-Cookie':sessionCookie});
       }
       if(method==='POST'&&p==='/api/auth/login'){
         const email=normalizeEmail(input.email),password=String(input.password||''),rate=checkLoginRateLimit(req,email);
