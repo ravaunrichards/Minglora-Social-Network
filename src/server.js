@@ -922,8 +922,6 @@ async function route(req, res) {
         }
         return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
       }
-        return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
-      }
       if(method==='GET'&&p==='/api/marketplace/admin/financial-reconciliation'){
         if(!isModerator(user))return json(res,403,{error:'Marketplace financial reconciliation is restricted to authorized moderators.'});
         if(isSupabasePersistence()){
