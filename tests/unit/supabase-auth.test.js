@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseGetUser, supabaseRequestPhoneChange, supabaseVerifyPhoneChange } from '../../src/supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseGetUser, supabaseRequestMagicLink, supabaseRequestPhoneChange, supabaseVerifyPhoneChange } from '../../src/supabase-auth.js';
 
 test('Supabase Auth refuses placeholder credentials', () => {
   const saved = {
@@ -159,6 +159,33 @@ test('Supabase validates a magic-link access token through the Auth user endpoin
     assert.equal(observed.options.method,'GET');
     assert.equal(observed.options.headers.apikey,'sb_publishable_test-key');
     assert.equal(observed.options.headers.Authorization,'Bearer '+'x'.repeat(40));
+  }finally{
+    if(saved.url===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=saved.url;
+    if(saved.key===undefined)delete process.env.SUPABASE_PUBLISHABLE_KEY;else process.env.SUPABASE_PUBLISHABLE_KEY=saved.key;
+    globalThis.fetch=saved.fetch;
+  }
+});
+
+test('Supabase magic-link requests use the explicit Minglora production redirect and never create users', async () => {
+  const saved={url:process.env.SUPABASE_URL,key:process.env.SUPABASE_PUBLISHABLE_KEY,fetch:globalThis.fetch};
+  let observed;
+  try{
+    process.env.SUPABASE_URL='https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY='sb_publishable_test-key';
+    globalThis.fetch=async(url,options)=>{
+      observed={url:new URL(String(url)),options};
+      return new Response('{}',{status:200,headers:{'content-type':'application/json'}});
+    };
+    await supabaseRequestMagicLink(
+      'member@example.test',
+      'https://minglora-social-network.onrender.com/'
+    );
+    assert.equal(observed.url.origin,'https://minglora-unit-test.supabase.co');
+    assert.equal(observed.url.pathname,'/auth/v1/otp');
+    assert.equal(observed.url.searchParams.get('redirect_to'),'https://minglora-social-network.onrender.com/');
+    assert.deepEqual(JSON.parse(observed.options.body),{
+      email:'member@example.test',create_user:false
+    });
   }finally{
     if(saved.url===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=saved.url;
     if(saved.key===undefined)delete process.env.SUPABASE_PUBLISHABLE_KEY;else process.env.SUPABASE_PUBLISHABLE_KEY=saved.key;
