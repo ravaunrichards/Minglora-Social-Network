@@ -125,3 +125,77 @@
     else if (input?.name === 'password') showError('Enter your Minglora password.');
   }, true);
 })();
+
+
+/* Defer Supabase's single-use confirmation URL until a person clicks.
+ * Email-security scanners commonly pre-open links; opening the actual
+ * Supabase /verify URL consumes the one-time token before the user arrives. */
+(() => {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const wrappedUrl = params.get('auth_confirmation');
+  if (!wrappedUrl) return;
+
+  // Keep the one-time URL out of browser history before rendering the handoff.
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  let confirmation;
+  try {
+    confirmation = new URL(wrappedUrl);
+    const validTypes = new Set(['magiclink', 'recovery', 'signup', 'invite', 'email_change', 'email']);
+    const type = confirmation.searchParams.get('type');
+    const redirectValue = confirmation.searchParams.get('redirect_to');
+    const redirect = redirectValue ? new URL(redirectValue) : null;
+    const validRedirect = redirect &&
+      redirect.origin === window.location.origin &&
+      redirect.pathname === '/' &&
+      ['', '?password-recovery=1'].includes(redirect.search) &&
+      !redirect.hash && !redirect.username && !redirect.password;
+
+    if (
+      confirmation.protocol !== 'https:' ||
+      confirmation.hostname !== 'gzycobgbasnqqhnympkr.supabase.co' ||
+      confirmation.pathname !== '/auth/v1/verify' ||
+      !confirmation.searchParams.get('token') ||
+      !validTypes.has(type) ||
+      !validRedirect
+    ) {
+      throw new Error('invalid-confirmation-url');
+    }
+  } catch {
+    const error = document.querySelector('#login-error');
+    if (error) error.textContent = 'This Minglora email link is invalid. Request a fresh link and try again.';
+    return;
+  }
+
+  const type = confirmation.searchParams.get('type');
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-backdrop';
+  overlay.innerHTML =
+    '<section class="modal" role="dialog" aria-modal="true" aria-labelledby="email-confirmation-title">' +
+      '<div class="modal-head"><h2 id="email-confirmation-title">Continue to Minglora</h2></div>' +
+      '<div class="modal-body">' +
+        '<p id="email-confirmation-description">Your secure email link is ready. Press Continue to complete verification.</p>' +
+        '<p class="auth-error" id="email-confirmation-error" role="alert"></p>' +
+        '<button class="primary full" id="email-confirmation-continue" type="button">Continue securely</button>' +
+      '</div>' +
+    '</section>';
+
+  const description = overlay.querySelector('#email-confirmation-description');
+  if (type === 'recovery') {
+    description.textContent = 'Continue to verify your password reset request.';
+  } else if (type === 'magiclink') {
+    description.textContent = 'Continue to verify your Minglora sign-in request.';
+  } else if (type === 'signup') {
+    description.textContent = 'Continue to confirm your Minglora email address.';
+  }
+
+  const button = overlay.querySelector('#email-confirmation-continue');
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    button.textContent = 'Opening secure verification…';
+    window.location.assign(confirmation.href);
+  });
+
+  document.body.append(overlay);
+  button.focus();
+})();
