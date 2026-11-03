@@ -68,13 +68,25 @@ export function buildMarketplacePayPalAuthAssertion(clientId, sellerIdentity) {
   const issuer = String(clientId || '').trim();
   const identity = String(sellerIdentity || '').trim();
   if (!issuer || !identity) throw new Error('PayPal Auth Assertion requires the Marketplace client ID and verified seller identity.');
-  const claim = identity.includes('@')
-    ? { iss: issuer, email: identity.toLowerCase() }
-    : { iss: issuer, payer_id: identity };
+  let claim;
+  if (identity.includes('@')) {
+    const email = identity.toLowerCase();
+    const at = email.indexOf('@');
+    const lastDot = email.lastIndexOf('.');
+    if (at <= 0 || at !== email.lastIndexOf('@') || lastDot < at + 2 ||
+        lastDot === email.length - 1 || /\s/.test(email) || email.length > 254) {
+      throw new Error('A valid verified PayPal seller email is required.');
+    }
+    claim = { iss: issuer, email };
+  } else {
+    if (identity.length > 128 || /\s/.test(identity)) {
+      throw new Error('A valid PayPal seller payer ID is required.');
+    }
+    claim = { iss: issuer, payer_id: identity };
+  }
   const encode = value => Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
   return encode({ alg: 'none' }) + '.' + encode(claim) + '.';
-}
-export function buildMarketplacePayPalReferralPayload({
+}export function buildMarketplacePayPalReferralPayload({
   trackingId,
   returnUrl,
   email,
