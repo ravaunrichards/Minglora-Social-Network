@@ -117,7 +117,7 @@ function safeUser(u,viewerId=null){
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
-  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:u.verificationBadge==='blue'?'blue':null};
+  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:u.verificationBadge==='blue'?'blue':null,verificationStatus:u.verificationStatus||'not_submitted'};
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
@@ -147,6 +147,7 @@ function safeUser(u,viewerId=null){
   result.aboutSections=aboutSections;
   if(own){
     result.email=u.email||'';
+    result.platformRole=u.role||null;
     result.aboutVisibility=visibility;
     result.aboutSectionVisibility=sectionVisibility;
   }
@@ -270,6 +271,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   const appMetadata = authUser.app_metadata || {};
   const trustedRole = ['platform_owner','admin','moderator'].includes(String(appMetadata.role||''))?String(appMetadata.role):null;
   const verificationBadge = appMetadata.verification_badge==='blue'?'blue':'none';
+  const verificationStatus = ['pending','needs_information','verified','rejected','suspended'].includes(String(appMetadata.verification_status||''))?String(appMetadata.verification_status):'not_submitted';
   const email = normalizeEmail(authUser.email);
   const name = String(metadata.name || metadata.full_name || fallback.name || email.split('@')[0] || 'Minglora Member').trim();
   const username = normalizeUsername(metadata.username || fallback.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
@@ -280,7 +282,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
-    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, aboutSections:metadata.about_sections||metadata.aboutSections||{}, aboutSectionVisibility:metadata.about_section_visibility||metadata.aboutSectionVisibility||DEFAULT_ABOUT_SECTION_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), role:trustedRole||undefined, verificationBadge, createdAt:authUser.created_at || now() };
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, aboutSections:metadata.about_sections||metadata.aboutSections||{}, aboutSectionVisibility:metadata.about_section_visibility||metadata.aboutSectionVisibility||DEFAULT_ABOUT_SECTION_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), role:trustedRole||undefined, verificationBadge, verificationStatus, createdAt:authUser.created_at || now() };
     db.users.push(user);
   } else {
     user.name = name || user.name;
@@ -301,6 +303,7 @@ function ensureLocalUser(authUser, fallback = {}) {
       if(trustedRole)user.role=trustedRole;
       else delete user.role;
       user.verificationBadge=verificationBadge;
+      user.verificationStatus=verificationStatus;
     }
   }
   return user;
@@ -1032,6 +1035,9 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/profile-verification'){
         if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
         const result=await requestSupabaseState('profile_verification_get',{userId:user.id});
+        user.verificationStatus=result.verificationStatus||'not_submitted';
+        user.verificationBadge=result.verificationBadge==='blue'?'blue':'none';
+        await saveStore();
         return json(res,200,result);
       }
       if(method==='POST'&&p==='/api/profile-verification'){
@@ -1062,6 +1068,12 @@ async function route(req, res) {
         const result=await requestSupabaseState('profile_verification_admin_review',{
           actorId:user.id,applicationId:profileVerificationReviewMatch[1],decision,note
         });
+        const applicant=db.users.find(item=>item.id===result.application.userId);
+        if(applicant){
+          applicant.verificationStatus=result.application.verificationStatus;
+          applicant.verificationBadge=result.application.verificationBadge==='blue'?'blue':'none';
+          await saveStore();
+        }
         notify(result.application.userId,user.id,'profile_verification_status',
           'Your Minglora profile verification status is now '+decision.replaceAll('_',' ')+'.',
           {applicationId:result.application.id,verificationBadge:result.application.verificationBadge});
