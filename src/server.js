@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import webpush from 'web-push';
+import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
@@ -437,6 +438,47 @@ function safeTenorGifUrl(value){
 }
 
 let webPushConfigKey='';
+let marketplaceMailTransport=null;
+let marketplaceMailTransportKey='';
+function marketplaceMailConfig(){
+  const provider=String(process.env.EMAIL_PROVIDER||'none').trim().toLowerCase();
+  const host=String(process.env.SMTP_HOST||'').trim();
+  const port=Number(process.env.SMTP_PORT||587);
+  const user=String(process.env.SMTP_USER||'').trim();
+  const pass=String(process.env.SMTP_PASS||'');
+  const from=String(process.env.EMAIL_FROM||'').trim();
+  const recipients=String(process.env.MARKETPLACE_REVIEW_EMAILS||'larryjones2019ersky@gmail.com')
+    .split(',').map(value=>normalizeEmail(value)).filter(value=>validateEmail(value).valid);
+  return {provider,host,port,user,pass,from,recipients,secure:String(process.env.SMTP_SECURE||'').toLowerCase()==='true'||port===465};
+}
+async function sendMarketplaceReviewEmail(subject,text){
+  const cfg=marketplaceMailConfig();
+  if(cfg.provider!=='smtp'||!cfg.host||!Number.isInteger(cfg.port)||cfg.port<1||cfg.port>65535||
+     !cfg.user||!cfg.pass||!validateEmail(cfg.from).valid||!cfg.recipients.length)return {sent:false,reason:'smtp_not_configured'};
+  const key=[cfg.host,cfg.port,cfg.user,cfg.pass,cfg.from,cfg.secure].join('|');
+  try{
+    if(!marketplaceMailTransport||marketplaceMailTransportKey!==key){
+      marketplaceMailTransport=nodemailer.createTransport({
+        host:cfg.host,port:cfg.port,secure:cfg.secure,
+        auth:{user:cfg.user,pass:cfg.pass},
+        connectionTimeout:5000,greetingTimeout:5000,socketTimeout:8000,
+        pool:true,maxConnections:2,maxMessages:50
+      });
+      marketplaceMailTransportKey=key;
+    }
+    const result=await marketplaceMailTransport.sendMail({
+      from:cfg.from,to:cfg.recipients.join(','),
+      subject:String(subject||'Minglora Marketplace review').slice(0,180),
+      text:String(text||'A Marketplace application requires review.').slice(0,5000)
+    });
+    return {sent:true,messageId:String(result.messageId||'')};
+  }catch(error){
+    console.warn('[Minglora Marketplace email] Delivery failed.',{
+      message:String(error?.message||'SMTP delivery error').slice(0,180)
+    });
+    return {sent:false,reason:'smtp_delivery_failed'};
+  }
+}
 function configureWebPush(){
   const publicKey=String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim();
   const privateKey=String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim();
@@ -485,6 +527,14 @@ function notifyMarketplaceReviewers(applicantId,actorId,text,extra={}){
     if(reviewer.id===applicantId||!hasActiveReviewerSession(reviewer))continue;
     notify(reviewer.id,actorId,'marketplace_review',text,{sellerId:applicantId,...extra});
   }
+  const due=extra.reviewDueAt?new Date(extra.reviewDueAt).toLocaleString('en-JM',{timeZone:'America/Jamaica'}):'within four hours';
+  void sendMarketplaceReviewEmail(
+    'Minglora Marketplace: application review required',
+    String(text||'A Marketplace application is waiting for review.')+'\n\nPriority: '+String(extra.priority||'normal')+
+    '\nReview target (Jamaica time): '+due+
+    '\nOpen Minglora Seller Centre > Marketplace review desk to inspect the application. '+
+    'Identity, business documents and payout details must be independently verified.'
+  );
 }
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
