@@ -2112,9 +2112,16 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "marketplace_financial_reconcile") {
-    const {data,error}=await admin.rpc("marketplace_financial_reconciliation_snapshot");
-    if(error)return fail(error,"Marketplace financial reconciliation snapshot failed.");
-    return json(200,{snapshot:data});
+    const [snapshotResult,healthResult]=await Promise.all([
+      admin.rpc("marketplace_financial_reconciliation_snapshot"),
+      admin.rpc("marketplace_financial_operational_health")
+    ]);
+    if(snapshotResult.error)return fail(snapshotResult.error,"Marketplace financial reconciliation snapshot failed.");
+    if(healthResult.error)return fail(healthResult.error,"Marketplace financial operational health could not be loaded.");
+    return json(200,{snapshot:{
+      ...(snapshotResult.data||{}),
+      operationalHealth:healthResult.data||{}
+    }});
   }
 
 
