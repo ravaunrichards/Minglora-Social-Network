@@ -55,10 +55,10 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261101-profile-tools-1/);
-  assert.match(html,/app\.js\?v=20261103-auth-fix-1/);
-  assert.match(worker,/minglora-shell-v62-auth-recovery-1/);
+  assert.match(html,/app\.js\?v=20261103-auth-refresh-2/);
+  assert.match(worker,/minglora-shell-v63-auth-refresh-2/);
   assert.match(worker,/styles\.css\?v=20261101-profile-tools-1/);
-  assert.match(worker,/app\.js\?v=20261103-auth-fix-1/);
+  assert.match(worker,/app\.js\?v=20261103-auth-refresh-2/);
 });
 
 test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{

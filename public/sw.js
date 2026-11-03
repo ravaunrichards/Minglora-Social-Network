@@ -1,6 +1,6 @@
 /* Minglora service worker: update-friendly shell caching and background Web Push. */
-const CACHE_NAME='minglora-shell-v62-auth-recovery-1';
-const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-profile-tools-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261103-auth-fix-1','/auth-login.js?v=20261103-auth-fix-1','/settings.js?v=20261102-platform-shell-2','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
+const CACHE_NAME='minglora-shell-v63-auth-refresh-2';
+const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261101-profile-tools-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/app.js?v=20261103-auth-refresh-2','/auth-login.js?v=20261103-auth-refresh-2','/settings.js?v=20261102-platform-shell-2','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
