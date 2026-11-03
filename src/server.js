@@ -914,6 +914,31 @@ async function route(req, res) {
         const result=await requestSupabaseState('marketplace_cart_clear',{buyerId:user.id});
         return json(res,200,result);
       }
+      if(method==='POST'&&p==='/api/marketplace/refunds'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
+        const result=await requestSupabaseState('marketplace_refund_request',{
+          buyerId:user.id,
+          sellerOrderId:String(input.sellerOrderId||''),
+          amountMinor:Number(input.amountMinor),
+          reason:String(input.reason||'').trim(),
+          idempotencyKey:String(input.idempotencyKey||'')
+        });
+        return json(res,201,result);
+      }
+      if(method==='GET'&&p==='/api/marketplace/admin/refunds'){
+        if(!isModerator(user))return json(res,403,{error:'Marketplace refund review is restricted to authorized moderators.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
+        return json(res,200,await requestSupabaseState('marketplace_refunds_admin_list'));
+      }
+      const marketplaceRefundMatch=p.match(/^\/api\/marketplace\/admin\/refunds\/([0-9a-f-]{36})\/approve$/i);
+      if(method==='POST'&&marketplaceRefundMatch){
+        if(!isModerator(user))return json(res,403,{error:'Only an authorized marketplace moderator may approve a refund.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
+        const result=await requestSupabaseState('marketplace_refund_approve',{
+          refundId:marketplaceRefundMatch[1],actorId:user.id
+        });
+        return json(res,result.paid?200:202,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/seller'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
