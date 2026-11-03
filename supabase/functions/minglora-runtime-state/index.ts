@@ -14,6 +14,27 @@ const admin = SUPABASE_URL && adminKey
 const MARKETPLACE_PAYPAL_MODE = (Deno.env.get("MARKETPLACE_PAYPAL_MODE") || "sandbox").toLowerCase();
 const MARKETPLACE_PAYPAL_BASE = (Deno.env.get("MARKETPLACE_PAYPAL_API_BASE_URL") ||
   (MARKETPLACE_PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com")).replace(/\/+$/, "");
+function marketplacePayPalConfig() {
+  const clientId=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")||"";
+  const clientSecret=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_SECRET")||"";
+  const attributionId=Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"";
+  const partnerMerchantId=Deno.env.get("MARKETPLACE_PAYPAL_PARTNER_MERCHANT_ID")||"";
+  const webhookId=Deno.env.get("MARKETPLACE_PAYPAL_WEBHOOK_ID")||"";
+  return {
+    clientId,clientSecret,attributionId,partnerMerchantId,webhookId,
+    base:MARKETPLACE_PAYPAL_BASE,
+    configured:Boolean(clientId&&clientSecret&&attributionId&&partnerMerchantId&&webhookId)
+  };
+}
+
+function marketplacePayPalAuthAssertion(payerId:string):string {
+  const cfg=marketplacePayPalConfig();
+  if(!cfg.clientId||!payerId||payerId.length>128)throw new Error("A verified PayPal seller payer ID and marketplace client ID are required.");
+  const encode=(value:Record<string,string>)=>btoa(JSON.stringify(value));
+  const header=encode({alg:"none"});
+  const payload=encode({iss:cfg.clientId,payer_id:payerId});
+  return header+"."+payload+".";
+}
 let marketplacePayPalToken: { value: string; expiresAt: number } | null = null;
 async function getMarketplacePayPalToken(): Promise<string> {
   const clientId=Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")||"";
@@ -988,6 +1009,9 @@ Deno.serve(async (req: Request) => {
       .eq("order_id",orderId).order("seller_id",{ascending:true});
     if(sellerOrdersError)return json(503,{error:"Marketplace seller orders could not be loaded."});
     if(!sellerOrders?.length||sellerOrders.length>10)return json(409,{error:"PayPal multi-seller checkout supports one to ten verified seller orders."});
+    if(sellerOrders.length>1&&(Deno.env.get("MARKETPLACE_PAYPAL_MULTI_SELLER_DELAYED_APPROVED")||"").toLowerCase()!=="true"){
+      return json(409,{error:"Multi-seller delayed disbursement requires PayPal's explicit approval for this combined integration. No payment was created."});
+    }
     const sumGross=sellerOrders.reduce((total,row)=>total+Number(row.gross_minor||0),0);
     if(sumGross!==Number(order.total_minor))return json(409,{error:"Seller order totals do not match the buyer order total. Tax and fulfilment must be allocated before payment."});
     const sellerIds=sellerOrders.map(row=>row.seller_id);
@@ -1066,6 +1090,7 @@ Deno.serve(async (req: Request) => {
           "Authorization":"Bearer "+token,
           "Content-Type":"application/json",
           "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+          ...(paymentSellers.length===1?{"PayPal-Auth-Assertion":marketplacePayPalAuthAssertion(paymentSellers[0].merchantId)}:{}),
           "PayPal-Request-Id":String(attempt.provider_request_id).slice(0,108)
         },
         body:JSON.stringify({
@@ -1137,9 +1162,19 @@ Deno.serve(async (req: Request) => {
       return json(409,{error:"This Marketplace order is not awaiting payment."});
     }
     const {data:sellerOrders,error:sellerOrdersError}=await admin.from("marketplace_seller_orders")
-      .select("id,gross_minor,commission_minor")
+      .select("id,seller_id,gross_minor,commission_minor")
       .eq("order_id",orderId);
     if(sellerOrdersError||!sellerOrders?.length)return json(503,{error:"Marketplace seller orders are unavailable for capture reconciliation."});
+    if(sellerOrders.length>1&&(Deno.env.get("MARKETPLACE_PAYPAL_MULTI_SELLER_DELAYED_APPROVED")||"").toLowerCase()!=="true"){
+      return json(409,{error:"Multi-seller delayed disbursement has not been approved for this PayPal integration."});
+    }
+    let authAssertion="";
+    if(sellerOrders.length===1){
+      const {data:payee,error:payeeError}=await admin.from("marketplace_seller_paypal_accounts")
+        .select("merchant_id").eq("user_id",sellerOrders[0].seller_id).maybeSingle();
+      if(payeeError||!payee?.merchant_id)return json(409,{error:"The verified PayPal seller identity could not be loaded for capture."});
+      authAssertion=marketplacePayPalAuthAssertion(String(payee.merchant_id));
+    }
     let captureResponse:Response|undefined;
     let providerOrder:any=null;
     try {
@@ -1150,6 +1185,7 @@ Deno.serve(async (req: Request) => {
           "Authorization":"Bearer "+token,
           "Content-Type":"application/json",
           "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+          ...(authAssertion?{"PayPal-Auth-Assertion":authAssertion}:{}),
           "PayPal-Request-Id":("MINGLORA-MARKETPLACE-CAPTURE-"+attempt.id).slice(0,108)
         },
         body:"{}"
@@ -1162,7 +1198,8 @@ Deno.serve(async (req: Request) => {
         const response=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/checkout/orders/"+encodeURIComponent(providerOrderId),{
           headers:{
             "Authorization":"Bearer "+token,
-            "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||""
+            "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+            ...(authAssertion?{"PayPal-Auth-Assertion":authAssertion}:{})
           }
         });
         providerOrder=await response.json().catch(()=>null);
