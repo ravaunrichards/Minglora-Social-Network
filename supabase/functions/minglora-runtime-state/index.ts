@@ -140,7 +140,7 @@ Deno.serve(async (req: Request) => {
     "auth_register_user", "account_deletion_request",
     "marketplace_cart_get", "marketplace_cart_add", "marketplace_cart_update", "marketplace_cart_remove", "marketplace_cart_clear",
     "marketplace_refund_request", "marketplace_refunds_admin_list", "marketplace_refund_approve",
-    "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
+    "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list", "marketplace_business_identity_submit", "marketplace_business_identity_review", "marketplace_review_alert_mark_read",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
     "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_receive", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_financial_provider_reconcile", "marketplace_seller_payouts",
@@ -2281,19 +2281,28 @@ Deno.serve(async (req: Request) => {
   if (action === "marketplace_seller_get") {
     const userId=String(input.userId||"");
     if(!validUuid(userId))return json(400,{error:"Invalid seller account."});
-    const [sellerResult,paypalResult]=await Promise.all([
-      admin.from("marketplace_seller_profiles").select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,terms_version,terms_accepted_at,created_at,updated_at").eq("user_id",userId).maybeSingle(),
-      admin.from("marketplace_seller_paypal_accounts").select("onboarding_status,account_type,permissions_granted,consent_granted,primary_email_confirmed,payments_receivable,requested_features,granted_features,products,last_checked_at,status_reason").eq("user_id",userId).maybeSingle()
+    const [sellerResult,paypalResult,businessResult]=await Promise.all([
+      admin.from("marketplace_seller_profiles").select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,terms_version,terms_accepted_at,review_priority,review_due_at,auto_review_status,auto_review_score,auto_review_flags,created_at,updated_at").eq("user_id",userId).maybeSingle(),
+      admin.from("marketplace_seller_paypal_accounts").select("onboarding_status,account_type,permissions_granted,consent_granted,primary_email_confirmed,payments_receivable,requested_features,granted_features,products,last_checked_at,status_reason").eq("user_id",userId).maybeSingle(),
+      admin.from("marketplace_business_identity_submissions").select("legal_business_name,registration_type,country_code,status,submitted_at,reviewed_at,review_reason").eq("user_id",userId).maybeSingle()
     ]);
     if(sellerResult.error)return json(503,{error:"Seller profile could not be loaded."});
     if(paypalResult.error)return json(503,{error:"PayPal seller connection status could not be loaded."});
-    const data=sellerResult.data,paypal=paypalResult.data;
+    if(businessResult.error)return json(503,{error:"Business identity status could not be loaded."});
+    const data=sellerResult.data,paypal=paypalResult.data,business=businessResult.data;
     return json(200,{
       seller:data?{
         userId:data.user_id,sellerType:data.seller_type,storeName:data.store_name,description:data.description,
         countryCode:data.country_code,contactEmail:data.contact_email,status:data.status,
         identityStatus:data.identity_status,payoutStatus:data.payout_status,termsVersion:data.terms_version,
+        reviewPriority:data.review_priority,reviewDueAt:data.review_due_at,autoReviewStatus:data.auto_review_status,
+        autoReviewScore:data.auto_review_score,autoReviewFlags:data.auto_review_flags||[],
         termsAcceptedAt:data.terms_accepted_at,createdAt:data.created_at,updatedAt:data.updated_at
+      }:null,
+      businessIdentity:business?{
+        legalBusinessName:business.legal_business_name,registrationType:business.registration_type,
+        countryCode:business.country_code,status:business.status,submittedAt:business.submitted_at,
+        reviewedAt:business.reviewed_at,reviewReason:business.review_reason
       }:null,
       paypal:paypal?{
         status:paypal.onboarding_status,accountType:paypal.account_type,
@@ -2323,19 +2332,32 @@ Deno.serve(async (req: Request) => {
       .select("user_id,status").eq("user_id",userId).maybeSingle();
     if(lookupError)return json(503,{error:"Seller application could not be checked."});
     if(existing&&existing.status!=="rejected")return json(409,{error:"A seller application already exists for this account.",status:existing.status});
+    const now=new Date();
+    const {data:authLookup}=await admin.auth.admin.getUserById(userId);
+    const authUser=authLookup?.user;
+    const accountEmail=String(authUser?.email||"").trim().toLowerCase();
+    const flags:any[]=[];
+    if(!authUser?.email_confirmed_at)flags.push({code:"email_not_verified",severity:"high",message:"Account email is not verified."});
+    if(accountEmail&&accountEmail!==contactEmail)flags.push({code:"contact_email_mismatch",severity:"medium",message:"Seller contact email differs from the confirmed login email."});
+    if(countryCode==="JM"&&sellerType!=="business")flags.push({code:"jamaica_business_seller_required",severity:"high",message:"Jamaica payout onboarding requires a Business seller profile and a PayPal Business account."});
+    if(sellerType==="business")flags.push({code:"business_identity_evidence_required",severity:"medium",message:"Business identity documents and registry details still require human verification."});
+    const reviewPriority=userId==="28e1df97-3fe1-488e-bb84-bdc353c58653"?"urgent":sellerType==="business"?"high":"normal";
     const values={
       seller_type:sellerType,store_name:storeName,description,country_code:countryCode,
       contact_email:contactEmail,status:"pending",identity_status:"not_started",
-      payout_status:"not_connected",terms_version:termsVersion,terms_accepted_at:new Date().toISOString(),
-      reviewed_at:null,reviewed_by:null,review_reason:"",updated_at:new Date().toISOString()
+      payout_status:"not_connected",terms_version:termsVersion,terms_accepted_at:now.toISOString(),
+      review_priority:reviewPriority,review_due_at:new Date(now.getTime()+4*60*60*1000).toISOString(),
+      auto_review_status:flags.length?"flagged":"clear_for_human_review",
+      auto_review_score:Math.max(0,100-flags.filter((item:any)=>item.severity==="high").length*35-flags.filter((item:any)=>item.severity==="medium").length*15),
+      auto_review_flags:flags,reviewed_at:null,reviewed_by:null,review_reason:"",updated_at:now.toISOString()
     };
     let result;
     if(existing){
       result=await admin.from("marketplace_seller_profiles").update(values).eq("user_id",userId)
-        .select("user_id,status,identity_status,payout_status,store_name,created_at,updated_at").single();
+        .select("user_id,status,identity_status,payout_status,store_name,created_at,updated_at,review_priority,review_due_at,auto_review_status,auto_review_score,auto_review_flags").single();
     }else{
       result=await admin.from("marketplace_seller_profiles").insert({...values,user_id:userId})
-        .select("user_id,status,identity_status,payout_status,store_name,created_at,updated_at").single();
+        .select("user_id,status,identity_status,payout_status,store_name,created_at,updated_at,review_priority,review_due_at,auto_review_status,auto_review_score,auto_review_flags").single();
     }
     if(result.error)return fail(result.error,"Seller application could not be submitted.");
     const {error:eventError}=await admin.from("marketplace_seller_verification_events").insert({
@@ -2349,6 +2371,9 @@ Deno.serve(async (req: Request) => {
     return json(201,{seller:{
       userId:result.data.user_id,status:result.data.status,identityStatus:result.data.identity_status,
       payoutStatus:result.data.payout_status,storeName:result.data.store_name,
+      reviewPriority:result.data.review_priority,reviewDueAt:result.data.review_due_at,
+      autoReviewStatus:result.data.auto_review_status,autoReviewScore:result.data.auto_review_score,
+      autoReviewFlags:result.data.auto_review_flags||[],
       createdAt:result.data.created_at,updatedAt:result.data.updated_at
     }});
   }
@@ -2361,11 +2386,20 @@ Deno.serve(async (req: Request) => {
        !["not_started","pending","verified","rejected"].includes(identityStatus)||!reason){
       return json(400,{error:"A valid seller review decision and audit reason are required."});
     }
+    if(actorId===sellerId)return json(403,{error:"You cannot review or approve your own Marketplace application. An independent reviewer must decide it."});
     if(status==="approved"&&identityStatus!=="verified")return json(409,{error:"Identity or business verification must be completed before approval."});
     const {data:seller,error:lookupError}=await admin.from("marketplace_seller_profiles")
-      .select("user_id,store_name,description,country_code,status").eq("user_id",sellerId).maybeSingle();
+      .select("user_id,store_name,description,country_code,seller_type,status").eq("user_id",sellerId).maybeSingle();
     if(lookupError)return json(503,{error:"Seller application could not be loaded."});
     if(!seller)return json(404,{error:"Seller application not found."});
+    if(status==="approved"&&seller.country_code==="JM"){
+      const {data:businessIdentity,error:businessError}=await admin.from("marketplace_business_identity_submissions")
+        .select("status").eq("user_id",sellerId).maybeSingle();
+      if(businessError)return json(503,{error:"Business identity verification could not be checked."});
+      if(seller.seller_type!=="business"||businessIdentity?.status!=="verified"){
+        return json(409,{error:"A Jamaican seller must submit and pass business-identity review before marketplace approval."});
+      }
+    }
     const stamp=new Date().toISOString();
     const {data,error}=await admin.from("marketplace_seller_profiles").update({
       status,identity_status:identityStatus,reviewed_at:stamp,reviewed_by:actorId,
@@ -2388,6 +2422,11 @@ Deno.serve(async (req: Request) => {
       actor_id:actorId,action:"marketplace_seller_reviewed",target_type:"marketplace_seller",
       target_id:sellerId,metadata:{status,identityStatus,reason}
     });
+    await admin.from("notifications").insert({
+      recipient_id:sellerId,actor_id:actorId,kind:"marketplace_seller_status",
+      entity_type:"marketplace_seller",entity_id:sellerId,
+      payload:{status,identityStatus,reason,title:"Marketplace application update"}
+    });
     return json(200,{seller:{userId:data.user_id,status:data.status,identityStatus:data.identity_status,payoutStatus:data.payout_status,storeName:data.store_name}});
   }
 
@@ -2395,26 +2434,37 @@ Deno.serve(async (req: Request) => {
     const status=String(input.status||"pending");
     if(!["pending","approved","rejected","suspended"].includes(status))return json(400,{error:"Invalid seller application filter."});
     const {data,error}=await admin.from("marketplace_seller_profiles")
-      .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,created_at,reviewed_at")
-      .eq("status",status).order("created_at",{ascending:false}).limit(200);
+      .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,review_priority,review_due_at,auto_review_status,auto_review_score,auto_review_flags,created_at,reviewed_at")
+      .eq("status",status).order("review_due_at",{ascending:true}).limit(200);
     if(error)return json(503,{error:"Seller applications could not be loaded."});
     return json(200,{sellers:(data||[]).map((row:any)=>({
       userId:row.user_id,sellerType:row.seller_type,storeName:row.store_name,description:row.description,
       countryCode:row.country_code,contactEmail:row.contact_email,status:row.status,
-      identityStatus:row.identity_status,payoutStatus:row.payout_status,submittedAt:row.created_at,reviewedAt:row.reviewed_at
+      identityStatus:row.identity_status,payoutStatus:row.payout_status,reviewPriority:row.review_priority,
+      reviewDueAt:row.review_due_at,autoReviewStatus:row.auto_review_status,autoReviewScore:row.auto_review_score,
+      autoReviewFlags:row.auto_review_flags||[],submittedAt:row.created_at,reviewedAt:row.reviewed_at
     }))});
   }
 
   if (action === "marketplace_seller_queue") {
-    const [sellerResult,jobResult]=await Promise.all([
+    const reviewerId=String(input.reviewerId||"");
+    if(!validUuid(reviewerId))return json(400,{error:"A valid reviewer account is required."});
+    const [sellerResult,jobResult,alertResult,businessResult]=await Promise.all([
       admin.from("marketplace_seller_profiles")
-        .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,created_at")
-        .eq("status","pending").order("created_at",{ascending:true}).limit(200),
+        .select("user_id,seller_type,store_name,description,country_code,contact_email,status,identity_status,payout_status,review_priority,review_due_at,auto_review_status,auto_review_score,auto_review_flags,created_at")
+        .eq("status","pending").order("review_due_at",{ascending:true}).limit(200),
       admin.from("marketplace_job_postings")
         .select("id,employer_id,title,company_name,description,category,employment_type,workplace_type,location_label,created_at")
-        .eq("status","pending_review").order("created_at",{ascending:true}).limit(200)
+        .eq("status","pending_review").order("created_at",{ascending:true}).limit(200),
+      admin.from("marketplace_application_review_alerts")
+        .select("id,application_user_id,event_type,priority,due_at,title,body,created_at")
+        .eq("recipient_id",reviewerId).is("read_at",null).order("created_at",{ascending:false}).limit(50),
+      admin.from("marketplace_business_identity_submissions")
+        .select("user_id,legal_business_name,registration_type,country_code,status,submitted_at")
+        .in("status",["pending","needs_information"]).limit(200)
     ]);
-    if(sellerResult.error||jobResult.error)return json(503,{error:"Marketplace moderation queue is unavailable."});
+    if(sellerResult.error||jobResult.error||alertResult.error||businessResult.error)return json(503,{error:"Marketplace moderation queue is unavailable."});
+    const businessByUser=new Map((businessResult.data||[]).map((row:any)=>[row.user_id,row]));
     const cfg=await admin.from("marketplace_payment_configuration")
       .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled")
       .eq("singleton",true).maybeSingle();
@@ -2426,8 +2476,19 @@ Deno.serve(async (req: Request) => {
       sellers:(sellerResult.data||[]).map(row=>({
         userId:row.user_id,sellerType:row.seller_type,storeName:row.store_name,description:row.description,
         countryCode:row.country_code,contactEmail:row.contact_email,status:row.status,
-        identityStatus:row.identity_status,payoutStatus:row.payout_status,submittedAt:row.created_at
+        identityStatus:row.identity_status,payoutStatus:row.payout_status,
+        reviewPriority:row.review_priority,reviewDueAt:row.review_due_at,
+        autoReviewStatus:row.auto_review_status,autoReviewScore:row.auto_review_score,
+        autoReviewFlags:row.auto_review_flags||[],canReview:row.user_id!==reviewerId,
+        businessIdentity:(businessByUser.get(row.user_id)?{
+          legalBusinessName:(businessByUser.get(row.user_id) as any).legal_business_name,
+          registrationType:(businessByUser.get(row.user_id) as any).registration_type,
+          countryCode:(businessByUser.get(row.user_id) as any).country_code,
+          status:(businessByUser.get(row.user_id) as any).status,
+          submittedAt:(businessByUser.get(row.user_id) as any).submitted_at
+        }:null),submittedAt:row.created_at
       })),
+      reviewAlerts:alertResult.data||[],
       jobs:(jobResult.data||[]).map(row=>({
         id:row.id,employerId:row.employer_id,title:row.title,companyName:row.company_name,
         description:row.description,category:row.category,employmentType:row.employment_type,
