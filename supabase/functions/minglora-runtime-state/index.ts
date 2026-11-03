@@ -1096,7 +1096,18 @@ Deno.serve(async (req: Request) => {
       .select("id,seller_order_id,amount_minor,currency,status,provider_disbursement_status,initiated_at,completed_at,failure_code")
       .eq("seller_id",sellerId).order("initiated_at",{ascending:false}).limit(100);
     if(error)return json(503,{error:"Marketplace seller payouts could not be loaded."});
-    return json(200,{payouts:data||[]});
+    const sellerOrderIds=[...new Set((data||[]).map((row:any)=>row.seller_order_id).filter(Boolean))];
+    const {data:orders,error:ordersError}=sellerOrderIds.length
+      ? await admin.from("marketplace_seller_orders").select("id,status,payout_status").in("id",sellerOrderIds)
+      : {data:[],error:null};
+    if(ordersError)return json(503,{error:"Seller order payout eligibility could not be loaded."});
+    const orderById=new Map((orders||[]).map((row:any)=>[row.id,row]));
+    const payouts=(data||[]).map((row:any)=>({
+      ...row,
+      seller_order_status:orderById.get(row.seller_order_id)?.status||"unknown",
+      seller_order_payout_status:orderById.get(row.seller_order_id)?.payout_status||"not_eligible"
+    }));
+    return json(200,{payouts});
   }
 
   if (action === "marketplace_seller_get") {
