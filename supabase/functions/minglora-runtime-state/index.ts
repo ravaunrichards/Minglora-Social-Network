@@ -174,6 +174,18 @@ Deno.serve(async (req: Request) => {
         (contactPhone && !/^\+[1-9][0-9]{7,14}$/.test(contactPhone))) {
       return json(400, { error: "Enter a valid name, username, email and password. Phone number is optional." });
     }
+    const { data: usernameOwner, error: usernameLookupError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+    if (usernameLookupError) {
+      return json(503, { error: "Minglora could not verify username availability. Please try again." });
+    }
+    if (usernameOwner) {
+      return json(409, { error: "That username is already taken. Choose another username.", code: "username_already_taken" });
+    }
+
     const { data, error } = await admin.auth.admin.createUser({
       email,
       password,
@@ -187,8 +199,21 @@ Deno.serve(async (req: Request) => {
     });
     if (error || !data?.user?.id) {
       const message = String(error?.message || "Minglora could not create the account.").slice(0, 240);
+      const providerCode = String(error?.code || "").toLowerCase();
+      const emailDuplicate = providerCode === "email_exists" ||
+        /user already registered|email.*(already|exists|registered)|(already|exists|registered).*email/i.test(message);
+      const usernameDuplicate = /profiles_username_lower_uq|username/i.test(message);
+      if (emailDuplicate) {
+        return json(409, { error: "An account with this email already exists. Log in instead.", code: "email_already_registered" });
+      }
+      if (usernameDuplicate) {
+        return json(409, { error: "That username is already taken. Choose another username.", code: "username_already_taken" });
+      }
       const duplicate = /already|exists|registered|duplicate/i.test(message);
-      return json(duplicate ? 409 : 503, { error: duplicate ? "An account with this email already exists. Log in instead." : message });
+      return json(duplicate ? 409 : 503, {
+        error: duplicate ? "The email or username is already in use. Check both and try again." : message,
+        code: duplicate ? "registration_identifier_conflict" : "registration_failed"
+      });
     }
     return json(201, {
       user: {
