@@ -1739,6 +1739,33 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
+async function finishMarketplacePaypalSellerReturn(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get("marketplacePayPal")!=="complete")return;
+  const callbackState=params.get("state")||"";
+  const trackingId=params.get("merchantId")||"";
+  const merchantId=params.get("merchantIdInPayPal")||"";
+  const permissionsGranted=params.get("permissionsGranted")==="true";
+  const consentGranted=params.get("consentStatus")==="true";
+  const emailConfirmed=params.get("isEmailConfirmed")==="true";
+  const accountType=params.get("accountStatus")||"";
+  window.history.replaceState(null,"",window.location.pathname);
+  if(!trackingId||!merchantId||!callbackState){
+    toast("PayPal returned without all onboarding references. Reopen Seller Centre and check the connection status.");
+    await renderMarketplaceSeller();
+    return;
+  }
+  try{
+    await api("/marketplace/paypal/seller-complete",{method:"POST",body:JSON.stringify({
+      trackingId,merchantId,callbackState,permissionsGranted,consentGranted,emailConfirmed,accountType
+    })});
+    toast("PayPal seller connection verified.");
+  }catch(error){
+    toast("Minglora could not verify all PayPal seller permissions: "+error.message);
+  }
+  await renderMarketplaceSeller();
+}
+
 async function finishMarketplacePaypalReturn(){
   const params=new URLSearchParams(window.location.search);
   const status=params.get("marketplacePayment"),orderId=params.get("orderId"),providerOrderId=params.get("token");
@@ -4054,7 +4081,7 @@ async function renderMarketplaceOrderDetail(orderId){
 }
 async function renderMarketplaceSeller(){
   activateSilent('marketplace');
-  const data=await api('/marketplace/seller'),seller=data.seller;
+  const data=await api('/marketplace/seller'),seller=data.seller,paypal=data.paypal||{status:'not_started'};
   const payoutData=seller?await api('/marketplace/payouts').catch(()=>({payouts:[]})):{payouts:[]};
   let html='<div class="marketplace-detail-toolbar"><button class="text-button" id="seller-back-marketplace">← Marketplace</button></div><section class="card marketplace-commerce-panel"><span class="marketplace-eyebrow">MINGLORA SELLER CENTRE</span><h1>Build your shop on Minglora</h1><p>Seller approval and identity/business checks are required before publishing. Payout setup is a separate verified process.</p>';
   if(!seller){
@@ -4074,7 +4101,14 @@ async function renderMarketplaceSeller(){
        }).join('');
      }else html+='<p class="muted">No seller payouts have been recorded yet. Real captured proceeds will appear here after checkout is approved and a buyer payment completes.</p>';
      html+='</section>';
-    if(seller.status==='approved'&&seller.identityStatus==='verified')html+='<p class="muted">Your seller profile is approved. You can publish products and services. Marketplace payments and seller payouts are not yet enabled.</p><button class="primary" id="seller-create-listing">＋ Create a listing</button>';
+    if(seller.status==='approved'&&seller.identityStatus==='verified'){
+       if(paypal.status==='verified'&&paypal.paymentsReceivable&&paypal.emailConfirmed){
+         html+='<section class="marketplace-payment-panel"><h2>PayPal seller connection</h2><span class="marketplace-status">Business account connected</span><p class="muted">PayPal confirmed your seller account, primary email and ability to receive payments. Checkout still depends on Minglora partner approval and activation checks.</p></section>';
+       }else{
+         html+='<section class="marketplace-payment-panel"><h2>Connect your PayPal Business account</h2><p class="muted">Minglora redirects you to PayPal to grant payment, refund, platform-fee and delayed-disbursement permissions. We verify your account directly with PayPal when you return.</p><form id="marketplace-paypal-onboarding"><label class="marketplace-terms"><input type="checkbox" name="shareDataConsent" value="true" required> I consent to PayPal sharing the account and verification information required to connect my seller account to Minglora.</label><button class="primary" type="submit">Connect PayPal Business</button></form><small class="muted">Connection status: '+esc(String(paypal.status||'not_started').replaceAll('_',' '))+'. '+esc(paypal.reason||'Complete PayPal onboarding to continue.')+'</small></section>';
+       }
+       html+='<p class="muted">Your Minglora seller profile is approved. You can publish products and services.</p><button class="primary" id="seller-create-listing">＋ Create a listing</button>';
+     }
     else html+='<p class="muted">Your application cannot publish listings until the Minglora team completes the required review. Payout setup is not activated by submitting this application.</p>';
     html+='<p class="marketplace-safety-note">Never send passwords, card details or full banking credentials through Minglora messages. Verification documents and payout connection must use approved secure flows.</p>';
   }
@@ -4284,6 +4318,7 @@ async function enterMingloraApp(user,showWelcome=false){
   const params=new URLSearchParams(window.location.search);
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else if(params.get('marketplacePayment')==='return'||params.get('marketplacePayment')==='cancel'){await finishMarketplacePaypalReturn();}
+  else if(params.get('marketplacePayPal')==='complete'){await finishMarketplacePaypalSellerReturn();}
   else activateNav('feed');
   if(showWelcome)toast('Welcome to Minglora!');
 }
