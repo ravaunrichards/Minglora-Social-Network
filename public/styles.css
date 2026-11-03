@@ -3183,3 +3183,13 @@ body.auth-mode .auth-screen{
 @media(max-width:600px){.profile-event-card{gap:8px;padding:10px}.profile-event-date{flex-basis:40px}.profile-story-archive-option{align-items:flex-start}.profile-story-archive-preview{width:46px;height:46px;flex-basis:46px}}
 
 
+
+/* Official platform-owner identity and Marketplace review queue */
+.profile-blue-verification{display:inline-grid;place-items:center;width:19px;height:19px;margin-left:7px;border-radius:50%;background:#1877f2;color:#fff;font-size:13px;font-weight:900;line-height:1;vertical-align:middle;box-shadow:0 0 0 2px rgba(24,119,242,.14)}
+.marketplace-review-title-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.marketplace-priority{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;background:var(--soft,#eef4fc);color:var(--muted)}
+.marketplace-priority.urgent{background:#fff0f0;color:#ad2b2b}
+.marketplace-priority.high{background:#fff6e8;color:#98600b}
+.marketplace-review-overdue{color:#b42318!important;font-weight:800}
+.marketplace-auto-review-flags{margin:7px 0 0;padding-left:18px;color:var(--muted);font-size:12px}
+.marketplace-auto-review-flags li{margin:3px 0}
