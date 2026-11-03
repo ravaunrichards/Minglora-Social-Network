@@ -167,7 +167,7 @@ test('capture reconciliation verifies every seller reference, amount and complet
   assert.throws(()=>parseMarketplacePayPalCapture({
     status:'COMPLETED',
     purchase_units:[{reference_id:sellerOrder1.sellerOrderId,payments:{captures:[{
-      id:'CAPTURE-ONE',status:'COMPLETED',amount:{currency_code:'USD',value:'124.00'}
+      id:'CAPTURE-ONE',status:'COMPLETED',disbursement_mode:'DELAYED',amount:{currency_code:'USD',value:'124.00'}
     }]}}]
   },[sellerOrder1]),/amount did not match/);
   assert.throws(()=>parseMarketplacePayPalCapture({status:'PARTIALLY_COMPLETED',purchase_units:[]},[sellerOrder1]),/did not capture every seller order/);
