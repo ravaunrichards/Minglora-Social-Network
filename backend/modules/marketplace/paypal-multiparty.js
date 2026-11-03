@@ -64,12 +64,15 @@ export function marketplacePayPalReadiness(env = process.env) {
   };
 }
 
-export function buildMarketplacePayPalAuthAssertion(clientId, payerId) {
+export function buildMarketplacePayPalAuthAssertion(clientId, sellerIdentity) {
   const issuer = String(clientId || '').trim();
-  const payer = String(payerId || '').trim();
-  if (!issuer || !payer) throw new Error('PayPal Auth Assertion requires the Marketplace client ID and merchant payer ID.');
+  const identity = String(sellerIdentity || '').trim();
+  if (!issuer || !identity) throw new Error('PayPal Auth Assertion requires the Marketplace client ID and verified seller identity.');
+  const claim = identity.includes('@')
+    ? { iss: issuer, email: identity.toLowerCase() }
+    : { iss: issuer, payer_id: identity };
   const encode = value => Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
-  return encode({ alg: 'none' }) + '.' + encode({ iss: issuer, payer_id: payer }) + '.';
+  return encode({ alg: 'none' }) + '.' + encode(claim) + '.';
 }
 
 export function buildMarketplacePayPalReferralPayload({
