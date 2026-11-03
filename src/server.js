@@ -116,7 +116,7 @@ function safeUser(u,viewerId=null){
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
-  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt};
+  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:u.verificationBadge==='blue'?'blue':null};
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
@@ -216,7 +216,16 @@ function sealSessionAuth(value){
 }
 function openSessionAuth(sealed){if(!sealed)return null;try{const bytes=Buffer.from(sealed,'base64url');const iv=bytes.subarray(0,12),tag=bytes.subarray(12,28),encrypted=bytes.subarray(28);const decipher=crypto.createDecipheriv('aes-256-gcm',sessionCipherKey,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(encrypted),decipher.final()]).toString('utf8'));}catch{return null;}}
 function sessionFromRequest(req){const raw=cookie(req,'sid');if(!raw)return null;let decoded;try{decoded=decodeURIComponent(raw);}catch{return null;}const parts=decoded.split('.');if(parts.length!==2)return null;const [id,sig]=parts;if(!id||!sig)return null;const expected=Buffer.from(sign(id),'utf8'),supplied=Buffer.from(sig,'utf8');if(supplied.length!==expected.length||!crypto.timingSafeEqual(supplied,expected))return null;return db.sessions.find(item=>item.id===id&&new Date(item.expiresAt)>new Date())||null;}
-function isModerator(user){const ids=String(process.env.MODERATOR_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);return Boolean(user&&(user.role==='admin'||user.role==='moderator'||ids.includes(user.id)));}
+const PLATFORM_OWNER_USER_IDS=new Set(['28e1df97-3fe1-488e-bb84-bdc353c58653']);
+function isModerator(user,req=null){
+  if(!user)return false;
+  if(PLATFORM_OWNER_USER_IDS.has(user.id)){
+    const session=req?sessionFromRequest(req):null;
+    return user.role==='platform_owner'&&Boolean(session?.mfaVerified);
+  }
+  const ids=String(process.env.MODERATOR_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);
+  return user.role==='admin'||user.role==='moderator'||ids.includes(user.id);
+}
 const loginFailures=new Map();
 function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(ip+'|'+email).digest('hex');}
 function checkLoginRateLimit(req,email){const key=loginRateLimitKey(req,email),entry=loginFailures.get(key);if(!entry)return {allowed:true,key};if(entry.resetAt<Date.now()){loginFailures.delete(key);return {allowed:true,key};}return {allowed:entry.count<5,key,retryAfterMs:Math.max(0,entry.resetAt-Date.now())};}
@@ -248,6 +257,9 @@ async function createAppSession(user,authTokens=null,req=null) {
 function ensureLocalUser(authUser, fallback = {}) {
   if (!authUser?.id || !authUser?.email) throw Object.assign(new Error('Supabase Auth returned an incomplete user record.'), { status:502 });
   const metadata = authUser.user_metadata || authUser.raw_user_meta_data || {};
+  const appMetadata = authUser.app_metadata || {};
+  const trustedRole = ['platform_owner','admin','moderator'].includes(String(appMetadata.role||''))?String(appMetadata.role):null;
+  const verificationBadge = appMetadata.verification_badge==='blue'?'blue':'none';
   const email = normalizeEmail(authUser.email);
   const name = String(metadata.name || metadata.full_name || fallback.name || email.split('@')[0] || 'Minglora Member').trim();
   const username = normalizeUsername(metadata.username || fallback.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
@@ -258,7 +270,7 @@ function ensureLocalUser(authUser, fallback = {}) {
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
-    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, aboutSections:metadata.about_sections||metadata.aboutSections||{}, aboutSectionVisibility:metadata.about_section_visibility||metadata.aboutSectionVisibility||DEFAULT_ABOUT_SECTION_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), createdAt:authUser.created_at || now() };
+    user = { id:authUser.id, name, username, email, passwordHash:null, bio:String(metadata.bio||''), location:String(metadata.location||''), contactPhone, country:String(metadata.country||''), county:String(metadata.county||''), parish:String(metadata.parish||''), city:String(metadata.city||''), gender:String(metadata.gender||''), relationshipStatus:String(metadata.relationship_status||metadata.relationshipStatus||''), aboutVisibility:metadata.about_visibility||metadata.aboutVisibility||DEFAULT_ABOUT_VISIBILITY, aboutSections:metadata.about_sections||metadata.aboutSections||{}, aboutSectionVisibility:metadata.about_section_visibility||metadata.aboutSectionVisibility||DEFAULT_ABOUT_SECTION_VISIBILITY, avatar:String(metadata.avatar_url||''), cover:String(metadata.cover_url||''), status:String(metadata.account_status||'active'), role:trustedRole||undefined, verificationBadge, createdAt:authUser.created_at || now() };
     db.users.push(user);
   } else {
     user.name = name || user.name;
@@ -275,6 +287,11 @@ function ensureLocalUser(authUser, fallback = {}) {
     if(metadata.avatar_url!==undefined)user.avatar=String(metadata.avatar_url||'');
     if(metadata.cover_url!==undefined)user.cover=String(metadata.cover_url||'');
     if(metadata.account_status!==undefined)user.status=String(metadata.account_status||'active');
+    if(Object.hasOwn(authUser,'app_metadata')){
+      if(trustedRole)user.role=trustedRole;
+      else delete user.role;
+      user.verificationBadge=verificationBadge;
+    }
   }
   return user;
 }
@@ -926,13 +943,13 @@ async function route(req, res) {
         return json(res,201,result);
       }
       if(method==='GET'&&p==='/api/marketplace/admin/refunds'){
-        if(!isModerator(user))return json(res,403,{error:'Marketplace refund review is restricted to authorized moderators.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Marketplace refund review is restricted to authorized moderators.'});
         if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
         return json(res,200,await requestSupabaseState('marketplace_refunds_admin_list'));
       }
       const marketplaceRefundMatch=p.match(/^\/api\/marketplace\/admin\/refunds\/([0-9a-f-]{36})\/approve$/i);
       if(method==='POST'&&marketplaceRefundMatch){
-        if(!isModerator(user))return json(res,403,{error:'Only an authorized marketplace moderator may approve a refund.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Only an authorized marketplace moderator may approve a refund.'});
         if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
         const result=await requestSupabaseState('marketplace_refund_approve',{
           refundId:marketplaceRefundMatch[1],actorId:user.id
@@ -957,29 +974,61 @@ async function route(req, res) {
         await saveStore();
         return json(res,201,{seller:{storeName:seller.storeName,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,submittedAt:seller.submittedAt}});
       }
+      if(method==='POST'&&p==='/api/marketplace/seller/business-identity'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Business identity review requires the hosted secure marketplace database.'});
+        const payload={
+          legalBusinessName:String(input.legalBusinessName||'').trim(),
+          registrationType:String(input.registrationType||''),
+          registrationNumber:String(input.registrationNumber||'').trim(),
+          registeredAddress:String(input.registeredAddress||'').trim(),
+          countryCode:String(input.countryCode||'').trim().toUpperCase(),
+          contactEmail:normalizeEmail(input.contactEmail||user.email)
+        };
+        if(payload.legalBusinessName.length<2||payload.registeredAddress.length<5||!validateEmail(payload.contactEmail).valid)return json(res,400,{error:'Complete the legal business name, registered address and contact email.'});
+        if(!['registered_company','sole_trader','partnership','other'].includes(payload.registrationType))return json(res,400,{error:'Choose a valid business structure.'});
+        if(['registered_company','partnership'].includes(payload.registrationType)&&payload.registrationNumber.length<3)return json(res,400,{error:'Enter the registration number for a company or partnership.'});
+        const result=await requestSupabaseState('marketplace_business_identity_submit',{userId:user.id,...payload});
+        return json(res,201,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/admin/sellers'){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
         const status=String(url.searchParams.get('status')||'pending');
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_admin_list',{status});return json(res,200,result);}
         const sellers=(db.marketplaceSellers||[]).filter(item=>!status||item.status===status).map(item=>({userId:item.userId,sellerType:item.sellerType,storeName:item.storeName,description:item.description,countryCode:item.countryCode,contactEmail:item.contactEmail,status:item.status,identityStatus:item.identityStatus,payoutStatus:item.payoutStatus,submittedAt:item.submittedAt}));
         return json(res,200,{sellers});
       }
       if(method==='GET'&&p==='/api/marketplace/admin/queue'){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_queue');return json(res,200,result);}
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
+        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_queue',{reviewerId:user.id});return json(res,200,result);}
         const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
         return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
       }
       if(method==='GET'&&p==='/api/marketplace/admin/queue'){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
         const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
         const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
         return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
       }
+      const businessIdentityReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/business-identity$/);
+      if(method==='PATCH'&&businessIdentityReviewMatch){
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Business identity review requires the hosted marketplace database.'});
+        const status=String(input.status||''),reason=String(input.reason||'').trim().slice(0,1000);
+        if(!['verified','needs_information','rejected'].includes(status)||reason.length<5)return json(res,400,{error:'Choose a valid identity decision and record the review reason.'});
+        const result=await requestSupabaseState('marketplace_business_identity_review',{actorId:user.id,sellerId:businessIdentityReviewMatch[1],status,reason});
+        return json(res,200,result);
+      }
+      const reviewAlertMatch=p.match(/^\/api\/marketplace\/admin\/alerts\/([^/]+)\/read$/);
+      if(method==='POST'&&reviewAlertMatch){
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Application alerts require the hosted marketplace database.'});
+        const result=await requestSupabaseState('marketplace_review_alert_mark_read',{reviewerId:user.id,alertId:reviewAlertMatch[1]});
+        return json(res,200,result);
+      }
       const sellerReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/review$/);
       if(method==='PATCH'&&sellerReviewMatch){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
         if(isSupabasePersistence()){const status=String(input.status||''),identityStatus=String(input.identityStatus||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['pending','approved','rejected','suspended'].includes(status)||!['not_started','pending','verified','rejected'].includes(identityStatus)||!reason)return json(res,400,{error:'A valid seller review decision and audit reason are required.'});const result=await requestSupabaseState('marketplace_seller_review',{actorId:user.id,sellerId:sellerReviewMatch[1],status,identityStatus,reason});return json(res,200,result);}
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===sellerReviewMatch[1]);if(!seller)return json(res,404,{error:'Seller application not found.'});
         const identityStatus=String(input.identityStatus||seller.identityStatus),status=String(input.status||seller.status);
@@ -1045,7 +1094,7 @@ async function route(req, res) {
         return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
       }
       if(method==='POST'&&p==='/api/marketplace/admin/financial-reconciliation/provider'){
-        if(!isModerator(user))return json(res,403,{error:'Provider reconciliation is restricted to authorized Marketplace moderators.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Provider reconciliation is restricted to authorized Marketplace moderators.'});
         if(!isSupabasePersistence())return json(res,503,{error:'Provider reconciliation requires the hosted Marketplace financial database.'});
         const startAt=String(input.startAt||''),endAt=String(input.endAt||'');
         const result=await requestSupabaseState('marketplace_financial_provider_reconcile',{
@@ -1054,7 +1103,7 @@ async function route(req, res) {
         return json(res,200,result);
       }
       if(method==='GET'&&p==='/api/marketplace/admin/financial-reconciliation'){
-        if(!isModerator(user))return json(res,403,{error:'Marketplace financial reconciliation is restricted to authorized moderators.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Marketplace financial reconciliation is restricted to authorized moderators.'});
         if(isSupabasePersistence()){
           const result=await requestSupabaseState('marketplace_financial_reconcile',{requestedBy:user.id});
           return json(res,200,result);
@@ -1136,7 +1185,7 @@ async function route(req, res) {
       }
       const jobReviewMatch=p.match(/^\/api\/jobs\/([^/]+)\/review$/);
       if(method==='PATCH'&&jobReviewMatch){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
         if(isSupabasePersistence()){const status=String(input.status||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['open','rejected'].includes(status)||!reason)return json(res,400,{error:'A valid vacancy moderation decision and reason are required.'});const result=await requestSupabaseState('marketplace_job_review',{actorId:user.id,jobId:jobReviewMatch[1],status,reason});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobReviewMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
         const status=String(input.status||'');if(!['open','rejected'].includes(status))return json(res,400,{error:'Choose open or rejected.'});
@@ -1169,7 +1218,7 @@ async function route(req, res) {
       if(jobApplicationsMatch&&method==='GET'){
         if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_for_job',{viewerId:user.id,jobId:jobApplicationsMatch[1]});return json(res,200,result);}
         const job=(db.jobPostings||[]).find(item=>item.id===jobApplicationsMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
-        if(job.employerId!==user.id&&!isModerator(user))return json(res,403,{error:'Only the employer can review applications.'});
+        if(job.employerId!==user.id&&!isModerator(user,req))return json(res,403,{error:'Only the employer can review applications.'});
         return json(res,200,{applications:(db.jobApplications||[]).filter(item=>item.jobId===job.id).map(item=>({...item,candidate:safeUser(db.users.find(member=>member.id===item.applicantId),user.id)}))});
       }
       const jobApplicationMatch=p.match(/^\/api\/jobs\/applications\/([^/]+)$/);
@@ -1441,7 +1490,7 @@ async function route(req, res) {
         currentSession.pendingEmail=email;await saveStore();
         return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
       }
-      if(method==='GET'&&p==='/api/moderation/access')return json(res,200,{canModerate:isModerator(user)});
+      if(method==='GET'&&p==='/api/moderation/access')return json(res,200,{canModerate:isModerator(user,req)});
       if(method==='GET'&&p==='/api/security/sessions'){
         const sessions=(db.sessions||[]).filter(item=>item.userId===user.id&&new Date(item.expiresAt)>new Date()).map(item=>({
           id:item.id,current:item.id===currentSession?.id,createdAt:item.createdAt||item.expiresAt,lastSeenAt:item.lastSeenAt||item.createdAt||item.expiresAt,expiresAt:item.expiresAt,userAgent:item.userAgent||'Unknown device'
@@ -1565,7 +1614,7 @@ async function route(req, res) {
         return json(res,200,{reports:(db.reports||[]).filter(item=>item.reporterId===user.id).map(item=>({...item,reviewedBy:undefined}))});
       }
       if(method==='GET'&&p==='/api/moderation/reports'){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
         const status=String(url.searchParams.get('status')||'open');
         const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>({
           ...item,reporter:safeUser(db.users.find(u=>u.id===item.reporterId)),
@@ -1575,7 +1624,7 @@ async function route(req, res) {
       }
       const moderationReportMatch=p.match(/^\/api\/moderation\/reports\/([^/]+)$/);
       if((method==='PATCH'||method==='DELETE')&&moderationReportMatch){
-        if(!isModerator(user))return json(res,403,{error:'Moderator access is required.'});
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
         const report=(db.reports||[]).find(item=>item.id===moderationReportMatch[1]);if(!report)return json(res,404,{error:'Report not found.'});
         if(method==='DELETE')report.status='dismissed';
         else{
@@ -1603,7 +1652,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{report});
       }
       if(method==='GET'&&p==='/api/support/tickets'){
-        if(isModerator(user)&&url.searchParams.get('scope')==='all'){
+        if(isModerator(user,req)&&url.searchParams.get('scope')==='all'){
           const tickets=(db.supportTickets||[]).map(ticket=>({...ticket,requester:safeUser(db.users.find(u=>u.id===ticket.userId)),messages:(db.supportMessages||[]).filter(message=>message.ticketId===ticket.id)}));
           return json(res,200,{tickets});
         }
@@ -1621,19 +1670,19 @@ async function route(req, res) {
       const supportMessageMatch=p.match(/^\/api\/support\/tickets\/([^/]+)\/messages$/);
       if(method==='POST'&&supportMessageMatch){
         const ticket=(db.supportTickets||[]).find(item=>item.id===supportMessageMatch[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
-        if(ticket.userId!==user.id&&!isModerator(user))return json(res,403,{error:'This support conversation belongs to another member.'});
+        if(ticket.userId!==user.id&&!isModerator(user,req))return json(res,403,{error:'This support conversation belongs to another member.'});
         const message=String(input.message||'').trim();if(message.length<1||message.length>5000)return json(res,400,{error:'Support message must contain 1–5000 characters.'});
-        if(ticket.status==='closed'&&!isModerator(user))return json(res,409,{error:'This ticket is closed. Create a new ticket to contact support.'});
+        if(ticket.status==='closed'&&!isModerator(user,req))return json(res,409,{error:'This ticket is closed. Create a new ticket to contact support.'});
         const item={id:uid(),ticketId:ticket.id,senderId:user.id,message,createdAt:now(),sender:safeUser(user)};
-        db.supportMessages.push(item);ticket.updatedAt=now();if(isModerator(user))ticket.status='waiting_for_member';else ticket.status='open';await saveStore();
+        db.supportMessages.push(item);ticket.updatedAt=now();if(isModerator(user,req))ticket.status='waiting_for_member';else ticket.status='open';await saveStore();
         return json(res,201,{message:item,ticket});
       }
       const supportTicketMatch=p.match(/^\/api\/support\/tickets\/([^/]+)$/);
       if(method==='PATCH'&&supportTicketMatch){
         const ticket=(db.supportTickets||[]).find(item=>item.id===supportTicketMatch[1]);if(!ticket)return json(res,404,{error:'Support ticket not found.'});
-        if(ticket.userId!==user.id&&!isModerator(user))return json(res,403,{error:'This support ticket belongs to another member.'});
+        if(ticket.userId!==user.id&&!isModerator(user,req))return json(res,403,{error:'This support ticket belongs to another member.'});
         const status=String(input.status||'');
-        if(isModerator(user)&&['open','waiting_for_member','in_progress','closed'].includes(status))ticket.status=status;
+        if(isModerator(user,req)&&['open','waiting_for_member','in_progress','closed'].includes(status))ticket.status=status;
         else if(ticket.userId===user.id&&status==='closed')ticket.status='closed';
         else return json(res,403,{error:'You cannot set this support ticket status.'});
         ticket.updatedAt=now();await saveStore();return json(res,200,{ticket});
