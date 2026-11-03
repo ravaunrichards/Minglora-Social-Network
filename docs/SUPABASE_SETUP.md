@@ -54,6 +54,27 @@ The hosted Minglora project was verified on 2026-11-03 as using Supabase's defau
 
 **Do not disable Confirm email to bypass this limit.** That marks arbitrary signup email addresses as confirmed without proving ownership. Keep the current account-security behavior and configure a real sender instead.
 
+### Zero-cost SMTP option for a small launch: Gmail
+
+Minglora's owner requested a $0-only setup. A dedicated personal Gmail account can be used as a no-domain, no-monthly-fee SMTP sender for low-volume testing or a small private launch. This is a constrained starter option, not a high-volume production mail platform.
+
+1. Create or choose a dedicated Gmail account used only for Minglora system email. Do not use a personal inbox that contains private correspondence.
+2. Enable Google 2-Step Verification on that account.
+3. Open the Google Account **App passwords** page and create a unique app password for Minglora. Google only offers app passwords to eligible accounts with 2-Step Verification; accounts using Advanced Protection, security-key-only 2-Step Verification, or some managed work/school accounts may not have the option.
+4. In Supabase Dashboard → **Authentication → SMTP Settings**, enable custom SMTP and enter:
+   - Host: `smtp.gmail.com`
+   - Port: `465` (SSL) or `587` (STARTTLS)
+   - Username: the complete dedicated Gmail address
+   - Password: the generated Google app password (not the normal Google password)
+   - Sender email: the same Gmail address
+   - Sender name: `Minglora`
+5. Save the SMTP settings, then use **Authentication → Rate Limits** to set a conservative quota within the sender's real limits. Keep per-address cooldowns and abuse protection enabled.
+6. Test recovery delivery to external Gmail, Outlook and iCloud inboxes. Confirm the message arrives, its link opens the Minglora recovery page, and the password can actually be changed.
+
+Google's published personal Gmail limit is up to 500 messages per day, and Google can temporarily suspend sending when its limits or abuse controls are triggered. Do not treat this as a guaranteed 500-message Minglora quota: Gmail may enforce additional restrictions, and the Supabase SMTP rate limit must remain lower than the sender's practical capacity. This option does not provide a branded Minglora domain or authenticated domain-level SPF/DKIM alignment. It is therefore suitable only as a $0 bridge while usage is small; do not promise reliable high-volume delivery from a consumer Gmail account.
+
+Never put the Gmail password or app password in GitHub, the browser, a public environment file, or chat. Store it only in Supabase's private SMTP configuration. If Google revokes the app password, create a replacement and update the Supabase SMTP setting.
+
 ### Required production SMTP setup
 
 1. Create an account with a transactional email provider that supports SMTP (for example Resend, AWS SES, Postmark, SendGrid, ZeptoMail or Brevo).
