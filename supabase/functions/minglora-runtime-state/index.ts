@@ -1364,26 +1364,41 @@ Deno.serve(async (req: Request) => {
     const eventId=String(event.id).slice(0,128);
     const eventType=String(event.event_type).slice(0,128);
     const resource=event.resource||{};
+    const receivedAt=new Date().toISOString();
     const {data:inserted,error:storeError}=await admin.from("marketplace_webhook_events").upsert({
       provider:"paypal",provider_event_id:eventId,event_type:eventType,
       signature_verified:true,processing_status:"processing",payload:event,
-      received_at:new Date().toISOString()
+      received_at:receivedAt,processing_started_at:receivedAt,attempt_count:1,last_error:""
     },{onConflict:"provider,provider_event_id",ignoreDuplicates:true})
       .select("id,processing_status").maybeSingle();
     if(storeError)return fail(storeError,"Verified Marketplace PayPal webhook could not be persisted.");
     if(!inserted){
       const {data:existing,error:existingError}=await admin.from("marketplace_webhook_events")
-        .select("id,processing_status").eq("provider","paypal").eq("provider_event_id",eventId).maybeSingle();
+        .select("id,processing_status,processing_started_at,attempt_count")
+        .eq("provider","paypal").eq("provider_event_id",eventId).maybeSingle();
       if(existingError||!existing)return json(503,{error:"Duplicate Marketplace webhook could not be checked."});
       if(existing.processing_status==="processed"||existing.processing_status==="ignored"){
         return json(200,{received:true,duplicate:true,eventId,status:existing.processing_status});
       }
-      const {data:claimed,error:claimError}=await admin.from("marketplace_webhook_events")
-        .update({processing_status:"processing",signature_verified:true,payload:event,event_type:eventType})
-        .eq("id",existing.id).in("processing_status",["received","failed"])
-        .select("id").maybeSingle();
+      const leaseExpired=!existing.processing_started_at||
+        Date.parse(existing.processing_started_at)<=Date.now()-5*60*1000;
+      const claimPatch={
+        processing_status:"processing",signature_verified:true,payload:event,event_type:eventType,
+        processing_started_at:receivedAt,attempt_count:Number(existing.attempt_count||0)+1,last_error:""
+      };
+      let claimQuery=admin.from("marketplace_webhook_events").update(claimPatch).eq("id",existing.id);
+      if(existing.processing_status==="received"||existing.processing_status==="failed"){
+        claimQuery=claimQuery.in("processing_status",["received","failed"]);
+      }else if(existing.processing_status==="processing"&&leaseExpired){
+        claimQuery=claimQuery.eq("processing_status","processing");
+        if(existing.processing_started_at)claimQuery=claimQuery.lte("processing_started_at",new Date(Date.now()-5*60*1000).toISOString());
+        else claimQuery=claimQuery.is("processing_started_at",null);
+      }else{
+        return json(202,{received:true,duplicate:true,processing:true,eventId,notice:"This PayPal event is already being processed."});
+      }
+      const {data:claimed,error:claimError}=await claimQuery.select("id").maybeSingle();
       if(claimError)return fail(claimError,"Failed Marketplace webhook could not be claimed for retry.");
-      if(!claimed)return json(202,{received:true,duplicate:true,processing:true,eventId,notice:"This PayPal event is already being processed."});
+      if(!claimed)return json(202,{received:true,duplicate:true,processing:true,eventId,notice:"This PayPal event is already being processed by another worker."});
     }
 
     try{
@@ -1625,7 +1640,8 @@ Deno.serve(async (req: Request) => {
         }
       }
       const {error:doneError}=await admin.from("marketplace_webhook_events").update({
-        processing_status:"processed",processed_at:new Date().toISOString()
+        processing_status:"processed",processed_at:new Date().toISOString(),
+        processing_started_at:null,last_error:""
       }).eq("provider","paypal").eq("provider_event_id",eventId);
       if(doneError)throw new Error("Could not mark the Marketplace webhook event processed.");
       return json(200,{received:true,processed:true,eventId,eventType});
