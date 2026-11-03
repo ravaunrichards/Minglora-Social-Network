@@ -54,18 +54,31 @@ Remove the production `http://localhost:3000` Site URL and any localhost redirec
 
 ### Supabase Auth email templates
 
-For the Magic Link, Confirm signup, Reset Password, Invite user and Change email templates, use Supabase's generated `{{ .ConfirmationURL }}` for the action link. Do not construct an action link from `{{ .SiteURL }}`, hard-code `localhost:3000`, or replace the Supabase verification host with the Minglora app host. Example Magic Link template:
+Supabase verification URLs are single-use. Some email security scanners pre-open links, consuming the token before the person clicks it. For the **Magic Link** and **Reset Password** templates, place the original generated `{{ .ConfirmationURL }}` behind a Minglora page fragment. The fragment is not sent in the initial HTTP request; Minglora displays a **Continue securely** button and opens the original Supabase URL only after the person clicks it.
+
+Use this Magic Link template:
 
 ```html
 <h2>Your Minglora sign-in link</h2>
-<p>Use the secure one-time link below to sign in to Minglora.</p>
-<p><a href="{{ .ConfirmationURL }}">Sign in to Minglora</a></p>
+<p>To sign in, open Minglora and continue securely.</p>
+<p><a href="{{ .SiteURL }}#auth_confirmation={{ .ConfirmationURL | urlquery }}">Continue to Minglora</a></p>
 <p>If you did not request this link, you can ignore this email.</p>
 ```
 
-The generated ConfirmationURL performs Supabase verification first and then applies the configured redirect. When a request explicitly supplies `redirectTo`, a custom template that constructs a verification URL may need `{{ .RedirectTo }}`; the safer standard is to link to `{{ .ConfirmationURL }}`. Minglora now recognizes the Supabase `type=magiclink` callback, validates its access token server-side against Supabase Auth, creates the app session, and enforces any verified TOTP MFA factor before opening the account. One-time tokens are removed from the browser URL before the session exchange.
+Use the same action-link pattern in the Reset Password template:
 
-These hosted Auth URL and email-template settings cannot be changed by a database migration or by the current Supabase project connector. Save the dashboard configuration directly. Previously sent links may retain the old destination; request a fresh magic link after saving.
+```html
+<h2>Reset your Minglora password</h2>
+<p>To reset your password, continue securely on Minglora.</p>
+<p><a href="{{ .SiteURL }}#auth_confirmation={{ .ConfirmationURL | urlquery }}">Continue to reset your password</a></p>
+<p>If you did not request this reset, you can ignore this email.</p>
+```
+
+Minglora validates that the wrapped URL belongs to its configured Supabase project, uses the Auth verification endpoint, and redirects only back to the current Minglora origin. It removes the wrapped one-time URL from browser history, then waits for the user's click before navigating to Supabase. Supabase returns the verified access/refresh tokens to the normal callback, where Minglora validates the access token server-side, creates the app session, and enforces any verified TOTP MFA factor before opening the account. Password-reset callbacks continue through Minglora's existing recovery flow.
+
+Do not replace `{{ .ConfirmationURL }}` with a hand-built Supabase verification URL, hard-code `localhost:3000`, or enable email link tracking that rewrites the nested URL. Request a fresh email after saving the template; previously sent links retain their old destination.
+
+These hosted Auth URL and email-template settings cannot be changed by a database migration or by the current Supabase project connector. Save the template in Supabase Dashboard → Authentication → Emails → Templates. The click-through protection becomes active for emails generated after the template is saved.
 
 ## Account access across devices
 
