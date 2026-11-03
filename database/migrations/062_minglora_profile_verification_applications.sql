@@ -133,18 +133,4 @@ UPDATE public.profiles
 SET verification_status='verified',verification_badge='blue'
 WHERE id='28e1df97-3fe1-488e-bb84-bdc353c58653';
 
-INSERT INTO public.profile_verification_review_events
-  (application_id,actor_id,event_type,details,event_metadata)
-SELECT
-  gen_random_uuid(),p.id,'verified',
-  'Official Minglora platform-owner account verified by platform ownership record.',
-  jsonb_build_object('source','minglora_platform_staff','badge','blue')
-FROM public.profiles p
-WHERE p.id='28e1df97-3fe1-488e-bb84-bdc353c58653'
-  AND NOT EXISTS (
-    SELECT 1 FROM public.profile_verification_review_events e
-    WHERE e.actor_id=p.id AND e.event_type='verified'
-      AND e.event_metadata->>'source'='minglora_platform_staff'
-  );
-
 COMMIT;
