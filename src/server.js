@@ -905,6 +905,26 @@ async function route(req, res) {
         return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
       }
       
+      if(method==='POST'&&p==='/api/marketplace/paypal/create'){
+        const orderId=String(input.orderId||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId))return json(res,400,{error:'A valid marketplace order ID is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Hosted marketplace checkout requires the transactional PostgreSQL database.'});
+        const origin=appOrigin(req);
+        const encoded=encodeURIComponent(orderId);
+        const result=await requestSupabaseState('marketplace_paypal_payment_prepare',{
+          buyerId:user.id,orderId,paymentMethod:'paypal',
+          returnUrl:origin+'/?marketplacePayment=return&orderId='+encoded,
+          cancelUrl:origin+'/?marketplacePayment=cancel&orderId='+encoded
+        });
+        return json(res,200,result);
+      }
+      if(method==='POST'&&p==='/api/marketplace/paypal/capture'){
+        const orderId=String(input.orderId||''),providerOrderId=String(input.providerOrderId||input.token||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)||!providerOrderId||providerOrderId.length>128)return json(res,400,{error:'A valid marketplace order and PayPal order reference are required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Hosted marketplace payment reconciliation requires the transactional PostgreSQL database.'});
+        const result=await requestSupabaseState('marketplace_paypal_capture_execute',{buyerId:user.id,orderId,providerOrderId});
+        return json(res,result.processing?202:200,result);
+      }
       if(method==='GET'&&p==='/api/marketplace/payouts'){
         if(isSupabasePersistence()){
           const result=await requestSupabaseState('marketplace_seller_payouts',{sellerId:user.id});
