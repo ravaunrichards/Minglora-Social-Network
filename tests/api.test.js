@@ -95,6 +95,32 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
 
+  const duplicateUsername = await request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Another Minglora User',
+      username: 'mingloratest',
+      email: 'different-user@example.test',
+      password: 'DifferentPassword123!'
+    })
+  });
+  assert.equal(duplicateUsername.status, 409);
+  assert.equal(duplicateUsername.body.code, 'username_already_taken');
+  assert.match(duplicateUsername.body.error, /username is already taken/i);
+
+  const duplicateEmail = await request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Another Minglora User',
+      username: 'different_user',
+      email: 'test-user@example.test',
+      password: 'DifferentPassword123!'
+    })
+  });
+  assert.equal(duplicateEmail.status, 409);
+  assert.equal(duplicateEmail.body.code, 'email_already_registered');
+  assert.match(duplicateEmail.body.error, /email already exists/i);
+
   // A second device gets its own session cookie without replacing the first device's session.
   const firstDeviceCookie = cookie;
   cookie = '';

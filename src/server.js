@@ -21,7 +21,7 @@ import { MARKETPLACE_PRODUCT_CATEGORIES, MARKETPLACE_SERVICE_CATEGORIES, MARKETP
 import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote, validateMarketplaceServiceBookingInput, transitionMarketplaceBooking } from '../backend/modules/marketplace/commerce.js';
 import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
-import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseCompletePasswordReset, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
+import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
@@ -832,7 +832,10 @@ async function route(req, res) {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
         if(phoneNumber&&!validateContactPhone(phoneNumber).valid)return json(res,400,{error:'Enter a valid international phone number, including + and country code.'});
-        if (db.users.some(u=>normalizeEmail(u.email)===email || u.username===username)) return json(res,409,{error:'That email or username is already registered. Log in instead.'});
+        if (AUTH_PROVIDER !== 'supabase') {
+          if (db.users.some(u=>normalizeEmail(u.email)===email)) return json(res,409,{error:'An account with this email already exists. Log in instead.',code:'email_already_registered'});
+          if (db.users.some(u=>u.username===username)) return json(res,409,{error:'That username is already taken. Choose another username.',code:'username_already_taken'});
+        }
         if (AUTH_PROVIDER === 'supabase') {
           const registration = await requestSupabaseState('auth_register_user', {
             email, password, name, username, phoneNumber
@@ -852,6 +855,27 @@ async function route(req, res) {
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',contactPhone:phoneNumber,country:'',county:'',parish:'',city:'',gender:'',relationshipStatus:'',aboutVisibility:DEFAULT_ABOUT_VISIBILITY,avatar:'',cover:'',createdAt:now()}; db.users.push(created);
         const sessionCookie = await createAppSession(created);
         return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
+      }
+
+      if(method==='POST'&&p==='/api/auth/magic-link/request'){
+        const email=normalizeEmail(input.email);
+        if(!validateEmail(email).valid)return json(res,400,{error:'Enter a valid email address.'});
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Email sign-in links are not configured for this account provider.'});
+        const redirectTo=new URL('/',appOrigin(req)).toString();
+        try{
+          await supabaseRequestMagicLink(email,redirectTo);
+        }catch(error){
+          if(error.status===429){
+            const retryAfterSeconds=Number(error.retryAfterSeconds)||60;
+            return json(res,429,{
+              error:'Please wait '+retryAfterSeconds+' seconds before requesting another sign-in link.',
+              code:'email_rate_limited',retryAfterSeconds
+            },{'Retry-After':String(retryAfterSeconds)});
+          }
+          if(error.status>=500||!error.status)return json(res,503,{error:'Minglora could not send a sign-in link right now. Please try again shortly.'});
+          return json(res,502,{error:'Minglora could not request a sign-in link. Please try again.'});
+        }
+        return json(res,200,{ok:true,message:'If that email belongs to a Minglora account, a secure sign-in link has been requested.'});
       }
       if(method==='POST'&&p==='/api/auth/password/reset/request'){
         const email=normalizeEmail(input.email);
@@ -886,6 +910,45 @@ async function route(req, res) {
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Password recovery is not configured for this account provider.'});
         await supabaseCompletePasswordReset(accessToken,password);
         return json(res,200,{ok:true,message:'Your password has been updated. Please log in.'});
+      }
+      if(method==='POST'&&p==='/api/auth/magic-link/complete'){
+        const accessToken=String(input.accessToken||'');
+        const refreshToken=String(input.refreshToken||'');
+        const expiresIn=Number(input.expiresIn)||3600;
+        if(accessToken.length<20||accessToken.length>8192||refreshToken.length<10||refreshToken.length>4096){
+          return json(res,400,{error:'This sign-in link is incomplete or has expired. Request a new Minglora sign-in link.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Magic-link sign-in is not configured for this account provider.'});
+        const verifiedUser=await supabaseGetUser(accessToken);
+        if(!verifiedUser?.id||!verifiedUser?.email)return json(res,401,{error:'Supabase could not validate this sign-in link. Request a new one.'});
+        if(!verifiedUser.email_confirmed_at)return json(res,403,{error:'Confirm your email address before signing in with a magic link.'});
+        const account=ensureLocalUser(verifiedUser);
+        if(account.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        const authenticated={
+          user:verifiedUser,access_token:accessToken,refresh_token:refreshToken,
+          expires_in:Number.isFinite(expiresIn)&&expiresIn>0&&expiresIn<=86400?expiresIn:3600,
+          token_type:'bearer'
+        };
+        const factors=await supabaseListFactors(accessToken);
+        const verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified');
+        if(verifiedTotp&&tokenAal(accessToken)!=='aal2'){
+          const pendingId=uid();
+          db.pendingAuth.push({
+            id:pendingId,userId:account.id,factorId:verifiedTotp.id,
+            authSealed:sealSessionAuth(authenticated),createdAt:now(),
+            expiresAt:new Date(Date.now()+5*60*1000).toISOString(),
+            userAgent:String(req.headers['user-agent']||'').slice(0,240)
+          });
+          await saveStore();
+          return json(res,200,{mfaRequired:true,challengeId:pendingId,message:'Enter the code from your authenticator app to finish signing in.'});
+        }
+        if(account.status==='deactivated'){
+          account.status='active';
+          await supabaseUpdateUserMetadata(accessToken,{account_status:'active'});
+        }
+        const sessionCookie=await createAppSession(account,authenticated,req);
+        await saveStore();
+        return json(res,200,{user:safeUser(account,account.id)},{'Set-Cookie':sessionCookie});
       }
       if(method==='POST'&&p==='/api/auth/login'){
         const email=normalizeEmail(input.email),password=String(input.password||''),rate=checkLoginRateLimit(req,email);
