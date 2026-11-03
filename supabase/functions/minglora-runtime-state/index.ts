@@ -2447,6 +2447,12 @@ Deno.serve(async (req: Request) => {
       verification_status:profileStatus,verification_badge:badge
     }).eq("id",application.user_id);
     if(profileUpdateError)return fail(profileUpdateError,"Decision saved but profile badge could not be synchronized.");
+    const {data:authResult}=await admin.auth.admin.getUserById(application.user_id);
+    if(authResult?.user){
+      const nextMetadata={...(authResult.user.app_metadata||{}),verification_status:profileStatus,verification_badge:badge};
+      const {error:metadataError}=await admin.auth.admin.updateUserById(application.user_id,{app_metadata:nextMetadata});
+      if(metadataError)return fail(metadataError,"Profile badge was synchronized but authentication metadata could not be refreshed.");
+    }
     const eventType=decision==="verified"?"verified":decision==="revoked"?"revoked":decision;
     await admin.from("profile_verification_review_events").insert({
       application_id:applicationId,actor_id:actorId,event_type:eventType,details:note,
