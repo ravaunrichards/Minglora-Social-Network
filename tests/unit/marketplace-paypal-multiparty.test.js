@@ -64,6 +64,16 @@ test('PayPal partner auth assertion follows the required two-part JWT format',()
   assert.throws(()=>buildMarketplacePayPalAuthAssertion('','merchant-123'));
 });
 
+test('PayPal Auth Assertion supports a verified seller email when payer ID is unavailable',()=>{
+  const token=buildMarketplacePayPalAuthAssertion('platform-client','seller@example.test');
+  const [header,payload,signature]=token.split('.');
+  assert.deepEqual(JSON.parse(Buffer.from(header,'base64').toString()),{alg:'none'});
+  assert.deepEqual(JSON.parse(Buffer.from(payload,'base64').toString()),{iss:'platform-client',email:'seller@example.test'});
+  assert.equal(signature,'');
+  assert.throws(()=>buildMarketplacePayPalAuthAssertion('platform-client','not-an-identity'));
+  assert.throws(()=>buildMarketplacePayPalAuthAssertion('','seller@example.test'));
+});
+
 test('seller referral requests business marketplace payment and refund capabilities',()=>{
   const payload=buildMarketplacePayPalReferralPayload({
     trackingId:'seller-123',
