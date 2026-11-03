@@ -522,11 +522,14 @@ const notify = (userId, actorId, type, text, extra = {}) => {
   if(prefs.inApp)db.notifications.unshift(notification);
   if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
 };
-function notifyMarketplaceReviewers(applicantId,actorId,text,extra={}){
+function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
   for(const reviewer of (db.users||[])){
     if(reviewer.id===applicantId||!hasActiveReviewerSession(reviewer))continue;
-    notify(reviewer.id,actorId,'marketplace_review',text,{sellerId:applicantId,...extra});
+    notify(reviewer.id,actorId,type,text,{applicantId,...extra});
   }
+}
+function notifyMarketplaceReviewers(applicantId,actorId,text,extra={}){
+  notifyPlatformReviewers('marketplace_review',applicantId,actorId,text,{sellerId:applicantId,...extra});
   const due=extra.reviewDueAt?new Date(extra.reviewDueAt).toLocaleString('en-JM',{timeZone:'America/Jamaica'}):'within four hours';
   void sendMarketplaceReviewEmail(
     'Minglora Marketplace: application review required',
@@ -1026,6 +1029,53 @@ async function route(req, res) {
         const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
         return json(res,200,{seller:seller?{sellerType:seller.sellerType,storeName:seller.storeName,description:seller.description,countryCode:seller.countryCode,contactEmail:seller.contactEmail,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,createdAt:seller.createdAt,updatedAt:seller.updatedAt}:null});
       }
+      if(method==='GET'&&p==='/api/profile-verification'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
+        const result=await requestSupabaseState('profile_verification_get',{userId:user.id});
+        return json(res,200,result);
+      }
+      if(method==='POST'&&p==='/api/profile-verification'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
+        const payload={
+          userId:user.id,accountCategory:String(input.accountCategory||''),
+          publicDisplayName:String(input.publicDisplayName||'').trim(),
+          officialWebsite:String(input.officialWebsite||'').trim(),
+          evidenceLinks:Array.isArray(input.evidenceLinks)?input.evidenceLinks:[],
+          evidenceSummary:String(input.evidenceSummary||'').trim()
+        };
+        const result=await requestSupabaseState('profile_verification_submit',payload);
+        notifyPlatformReviewers('profile_verification_review',user.id,user.id,
+          'A profile verification application is waiting in the review desk.',
+          {applicationId:result.application?.id,priority:result.application?.reviewPriority||'normal',reviewDueAt:result.application?.reviewDueAt||null});
+        return json(res,201,result);
+      }
+      if(method==='GET'&&p==='/api/admin/profile-verification/queue'){
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access profile verification review.':'Moderator access is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
+        return json(res,200,await requestSupabaseState('profile_verification_admin_queue',{reviewerId:user.id}));
+      }
+      const profileVerificationReviewMatch=p.match(/^\/api\/admin\/profile-verification\/([^/]+)\/review$/);
+      if(method==='PATCH'&&profileVerificationReviewMatch){
+        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to review profile verification.':'Moderator access is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
+        const decision=String(input.decision||''),note=String(input.note||'').trim().slice(0,1500);
+        const result=await requestSupabaseState('profile_verification_admin_review',{
+          actorId:user.id,applicationId:profileVerificationReviewMatch[1],decision,note
+        });
+        notify(result.application.userId,user.id,'profile_verification_status',
+          'Your Minglora profile verification status is now '+decision.replaceAll('_',' ')+'.',
+          {applicationId:result.application.id,verificationBadge:result.application.verificationBadge});
+        return json(res,200,result);
+      }
+      const profileVerificationAlertMatch=p.match(/^\/api\/admin\/profile-verification\/alerts\/([^/]+)\/read$/);
+      if(method==='POST'&&profileVerificationAlertMatch){
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
+        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
+        return json(res,200,await requestSupabaseState('profile_verification_alert_mark_read',{
+          reviewerId:user.id,alertId:profileVerificationAlertMatch[1]
+        }));
+      }
+
       if(method==='POST'&&p==='/api/marketplace/seller'){
         const validation=validateMarketplaceSellerApplication(input);if(!validation.valid)return json(res,400,{error:validation.error});
         if(isSupabasePersistence()){
