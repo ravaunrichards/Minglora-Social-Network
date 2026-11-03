@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list",
     "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
     "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
-    "marketplace_paypal_payment_prepare", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_seller_payouts",
+    "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_seller_payouts",
     "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
     "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
     "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
@@ -842,7 +842,11 @@ Deno.serve(async (req: Request) => {
 
   if (action === "marketplace_paypal_payment_prepare") {
     const buyerId=String(input.buyerId||""),orderId=String(input.orderId||"");
+    const paymentMethod=String(input.paymentMethod||"paypal").toLowerCase();
+    const returnUrl=String(input.returnUrl||""),cancelUrl=String(input.cancelUrl||"");
     if(!validUuid(buyerId)||!validUuid(orderId))return json(400,{error:"Invalid Marketplace order reference."});
+    if(paymentMethod!=="paypal")return json(400,{error:"Use PayPal hosted checkout. Supported card options, if eligible, are presented by PayPal."});
+    if(!/^https:\/\//i.test(returnUrl)||!/^https:\/\//i.test(cancelUrl))return json(400,{error:"Secure HTTPS return and cancel URLs are required."});
     const {data:order,error:orderError}=await admin.from("marketplace_orders")
       .select("id,buyer_id,currency,status,payment_status,total_minor,source_quote_id")
       .eq("id",orderId).eq("buyer_id",buyerId).maybeSingle();
@@ -851,28 +855,47 @@ Deno.serve(async (req: Request) => {
     if(order.status!=="awaiting_payment"||!["not_started","pending","failed"].includes(order.payment_status)){
       return json(409,{error:"This Marketplace order is not awaiting payment."});
     }
+    const supportedCurrencies=new Set(["AUD","BRL","CAD","CNY","CZK","DKK","EUR","HKD","ILS","MYR","MXN","NZD","NOK","PHP","PLN","GBP","RUB","SGD","SEK","CHF","THB","USD"]);
+    if(!supportedCurrencies.has(String(order.currency||"").trim().toUpperCase())){
+      return json(409,{error:"PayPal Checkout does not support this order currency. A verified FX quote into a supported transaction currency is required; no conversion or charge was attempted."});
+    }
     const {data:config,error:configError}=await admin.from("marketplace_payment_configuration")
-      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled,delayed_disbursement_enabled,card_payments_enabled")
+      .select("provider,marketplace_approval_status,checkout_enabled,payouts_enabled,tax_calculation_enabled,delayed_disbursement_enabled")
       .eq("singleton",true).maybeSingle();
     if(configError||!config)return json(503,{error:"Marketplace payment configuration could not be loaded."});
     const blockers=[];
+    const envConfigured=Boolean(
+      Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_ID")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_CLIENT_SECRET")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_PARTNER_MERCHANT_ID")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")&&
+      Deno.env.get("MARKETPLACE_PAYPAL_WEBHOOK_ID")
+    );
+    const envEnabled=(Deno.env.get("MARKETPLACE_PAYPAL_ENABLED")||"").toLowerCase()==="true";
+    const partnerApproved=(Deno.env.get("MARKETPLACE_PAYPAL_PARTNER_APPROVED")||"").toLowerCase()==="true";
+    const delayedApproved=(Deno.env.get("MARKETPLACE_PAYPAL_DELAYED_DISBURSEMENT_APPROVED")||"").toLowerCase()==="true";
+    const liveApproved=(Deno.env.get("MARKETPLACE_PAYPAL_LIVE_APPROVED")||"").toLowerCase()==="true";
     if(config.provider!=="paypal")blockers.push("PayPal is not selected as the Marketplace payment provider.");
-    if(config.marketplace_approval_status!=="approved")blockers.push("PayPal Marketplace partner approval is pending.");
+    if(config.marketplace_approval_status!=="approved"||!partnerApproved)blockers.push("PayPal Marketplace partner approval is pending.");
     if(!config.checkout_enabled)blockers.push("Marketplace buyer checkout is disabled.");
     if(!config.payouts_enabled)blockers.push("Marketplace seller settlement is disabled.");
     if(!config.tax_calculation_enabled||!order.source_quote_id)blockers.push("A completed tax and customs calculation is required.");
+    if(!config.delayed_disbursement_enabled||!delayedApproved)blockers.push("PayPal delayed seller disbursement has not been approved and enabled.");
+    if(!envConfigured||!envEnabled)blockers.push("Marketplace-specific PayPal credentials and integration approval flags are not fully configured.");
+    if(MARKETPLACE_PAYPAL_MODE==="live"&&!liveApproved)blockers.push("Production PayPal Marketplace processing has not been approved.");
     if(blockers.length)return json(409,{error:"Marketplace PayPal checkout is not ready.",blockers});
+
     const {data:sellerOrders,error:sellerOrdersError}=await admin.from("marketplace_seller_orders")
       .select("id,seller_id,gross_minor,commission_minor,seller_net_minor,status,payout_status")
       .eq("order_id",orderId).order("seller_id",{ascending:true});
     if(sellerOrdersError)return json(503,{error:"Marketplace seller orders could not be loaded."});
     if(!sellerOrders?.length||sellerOrders.length>10)return json(409,{error:"PayPal multi-seller checkout supports one to ten verified seller orders."});
     const sumGross=sellerOrders.reduce((total,row)=>total+Number(row.gross_minor||0),0);
-    if(sumGross!==Number(order.total_minor))return json(409,{error:"Seller order totals do not match the buyer order total. Tax and fulfillment must be allocated to each seller before payment."});
+    if(sumGross!==Number(order.total_minor))return json(409,{error:"Seller order totals do not match the buyer order total. Tax and fulfilment must be allocated before payment."});
     const sellerIds=sellerOrders.map(row=>row.seller_id);
     const [sellerResult,accountResult]=await Promise.all([
       admin.from("marketplace_seller_profiles").select("user_id,status,identity_status,seller_type,payout_status").in("user_id",sellerIds),
-      admin.from("marketplace_seller_paypal_accounts").select("user_id,merchant_id,paypal_payer_id,onboarding_status,account_type,permissions_granted,consent_granted,payments_receivable,primary_email_confirmed,granted_features").in("user_id",sellerIds)
+      admin.from("marketplace_seller_paypal_accounts").select("user_id,merchant_id,onboarding_status,account_type,permissions_granted,consent_granted,payments_receivable,primary_email_confirmed,granted_features").in("user_id",sellerIds)
     ]);
     if(sellerResult.error||accountResult.error)return json(503,{error:"Seller payment eligibility could not be loaded."});
     const sellers=new Map((sellerResult.data||[]).map((row:any)=>[row.user_id,row]));
@@ -880,42 +903,221 @@ Deno.serve(async (req: Request) => {
     const paymentSellers=[];
     for(const sellerOrder of sellerOrders){
       const seller=sellers.get(sellerOrder.seller_id),account=accounts.get(sellerOrder.seller_id);
-      if(!seller||seller.status!=="approved"||seller.identity_status!=="verified"||seller.seller_type!=="business"||
+      if(!seller||seller.status!=="approved"||seller.identity_status!=="verified"||
          seller.payout_status!=="verified"||!account||account.onboarding_status!=="verified"||
-         account.account_type!=="business"||!account.merchant_id||!account.permissions_granted||
-         !account.consent_granted||!account.payments_receivable||!account.primary_email_confirmed||
-         !account.paypal_payer_id||
-          !["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every(feature=>(account.granted_features||[]).includes(feature))){
-        return json(409,{error:"Every seller must have an approved Minglora account and a verified PayPal Business connection with payment, refund and platform-fee permissions."});
+         !account.merchant_id||!account.permissions_granted||!account.consent_granted||
+         !account.payments_receivable||!account.primary_email_confirmed||
+         !["PAYMENT","REFUND","PARTNER_FEE","DELAY_FUNDS_DISBURSEMENT"].every(feature=>(account.granted_features||[]).includes(feature))){
+        return json(409,{error:"Every seller must have an approved Minglora identity and a verified PayPal merchant connection with payment, refund, platform-fee and delayed-disbursement permissions."});
       }
       paymentSellers.push({
-        sellerOrderId:sellerOrder.id,merchantId:account.merchant_id,
-        grossMinor:Number(sellerOrder.gross_minor),platformFeeMinor:Number(sellerOrder.commission_minor),
-        sellerNetMinor:Number(sellerOrder.seller_net_minor),currency:order.currency,
+        sellerOrderId:sellerOrder.id,
+        merchantId:account.merchant_id,
+        grossMinor:Number(sellerOrder.gross_minor),
+        platformFeeMinor:Number(sellerOrder.commission_minor),
+        currency:order.currency,
         description:"Minglora seller order "+sellerOrder.id.slice(0,8)
       });
     }
+
     const {data:existingAttempt,error:attemptError}=await admin.from("marketplace_payment_attempts")
-      .select("id,provider_order_id,provider_approval_url,status,provider_request_id")
-      .eq("order_id",orderId).eq("provider","paypal").order("created_at",{ascending:false}).limit(1).maybeSingle();
+      .select("id,provider_order_id,provider_approval_url,status,provider_request_id,payment_method")
+      .eq("order_id",orderId).eq("provider","paypal").eq("payment_method","paypal")
+      .order("created_at",{ascending:false}).limit(1).maybeSingle();
     if(attemptError)return json(503,{error:"Existing Marketplace PayPal payment attempt could not be checked."});
     if(existingAttempt?.provider_order_id&&existingAttempt.provider_approval_url&&["created","approved"].includes(existingAttempt.status)){
       return json(200,{attemptId:existingAttempt.id,providerOrderId:existingAttempt.provider_order_id,
         approvalUrl:existingAttempt.provider_approval_url,requestId:existingAttempt.provider_request_id,
         currency:order.currency,totalMinor:order.total_minor,sellerOrders:paymentSellers,paymentMethod,reused:true});
     }
-    const requestId="MINGLORA-"+crypto.randomUUID();
-    const attemptValues={
-      order_id:orderId,provider:"paypal",status:"created",amount_minor:Number(order.total_minor),
-      currency:order.currency,provider_request_id:requestId,attempted_at:new Date().toISOString(),
-      provider_status:"PAYMENT_ORDER_PENDING",failure_code:"",payment_method:paymentMethod
-    };
-    const {data:attempt,error:insertError}=await admin.from("marketplace_payment_attempts")
-      .insert(attemptValues).select("id,provider_request_id").single();
-    if(insertError)return fail(insertError,"Marketplace PayPal payment attempt could not be created.");
-    return json(200,{attemptId:attempt.id,providerOrderId:null,approvalUrl:null,
-      requestId:attempt.provider_request_id,currency:order.currency,totalMinor:order.total_minor,
-      sellerOrders:paymentSellers,reused:false});
+
+    let attempt=existingAttempt;
+    if(!attempt){
+      const requestId="MINGLORA-MARKETPLACE-"+crypto.randomUUID();
+      const {data:created,error:insertError}=await admin.from("marketplace_payment_attempts")
+        .insert({
+          order_id:orderId,provider:"paypal",status:"created",amount_minor:Number(order.total_minor),
+          currency:order.currency,provider_request_id:requestId,attempted_at:new Date().toISOString(),
+          provider_status:"PAYMENT_ORDER_PENDING",failure_code:"",payment_method:"paypal"
+        }).select("id,provider_request_id").single();
+      if(insertError)return fail(insertError,"Marketplace PayPal payment attempt could not be created.");
+      attempt=created;
+    }
+    const purchase_units=paymentSellers.map(seller=>{
+      const gross=(seller.grossMinor/100).toFixed(2);
+      const fee=seller.platformFeeMinor>0?(seller.platformFeeMinor/100).toFixed(2):null;
+      if(seller.platformFeeMinor<0||seller.platformFeeMinor>seller.grossMinor)throw new Error("Marketplace commission is outside the allowed seller-order amount.");
+      const unit:any={
+        reference_id:seller.sellerOrderId,
+        custom_id:orderId,
+        description:seller.description,
+        payee:{merchant_id:seller.merchantId},
+        amount:{currency_code:order.currency,value:gross},
+        payment_instruction:{disbursement_mode:"DELAYED"}
+      };
+      if(fee)unit.payment_instruction.platform_fees=[{amount:{currency_code:order.currency,value:fee}}];
+      return unit;
+    });
+    let providerResponse:Response;
+    try {
+      const token=await getMarketplacePayPalToken();
+      providerResponse=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/checkout/orders",{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer "+token,
+          "Content-Type":"application/json",
+          "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+          "PayPal-Request-Id":String(attempt.provider_request_id).slice(0,108)
+        },
+        body:JSON.stringify({
+          intent:"CAPTURE",
+          purchase_units,
+          application_context:{
+            brand_name:"Minglora",
+            user_action:"PAY_NOW",
+            shipping_preference:"NO_PREFERENCE",
+            return_url:returnUrl,
+            cancel_url:cancelUrl
+          }
+        })
+      });
+    } catch {
+      return json(503,{error:"Minglora could not reach PayPal to create the payment order. Retry this order; the same provider request ID is retained."});
+    }
+    const providerData=await providerResponse.json().catch(()=>({}));
+    if(!providerResponse.ok){
+      await admin.from("marketplace_payment_attempts").update({
+        status:"failed",failure_code:String(providerData?.name||"PAYPAL_ORDER_CREATE_FAILED").slice(0,120),
+        provider_status:String(providerData?.name||"PAYPAL_ORDER_CREATE_FAILED").slice(0,120),
+        updated_at:new Date().toISOString()
+      }).eq("id",attempt.id);
+      return json(502,{error:"PayPal could not create the marketplace payment order.",providerIssue:String(providerData?.name||providerData?.message||"PAYPAL_ORDER_CREATE_FAILED").slice(0,160)});
+    }
+    const providerOrderId=String(providerData?.id||"");
+    const approval=Array.isArray(providerData?.links)?providerData.links.find((item:any)=>["approve","payer-action"].includes(item?.rel)):null;
+    let approvalUrl="";
+    try {
+      const parsedUrl=new URL(String(approval?.href||""));
+      if(parsedUrl.protocol==="https:"&&["www.paypal.com","www.sandbox.paypal.com","paypal.com","sandbox.paypal.com"].includes(parsedUrl.hostname))approvalUrl=parsedUrl.toString();
+    } catch {}
+    if(!providerOrderId||!approvalUrl){
+      return json(502,{error:"PayPal did not return a valid hosted checkout approval URL."});
+    }
+    const {data:saved,error:saveError}=await admin.from("marketplace_payment_attempts").update({
+      provider_order_id:providerOrderId,provider_approval_url:approvalUrl,status:"created",
+      provider_status:String(providerData?.status||"CREATED"),updated_at:new Date().toISOString()
+    }).eq("id",attempt.id).select("id,provider_order_id,provider_approval_url,status,provider_request_id").single();
+    if(saveError)return fail(saveError,"PayPal order was created but its reference could not be saved in Minglora.");
+    return json(200,{
+      attemptId:saved.id,providerOrderId:saved.provider_order_id,approvalUrl:saved.provider_approval_url,
+      requestId:saved.provider_request_id,currency:order.currency,totalMinor:order.total_minor,
+      sellerOrders:paymentSellers,paymentMethod,reused:false
+    });
+  }
+
+  if (action === "marketplace_paypal_capture_execute") {
+    const buyerId=String(input.buyerId||""),orderId=String(input.orderId||""),providerOrderId=String(input.providerOrderId||"");
+    if(!validUuid(buyerId)||!validUuid(orderId)||!providerOrderId||providerOrderId.length>128){
+      return json(400,{error:"Invalid Marketplace PayPal capture reference."});
+    }
+    const {data:order,error:orderError}=await admin.from("marketplace_orders")
+      .select("id,buyer_id,currency,status,payment_status,total_minor")
+      .eq("id",orderId).eq("buyer_id",buyerId).maybeSingle();
+    if(orderError)return json(503,{error:"Marketplace order could not be loaded."});
+    if(!order)return json(404,{error:"Marketplace order not found."});
+    const {data:attempt,error:attemptError}=await admin.from("marketplace_payment_attempts")
+      .select("id,provider_order_id,status,provider_request_id")
+      .eq("order_id",orderId).eq("provider","paypal").eq("provider_order_id",providerOrderId)
+      .order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(attemptError)return json(503,{error:"Marketplace payment attempt could not be loaded."});
+    if(!attempt)return json(404,{error:"PayPal payment order does not belong to this buyer order."});
+    if(["captured","partially_captured"].includes(attempt.status)){
+      return json(200,{ok:true,alreadyCaptured:true,orderId,capturedMinor:order.total_minor,paymentStatus:order.payment_status});
+    }
+    if(order.status!=="awaiting_payment"||!["not_started","pending","failed"].includes(order.payment_status)){
+      return json(409,{error:"This Marketplace order is not awaiting payment."});
+    }
+    const {data:sellerOrders,error:sellerOrdersError}=await admin.from("marketplace_seller_orders")
+      .select("id,gross_minor,commission_minor")
+      .eq("order_id",orderId);
+    if(sellerOrdersError||!sellerOrders?.length)return json(503,{error:"Marketplace seller orders are unavailable for capture reconciliation."});
+    let captureResponse:Response|undefined;
+    let providerOrder:any=null;
+    try {
+      const token=await getMarketplacePayPalToken();
+      captureResponse=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/checkout/orders/"+encodeURIComponent(providerOrderId)+"/capture",{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer "+token,
+          "Content-Type":"application/json",
+          "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||"",
+          "PayPal-Request-Id":("MINGLORA-MARKETPLACE-CAPTURE-"+attempt.id).slice(0,108)
+        },
+        body:"{}"
+      });
+      providerOrder=await captureResponse.json().catch(()=>null);
+    } catch {
+      // Network outcomes are ambiguous. Query the provider before allowing another capture.
+      try {
+        const token=await getMarketplacePayPalToken();
+        const response=await fetch(MARKETPLACE_PAYPAL_BASE+"/v2/checkout/orders/"+encodeURIComponent(providerOrderId),{
+          headers:{
+            "Authorization":"Bearer "+token,
+            "PayPal-Partner-Attribution-Id":Deno.env.get("MARKETPLACE_PAYPAL_ATTRIBUTION_ID")||""
+          }
+        });
+        providerOrder=await response.json().catch(()=>null);
+        if(!response.ok)return json(202,{ok:false,processing:true,orderId,notice:"Payment status is being verified with PayPal. Do not submit another payment."});
+      } catch {
+        return json(202,{ok:false,processing:true,orderId,notice:"PayPal's response is uncertain. Minglora will not submit a duplicate charge."});
+      }
+    }
+    if(!providerOrder||!Array.isArray(providerOrder.purchase_units)){
+      return json(202,{ok:false,processing:true,orderId,notice:"PayPal has not returned the final capture details yet."});
+    }
+    const rows:any[]=[];
+    const expected=new Map(sellerOrders.map((row:any)=>[row.id,row]));
+    const seen=new Set<string>();
+    for(const unit of providerOrder.purchase_units){
+      const sellerOrderId=String(unit?.reference_id||"");
+      const sellerOrder=expected.get(sellerOrderId);
+      if(!sellerOrder||seen.has(sellerOrderId))return json(409,{error:"PayPal returned an unknown or duplicate seller order reference."});
+      seen.add(sellerOrderId);
+      const captures=Array.isArray(unit?.payments?.captures)?unit.payments.captures:[];
+      if(captures.length!==1)return json(202,{ok:false,processing:true,orderId,notice:"A seller capture is still pending provider confirmation."});
+      const capture=captures[0],status=String(capture?.status||"").toUpperCase();
+      if(status==="DECLINED"){
+        rows.push({sellerOrderId,status:"declined",providerStatus:"DECLINED",failureCode:String(capture?.error?.details?.[0]?.issue||"PAYMENT_DECLINED").slice(0,120)});
+        continue;
+      }
+      if(status!=="COMPLETED"||!capture?.id)return json(202,{ok:false,processing:true,orderId,notice:"A seller capture has not reached a final provider state."});
+      const currency=String(capture?.amount?.currency_code||"").toUpperCase();
+      const amountMinor=Math.round(Number(capture?.amount?.value||0)*100);
+      const breakdown=capture?.seller_receivable_breakdown||{};
+      const processorFeeMinor=breakdown.paypal_fee?.value==null?0:Math.round(Number(breakdown.paypal_fee.value)*100);
+      const sellerNetMinor=breakdown.net_amount?.value==null
+        ? Number(sellerOrder.gross_minor)-Number(sellerOrder.commission_minor)-processorFeeMinor
+        : Math.round(Number(breakdown.net_amount.value)*100);
+      if(currency!==String(order.currency).toUpperCase()||amountMinor!==Number(sellerOrder.gross_minor)||
+         String(capture?.disbursement_mode||"").toUpperCase()!=="DELAYED"||
+         !Number.isSafeInteger(processorFeeMinor)||processorFeeMinor<0||
+         sellerNetMinor!==Number(sellerOrder.gross_minor)-Number(sellerOrder.commission_minor)-processorFeeMinor||
+         sellerNetMinor<=0){
+        return json(409,{error:"PayPal capture amount, currency, delayed disbursement or seller net did not reconcile to Minglora's order."});
+      }
+      rows.push({
+        sellerOrderId,providerCaptureId:String(capture.id),amountMinor,
+        platformFeeMinor:Number(sellerOrder.commission_minor),processorFeeMinor,
+        sellerNetMinor,status:"captured",providerStatus:"COMPLETED"
+      });
+    }
+    if(seen.size!==expected.size)return json(202,{ok:false,processing:true,orderId,notice:"PayPal has not returned every seller capture result yet."});
+    const {data:result,error:reconcileError}=await admin.rpc("complete_marketplace_paypal_capture",{
+      p_buyer_id:buyerId,p_order_id:orderId,p_attempt_id:attempt.id,
+      p_provider_order_id:providerOrderId,p_capture_rows:rows
+    });
+    if(reconcileError)return fail(reconcileError,"PayPal capture completed, but Minglora could not reconcile the seller order breakdown.");
+    return json(200,{ok:true,orderId,result});
   }
 
   if (action === "marketplace_paypal_order_saved") {
