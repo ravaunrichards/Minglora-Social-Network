@@ -74,7 +74,6 @@ export function buildMarketplacePayPalAuthAssertion(clientId, sellerIdentity) {
   const encode = value => Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
   return encode({ alg: 'none' }) + '.' + encode(claim) + '.';
 }
-
 export function buildMarketplacePayPalReferralPayload({
   trackingId,
   returnUrl,
