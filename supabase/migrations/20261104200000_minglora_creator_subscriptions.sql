@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS public.subscription_content_access (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE OR REPLACE FUNCTION public.minglora_has_active_subscription(p_creator_id uuid,p_subscriber_id uuid DEFAULT auth.uid())
-RETURNS boolean LANGUAGE sql STABLE AS $
+RETURNS boolean LANGUAGE sql STABLE AS $active$
  SELECT EXISTS(SELECT 1 FROM public.creator_subscriptions s WHERE s.creator_id=p_creator_id AND s.subscriber_id=p_subscriber_id AND s.status='active' AND (s.current_period_end IS NULL OR s.current_period_end>now()));
-$$;
+$active$;
 REVOKE ALL ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.subscription_creator_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_tiers ENABLE ROW LEVEL SECURITY;
