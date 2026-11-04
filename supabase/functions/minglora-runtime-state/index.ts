@@ -11,6 +11,8 @@ const admin = SUPABASE_URL && adminKey
   : null;
 
 
+let retiredStorageCleanupAttempted = false;
+
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
@@ -1021,6 +1023,27 @@ Deno.serve(async (req: Request) => {
       removedRuntimeAssets,
       revision
     });
+  }
+
+  if (action === "load" && !retiredStorageCleanupAttempted) {
+    retiredStorageCleanupAttempted = true;
+    const retiredBucketName = "minglora-marketplace-media";
+    try {
+      const { data: bucket, error: lookupError } = await admin.storage.getBucket(retiredBucketName);
+      if (!lookupError && bucket) {
+        const { error: emptyError } = await admin.storage.emptyBucket(retiredBucketName);
+        if (emptyError) {
+          console.error("Retired storage bucket could not be emptied.");
+        } else {
+          const { error: deleteError } = await admin.storage.deleteBucket(retiredBucketName);
+          if (deleteError) console.error("Retired empty storage bucket could not be deleted.");
+        }
+      } else if (lookupError && !/not found|404/i.test(String(lookupError.message || ""))) {
+        console.error("Retired storage bucket lookup failed.");
+      }
+    } catch {
+      console.error("Retired storage bucket cleanup failed; app-state loading will continue.");
+    }
   }
 
   if (action === "load" || action === "health") {
