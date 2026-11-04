@@ -81,7 +81,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v77-gifter-progression-1/);
-  assert.match(serviceWorker, /styles\.css\?v=20261104-sounds-studio-1/);
+  assert.match(serviceWorker, /minglora-shell-v78-recharge-exchange-1/);
+  assert.match(serviceWorker, /styles\.css\?v=20261104-recharge-exchange-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
