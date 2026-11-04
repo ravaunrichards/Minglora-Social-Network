@@ -33,19 +33,21 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
 });
 
 test('mobile navigation keeps five clear destinations and secondary features in the organised More page', () => {
-  const nav = html.match(/<div class="mobile-nav"[\\s\\S]*?<\\/div>/)?.[0] || '';
-  assert.ok(nav, 'mobile navigation exists');
+  const navStart = html.indexOf('<div class="mobile-nav"');
+  const navEnd = html.indexOf('</div>', navStart);
+  const nav = html.slice(navStart, navEnd);
+  assert.ok(navStart >= 0 && navEnd > navStart, 'mobile navigation exists');
   for (const [view, icon] of [
     ['feed', 'home'],
     ['for-you', 'explore'],
     ['live', 'live'],
     ['messages', 'messages'],
   ]) {
-    assert.match(nav, new RegExp('data-view="' + view + '"'));
+    assert.ok(nav.includes('data-view="' + view + '"'), view + ' is a primary destination');
     assert.ok(nav.includes(useIcon(icon)), view + ' uses the shared 3D artwork');
   }
-  assert.match(nav,/data-view="more"/);
-  assert.match(nav,/id="mobile-more-nav"/);
+  assert.ok(nav.includes('data-view="more"'), 'More is the fifth primary destination');
+  assert.ok(nav.includes('id="mobile-more-nav"'), 'More is a proper navigation item');
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
   assert.ok(html.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
 });
