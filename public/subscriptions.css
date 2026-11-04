@@ -47,3 +47,27 @@
  .subscription-member-card button{width:100%}
  .subscription-form button{width:100%}
 }
+
+.subscription-form select{box-sizing:border-box;width:100%;min-width:0;padding:12px 13px;border:1px solid var(--border,#dbe2ea);border-radius:12px;background:var(--surface,#fff);color:var(--text,inherit);font:inherit}
+.subscription-subscriber-row,.subscription-admin-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 14px;padding:13px 0;border-top:1px solid var(--border,#e2e8f0)}
+.subscription-subscriber-row strong,.subscription-admin-row strong{min-width:0;overflow-wrap:anywhere}
+.subscription-subscriber-row span,.subscription-subscriber-row small,.subscription-admin-row small{color:var(--muted,#64748b);font-size:.82rem}
+.subscription-subscriber-row small{grid-column:1/-1}
+.subscription-admin-row{grid-template-columns:minmax(0,1fr) minmax(180px,260px) auto;align-items:center}
+.subscription-admin-row>div:first-child{display:grid;gap:5px;min-width:0}
+.subscription-admin-reason{display:grid;gap:6px;font-size:.8rem;color:var(--muted,#64748b)}
+.subscription-admin-reason input{min-width:0;width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--border,#dbe2ea);border-radius:10px;font:inherit}
+.subscription-admin-actions{display:flex;gap:8px;flex-wrap:wrap}
+.subscription-admin-actions button{white-space:nowrap}
+.live-subscriber-option{display:flex!important;align-items:flex-start;gap:10px;padding:12px 13px;border:1px solid var(--border,#dbe2ea);border-radius:12px;background:var(--surface-soft,#f8fafc)}
+.live-subscriber-option input{width:18px;height:18px;flex:0 0 auto;margin:2px 0 0;accent-color:var(--brand,#1769e0)}
+.live-subscriber-option span{display:grid;gap:4px}
+.live-subscriber-option strong{font-size:.9rem}
+.live-subscriber-option small{font-size:.8rem;color:var(--muted,#64748b);line-height:1.45}
+.subscriber-live-pill{background:#ede9fe;color:#6d28d9}
+@media(max-width:700px){
+ .subscription-admin-row{grid-template-columns:minmax(0,1fr);align-items:stretch}
+ .subscription-admin-actions{display:grid;grid-template-columns:1fr 1fr}
+ .subscription-admin-actions button{width:100%}
+ .subscription-subscriber-row{grid-template-columns:minmax(0,1fr) auto}
+}
