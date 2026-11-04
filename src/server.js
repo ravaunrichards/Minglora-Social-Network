@@ -18,6 +18,7 @@ import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../bac
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
+import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -1935,11 +1936,24 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
 
-      m=p.match(/^\/api\/users\/([^/]+)\/(followers|following)$/);
+      m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         const relationshipType=m[2];
+        if(relationshipType==='subscribers'){
+          const subscriptions=listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id);
+          const seen=new Set(),users=[];
+          for(const subscription of subscriptions){
+            const id=subscription.subscriberId;
+            if(!id||seen.has(id))continue;
+            seen.add(id);
+            const member=db.users.find(item=>item.id===id);
+            if(!member||blockedBetween(user.id,member.id)||!canViewProfile(user.id,member))continue;
+            users.push(safeUser(member,user.id));
+          }
+          return json(res,200,{users,count:users.length,totalCount:subscriptions.length,relationship:relationshipType});
+        }
         const sourceField=relationshipType==='followers'?'followedId':'followerId';
         const resultField=relationshipType==='followers'?'followerId':'followedId';
         const ordered=(db.follows||[])
@@ -2294,6 +2308,7 @@ async function route(req, res) {
           followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
           followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
           friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
+          subscribersCount:listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).filter(subscription=>!blockedBetween(user.id,subscription.subscriberId)).length,
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
         });
