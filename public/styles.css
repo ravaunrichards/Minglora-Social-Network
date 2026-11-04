@@ -3333,6 +3333,16 @@ body.auth-mode .auth-screen{
 @media(max-width:620px){.gift-browse-controls,.gift-preview-panel{grid-template-columns:1fr}.gift-preview-stage{min-height:220px}.gift-preview-stage model-viewer{height:240px}.gift-catalogue-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.gift-catalog-card{grid-template-rows:82px auto auto;padding:7px 5px}.live-gift-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.minglora-gift-fx-card{width:min(82vw,340px)}}
 @media(prefers-reduced-motion:reduce){.minglora-gift-fx-card,.minglora-gift-fx-rays{animation-duration:.3s!important;animation-iteration-count:1!important}}
 
+
+/* Each Minglora gift has its own deterministic motion signature over its choreography family. */
+.minglora-gift-fx-model,.minglora-gift-fx-emoji{transform-origin:50% 55%;animation:minglora-gift-object-signature var(--minglora-gift-duration) cubic-bezier(.18,.78,.24,1) both}
+.minglora-gift-fx-rays{animation-duration:var(--minglora-gift-rays-duration,1.5s);animation-delay:var(--minglora-gift-rays-delay,0ms);rotate:var(--minglora-gift-rays-angle,0deg)}
+.minglora-gift-fx-particles{position:absolute;inset:12% 10%;pointer-events:none;overflow:visible}
+.minglora-gift-fx-particle{position:absolute;left:50%;top:50%;width:var(--minglora-particle-size,6px);height:var(--minglora-particle-size,6px);border-radius:50%;opacity:0;background:hsl(var(--minglora-particle-hue,190) 96% 70%);box-shadow:0 0 13px hsl(var(--minglora-particle-hue,190) 96% 70% / .85);animation:minglora-gift-particle var(--minglora-particle-duration,1s) cubic-bezier(.15,.75,.3,1) var(--minglora-particle-delay,0ms) both}
+@keyframes minglora-gift-object-signature{0%{opacity:0;transform:translate3d(0,24px,0) rotateZ(var(--minglora-gift-start-tilt,0deg)) scale(.72);filter:saturate(.82) brightness(.88)}23%{opacity:1;transform:translate3d(var(--minglora-gift-dx,0px),var(--minglora-gift-dy,-28px),0) rotateZ(var(--minglora-gift-tilt,0deg)) scale(var(--minglora-gift-peak,1.12));filter:saturate(1.28) brightness(1.18)}61%{opacity:1;transform:translate3d(calc(var(--minglora-gift-dx,0px)*-.58),calc(var(--minglora-gift-dy,-28px)*-.18),0) rotateZ(var(--minglora-gift-spin,90deg)) scale(var(--minglora-gift-rebound,.96));filter:saturate(1.08) brightness(1.06)}100%{opacity:1;transform:translate3d(0,0,0) rotateZ(0deg) scale(1);filter:none}}
+@keyframes minglora-gift-particle{0%{opacity:0;transform:translate3d(-50%,-50%,0) scale(.12) rotate(0deg)}18%{opacity:.95;transform:translate3d(calc(-50% + var(--minglora-particle-x,0px)*.18),calc(-50% + var(--minglora-particle-y,0px)*.18),0) scale(1)}100%{opacity:0;transform:translate3d(calc(-50% + var(--minglora-particle-x,0px)),calc(-50% + var(--minglora-particle-y,0px)),0) scale(.08) rotate(var(--minglora-particle-spin,180deg))}}
+@media(prefers-reduced-motion:reduce){.minglora-gift-fx-model,.minglora-gift-fx-emoji,.minglora-gift-fx-particle{animation-duration:.3s!important;animation-iteration-count:1!important}}
+
 /* Profile-verification review styling (independent of removed commerce styles). */
 .profile-verification-detail-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 2px 12px}
 .profile-verification-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 1px 13px}
