@@ -2986,7 +2986,7 @@ async function finishCreatorSubscriptionReturn(){
   try{
     const result=await api('/subscriptions/confirm',{method:'POST',body:JSON.stringify({paypalSubscriptionId})});
     toast(result.subscription?.status==='active'?'Subscription activated. Your creator perks are ready.':'PayPal approval received. Your subscription is awaiting confirmation.');
-    await openProfile(state.user.id);
+    await openProfile(result.creatorId||state.user.id);
   }catch(error){toast('PayPal returned, but the subscription could not be confirmed: '+error.message);}
   return true;
 }
