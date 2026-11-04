@@ -2505,7 +2505,7 @@ async function loadProfileGiftGallery(panel,profileData){
     const isOwner=member.id===state.user?.id;
     const period=gallery.period||{};
     const resetAt=period.resetsAt?new Date(period.resetsAt):null;
-    const resetText=resetAt&&!Number.isNaN(resetAt.getTime())?resetAt.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Monday at midnight';
+    const resetText=resetAt&&!Number.isNaN(resetAt.getTime())?resetAt.toLocaleString(undefined,{timeZone:timezone,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Monday at midnight';
     const timezone=String(period.timeZone||'local time');
     const totals=gallery.totals||{gifts:0,giftTypes:0,coins:0,supporters:0};
     const safeMediaUrl=value=>{
