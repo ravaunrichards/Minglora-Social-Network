@@ -2730,6 +2730,8 @@ async function route(req, res) {
           followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
           friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
           subscribersCount:listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).filter(subscription=>!blockedBetween(user.id,subscription.subscriberId)).length,
+          subscriptionPlans:publicCreatorSubscriptionPlans(target.id),
+          viewerSubscription:(()=>{const subscription=activeSubscriptionForPair(target.id,user.id);return subscription?{id:subscription.id,status:subscription.status,planCode:subscription.planCode,planName:subscription.planName,currentPeriodEnd:subscription.currentPeriodEnd||null,cancelAtPeriodEnd:subscription.cancelAtPeriodEnd===true}:null;})(),
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
         });
