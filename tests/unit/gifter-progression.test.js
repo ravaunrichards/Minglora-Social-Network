@@ -86,7 +86,7 @@ test("public gifter badge is earned only by confirmed gifts sent and Level 25 un
   });
   const milestoneBadge = getGifterBadgeSummary(db, "sender");
   assert.equal(milestoneBadge.level, 25);
-  assert.equal(milestoneBadge.tier, "Legend");
+  assert.equal(milestoneBadge.tier, "Platinum");
   assert.equal(milestoneBadge.liveEntranceUnlocked, true);
 });
 
