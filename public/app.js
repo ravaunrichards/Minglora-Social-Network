@@ -2823,6 +2823,7 @@ function createMediaPicker(root,options={}){
   render();
   return {
     hasSelection:()=>entries.length>0,
+    selectedFiles:()=>entries.filter(entry=>!entry.existing&&entry.file).map(entry=>entry.file),
     async upload(){
       const ids=[];
       for(const entry of entries){
