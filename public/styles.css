@@ -3406,3 +3406,8 @@ body.auth-mode .auth-screen{
 @media(max-width:760px){
   .mobile-nav>button{flex:1 1 16.666%;max-width:16.666%;min-width:0}
 }
+
+@media(max-width:760px){
+  .mobile-more-menu .mobile-more-link .nav-3d-icon{width:28px;height:28px}
+  .mobile-more-menu .mobile-more-link small{font-size:10px;font-weight:800;line-height:1.2}
+}
