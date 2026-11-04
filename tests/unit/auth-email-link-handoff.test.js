@@ -31,6 +31,6 @@ test('independent auth handler owns both sign-in and account registration', () =
 
 test('account-auth script and service-worker shell caches use the refreshed version', () => {
   assert.match(login, /submitRegistration\(form\)/);
-  assert.match(serviceWorker, /minglora-shell-v69-account-auth-1/);
+  assert.match(serviceWorker, /minglora-shell-v70-league-arena-1/);
   assert.match(serviceWorker, /auth-login\.js\?v=20261104-account-auth-1/);
 });
