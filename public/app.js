@@ -825,7 +825,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form>"+
     (role==="host"
       ? "<div class='live-gift-host-note'><strong>Your LIVE is ready for gifts</strong><p>Viewers can send you gifts while you are broadcasting.</p></div>"
-      : "<div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><div id='live-gift-grid' class='live-gift-grid'></div><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
+      : "<div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search gifts…' aria-label='Search gifts'><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
     "</aside></div></section>");
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
@@ -909,26 +909,35 @@ async function openLiveRoom(session,role,issuedLiveKit){
       if(walletBalance)walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null
         ?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
       const giftGrid=$("#live-gift-grid");
-      if(giftGrid)giftGrid.innerHTML=liveGiftCatalogue.length?liveGiftCatalogue.map(gift=>"<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+(gift.model_url?"<model-viewer src='"+esc(gift.model_url)+"' alt='"+esc(gift.name)+"' auto-rotate rotation-per-second='34deg' interaction-prompt='none'></model-viewer>":esc(gift.emoji))+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>").join(""):"<p class='muted'>Gifts are temporarily unavailable. You can keep watching the LIVE stream.</p>";
-      document.querySelectorAll("[data-live-gift]").forEach(button=>button.addEventListener("click",async()=>{
-        button.disabled=true;
+      const liveGiftSearch=$("#live-gift-search");
+      const liveGiftMore=$("#live-gift-more");
+      let liveGiftVisible=48,liveGiftQuery="";
+      const drawLiveGiftGrid=()=>{
+        if(!giftGrid)return;
+        const query=liveGiftQuery.trim().toLowerCase();
+        const filtered=liveGiftCatalogue.filter(item=>!query||(item.name+" "+item.category).toLowerCase().includes(query));
+        const shown=filtered.slice(0,liveGiftVisible);
+        giftGrid.innerHTML=shown.length?shown.map(gift=>{
+          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name)+"'>":esc(gift.emoji||"🎁");
+          return "<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>";
+        }).join(""):"<p class='muted'>No gifts match your search.</p>";
+        if(liveGiftMore){liveGiftMore.hidden=shown.length>=filtered.length;liveGiftMore.textContent="Show more gifts · "+Math.max(0,filtered.length-shown.length).toLocaleString()+" remaining";}
+      };
+      drawLiveGiftGrid();
+      liveGiftSearch?.addEventListener("input",()=>{liveGiftQuery=liveGiftSearch.value;liveGiftVisible=48;drawLiveGiftGrid();});
+      liveGiftMore?.addEventListener("click",()=>{liveGiftVisible+=48;drawLiveGiftGrid();});
+      if(giftGrid)giftGrid.addEventListener("click",async event=>{
+        const button=event.target.closest("[data-live-gift]");if(!button)return;
+        const catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift);if(!catalogGift)return;
+        window.MingloraGiftFX?.prime();button.disabled=true;
         try{
-          const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})}),gift=sent.gift;
-          toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
-          const walletResult=await api("/coins/wallet").catch(()=>null);
-          const balanceElement=$("#live-wallet-balance");
-          if(balanceElement)balanceElement.textContent=walletResult?.wallet&&walletResult.wallet.balance_coins!=null
-            ?Number(walletResult.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
-          const stage=$("#live-video-stage"),catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift)||{};
-          if(stage){
-            const effect=document.createElement("div");effect.className="live-gift-effect live-gift-effect-3d";
-            effect.dataset.animationPreset=catalogGift.animation_preset||catalogGift.animation_key||"gift-float";
-            if(catalogGift.model_url)effect.innerHTML="<model-viewer src='"+esc(catalogGift.model_url)+"' alt='"+esc(catalogGift.name||gift.giftName||"Minglora gift")+"' auto-rotate rotation-per-second='78deg' interaction-prompt='none'></model-viewer>";
-            else effect.textContent=gift.emoji||"🎁";
-            stage.append(effect);setTimeout(()=>effect.remove(),2600);
-          }
+          const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})});
+          const gift=sent.gift;toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
+          const walletResult=await api("/coins/wallet").catch(()=>null),balanceElement=$("#live-wallet-balance");
+          if(balanceElement)balanceElement.textContent=walletResult?.wallet&&walletResult.wallet.balance_coins!=null?Number(walletResult.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+          const stage=$("#live-video-stage");if(stage)window.MingloraGiftFX?.mount(stage,catalogGift);
         }catch(error){toast(error.message);}finally{button.disabled=false;}
-      }));
+      });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
     }
     await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);
