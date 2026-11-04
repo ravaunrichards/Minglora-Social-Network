@@ -91,13 +91,13 @@ test('the app shell and service worker cache the same final navigation and stage
 });
 
 
-test('primary navigation stays limited to Home, MeetWave and LIVE', () => {
+test('primary navigation contains only five main destinations', () => {
   const topStart = html.indexOf('<nav class="top-nav"');
   const topEnd = html.indexOf('</nav>', topStart);
   const primaryTop = html.slice(topStart, topEnd);
   assert.deepEqual(
     [...primaryTop.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'meetwave', 'live']
+    ['feed', 'for-you', 'live', 'meetwave', 'leagues']
   );
 
   const mobileStart = html.indexOf('<div class="mobile-nav"');
@@ -105,7 +105,7 @@ test('primary navigation stays limited to Home, MeetWave and LIVE', () => {
   const mobilePrimary = html.slice(mobileStart, moreMenuStart);
   assert.deepEqual(
     [...mobilePrimary.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'meetwave', 'live']
+    ['feed', 'for-you', 'live', 'meetwave', 'leagues']
   );
   assert.match(html, /id="mobile-more-btn"/);
   assert.match(html, /data-view="leagues"/);
