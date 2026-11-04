@@ -81,6 +81,10 @@ Deno.serve(async (req: Request) => {
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
+    "subscription_creator_get", "subscription_apply", "subscription_admin_queue", "subscription_admin_review",
+    "subscription_tier_store", "subscription_enable", "subscription_checkout_prepare",
+    "subscription_checkout_attach", "subscription_my", "subscription_cancel_lookup",
+    "subscription_cancel_mark", "subscription_paypal_webhook",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -188,6 +192,330 @@ Deno.serve(async (req: Request) => {
       .select("id,creator_id,status,amount_minor");
     if (error) return json(503, { error: "Minglora could not update the payout from PayPal's event." });
     return json(200, { updated: (data || []).length });
+  }
+
+
+  if (action === "subscription_creator_get") {
+    const creatorId = String(input.userId || "");
+    if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
+    const [settingsResult, tierResult, countResult] = await Promise.all([
+      admin.from("subscription_creator_settings").select("*").eq("creator_id", creatorId).maybeSingle(),
+      admin.from("subscription_tiers").select("id,creator_id,name,description,currency,price_minor,billing_interval,benefits,is_active,paypal_plan_id").eq("creator_id", creatorId).eq("is_active", true).maybeSingle(),
+      admin.from("creator_subscriptions").select("id", { count: "exact", head: true }).eq("creator_id", creatorId).eq("status", "active")
+    ]);
+    if (settingsResult.error || tierResult.error || countResult.error) return json(503, { error: "Creator subscription settings are unavailable." });
+    return json(200, { settings: settingsResult.data || null, tier: tierResult.data || null, activeSubscribers: countResult.count || 0 });
+  }
+
+  if (action === "subscription_apply") {
+    const creatorId = String(input.userId || ""), note = String(input.applicationNote || "").trim();
+    if (!validUuid(creatorId) || note.length > 1200) return json(400, { error: "Enter a valid subscription creator application." });
+    const { data: existing, error: lookupError } = await admin.from("subscription_creator_settings")
+      .select("application_status").eq("creator_id", creatorId).maybeSingle();
+    if (lookupError) return json(503, { error: "Minglora could not check your creator application." });
+    if (existing?.application_status === "approved") return json(409, { error: "Your creator subscription application is already approved." });
+    if (existing?.application_status === "suspended") return json(403, { error: "This creator account is suspended from subscriptions." });
+    const { data, error } = await admin.from("subscription_creator_settings").upsert({
+      creator_id: creatorId, application_status: "pending", application_note: note,
+      subscriptions_enabled: false, rejection_reason: null, approved_by: null, approved_at: null
+    }, { onConflict: "creator_id" }).select("*").single();
+    if (error) return fail(error, "Minglora could not submit your creator application.");
+    return json(200, { settings: data });
+  }
+
+  if (action === "subscription_admin_queue") {
+    const { data, error } = await admin.from("subscription_creator_settings")
+      .select("creator_id,application_status,application_note,created_at,updated_at,is_verified")
+      .eq("application_status", "pending").order("created_at", { ascending: true }).limit(200);
+    if (error) return json(503, { error: "Creator subscription applications are unavailable." });
+    return json(200, { applications: data || [] });
+  }
+
+  if (action === "subscription_admin_review") {
+    const creatorId = String(input.creatorId || ""), reviewerId = String(input.reviewerId || "");
+    const status = String(input.status || ""), reason = String(input.reason || "").trim();
+    if (!validUuid(creatorId) || !validUuid(reviewerId) || !["approved", "rejected", "suspended"].includes(status) || reason.length > 1000) {
+      return json(400, { error: "Invalid creator subscription review." });
+    }
+    const patch: Record<string, unknown> = {
+      application_status: status, subscriptions_enabled: false,
+      approved_by: status === "approved" ? reviewerId : null,
+      approved_at: status === "approved" ? new Date().toISOString() : null,
+      rejection_reason: status === "approved" ? null : (reason || null),
+      updated_at: new Date().toISOString()
+    };
+    const { data, error } = await admin.from("subscription_creator_settings").update(patch)
+      .eq("creator_id", creatorId).select("*").maybeSingle();
+    if (error) return fail(error, "Minglora could not save the creator subscription review.");
+    if (!data) return json(404, { error: "Creator application not found." });
+    return json(200, { settings: data });
+  }
+
+  if (action === "subscription_tier_store") {
+    const creatorId = String(input.creatorId || ""), productId = String(input.paypalProductId || ""), planId = String(input.paypalPlanId || "");
+    const priceMinor = Number(input.priceMinor), currency = String(input.currency || "USD").toUpperCase();
+    const name = String(input.name || "Monthly membership").trim(), description = String(input.description || "").trim();
+    const benefits = Array.isArray(input.benefits) ? input.benefits.map((item: unknown) => String(item).trim()).filter(Boolean).slice(0, 8) : [];
+    if (!validUuid(creatorId) || !/^PROD-[A-Z0-9]+$/i.test(productId) || !/^P-[A-Z0-9]+$/i.test(planId) ||
+        currency !== "USD" || !Number.isSafeInteger(priceMinor) || priceMinor < 100 || priceMinor > 1000000 || priceMinor % 2 !== 0 ||
+        name.length < 2 || name.length > 48 || description.length > 500 || benefits.some((item: string) => item.length > 100)) {
+      return json(400, { error: "Enter a valid monthly price, title, benefits and PayPal plan." });
+    }
+    const { data: settings, error: settingsError } = await admin.from("subscription_creator_settings")
+      .select("application_status").eq("creator_id", creatorId).maybeSingle();
+    if (settingsError) return json(503, { error: "Creator approval status could not be checked." });
+    if (settings?.application_status !== "approved") return json(403, { error: "Minglora must approve this creator before a subscription price can be published." });
+    const { data: current, error: currentError } = await admin.from("subscription_tiers")
+      .select("id").eq("creator_id", creatorId).eq("is_active", true).maybeSingle();
+    if (currentError) return json(503, { error: "Current subscription tier could not be loaded." });
+    let result;
+    if (current?.id) {
+      result = await admin.from("subscription_tiers").update({
+        name, description, currency, price_minor: priceMinor, billing_interval: "month",
+        benefits, paypal_product_id: productId, paypal_plan_id: planId, is_active: true, updated_at: new Date().toISOString()
+      }).eq("id", current.id).eq("creator_id", creatorId).select("*").single();
+    } else {
+      result = await admin.from("subscription_tiers").insert({
+        creator_id: creatorId, name, description, currency, price_minor: priceMinor,
+        billing_interval: "month", benefits, paypal_product_id: productId, paypal_plan_id: planId, is_active: true
+      }).select("*").single();
+    }
+    if (result.error) return fail(result.error, "Minglora could not save this subscription tier.");
+    return json(200, { tier: result.data });
+  }
+
+  if (action === "subscription_enable") {
+    const creatorId = String(input.creatorId || ""), enabled = input.enabled === true;
+    if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
+    const { data: settings, error: settingsError } = await admin.from("subscription_creator_settings")
+      .select("application_status").eq("creator_id", creatorId).maybeSingle();
+    if (settingsError) return json(503, { error: "Creator approval status could not be checked." });
+    if (enabled) {
+      if (settings?.application_status !== "approved") return json(403, { error: "Minglora approval is required before subscriptions can be enabled." });
+      const { data: tier, error: tierError } = await admin.from("subscription_tiers").select("id,paypal_plan_id")
+        .eq("creator_id", creatorId).eq("is_active", true).maybeSingle();
+      if (tierError) return json(503, { error: "Subscription tier could not be checked." });
+      if (!tier?.paypal_plan_id) return json(409, { error: "Create a PayPal monthly subscription plan before enabling subscriptions." });
+    }
+    const { data, error } = await admin.from("subscription_creator_settings").upsert({
+      creator_id: creatorId, subscriptions_enabled: enabled,
+      application_status: settings?.application_status || "not_applied", updated_at: new Date().toISOString()
+    }, { onConflict: "creator_id" }).select("*").single();
+    if (error) return fail(error, "Minglora could not update subscription availability.");
+    return json(200, { settings: data });
+  }
+
+  if (action === "subscription_checkout_prepare") {
+    const subscriberId = String(input.subscriberId || ""), creatorId = String(input.creatorId || ""), localId = String(input.subscriptionId || "");
+    if (!validUuid(subscriberId) || !validUuid(creatorId) || !validUuid(localId) || subscriberId === creatorId) {
+      return json(400, { error: "Invalid subscription checkout." });
+    }
+    const [settingsResult, tierResult, existingResult] = await Promise.all([
+      admin.from("subscription_creator_settings").select("application_status,subscriptions_enabled")
+        .eq("creator_id", creatorId).maybeSingle(),
+      admin.from("subscription_tiers").select("id,name,description,currency,price_minor,paypal_plan_id,benefits")
+        .eq("creator_id", creatorId).eq("is_active", true).maybeSingle(),
+      admin.from("creator_subscriptions").select("id,status,created_at")
+        .eq("subscriber_id", subscriberId).eq("creator_id", creatorId)
+        .in("status", ["incomplete", "active", "past_due"]).limit(1).maybeSingle()
+    ]);
+    if (settingsResult.error || tierResult.error || existingResult.error) return json(503, { error: "Subscription checkout could not be prepared." });
+    if (settingsResult.data?.application_status !== "approved" || !settingsResult.data?.subscriptions_enabled || !tierResult.data?.paypal_plan_id) {
+      return json(409, { error: "This creator is not currently accepting subscriptions." });
+    }
+    const existing = existingResult.data;
+    if (existing?.status === "active" || existing?.status === "past_due") return json(409, { error: "You already have a subscription to this creator." });
+    if (existing?.status === "incomplete" && Date.now() - new Date(existing.created_at).getTime() < 30 * 60 * 1000) {
+      return json(409, { error: "A PayPal checkout for this creator is already waiting for approval. Finish it or try again later." });
+    }
+    if (existing?.id) await admin.from("creator_subscriptions").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", existing.id);
+    const { data, error } = await admin.from("creator_subscriptions").insert({
+      id: localId, creator_id: creatorId, subscriber_id: subscriberId, tier_id: tierResult.data.id,
+      status: "incomplete", currency: tierResult.data.currency, amount_minor: tierResult.data.price_minor,
+      provider: "paypal", platform_share_bps: 5000, creator_share_bps: 5000
+    }).select("id,creator_id,subscriber_id,tier_id,status,currency,amount_minor").single();
+    if (error) return fail(error, "Minglora could not create the subscription checkout record.");
+    return json(201, { subscription: data, tier: tierResult.data });
+  }
+
+  if (action === "subscription_checkout_attach") {
+    const subscriberId = String(input.subscriberId || ""), subscriptionId = String(input.subscriptionId || ""), paypalSubscriptionId = String(input.paypalSubscriptionId || "");
+    if (!validUuid(subscriberId) || !validUuid(subscriptionId) || !/^I-[A-Z0-9]+$/i.test(paypalSubscriptionId)) {
+      return json(400, { error: "Invalid PayPal subscription reference." });
+    }
+    const { data, error } = await admin.from("creator_subscriptions").update({
+      provider_subscription_id: paypalSubscriptionId, updated_at: new Date().toISOString()
+    }).eq("id", subscriptionId).eq("subscriber_id", subscriberId).eq("status", "incomplete")
+      .select("id,provider_subscription_id").single();
+    if (error || !data) return fail(error, "Minglora could not link the PayPal subscription to this account.");
+    return json(200, { subscription: data });
+  }
+
+  if (action === "subscription_my") {
+    const userId = String(input.userId || "");
+    if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
+    const [memberResult, creatorResult] = await Promise.all([
+      admin.from("creator_subscriptions").select("id,creator_id,subscriber_id,tier_id,status,currency,amount_minor,current_period_start,current_period_end,cancel_at_period_end,created_at")
+        .eq("subscriber_id", userId).order("created_at", { ascending: false }).limit(100),
+      admin.from("creator_subscriptions").select("id,creator_id,subscriber_id,tier_id,status,currency,amount_minor,current_period_start,current_period_end,cancel_at_period_end,created_at")
+        .eq("creator_id", userId).order("created_at", { ascending: false }).limit(100)
+    ]);
+    if (memberResult.error || creatorResult.error) return json(503, { error: "Your subscription list could not be loaded." });
+    const all = [...(memberResult.data || []), ...(creatorResult.data || [])];
+    const tierIds = [...new Set(all.map((row: any) => row.tier_id))];
+    const userIds = [...new Set(all.map((row: any) => row.creator_id === userId ? row.subscriber_id : row.creator_id))];
+    const [tiersResult, profilesResult] = await Promise.all([
+      tierIds.length ? admin.from("subscription_tiers").select("id,name,description,benefits").in("id", tierIds) : Promise.resolve({ data: [], error: null }),
+      userIds.length ? admin.from("profiles").select("id,username").in("id", userIds) : Promise.resolve({ data: [], error: null })
+    ]);
+    if (tiersResult.error || profilesResult.error) return json(503, { error: "Subscription profile details could not be loaded." });
+    return json(200, { subscriptions: all, tiers: tiersResult.data || [], members: profilesResult.data || [] });
+  }
+
+  if (action === "subscription_cancel_lookup") {
+    const userId = String(input.userId || ""), subscriptionId = String(input.subscriptionId || "");
+    if (!validUuid(userId) || !validUuid(subscriptionId)) return json(400, { error: "Invalid subscription." });
+    const { data, error } = await admin.from("creator_subscriptions")
+      .select("id,provider_subscription_id,status,current_period_end,cancel_at_period_end")
+      .eq("id", subscriptionId).eq("subscriber_id", userId).maybeSingle();
+    if (error) return json(503, { error: "Subscription cancellation could not be prepared." });
+    if (!data) return json(404, { error: "Subscription not found." });
+    if (!data.provider_subscription_id || !["active", "past_due"].includes(data.status)) return json(409, { error: "This subscription cannot be canceled right now." });
+    if (data.cancel_at_period_end) return json(200, { subscription: data, alreadyCanceled: true });
+    return json(200, { subscription: data });
+  }
+
+  if (action === "subscription_cancel_mark") {
+    const userId = String(input.userId || ""), subscriptionId = String(input.subscriptionId || "");
+    if (!validUuid(userId) || !validUuid(subscriptionId)) return json(400, { error: "Invalid subscription." });
+    const { data, error } = await admin.from("creator_subscriptions").update({
+      cancel_at_period_end: true, canceled_at: new Date().toISOString(), updated_at: new Date().toISOString()
+    }).eq("id", subscriptionId).eq("subscriber_id", userId).in("status", ["active", "past_due"])
+      .select("id,status,current_period_end,cancel_at_period_end").single();
+    if (error) return fail(error, "Minglora could not record your PayPal cancellation.");
+    return json(200, { subscription: data });
+  }
+
+  if (action === "subscription_paypal_webhook") {
+    const event = input.event as any, details = input.subscriptionDetails as any;
+    const eventId = String(event?.id || ""), eventType = String(event?.event_type || "");
+    const resource = event?.resource || {};
+    const allowedEvents = new Set([
+      "BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED",
+      "BILLING.SUBSCRIPTION.CANCELLED", "BILLING.SUBSCRIPTION.EXPIRED",
+      "BILLING.SUBSCRIPTION.SUSPENDED", "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
+      "PAYMENT.SALE.COMPLETED", "PAYMENT.SALE.REFUNDED", "PAYMENT.SALE.REVERSED"
+    ]);
+    if (eventId.length < 5 || eventId.length > 160 || !allowedEvents.has(eventType)) {
+      return json(400, { error: "Unsupported PayPal subscription event." });
+    }
+    const paypalSubId = String(details?.id || resource.billing_agreement_id || "");
+    const customId = String(details?.custom_id || resource.custom_id || "");
+    const insertResult = await admin.from("subscription_payment_events").insert({
+      provider: "paypal", provider_event_id: eventId, provider_subscription_id: paypalSubId || null,
+      event_type: eventType, payload: event, received_at: new Date().toISOString()
+    }).select("id,processed_at").maybeSingle();
+    let paymentEvent = insertResult.data;
+    if (insertResult.error?.code === "23505") {
+      const { data, error } = await admin.from("subscription_payment_events").select("id,processed_at")
+        .eq("provider", "paypal").eq("provider_event_id", eventId).single();
+      if (error) return json(503, { error: "PayPal event idempotency record could not be checked." });
+      paymentEvent = data;
+    } else if (insertResult.error) {
+      return fail(insertResult.error, "PayPal subscription event could not be stored.");
+    }
+    if (paymentEvent?.processed_at) return json(200, { received: true, duplicate: true });
+    let lookup = admin.from("creator_subscriptions")
+      .select("id,creator_id,subscriber_id,tier_id,status,currency,amount_minor,current_period_start,current_period_end")
+      .eq("provider", "paypal");
+    let subResult: any = null;
+    if (paypalSubId) subResult = await lookup.eq("provider_subscription_id", paypalSubId).maybeSingle();
+    if ((!subResult || !subResult.data) && validUuid(customId)) {
+      subResult = await admin.from("creator_subscriptions")
+        .select("id,creator_id,subscriber_id,tier_id,status,currency,amount_minor,current_period_start,current_period_end")
+        .eq("id", customId).maybeSingle();
+    }
+    if (subResult?.error) return json(503, { error: "PayPal event subscription could not be matched." });
+    if (!subResult?.data) {
+      await admin.from("subscription_payment_events").update({ processing_error: "No matching local subscription record." }).eq("id", paymentEvent.id);
+      return json(202, { received: true, matched: false });
+    }
+    const subscription = subResult.data;
+    const detailsStatus = String(details?.status || "");
+    const periodEndRaw = details?.billing_info?.next_billing_time || details?.billing_info?.final_payment_time || null;
+    const periodEnd = periodEndRaw && !Number.isNaN(Date.parse(periodEndRaw)) ? new Date(periodEndRaw).toISOString() : subscription.current_period_end;
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+    if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" || eventType === "BILLING.SUBSCRIPTION.UPDATED") {
+      if (detailsStatus === "ACTIVE" || eventType === "BILLING.SUBSCRIPTION.ACTIVATED") {
+        patch.status = "active";
+        patch.current_period_start = details?.billing_info?.last_payment?.time || subscription.current_period_start || new Date().toISOString();
+        patch.current_period_end = periodEnd;
+      } else if (detailsStatus === "SUSPENDED") {
+        patch.status = "past_due";
+      } else if (detailsStatus === "CANCELLED" || detailsStatus === "EXPIRED") {
+        patch.status = periodEnd && Date.parse(periodEnd) > Date.now() ? "active" : "canceled";
+        patch.cancel_at_period_end = true;
+      }
+    } else if (eventType === "BILLING.SUBSCRIPTION.CANCELLED") {
+      patch.cancel_at_period_end = true;
+      patch.canceled_at = new Date().toISOString();
+      patch.status = periodEnd && Date.parse(periodEnd) > Date.now() ? "active" : "canceled";
+      if (periodEnd) patch.current_period_end = periodEnd;
+    } else if (eventType === "BILLING.SUBSCRIPTION.EXPIRED") {
+      patch.status = "expired";
+    } else if (eventType === "BILLING.SUBSCRIPTION.SUSPENDED" || eventType === "BILLING.SUBSCRIPTION.PAYMENT.FAILED") {
+      patch.status = "past_due";
+    } else if (eventType === "PAYMENT.SALE.COMPLETED") {
+      const amountNode = resource?.amount || resource?.amount_with_breakdown?.gross_amount || {};
+      const amountValue = Number(amountNode.total ?? amountNode.value);
+      const amountMinor = Math.round(amountValue * 100);
+      const currency = String(amountNode.currency || amountNode.currency_code || "").toUpperCase();
+      const transactionId = String(resource.id || "");
+      if (!Number.isSafeInteger(amountMinor) || amountMinor !== Number(subscription.amount_minor) ||
+          amountMinor % 2 !== 0 || currency !== subscription.currency || transactionId.length < 5) {
+        await admin.from("subscription_payment_events").update({ processing_error: "PayPal recurring payment amount or currency did not match the creator tier." }).eq("id", paymentEvent.id);
+        return json(409, { error: "PayPal recurring payment does not match the saved subscription price. Reconciliation is required." });
+      }
+      const half = amountMinor / 2;
+      const { error: ledgerError } = await admin.from("subscription_earnings_ledger").upsert({
+        subscription_id: subscription.id, payment_event_id: paymentEvent.id,
+        provider_transaction_id: transactionId,
+        creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
+        currency, gross_minor: amountMinor, creator_minor: half, platform_minor: half, entry_type: "payment"
+      }, { onConflict: "provider_transaction_id", ignoreDuplicates: true });
+      if (ledgerError) return fail(ledgerError, "PayPal payment was received but Minglora could not write the earnings ledger.");
+      patch.status = "active";
+      patch.current_period_start = resource.create_time || new Date().toISOString();
+      patch.current_period_end = periodEnd;
+    } else if (eventType === "PAYMENT.SALE.REFUNDED" || eventType === "PAYMENT.SALE.REVERSED") {
+      const amountNode = resource?.amount || {};
+      const amountValue = Number(amountNode.total ?? amountNode.value);
+      const amountMinor = Math.round(amountValue * 100);
+      const currency = String(amountNode.currency || amountNode.currency_code || subscription.currency).toUpperCase();
+      const refundId = String(resource.id || eventId);
+      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor % 2 !== 0 || currency !== subscription.currency) {
+        await admin.from("subscription_payment_events").update({ processing_error: "PayPal refund or reversal amount requires manual reconciliation." }).eq("id", paymentEvent.id);
+        return json(409, { error: "PayPal refund or reversal requires manual reconciliation." });
+      }
+      const half = amountMinor / 2;
+      const { error: refundError } = await admin.from("subscription_earnings_ledger").insert({
+        subscription_id: subscription.id, payment_event_id: paymentEvent.id,
+        provider_transaction_id: refundId,
+        creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
+        currency, gross_minor: amountMinor, creator_minor: half, platform_minor: half, entry_type: "refund"
+      });
+      if (refundError && refundError.code !== "23505") return fail(refundError, "PayPal refund was received but Minglora could not reconcile the earnings ledger.");
+      if (eventType === "PAYMENT.SALE.REVERSED") patch.status = "past_due";
+    }
+
+    const { error: updateError } = await admin.from("creator_subscriptions").update(patch).eq("id", subscription.id);
+    if (updateError) return fail(updateError, "PayPal event could not update subscription status.");
+    const { error: doneError } = await admin.from("subscription_payment_events").update({
+      subscription_id: subscription.id, processed_at: new Date().toISOString(), processing_error: null
+    }).eq("id", paymentEvent.id);
+    if (doneError) return fail(doneError, "PayPal event was applied but its processing marker could not be saved.");
+    return json(200, { received: true, processed: true });
   }
 
   if (action === "relationship_follow" || action === "relationship_unfollow") {
