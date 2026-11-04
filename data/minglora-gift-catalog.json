@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated_at": "2026-11-04",
-  "gift_count": 1659,
+  "gift_count": 1658,
   "attribution": {
     "catalog_sources": [
       "StreamDPS TikTok gifts pages 1–9",
@@ -87,10 +87,10 @@
     {
       "code": "alien-pet-1m4a8nx",
       "name": "Alien Pet",
-      "category": "celebrations",
-      "emoji": "🎉",
-      "animation_key": "celebration-burst",
-      "animation_preset": "celebration-burst",
+      "category": "animals",
+      "emoji": "👽",
+      "animation_key": "creature-entrance",
+      "animation_preset": "creature-entrance",
       "sound_preset": "celebrations-10",
       "animation_duration_ms": 1450,
       "coin_price": 1,
@@ -14019,10 +14019,10 @@
     {
       "code": "alien-buddy-bzqlhg",
       "name": "Alien Buddy",
-      "category": "celebrations",
-      "emoji": "🎉",
-      "animation_key": "celebration-burst",
-      "animation_preset": "celebration-burst",
+      "category": "animals",
+      "emoji": "👽",
+      "animation_key": "creature-entrance",
+      "animation_preset": "creature-entrance",
       "sound_preset": "celebrations-5",
       "animation_duration_ms": 1450,
       "coin_price": 399,
@@ -24729,10 +24729,10 @@
     {
       "code": "dj-alien-1rzsc5k",
       "name": "DJ Alien",
-      "category": "music",
-      "emoji": "🎵",
-      "animation_key": "soundwave-ripple",
-      "animation_preset": "soundwave-ripple",
+      "category": "animals",
+      "emoji": "👽",
+      "animation_key": "creature-entrance",
+      "animation_preset": "creature-entrance",
       "sound_preset": "music-9",
       "animation_duration_ms": 1450,
       "coin_price": 5000,
@@ -29854,24 +29854,6 @@
       "model_url": "/assets/gifts/catalog/holiday-universe-xmfre.gltf",
       "asset_version": "1",
       "source_ids_count": 1,
-      "source_label": "catalogue"
-    },
-    {
-      "code": "upgraded-gift-nme6xh",
-      "name": "upgraded gift",
-      "category": "celebrations",
-      "emoji": "🎉",
-      "animation_key": "celebration-burst",
-      "animation_preset": "celebration-burst",
-      "sound_preset": "celebrations-6",
-      "animation_duration_ms": 1450,
-      "coin_price": null,
-      "active": true,
-      "sort_order": 16590,
-      "image_url": "/assets/gifts/catalog/upgraded-gift-nme6xh.svg",
-      "model_url": "/assets/gifts/catalog/upgraded-gift-nme6xh.gltf",
-      "asset_version": "1",
-      "source_ids_count": 2,
       "source_label": "catalogue"
     }
   ]
