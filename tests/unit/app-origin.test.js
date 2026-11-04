@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appOrigin } from '../../src/app-origin.js';
+import { appOrigin, isAllowedAppOrigin } from '../../src/app-origin.js';
 
 const request = {
   headers: {
@@ -41,4 +41,23 @@ test('invalid development forwarded hosts fall back safely to local development'
     appOrigin({ headers: { 'x-forwarded-host': 'not a valid host' }, socket: {} }, { NODE_ENV: 'development' }),
     'http://localhost:3000'
   );
+});
+
+
+test('same-origin writes accept the canonical Render domain alongside a configured custom domain', () => {
+  const env = { NODE_ENV: 'production', APP_ORIGIN: 'https://social.example.com' };
+  assert.equal(isAllowedAppOrigin('https://minglora-social-network.onrender.com', request, env), true);
+  assert.equal(isAllowedAppOrigin('https://social.example.com', request, env), true);
+});
+
+test('same-origin writes reject unconfigured domains and lookalike hosts', () => {
+  const env = { NODE_ENV: 'production', APP_ORIGIN: 'https://social.example.com' };
+  assert.equal(isAllowedAppOrigin('https://attacker.example', request, env), false);
+  assert.equal(isAllowedAppOrigin('https://minglora-social-network.onrender.com.attacker.example', request, env), false);
+  assert.equal(isAllowedAppOrigin('javascript:alert(1)', request, env), false);
+});
+
+test('development same-origin writes continue to match the forwarded local origin', () => {
+  assert.equal(isAllowedAppOrigin('http://localhost:3000', request, { NODE_ENV: 'development' }), true);
+  assert.equal(isAllowedAppOrigin('http://attacker.example', request, { NODE_ENV: 'development' }), false);
 });

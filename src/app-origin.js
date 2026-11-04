@@ -36,3 +36,26 @@ export function appOrigin(req, env = process.env) {
     return 'http://localhost:3000';
   }
 }
+
+
+export function isAllowedAppOrigin(suppliedOrigin, req, env = process.env) {
+  let origin;
+  try {
+    const parsed = new URL(String(suppliedOrigin || ''));
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    origin = parsed.origin;
+  } catch {
+    return false;
+  }
+
+  if (env.NODE_ENV === 'production') {
+    // Keep the canonical Render hostname valid even when APP_ORIGIN is also
+    // configured for a custom domain. This prevents a stale custom-origin
+    // setting from blocking same-origin account creation and sign-in on Render.
+    const allowed = [DEFAULT_PRODUCTION_ORIGIN, configuredProductionOrigin(env.APP_ORIGIN)]
+      .filter(Boolean);
+    return allowed.includes(origin);
+  }
+
+  return origin === appOrigin(req, env);
+}

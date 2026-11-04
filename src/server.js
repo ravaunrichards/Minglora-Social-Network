@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { appOrigin } from './app-origin.js';
+import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
@@ -238,12 +238,7 @@ function isSameOriginApiWrite(req) {
   if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') return false;
   const suppliedOrigin = req.headers.origin;
   if (!suppliedOrigin) return true;
-  try {
-    const origin = new URL(String(suppliedOrigin));
-    return ['http:', 'https:'].includes(origin.protocol) && origin.origin === appOrigin(req);
-  } catch {
-    return false;
-  }
+  return isAllowedAppOrigin(suppliedOrigin, req);
 }
 function appSessionCookie(sid) {
   return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`;
@@ -2986,6 +2981,7 @@ async function route(req, res) {
         // not server faults; keep them out of the error-level incident stream.
         console.info('[Minglora API client response]', JSON.stringify({
           status,
+          route: p,
           message: String(e.message || 'Request rejected').slice(0, 160)
         }));
       }

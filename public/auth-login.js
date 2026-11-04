@@ -1,8 +1,9 @@
-/* Independent sign-in recovery handler.
- * Captures the login form before app.js target listeners so login remains usable
- * even if the large application bundle fails during startup. */
+/* Independent account-auth handler.
+ * Captures login and registration before app.js target listeners so both flows
+ * remain usable even if the large social-network bundle fails during startup. */
 (() => {
   const LOGIN_FORM_SELECTOR = '#login-form';
+  const REGISTER_FORM_SELECTOR = '#register-form';
   const jsonRequest = async (path, payload) => {
     let response;
     try {
@@ -20,7 +21,10 @@
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = new Error(data.error || 'Sign-in failed (HTTP ' + response.status + ').');
+      const fallback = path === '/auth/register'
+        ? 'Minglora could not create your account (HTTP ' + response.status + ').'
+        : 'Sign-in failed (HTTP ' + response.status + ').';
+      const error = new Error(data.error || fallback);
       error.status = response.status;
       throw error;
     }
@@ -35,6 +39,11 @@
   const reloadIntoSession = () => {
     // A fresh document read runs the normal /auth/me bootstrap with the new HttpOnly sid cookie.
     window.location.replace(window.location.pathname + window.location.search);
+  };
+
+  const showRegistrationError = message => {
+    const target = document.querySelector('#register-error');
+    if (target) target.textContent = message;
   };
 
   const requestMfa = challengeId => new Promise(resolve => {
@@ -106,14 +115,51 @@
     }
   }
 
+
+  async function submitRegistration(form) {
+    const button = form.querySelector('button[type="submit"]');
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Creating account…';
+    showRegistrationError('');
+    try {
+      const values = new FormData(form);
+      const result = await jsonRequest('/auth/register', {
+        name: String(values.get('name') || '').trim(),
+        username: String(values.get('username') || '').trim(),
+        email: String(values.get('email') || '').trim(),
+        phoneNumber: String(values.get('phoneNumber') || '').trim(),
+        password: String(values.get('password') || '')
+      });
+      if (result.confirmationRequired) {
+        throw new Error('Minglora returned an unexpected email-confirmation requirement. Your account has not been signed in; please try again.');
+      }
+      if (!result.user || !result.user.id) {
+        throw new Error('Minglora did not finish creating your account. Please try again.');
+      }
+      button.textContent = 'Opening Minglora…';
+      reloadIntoSession();
+    } catch (cause) {
+      showRegistrationError(cause.message || 'Minglora could not create your account. Please try again.');
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = 'Create account';
+    }
+  }
+
   // Capture phase runs before app.js's form-level listener. Stop the old handler
   // from issuing a second password request.
   document.addEventListener('submit', event => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.matches(LOGIN_FORM_SELECTOR)) return;
+    if (!(form instanceof HTMLFormElement)) return;
+    const isLogin = form.matches(LOGIN_FORM_SELECTOR);
+    const isRegistration = form.matches(REGISTER_FORM_SELECTOR);
+    if (!isLogin && !isRegistration) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    void submitLogin(form);
+    if (isLogin) void submitLogin(form);
+    else void submitRegistration(form);
   }, true);
 
   // Give visible feedback when native email/password constraints prevent submit.

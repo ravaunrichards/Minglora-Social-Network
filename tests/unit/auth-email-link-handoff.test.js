@@ -19,3 +19,18 @@ test('email verification links wait for a person before opening Supabase one-tim
   assert.match(setup, /#auth_confirmation=/);
   assert.match(serviceWorker, /email-link handoff refresh/);
 });
+
+
+test('independent auth handler owns both sign-in and account registration', () => {
+  assert.match(login, /REGISTER_FORM_SELECTOR\s*=\s*'#register-form'/);
+  assert.match(login, /jsonRequest\('\/auth\/register'/);
+  assert.match(login, /jsonRequest\('\/auth\/login'/);
+  assert.match(login, /event\.stopImmediatePropagation\(\)/);
+  assert.match(login, /showRegistrationError/);
+});
+
+test('account-auth script and service-worker shell caches use the refreshed version', () => {
+  assert.match(login, /submitRegistration\(form\)/);
+  assert.match(serviceWorker, /minglora-shell-v69-account-auth-1/);
+  assert.match(serviceWorker, /auth-login\.js\?v=20261104-account-auth-1/);
+});
