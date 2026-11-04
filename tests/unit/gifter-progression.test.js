@@ -30,6 +30,7 @@ test("only confirmed positive gifts are recorded and each transaction is unique"
   assert.equal(recordGifterGift(db, details).reason, "duplicate_transaction");
   assert.equal(recordGifterGift(db, { ...details, giftId: "txn-2", coinAmount: 0 }).recorded, false);
   assert.equal(db.gifterProgressionLedger.length, 1);
+  assert.equal(db.gifterProgressionLedger[0].id, "txn-1");
 });
 
 test("gifter overview includes sent gifts only and ranks only real members", () => {
