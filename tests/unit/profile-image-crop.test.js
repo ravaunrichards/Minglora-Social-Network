@@ -56,11 +56,11 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 });
 
 test('the refreshed shell and service worker load the profile crop editor and its styles',()=>{
-  assert.match(html,/styles\.css\?v=20261104-recharge-exchange-1/);
-  assert.match(html,/app\.js\?v=20261104-recharge-exchange-1/);
-  assert.match(worker,/minglora-shell-v78-recharge-exchange-1/);
-  assert.match(worker,/styles\.css\?v=20261104-recharge-exchange-1/);
-  assert.match(worker,/app\.js\?v=20261104-recharge-exchange-1/);
+  assert.match(html,/styles\.css\?v=20261104-money-to-coins-1/);
+  assert.match(html,/app\.js\?v=20261104-money-to-coins-1/);
+  assert.match(worker,/minglora-shell-v79-money-to-coins-1/);
+  assert.match(worker,/styles\.css\?v=20261104-money-to-coins-1/);
+  assert.match(worker,/app\.js\?v=20261104-money-to-coins-1/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
