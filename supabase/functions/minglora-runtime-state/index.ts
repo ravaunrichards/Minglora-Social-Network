@@ -217,12 +217,48 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "economy_catalog") {
-    const [packagesResult, giftsResult] = await Promise.all([
-      admin.from("coin_packages").select("code,name,coin_amount,price_minor,currency").eq("active", true).order("sort_order"),
-      admin.from("live_gift_catalog").select("code,name,category,emoji,animation_key,coin_price,image_url,model_url,animation_preset,sound_preset,animation_duration_ms,asset_version").eq("active", true).order("sort_order")
-    ]);
-    if (packagesResult.error || giftsResult.error) return json(503, { error: "Minglora coin and gift catalogue is unavailable." });
-    return json(200, { packages: packagesResult.data || [], gifts: giftsResult.data || [], currency: "USD", coinName: "Minglora Coins" });
+    const packagesPromise = admin.from("coin_packages")
+      .select("code,name,coin_amount,price_minor,currency")
+      .eq("active", true)
+      .order("sort_order")
+      .order("code");
+
+    // PostgREST commonly caps a single response at 1,000 rows. Fetch the
+    // complete active gift catalogue in stable, non-overlapping pages.
+    const gifts: any[] = [];
+    const pageSize = 1000;
+    let giftsError: any = null;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await admin.from("live_gift_catalog")
+        .select("code,name,category,emoji,animation_key,coin_price,image_url,model_url,animation_preset,sound_preset,animation_duration_ms,asset_version")
+        .eq("active", true)
+        .order("sort_order")
+        .order("code")
+        .range(offset, offset + pageSize - 1);
+      if (error) {
+        giftsError = error;
+        break;
+      }
+      const page = data || [];
+      gifts.push(...page);
+      if (page.length < pageSize) break;
+    }
+    const packagesResult = await packagesPromise;
+    if (packagesResult.error || giftsError) {
+      console.error("[Minglora economy catalogue] Could not load every catalogue page.", {
+        packagesError: packagesResult.error?.message || null,
+        giftsError: giftsError?.message || null,
+        loadedGiftCount: gifts.length
+      });
+      return json(503, { error: "Minglora coin and gift catalogue is unavailable. Please retry." });
+    }
+    return json(200, {
+      packages: packagesResult.data || [],
+      gifts,
+      giftCount: gifts.length,
+      currency: "USD",
+      coinName: "Minglora Coins"
+    });
   }
 
   if (action === "economy_wallet") {
