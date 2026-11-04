@@ -10,6 +10,15 @@ const manifest = JSON.parse(readFileSync(path.join(root, "data/minglora-gift-cat
 const gifts = manifest.gifts;
 const assetRoot = path.join(root, "public/assets/gifts/catalog");
 const generatedStamp = path.join(assetRoot, "catalog-build.json");
+function giftAnimationMotionSignature(gift) {
+  let seed = 2166136261;
+  for (const ch of [gift.animation_key, gift.code, gift.name].join("|")) {
+    seed ^= ch.charCodeAt(0);
+    seed = Math.imul(seed, 16777619);
+  }
+  seed >>>= 0;
+  return [seed % 81 - 40,-18 - ((seed >>> 7) % 65),(seed >>> 13) % 71 - 35,((seed >>> 19) % 2 ? 1 : -1) * (50 + ((seed >>> 20) % 311)),(104 + ((seed >>> 3) % 27)) / 100,(90 + ((seed >>> 11) % 15)) / 100,seed % 360,750 + ((seed >>> 9) % 1400),24 + ((seed >>> 15) % 90),(seed >>> 4) % 360].join("|");
+}
 if (!existsSync(generatedStamp)) {
   execFileSync(process.execPath, [path.join(root, "scripts/generate-minglora-gifts.mjs")], { stdio: "inherit" });
 } else {
@@ -27,11 +36,10 @@ test("every active Minglora gift has a unique code", () => {
   for (const code of codes) assert.match(code, /^[a-z0-9_-]{1,59}$/);
 });
 
-test("every gift has one distinct name and coin-price pair", () => {
-  const pairs = gifts.map(gift => gift.name.toLocaleLowerCase("en-US") + "|" + gift.coin_price);
-  assert.equal(new Set(pairs).size, pairs.length);
-  assert.ok(gifts.some(gift => gifts.filter(other => other.name === gift.name).length > 1),
-    "source price variants should remain represented");
+test("every gift has a unique display name and price variants are clearly labeled", () => {
+  const names = gifts.map(gift => gift.name.trim().toLocaleLowerCase("en-US"));
+  assert.equal(new Set(names).size, gifts.length);
+  assert.equal(gifts.filter(gift => gift.name.endsWith(" — Premium Edition")).length, 19);
 });
 
 test("all gifts have valid coin prices and unique original asset paths", () => {
@@ -63,6 +71,11 @@ test("every gift has an animation and generated-sound profile", () => {
   }
 });
 
+test("every gift has its own animation key and a distinct movement signature", () => {
+  assert.equal(new Set(gifts.map(gift => gift.animation_key)).size, gifts.length);
+  assert.equal(new Set(gifts.map(giftAnimationMotionSignature)).size, gifts.length);
+});
+
 test("Minglora gift identities and generated asset paths are platform-neutral", () => {
   assert.doesNotMatch(JSON.stringify(manifest), /tiktok/i);
   for (const gift of gifts) {
@@ -83,6 +96,8 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
   const generated = readdirSync(assetRoot);
   assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length);
   assert.equal(generated.filter(name => name.endsWith(".gltf")).length, gifts.length);
+  const svgPayloads = new Set();
+  const modelPayloads = new Set();
   for (const gift of gifts) {
     const svgPath = path.join(assetRoot, gift.code + ".svg");
     const modelPath = path.join(assetRoot, gift.code + ".gltf");
@@ -91,11 +106,16 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
     const svg = readFileSync(svgPath, "utf8");
     assert.ok(svg.startsWith("<svg"), gift.name + " SVG should be a valid SVG document");
     assert.ok(svg.includes("Minglora") || svg.includes("aria-label"), gift.name);
-    const model = JSON.parse(readFileSync(modelPath, "utf8"));
+    svgPayloads.add(svg);
+    const modelText = readFileSync(modelPath, "utf8");
+    const model = JSON.parse(modelText);
     assert.equal(model.asset?.version, "2.0", gift.name);
     assert.ok(model.meshes?.[0]?.primitives?.length > 0, gift.name);
     assert.ok((model.buffers?.[0]?.uri || "").startsWith("data:application/octet-stream;base64,"), gift.name + " GLTF must include embedded mesh data");
+    modelPayloads.add(modelText);
   }
+  assert.equal(svgPayloads.size, gifts.length, "Every gift must have different generated SVG artwork");
+  assert.equal(modelPayloads.size, gifts.length, "Every gift must have a different generated 3D model payload");
 });
 
 test("Livecade source gaps and coin-price variants remain in the Minglora manifest", () => {
@@ -108,10 +128,10 @@ test("Livecade source gaps and coin-price variants remain in the Minglora manife
     ["It's a festival!",7000],["KLCC",7999],["Alpha Wolves Scepter",15000],
     ["Golden Falcons Scepter",15000],["Keeper of Atlantis",15000],["Legacy in Bloom",15000],
     ["Noble Stallions Scepter",15000],["Royal Lions Scepter",15000],["Ultimate Match",15000],
-    ["Jakarta Roundabout",16999],["Legacy in Bloom",21000],["Goal of Glory",21500],
-    ["Flamenco dancers",25999],["Thumbs Up",2],["Baseball",5],["Music Bubbles",100],
-    ["Dream Team",500],["Crocodile",15000],["Level Ship",21000],
-    ["Julius the Champion",43999],["Valerian's Oath",43999]
+    ["Jakarta Roundabout",16999],["Legacy in Bloom — Premium Edition",21000],["Goal of Glory",21500],
+    ["Flamenco dancers",25999],["Thumbs Up",2],["Baseball — Premium Edition",5],["Music Bubbles",100],
+    ["Dream Team — Premium Edition",500],["Crocodile — Premium Edition",15000],["Level Ship — Premium Edition",21000],
+    ["Julius the Champion — Premium Edition",43999],["Valerian's Oath — Premium Edition",43999]
   ];
   for (const [name,price] of required) {
     assert.ok(gifts.some(gift => gift.name === name && gift.coin_price === price), name + " at " + price + " coins");
