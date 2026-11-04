@@ -143,3 +143,80 @@ test("tied daily boundaries do not cause arbitrary promotions or demotions", () 
   assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-a").leagueClass, "D5");
   assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-b").leagueClass, "D5");
 });
+
+
+test("League reads collapse duplicate creator profiles and repeated active matches without double-counting scores", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const profile = {
+    userId: "creator-a", region: "JAMAICA", leagueClass: "D5",
+    fragments: 2, leagueShields: 0, lifetimeGiftPoints: 20,
+    seasonPoints: 15, seasonKey: "2026-11-02",
+    matchRankIndex: 0, matchRankPoints: 0,
+    matchWins: 0, matchLosses: 0, matchDraws: 0,
+    createdAt: now.toISOString(), updatedAt: now.toISOString()
+  };
+  db.creatorLeagueProfiles.push({ ...profile }, { ...profile, updatedAt: new Date(now.getTime() + 1000).toISOString() });
+  const match = {
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    status: "live", scores: { challenger: 20, opponent: 10 },
+    supporters: [], activeEffects: [], pendingEffects: [], events: [],
+    timeBoostUsed: { challenger: false, opponent: false },
+    createdAt: now.toISOString(), startedAt: now.toISOString(),
+    endsAt: new Date(now.getTime() + 300000).toISOString()
+  };
+  db.creatorLeagueMatches.push(
+    { ...match, id: "match-copy-1" },
+    { ...match, id: "match-copy-2", scores: { challenger: "20", opponent: "10" } }
+  );
+
+  ensureCreatorLeagueProfile(db, "creator-a", "JAMAICA", now);
+  const matches = listCreatorLeagueMatches(db, db.users, "creator-a", now);
+
+  assert.equal(db.creatorLeagueProfiles.length, 1);
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].scores.challenger, 20);
+  assert.equal(matches[0].scores.opponent, 10);
+});
+
+test("completed match history uses the supplied clock rather than the server wall clock", () => {
+  const db = blankDb();
+  const now = new Date("2020-01-10T12:00:00.000Z");
+  db.creatorLeagueMatches.push({
+    id: "recent-completed-match",
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    status: "completed", result: "win", winnerId: "creator-a",
+    scores: { challenger: 10, opponent: 5 },
+    supporters: [], activeEffects: [], pendingEffects: [], events: [],
+    timeBoostUsed: { challenger: false, opponent: false },
+    createdAt: "2020-01-05T11:00:00.000Z",
+    startedAt: "2020-01-05T11:00:00.000Z",
+    completedAt: "2020-01-05T12:00:00.000Z"
+  });
+
+  const matches = listCreatorLeagueMatches(db, db.users, "creator-a", now);
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].id, "recent-completed-match");
+});
+
+test("legacy string match scores are normalized before viewer support is added", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const match = {
+    id: "string-score-match",
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    status: "live", scores: { challenger: "0", opponent: "0" },
+    supporters: [], activeEffects: [], pendingEffects: [], events: [],
+    timeBoostUsed: { challenger: false, opponent: false },
+    createdAt: now.toISOString(), startedAt: now.toISOString(),
+    endsAt: new Date(now.getTime() + 300000).toISOString()
+  };
+  db.creatorLeagueMatches.push(match);
+
+  supportCreatorLeagueMatch(db, match, "viewer-1", "challenger", now);
+  assert.equal(match.scores.challenger, 3);
+  assert.equal(typeof match.scores.challenger, "number");
+});
