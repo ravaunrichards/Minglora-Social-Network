@@ -3413,5 +3413,41 @@ body.auth-mode .auth-screen{
 }
 
 
-/* Six profile statistics remain readable on narrow phones by using a balanced 3-by-2 grid. */
-@media(max-width:560px){.profile-counts{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-counts>*:nth-child(3n){border-right:0}.profile-counts>*:nth-child(-n+3){border-bottom:1px solid var(--line)}.profile-counts>*:nth-child(n+4){padding-top:9px}}
+
+/* Keep all six profile statistics on one compact row at every viewport width. */
+.profile-counts{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  align-items:center;
+  width:100%;
+  min-width:0;
+  gap:0;
+  padding:8px 0 0;
+  overflow:hidden;
+}
+.profile-counts>*{
+  min-width:0;
+  padding:4px 1px;
+  border-right:1px solid var(--line);
+  gap:2px;
+}
+.profile-counts>*:last-child{border-right:0}
+.profile-counts strong{
+  max-width:100%;
+  font-size:clamp(11px,2.6vw,17px);
+  line-height:1.15;
+  white-space:nowrap;
+}
+.profile-counts span{
+  max-width:100%;
+  font-size:clamp(7px,1.65vw,10px);
+  line-height:1.15;
+  white-space:nowrap;
+  letter-spacing:-.02em;
+}
+@media(max-width:380px){
+  .profile-counts{padding-top:7px}
+  .profile-counts>*{padding-left:0;padding-right:0}
+  .profile-counts strong{font-size:11px}
+  .profile-counts span{font-size:7px;letter-spacing:-.035em}
+}
