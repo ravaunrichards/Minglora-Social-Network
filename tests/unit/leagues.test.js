@@ -258,3 +258,48 @@ test("stale live snapshots never revive a completed League Match during deduplic
   assert.equal(matches[0].ratingAwarded, true);
   assert.equal(matches[0].winnerId, "creator-a");
 });
+
+
+test("League actions update the canonical record after duplicate matches are compacted", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const base = {
+    id: "duplicate-action-match",
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    giftMode: "all", selectedGiftCode: null, status: "pending",
+    scores: { challenger: 0, opponent: 0 }, supporters: [],
+    activeEffects: [], pendingEffects: [], events: [],
+    timeBoostUsed: { challenger: false, opponent: false },
+    timerMode: "flexible",
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + 120000).toISOString()
+  };
+  db.creatorLeagueMatches.push({ ...base }, { ...base });
+
+  const staleAcceptReference = db.creatorLeagueMatches[0];
+  const accepted = acceptCreatorLeagueMatch(db, staleAcceptReference, "creator-b", now);
+  assert.equal(accepted.status, "live");
+  assert.equal(db.creatorLeagueMatches.length, 1);
+  assert.equal(db.creatorLeagueMatches[0].status, "live");
+
+  db.creatorLeagueMatches.push({
+    ...structuredClone(db.creatorLeagueMatches[0]),
+    updatedAt: new Date(now.getTime() + 1).toISOString()
+  });
+  const staleSupportReference = db.creatorLeagueMatches[0];
+  supportCreatorLeagueMatch(db, staleSupportReference, "viewer-1", "challenger", new Date(now.getTime() + 1000));
+  assert.equal(db.creatorLeagueMatches.length, 1);
+  assert.equal(db.creatorLeagueMatches[0].scores.challenger, 3);
+  assert.ok(db.creatorLeagueMatches[0].supporters.some(item => item.userId === "viewer-1"));
+
+  db.creatorLeagueMatches.push({
+    ...structuredClone(db.creatorLeagueMatches[0]),
+    updatedAt: new Date(now.getTime() + 2).toISOString()
+  });
+  const stalePowerupReference = db.creatorLeagueMatches[0];
+  useCreatorLeaguePowerup(db, stalePowerupReference, "creator-a", "score_multiplier", new Date(now.getTime() + 2000));
+  assert.equal(db.creatorLeagueMatches.length, 1);
+  assert.ok(db.creatorLeagueMatches[0].activeEffects.some(item => item.type === "score_multiplier"));
+  assert.equal(db.creatorLeaguePowerupUses.length, 1);
+});
