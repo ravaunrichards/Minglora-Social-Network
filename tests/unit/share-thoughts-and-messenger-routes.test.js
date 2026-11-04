@@ -96,6 +96,6 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     assert.match(sprite, new RegExp('<symbol id="' + id + '" viewBox="0 0 64 64">'));
     assert.ok(app.includes("messenger3dIcon('" + id + "'") || app.includes("'" + id + "'"), id + ' is used by the client');
   }
-  assert.ok(serviceWorker.includes('minglora-shell-v68-unique-gift-animations-1'));
+  assert.ok(serviceWorker.includes('minglora-shell-v70-league-arena-1'));
   assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261102-navigation-3d-2'));
 });
