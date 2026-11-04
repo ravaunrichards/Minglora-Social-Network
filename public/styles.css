@@ -3729,3 +3729,42 @@ body.auth-mode .auth-screen{
   .story-composer-modal{width:100%;max-height:calc(100dvh - 16px);margin:auto}
   .story-composer-modal .modal-body{max-height:calc(100dvh - 90px);overflow-y:auto}
 }
+
+/* Minglora LIVE: compact, accessible icon-first room controls. */
+.live-player-controls.live-icon-controls{
+  display:flex;align-items:flex-start;justify-content:center;gap:clamp(4px,1.2vw,10px);
+  flex-wrap:nowrap;width:100%;min-width:0;padding:5px 3px 10px;overflow-x:auto;
+  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.live-player-controls.live-icon-controls::-webkit-scrollbar{display:none}
+.live-player-controls.live-icon-controls .live-control-button{
+  display:flex;flex:0 0 48px;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:5px;width:48px;min-width:48px!important;max-width:48px;min-height:66px;
+  margin:0;padding:0;border:0;background:transparent;color:#f5f7fb;box-shadow:none;
+  white-space:nowrap;cursor:pointer;transition:opacity .16s ease,transform .16s ease;
+}
+.live-player-controls.live-icon-controls .live-control-button:hover{transform:translateY(-2px);background:transparent}
+.live-player-controls.live-icon-controls .live-control-button:focus-visible{outline:2px solid #9fc4ff;outline-offset:3px;border-radius:12px}
+.live-player-controls.live-icon-controls .live-control-button:disabled{opacity:.42;cursor:not-allowed;transform:none}
+.live-control-icon{
+  display:flex;align-items:center;justify-content:center;width:43px;height:43px;flex:0 0 43px;
+  border:1px solid rgba(255,255,255,.13);border-radius:50%;
+  background:linear-gradient(155deg,#333b4a,#202631);color:#f7f9fd;
+  box-shadow:0 3px 10px rgba(0,0,0,.2);transition:background .16s ease,border-color .16s ease;
+}
+.live-control-icon svg{display:block;width:20px;height:20px}
+.live-control-caption{display:block;max-width:50px;overflow:hidden;text-overflow:ellipsis;color:#e4e8f0;font-size:9px;font-weight:650;line-height:1.15;text-align:center}
+.live-control-button.is-active .live-control-icon{background:linear-gradient(155deg,#435268,#283648);border-color:rgba(151,194,255,.55);color:#fff}
+.live-player-controls.live-icon-controls .live-control-button.is-danger{background:transparent;border:0;color:#fff}
+.live-player-controls.live-icon-controls .live-control-button.is-danger .live-control-icon{background:linear-gradient(155deg,#f24b62,#c92340);border-color:rgba(255,255,255,.2);color:#fff}
+.live-player-controls.live-icon-controls .live-control-button.is-danger .live-control-caption{color:#ff9eac}
+.live-speaker-request-panel.is-focused,.live-gift-panel.is-focused{
+  outline:2px solid var(--live-accent,#9fc4ff);outline-offset:3px;box-shadow:0 0 0 5px rgba(127,177,255,.12);
+  transition:outline-color .2s ease,box-shadow .2s ease;
+}
+@media(max-width:520px){
+  .live-player-controls.live-icon-controls{justify-content:space-around;gap:3px;padding-inline:0}
+  .live-player-controls.live-icon-controls .live-control-button{flex-basis:46px;width:46px;min-width:46px!important;max-width:46px}
+  .live-control-icon{width:41px;height:41px;flex-basis:41px}
+  .live-control-caption{font-size:8.5px}
+}
