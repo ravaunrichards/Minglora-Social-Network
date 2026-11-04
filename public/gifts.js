@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state={gifts:[],balance:null,selectedCode:"",category:"all",search:"",recipient:"",contextType:"user",contextId:"",page:0,pageSize:72,sort:"high"};
+  const state={gifts:[],balance:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -53,15 +53,6 @@
     grid.querySelectorAll("[data-gift-select]").forEach(b=>b.addEventListener("click",()=>{state.selectedCode=b.dataset.giftSelect;drawGrid();updateSelected();}));
     updateSelected();
   }
-  function updateContext(){
-    const type=document.getElementById("minglora-gift-context"),wrap=document.getElementById("minglora-gift-context-id-wrap"),input=document.getElementById("minglora-gift-context-id"),help=document.getElementById("minglora-gift-context-help");
-    if(!type||!wrap||!input)return;
-    wrap.hidden=type.value==="user";input.required=type.value!=="user";
-    if(type.value==="post"){input.placeholder="Post ID";if(help)help.textContent="The Gift button on a post fills in its post ID automatically.";}
-    else if(type.value==="video"){input.placeholder="Short video ID";if(help)help.textContent="Use the published Minglora short-video ID.";}
-    else if(type.value==="photo"){input.placeholder="Photo album ID";if(help)help.textContent="Use the active Minglora photo album ID.";}
-    else if(help)help.textContent="Send directly to a member using their unique @username.";
-  }
   async function render(){
     const main=document.getElementById("main-content");if(!main)return;
     main.innerHTML="<section class='card empty-state'><h3>Loading Minglora Gifts</h3><p>Connecting to the complete gift collection…</p></section>";
@@ -79,10 +70,7 @@
       "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Gift preview</span><h2 id='minglora-gift-selected'>Choose a gift above</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage'><img id='minglora-gift-selected-image' alt='' hidden><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' hidden></model-viewer></div></section>"+
       "<section class='card gift-send-panel'><div class='gift-send-panel-heading'><div><span class='eyebrow'>Send a gift</span><h2>Choose who receives it</h2></div></div><form id='minglora-gift-form' class='gift-send-form'>"+
       "<label>Recipient username<input id='minglora-gift-recipient' name='username' maxlength='31' autocomplete='off' placeholder='@Username' value='"+esc(state.recipient)+"' required></label>"+
-      "<label>Gift destination<select id='minglora-gift-context' name='contextType'><option value='user'>Direct to member</option><option value='post'>Post / photo / attached video</option><option value='video'>Short video</option><option value='photo'>Photo album</option></select></label>"+
-      "<label id='minglora-gift-context-id-wrap' hidden>Content ID<input id='minglora-gift-context-id' name='contextId' value='"+esc(state.contextId)+"' placeholder='Content ID'></label>"+
-      "<p class='gift-context-help' id='minglora-gift-context-help'>Send directly to a member using their unique @username.</p>"+
-      "<div class='gift-send-form-footer'><span class='muted'>The selected gift's exact coin price is deducted after the recipient and destination pass verification.</span><button type='submit' class='primary' id='minglora-gift-send' disabled>Send gift</button></div><p id='minglora-gift-status' class='gift-send-status' role='status'></p></form></section>";
+      "<div class='gift-send-form-footer'><span class='muted'>The selected gift's exact coin price is deducted after the recipient is verified.</span><button type='submit' class='primary' id='minglora-gift-send' disabled>Send gift</button></div><p id='minglora-gift-status' class='gift-send-status' role='status'></p></form></section>";
     const sort=document.getElementById("minglora-gift-sort");if(sort)sort.value=state.sort;
     document.getElementById("minglora-gift-search")?.addEventListener("input",e=>{state.search=e.target.value;state.page=0;drawGrid();});
     document.getElementById("minglora-gift-sort")?.addEventListener("change",e=>{state.sort=e.target.value;state.page=0;drawGrid();});
@@ -91,25 +79,20 @@
     });
     document.getElementById("minglora-gift-more")?.addEventListener("click",()=>{state.page++;drawGrid();});
     document.getElementById("minglora-gift-sound")?.addEventListener("click",()=>{const g=selected();if(g){window.MingloraGiftFX?.prime();window.MingloraGiftFX?.preview(g);}});
-    document.getElementById("minglora-gift-context")?.addEventListener("change",e=>{state.contextType=e.target.value;state.contextId="";const input=document.getElementById("minglora-gift-context-id");if(input)input.value="";updateContext();});
     document.getElementById("minglora-gift-recipient")?.addEventListener("input",e=>{state.recipient=e.target.value;});
-    document.getElementById("minglora-gift-context-id")?.addEventListener("input",e=>{state.contextId=e.target.value;});
     document.getElementById("minglora-gift-recharge")?.addEventListener("click",()=>window.activateNav?.("coins"));
     document.getElementById("minglora-gift-form")?.addEventListener("submit",sendGift);
-    updateContext();drawGrid();
+    drawGrid();
   }
   async function sendGift(event){
     event.preventDefault();
     const button=document.getElementById("minglora-gift-send"),status=document.getElementById("minglora-gift-status"),gift=selected();
     const username=String(document.getElementById("minglora-gift-recipient")?.value||"").trim().replace(/^@/,"").toLowerCase();
-    const contextType=document.getElementById("minglora-gift-context")?.value||"user";
-    const contextId=contextType==="user"?null:String(document.getElementById("minglora-gift-context-id")?.value||"").trim();
     if(!gift){if(status)status.textContent="Select a gift before sending.";return;}
     if(!/^[a-z0-9_]{3,30}$/.test(username)){if(status)status.textContent="Enter a valid @username (3–30 letters, numbers or underscores).";return;}
-    if(contextType!=="user"&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contextId||"")){if(status)status.textContent="Enter a valid content ID, or open Gifts from the relevant post.";return;}
     window.MingloraGiftFX?.prime();if(button)button.disabled=true;if(status)status.textContent="Verifying recipient and sending gift…";
     try{
-      const result=await request("/gifts/send",{method:"POST",body:JSON.stringify({username,giftCode:gift.code,contextType,contextId})});
+      const result=await request("/gifts/send",{method:"POST",body:JSON.stringify({username,giftCode:gift.code})});
       const sent=result.gift||{};state.recipient="@"+(sent.recipientUsername||username);state.balance=Number(sent.remainingCoins);
       if(status)status.textContent=(sent.giftName||gift.name)+" sent to @"+(sent.recipientUsername||username)+". "+state.balance.toLocaleString()+" Coins remaining.";
       const balance=document.querySelector(".gift-balance-pill strong");if(balance&&Number.isFinite(state.balance))balance.textContent=state.balance.toLocaleString()+" Coins available";
@@ -119,7 +102,6 @@
   }
   function open(options={}){
     state.recipient=options.username?"@"+String(options.username).replace(/^@/,""):state.recipient;
-    state.contextType=options.contextType||"user";state.contextId=options.contextId||"";
     window.activateNav?.("gifts");
   }
   document.addEventListener("click",event=>{
