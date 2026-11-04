@@ -75,7 +75,10 @@ test('LIVE participant leave records an ended connection for viewers and speaker
 test('Audio LIVE roster appears before speech and reflects microphone publication and mute state', () => {
   assert.match(app,/refreshSpeakerRoster\(\);\s*try\{/);
   assert.match(app,/for\(let attempt=0;attempt<5&&!microphonePublished;attempt\+\+\)/);
-  assert.match(app,/refreshSpeakerRoster\(\);\}catch\(error\)\{toast\(error\.message\);\}\}\);/);
+  assert.match(app,/micControl\?\.addEventListener\("click",async\(\)=>\{/);
+  assert.match(app,/await room\.localParticipant\.setMicrophoneEnabled\(nextEnabled\)/);
+  assert.match(app,/updateLiveControlButton\(micControl,nextEnabled\?"mic":"mic-off"/);
+  assert.match(app,/refreshSpeakerRoster\(\)/);
 });
 
 test('LIVE participant confirmation retries until the server verifies LiveKit presence', () => {
