@@ -13,6 +13,7 @@ import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, 
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
+import { rankForYouFeed } from './domain/feed-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
@@ -1797,16 +1798,29 @@ async function route(req, res) {
       }
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
-        if(!['all','following','friends'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, or friends.'});
+        if(!['all','following','friends','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, or for-you.'});
         let eligibleIds=null;
         if(scope==='following'){
           eligibleIds=new Set([user.id,...(db.follows||[]).filter(f=>f.followerId===user.id).map(f=>f.followedId)]);
         } else if(scope==='friends'){
           eligibleIds=new Set([user.id,...db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)).map(f=>f.from===user.id?f.to:f.from)]);
         }
-        const posts=await Promise.all(db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&(!eligibleIds||eligibleIds.has(x.userId)))
-          .slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>publicPost(x,user.id)));
-        if (!url.searchParams.has('limit') && !url.searchParams.has('cursor')) return json(res,200,{posts,scope});
+        const visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&(!eligibleIds||eligibleIds.has(x.userId)));
+        const orderedPosts=scope==='for-you'
+          ?rankForYouFeed(visiblePosts,user.id,db.follows||[],db.savedPosts||[])
+          :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const posts=await Promise.all(orderedPosts.map(x=>publicPost(x,user.id)));
+        if(!url.searchParams.has('limit')&&!url.searchParams.has('cursor'))return json(res,200,{posts,scope});
+        if(scope==='for-you'){
+          const limit=url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20;
+          const cursor=url.searchParams.get('cursor');
+          const offset=cursor===null?0:Number(cursor);
+          if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0)return json(res,400,{error:'Invalid For You feed pagination.'});
+          const page=posts.slice(offset,offset+limit+1);
+          const hasMore=page.length>limit;
+          const items=page.slice(0,limit);
+          return json(res,200,{posts:items,nextCursor:hasMore?String(offset+limit):null,hasMore,scope});
+        }
         try {
           const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
