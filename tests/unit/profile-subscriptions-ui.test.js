@@ -28,6 +28,9 @@ test('member checkout, PayPal return, renewal cancellation and webhook events ar
   assert.match(app, /api\('\/subscriptions\/confirm'/);
   assert.match(app, /api\('\/subscriptions\/'.*\/cancel/);
   assert.match(app, /finishCreatorSubscriptionReturn\(\)/);
+  assert.match(app, /checkout-cancel/);
+  assert.match(server, /subscriptionCheckoutCancelMatch/);
+  assert.match(server, /creatorId:tracked\.creatorId/);
   assert.match(server, /\/v1\/billing\/subscriptions/);
   assert.match(server, /BILLING\.SUBSCRIPTION\.ACTIVATED/);
   assert.match(server, /PAYMENT\.SALE\.COMPLETED/);
