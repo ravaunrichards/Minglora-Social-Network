@@ -94,6 +94,36 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
   }
 });
 
+test("Livecade source gaps and coin-price variants remain in the Minglora manifest", () => {
+  const required = [
+    ["CNC Coin",1],["Easter Heart",1],["Fighting",1],["Yalla Sahel",1],
+    ["Hibiscus",5],["Kitty Pillow",5],["DJ Headphone",100],["Four Leaf Clover",100],
+    ["Gamer Otter",100],["Gamer Pass Otter",100],["Merdeka!",100],["Merdeka",299],
+    ["Pop, Don!?",299],["House Hat",500],["Let's Be Friends",500],["Audience Laughter",1500],
+    ["Star Hero Stage",5999],["Picture Perfect",6000],["Championship Hall",6600],
+    ["It's a festival!",7000],["KLCC",7999],["Alpha Wolves Scepter",15000],
+    ["Golden Falcons Scepter",15000],["Keeper of Atlantis",15000],["Legacy in Bloom",15000],
+    ["Noble Stallions Scepter",15000],["Royal Lions Scepter",15000],["Ultimate Match",15000],
+    ["Jakarta Roundabout",16999],["Legacy in Bloom",21000],["Goal of Glory",21500],
+    ["Flamenco dancers",25999],["Thumbs Up",2],["Baseball",5],["Music Bubbles",100],
+    ["Dream Team",500],["Crocodile",15000],["Level Ship",21000],
+    ["Julius the Champion",43999],["Valerian's Oath",43999]
+  ];
+  for (const [name,price] of required) {
+    assert.ok(gifts.some(gift => gift.name === name && gift.coin_price === price), name + " at " + price + " coins");
+  }
+});
+
+test("newly audited object gifts render their matching Minglora icons", () => {
+  const expected = [["CNC Coin","🪙"],["Fighting","🥊"],["Hibiscus","🌺"],["DJ Headphone","🎧"],["Four Leaf Clover","🍀"]];
+  for (const [name,symbol] of expected) {
+    const gift = gifts.find(item => item.name === name);
+    assert.ok(gift, name + " should exist in the manifest");
+    const svg = readFileSync(path.join(assetRoot,gift.code + ".svg"),"utf8");
+    assert.ok(svg.includes(symbol), name + " should render the matching icon");
+  }
+});
+
 test("recognisable gifts use their matching object artwork instead of an unrelated category symbol", () => {
   const rose = gifts.find(gift => gift.name === "Rose");
   const baseball = gifts.find(gift => gift.name === "Baseball");
