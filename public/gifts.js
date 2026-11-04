@@ -23,7 +23,7 @@
     const q=state.search.trim().toLowerCase();
     const rows=state.gifts.filter(g=>(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code+" "+String(g.coin_price)).toLowerCase().includes(q)));
     if(state.sort==="name")rows.sort((a,b)=>a.name.localeCompare(b.name));
-    else if(state.sort==="high")rows.sort((a,b)=>b.coin_price-a.coin_price||a.name.localeCompare(b.name));
+    else if(state.sort==="high")rows.sort((a,b)=>Number(b.asset_version==="2")-Number(a.asset_version==="2")||b.coin_price-a.coin_price||a.name.localeCompare(b.name));
     else rows.sort((a,b)=>a.coin_price-b.coin_price||a.name.localeCompare(b.name));
     return rows;
   }
