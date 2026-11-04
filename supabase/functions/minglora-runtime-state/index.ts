@@ -201,7 +201,7 @@ Deno.serve(async (req: Request) => {
     const [settingsResult, tierResult, countResult] = await Promise.all([
       admin.from("subscription_creator_settings").select("*").eq("creator_id", creatorId).maybeSingle(),
       admin.from("subscription_tiers").select("id,creator_id,name,description,currency,price_minor,billing_interval,benefits,is_active,paypal_plan_id").eq("creator_id", creatorId).eq("is_active", true).maybeSingle(),
-      admin.from("creator_subscriptions").select("id", { count: "exact", head: true }).eq("creator_id", creatorId).eq("status", "active")
+      admin.from("creator_subscriptions").select("id", { count: "exact", head: true }).eq("creator_id", creatorId).in("status", ["active", "past_due"]).gt("current_period_end", new Date().toISOString())
     ]);
     if (settingsResult.error || tierResult.error || countResult.error) return json(503, { error: "Creator subscription settings are unavailable." });
     return json(200, { settings: settingsResult.data || null, tier: tierResult.data || null, activeSubscribers: countResult.count || 0 });
@@ -228,7 +228,13 @@ Deno.serve(async (req: Request) => {
       .select("creator_id,application_status,application_note,created_at,updated_at")
       .eq("application_status", "pending").order("created_at", { ascending: true }).limit(200);
     if (error) return json(503, { error: "Creator subscription applications are unavailable." });
-    return json(200, { applications: data || [] });
+    const creatorIds = (data || []).map((row: any) => row.creator_id);
+    const { data: profiles, error: profileError } = creatorIds.length
+      ? await admin.from("profiles").select("id,username").in("id", creatorIds)
+      : { data: [], error: null };
+    if (profileError) return json(503, { error: "Creator application profile details are unavailable." });
+    const usernameById = new Map((profiles || []).map((profile: any) => [profile.id, profile.username]));
+    return json(200, { applications: (data || []).map((row: any) => ({ ...row, username: usernameById.get(row.creator_id) || null })) });
   }
 
   if (action === "subscription_admin_review") {
