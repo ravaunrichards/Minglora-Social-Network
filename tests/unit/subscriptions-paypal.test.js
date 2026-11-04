@@ -5,10 +5,11 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('Minglora uses PayPal-only monthly billing and stores server-side subscription records', async () => {
-  const [server, schema, paypalMigration] = await Promise.all([
+  const [server, schema, paypalMigration, payoutMigration] = await Promise.all([
     read('../../src/server.js'),
     read('../../supabase/migrations/20261104200000_minglora_creator_subscriptions.sql'),
-    read('../../supabase/migrations/20261104202000_minglora_paypal_subscription_billing.sql')
+    read('../../supabase/migrations/20261104202000_minglora_paypal_subscription_billing.sql'),
+    read('../../supabase/migrations/20261104204000_minglora_subscription_payout_integration.sql')
   ]);
   assert.match(server, /\/v1\/catalogs\/products/);
   assert.match(server, /\/v1\/billing\/plans/);
@@ -18,6 +19,10 @@ test('Minglora uses PayPal-only monthly billing and stores server-side subscript
   assert.match(schema, /creator_share_bps integer NOT NULL DEFAULT 5000 CHECK \(creator_share_bps = 5000\)/);
   assert.ok(schema.includes("UNIQUE(provider,provider_event_id)"));
   assert.match(paypalMigration, /paypal_plan_id/);
+  assert.match(schema, /provider = 'paypal'/);
+  assert.match(schema, /REVOKE ALL ON public\.subscription_creator_settings/);
+  assert.match(payoutMigration, /subscription_earnings_ledger/);
+  assert.match(payoutMigration, /e\.entry_type='refund' THEN -e\.creator_minor/);
 });
 
 test('PayPal webhook verification and idempotent event handling gate paid access', async () => {
