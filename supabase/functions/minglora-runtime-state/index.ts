@@ -321,7 +321,29 @@ Deno.serve(async (req: Request) => {
       p_sender_id: senderId, p_broadcast_id: broadcastId, p_gift_code: giftCode
     });
     if (error) return fail(error, "Minglora could not send the LIVE gift.");
-    return json(200, { gift: data });
+
+    // Artwork is presentation metadata, not part of the payment decision.
+    // Enrich only after the gift RPC confirms the transaction; never turn an
+    // artwork lookup failure into a failed/duplicated gift payment.
+    const gift = data && typeof data === "object" && !Array.isArray(data) ? { ...data } : { gift: data };
+    const { data: artwork, error: artworkError } = await admin
+      .from("live_gift_catalog")
+      .select("name,emoji,image_url,model_url,coin_price")
+      .eq("code", giftCode)
+      .maybeSingle();
+    if (artworkError) {
+      console.warn("[Minglora LIVE gift] Gift artwork lookup was unavailable.", {
+        giftCode,
+        message: String(artworkError.message || "catalogue lookup failed").slice(0, 160)
+      });
+    } else if (artwork) {
+      gift.giftName = gift.giftName || artwork.name;
+      gift.emoji = gift.emoji || artwork.emoji;
+      gift.imageUrl = gift.imageUrl || artwork.image_url || "";
+      gift.modelUrl = gift.modelUrl || artwork.model_url || "";
+      gift.coinPrice = Number(gift.coinPrice || artwork.coin_price || 0);
+    }
+    return json(200, { gift });
   }
 
   if (action === "economy_creator_earnings") {
