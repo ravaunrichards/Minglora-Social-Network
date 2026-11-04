@@ -76,7 +76,11 @@ test('global navigation destinations all resolve to an application view and Home
   const renderStart = app.indexOf('async function renderView()');
   const renderEnd = app.indexOf('function bindNavigation()', renderStart);
   const renderView = app.slice(renderStart, renderEnd);
-  for (const view of views) assert.ok(renderView.includes("state.view==='" + view + "'"), 'no route for ' + view);
+  for (const view of views) {
+    const routedView = view === 'for-you' ? 'feed' : view;
+    assert.ok(renderView.includes("state.view==='" + routedView + "'"), 'no route for ' + view);
+    if (view === 'for-you') assert.ok(app.includes("requestedView==='for-you'"), 'For You maps to its own personalized feed scope');
+  }
   assert.match(app, /document\.querySelectorAll\('\[data-view\]'\)/);
   assert.match(app, /\$\('#home-brand'\)\.onclick=\(\)=>activateNav\('feed'\)/);
   assert.match(app, /\$\('#retry-view'\)\.onclick=renderView/);
@@ -84,10 +88,10 @@ test('global navigation destinations all resolve to an application view and Home
 
 test('the app shell and service worker cache the same final navigation and stage build', () => {
   assert.match(html, /styles\.css\?v=20261104-minglora-gift-motion-1/);
-  assert.match(html, /app\.js\?v=20261104-minglora-gift-motion-1/);
+  assert.match(html, /app\.js\?v=20261104-for-you-feed-1/);
   assert.match(worker, /minglora-shell-v72-compact-primary-nav-1/);
   assert.match(worker, /styles\.css\?v=20261104-minglora-gift-motion-1/);
-  assert.match(worker, /app\.js\?v=20261104-minglora-gift-motion-1/);
+  assert.match(worker, /app\.js\?v=20261104-for-you-feed-1/);
 });
 
 
