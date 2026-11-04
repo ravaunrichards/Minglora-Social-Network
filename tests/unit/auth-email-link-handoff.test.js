@@ -31,14 +31,14 @@ test('independent auth handler owns both sign-in and account registration', () =
 
 test('account-auth script and service-worker shell caches use the refreshed version', () => {
   assert.match(login, /submitRegistration\(form\)/);
-  assert.match(serviceWorker, /minglora-shell-v70-league-arena-1/);
-  assert.match(serviceWorker, /auth-login\.js\?v=20261104-account-auth-1/);
+  assert.match(serviceWorker, /minglora-shell-v71-account-auth-click-1/);
+  assert.match(serviceWorker, /auth-login\.js\?v=20261104-account-auth-click-2/);
 });
 
 
 test('login and registration buttons have a direct click path independent of app.js', () => {
   assert.match(login, /addEventListener\('click'/);
-  assert.match(login, /button\.closest\('button\[type="submit"\]'\)/);
+  assert.match(login, /target\.closest\('button\[type="submit"\]'\)/);
   assert.match(login, /form\.reportValidity\(\)/);
   assert.match(login, /submitLogin\(form\)/);
   assert.match(login, /submitRegistration\(form\)/);
