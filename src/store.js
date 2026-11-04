@@ -11,9 +11,8 @@ const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
-  'marketplaceSellers', 'marketplaceSellerEvents', 'marketplaceQuotes', 'marketplaceBookings', 'jobPostings', 'jobApplications',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
-  'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
+  'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
     'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
@@ -48,6 +47,25 @@ function normalizeState(state) {
   for (const key of ['mailboxes', 'mailMessages', 'mailOAuthStates', 'mailExternalAccounts']) {
     if (Object.prototype.hasOwnProperty.call(state, key)) {
       delete state[key];
+      changed = true;
+    }
+  }
+  // Permanently retire the removed Jobs and Marketplace features and their media records.
+  for (const key of [
+    'marketplaceSellers', 'marketplaceSellerEvents', 'marketplaceQuotes', 'marketplaceBookings',
+    'jobPostings', 'jobApplications', 'marketplaceListings', 'marketplaceSaved', 'marketplaceInquiries'
+  ]) {
+    if (Object.prototype.hasOwnProperty.call(state, key)) {
+      delete state[key];
+      changed = true;
+    }
+  }
+  if (Array.isArray(state.mediaAssets)) {
+    const retainedAssets = state.mediaAssets.filter(asset =>
+      asset?.slot !== 'marketplace' && !String(asset?.attachedTo || '').startsWith('marketplace:')
+    );
+    if (retainedAssets.length !== state.mediaAssets.length) {
+      state.mediaAssets = retainedAssets;
       changed = true;
     }
   }
