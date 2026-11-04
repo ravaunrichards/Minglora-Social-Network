@@ -13,6 +13,7 @@ const collections = [
   'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',
   'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance',
   'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
+  'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents',
   'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
