@@ -31,7 +31,7 @@ test('mobile LIVE controls remain touch-sized and scrollable panels stay contain
 
 test('phone viewport reserves the display cutout and screen safe areas', () => {
   assert.match(html, /viewport-fit=cover/);
-  assert.match(html, /mobile-layout\.css\?v=20261104-mobile-live-room-1/);
+  assert.match(html, /mobile-layout\.css\?v=20261104-mobile-profile-media-1/);
   assert.match(html, /app\.js\?v=20261104-money-to-coins-1/);
 });
 
