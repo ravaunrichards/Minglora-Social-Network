@@ -22,6 +22,9 @@ test('story publishing sends all uploaded media IDs in one idempotent batch requ
   assert.match(server, /totalBytes>500\*1024\*1024/);
   assert.match(server, /combined story upload is larger than 500 MB/);
   assert.match(server, /Nothing was published/);
+  assert.match(server, /const totalBytes=assets\\.reduce\\(\\(total,asset\\)=>total\\+Number\\(asset\\.byteSize\\|\\|0\\),0\\)/);
+  assert.match(server, /if\\(totalBytes>500\\*1024\\*1024\\)/);
+  assert.match(server, /combined story upload is larger than 500 MB/);
 });
 
 test('each story in a multi-upload batch is stored as its own appended active item', () => {
