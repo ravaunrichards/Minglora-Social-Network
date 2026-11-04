@@ -61,6 +61,46 @@ function aggregateBySender(events) {
   return totals;
 }
 
+
+const senderTotalsCache = new WeakMap();
+
+function getDeduplicatedSenderTotals(db) {
+  const ledger = Array.isArray(db.gifterProgressionLedger) ? db.gifterProgressionLedger : [];
+  const lastGiftId = ledger.length ? ledger[ledger.length - 1]?.giftId || null : null;
+  const cached = senderTotalsCache.get(db);
+  if (cached && cached.ledger === ledger && cached.length === ledger.length && cached.lastGiftId === lastGiftId) {
+    return cached.totals;
+  }
+
+  const seen = new Set();
+  const uniqueEvents = ledger.filter(item => {
+    if (!item?.giftId || seen.has(item.giftId)) return false;
+    seen.add(item.giftId);
+    return true;
+  });
+  const totals = aggregateBySender(uniqueEvents);
+  senderTotalsCache.set(db, { ledger, length: ledger.length, lastGiftId, totals });
+  return totals;
+}
+
+/**
+ * Return the public-facing badge for a member, based only on confirmed gifts
+ * they sent. Members who have not sent a confirmed gift have no gifter badge.
+ */
+export function getGifterBadgeSummary(db, userId) {
+  if (!db || typeof db !== "object" || !userId) return null;
+  const own = getDeduplicatedSenderTotals(db).get(userId);
+  if (!own || own.giftsSent < 1) return null;
+  const level = getGifterLevel(own.xp);
+  const badge = getGifterLevelChart(own.xp)[level - 1];
+  return {
+    level,
+    tier: badge.tier,
+    badgeName: badge.badgeName,
+    liveEntranceUnlocked: level >= 25
+  };
+}
+
 export function recordGifterGift(db, details = {}) {
   if (!db || typeof db !== "object") throw new TypeError("Gifter progression storage is required.");
   db.gifterProgressionLedger ||= [];
