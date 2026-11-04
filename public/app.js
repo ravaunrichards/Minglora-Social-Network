@@ -434,7 +434,27 @@ function openPostOptions(post){
 }
 async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;state.feed=(await api(`/feed?scope=${encodeURIComponent(state.feedScope)}`)).posts;}
 async function loadStories(){state.stories=(await api('/stories')).stories;}
-function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
+function renderStoriesPanel(){
+  const byAuthor=new Map();
+  for(const story of state.stories||[]){
+    const authorId=story.author?.id||story.userId;
+    if(!authorId)continue;
+    if(!byAuthor.has(authorId))byAuthor.set(authorId,[]);
+    byAuthor.get(authorId).push(story);
+  }
+  const visible=[...byAuthor.values()].map(stories=>{
+    const chronological=stories.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)||Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
+    const firstUnseen=chronological.find(story=>!story.viewedByMe);
+    return {story:firstUnseen||chronological[chronological.length-1],count:chronological.length,allViewed:chronological.every(story=>story.viewedByMe)};
+  }).filter(item=>item.story);
+  const cards=visible.map(({story,count,allViewed})=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+
+    (story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+
+    '<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+
+    (count>1?'<span class="story-count" aria-label="'+count+' active stories">'+count+' stories</span>':'')+
+    (allViewed?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');
+  return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+
+    (visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';
+}
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 
 function measureAudioDurationMs(file){
@@ -3783,24 +3803,31 @@ function openEditProfile(u,mediaOnly=null){
 }
 function openStoryComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose a photo or video</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
+  const requestId=window.crypto?.randomUUID?.()||('story-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+  modal.innerHTML='<section class="modal story-composer-modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose multiple photos and videos</label><div id="story-media-picker"></div><small class="muted">Select up to 10 photos or videos together. Each becomes its own story item, and your previous stories stay available until they expire.</small></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically 24 hours after they are published.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish stories</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:1});
+  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
   const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelector('form').onsubmit=async event=>{
-    event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
+    event.preventDefault();
+    const button=modal.querySelector('button[type="submit"]');
+    if(button.disabled)return;
+    button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload(),track=soundtrack.value();
-      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track){toast('Write a Story, choose a photo/video or add a sound.');button.disabled=false;return;}
-      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaId:mediaIds[0]||null,audience:values.get('audience'),soundtrack:track})});
-      close();await loadStories();if(state.view==='feed')await renderFeed();toast('Story published for 24 hours.');
+      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track)throw new Error('Write a story, choose photos or videos, or add a sound.');
+      const result=await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:track,requestId})});
+      close();
+      await loadStories();
+      if(state.view==='feed')await renderFeed();
+      const count=Number(result.createdCount||result.stories?.length||1);
+      toast(count+' story item'+(count===1?'':'s')+' published. Your earlier stories are still there.');
     }catch(error){toast(error.message);button.disabled=false;}
   };
 }
-
 async function openStory(id){
   try{
     const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
