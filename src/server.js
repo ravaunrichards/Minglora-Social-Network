@@ -1616,6 +1616,23 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
       }
+      if(method==='POST'&&p==='/api/coins/owner-issuance'){
+        const creatorHubOwnerId='28e1df97-3fe1-488e-bb84-bdc353c58653';
+        const ownerEmail=String(user.email||'').trim().toLowerCase();
+        if(user.id!==creatorHubOwnerId||ownerEmail!=='larryjones2019ersky@gmail.com'){
+          return json(res,403,{error:'This owner-only Coin issuance is not available to this account.'});
+        }
+        const amountCoins=Number(input.amountCoins);
+        const requestId=String(input.requestId||'').trim();
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Number.isSafeInteger(amountCoins)||amountCoins<1)return json(res,400,{error:'Enter a positive whole-number Coin amount.'});
+        if(!uuidPattern.test(requestId))return json(res,400,{error:'A valid issuance request reference is required.'});
+        const result=await requestSupabaseState('economy_owner_issuance',{
+          ownerId:user.id,ownerEmail,amountCoins,requestId,note:String(input.note||'').trim().slice(0,240)
+        });
+        const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
+        return json(res,200,{ok:true,issuance:result.issuance||result,wallet});
+      }
       if(method==='POST'&&p==='/api/coins/exchange'){
         const amountMinor=Number(input.amountMinor);
         const requestId=String(input.requestId||'').trim();
