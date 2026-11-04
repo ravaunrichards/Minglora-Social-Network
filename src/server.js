@@ -1808,6 +1808,7 @@ async function route(req, res) {
         if(existing)return json(res,409,{error:existing.status==='approval_pending'?'A PayPal subscription approval is already pending for this creator.':'You already have an active subscription to this creator.'});
         const savedPlan=await ensurePaypalCreatorSubscriptionPlan(req,creator,plan);
         const origin=appOrigin(req);
+        const localSubscriptionId=uid();
         const checkout=await paypalRequest('/v1/billing/subscriptions','POST',{
           plan_id:savedPlan.paypalPlanId,
           custom_id:user.id,
@@ -1817,13 +1818,13 @@ async function route(req, res) {
             shipping_preference:'NO_SHIPPING',
             user_action:'SUBSCRIBE_NOW',
             return_url:origin+'/?minglora_subscription=return',
-            cancel_url:origin+'/?minglora_subscription=cancel'
+            cancel_url:origin+'/?minglora_subscription=cancel&subscription_ref='+encodeURIComponent(localSubscriptionId)
           }
-        },'minglora-subscribe-'+uid());
+        },'minglora-subscribe-'+localSubscriptionId);
         const approveUrl=(checkout.links||[]).find(link=>link.rel==='approve'||link.rel==='payer-action')?.href;
         if(!checkout.id||!approveUrl)return json(res,502,{error:'PayPal did not return a subscription approval link.'});
         const subscription={
-          id:uid(),
+          id:localSubscriptionId,
           creatorId,
           subscriberId:user.id,
           planCode:plan.code,
@@ -1863,6 +1864,18 @@ async function route(req, res) {
         if(tracked.status==='active')tracked.activatedAt=tracked.activatedAt||now();
         await saveStore();
         return json(res,200,{ok:true,creatorId:tracked.creatorId,subscription:{id:tracked.id,status:tracked.status,planName:tracked.planName,currentPeriodEnd:tracked.currentPeriodEnd,cancelAtPeriodEnd:tracked.cancelAtPeriodEnd}});
+      }
+      const subscriptionCheckoutCancelMatch=p.match(/^\/api\/subscriptions\/([^/]+)\/checkout-cancel$/);
+      if(method==='POST'&&subscriptionCheckoutCancelMatch){
+        if(!user)return json(res,401,{error:'Sign in to manage your subscription.'});
+        const tracked=(db.creatorSubscriptions||[]).find(item=>item.id===subscriptionCheckoutCancelMatch[1]&&item.subscriberId===user.id);
+        if(!tracked)return json(res,404,{error:'Pending subscription checkout not found.'});
+        if(tracked.status!=='approval_pending')return json(res,409,{error:'This checkout is no longer pending.'});
+        tracked.status='checkout_cancelled';
+        tracked.checkoutCancelledAt=now();
+        tracked.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,status:tracked.status});
       }
       const subscriptionCancelMatch=p.match(/^\/api\/subscriptions\/([^/]+)\/cancel$/);
       if(method==='POST'&&subscriptionCancelMatch){
