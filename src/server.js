@@ -1913,7 +1913,7 @@ async function route(req, res) {
         const card=await publicSoundCard(sound,user.id);
         return json(res,201,{sound:card});
       }
-      let soundFavorite=p.match(/^\\/api\\/sounds\\/([^/]+)\\/favorite$/);
+      let soundFavorite=p.match(/^\/api\/sounds\/([^/]+)\/favorite$/);
       if(soundFavorite&&(method==='POST'||method==='DELETE')){
         const sound=(db.sounds||[]).find(item=>item.id===soundFavorite[1]);
         if(!sound||!canUseSound(sound,user.id)||blockedBetween(user.id,sound.ownerId))return json(res,404,{error:'Sound not found or unavailable for reuse.'});
@@ -1923,7 +1923,7 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{favorite:method==='POST',soundId:sound.id});
       }
-      let soundRoute=p.match(/^\\/api\\/sounds\\/([^/]+)$/);
+      let soundRoute=p.match(/^\/api\/sounds\/([^/]+)$/);
       if(method==='DELETE'&&soundRoute){
         const sound=(db.sounds||[]).find(item=>item.id===soundRoute[1]);
         if(!sound)return json(res,404,{error:'Sound not found.'});
@@ -1935,9 +1935,10 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/posts'){
         const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
+        let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,createdAt:now(),reactions:{},comments:[]};
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,createdAt:now(),reactions:{},comments:[]};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
@@ -1947,11 +1948,13 @@ async function route(req, res) {
         if(post.userId!==user.id)return json(res,403,{error:'Only the post author can edit this post.'});
         const validation=validatePostInput({text:input.text===undefined?post.text:input.text,mediaIds:input.mediaIds===undefined?(post.mediaIds||[]):input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        let nextSoundtrack=post.soundtrack||null;
+        if(Object.prototype.hasOwnProperty.call(input,'soundtrack')){try{nextSoundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}}
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&(asset.status==='uploaded'||asset.attachedTo===post.id)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are not available to this post.'});
         (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        post.text=validation.value.text;post.mediaIds=ids;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
+        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -2565,12 +2568,13 @@ async function route(req, res) {
         const text=String(input.text||'').trim(),mediaId=String(input.mediaId||''),audience=String(input.audience||'public');
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose a photo or video from your device.'});
         if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
-        if(!text&&!mediaId)return json(res,400,{error:'Add text or select a photo/video from your device.'});
+        if(!text&&!mediaId&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
+        let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         let asset=null;
         if(mediaId){asset=(db.mediaAssets||[]).find(item=>item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded');if(!asset)return json(res,400,{error:'The selected story media is unavailable. Select it again.'});}
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaId:asset?.id||null,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        const story={id:uid(),userId:user.id,text,mediaId:asset?.id||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         if(asset){asset.status='attached';asset.attachedTo=story.id;}
         db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
       }
