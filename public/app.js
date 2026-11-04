@@ -197,7 +197,7 @@ async function handleMingloraPushNavigation(){
     await renderNotifications();
   }catch(error){toast(error.message);}
 }
-function activateNav(view){if(state.view==='meetwave'&&view!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
+function activateNav(view){if(state.view==='meetwave'&&view!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&view!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
