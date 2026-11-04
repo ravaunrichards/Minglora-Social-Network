@@ -1614,6 +1614,22 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
       }
+      if(method==='POST'&&p==='/api/coins/exchange'){
+        const amountMinor=Number(input.amountMinor);
+        const requestId=String(input.requestId||'').trim();
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Number.isSafeInteger(amountMinor)||amountMinor<100){
+          return json(res,400,{error:'Exchange at least USD $1.00 from your available money balance.'});
+        }
+        if(!uuidPattern.test(requestId)){
+          return json(res,400,{error:'A valid exchange request reference is required. Please retry.'});
+        }
+        const result=await requestSupabaseState('economy_exchange_creator_earnings',{
+          creatorId:user.id,amountMinor,requestId
+        });
+        const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
+        return json(res,200,{ok:true,exchange:result.exchange||result,wallet});
+      }
       if(method==='POST'&&p==='/api/coins/purchase'){
         const catalogue=await requestSupabaseState('economy_catalog');
         let coinAmount,amountMinor,packageName='Custom Minglora Coins';
