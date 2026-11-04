@@ -3184,7 +3184,7 @@ body.auth-mode .auth-screen{
 
 
 
-/* Official platform-owner identity and Marketplace review queue */
+/* Official platform-owner identity and profile verification review queue */
 .profile-blue-verification{display:inline-grid;place-items:center;width:19px;height:19px;margin-left:7px;border-radius:50%;background:#1877f2;color:#fff;font-size:13px;font-weight:900;line-height:1;vertical-align:middle;box-shadow:0 0 0 2px rgba(24,119,242,.14)}
 .verification-review-title-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .verification-priority{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;background:var(--soft,#eef4fc);color:var(--muted)}
