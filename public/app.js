@@ -2936,7 +2936,7 @@ async function openProfileSubscriptionPicker(creator,profileData){
   const modal=document.createElement('div');
   modal.className='modal-backdrop creator-subscription-backdrop';
   const perkText=plan=>Object.entries(plan.perks||{}).filter(([,enabled])=>enabled).map(([code])=>CREATOR_SUBSCRIPTION_PERK_LABELS[code]||code).map(label=>'<li>'+esc(label)+'</li>').join('');
-  const planCards=plans.map(plan=>'<article class="subscriber-subscription-tier"><div class="subscriber-subscription-tier-head"><div><h3>'+esc(plan.name)+'</h3><p class="muted">Billed monthly through PayPal</p></div><strong>'+subscriptionMoney(plan.priceMinor,plan.currency)+'<small>/mo</small></strong></div><ul>'+(perkText(plan)||'<li>Creator supporter membership</li>')+'</ul><button type="button" class="primary full" data-subscribe-plan="'+esc(plan.code)+'">Subscribe · '+subscriptionMoney(plan.priceMinor,plan.currency)+'/month</button></article>').join('');
+  const planCards=subscription?'' : plans.map(plan=>'<article class="subscriber-subscription-tier"><div class="subscriber-subscription-tier-head"><div><h3>'+esc(plan.name)+'</h3><p class="muted">Billed monthly through PayPal</p></div><strong>'+subscriptionMoney(plan.priceMinor,plan.currency)+'<small>/mo</small></strong></div><ul>'+(perkText(plan)||'<li>Creator supporter membership</li>')+'</ul><button type="button" class="primary full" data-subscribe-plan="'+esc(plan.code)+'">Subscribe · '+subscriptionMoney(plan.priceMinor,plan.currency)+'/month</button></article>').join('');
   let current='';
   if(subscription?.status==='approval_pending'){
     current='<section class="subscriber-current-plan"><strong>Finish your pending subscription</strong><p>Continue to PayPal to approve '+esc(subscription.planName||'your selected package')+'.</p>'+(subscription.approvalUrl?'<button type="button" class="primary full" data-resume-subscription>Continue to PayPal</button>':'<p class="muted">The PayPal approval link is not available. Start checkout again when this pending request expires.</p>')+'</section>';
@@ -2981,7 +2981,15 @@ async function finishCreatorSubscriptionReturn(){
   if(!['return','cancel'].includes(status))return false;
   const paypalSubscriptionId=params.get('subscription_id')||params.get('token');
   window.history.replaceState(null,'',window.location.pathname);
-  if(status==='cancel'){toast('PayPal checkout was cancelled. No subscription was activated.');return true;}
+  if(status==='cancel'){
+    const pendingId=params.get('subscription_ref');
+    if(pendingId){
+      try{await api('/subscriptions/'+encodeURIComponent(pendingId)+'/checkout-cancel',{method:'POST',body:'{}'});}
+      catch(error){if(error.status!==404&&error.status!==409)toast('Checkout was cancelled, but Minglora could not clear its pending status: '+error.message);}
+    }
+    toast('PayPal checkout was cancelled. No subscription was activated.');
+    return true;
+  }
   if(!paypalSubscriptionId){toast('PayPal returned without a subscription reference. Check your profile subscription status.');return true;}
   try{
     const result=await api('/subscriptions/confirm',{method:'POST',body:JSON.stringify({paypalSubscriptionId})});
