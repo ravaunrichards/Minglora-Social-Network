@@ -2933,6 +2933,10 @@ async function route(req, res) {
         if(assets.some(asset=>!asset)){
           return json(res,400,{error:'One or more selected photos or videos are unavailable. Nothing was published. Remove the missing file, select it again, and retry.'});
         }
+        const totalBytes=assets.reduce((total,asset)=>total+Number(asset.byteSize||0),0);
+        if(totalBytes>500*1024*1024){
+          return json(res,400,{error:'The combined story upload is larger than 500 MB. Nothing was published. Remove a file or choose smaller media.'});
+        }
 
         const createdAt=now();
         const createdStories=createStoryBatch({
