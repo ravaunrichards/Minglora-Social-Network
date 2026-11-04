@@ -5,7 +5,8 @@ import {
   getGifterLevelChart,
   gifterXpRequired,
   recordGifterGift,
-  getGifterProgressionOverview
+  getGifterProgressionOverview,
+  getGifterBadgeSummary
 } from "../../backend/modules/gifter-progression/service.js";
 
 test("gifter levels use ascending lifetime XP thresholds from level 1 through 50", () => {
@@ -62,4 +63,40 @@ test("gifter overview includes sent gifts only and ranks only real members", () 
   assert.equal(overview.history.length, 1);
   assert.equal(overview.history[0].contextType, "live");
   assert.equal(overview.leaderboard.length, 2);
+});
+
+
+test("public gifter badge is earned only by confirmed gifts sent and Level 25 unlocks LIVE entry", () => {
+  const db = { gifterProgressionLedger: [] };
+  assert.equal(getGifterBadgeSummary(db, "sender"), null);
+
+  recordGifterGift(db, {
+    giftId: "badge-first-gift", senderId: "sender", recipientId: "recipient",
+    giftCode: "rose", coinAmount: 1, contextType: "member"
+  });
+  const starterBadge = getGifterBadgeSummary(db, "sender");
+  assert.equal(starterBadge.level, 1);
+  assert.equal(starterBadge.liveEntranceUnlocked, false);
+  assert.equal(getGifterBadgeSummary(db, "recipient"), null);
+
+  recordGifterGift(db, {
+    giftId: "badge-level-25", senderId: "sender", recipientId: "recipient",
+    giftCode: "crown", coinAmount: gifterXpRequired(25) - 1,
+    contextType: "live"
+  });
+  const milestoneBadge = getGifterBadgeSummary(db, "sender");
+  assert.equal(milestoneBadge.level, 25);
+  assert.equal(milestoneBadge.tier, "Legend");
+  assert.equal(milestoneBadge.liveEntranceUnlocked, true);
+});
+
+test("duplicate ledger entries never increase a member's public gifter level", () => {
+  const db = { gifterProgressionLedger: [] };
+  const gift = {
+    giftId: "same-gift", senderId: "sender", recipientId: "recipient",
+    giftCode: "rose", coinAmount: 100, contextType: "member"
+  };
+  recordGifterGift(db, gift);
+  db.gifterProgressionLedger.push({ ...db.gifterProgressionLedger[0] });
+  assert.equal(getGifterBadgeSummary(db, "sender").level, 2);
 });
