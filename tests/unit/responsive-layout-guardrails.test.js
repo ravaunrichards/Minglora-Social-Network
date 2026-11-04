@@ -83,10 +83,10 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
   const mobile = await read('public/mobile-layout.css');
-  assert.ok(html.includes('styles.css?v=20261104-minglora-gift-motion-1'));
+  assert.ok(html.includes('styles.css?v=20261104-profile-stats-single-row-1'));
   assert.ok(html.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
   assert.ok(worker.includes('minglora-shell-v74-league-refresh-dedupe-1'));
-  assert.ok(worker.includes('/styles.css?v=20261104-minglora-gift-motion-1'));
+  assert.ok(worker.includes('/styles.css?v=20261104-profile-stats-single-row-1'));
   assert.ok(worker.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
   assert.ok(worker.includes('/app.js?v=20261104-profile-subscribers-2'));
   assert.ok(mobile.includes('.mobile-nav>button{display:flex;flex:1 1 20%;max-width:20%'));
