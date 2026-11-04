@@ -56,9 +56,9 @@ test('outside-profile cards provide dimensional responsive styling and respect r
 test('static shell cache is versioned for the upgraded discovery cards', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.match(html, /20261104-gift-gallery-1/);
-  assert.match(html, /20261104-gift-gallery-1/);
-  assert.match(worker, /minglora-shell-v74-league-refresh-dedupe-1/);
+  assert.match(html, /20261104-sounds-studio-1/);
+  assert.match(html, /20261104-sounds-studio-1/);
+  assert.match(worker, /minglora-shell-v75-sounds-studio-1/);
 });
 
 test('outside profile cards preserve the full 3:1 saved cover and uncropped avatar',async()=>{
