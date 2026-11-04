@@ -27,12 +27,12 @@
 - Audit approvals, price changes, refunds, chargebacks and payouts. Apply tax, age, identity and payout eligibility checks where required.
 
 ## Release gate
-The migration adds the provider-neutral data model and an RLS baseline. The current repository has no configured recurring-billing provider credentials or verified webhook implementation. Live paid subscriptions must not be advertised as active until a provider (PayPal Subscriptions or Stripe Billing) is configured, webhook signature verification and idempotent processing are implemented, creator payout onboarding is ready, and sandbox end-to-end tests pass. No fake checkout success or client-side entitlement is permitted.
+The implementation adds the provider-neutral data model and an RLS baseline. The current repository has no configured recurring-billing provider credentials or verified webhook implementation. Live paid subscriptions must not be advertised as active until a provider (PayPal Subscriptions or Stripe Billing) is configured, webhook signature verification and idempotent processing are implemented, creator payout onboarding is ready, and sandbox end-to-end tests pass. No fake checkout success or client-side entitlement is permitted.
 
 ## Remaining implementation sequence
 1. Creator application and admin approval endpoints.
 2. Creator tier management with server-side price validation.
-3. PayPal or Stripe checkout, cancellation, refund and verified webhook adapter.
+3. PayPal checkout, cancellation, refund and verified webhook adapter.
 4. Subscription status, invoice and ledger APIs.
 5. Server-side content and LIVE authorization using the active paid period.
 6. Profile Subscribe CTA, checkout, My Subscriptions, Creator Studio and admin review UI.
