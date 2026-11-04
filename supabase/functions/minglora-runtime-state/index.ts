@@ -138,19 +138,7 @@ Deno.serve(async (req: Request) => {
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
-    "marketplace_cart_get", "marketplace_cart_add", "marketplace_cart_update", "marketplace_cart_remove", "marketplace_cart_clear",
-    "marketplace_refund_request", "marketplace_refunds_admin_list", "marketplace_refund_approve",
-    "marketplace_seller_get", "marketplace_seller_apply", "marketplace_seller_review", "marketplace_seller_queue", "marketplace_seller_admin_list", "marketplace_business_identity_submit", "marketplace_business_identity_review", "marketplace_review_alert_mark_read",
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
-    "marketplace_listing_sync", "marketplace_listing_set_status", "marketplace_listings_list", "marketplace_listing_get", "marketplace_checkout_quote", "marketplace_checkout_status",
-    "marketplace_paypal_seller_get", "marketplace_paypal_seller_start", "marketplace_paypal_seller_callback_state", "marketplace_paypal_seller_complete",
-    "marketplace_paypal_payment_prepare", "marketplace_paypal_capture_execute", "marketplace_paypal_order_saved", "marketplace_paypal_capture_record", "marketplace_paypal_payment_failed", "marketplace_paypal_webhook_receive", "marketplace_paypal_webhook_record", "marketplace_paypal_payout_release", "marketplace_paypal_payout_webhook", "marketplace_financial_reconcile", "marketplace_financial_provider_reconcile", "marketplace_seller_payouts",
-    "marketplace_order_create", "marketplace_orders_list", "marketplace_order_get", "marketplace_order_cancel", "marketplace_inventory_expire",
-    "marketplace_bookings_list", "marketplace_booking_create", "marketplace_booking_update",
-    "marketplace_jobs_list", "marketplace_jobs_mine", "marketplace_jobs_create", "marketplace_job_review",
-    "marketplace_job_update", "marketplace_job_apply", "marketplace_job_applications_for_job",
-    "marketplace_job_applications_mine", "marketplace_job_application_update",
-    "marketplace_saved_listings_list", "marketplace_listing_save"
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -651,9 +639,9 @@ Deno.serve(async (req: Request) => {
     const communityMedia={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4"};
     const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","application/pdf":"pdf","text/plain":"txt","text/csv":"csv","application/zip":"zip","application/x-zip-compressed":"zip","application/msword":"doc","application/vnd.ms-excel":"xls","application/vnd.ms-powerpoint":"ppt","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"xlsx","application/vnd.openxmlformats-officedocument.presentationml.presentation":"pptx"};
     const ringtone={"audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","audio/wav":"wav","audio/x-wav":"wav","audio/flac":"flac","audio/aac":"aac"};
-    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="marketplace"?image:slot==="message"?message:slot==="ringtone"?ringtone:{};
-    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"||slot==="marketplace"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":slot==="ringtone"?"minglora-ringtones":"";
-    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="marketplace"?15*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="ringtone"?20*1024*1024:slot==="post"?500*1024*1024:0;
+    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="message"?message:slot==="ringtone"?ringtone:{};
+    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":slot==="ringtone"?"minglora-ringtones":"";
+    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="ringtone"?20*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
@@ -749,7 +737,7 @@ Deno.serve(async (req: Request) => {
     const assetId=String(input.assetId||"");
     const slot=String(input.slot||"");
     const originalName=String(input.originalName||"").trim().slice(0,255);
-    if(!uuidPattern.test(assetId)||!["avatar","cover","post","story","group","page","message","marketplace"].includes(slot)){
+    if(!uuidPattern.test(assetId)||!["avatar","cover","post","story","group","page","message"].includes(slot)){
       return json(400,{error:"A valid upload asset ID and media slot are required."});
     }
     const assetStatus=slot==="avatar"||slot==="cover"?"attached":"uploaded";
