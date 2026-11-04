@@ -532,7 +532,10 @@ Deno.serve(async (req: Request) => {
         currency, gross_minor: amountMinor, creator_minor: creatorRefund, platform_minor: platformRefund, entry_type: "refund"
       });
       if (refundError && refundError.code !== "23505") return fail(refundError, "PayPal refund was received but Minglora could not reconcile the earnings ledger.");
-      if (eventType === "PAYMENT.SALE.REVERSED") patch.status = "past_due";
+      // A refunded or reversed settled charge no longer grants paid access.
+      // A later successful recurring sale can reactivate the membership.
+      patch.status = "refunded";
+      patch.current_period_end = new Date().toISOString();
     }
 
     const { error: updateError } = await admin.from("creator_subscriptions").update(patch).eq("id", subscription.id);
