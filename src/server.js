@@ -1763,7 +1763,7 @@ async function route(req, res) {
       }
       let leagueMatchAction=p.match(/^\/api\/leagues\/matches\/([^/]+)\/(accept|support|powerups)$/);
       if(method==='POST'&&leagueMatchAction){
-        const match=(db.creatorLeagueMatches||[]).find(item=>item.id===leagueMatchAction[1]);
+        let match=(db.creatorLeagueMatches||[]).find(item=>item.id===leagueMatchAction[1]);
         if(!match)return json(res,404,{error:'League Match not found.'});
         const action=leagueMatchAction[2];
         try{
@@ -1780,6 +1780,7 @@ async function route(req, res) {
           }else{
             useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''));
           }
+          match=(db.creatorLeagueMatches||[]).find(item=>item.id===match.id)||match;
           await saveStore();
           return json(res,200,{match});
         }catch(error){
