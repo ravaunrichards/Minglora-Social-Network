@@ -15,7 +15,7 @@ test('Share thoughts is a real post composer connected to the authenticated post
   assert.ok(app.includes('<span>Share thoughts</span>'));
   assert.ok(app.includes('id="create-post-form"'));
   assert.ok(app.includes('placeholder="What would you like to share?"'));
-  assert.ok(app.includes("await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});"));
+  assert.ok(app.includes("await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,accessLevel:values.get('accessLevel')||'public'})});"));
   assert.ok(app.includes("createMediaPicker(modal.querySelector('#create-post-media-picker'),{slot:'post',maxFiles:10})"));
   assert.ok(server.includes("if(method==='POST'&&p==='/api/posts')"));
   assert.ok(server.includes('validatePostInput(input)'));
@@ -96,7 +96,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     assert.match(sprite, new RegExp('<symbol id="' + id + '" viewBox="0 0 64 64">'));
     assert.ok(app.includes("messenger3dIcon('" + id + "'") || app.includes("'" + id + "'"), id + ' is used by the client');
   }
-  assert.ok(serviceWorker.includes('minglora-shell-v73-mobile-navigation-1'));
+  assert.ok(serviceWorker.includes('minglora-shell-v74-paypal-subscriptions-1'));
   assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261102-navigation-3d-2'));
   assert.ok(serviceWorker.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
 });
