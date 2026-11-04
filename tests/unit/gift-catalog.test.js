@@ -1,12 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const manifest = JSON.parse(readFileSync(path.join(root, "data/minglora-gift-catalog.json"), "utf8"));
 const gifts = manifest.gifts;
+const assetRoot = path.join(root, "public/assets/gifts/catalog");
+const generatedStamp = path.join(assetRoot, "catalog-build.json");
+if (!existsSync(generatedStamp)) {
+  execFileSync(process.execPath, [path.join(root, "scripts/generate-minglora-gifts.mjs")], { stdio: "inherit" });
+} else {
+  execFileSync(process.execPath, [path.join(root, "scripts/generate-minglora-gifts.mjs"), "--check"], { stdio: "inherit" });
+}
 
 test("Minglora gift manifest count matches all catalogue entries", () => {
   assert.ok(gifts.length >= 1600, "expected the full large gift collection");
@@ -60,4 +68,38 @@ test("the gift manifest does not reference external TikTok or CDN artwork", () =
     assert.ok(!/tiktokcdn|cdn4\.dps\.vc|streamtoearn|livecade/i.test(gift.image_url));
     assert.ok(!/tiktokcdn|cdn4\.dps\.vc|streamtoearn|livecade/i.test(gift.model_url));
   }
+});
+
+
+test("the build produces one original SVG and one 3D GLTF for every active gift", () => {
+  const stamp = JSON.parse(readFileSync(generatedStamp, "utf8"));
+  assert.equal(stamp.giftCount, gifts.length);
+  assert.equal(stamp.svgAssets, gifts.length);
+  assert.equal(stamp.gltfAssets, gifts.length);
+  const generated = readdirSync(assetRoot);
+  assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length);
+  assert.equal(generated.filter(name => name.endsWith(".gltf")).length, gifts.length);
+  for (const gift of gifts) {
+    const svgPath = path.join(assetRoot, gift.code + ".svg");
+    const modelPath = path.join(assetRoot, gift.code + ".gltf");
+    assert.ok(statSync(svgPath).size > 1000, gift.name + " SVG should contain real artwork");
+    assert.ok(statSync(modelPath).size > 1000, gift.name + " GLTF should contain real mesh geometry");
+    const svg = readFileSync(svgPath, "utf8");
+    assert.match(svg, /^<svg\\b/);
+    assert.ok(svg.includes("Minglora") || svg.includes("aria-label"), gift.name);
+    const model = JSON.parse(readFileSync(modelPath, "utf8"));
+    assert.equal(model.asset?.version, "2.0", gift.name);
+    assert.ok(model.meshes?.[0]?.primitives?.length > 0, gift.name);
+    assert.match(model.buffers?.[0]?.uri || "", /^data:application\\/octet-stream;base64,/);
+  }
+});
+
+test("recognisable gifts use their matching object artwork instead of an unrelated category symbol", () => {
+  const rose = gifts.find(gift => gift.name === "Rose");
+  const baseball = gifts.find(gift => gift.name === "Baseball");
+  assert.ok(rose && baseball);
+  const roseSvg = readFileSync(path.join(assetRoot, rose.code + ".svg"), "utf8");
+  const baseballSvg = readFileSync(path.join(assetRoot, baseball.code + ".svg"), "utf8");
+  assert.ok(roseSvg.includes("🌹"), "Rose must visibly render as a rose");
+  assert.ok(baseballSvg.includes("⚾"), "Baseball must visibly render as a baseball");
 });
