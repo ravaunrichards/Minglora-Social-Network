@@ -43,7 +43,7 @@ test('Exchange uses eligible creator earnings and the existing PayPal payout flo
   assert.match(app, /Minimum exchange: USD \$1\.00/);
   assert.match(app, /Coins purchased for gifting stay in your Minglora Coin balance and cannot be converted to cash/);
   assert.match(server, /paypalRequest\('\/v1\/payments\/payouts'/);
-  assert.match(server, /50% creator share from eligible LIVE gifts/);
+  assert.match(app, /50% of eligible LIVE gift value/);
 });
 
 test('Recharge styles and current shell assets are cached under one matching release version', () => {
