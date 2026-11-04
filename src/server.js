@@ -124,7 +124,7 @@ async function ensurePaypalCreatorSubscriptionPlan(req, creator, plan) {
       type: 'SERVICE',
       category: 'SOFTWARE',
       home_url: origin
-    }, 'minglora-sub-product-' + creator.id + '-' + plan.planCode);
+    }, 'minglora-sub-product-' + creator.id + '-' + plan.code);
     if (!product.id) throw Object.assign(new Error('PayPal did not create the subscription product.'), { status: 502 });
     saved.paypalProductId = product.id;
     await saveStore();
@@ -150,7 +150,7 @@ async function ensurePaypalCreatorSubscriptionPlan(req, creator, plan) {
         setup_fee_failure_action: 'CONTINUE',
         payment_failure_threshold: 3
       }
-    }, 'minglora-sub-plan-' + creator.id + '-' + plan.planCode);
+    }, 'minglora-sub-plan-' + creator.id + '-' + plan.code);
     if (!billingPlan.id) throw Object.assign(new Error('PayPal did not create the recurring subscription plan.'), { status: 502 });
     saved.paypalPlanId = billingPlan.id;
     await saveStore();
