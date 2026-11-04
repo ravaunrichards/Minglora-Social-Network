@@ -220,3 +220,41 @@ test("legacy string match scores are normalized before viewer support is added",
   assert.equal(match.scores.challenger, 3);
   assert.equal(typeof match.scores.challenger, "number");
 });
+
+
+test("stale live snapshots never revive a completed League Match during deduplication", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const completedAt = new Date(now.getTime() - 60000).toISOString();
+  const matchId = "same-match-id";
+  db.creatorLeagueMatches.push(
+    {
+      id: matchId, challengerId: "creator-a", opponentId: "creator-b",
+      challengerSessionId: "live-a", opponentSessionId: "live-b",
+      status: "completed", result: "win", winnerId: "creator-a",
+      scores: { challenger: 25, opponent: 10 }, ratingAwarded: true,
+      supporters: [], activeEffects: [], pendingEffects: [], events: [],
+      timeBoostUsed: { challenger: false, opponent: false },
+      createdAt: new Date(now.getTime() - 360000).toISOString(),
+      startedAt: new Date(now.getTime() - 300000).toISOString(),
+      completedAt
+    },
+    {
+      id: matchId, challengerId: "creator-a", opponentId: "creator-b",
+      challengerSessionId: "live-a", opponentSessionId: "live-b",
+      status: "live", scores: { challenger: 25, opponent: 10 },
+      supporters: [], activeEffects: [], pendingEffects: [], events: [],
+      timeBoostUsed: { challenger: false, opponent: false },
+      createdAt: new Date(now.getTime() - 360000).toISOString(),
+      startedAt: new Date(now.getTime() - 300000).toISOString(),
+      endsAt: new Date(now.getTime() + 300000).toISOString(),
+      updatedAt: now.toISOString()
+    }
+  );
+
+  const matches = listCreatorLeagueMatches(db, db.users, "creator-a", now);
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].status, "completed");
+  assert.equal(matches[0].ratingAwarded, true);
+  assert.equal(matches[0].winnerId, "creator-a");
+});
