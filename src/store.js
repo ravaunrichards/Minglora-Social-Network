@@ -15,7 +15,7 @@ const COLLECTIONS = [
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
     'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents',
-    'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
+    'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences', 'sounds', 'soundFavorites', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
