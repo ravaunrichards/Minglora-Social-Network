@@ -3865,8 +3865,12 @@ async function openStory(id){
       if(event.key==='ArrowLeft'&&storyIndex>0){event.preventDefault();navigate(storyIndex-1);}
       if(event.key==='ArrowRight'&&storyIndex<sequence.length-1){event.preventDefault();navigate(storyIndex+1);}
     });
-    modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};
-    modal.addEventListener('click',event=>{if(event.target===modal){modal.remove();loadStories().catch(()=>{});}});
+    const closeViewer=()=>{
+      modal.remove();
+      loadStories().then(()=>{if(state.view==='feed')return renderFeed();}).catch(()=>{});
+    };
+    modal.querySelector('.modal-close').onclick=closeViewer;
+    modal.addEventListener('click',event=>{if(event.target===modal)closeViewer();});
     const video=modal.querySelector('video.story-viewer-image');
     video?.addEventListener('ended',()=>navigate(storyIndex+1));
     modal.querySelector('#report-story')?.addEventListener('click',()=>{modal.remove();openReportComposer('story',s.id);});
