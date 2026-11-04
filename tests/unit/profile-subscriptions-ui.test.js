@@ -45,7 +45,7 @@ test('subscription receipts use an idempotent 50/50 creator and platform ledger'
 
 test('the subscriber-badge perk is reflected on a member identity while active', () => {
   assert.match(server, /result\.subscriberBadge=\(db\.creatorSubscriptions\|\|\[\]\)\.some/);
-  assert.match(server, /item\.perks\?\.subscriber_badge===true/);
+  assert.ok(server.includes('item.perks?.subscriber_badge===true'));
   assert.match(app, /ml-subscriber-badge/);
   assert.match(css, /\.ml-subscriber-badge\s*\{/);
 });
