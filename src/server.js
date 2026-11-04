@@ -187,6 +187,12 @@ function safeUser(u,viewerId=null){
   if(profileThought)result.profileThought={text:profileThought.text,mood:profileThought.mood||'',audience:profileThought.audience,createdAt:profileThought.createdAt,expiresAt:profileThought.expiresAt};
   const gifterBadge=getGifterBadgeSummary(db,u.id);
   if(gifterBadge)result.gifterBadge=gifterBadge;
+  result.subscriberBadge=(db.creatorSubscriptions||[]).some(item=>{
+    if(item.subscriberId!==u.id||item.status!=='active'||item.perks?.subscriber_badge!==true)return false;
+    if(!item.currentPeriodEnd)return true;
+    const periodEnd=new Date(item.currentPeriodEnd).getTime();
+    return Number.isFinite(periodEnd)&&periodEnd>Date.now();
+  });
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
