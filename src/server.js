@@ -1669,14 +1669,13 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/gifts/send'){
         const recipientUsername=String(input.username||'').trim().replace(/^@/,'').toLowerCase();
         const giftCode=String(input.giftCode||'').trim();
-        const contextType=String(input.contextType||'user');
-        const contextId=input.contextId==null||input.contextId===''?null:String(input.contextId);
+        // Social gifts in Minglora are always sent directly to a member.
+        // Ignore legacy content-destination fields from older clients.
+        const contextType='user';
+        const contextId=null;
         if(!/^[a-z0-9_]{3,30}$/.test(recipientUsername)||
-           !/^[a-z0-9_-]{1,60}$/.test(giftCode)||
-           !['user','post','video','photo'].includes(contextType)||
-           (contextType==='user'&&contextId!==null)||
-           (contextType!=='user'&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contextId||''))){
-          return json(res,400,{error:'Enter a valid @username, gift and gifting destination.'});
+           !/^[a-z0-9_-]{1,60}$/.test(giftCode)){
+          return json(res,400,{error:'Enter a valid @username and gift.'});
         }
         const result=await requestSupabaseState('economy_send_social_gift',{
           senderId:user.id,recipientUsername,giftCode,contextType,contextId
