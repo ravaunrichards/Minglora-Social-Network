@@ -16,7 +16,7 @@ test('Minglora uses PayPal-only monthly billing and stores server-side subscript
   assert.match(server, /PAYPAL_WEBHOOK_ID/);
   assert.match(schema, /platform_share_bps integer NOT NULL DEFAULT 5000 CHECK \(platform_share_bps = 5000\)/);
   assert.match(schema, /creator_share_bps integer NOT NULL DEFAULT 5000 CHECK \(creator_share_bps = 5000\)/);
-  assert.match(schema, /UNIQUE \(provider, provider_event_id\)/);
+  assert.match(schema, /UNIQUE\\(provider,provider_event_id\\)/);
   assert.match(paypalMigration, /paypal_plan_id/);
 });
 
@@ -25,7 +25,7 @@ test('PayPal webhook verification and idempotent event handling gate paid access
     read('../../src/server.js'),
     read('../../supabase/functions/minglora-runtime-state/index.ts')
   ]);
-  assert.match(server, /verifyPayPalWebhook\(req\)/);
+  assert.match(server, /verify-webhook-signature/);
   assert.match(server, /subscription_paypal_webhook/);
   assert.match(edge, /BILLING\.SUBSCRIPTION\.ACTIVATED/);
   assert.match(edge, /PAYMENT\.SALE\.COMPLETED/);
