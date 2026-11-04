@@ -2,6 +2,7 @@ BEGIN;
 
 -- All subscription tables are accessed through Minglora's authenticated server
 -- runtime. Keep this content-access registry closed to direct client SQL/API access.
+DROP POLICY IF EXISTS subscription_content_read ON public.subscription_content_access;
 DROP POLICY IF EXISTS subscription_content_access_read ON public.subscription_content_access;
 DROP POLICY IF EXISTS subscription_content_manage ON public.subscription_content_access;
 DROP POLICY IF EXISTS subscription_content_access_creator_manage ON public.subscription_content_access;
