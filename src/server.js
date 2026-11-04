@@ -14,7 +14,7 @@ import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateConta
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
-import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
+import { canViewStory as canViewStoryPolicy, removeExpiredStories, normalizeStoryMediaIds, createStoryBatch, appendStoryBatch } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
@@ -2878,18 +2878,59 @@ async function route(req, res) {
         return json(res,200,{stories});
       }
       if(method==='POST'&&p==='/api/stories'){
-        const text=String(input.text||'').trim(),mediaId=String(input.mediaId||''),audience=String(input.audience||'public');
-        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose a photo or video from your device.'});
+        const text=String(input.text||'').trim(),audience=String(input.audience||'public');
+        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose photos or videos from your device.'});
         if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
-        if(!text&&!mediaId&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
+        const mediaSelection=normalizeStoryMediaIds(input,10);
+        if(!mediaSelection.valid)return json(res,400,{error:mediaSelection.error});
+        const mediaIds=mediaSelection.mediaIds;
+        if(!text&&!mediaIds.length&&!input.soundtrack)return json(res,400,{error:'Add text, at least one photo or video, or a sound to your Story.'});
+        const requestId=String(input.requestId||'').trim();
+        if(requestId&&(!/^[A-Za-z0-9_-]{8,128}$/.test(requestId)))return json(res,400,{error:'The story upload request is invalid. Close the composer and try again.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
-        let asset=null;
-        if(mediaId){asset=(db.mediaAssets||[]).find(item=>item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded');if(!asset)return json(res,400,{error:'The selected story media is unavailable. Select it again.'});}
+
+        // A retried client request must return its already-created items rather than
+        // publishing the same upload batch twice.
+        if(requestId){
+          const prior=(db.stories||[]).filter(item=>item.userId===user.id&&item.storyRequestId===requestId)
+            .sort((a,b)=>Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
+          if(prior.length){
+            const priorIds=prior.map(item=>item.mediaId).filter(Boolean);
+            if(priorIds.length!==mediaIds.length||mediaIds.some(id=>!priorIds.includes(id))){
+              return json(res,409,{error:'This story upload request was already used for a different batch. Close the composer and start a new story.'});
+            }
+            const stories=await Promise.all(prior.map(item=>publicStory(item,user.id)));
+            return json(res,200,{story:stories[0],stories,alreadyPublished:true});
+          }
+        }
+
+        // Validate the complete set before changing any asset status or publishing
+        // any story, so one missing file cannot leave a partial batch.
+        const assets=mediaIds.map(mediaId=>(db.mediaAssets||[]).find(item=>
+          item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&
+          item.status==='uploaded'&&['image','video'].includes(item.mediaType)
+        ));
+        if(assets.some(asset=>!asset)){
+          return json(res,400,{error:'One or more selected photos or videos are unavailable. Nothing was published. Remove the missing file, select it again, and retry.'});
+        }
+
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaId:asset?.id||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
-        if(asset){asset.status='attached';asset.attachedTo=story.id;}
-        db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
+        const createdStories=createStoryBatch({
+          userId:user.id,text,mediaIds,audience,soundtrack,
+          requestId:requestId||null,idFactory:uid,
+          createdAt,
+          expiresAt:new Date(Date.parse(createdAt)+24*60*60*1000).toISOString()
+        });
+        assets.forEach((asset,index)=>{
+          const story=createdStories[index];
+          asset.status='attached';
+          asset.attachedTo=story.id;
+        });
+        db.stories=appendStoryBatch(db.stories||[],createdStories);
+        await saveStore();
+        const stories=await Promise.all(createdStories.map(story=>publicStory(story,user.id)));
+        return json(res,201,{story:stories[0],stories,createdCount:stories.length});
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
       if(method==='POST'&&m){
