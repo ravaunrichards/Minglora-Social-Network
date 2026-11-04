@@ -22,7 +22,7 @@ import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
-import { recordGifterGift, getGifterProgressionOverview } from '../backend/modules/gifter-progression/service.js';
+import { recordGifterGift, getGifterProgressionOverview, getGifterBadgeSummary } from '../backend/modules/gifter-progression/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -114,6 +114,8 @@ function safeUser(u,viewerId=null){
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
   const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:u.verificationBadge==='blue'?'blue':null,verificationStatus:u.verificationStatus||'not_submitted'};
+  const gifterBadge=getGifterBadgeSummary(db,u.id);
+  if(gifterBadge)result.gifterBadge=gifterBadge;
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
@@ -1789,7 +1791,7 @@ async function route(req, res) {
         return json(res,200,{gift:result.gift});
       }
       if(method==='GET'&&p==='/api/gifter-progression/overview'){
-        return json(res,200,{viewerId:user.id,...getGifterProgressionOverview(db,user.id)});
+        return json(res,200,{viewerId:user.id,badge:getGifterBadgeSummary(db,user.id),...getGifterProgressionOverview(db,user.id)});
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
         const overview=getCreatorLeagueOverview(db,user);
