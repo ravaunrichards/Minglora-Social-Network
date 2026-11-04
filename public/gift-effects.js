@@ -55,19 +55,54 @@
   function mount(parent,gift,options={}){
     if(!parent||!gift)return null;
     const duration=Math.max(900,Math.min(8000,Number(options.duration)||Number(gift.animation_duration_ms)||2600));
-    const preset=presets.has(gift.animation_preset||gift.animation_key)?(gift.animation_preset||gift.animation_key):"gift-reveal";
-    const outer=document.createElement("div");outer.className="minglora-gift-fx minglora-fx-"+preset;outer.style.setProperty("--minglora-gift-duration",duration+"ms");
+    const requestedPreset=gift.animation_preset||"gift-reveal";
+    const preset=presets.has(requestedPreset)?requestedPreset:"gift-reveal";
+    const animationIdentity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
+    const motionSeed=hash([animationIdentity,gift.code,gift.name].join("|"));
+    const dx=(motionSeed%81)-40,dy=-18-((motionSeed>>>7)%65),tilt=(motionSeed>>>13)%71-35;
+    const spin=((motionSeed>>>19)%2?1:-1)*(50+((motionSeed>>>20)%311));
+    const peak=(104+((motionSeed>>>3)%27))/100,rebound=(90+((motionSeed>>>11)%15))/100;
+    const outer=document.createElement("div");
+    outer.className="minglora-gift-fx minglora-fx-"+preset;
+    outer.dataset.giftAnimation=animationIdentity;
+    outer.style.setProperty("--minglora-gift-duration",duration+"ms");
+    outer.style.setProperty("--minglora-gift-dx",dx+"px");
+    outer.style.setProperty("--minglora-gift-dy",dy+"px");
+    outer.style.setProperty("--minglora-gift-tilt",tilt+"deg");
+    outer.style.setProperty("--minglora-gift-start-tilt",(-tilt*.55)+"deg");
+    outer.style.setProperty("--minglora-gift-spin",spin+"deg");
+    outer.style.setProperty("--minglora-gift-peak",String(peak));
+    outer.style.setProperty("--minglora-gift-rebound",String(rebound));
+    outer.style.setProperty("--minglora-gift-rays-duration",(750+((motionSeed>>>9)%1400))+"ms");
+    outer.style.setProperty("--minglora-gift-rays-delay",(-((motionSeed>>>21)%1000))+"ms");
+    outer.style.setProperty("--minglora-gift-rays-angle",(motionSeed%360)+"deg");
+    const rotationSpeed=24+((motionSeed>>>15)%90);
     const card=document.createElement("div");card.className="minglora-gift-fx-card";
     if(gift.model_url){
       const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" original Minglora gift";
-      model.setAttribute("auto-rotate","");model.setAttribute("rotation-per-second","60deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
+      model.setAttribute("auto-rotate","");model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
     }else if(gift.image_url){
       const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name;card.append(img);
     }else{
       const emoji=document.createElement("span");emoji.className="minglora-gift-fx-emoji";emoji.textContent=gift.emoji||"🎁";card.append(emoji);
     }
     const caption=document.createElement("strong");caption.className="minglora-gift-fx-caption";caption.textContent=gift.name||"Minglora Gift";card.append(caption);
-    const rays=document.createElement("span");rays.className="minglora-gift-fx-rays";outer.append(card,rays);parent.append(outer);
+    const rays=document.createElement("span");rays.className="minglora-gift-fx-rays";
+    const particles=document.createElement("span");particles.className="minglora-gift-fx-particles";
+    const particleCount=5+((motionSeed>>>24)%4);
+    for(let i=0;i<particleCount;i++){
+      const ps=hash(animationIdentity+"|particle|"+i),angle=(ps%360)*Math.PI/180,distance=76+(ps%118);
+      const particle=document.createElement("span");particle.className="minglora-gift-fx-particle";
+      particle.style.setProperty("--minglora-particle-x",Math.round(Math.cos(angle)*distance)+"px");
+      particle.style.setProperty("--minglora-particle-y",Math.round(Math.sin(angle)*distance)+"px");
+      particle.style.setProperty("--minglora-particle-size",(4+(ps%9))+"px");
+      particle.style.setProperty("--minglora-particle-hue",String((motionSeed+i*47)%360));
+      particle.style.setProperty("--minglora-particle-duration",(720+(ps%1200))+"ms");
+      particle.style.setProperty("--minglora-particle-delay",(i*65)+"ms");
+      particle.style.setProperty("--minglora-particle-spin",((ps%2?1:-1)*(90+(ps%540)))+"deg");
+      particles.append(particle);
+    }
+    outer.append(card,rays,particles);parent.append(outer);
     if(options.sound!==false)play(gift);
     setTimeout(()=>outer.remove(),duration+250);
     return outer;
