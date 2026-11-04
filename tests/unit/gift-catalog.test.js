@@ -63,12 +63,16 @@ test("every gift has an animation and generated-sound profile", () => {
   }
 });
 
-test("the gift manifest does not reference external TikTok or CDN artwork", () => {
+test("Minglora gift identities and generated asset paths are platform-neutral", () => {
+  assert.doesNotMatch(JSON.stringify(manifest), /tiktok/i);
   for (const gift of gifts) {
-    assert.ok(!/tiktokcdn|cdn4\.dps\.vc|streamtoearn|livecade/i.test(gift.image_url));
-    assert.ok(!/tiktokcdn|cdn4\.dps\.vc|streamtoearn|livecade/i.test(gift.model_url));
+    assert.doesNotMatch(gift.name, /tiktok/i);
+    assert.doesNotMatch(gift.code, /tiktok/i);
+    assert.doesNotMatch(gift.image_url + " " + gift.model_url, /tiktok/i);
+    assert.ok(gift.image_url.startsWith("/assets/gifts/catalog/"));
+    assert.ok(gift.model_url.startsWith("/assets/gifts/catalog/"));
   }
-});
+});;
 
 
 test("the build produces one original SVG and one 3D GLTF for every active gift", () => {
