@@ -84,6 +84,9 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/gifts.js
+          node --check public/gift-effects.js
+          node --check scripts/generate-minglora-gifts.mjs
           node --check public/auth-login.js
           node --check public/sw.js
           node --check public/settings.js
