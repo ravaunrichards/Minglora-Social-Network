@@ -229,7 +229,7 @@ function syncNavigationActive(){
 }
 function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();syncNavigationActive();renderView();}
 function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));}
-const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-3d-1';
+const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-wallet-3d-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
   return '<svg class="'+className+'" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="'+MESSENGER_ICON_SPRITE+'#'+id+'"></use></svg>';
 }
