@@ -371,8 +371,13 @@ export function createCreatorLeagueMatch(db, input) {
   event(db, input.opponentId, "match_challenge_received", { matchId: match.id, challengerId: input.challengerId }, now);
   return match;
 }
+function resolveCanonicalMatch(db, match) {
+  if (!match?.id) return match;
+  return (db.creatorLeagueMatches || []).find(item => item.id === match.id) || match;
+}
 export function acceptCreatorLeagueMatch(db, match, userId, now = new Date()) {
   settleExpiredLeagueMatches(db, now);
+  match = resolveCanonicalMatch(db, match);
   if (!match || match.status !== "pending") throw Object.assign(new Error("This League Match invitation is no longer available."), { status: 404 });
   if (match.opponentId !== userId) throw Object.assign(new Error("Only the invited creator can accept this match."), { status: 403 });
   if (new Date(match.expiresAt).getTime() <= now.getTime()) { match.status = "expired"; throw Object.assign(new Error("This League Match invitation has expired."), { status: 410 }); }
@@ -384,6 +389,7 @@ export function acceptCreatorLeagueMatch(db, match, userId, now = new Date()) {
 }
 export function supportCreatorLeagueMatch(db, match, viewerId, side, now = new Date()) {
   settleExpiredLeagueMatches(db, now);
+  match = resolveCanonicalMatch(db, match);
   if (!match || match.status !== "live") throw Object.assign(new Error("This League Match is not active."), { status: 409 });
   if (!["challenger", "opponent"].includes(side)) throw Object.assign(new Error("Choose a valid side to support."), { status: 400 });
   if ([match.challengerId, match.opponentId].includes(viewerId)) throw Object.assign(new Error("Creators cannot support their own match."), { status: 403 });
@@ -395,6 +401,7 @@ export function supportCreatorLeagueMatch(db, match, viewerId, side, now = new D
 }
 export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new Date()) {
   settleExpiredLeagueMatches(db, now);
+  match = resolveCanonicalMatch(db, match);
   if (!match || match.status !== "live") throw Object.assign(new Error("Power-ups can only be used during an active match."), { status: 409 });
   const side = match.challengerId === userId ? "challenger" : match.opponentId === userId ? "opponent" : null;
   if (!side) throw Object.assign(new Error("Only a creator in this match can activate a power-up."), { status: 403 });
