@@ -2882,6 +2882,115 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='verified'){await openProfileVerificationManager();return;}
   if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
+const CREATOR_SUBSCRIPTION_PERK_LABELS = {
+  subscriber_badge: 'Subscriber badge',
+  exclusive_posts: 'Exclusive posts',
+  exclusive_reels: 'Exclusive videos and Reels',
+  subscriber_live: 'Subscriber-only LIVE',
+  priority_live_chat: 'Priority LIVE chat',
+  behind_the_scenes: 'Behind-the-scenes updates'
+};
+
+function subscriptionMoney(minor,currency='USD'){
+  const amount=Number(minor||0)/100;
+  return new Intl.NumberFormat(undefined,{style:'currency',currency}).format(amount);
+}
+
+async function openCreatorSubscriptionManager(){
+  let data;
+  try{data=await api('/creator/subscriptions');}
+  catch(error){toast(error.message);return;}
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop creator-subscription-backdrop';
+  const cards=(data.plans||[]).map(plan=>{
+    const perks=(data.perks||[]).map(perk=>'<label class="creator-subscription-perk"><input type="checkbox" data-plan-perk="'+esc(perk.code)+'" '+(plan.perks?.[perk.code]?'checked':'')+'><span><strong>'+esc(perk.label)+'</strong><small>'+esc(perk.description)+'</small></span></label>').join('');
+    return '<section class="creator-subscription-tier" data-subscription-plan="'+esc(plan.code)+'"><div class="creator-subscription-tier-heading"><div><span class="eyebrow">'+esc(plan.interval||'month')+'LY PACKAGE</span><h3>'+esc(plan.name)+'</h3><strong>'+subscriptionMoney(plan.priceMinor,plan.currency)+' <small>/ month</small></strong></div><label class="creator-subscription-enable"><input type="checkbox" data-plan-enabled '+(plan.enabled?'checked':'')+'><span>Enabled</span></label></div><p class="muted">Choose the benefits included with this package. Members will see these before checkout.</p><div class="creator-subscription-perks">'+perks+'</div></section>';
+  }).join('');
+  modal.innerHTML='<section class="modal creator-subscription-modal" role="dialog" aria-modal="true" aria-labelledby="creator-subscription-title"><div class="modal-head"><div><h2 id="creator-subscription-title">Creator subscriptions</h2><p class="muted">Set your monthly packages and subscriber benefits.</p></div><button type="button" class="modal-close" aria-label="Close">×</button></div><form id="creator-subscription-form" class="modal-body"><div class="creator-subscription-note"><strong>Creator earnings are split 50/50.</strong><span>Half of each verified subscription payment is credited to your creator earnings. Payouts use your saved PayPal payout account.</span></div>'+cards+'<p class="creator-subscription-status" id="creator-subscription-status" role="status"></p><div class="modal-actions"><button type="button" class="secondary" data-subscription-close>Cancel</button><button type="submit" class="primary">Save subscription settings</button></div></form></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close').addEventListener('click',close);
+  modal.querySelector('[data-subscription-close]').addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('#creator-subscription-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,submit=form.querySelector('button[type="submit"]'),status=form.querySelector('#creator-subscription-status');
+    const plans=[...form.querySelectorAll('[data-subscription-plan]')].map(card=>({
+      code:card.dataset.subscriptionPlan,
+      enabled:card.querySelector('[data-plan-enabled]').checked,
+      perks:Object.fromEntries([...card.querySelectorAll('[data-plan-perk]')].map(input=>[input.dataset.planPerk,input.checked]))
+    }));
+    submit.disabled=true;status.textContent='Saving your subscription settings…';
+    try{
+      await api('/creator/subscriptions',{method:'PUT',body:JSON.stringify({plans})});
+      toast('Subscription packages saved.');
+      close();
+      await openProfile(state.user.id);
+    }catch(error){status.textContent=error.message;submit.disabled=false;}
+  });
+}
+
+async function openProfileSubscriptionPicker(creator,profileData){
+  const plans=Array.isArray(profileData.subscriptionPlans)?profileData.subscriptionPlans.filter(plan=>plan.enabled):[];
+  const subscription=profileData.viewerSubscription||null;
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop creator-subscription-backdrop';
+  const perkText=plan=>Object.entries(plan.perks||{}).filter(([,enabled])=>enabled).map(([code])=>CREATOR_SUBSCRIPTION_PERK_LABELS[code]||code).map(label=>'<li>'+esc(label)+'</li>').join('');
+  const planCards=plans.map(plan=>'<article class="subscriber-subscription-tier"><div class="subscriber-subscription-tier-head"><div><h3>'+esc(plan.name)+'</h3><p class="muted">Billed monthly through PayPal</p></div><strong>'+subscriptionMoney(plan.priceMinor,plan.currency)+'<small>/mo</small></strong></div><ul>'+(perkText(plan)||'<li>Creator supporter membership</li>')+'</ul><button type="button" class="primary full" data-subscribe-plan="'+esc(plan.code)+'">Subscribe · '+subscriptionMoney(plan.priceMinor,plan.currency)+'/month</button></article>').join('');
+  let current='';
+  if(subscription?.status==='approval_pending'){
+    current='<section class="subscriber-current-plan"><strong>Finish your pending subscription</strong><p>Continue to PayPal to approve '+esc(subscription.planName||'your selected package')+'.</p>'+(subscription.approvalUrl?'<button type="button" class="primary full" data-resume-subscription>Continue to PayPal</button>':'<p class="muted">The PayPal approval link is not available. Start checkout again when this pending request expires.</p>')+'</section>';
+  }else if(subscription?.status==='active'){
+    const renewal=subscription.currentPeriodEnd?new Date(subscription.currentPeriodEnd).toLocaleDateString(): 'the end of the paid period';
+    current='<section class="subscriber-current-plan"><strong>You subscribe to '+esc(subscription.planName||'this creator')+'</strong><p>'+(subscription.cancelAtPeriodEnd?'Renewal is cancelled. Your access remains until '+esc(renewal)+'.':'Next billing date: '+esc(renewal)+'.')+'</p>'+(subscription.cancelAtPeriodEnd?'':'<button type="button" class="secondary full" data-cancel-subscription>Cancel renewal</button>')+'</section>';
+  }
+  modal.innerHTML='<section class="modal creator-subscription-modal subscriber-subscription-modal" role="dialog" aria-modal="true" aria-labelledby="subscriber-subscription-title"><div class="modal-head"><div><h2 id="subscriber-subscription-title">Subscribe to '+esc(creator.name)+'</h2><p class="muted">Support this creator and unlock the perks they selected.</p></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="subscriber-subscription-paypal"><strong>Secure recurring payments with PayPal</strong><span>Monthly billing · manage or cancel renewal from this profile</span></div>'+current+(planCards?'<div class="subscriber-subscription-packages">'+planCards+'</div>':'<div class="empty-state"><h3>No packages are available</h3><p>This creator has not enabled a subscription package.</p></div>')+'<p class="creator-subscription-status" id="subscriber-subscription-status" role="status"></p></div></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close').addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelectorAll('[data-subscribe-plan]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    const status=modal.querySelector('#subscriber-subscription-status');
+    status.textContent='Connecting to PayPal…';
+    try{
+      const result=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:creator.id,planCode:button.dataset.subscribePlan})});
+      if(!result.approveUrl)throw new Error('PayPal did not provide a subscription approval link.');
+      window.location.assign(result.approveUrl);
+    }catch(error){status.textContent=error.message;button.disabled=false;}
+  }));
+  modal.querySelector('[data-resume-subscription]')?.addEventListener('click',()=>{
+    if(subscription?.approvalUrl)window.location.assign(subscription.approvalUrl);
+  });
+  modal.querySelector('[data-cancel-subscription]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget,status=modal.querySelector('#subscriber-subscription-status');
+    if(!window.confirm('Cancel automatic renewal for this creator subscription? Your access will remain through the paid period.'))return;
+    button.disabled=true;status.textContent='Cancelling renewal…';
+    try{
+      await api('/subscriptions/'+encodeURIComponent(subscription.id)+'/cancel',{method:'POST',body:'{}'});
+      toast('Subscription renewal cancelled.');
+      close();
+      await openProfile(creator.id);
+    }catch(error){status.textContent=error.message;button.disabled=false;}
+  });
+}
+
+async function finishCreatorSubscriptionReturn(){
+  const params=new URLSearchParams(window.location.search);
+  const status=params.get('minglora_subscription');
+  if(!['return','cancel'].includes(status))return false;
+  const paypalSubscriptionId=params.get('subscription_id')||params.get('token');
+  window.history.replaceState(null,'',window.location.pathname);
+  if(status==='cancel'){toast('PayPal checkout was cancelled. No subscription was activated.');return true;}
+  if(!paypalSubscriptionId){toast('PayPal returned without a subscription reference. Check your profile subscription status.');return true;}
+  try{
+    const result=await api('/subscriptions/confirm',{method:'POST',body:JSON.stringify({paypalSubscriptionId})});
+    toast(result.subscription?.status==='active'?'Subscription activated. Your creator perks are ready.':'PayPal approval received. Your subscription is awaiting confirmation.');
+    await openProfile(state.user.id);
+  }catch(error){toast('PayPal returned, but the subscription could not be confirmed: '+error.message);}
+  return true;
+}
+
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
