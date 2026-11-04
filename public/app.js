@@ -3830,14 +3830,54 @@ function openStoryComposer(){
 }
 async function openStory(id){
   try{
-    const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
+    const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});
+    const s=result.story,isOwner=s.userId===state.user.id;
+    let sequence=(state.stories||[]).filter(story=>story.userId===s.userId);
+    if(!sequence.some(story=>story.id===s.id)){
+      await loadStories();
+      sequence=(state.stories||[]).filter(story=>story.userId===s.userId);
+    }
+    if(!sequence.some(story=>story.id===s.id))sequence.push(s);
+    sequence.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)||Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
+    const storyIndex=Math.max(0,sequence.findIndex(story=>story.id===s.id));
     const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
-    const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';
-    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+(s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
-    document.body.append(modal);bindSoundtrackPlayback(modal);modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
+    const navigation=sequence.length>1
+      ?'<div class="story-navigation" aria-label="Story sequence"><span>Story '+(storyIndex+1)+' of '+sequence.length+'</span><div><button type="button" class="secondary" data-story-previous '+(storyIndex===0?'disabled':'')+' aria-label="Previous story">‹ Previous</button><button type="button" class="primary" data-story-next '+(storyIndex===sequence.length-1?'disabled':'')+' aria-label="Next story">Next ›</button></div></div>'
+      :'';
+    const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';modal.tabIndex=-1;
+    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+
+      (s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+
+      renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+
+      (s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+
+      navigation+
+      (isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+
+      '</section>';
+    document.body.append(modal);modal.focus();bindSoundtrackPlayback(modal);
+    const navigate=targetIndex=>{
+      if(targetIndex<0||targetIndex>=sequence.length)return;
+      const nextStory=sequence[targetIndex];
+      modal.remove();
+      void openStory(nextStory.id);
+    };
+    modal.querySelector('[data-story-previous]')?.addEventListener('click',()=>navigate(storyIndex-1));
+    modal.querySelector('[data-story-next]')?.addEventListener('click',()=>navigate(storyIndex+1));
+    modal.addEventListener('keydown',event=>{
+      if(event.key==='ArrowLeft'&&storyIndex>0){event.preventDefault();navigate(storyIndex-1);}
+      if(event.key==='ArrowRight'&&storyIndex<sequence.length-1){event.preventDefault();navigate(storyIndex+1);}
+    });
+    modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};
+    modal.addEventListener('click',event=>{if(event.target===modal){modal.remove();loadStories().catch(()=>{});}});
+    const video=modal.querySelector('video.story-viewer-image');
+    video?.addEventListener('ended',()=>navigate(storyIndex+1));
     modal.querySelector('#report-story')?.addEventListener('click',()=>{modal.remove();openReportComposer('story',s.id);});
-    modal.querySelector('#delete-story')?.addEventListener('click',async()=>{if(!window.confirm('Delete this story?'))return;try{await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');}catch(err){toast(err.message);}});
-  }catch(err){toast(err.message);}
+    modal.querySelector('#delete-story')?.addEventListener('click',async()=>{
+      if(!window.confirm('Delete this story?'))return;
+      try{
+        await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});
+        modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');
+      }catch(error){toast(error.message);}
+    });
+  }catch(error){toast(error.message);}
 }
 async function loadPages(){state.pages=(await api('/pages')).pages;}
 async function renderPages(){
