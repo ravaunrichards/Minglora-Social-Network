@@ -448,7 +448,7 @@ function main(){
     writeAsset(path.join(ASSET_DIR,gift.code+".gltf"),gltf,checkOnly);
     count++;
   }
-  const stamp={version:1,giftCount:count,svgAssets:count,gltfAssets:count,generatedAt:new Date().toISOString()};
+  const stamp={version:1,giftCount:count,svgAssets:count,gltfAssets:count,generatedAt:String(data.generated_at||"unspecified")};
   const stampText=JSON.stringify(stamp,null,2);
   writeAsset(path.join(ASSET_DIR,"catalog-build.json"),stampText,checkOnly);
   process.stdout.write("[Minglora Gift Studio] "+(checkOnly?"verified ":"generated ")+count+" individual SVG artworks and "+count+" 3D GLTF gift models.\n");
