@@ -81,7 +81,7 @@ test("catalog previews and sent gifts use each gift animation identity", () => {
   assert.match(giftEffectsSource, /const animationIdentity=String\(gift\.animation_key/);
   assert.match(giftEffectsSource, /target\.animate\(frames/);
   assert.match(giftEffectsSource, /minglora-gift-fx-particles/);
-  assert.match(giftEffectsSource, /data\.giftAnimation=animationIdentity/);
+  assert.match(giftEffectsSource, /dataset\.giftAnimation=animationIdentity/);
 });
 
 test("Minglora gift identities and generated asset paths are platform-neutral", () => {
