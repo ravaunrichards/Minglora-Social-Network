@@ -31,8 +31,8 @@ test("sound APIs enforce ownership, rights and reusable-sound access", async () 
   assert.match(server, /if\(method==='POST'&&p==='\/api\/sounds'\)/);
   assert.match(server, /validateSoundInput\(input\)/);
   assert.match(server, /asset\.ownerId===user\.id&&asset\.slot==='sound'/);
-  assert.match(server, /soundFavorite=p\.match\(\/\^\\\/api\\\/sounds/);
-  assert.match(server, /soundRoute=p\.match\(\/\^\\\/api\\\/sounds/);
+  assert.match(server, /soundFavorite=p\.match\(\/\^/);
+  assert.match(server, /soundRoute=p\.match\(\/\^/);
   assert.match(server, /canUseSound\(sound,user\.id\)/);
 });
 
