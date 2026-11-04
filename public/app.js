@@ -713,6 +713,11 @@ let liveSpeakerRefreshTimer=null;
 let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
 let liveDirectoryFilter='all';
+function setLiveRoomMobileMode(enabled){
+  const method=enabled?'add':'remove';
+  document.documentElement.classList[method]('live-room-active');
+  document.body.classList[method]('live-room-active');
+}
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
@@ -820,16 +825,18 @@ function attachLiveTrack(track,participant,local){
   }
 }
 
-function endHostedLiveOnPageHide(){
-  if(activeLiveRole!=="host"||!activeLiveSession?.id)return;
-  const sessionId=encodeURIComponent(activeLiveSession.id);
+function closeLiveRoomOnPageHide(){
+  const sessionId=activeLiveSession?.id;
+  if(!sessionId)return;
+  const endpoint=activeLiveRole==='host'?'end':'leave';
   try{activeLiveRoom?.disconnect();}catch{}
-  fetch("/api/live/sessions/"+sessionId+"/end",{
+  setLiveRoomMobileMode(false);
+  fetch("/api/live/sessions/"+encodeURIComponent(sessionId)+"/"+endpoint,{
     method:"POST",credentials:"same-origin",keepalive:true,
     headers:{"Content-Type":"application/json"},body:"{}"
   }).catch(()=>{});
 }
-window.addEventListener("pagehide",endHostedLiveOnPageHide);
+window.addEventListener("pagehide",closeLiveRoomOnPageHide);
 
 function stopLiveParticipantSync(){
   if(liveParticipantSyncTimer){clearInterval(liveParticipantSyncTimer);liveParticipantSyncTimer=null;}
@@ -1017,6 +1024,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       ? "<div class='live-gift-host-note'><strong>Your LIVE is ready for gifts</strong><p>Viewers can send you gifts while you are broadcasting.</p></div>"
       : "<div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
     "</aside></div></section>");
+  setLiveRoomMobileMode(true);
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
@@ -1077,12 +1085,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
         if(button)button.disabled=false;
         return;
       }
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();setLiveRoomMobileMode(false);activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();setLiveRoomMobileMode(false);activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
@@ -1142,7 +1150,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast("You're on stage. Your microphone is connected; camera publishing is disabled.");
   }catch(error){
-    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
+    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});setLiveRoomMobileMode(false);activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
     if(state.view==='live'){
