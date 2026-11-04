@@ -1,6 +1,6 @@
 BEGIN;
 CREATE OR REPLACE FUNCTION public.minglora_guard_creator_subscription_settings()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $guard$
 BEGIN
  IF current_user <> 'service_role' THEN
    IF TG_OP = 'INSERT' THEN
@@ -22,7 +22,7 @@ BEGIN
  NEW.updated_at := now();
  RETURN NEW;
 END;
-$$;
+$guard$;
 DROP TRIGGER IF EXISTS minglora_guard_creator_subscription_settings ON public.subscription_creator_settings;
 CREATE TRIGGER minglora_guard_creator_subscription_settings
  BEFORE INSERT OR UPDATE ON public.subscription_creator_settings
