@@ -89,3 +89,26 @@ test('the app shell and service worker cache the same final navigation and stage
   assert.match(worker, /styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(worker, /app\.js\?v=20261104-minglora-gift-motion-1/);
 });
+
+
+test('primary navigation stays limited to Home, MeetWave and LIVE', () => {
+  const topStart = html.indexOf('<nav class="top-nav"');
+  const topEnd = html.indexOf('</nav>', topStart);
+  const primaryTop = html.slice(topStart, topEnd);
+  assert.deepEqual(
+    [...primaryTop.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
+    ['feed', 'meetwave', 'live']
+  );
+
+  const mobileStart = html.indexOf('<div class="mobile-nav"');
+  const moreMenuStart = html.indexOf('id="mobile-more-menu"', mobileStart);
+  const mobilePrimary = html.slice(mobileStart, moreMenuStart);
+  assert.deepEqual(
+    [...mobilePrimary.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
+    ['feed', 'meetwave', 'live']
+  );
+  assert.match(html, /id="mobile-more-btn"/);
+  assert.match(html, /data-view="leagues"/);
+  assert.match(html, /data-view="creator"/);
+  assert.match(app, /#mobile-more-btn/);
+});
