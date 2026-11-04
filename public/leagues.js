@@ -69,11 +69,11 @@
       const side = isChallenger ? "challenger" : "opponent";
       const powers = (overview.powerups || []).map(power => {
         const unavailableShield = power.id === "shield" &&
-          !(match.pendingEffects || []).some(effect => effect.side === side && effect.shieldable === true && effect.source !== "referee");
+          (match.activeEffects || []).some(effect => effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now());
         const fixedTimer = power.id === "time_boost" && match.timerMode === "fixed";
         const disabled = power.usedToday || unavailableShield || fixedTimer;
-        const reason = power.usedToday ? "Used today" : unavailableShield ? "No shieldable effect" : fixedTimer ? "Fixed timer" : power.description;
-        return "<button type='button' class='league-powerup-btn' data-match-powerup='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' " + (disabled ? "disabled" : "") + " title='" + esc(reason) + "'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (power.usedToday ? "Used today" : unavailableShield ? "Not available" : fixedTimer ? "Disabled" : "Use") + "</small></button>";
+        const reason = power.usedToday ? "Used today" : unavailableShield ? "Your Shield is already active" : fixedTimer ? "Fixed timer" : power.description;
+        return "<button type='button' class='league-powerup-btn' data-match-powerup='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' " + (disabled ? "disabled" : "") + " title='" + esc(reason) + "'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (power.usedToday ? "Used today" : unavailableShield ? "Active" : fixedTimer ? "Disabled" : "Use") + "</small></button>";
       }).join("");
       controls = "<div class='league-powerup-grid'>" + powers + "</div>";
     } else if (match.status === "live" && !isParticipant) {
