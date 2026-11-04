@@ -2230,7 +2230,7 @@ async function route(req, res) {
         const earnings=await requestSupabaseState('economy_creator_earnings',{creatorId:user.id});
         const payoutEmail=earnings.payoutAccount?.paypal_email;
         if(!payoutEmail)return json(res,400,{error:'Add your PayPal payout email before requesting a withdrawal.'});
-        const amountMinor=input.amountMinor===undefined?Number(earnings.availableMinor):Number(input.amountMinor);
+        const amountMinor=input.amountMinor===undefined?Math.floor(Number(earnings.availableMinor)):Number(input.amountMinor);
         if(!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>Number(earnings.availableMinor)){
           return json(res,400,{error:'Enter an amount up to your available creator earnings (minimum USD 1.00).'});
         }
