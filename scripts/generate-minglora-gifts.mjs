@@ -331,7 +331,7 @@ function modelDocument(gift) {
   // A small unique signature gem distinguishes objects that share a shape family.
   sphere(.48,.58,.1,.07,.07,.07,light,9,6);
 
-  const binParts=[],bufferViews=[],accessors=[],primitives=[];
+  const binParts=[],bufferViews=[],accessors=[],primitives=[],materials=[];
   let byteOffset=0;
   function align4(buf){const pad=(4-(buf.length%4))%4;return pad?Buffer.concat([buf,Buffer.alloc(pad)]):buf;}
   function addBuffer(buf,target){
