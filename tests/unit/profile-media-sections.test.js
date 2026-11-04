@@ -76,6 +76,6 @@ test('profile tabs include a right-aligned three-dot overflow menu with requeste
   assert.match(app, /profileVisibility:next/);
   assert.match(css, /\.profile-tabs-overflow\{[^}]*align-items:center/);
   assert.match(css, /\.profile-overflow-trigger\{[^}]*align-self:center/);
-  assert.match(html, /styles\.css\?v=20261104-minglora-gift-studio-1/);
+  assert.match(html, /styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(sw, /minglora-shell-v66-minglora-gift-motion-1/);
 });
