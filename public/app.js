@@ -311,21 +311,23 @@ function bindFeed(){
 }
 function openEditPost(post){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="edit-post-title"><div class="modal-head"><h2 id="edit-post-title">Edit post</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="edit-post-form"><div class="field"><label for="edit-post-text">Post text</label><textarea id="edit-post-text" name="text" maxlength="5000">'+esc(post.text||'')+'</textarea></div><div class="field"><label>Photos, videos, audio and 3D files</label><div id="edit-post-media-picker"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="edit-post-title"><div class="modal-head"><h2 id="edit-post-title">Edit post</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="edit-post-form"><div class="field"><label for="edit-post-text">Post text</label><textarea id="edit-post-text" name="text" maxlength="5000">'+esc(post.text||'')+'</textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="edit-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="edit-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>';
   document.body.append(modal);
   const picker=createMediaPicker(modal.querySelector('#edit-post-media-picker'),{slot:'post',initialMedia:post.media||[]});
-  const close=()=>{picker.destroy();modal.remove();};
+  const soundtrack=createSoundtrackEditor(modal.querySelector('#edit-post-soundtrack'),post.soundtrack||null);
+  const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelector('form').onsubmit=async event=>{
     event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
-      await api('/posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      await api('/posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({text:values.get('text'),mediaIds,soundtrack:soundtrack.value()})});
       close();await refreshVisiblePosts();toast('Post updated.');
     }catch(error){toast(error.message);button.disabled=false;}
   };
 }
+
 function openReportComposer(targetType,targetId){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="report-title"><div class="modal-head"><h2 id="report-title">Report '+esc(targetType)+'</h2><button class="modal-close" aria-label="Close">×</button></div><form id="report-form" class="modal-body"><p class="muted">Reports are reviewed by Minglora moderators. Reporting does not automatically remove content.</p><label class="field"><span>Reason</span><select name="category" required><option value="spam">Spam</option><option value="harassment">Harassment or bullying</option><option value="hate">Hate or discrimination</option><option value="nudity">Nudity or sexual content</option><option value="violence">Violence or threats</option><option value="scam">Scam or fraud</option><option value="impersonation">Impersonation</option><option value="copyright">Copyright</option><option value="privacy">Privacy concern</option><option value="other">Other</option></select></label><label class="field"><span>Additional details (optional)</span><textarea name="details" rows="4" maxlength="2000" placeholder="Tell the moderator what happened."></textarea></label><p class="auth-error" id="report-status" role="status"></p><button class="primary full" type="submit">Submit report</button></form></section>';
@@ -454,17 +456,18 @@ function createSoundtrackEditor(root,initialTrack=null){
 }
 function openComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Public · Anyone can see this</small></div></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos, audio and 3D models</label><div id="create-post-media-picker"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Public · Anyone can see this</small></div></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="create-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="create-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
   document.body.append(modal);
   const picker=createMediaPicker(modal.querySelector('#create-post-media-picker'),{slot:'post',maxFiles:10});
-  const close=()=>{picker.destroy();modal.remove();};
+  const soundtrack=createSoundtrackEditor(modal.querySelector('#create-post-soundtrack'));
+  const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelector('form').addEventListener('submit',async event=>{
     event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,soundtrack:soundtrack.value()})});
       close();await loadFeed();await renderFeed();toast('Your post is published.');
     }catch(error){toast(error.message);button.disabled=false;}
   });
@@ -3268,22 +3271,24 @@ function openEditProfile(u,mediaOnly=null){
 }
 function openStoryComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose a photo or video</label><div id="story-media-picker"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
+  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose a photo or video</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
   document.body.append(modal);
   const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:1});
-  const close=()=>{picker.destroy();modal.remove();};
+  const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
+  const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelector('form').onsubmit=async event=>{
     event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
     try{
-      const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
-      if(!String(values.get('text')||'').trim()&&!mediaIds.length){toast('Write a story or choose a photo/video.');button.disabled=false;return;}
-      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaId:mediaIds[0]||null,audience:values.get('audience')})});
+      const values=new FormData(event.currentTarget),mediaIds=await picker.upload(),track=soundtrack.value();
+      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track){toast('Write a Story, choose a photo/video or add a sound.');button.disabled=false;return;}
+      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaId:mediaIds[0]||null,audience:values.get('audience'),soundtrack:track})});
       close();await loadStories();if(state.view==='feed')await renderFeed();toast('Story published for 24 hours.');
     }catch(error){toast(error.message);button.disabled=false;}
   };
 }
+
 async function openStory(id){
   try{
     const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
