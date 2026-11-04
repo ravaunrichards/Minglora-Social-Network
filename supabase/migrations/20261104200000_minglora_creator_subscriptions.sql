@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.creator_subscriptions (
  amount_minor integer NOT NULL CHECK (amount_minor > 0),
  platform_share_bps integer NOT NULL DEFAULT 5000 CHECK (platform_share_bps = 5000),
  creator_share_bps integer NOT NULL DEFAULT 5000 CHECK (creator_share_bps = 5000),
- provider text NOT NULL CHECK (provider IN ('paypal','stripe','manual')),
+ provider text NOT NULL CHECK (provider = 'paypal'),
  provider_customer_id text,
  provider_subscription_id text,
  current_period_start timestamptz,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS public.creator_subscriptions (
 CREATE UNIQUE INDEX IF NOT EXISTS creator_subscriptions_one_live_per_pair ON public.creator_subscriptions(creator_id,subscriber_id) WHERE status IN ('incomplete','active','past_due');
 CREATE TABLE IF NOT EXISTS public.subscription_payment_events (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
- provider text NOT NULL CHECK (provider IN ('paypal','stripe')),
+ provider text NOT NULL CHECK (provider = 'paypal'),
  provider_event_id text NOT NULL,
  provider_subscription_id text,
  subscription_id uuid REFERENCES public.creator_subscriptions(id) ON DELETE SET NULL,
@@ -87,11 +87,10 @@ CREATE TABLE IF NOT EXISTS public.subscription_content_access (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE OR REPLACE FUNCTION public.minglora_has_active_subscription(p_creator_id uuid,p_subscriber_id uuid DEFAULT auth.uid())
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+RETURNS boolean LANGUAGE sql STABLE AS $
  SELECT EXISTS(SELECT 1 FROM public.creator_subscriptions s WHERE s.creator_id=p_creator_id AND s.subscriber_id=p_subscriber_id AND s.status='active' AND (s.current_period_end IS NULL OR s.current_period_end>now()));
 $$;
-REVOKE ALL ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.subscription_creator_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_tiers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.creator_subscriptions ENABLE ROW LEVEL SECURITY;
@@ -109,5 +108,6 @@ CREATE POLICY subscription_ledger_read ON public.subscription_earnings_ledger FO
 CREATE POLICY subscription_content_manage ON public.subscription_content_access FOR ALL TO authenticated USING(creator_id=auth.uid()) WITH CHECK(creator_id=auth.uid());
 CREATE POLICY subscription_content_read ON public.subscription_content_access FOR SELECT TO authenticated USING(access_level='public' OR creator_id=auth.uid() OR public.minglora_has_active_subscription(creator_id,auth.uid()));
 REVOKE ALL ON public.creator_subscriptions,public.subscription_payment_events,public.subscription_earnings_ledger FROM anon,authenticated;
-GRANT SELECT ON public.creator_subscriptions,public.subscription_earnings_ledger TO authenticated;
+REVOKE ALL ON public.subscription_creator_settings, public.subscription_tiers, public.creator_subscriptions, public.subscription_payment_events, public.subscription_earnings_ledger, public.subscription_content_access FROM anon, authenticated;
+GRANT ALL PRIVILEGES ON public.subscription_creator_settings, public.subscription_tiers, public.creator_subscriptions, public.subscription_payment_events, public.subscription_earnings_ledger, public.subscription_content_access TO service_role;
 COMMIT;
