@@ -10,7 +10,7 @@ test('Minglora uses PayPal-only monthly billing and stores server-side subscript
     read('../../supabase/migrations/20261104200000_minglora_creator_subscriptions.sql'),
     read('../../supabase/migrations/20261104202000_minglora_paypal_subscription_billing.sql'),
     read('../../supabase/migrations/20261104204000_minglora_subscription_payout_integration.sql'),
-    read('../../supabase/migrations/20261104201000_harden_minglora_subscription_creator_controls.sql')
+    read('../../supabase/migrations/20261104205000_harden_subscription_runtime_access.sql')
   ]);
   assert.match(server, /\/v1\/catalogs\/products/);
   assert.match(server, /\/v1\/billing\/plans/);
@@ -22,7 +22,8 @@ test('Minglora uses PayPal-only monthly billing and stores server-side subscript
   assert.match(paypalMigration, /paypal_plan_id/);
   assert.doesNotMatch(paypalMigration, /SECURITY DEFINER/);
   assert.match(controlMigration, /current_user <> 'service_role'/);
-  assert.match(controlMigration, /AS \\$guard\\$/);
+  assert.match(controlMigration, /SET search_path TO ''/);
+  assert.match(controlMigration, /DROP POLICY IF EXISTS subscription_content_access_read/);
   assert.match(schema, /provider = 'paypal'/);
   assert.match(schema, /REVOKE ALL ON public\.subscription_creator_settings/);
   assert.match(payoutMigration, /subscription_earnings_ledger/);
