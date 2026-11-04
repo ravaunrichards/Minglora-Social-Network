@@ -518,6 +518,41 @@ async function resolveAssetUrl(asset) {
   const result=await mediaGateway('media_sign',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
   return result.url||null;
 }
+function resolveSoundtrackForUser(userId, raw) {
+  const validation=normalizeSoundtrackInput(raw);
+  if(!validation.valid)throw Object.assign(new Error(validation.errors.join(" ")),{status:400});
+  if(!validation.value)return null;
+  const sound=(db.sounds||[]).find(item=>item.id===validation.value.soundId);
+  if(!sound||!canUseSound(sound,userId)||blockedBetween(userId,sound.ownerId)){
+    throw Object.assign(new Error("That sound is unavailable or its creator has not allowed reuse."),{status:404});
+  }
+  if(sound.durationMs>0&&validation.value.endMs>sound.durationMs){
+    throw Object.assign(new Error("The selected sound trim extends beyond the recording."),{status:400});
+  }
+  return validation.value;
+}
+async function publicSoundCard(sound,viewerId,usageCounts=soundUsageCounts(db)) {
+  const asset=(db.mediaAssets||[]).find(item=>item.id===sound.assetId&&item.ownerId===sound.ownerId&&item.slot==="sound"&&item.status!=="deleted");
+  if(!asset)return null;
+  let url=null;
+  try{url=await resolveAssetUrl(asset);}catch{return null;}
+  if(!url)return null;
+  return {
+    id:sound.id,title:sound.title,attribution:sound.attribution||"",
+    durationMs:Number(sound.durationMs||0),allowReuse:Boolean(sound.allowReuse),
+    createdAt:sound.createdAt,usageCount:Number(usageCounts.get(sound.id)||0),
+    isFavorite:(db.soundFavorites||[]).some(item=>item.userId===viewerId&&item.soundId===sound.id),
+    mediaType:"audio",mimeType:asset.mimeType,url,
+    author:safeUser(db.users.find(item=>item.id===sound.ownerId))
+  };
+}
+async function publicSoundtrack(track,viewerId) {
+  if(!track?.soundId)return null;
+  const sound=(db.sounds||[]).find(item=>item.id===track.soundId);
+  if(!sound)return null;
+  const card=await publicSoundCard(sound,viewerId);
+  return card?{...track,sound:card}:null;
+}
 async function publicPost(p,viewerId) {
   const author=db.users.find(u=>u.id===p.userId);
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
@@ -526,7 +561,7 @@ async function publicPost(p,viewerId) {
     try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
   }));
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
@@ -568,7 +603,7 @@ async function publicStory(story,viewerId,includeViews=false) {
   const asset=story.mediaId?(db.mediaAssets||[]).find(item=>item.id===story.mediaId&&item.ownerId===story.userId&&item.slot==='story'):null;
   let media=null;if(asset){try{media={mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset)};}catch{}}
   const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
-  return {...story,media,author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
+  return {...story,media,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
     viewers:includeViews&&story.userId===viewerId?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined};
 }
 
