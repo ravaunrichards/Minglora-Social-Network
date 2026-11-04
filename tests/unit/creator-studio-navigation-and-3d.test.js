@@ -89,7 +89,7 @@ test('global navigation destinations all resolve to an application view and Home
 test('the app shell and service worker cache the same final navigation and stage build', () => {
   assert.match(html, /styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(html, /app\.js\?v=20261104-for-you-feed-1/);
-  assert.match(worker, /minglora-shell-v72-compact-primary-nav-1/);
+  assert.match(worker, /minglora-shell-v73-mobile-navigation-1/);
   assert.match(worker, /styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(worker, /app\.js\?v=20261104-for-you-feed-1/);
 });
@@ -105,14 +105,17 @@ test('primary navigation contains only five main destinations', () => {
   );
 
   const mobileStart = html.indexOf('<div class="mobile-nav"');
-  const moreMenuStart = html.indexOf('id="mobile-more-menu"', mobileStart);
-  const mobilePrimary = html.slice(mobileStart, moreMenuStart);
+  const mobileEnd = html.indexOf('</div>', mobileStart);
+  const mobilePrimary = html.slice(mobileStart, mobileEnd);
   assert.deepEqual(
     [...mobilePrimary.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'for-you', 'live', 'meetwave', 'leagues']
+    ['feed', 'for-you', 'live', 'messages', 'more']
   );
-  assert.match(html, /id="mobile-more-btn"/);
-  assert.match(html, /data-view="leagues"/);
-  assert.match(html, /data-view="creator"/);
-  assert.match(app, /#mobile-more-btn/);
+  assert.match(html, /id="mobile-more-nav"/);
+  const hubStart = app.indexOf('function renderMoreHub(){');
+  const hubEnd = app.indexOf('async function renderView(){', hubStart);
+  const moreHub = app.slice(hubStart, hubEnd);
+  for (const destination of ['meetwave','leagues','creator','friends','groups','pages','saved','gifts','coins']) {
+    assert.ok(moreHub.includes("view:'" + destination + "'"), destination + ' remains accessible from More');
+  }
 });
