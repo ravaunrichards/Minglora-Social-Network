@@ -19,6 +19,7 @@ import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backe
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
+import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -1714,6 +1715,21 @@ async function route(req, res) {
             console.error('[Minglora League] A confirmed LIVE Gift could not be added to League totals.',{giftId:String(confirmedGiftId),message:String(error?.message||'league update failed').slice(0,160)});
           }
         }
+        if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
+          try{
+            const creator=db.users.find(member=>member.id===session.hostId);
+            recordGiftGalleryEvent(db,{
+              giftId:String(confirmedGiftId),creatorId:session.hostId,senderId:user.id,
+              broadcastId:session.id,giftCode:String(input.giftCode||''),coinAmount:confirmedCoinAmount,
+              giftName:confirmedGift.giftName||confirmedGift.name||'',emoji:confirmedGift.emoji||'🎁',
+              imageUrl:confirmedGift.imageUrl||confirmedGift.image_url||'',
+              modelUrl:confirmedGift.modelUrl||confirmedGift.model_url||'',
+              timeZone:giftGalleryTimeZone(creator),now:new Date()
+            });
+          }catch(error){
+            console.error('[Minglora Gift Gallery] A confirmed LIVE Gift could not be added to the weekly gallery.',{giftId:String(confirmedGiftId),message:String(error?.message||'gallery update failed').slice(0,160)});
+          }
+        }
         notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
         await saveStore();
         return json(res,200,{gift:result.gift});
@@ -2259,6 +2275,38 @@ async function route(req, res) {
           ...(db.auditLog||[]).filter(item=>item.actorId===user.id).map(item=>({id:item.id,userId:user.id,action:item.action,summary:item.action.replace(/_/g,' '),targetType:item.targetType,targetId:item.targetId,createdAt:item.createdAt}))
         ].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,250);
         return json(res,200,{activity});
+      }
+      m=p.match(/^\/api\/users\/([^/]+)\/gift-gallery$/);
+      if(method==='GET'&&m){
+        const target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const gallery=getGiftGallery(db,target);
+        const entries=gallery.entries.map(entry=>{
+          const leader=entry.leadingGifterId?db.users.find(member=>member.id===entry.leadingGifterId):null;
+          return {...entry,leadingGifter:leader?safeUser(leader,user.id):null};
+        });
+        const response={...gallery,entries};
+        if(user.id===target.id){
+          const settings=(db.giftGallerySettings||[]).find(item=>item.userId===user.id)||{enabled:true,targets:{}};
+          const preference=(db.giftGalleryPreferences||[]).find(item=>item.userId===user.id)||{showInGalleries:true};
+          response.ownerSettings={enabled:settings.enabled!==false,targets:{...(settings.targets||{})}};
+          response.viewerPreference={showInGalleries:preference.showInGalleries!==false};
+        }
+        return json(res,200,response);
+      }
+      if(method==='PATCH'&&p==='/api/gift-gallery/settings'){
+        if(input.enabled!==undefined&&typeof input.enabled!=='boolean')return json(res,400,{error:'Gift Gallery visibility must be enabled or disabled.'});
+        if(input.showInGalleries!==undefined&&typeof input.showInGalleries!=='boolean')return json(res,400,{error:'Gift Gallery privacy must be enabled or disabled.'});
+        try{
+          const result=updateGiftGallerySettings(db,{
+            userId:user.id,enabled:input.enabled,showInGalleries:input.showInGalleries,
+            giftCode:input.giftCode,targetCount:input.targetCount
+          });
+          await saveStore();
+          return json(res,200,result);
+        }catch(error){
+          return json(res,400,{error:error.message||'Gift Gallery settings could not be saved.'});
+        }
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
