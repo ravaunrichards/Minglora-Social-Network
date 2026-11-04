@@ -122,14 +122,52 @@ const ensureCollections = db => {
   for (const name of COLLECTIONS) if (!Array.isArray(db[name])) db[name] = [];
   db.creatorLeagueProfiles = uniqueRecords(db.creatorLeagueProfiles, item => item.userId, mergeProfileRecords);
   db.creatorLeagueGiftLedger = uniqueRecords(db.creatorLeagueGiftLedger, item => item.giftId || item.id);
+
+  // The unique confirmed-gift ledger is the source of truth for League points.
+  // Rebuild daily/lifetime totals from it so duplicate snapshots cannot inflate
+  // scores and concurrent snapshots cannot lose independent confirmed Gifts.
+  const dailyGiftTotals = new Map();
+  const lifetimeGiftTotals = new Map();
+  const seasonGiftTotals = new Map();
+  for (const gift of db.creatorLeagueGiftLedger) {
+    const amount = asNumber(gift.coinAmount);
+    if (!gift.userId || !gift.dayKey || amount <= 0) continue;
+    const dailyKey = String(gift.userId) + "\u0000" + String(gift.dayKey);
+    dailyGiftTotals.set(dailyKey, (dailyGiftTotals.get(dailyKey) || 0) + amount);
+    lifetimeGiftTotals.set(gift.userId, (lifetimeGiftTotals.get(gift.userId) || 0) + amount);
+    if (gift.seasonKey) {
+      const seasonKey = String(gift.userId) + "\u0000" + String(gift.seasonKey);
+      seasonGiftTotals.set(seasonKey, (seasonGiftTotals.get(seasonKey) || 0) + amount);
+    }
+  }
   db.creatorLeagueDailyScores = uniqueRecords(
     db.creatorLeagueDailyScores,
-    item => item.userId && item.dayKey ? item.userId + ":" + item.dayKey : null,
+    item => item.userId && item.dayKey ? String(item.userId) + "\u0000" + String(item.dayKey) : null,
     (current, incoming) => {
       const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
       return { ...(preferred === current ? incoming : current), ...preferred, points: Math.max(asNumber(current.points), asNumber(incoming.points)) };
     }
   );
+  const existingDailyKeys = new Set();
+  for (const daily of db.creatorLeagueDailyScores) {
+    const key = String(daily.userId) + "\u0000" + String(daily.dayKey);
+    if (dailyGiftTotals.has(key)) daily.points = dailyGiftTotals.get(key);
+    existingDailyKeys.add(key);
+  }
+  for (const [key, points] of dailyGiftTotals) {
+    if (existingDailyKeys.has(key)) continue;
+    const [userId, dayKey] = key.split("\u0000");
+    db.creatorLeagueDailyScores.push({ id: randomUUID(), userId, dayKey, points });
+  }
+  for (const profile of db.creatorLeagueProfiles) {
+    if (lifetimeGiftTotals.has(profile.userId)) {
+      profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId);
+    }
+    const seasonKey = String(profile.userId) + "\u0000" + String(profile.seasonKey || "");
+    if (seasonGiftTotals.has(seasonKey)) {
+      profile.seasonPoints = seasonGiftTotals.get(seasonKey);
+    }
+  }
   db.creatorLeagueDailySettlements = uniqueRecords(db.creatorLeagueDailySettlements, item => item.dayKey);
   db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
     item.userId && item.powerupId && item.dayKey ? [item.userId, item.powerupId, item.dayKey].join(":") : item.id
