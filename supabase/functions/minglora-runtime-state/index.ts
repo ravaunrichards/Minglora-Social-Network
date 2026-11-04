@@ -697,7 +697,7 @@ Deno.serve(async (req: Request) => {
     const ownerId=String(input.ownerId||"");
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
-    const allowedBuckets=["minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-marketplace-media","minglora-live-thumbnails","minglora-data-exports","minglora-ringtones"];
+    const allowedBuckets=["minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-live-thumbnails","minglora-data-exports","minglora-ringtones"];
     if(!validUuid(ownerId)||!allowedBuckets.includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")||objectPath.includes("\\\\")){
       return json(400,{error:"Invalid media deletion reference."});
     }
