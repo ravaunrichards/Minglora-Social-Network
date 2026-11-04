@@ -18,7 +18,7 @@ import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../bac
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
-import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
+import { CREATOR_SUBSCRIPTION_PACKAGES, CREATOR_SUBSCRIPTION_PERKS, getCreatorSubscriptionPlans, normalizeCreatorSubscriptionPlans, listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
@@ -87,6 +87,67 @@ async function paypalRequest(path,method='POST',payload={},requestId){
     throw Object.assign(new Error(String(detail||data.message||data.name||'PayPal could not complete the request.')),{status:502,code:data.name||null});
   }
   return data;
+}
+
+function activeSubscriptionForPair(creatorId, subscriberId) {
+  return (db.creatorSubscriptions || [])
+    .filter(item => item.creatorId === creatorId && item.subscriberId === subscriberId &&
+      ['active','approval_pending'].includes(String(item.status || '').toLowerCase()))
+    .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null;
+}
+
+function publicCreatorSubscriptionPlans(creatorId) {
+  return getCreatorSubscriptionPlans(db.creatorSubscriptionPlans, creatorId)
+    .filter(plan => plan.enabled && Object.values(plan.perks || {}).some(Boolean))
+    .map(({ paypalProductId, paypalPlanId, ...plan }) => plan);
+}
+
+async function ensurePaypalCreatorSubscriptionPlan(req, creator, plan) {
+  let saved = (db.creatorSubscriptionPlans || []).find(item =>
+    item.creatorId === creator.id && item.planCode === plan.planCode
+  );
+  if (!saved) throw Object.assign(new Error('This creator subscription package is no longer available.'), { status: 404 });
+
+  const origin = appOrigin(req);
+  if (!saved.paypalProductId) {
+    const product = await paypalRequest('/v1/catalogs/products', 'POST', {
+      name: ('Minglora ' + plan.name + ' Subscription · ' + String(creator.username || creator.id)).slice(0, 127),
+      description: 'Monthly creator subscription on Minglora.',
+      type: 'SERVICE',
+      category: 'SOFTWARE',
+      home_url: origin
+    }, 'minglora-sub-product-' + creator.id + '-' + plan.planCode);
+    if (!product.id) throw Object.assign(new Error('PayPal did not create the subscription product.'), { status: 502 });
+    saved.paypalProductId = product.id;
+    await saveStore();
+  }
+
+  if (!saved.paypalPlanId) {
+    const billingPlan = await paypalRequest('/v1/billing/plans', 'POST', {
+      product_id: saved.paypalProductId,
+      name: ('Minglora ' + plan.name + ' · ' + String(creator.username || creator.id)).slice(0, 127),
+      description: 'Monthly access to creator-selected Minglora subscription perks.',
+      status: 'ACTIVE',
+      billing_cycles: [{
+        frequency: { interval_unit: 'MONTH', interval_count: 1 },
+        tenure_type: 'REGULAR',
+        sequence: 1,
+        total_cycles: 0,
+        pricing_scheme: {
+          fixed_price: { value: (Number(plan.priceMinor) / 100).toFixed(2), currency_code: 'USD' }
+        }
+      }],
+      payment_preferences: {
+        auto_bill_outstanding: true,
+        setup_fee_failure_action: 'CONTINUE',
+        payment_failure_threshold: 3
+      }
+    }, 'minglora-sub-plan-' + creator.id + '-' + plan.planCode);
+    if (!billingPlan.id) throw Object.assign(new Error('PayPal did not create the recurring subscription plan.'), { status: 502 });
+    saved.paypalPlanId = billingPlan.id;
+    await saveStore();
+  }
+  return saved;
 }
 
 const SECURITY_HEADERS = {
