@@ -120,6 +120,7 @@ function svgArt(gift) {
   const star2 = 370 + (seed % 60);
   const ring = 185 + (seed % 35);
   const bg1 = colors[1], bg2 = colors[0], shine = colors[2];
+  const premiumAccent = /premium edition/i.test(name) ? '<g transform="translate(390 115)"><circle r="42" fill="#17142c" fill-opacity=".7" stroke="#ffe08a" stroke-width="5"/><path d="M-25 10l7-31 18 17 18-17 7 31z" fill="#ffcf55" stroke="#fff2bd" stroke-width="4"/><path d="M-28 13h56v10h-56z" fill="#f5a623"/><circle cy="-26" r="5" fill="#fff"/></g>' : '';
   const icon = (gift.category === "hearts" ? "heart" :
     gift.category === "flowers" ? "petal" :
     gift.category === "animals" ? "creature" :
@@ -193,7 +194,7 @@ function svgArt(gift) {
     '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+bg1+'"/><stop offset="1" stop-color="'+bg2+'"/></linearGradient><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+shine+'"/><stop offset=".55" stop-color="'+bg2+'"/><stop offset="1" stop-color="'+bg1+'"/></linearGradient><radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="'+shine+'"/><stop offset="1" stop-color="'+bg1+'"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter></defs>'+
     '<rect width="512" height="512" rx="82" fill="url(#bg)"/><circle cx="256" cy="257" r="'+ring+'" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="22"/><circle cx="256" cy="265" r="160" fill="#100d36" opacity=".17" filter="url(#shadow)"/>'+
     '<ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>'+
-    '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+
+    '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+premiumAccent+
     '<circle cx="392" cy="108" r="7" fill="#fff" opacity=".9"/><circle cx="115" cy="390" r="6" fill="#fff" opacity=".75"/>'+
     '<text x="256" y="286" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif" font-size="118" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#fff" stroke-opacity=".2" stroke-width="4">'+symbol+'</text>'+
     '<path d="M90 72q90-48 174-26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>'+
@@ -507,6 +508,11 @@ function modelDocument(gift) {
   }
   // A small unique signature gem distinguishes objects that share a shape family.
   sphere(.48,.58,.1,.07,.07,.07,light,9,6);
+  if(/premium edition/i.test(n)){
+    torus(0,.88,0,.37,.026,"#f8d369",32,10);
+    for(let i=0;i<5;i++){const x=(i-2)*.15;cone(x,1.02,0,.055,.22,"#f8d369",10);sphere(x,1.15,0,.035,.035,.035,"#fff1b8",8,5);}
+    sphere(0,.89,.39,.055,.055,.04,"#fff1b8",9,6);
+  }
 
   const binParts=[],bufferViews=[],accessors=[],primitives=[],materials=[];
   let byteOffset=0;
@@ -556,19 +562,23 @@ function main(){
   const checkOnly=process.argv.includes("--check");
   const data=JSON.parse(fs.readFileSync(MANIFEST,"utf8"));
   if(!Array.isArray(data.gifts)||data.gifts.length!==data.gift_count)throw new Error("Gift catalogue manifest count does not match its records.");
-  const codes=new Set(),namePricePairs=new Set(),imagePaths=new Set(),modelPaths=new Set();
+  const codes=new Set(),giftNames=new Set(),animationKeys=new Set(),namePricePairs=new Set(),imagePaths=new Set(),modelPaths=new Set();
   for(const gift of data.gifts){
     if(!gift||typeof gift!=="object")throw new Error("Gift catalogue contains a non-object record.");
     if(!Number.isSafeInteger(gift.coin_price)||gift.coin_price<1)throw new Error("Invalid coin price: "+gift.name);
     if(!/^[a-z0-9_-]{1,59}$/.test(String(gift.code||"")))throw new Error("Invalid gift code: "+gift.code);
     if(!String(gift.name||"").trim()||!String(gift.category||"").trim())throw new Error("Gift is missing its name or category: "+gift.code);
     if(!String(gift.animation_preset||"").trim()||!String(gift.sound_preset||"").trim())throw new Error("Gift is missing its animation or sound profile: "+gift.code);
-    const pair=gift.name.toLocaleLowerCase("en-US")+"|"+gift.coin_price;
+    const normalizedName=gift.name.trim().toLocaleLowerCase("en-US");
+    if(giftNames.has(normalizedName))throw new Error("Duplicate active gift display name: "+gift.name);
+    if(!String(gift.animation_key||"").trim())throw new Error("Gift is missing its unique animation identity: "+gift.name);
+    if(animationKeys.has(gift.animation_key))throw new Error("Duplicate gift animation identity: "+gift.animation_key);
+    const pair=normalizedName+"|"+gift.coin_price;
     if(codes.has(gift.code))throw new Error("Duplicate gift code: "+gift.code);
     if(namePricePairs.has(pair))throw new Error("Duplicate gift name and price: "+pair);
     if(gift.image_url!=="/assets/gifts/catalog/"+gift.code+".svg"||gift.model_url!=="/assets/gifts/catalog/"+gift.code+".gltf")throw new Error("Gift asset paths are not canonical: "+gift.code);
     if(imagePaths.has(gift.image_url)||modelPaths.has(gift.model_url))throw new Error("Duplicate gift asset path: "+gift.code);
-    codes.add(gift.code);namePricePairs.add(pair);imagePaths.add(gift.image_url);modelPaths.add(gift.model_url);
+    codes.add(gift.code);giftNames.add(normalizedName);animationKeys.add(gift.animation_key);imagePaths.add(gift.image_url);modelPaths.add(gift.model_url);
   }
   fs.mkdirSync(ASSET_DIR,{recursive:true});
   let count=0;
