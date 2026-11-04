@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state={gifts:[],balance:null,selectedCode:"",category:"all",search:"",recipient:"",contextType:"user",contextId:"",page:0,pageSize:72,sort:"price"};
+  const state={gifts:[],balance:null,selectedCode:"",category:"all",search:"",recipient:"",contextType:"user",contextId:"",page:0,pageSize:72,sort:"high"};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -21,7 +21,7 @@
   }
   function filtered(){
     const q=state.search.trim().toLowerCase();
-    const rows=state.gifts.filter(g=>(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code).toLowerCase().includes(q)));
+    const rows=state.gifts.filter(g=>(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code+" "+String(g.coin_price)).toLowerCase().includes(q)));
     if(state.sort==="name")rows.sort((a,b)=>a.name.localeCompare(b.name));
     else if(state.sort==="high")rows.sort((a,b)=>b.coin_price-a.coin_price||a.name.localeCompare(b.name));
     else rows.sort((a,b)=>a.coin_price-b.coin_price||a.name.localeCompare(b.name));
@@ -74,7 +74,7 @@
     main.innerHTML=
       "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Each gift is built as original Minglora artwork and a 3D model, with its own animated presentation and synthesized sound effect.</p></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
       "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original assets</p></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
-      "<div class='gift-browse-controls'><label class='gift-search-label'><span>Find a gift</span><input id='minglora-gift-search' type='search' placeholder='Search every gift by name…' value='"+esc(state.search)+"'></label><label class='gift-sort-label'><span>Sort</span><select id='minglora-gift-sort'><option value='price'>Price: low to high</option><option value='high'>Price: high to low</option><option value='name'>Name A–Z</option></select></label></div>"+
+      "<div class='gift-browse-controls'><label class='gift-search-label'><span>Find a gift</span><input id='minglora-gift-search' type='search' placeholder='Search every gift by name…' value='"+esc(state.search)+"'></label><label class='gift-sort-label'><span>Sort</span><select id='minglora-gift-sort'><option value='high'>Price: high to low · Premium first</option><option value='price'>Price: low to high</option><option value='name'>Name A–Z</option></select></label></div>"+
       "<div class='gift-category-row' id='minglora-gift-categories'>"+categoryMarkup()+"</div><div class='gift-catalogue-grid' id='minglora-gift-grid'></div><button type='button' class='secondary gift-load-more' id='minglora-gift-more' hidden>Show more gifts</button></section>"+
       "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Gift preview</span><h2 id='minglora-gift-selected'>Choose a gift above</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage'><img id='minglora-gift-selected-image' alt='' hidden><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' hidden></model-viewer></div></section>"+
       "<section class='card gift-send-panel'><div class='gift-send-panel-heading'><div><span class='eyebrow'>Send a gift</span><h2>Choose who receives it</h2></div></div><form id='minglora-gift-form' class='gift-send-form'>"+
