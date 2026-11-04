@@ -7,14 +7,15 @@ import { dirname, resolve } from 'node:path';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFile(resolve(root, path), 'utf8');
 
-const [app, html, css, worker, server, runtime, migration] = await Promise.all([
+const [app, html, css, worker, server, runtime, migration, balanceMigration] = await Promise.all([
   read('public/app.js'),
   read('public/index.html'),
   read('public/styles.css'),
   read('public/sw.js'),
   read('src/server.js'),
   read('supabase/functions/minglora-runtime-state/index.ts'),
-  read('supabase/migrations/20261104215934_minglora_money_balance_to_coins.sql')
+  read('supabase/migrations/20261104215934_minglora_money_balance_to_coins.sql'),
+  read('supabase/migrations/20261104220917_minglora_creator_money_balance_lifetime_total.sql')
 ]);
 
 test('the Coins destination is presented as Recharge in navigation', () => {
@@ -61,6 +62,8 @@ test('the database exchange is atomic, idempotent, ledger-backed and deducted fr
   assert.match(migration, /exchanged_minor/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.minglora_exchange_creator_earnings_for_coins/);
   assert.match(migration, /REVOKE ALL ON TABLE public\.creator_coin_exchanges FROM PUBLIC, anon, authenticated/);
+  assert.match(balanceMigration, /lifetime_creator_earnings_minor/);
+  assert.match(balanceMigration, /available_creator_earnings_minor/);
 });
 
 test('the Recharge app and service worker use matching updated cache versions', () => {
