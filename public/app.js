@@ -225,7 +225,7 @@ function syncNavigationActive(){
 }
 function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();syncNavigationActive();renderView();}
 function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));}
-const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2';
+const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-3d-1';
 function messenger3dIcon(id,className='messenger-3d-icon'){
   return '<svg class="'+className+'" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="'+MESSENGER_ICON_SPRITE+'#'+id+'"></use></svg>';
 }
@@ -4614,7 +4614,7 @@ function renderMoreHub(){
       {label:'Leagues',detail:'Matches, rankings and rewards',view:'leagues',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏆</span>'},
       {label:'Gifts',detail:'Browse and send member gifts',view:'gifts',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🎁</span>'},
       {label:'Gifter Levels & Badges',detail:'Track your level, XP and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
-      {label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins',icon:messenger3dIcon('coins','mobile-hub-icon')}
+      {label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins',icon:messenger3dIcon('recharge','mobile-hub-icon')}
     ]},
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
