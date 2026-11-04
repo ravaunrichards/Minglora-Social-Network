@@ -22,6 +22,7 @@ import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
+import { recordGifterGift, getGifterProgressionOverview } from '../backend/modules/gifter-progression/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1724,6 +1725,12 @@ async function route(req, res) {
         });
         const gift=result.gift;
         if(!gift?.receiverId)return json(res,502,{error:'Minglora could not confirm the gift transaction.'});
+        const directGiftId=gift.giftTransactionId||gift.transactionId||gift.transaction_id||gift.id;
+        const directCoinAmount=Number(gift.coinAmount??gift.coin_amount??gift.coins??0);
+        if(directGiftId&&Number.isSafeInteger(directCoinAmount)&&directCoinAmount>0){
+          try{recordGifterGift(db,{giftId:String(directGiftId),senderId:user.id,recipientId:gift.receiverId,recipientUsername:gift.recipientUsername||recipientUsername,giftCode:String(gift.giftCode||giftCode),giftName:gift.giftName||gift.gift_name||'',coinAmount:directCoinAmount,contextType:'member',now:new Date()});}
+          catch(error){console.error('[Minglora Gifter Progression] Confirmed member gift could not be recorded.',{giftId:String(directGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
+        }
         notify(gift.receiverId,user.id,'gift',user.name+' sent you a gift.');
         await saveStore();
         return json(res,201,{gift});
@@ -1748,6 +1755,10 @@ async function route(req, res) {
         const confirmedGiftId=confirmedGift.giftTransactionId||confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
         const confirmedCoinAmount=Number(confirmedGift.coinAmount??confirmedGift.coin_amount??confirmedGift.coins??0);
         if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
+          try{
+            const recipient=db.users.find(member=>member.id===session.hostId);
+            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId:session.hostId,recipientUsername:recipient?.username||'',giftCode:String(input.giftCode||''),giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',now:new Date()});
+          }catch(error){console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
           try{
             recordLiveGiftForLeagues(db,{
               giftId:confirmedGiftId,recipientId:session.hostId,broadcastId:session.id,
@@ -1776,6 +1787,9 @@ async function route(req, res) {
         notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
         await saveStore();
         return json(res,200,{gift:result.gift});
+      }
+      if(method==='GET'&&p==='/api/gifter-progression/overview'){
+        return json(res,200,{viewerId:user.id,...getGifterProgressionOverview(db,user.id)});
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
         const overview=getCreatorLeagueOverview(db,user);
@@ -3231,6 +3245,11 @@ async function route(req, res) {
       }
       return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
     }
+  }
+  if(p==='/assets/gifters-level-up.png'){
+    const assetFile=path.join(__dirname,'..','assets','Gifters Level Up.png');
+    fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
+    return;
   }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
   if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
