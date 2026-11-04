@@ -48,7 +48,7 @@ function palette(gift) {
 function symbolFor(gift) {
   const name = gift.name.toLowerCase();
   const rules = [
-    [/rose|flower|tulip|bouquet|hibiscus|blossom|sakura|orchid|lotus/,"🌹"],
+    [/hibiscus/,"🌺"], [/rose|flower|tulip|bouquet|blossom|sakura|orchid|lotus/,"🌹"],
     [/cnc coin/,"🪙"], [/easter heart/,"💖"], [/fighting|boxing glove|boxing/,"🥊"],
     [/kitty pillow/,"🐱"], [/otter/,"🦦"], [/four leaf clover|clover/,"🍀"],
     [/dj headphone|headphone/,"🎧"], [/yalla sahel/,"👋"], [/merdeka|festival/,"🎊"],
