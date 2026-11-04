@@ -113,7 +113,7 @@
       const sent=result.gift||{};state.recipient="@"+(sent.recipientUsername||username);state.balance=Number(sent.remainingCoins);
       if(status)status.textContent=(sent.giftName||gift.name)+" sent to @"+(sent.recipientUsername||username)+". "+state.balance.toLocaleString()+" Coins remaining.";
       const balance=document.querySelector(".gift-balance-pill strong");if(balance&&Number.isFinite(state.balance))balance.textContent=state.balance.toLocaleString()+" Coins available";
-      window.MingloraGiftFX?.play(gift);window.MingloraGiftFX?.show(gift);window.toast?.("Gift sent successfully.");
+      window.MingloraGiftFX?.show(gift);window.toast?.("Gift sent successfully.");
     }catch(error){if(status)status.textContent=error.message;window.toast?.(error.message);}
     finally{if(button)button.disabled=!selected();}
   }
