@@ -17,7 +17,7 @@ test('mobile LIVE room uses the full viewport and hides competing navigation', (
   assert.match(mobileCss, /body\.live-room-active \.layout\s*\{[^}]*position:fixed/s);
   assert.match(mobileCss, /body\.live-room-active \.topbar/);
   assert.match(mobileCss, /body\.live-room-active \.mobile-nav/);
-  assert.match(mobileCss, /height:100dvh/);
+  assert.match(mobileCss, /--minglora-live-visible-height,100dvh/);
   assert.match(mobileCss, /env\(safe-area-inset-top\)/);
   assert.match(mobileCss, /env\(safe-area-inset-bottom\)/);
 });
