@@ -21,7 +21,7 @@ test("Minglora Sounds upload gateway accepts only supported audio in the private
 test("Minglora Sounds storage policies are owner-folder scoped", async () => {
   const migration = await read("../../supabase/migrations/20261104210500_minglora_sounds_storage_owner_policies.sql");
   for (const operation of ["INSERT","SELECT","UPDATE","DELETE"]) assert.ok(migration.includes("FOR "+operation));
-  assert.equal((migration.match(/bucket_id = 'minglora-sounds'/g)||[]).length,4);
+  assert.equal((migration.match(/CREATE POLICY "minglora-sounds_/g)||[]).length,4);
   assert.match(migration, /storage\.foldername\(name\).*auth\.uid\(\)/s);
 });
 
@@ -30,7 +30,7 @@ test("sound APIs enforce ownership, rights and reusable-sound access", async () 
   assert.match(server, /if\(method==='GET'&&p==='\/api\/sounds'\)/);
   assert.match(server, /if\(method==='POST'&&p==='\/api\/sounds'\)/);
   assert.match(server, /validateSoundInput\(input\)/);
-  assert.match(server, /asset\.ownerId===user\.id&&asset\.slot==='sound'/);
+  assert.match(server, /item\.ownerId===user\.id&&item\.slot==='sound'/);
   assert.match(server, /soundFavorite=p\.match\(\/\^/);
   assert.match(server, /soundRoute=p\.match\(\/\^/);
   assert.match(server, /canUseSound\(sound,user\.id\)/);
