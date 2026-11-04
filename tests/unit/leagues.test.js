@@ -303,3 +303,31 @@ test("League actions update the canonical record after duplicate matches are com
   assert.ok(db.creatorLeagueMatches[0].activeEffects.some(item => item.type === "score_multiplier"));
   assert.equal(db.creatorLeaguePowerupUses.length, 1);
 });
+
+
+test("duplicate power-up effect snapshots cannot stack extra Shields on one side", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const earlierExpiry = new Date(now.getTime() + 10000).toISOString();
+  const laterExpiry = new Date(now.getTime() + 20000).toISOString();
+  db.creatorLeagueMatches.push({
+    id: "duplicate-shield-match",
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    status: "live", scores: { challenger: 0, opponent: 0 },
+    supporters: [],
+    activeEffects: [
+      { id: "shield-copy-1", type: "shield", side: "challenger", expiresAt: earlierExpiry, createdAt: now.toISOString() },
+      { id: "shield-copy-2", type: "shield", side: "challenger", expiresAt: laterExpiry, createdAt: now.toISOString() }
+    ],
+    pendingEffects: [], events: [],
+    timeBoostUsed: { challenger: false, opponent: false },
+    createdAt: now.toISOString(), startedAt: now.toISOString(),
+    endsAt: new Date(now.getTime() + 300000).toISOString()
+  });
+
+  const matches = listCreatorLeagueMatches(db, db.users, "viewer-1", now);
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].activeEffects.filter(item => item.type === "shield" && item.side === "challenger").length, 1);
+  assert.equal(matches[0].activeEffects[0].expiresAt, laterExpiry);
+});
