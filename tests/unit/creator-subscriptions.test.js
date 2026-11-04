@@ -28,3 +28,51 @@ test('invalid, expired, self, and non-active subscription records are not counte
   assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'active', currentPeriodEnd: past }), false);
   assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'active', currentPeriodEnd: future }), true);
 });
+
+import {
+  CREATOR_SUBSCRIPTION_PACKAGES,
+  CREATOR_SUBSCRIPTION_PERKS,
+  getCreatorSubscriptionPlans,
+  normalizeCreatorSubscriptionPlans
+} from '../../backend/modules/subscriptions/service.js';
+
+test('creator subscriptions expose three monthly package choices and perk toggles', () => {
+  assert.deepEqual(CREATOR_SUBSCRIPTION_PACKAGES.map(item => [item.code, item.priceMinor]), [
+    ['supporter', 299], ['plus', 499], ['vip', 999]
+  ]);
+  assert.ok(CREATOR_SUBSCRIPTION_PERKS.some(perk => perk.code === 'subscriber_badge'));
+  assert.ok(CREATOR_SUBSCRIPTION_PERKS.some(perk => perk.code === 'exclusive_posts'));
+  const requested = CREATOR_SUBSCRIPTION_PACKAGES.map((plan, index) => ({
+    code: plan.code,
+    enabled: index !== 1,
+    perks: Object.fromEntries(CREATOR_SUBSCRIPTION_PERKS.map((perk, perkIndex) => [
+      perk.code, perkIndex === 0 || (index === 2 && perk.code === 'subscriber_live')
+    ]))
+  }));
+  const normalized = normalizeCreatorSubscriptionPlans('creator-a', requested);
+  assert.equal(normalized.valid, true);
+  assert.equal(normalized.plans.length, 3);
+  assert.equal(normalized.plans[0].enabled, true);
+  assert.equal(normalized.plans[1].enabled, false);
+  assert.equal(normalized.plans[2].perks.subscriber_live, true);
+});
+
+test('creator subscription settings preserve PayPal plan references and remain private to their owner', () => {
+  const saved = normalizeCreatorSubscriptionPlans('creator-a', CREATOR_SUBSCRIPTION_PACKAGES.map(plan => ({
+    code: plan.code, enabled: true, perks: { subscriber_badge: true }
+  })), [{ creatorId: 'creator-a', planCode: 'supporter', paypalProductId: 'PROD-123', paypalPlanId: 'P-123' }]);
+  assert.equal(saved.plans[0].paypalProductId, 'PROD-123');
+  assert.equal(saved.plans[0].paypalPlanId, 'P-123');
+  const publicPlans = getCreatorSubscriptionPlans(saved.plans, 'creator-b');
+  assert.equal(publicPlans.every(plan => plan.enabled === false), true);
+});
+
+test('enabled subscription packages must include at least one selected perk', () => {
+  const requested = CREATOR_SUBSCRIPTION_PACKAGES.map((plan, index) => ({
+    code: plan.code, enabled: index === 0, perks: {}
+  }));
+  assert.throws(
+    () => normalizeCreatorSubscriptionPlans('creator-a', requested),
+    /at least one perk/i
+  );
+});

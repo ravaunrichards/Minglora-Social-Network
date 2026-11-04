@@ -1,5 +1,11 @@
 # Stories and ephemeral content
 
-**Current:** text or HTTPS-image stories, audience restrictions (public/friends/followers/private), request-triggered expiry cleanup, unique viewer tracking and author-only deletion are implemented. Upload pipelines, video, moderation/reporting, audience muting and scheduled cleanup are incomplete.
+**Current implementation:** members can publish text, photos, and videos as individual story items. A new story is appended to the existing active stories; it never replaces earlier stories. The composer supports selecting up to 10 photos/videos in one batch. Each file is checked against the 200 MB story-file limit, while the complete batch is capped at 500 MB. The server validates all uploaded asset IDs, ownership, slot, status, media type, uniqueness, and the aggregate size before attaching or publishing any story in the batch.
 
-**Ownership:** media-backed story creation, expiry, viewers, audiences, mute controls and safe cleanup. Never render placeholder stories, invent viewer counts, or keep expired content visible after its expiration policy.
+**Batch behaviour:** every selected photo/video becomes its own story record, grouped by a shared batch ID and ordered by batch index. A request ID makes retries idempotent, so a lost response does not publish the same batch twice. The Stories strip groups active stories by member, displays the number of active items, and opens a sequence viewer with previous/next controls. Video playback can advance to the next story. A later upload creates a new batch and leaves existing active stories intact.
+
+**Visibility and lifecycle:** public, friends, followers, and private audience values are validated server-side. Each story item expires 24 hours after its batch is published. Expired items and their viewer records are moved/cleaned by the request-triggered expiry process. Viewer records are unique per member/story, story deletion is author-only, and members can report stories through the reporting flow. Scheduled background expiry cleanup and audience muting controls are not implemented yet.
+
+**Storage:** story images use Minglora's private minglora-stories bucket and authenticated resumable uploads. Accepted stored formats are JPEG, PNG, WEBP, AVIF, MP4, WebM, and QuickTime; HEIC/HEIF image selection is converted by the browser to a supported image format when its image decoder permits it. Asset completion checks the stored type and file signature.
+
+**Ownership:** this module owns story creation, audience policy, batch validation, expiry, views, and deletion. Never render placeholder stories, invent viewer counts, overwrite earlier story records on a new upload, or keep expired content visible after its expiration policy.

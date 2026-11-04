@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
-    "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
+    "economy_purchase_settle", "economy_send_gift", "economy_subscription_payment", "economy_creator_earnings",
     "economy_exchange_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
@@ -347,20 +347,62 @@ Deno.serve(async (req: Request) => {
     return json(200, { gift });
   }
 
+  if (action === "economy_subscription_payment") {
+    const creatorId = String(input.creatorId || "");
+    const subscriberId = String(input.subscriberId || "");
+    const paypalSubscriptionId = String(input.paypalSubscriptionId || "");
+    const paypalSaleId = String(input.paypalSaleId || "");
+    const grossMinor = Number(input.grossMinor);
+    const currency = String(input.currency || "USD").toUpperCase();
+    if (!validUuid(creatorId) || !validUuid(subscriberId) || creatorId === subscriberId ||
+        paypalSubscriptionId.length < 5 || paypalSubscriptionId.length > 160 ||
+        paypalSaleId.length < 5 || paypalSaleId.length > 160 ||
+        !Number.isSafeInteger(grossMinor) || grossMinor < 100 || currency !== "USD") {
+      return json(400, { error: "Invalid creator subscription payment details." });
+    }
+    const { data, error } = await admin.rpc("minglora_record_subscription_payment", {
+      p_creator_id: creatorId,
+      p_subscriber_id: subscriberId,
+      p_paypal_subscription_id: paypalSubscriptionId,
+      p_paypal_sale_id: paypalSaleId,
+      p_gross_minor: grossMinor,
+      p_currency: currency
+    });
+    if (error) return fail(error, "Minglora could not record the creator subscription payment.");
+    return json(200, { entry: data });
+  }
+
   if (action === "economy_creator_earnings") {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
-    const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult] = await Promise.all([
+    const [ledgerResult, subscriptionLedgerResult, payoutsResult, accountResult, exchangesResult, balanceResult] = await Promise.all([
       admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
+      admin.from("subscription_earnings_ledger").select("id,gross_minor,creator_minor,platform_minor,currency,entry_type,created_at,paypal_subscription_id,paypal_sale_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle(),
       admin.from("creator_coin_exchanges").select("id,amount_minor,coin_amount,currency,created_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.rpc("minglora_get_creator_money_balance", { p_creator_id: creatorId })
     ]);
-    if (ledgerResult.error || payoutsResult.error || accountResult.error || exchangesResult.error || balanceResult.error) {
+    if (ledgerResult.error || subscriptionLedgerResult.error || payoutsResult.error || accountResult.error || exchangesResult.error || balanceResult.error) {
       return json(503, { error: "Creator money balance is temporarily unavailable." });
     }
-    const ledger = ledgerResult.data || [], payouts = payoutsResult.data || [];
+    const subscriptionLedger = (subscriptionLedgerResult.data || []).map((entry) => ({
+      id: entry.id,
+      gross_minor: entry.gross_minor,
+      creator_share_minor: entry.creator_minor,
+      platform_share_minor: entry.platform_minor,
+      currency: entry.currency,
+      status: entry.entry_type === "refund" ? "refunded" : "available",
+      created_at: entry.created_at,
+      gift_transaction_id: null,
+      source: "subscription",
+      paypal_subscription_id: entry.paypal_subscription_id,
+      paypal_sale_id: entry.paypal_sale_id
+    }));
+    const ledger = [...(ledgerResult.data || []).map((entry) => ({ ...entry, source: "live_gift" })), ...subscriptionLedger]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 250);
+    const payouts = payoutsResult.data || [];
     const moneyBalance = balanceResult.data || {};
     return json(200, {
       ledger,

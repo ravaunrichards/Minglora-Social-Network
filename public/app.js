@@ -18,9 +18,13 @@ function thoughtAvatarMarkup(member,className='avatar',clickToProfile=false){
   if(!member?.profileThought?.text)return image;
   return '<span class="ml-thought-avatar-wrap">'+image+'<button type="button" class="ml-thought-avatar-indicator" data-view-profile-thought-user="'+esc(member.id)+'" aria-label="View '+esc(member.name||'member')+'’s thought" title="View thought">…</button></span>';
 }
-const verifiedProfileBadge = member => member?.verificationBadge==='blue'
-  ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
-  : '';
+const verifiedProfileBadge = member =>
+  (member?.verificationBadge==='blue'
+    ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
+    : '')+
+  (member?.subscriberBadge
+    ? '<span class="ml-subscriber-badge" role="img" aria-label="Minglora subscriber" title="Minglora subscriber">✦ SUBSCRIBER</span>'
+    : '');
 const gifterProfileBadge = member => {
   const badge=member?.gifterBadge;
   if(!badge?.level)return '';
@@ -430,7 +434,27 @@ function openPostOptions(post){
 }
 async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;state.feed=(await api(`/feed?scope=${encodeURIComponent(state.feedScope)}`)).posts;}
 async function loadStories(){state.stories=(await api('/stories')).stories;}
-function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
+function renderStoriesPanel(){
+  const byAuthor=new Map();
+  for(const story of state.stories||[]){
+    const authorId=story.author?.id||story.userId;
+    if(!authorId)continue;
+    if(!byAuthor.has(authorId))byAuthor.set(authorId,[]);
+    byAuthor.get(authorId).push(story);
+  }
+  const visible=[...byAuthor.values()].map(stories=>{
+    const chronological=stories.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)||Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
+    const firstUnseen=chronological.find(story=>!story.viewedByMe);
+    return {story:firstUnseen||chronological[0],count:chronological.length,allViewed:chronological.every(story=>story.viewedByMe)};
+  }).filter(item=>item.story);
+  const cards=visible.map(({story,count,allViewed})=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+
+    (story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+
+    '<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+
+    (count>1?'<span class="story-count" aria-label="'+count+' active stories">'+count+' stories</span>':'')+
+    (allViewed?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');
+  return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+
+    (visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';
+}
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 
 function measureAudioDurationMs(file){
@@ -714,6 +738,39 @@ let liveSpeakerRefreshTimer=null;
 let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
 let liveDirectoryFilter='all';
+let liveViewportCleanup=null;
+function bindLiveRoomVisualViewport(){
+  const viewport=window.visualViewport;
+  if(!viewport)return ()=>{};
+  const update=()=>{
+    const height=Math.max(240,Math.round(viewport.height||window.innerHeight));
+    const top=Math.max(0,Math.round(viewport.offsetTop||0));
+    document.documentElement.style.setProperty('--minglora-live-visible-height',height+'px');
+    document.documentElement.style.setProperty('--minglora-live-viewport-top',top+'px');
+  };
+  viewport.addEventListener('resize',update);
+  viewport.addEventListener('scroll',update);
+  update();
+  return ()=>{
+    viewport.removeEventListener('resize',update);
+    viewport.removeEventListener('scroll',update);
+    document.documentElement.style.removeProperty('--minglora-live-visible-height');
+    document.documentElement.style.removeProperty('--minglora-live-viewport-top');
+  };
+}
+function setLiveRoomMobileMode(enabled){
+  const method=enabled?'add':'remove';
+  document.documentElement.classList[method]('live-room-active');
+  document.body.classList[method]('live-room-active');
+  if(enabled){
+    liveViewportCleanup?.();
+    liveViewportCleanup=bindLiveRoomVisualViewport();
+  }else{
+    liveViewportCleanup?.();
+    liveViewportCleanup=null;
+    document.body.classList.remove('live-room-chat-focused');
+  }
+}
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
@@ -821,16 +878,18 @@ function attachLiveTrack(track,participant,local){
   }
 }
 
-function endHostedLiveOnPageHide(){
-  if(activeLiveRole!=="host"||!activeLiveSession?.id)return;
-  const sessionId=encodeURIComponent(activeLiveSession.id);
+function closeLiveRoomOnPageHide(){
+  const sessionId=activeLiveSession?.id;
+  if(!sessionId)return;
+  const endpoint=activeLiveRole==='host'?'end':'leave';
   try{activeLiveRoom?.disconnect();}catch{}
-  fetch("/api/live/sessions/"+sessionId+"/end",{
+  setLiveRoomMobileMode(false);
+  fetch("/api/live/sessions/"+encodeURIComponent(sessionId)+"/"+endpoint,{
     method:"POST",credentials:"same-origin",keepalive:true,
     headers:{"Content-Type":"application/json"},body:"{}"
   }).catch(()=>{});
 }
-window.addEventListener("pagehide",endHostedLiveOnPageHide);
+window.addEventListener("pagehide",closeLiveRoomOnPageHide);
 
 function stopLiveParticipantSync(){
   if(liveParticipantSyncTimer){clearInterval(liveParticipantSyncTimer);liveParticipantSyncTimer=null;}
@@ -985,7 +1044,6 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
       esc(person.name)+"<small>"+(person.speaking?"Speaking":person.connected?(person.muted?"Microphone muted":"Microphone connected"):"Connected · microphone starting")+"</small></span>"
   ).join("");
 }
-
 function liveControlIcon(name){
   const paths={
     mic:"<rect x='9' y='3' width='6' height='12' rx='3'/><path d='M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6'/>",
@@ -1029,7 +1087,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveCameraFacing='user';
+  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveCameraFacing="user";
   const stageMarkup=broadcastType==="audio_only"
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
     : "<div id='live-video-stage' class='live-video-stage'><div class='live-video-placeholder'>Connecting to LIVE…</div></div>";
@@ -1059,6 +1117,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
       ? "<div class='live-gift-host-note'><strong>Your LIVE is ready for gifts</strong><p>Viewers can send you gifts while you are broadcasting.</p></div>"
       : "<div id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
     "</aside></div></section>");
+  setLiveRoomMobileMode(true);
+  const liveChatComposer=$("#live-chat-form input");
+  liveChatComposer?.addEventListener("focus",()=>document.body.classList.add("live-room-chat-focused"));
+  liveChatComposer?.addEventListener("blur",()=>document.body.classList.remove("live-room-chat-focused"));
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
@@ -1173,12 +1235,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
         if(button)button.disabled=false;
         return;
       }
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();setLiveRoomMobileMode(false);activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();setLiveRoomMobileMode(false);activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
@@ -1238,7 +1300,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast("You're on stage. Your microphone is connected; camera publishing is disabled.");
   }catch(error){
-    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
+    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});setLiveRoomMobileMode(false);activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
     if(state.view==='live'){
@@ -2939,11 +3001,128 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='verified'){await openProfileVerificationManager();return;}
   if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
+const CREATOR_SUBSCRIPTION_PERK_LABELS = {
+  subscriber_badge: 'Subscriber badge',
+  exclusive_posts: 'Exclusive posts',
+  exclusive_reels: 'Exclusive videos and Reels',
+  subscriber_live: 'Subscriber-only LIVE',
+  priority_live_chat: 'Priority LIVE chat',
+  behind_the_scenes: 'Behind-the-scenes updates'
+};
+
+function subscriptionMoney(minor,currency='USD'){
+  const amount=Number(minor||0)/100;
+  return new Intl.NumberFormat(undefined,{style:'currency',currency}).format(amount);
+}
+
+async function openCreatorSubscriptionManager(){
+  let data;
+  try{data=await api('/creator/subscriptions');}
+  catch(error){toast(error.message);return;}
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop creator-subscription-backdrop';
+  const cards=(data.plans||[]).map(plan=>{
+    const perks=(data.perks||[]).map(perk=>'<label class="creator-subscription-perk"><input type="checkbox" data-plan-perk="'+esc(perk.code)+'" '+(plan.perks?.[perk.code]?'checked':'')+'><span><strong>'+esc(perk.label)+'</strong><small>'+esc(perk.description)+'</small></span></label>').join('');
+    return '<section class="creator-subscription-tier" data-subscription-plan="'+esc(plan.code)+'"><div class="creator-subscription-tier-heading"><div><span class="eyebrow">'+esc(plan.interval||'month')+'LY PACKAGE</span><h3>'+esc(plan.name)+'</h3><strong>'+subscriptionMoney(plan.priceMinor,plan.currency)+' <small>/ month</small></strong></div><label class="creator-subscription-enable"><input type="checkbox" data-plan-enabled '+(plan.enabled?'checked':'')+'><span>Enabled</span></label></div><p class="muted">Choose the benefits included with this package. Members will see these before checkout.</p><div class="creator-subscription-perks">'+perks+'</div></section>';
+  }).join('');
+  modal.innerHTML='<section class="modal creator-subscription-modal" role="dialog" aria-modal="true" aria-labelledby="creator-subscription-title"><div class="modal-head"><div><h2 id="creator-subscription-title">Creator subscriptions</h2><p class="muted">Set your monthly packages and subscriber benefits.</p></div><button type="button" class="modal-close" aria-label="Close">×</button></div><form id="creator-subscription-form" class="modal-body"><div class="creator-subscription-note"><strong>Creator earnings are split 50/50.</strong><span>Half of each verified subscription payment is credited to your creator earnings. Payouts use your saved PayPal payout account.</span></div>'+cards+'<p class="creator-subscription-status" id="creator-subscription-status" role="status"></p><div class="modal-actions"><button type="button" class="secondary" data-subscription-close>Cancel</button><button type="submit" class="primary">Save subscription settings</button></div></form></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close').addEventListener('click',close);
+  modal.querySelector('[data-subscription-close]').addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('#creator-subscription-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,submit=form.querySelector('button[type="submit"]'),status=form.querySelector('#creator-subscription-status');
+    const plans=[...form.querySelectorAll('[data-subscription-plan]')].map(card=>({
+      code:card.dataset.subscriptionPlan,
+      enabled:card.querySelector('[data-plan-enabled]').checked,
+      perks:Object.fromEntries([...card.querySelectorAll('[data-plan-perk]')].map(input=>[input.dataset.planPerk,input.checked]))
+    }));
+    submit.disabled=true;status.textContent='Saving your subscription settings…';
+    try{
+      await api('/creator/subscriptions',{method:'PUT',body:JSON.stringify({plans})});
+      toast('Subscription packages saved.');
+      close();
+      await openProfile(state.user.id);
+    }catch(error){status.textContent=error.message;submit.disabled=false;}
+  });
+}
+
+async function openProfileSubscriptionPicker(creator,profileData){
+  const plans=Array.isArray(profileData.subscriptionPlans)?profileData.subscriptionPlans.filter(plan=>plan.enabled):[];
+  const subscription=profileData.viewerSubscription||null;
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop creator-subscription-backdrop';
+  const perkText=plan=>Object.entries(plan.perks||{}).filter(([,enabled])=>enabled).map(([code])=>CREATOR_SUBSCRIPTION_PERK_LABELS[code]||code).map(label=>'<li>'+esc(label)+'</li>').join('');
+  const planCards=subscription?'' : plans.map(plan=>'<article class="subscriber-subscription-tier"><div class="subscriber-subscription-tier-head"><div><h3>'+esc(plan.name)+'</h3><p class="muted">Billed monthly through PayPal</p></div><strong>'+subscriptionMoney(plan.priceMinor,plan.currency)+'<small>/mo</small></strong></div><ul>'+(perkText(plan)||'<li>Creator supporter membership</li>')+'</ul><button type="button" class="primary full" data-subscribe-plan="'+esc(plan.code)+'">Subscribe · '+subscriptionMoney(plan.priceMinor,plan.currency)+'/month</button></article>').join('');
+  let current='';
+  if(subscription?.status==='approval_pending'){
+    current='<section class="subscriber-current-plan"><strong>Finish your pending subscription</strong><p>Continue to PayPal to approve '+esc(subscription.planName||'your selected package')+'.</p>'+(subscription.approvalUrl?'<button type="button" class="primary full" data-resume-subscription>Continue to PayPal</button>':'<p class="muted">The PayPal approval link is not available. Start checkout again when this pending request expires.</p>')+'</section>';
+  }else if(subscription?.status==='active'){
+    const renewal=subscription.currentPeriodEnd?new Date(subscription.currentPeriodEnd).toLocaleDateString(): 'the end of the paid period';
+    current='<section class="subscriber-current-plan"><strong>You subscribe to '+esc(subscription.planName||'this creator')+'</strong><p>'+(subscription.cancelAtPeriodEnd?'Renewal is cancelled. Your access remains until '+esc(renewal)+'.':'Next billing date: '+esc(renewal)+'.')+'</p>'+(subscription.cancelAtPeriodEnd?'':'<button type="button" class="secondary full" data-cancel-subscription>Cancel renewal</button>')+'</section>';
+  }
+  modal.innerHTML='<section class="modal creator-subscription-modal subscriber-subscription-modal" role="dialog" aria-modal="true" aria-labelledby="subscriber-subscription-title"><div class="modal-head"><div><h2 id="subscriber-subscription-title">Subscribe to '+esc(creator.name)+'</h2><p class="muted">Support this creator and unlock the perks they selected.</p></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="subscriber-subscription-paypal"><strong>Secure recurring payments with PayPal</strong><span>Monthly billing · manage or cancel renewal from this profile</span></div>'+current+(planCards?'<div class="subscriber-subscription-packages">'+planCards+'</div>':'<div class="empty-state"><h3>No packages are available</h3><p>This creator has not enabled a subscription package.</p></div>')+'<p class="creator-subscription-status" id="subscriber-subscription-status" role="status"></p></div></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close').addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelectorAll('[data-subscribe-plan]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    const status=modal.querySelector('#subscriber-subscription-status');
+    status.textContent='Connecting to PayPal…';
+    try{
+      const result=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:creator.id,planCode:button.dataset.subscribePlan})});
+      if(!result.approveUrl)throw new Error('PayPal did not provide a subscription approval link.');
+      window.location.assign(result.approveUrl);
+    }catch(error){status.textContent=error.message;button.disabled=false;}
+  }));
+  modal.querySelector('[data-resume-subscription]')?.addEventListener('click',()=>{
+    if(subscription?.approvalUrl)window.location.assign(subscription.approvalUrl);
+  });
+  modal.querySelector('[data-cancel-subscription]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget,status=modal.querySelector('#subscriber-subscription-status');
+    if(!window.confirm('Cancel automatic renewal for this creator subscription? Your access will remain through the paid period.'))return;
+    button.disabled=true;status.textContent='Cancelling renewal…';
+    try{
+      await api('/subscriptions/'+encodeURIComponent(subscription.id)+'/cancel',{method:'POST',body:'{}'});
+      toast('Subscription renewal cancelled.');
+      close();
+      await openProfile(creator.id);
+    }catch(error){status.textContent=error.message;button.disabled=false;}
+  });
+}
+
+async function finishCreatorSubscriptionReturn(){
+  const params=new URLSearchParams(window.location.search);
+  const status=params.get('minglora_subscription');
+  if(!['return','cancel'].includes(status))return false;
+  const paypalSubscriptionId=params.get('subscription_id')||params.get('token');
+  window.history.replaceState(null,'',window.location.pathname);
+  if(status==='cancel'){
+    const pendingId=params.get('subscription_ref');
+    if(pendingId){
+      try{await api('/subscriptions/'+encodeURIComponent(pendingId)+'/checkout-cancel',{method:'POST',body:'{}'});}
+      catch(error){if(error.status!==404&&error.status!==409)toast('Checkout was cancelled, but Minglora could not clear its pending status: '+error.message);}
+    }
+    toast('PayPal checkout was cancelled. No subscription was activated.');
+    return true;
+  }
+  if(!paypalSubscriptionId){toast('PayPal returned without a subscription reference. Check your profile subscription status.');return true;}
+  try{
+    const result=await api('/subscriptions/confirm',{method:'POST',body:JSON.stringify({paypalSubscriptionId})});
+    toast(result.subscription?.status==='active'?'Subscription activated. Your creator perks are ready.':'PayPal approval received. Your subscription is awaiting confirmation.');
+    await openProfile(result.creatorId||state.user.id);
+  }catch(error){toast('PayPal returned, but the subscription could not be confirmed: '+error.message);}
+  return true;
+}
+
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
-    ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
-    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
+    ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="secondary profile-edit" id="creator-subscriptions-manage" type="button" aria-label="Manage subscriptions"><span aria-hidden="true">★</span><span>Subscriptions</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
+    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button>'+(data.subscriptionPlans?.length||data.viewerSubscription?'<button class="primary profile-edit" id="profile-subscribe" type="button">'+(data.viewerSubscription?.status==='active'?'Subscription':data.viewerSubscription?.status==='approval_pending'?'Finish subscription':'Subscribe')+'</button>':'')+'<button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const profileThought=data.profileStatus||u.profileThought||null;
   const tab=state.profileTab||'posts';
@@ -2971,6 +3150,8 @@ function renderProfile(data){
   overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>handleProfileOverflowAction(button.dataset.profileOverflowAction,u,data)));
 
   $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
+  $('#creator-subscriptions-manage')?.addEventListener('click',()=>openCreatorSubscriptionManager());
+  $('#profile-subscribe')?.addEventListener('click',()=>openProfileSubscriptionPicker(u,data));
   $('#profile-edit-avatar')?.addEventListener('click',()=>openEditProfile(u,'avatar'));
   $('#profile-edit-cover')?.addEventListener('click',()=>openEditProfile(u,'cover'));
   $('#profile-add-story')?.addEventListener('click',()=>openStoryComposer());
@@ -3312,10 +3493,10 @@ async function openDeviceAudioCapture({onCapture}={}){
   stop.onclick=()=>{if(recorder&&recorder.state!=='inactive'){status.textContent='Finalizing your recording…';recorder.stop();}};
 }
 function createMediaPicker(root,options={}){
-  const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
+  const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[],maxTotalBytes=Number.isFinite(options.maxTotalBytes)?Math.max(0,options.maxTotalBytes):Infinity;
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
   initialMedia.forEach(item=>entries.push({existing:true,id:item.id,url:item.url,mimeType:item.mimeType||'image/jpeg',mediaType:item.mediaType||'image',name:'Attached media',zoom:1,rotation:0}));
-  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
+  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.'+(Number.isFinite(maxTotalBytes)?' Total selection limit: '+Math.round(maxTotalBytes/1024/1024)+' MB.':'')+'</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
   const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress');
   function mediaCard(entry,index){
     let preview='';
@@ -3342,6 +3523,8 @@ function createMediaPicker(root,options={}){
     for(const file of Array.from(fileList||[])){
       if(entries.length>=maxFiles){status.textContent='You can select up to '+maxFiles+' files.';break;}
       if(file.size>mediaMaxBytes(slot)){status.textContent=file.name+' is over the '+mediaMaxLabel(slot)+' limit for this media area.';continue;}
+      const selectedBytes=entries.reduce((total,entry)=>total+(Number(entry.file?.size||entry.byteSize)||0),0);
+      if(selectedBytes+file.size>maxTotalBytes){status.textContent='Adding '+file.name+' would exceed the '+Math.round(maxTotalBytes/1024/1024)+' MB total selection limit. Remove a file or choose a smaller one.';continue;}
       const baseMime=String(file.type||'').split(';')[0].trim().toLowerCase();
       const allowed=accept.split(',').some(pattern=>pattern.trim().startsWith('.')?file.name.toLowerCase().endsWith(pattern.trim().toLowerCase()):pattern.trim().endsWith('/*')?baseMime.startsWith(pattern.trim().slice(0,-1)):baseMime===pattern.trim().toLowerCase());
       if(!allowed){status.textContent=file.name+' has an unsupported file type.';continue;}
@@ -3715,34 +3898,85 @@ function openEditProfile(u,mediaOnly=null){
 }
 function openStoryComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose a photo or video</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
+  const requestId=window.crypto?.randomUUID?.()||('story-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+  modal.innerHTML='<section class="modal story-composer-modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose multiple photos and videos</label><div id="story-media-picker"></div><small class="muted">Select up to 10 photos or videos together. Each becomes its own story item, and your previous stories stay available until they expire.</small></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically 24 hours after they are published.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish stories</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:1});
+  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
   const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelector('form').onsubmit=async event=>{
-    event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
+    event.preventDefault();
+    const button=modal.querySelector('button[type="submit"]');
+    if(button.disabled)return;
+    button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload(),track=soundtrack.value();
-      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track){toast('Write a Story, choose a photo/video or add a sound.');button.disabled=false;return;}
-      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaId:mediaIds[0]||null,audience:values.get('audience'),soundtrack:track})});
-      close();await loadStories();if(state.view==='feed')await renderFeed();toast('Story published for 24 hours.');
+      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track)throw new Error('Write a story, choose photos or videos, or add a sound.');
+      const result=await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:track,requestId})});
+      close();
+      await loadStories();
+      if(state.view==='feed')await renderFeed();
+      const count=Number(result.createdCount||result.stories?.length||1);
+      toast(count+' story item'+(count===1?'':'s')+' published. Your earlier stories are still there.');
     }catch(error){toast(error.message);button.disabled=false;}
   };
 }
-
 async function openStory(id){
   try{
-    const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
+    const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});
+    const s=result.story,isOwner=s.userId===state.user.id;
+    let sequence=(state.stories||[]).filter(story=>story.userId===s.userId);
+    if(!sequence.some(story=>story.id===s.id)){
+      await loadStories();
+      sequence=(state.stories||[]).filter(story=>story.userId===s.userId);
+    }
+    if(!sequence.some(story=>story.id===s.id))sequence.push(s);
+    sequence.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)||Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
+    const storyIndex=Math.max(0,sequence.findIndex(story=>story.id===s.id));
     const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
-    const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';
-    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+(s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
-    document.body.append(modal);bindSoundtrackPlayback(modal);modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
+    const navigation=sequence.length>1
+      ?'<div class="story-navigation" aria-label="Story sequence"><span>Story '+(storyIndex+1)+' of '+sequence.length+'</span><div><button type="button" class="secondary" data-story-previous '+(storyIndex===0?'disabled':'')+' aria-label="Previous story">‹ Previous</button><button type="button" class="primary" data-story-next '+(storyIndex===sequence.length-1?'disabled':'')+' aria-label="Next story">Next ›</button></div></div>'
+      :'';
+    const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';modal.tabIndex=-1;
+    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+
+      (s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+
+      renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+
+      (s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+
+      navigation+
+      (isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+
+      '</section>';
+    document.body.append(modal);modal.focus();bindSoundtrackPlayback(modal);
+    const navigate=targetIndex=>{
+      if(targetIndex<0||targetIndex>=sequence.length)return;
+      const nextStory=sequence[targetIndex];
+      modal.remove();
+      void openStory(nextStory.id);
+    };
+    modal.querySelector('[data-story-previous]')?.addEventListener('click',()=>navigate(storyIndex-1));
+    modal.querySelector('[data-story-next]')?.addEventListener('click',()=>navigate(storyIndex+1));
+    modal.addEventListener('keydown',event=>{
+      if(event.key==='ArrowLeft'&&storyIndex>0){event.preventDefault();navigate(storyIndex-1);}
+      if(event.key==='ArrowRight'&&storyIndex<sequence.length-1){event.preventDefault();navigate(storyIndex+1);}
+    });
+    const closeViewer=()=>{
+      modal.remove();
+      loadStories().then(()=>{if(state.view==='feed')return renderFeed();}).catch(()=>{});
+    };
+    modal.querySelector('.modal-close').onclick=closeViewer;
+    modal.addEventListener('click',event=>{if(event.target===modal)closeViewer();});
+    const video=modal.querySelector('video.story-viewer-image');
+    video?.addEventListener('ended',()=>navigate(storyIndex+1));
     modal.querySelector('#report-story')?.addEventListener('click',()=>{modal.remove();openReportComposer('story',s.id);});
-    modal.querySelector('#delete-story')?.addEventListener('click',async()=>{if(!window.confirm('Delete this story?'))return;try{await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');}catch(err){toast(err.message);}});
-  }catch(err){toast(err.message);}
+    modal.querySelector('#delete-story')?.addEventListener('click',async()=>{
+      if(!window.confirm('Delete this story?'))return;
+      try{
+        await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});
+        modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');
+      }catch(error){toast(error.message);}
+    });
+  }catch(error){toast(error.message);}
 }
 async function loadPages(){state.pages=(await api('/pages')).pages;}
 async function renderPages(){
@@ -4681,7 +4915,9 @@ async function renderSidebar(){try{await loadPeople();await loadGroups();const s
 async function enterMingloraApp(user,showWelcome=false){
   state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   const params=new URLSearchParams(window.location.search);
-  if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
+  const subscriptionReturnHandled=await finishCreatorSubscriptionReturn();
+  if(subscriptionReturnHandled){/* PayPal returned to the selected profile. */}
+  else if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else activateNav('feed');
   if(showWelcome)toast('Welcome to Minglora!');
 }
