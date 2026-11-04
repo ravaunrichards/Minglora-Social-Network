@@ -16,7 +16,7 @@ test('Minglora uses PayPal-only monthly billing and stores server-side subscript
   assert.match(server, /PAYPAL_WEBHOOK_ID/);
   assert.match(schema, /platform_share_bps integer NOT NULL DEFAULT 5000 CHECK \(platform_share_bps = 5000\)/);
   assert.match(schema, /creator_share_bps integer NOT NULL DEFAULT 5000 CHECK \(creator_share_bps = 5000\)/);
-  assert.match(schema, /UNIQUE\\(provider,provider_event_id\\)/);
+  assert.ok(schema.includes("UNIQUE(provider,provider_event_id)"));
   assert.match(paypalMigration, /paypal_plan_id/);
 });
 
