@@ -2607,10 +2607,10 @@ function bindProfileTabActions(panel){
   }));
 }
 function mediaMaxBytes(slot){
-  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
+  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='sound'?50*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
 }
 function mediaMaxLabel(slot){
-  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
+  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='sound'?'50 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
 }
 async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
@@ -2618,7 +2618,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
   let mimeType=String(prepared.type||'').split(';')[0].trim().toLowerCase();
   if(!mimeType&&prepared.name?.toLowerCase().endsWith('.glb'))mimeType='model/gltf-binary';
-  if(slot==='ringtone'&&(!mimeType||mimeType==='application/octet-stream')){
+  if((slot==='ringtone'||slot==='sound')&&(!mimeType||mimeType==='application/octet-stream')){
     const ext=String(prepared.name||'').toLowerCase().split('.').pop();
     const audioTypes={mp3:'audio/mpeg',m4a:'audio/mp4',mp4:'audio/mp4',ogg:'audio/ogg',opus:'audio/ogg',webm:'audio/webm',wav:'audio/wav',flac:'audio/flac',aac:'audio/aac'};
     mimeType=audioTypes[ext]||mimeType;
@@ -2695,6 +2695,7 @@ async function uploadProfileImage(slot,file,zoom=1,rotation=0,onProgress=()=>{})
 
 let mediaPickerSequence=0;
 function mediaAccept(slot){
+  if(slot==='sound')return 'audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.mp4,.ogg,.opus,.webm,.wav,.flac,.aac';
   if(slot==='ringtone')return 'audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac';
   if(slot==='message')return 'image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/ogg,audio/webm,application/pdf,text/plain,text/csv,application/zip,application/x-zip-compressed,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation';
   if(slot==='group'||slot==='page')return 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,video/mp4';
