@@ -34,3 +34,19 @@ test('account-auth script and service-worker shell caches use the refreshed vers
   assert.match(serviceWorker, /minglora-shell-v70-league-arena-1/);
   assert.match(serviceWorker, /auth-login\.js\?v=20261104-account-auth-1/);
 });
+
+
+test('login and registration buttons have a direct click path independent of app.js', () => {
+  assert.match(login, /addEventListener\('click'/);
+  assert.match(login, /button\.closest\('button\[type="submit"\]'\)/);
+  assert.match(login, /form\.reportValidity\(\)/);
+  assert.match(login, /submitLogin\(form\)/);
+  assert.match(login, /submitRegistration\(form\)/);
+});
+
+test('auth handler loads before the large application bundle', () => {
+  const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+  assert.ok(html.indexOf('auth-login.js?v=20261104-account-auth-click-2') < html.indexOf('/app.js?'));
+  assert.match(serviceWorker, /minglora-shell-v71-account-auth-click-1/);
+  assert.match(serviceWorker, /auth-login\.js\?v=20261104-account-auth-click-2/);
+});
