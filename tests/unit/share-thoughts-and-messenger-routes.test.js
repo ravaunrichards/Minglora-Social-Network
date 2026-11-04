@@ -20,7 +20,7 @@ test('Share thoughts is a real post composer connected to the authenticated post
   assert.ok(server.includes("if(method==='POST'&&p==='/api/posts')"));
   assert.ok(server.includes('validatePostInput(input)'));
   assert.ok(server.includes('publicPost(post,user.id)'));
-  assert.ok(html.includes('app.js?v=20261104-profile-subscribers-2'));
+  assert.ok(html.includes('app.js?v=20261104-gift-gallery-1'));
 });
 
 test('Messenger controls connect to conversation, user, settings and read-receipt routes', async () => {
