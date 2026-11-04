@@ -36,7 +36,7 @@ export function getGifterLevelChart(xp = 0) {
       xpRequired: gifterXpRequired(level),
       tier,
       badgeName: tier + " Gifter · Level " + level,
-      reward: milestone ? "Milestone badge finish" : "Level badge",
+      reward: level === 25 ? "Special LIVE entrance badge" : milestone ? "Milestone badge finish" : "Level badge",
       unlocked: level <= currentLevel,
       current: level === currentLevel
     };
