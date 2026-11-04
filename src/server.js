@@ -560,6 +560,23 @@ function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
     notify(reviewer.id,actorId,type,text,{applicantId,...extra});
   }
 }
+const storyBatchRequestLocks = new Map();
+async function acquireStoryBatchRequestLock(key) {
+  const previous = storyBatchRequestLocks.get(key) || Promise.resolve();
+  let releaseGate;
+  const gate = new Promise(resolve => { releaseGate = resolve; });
+  const next = previous.then(() => gate);
+  storyBatchRequestLocks.set(key, next);
+  await previous;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    releaseGate();
+    if (storyBatchRequestLocks.get(key) === next) storyBatchRequestLocks.delete(key);
+  };
+}
+
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
@@ -2888,6 +2905,8 @@ async function route(req, res) {
         if(!text&&!mediaIds.length&&!input.soundtrack)return json(res,400,{error:'Add text, at least one photo or video, or a sound to your Story.'});
         const requestId=String(input.requestId||'').trim();
         if(requestId&&(!/^[A-Za-z0-9_-]{8,128}$/.test(requestId)))return json(res,400,{error:'The story upload request is invalid. Close the composer and try again.'});
+        const releaseStoryBatchLock=requestId?await acquireStoryBatchRequestLock(user.id+':'+requestId):()=>{};
+        try{
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
 
         // A retried client request must return its already-created items rather than
@@ -2931,6 +2950,7 @@ async function route(req, res) {
         await saveStore();
         const stories=await Promise.all(createdStories.map(story=>publicStory(story,user.id)));
         return json(res,201,{story:stories[0],stories,createdCount:stories.length});
+        }finally{releaseStoryBatchLock();}
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
       if(method==='POST'&&m){
