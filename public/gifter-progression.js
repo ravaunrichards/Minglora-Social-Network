@@ -1,0 +1,158 @@
+(() => {
+  "use strict";
+
+  const state = { overview: null, selectedLevel: 1 };
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[char]));
+  const number = value => Number(value || 0).toLocaleString();
+  const date = value => {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? "Date unavailable" : parsed.toLocaleString();
+  };
+
+  async function requestOverview() {
+    const response = await fetch("/api/gifter-progression/overview", {
+      credentials: "same-origin",
+      headers: { "Accept": "application/json" }
+    });
+    let data = {};
+    try { data = await response.json(); } catch {}
+    if (!response.ok) throw new Error(data.error || "Gifter progression could not be loaded.");
+    return data;
+  }
+
+  function badgeMarkup(level, tier, small = false) {
+    const className = "gp-badge" + (small ? " gp-badge--small" : "");
+    return "<span class='" + className + " gp-tier-" + Math.ceil(Number(level) / 5) + "' aria-label='" +
+      esc(tier + " Gifter, level " + level) + "'><span class='gp-badge-crown'>✦</span><strong>" +
+      number(level) + "</strong><small>GIFTER</small></span>";
+  }
+
+  function levelCard(item) {
+    const classes = [
+      "gp-level-card",
+      item.unlocked ? "is-unlocked" : "is-locked",
+      item.current ? "is-current" : ""
+    ].filter(Boolean).join(" ");
+    return "<button type='button' class='" + classes + "' data-gp-level='" + item.level + "' aria-pressed='" +
+      (item.current ? "true" : "false") + "'>" +
+      badgeMarkup(item.level, item.tier, true) +
+      "<span class='gp-level-card-copy'><strong>Level " + item.level + "</strong><small>" +
+      number(item.xpRequired) + " XP</small></span>" +
+      (item.unlocked ? "<span class='gp-level-state' aria-label='Unlocked'>✓</span>" : "<span class='gp-level-state' aria-label='Locked'>⌑</span>") +
+      "</button>";
+  }
+
+  function detailMarkup(item, current) {
+    if (!item) return "";
+    return "<div class='gp-selected-badge'>" + badgeMarkup(item.level, item.tier) +
+      "<div><span class='gp-eyebrow'>" + (item.unlocked ? "UNLOCKED BADGE" : "LOCKED BADGE") +
+      "</span><h3>" + esc(item.badgeName) + "</h3><p>" + esc(item.reward) + "</p>" +
+      "<small>Lifetime requirement: " + number(item.xpRequired) + " XP</small></div></div>" +
+      (item.level === current.level
+        ? "<p class='gp-selected-note'>This is your current badge.</p>"
+        : item.unlocked
+          ? "<p class='gp-selected-note'>You have already unlocked this badge.</p>"
+          : "<p class='gp-selected-note'>You need " + number(Math.max(0, item.xpRequired - current.xp)) + " more XP to unlock this badge.</p>");
+  }
+
+  function renderHistory(items) {
+    if (!items.length) {
+      return "<div class='gp-empty'><span>🎁</span><strong>No confirmed gifts sent yet</strong><p>Your real gifting activity will appear here after a gift is successfully sent.</p></div>";
+    }
+    return "<div class='gp-history-list'>" + items.map(item =>
+      "<article class='gp-history-row'><span class='gp-history-icon'>🎁</span><div class='gp-history-copy'><strong>" +
+      esc(item.giftName) + "</strong><small>To @" + esc(item.recipientUsername || "member") + " · " +
+      (item.contextType === "live" ? "LIVE gift" : "Member gift") + "</small><small>" + esc(date(item.createdAt)) +
+      "</small></div><strong class='gp-history-xp'>+" + number(item.coinAmount) + " XP</strong></article>"
+    ).join("") + "</div>";
+  }
+
+  function renderLeaderboard(items, current) {
+    if (!items.length) {
+      return "<div class='gp-empty'><span>🏅</span><strong>The leaderboard is waiting for its first gifter</strong><p>Only members with confirmed gifts appear here.</p></div>";
+    }
+    return "<div class='gp-leaderboard-list'>" + items.map(item =>
+      "<article class='gp-leader-row " + (item.userId === current.userId ? "is-you" : "") + "'>" +
+      "<span class='gp-rank-number'>" + item.rank + "</span>" +
+      "<span class='gp-leader-avatar'>" + esc((item.name || item.username || "M").slice(0, 1).toUpperCase()) + "</span>" +
+      "<span class='gp-leader-copy'><strong>" + esc(item.name) + "</strong><small>@" + esc(item.username) +
+      " · Level " + item.level + "</small></span><strong class='gp-leader-xp'>" + number(item.xp) + " XP</strong></article>"
+    ).join("") + "</div>";
+  }
+
+  function renderMarkup(data) {
+    const current = data.current;
+    const selected = (data.levels || []).find(item => item.level === state.selectedLevel) ||
+      (data.levels || []).find(item => item.current);
+    const progressText = current.maxLevel
+      ? "You have reached the maximum gifter level."
+      : number(current.xpRemaining) + " XP to Level " + current.nextLevel;
+    const image = "<img class='gp-reference-art' src='/assets/gifters-level-up.png' alt='Minglora gifter level progression artwork' loading='eager' decoding='async'>";
+    const chart = (data.levels || []).map(levelCard).join("");
+    const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
+
+    return "<div class='gp-page'>" +
+      "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Levels &amp; Badges</h1>" +
+      "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
+      "<button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></header>" +
+      "<section class='gp-hero card'><div class='gp-hero-art'>" + image + "</div><div class='gp-hero-summary'>" +
+      "<span class='gp-eyebrow'>YOUR CURRENT BADGE</span><div class='gp-current-badge-row'>" +
+      badgeMarkup(current.level, current.tier) +
+      "<div><h2>Level " + current.level + " · " + esc(current.tier) + "</h2><p>" + esc(current.badgeName) + "</p>" +
+      "<span class='gp-rank-chip'>" + (current.rankPosition ? "Community rank #" + current.rankPosition : "Not ranked yet") + "</span></div></div>" +
+      "<div class='gp-progress-heading'><strong>" + (current.maxLevel ? "Maximum level reached" : "Progress to Level " + current.nextLevel) +
+      "</strong><span>" + number(current.xp) + " XP</span></div><div class='gp-progress-track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='" +
+      current.progressPercent + "'><span style='width:" + current.progressPercent + "%'></span></div>" +
+      "<p class='gp-progress-foot'>" + esc(progressText) + "</p></div></section>" +
+      "<section class='gp-stats-grid' aria-label='Gifter statistics'>" +
+      "<article class='gp-stat-card'><span>Lifetime XP</span><strong>" + number(current.xp) + "</strong><small>From confirmed gifts sent</small></article>" +
+      "<article class='gp-stat-card'><span>Coins sent</span><strong>" + number(current.totalCoinsSent) + "</strong><small>1 XP for each Coin in a confirmed gift</small></article>" +
+      "<article class='gp-stat-card'><span>Gifts sent</span><strong>" + number(current.giftsSent) + "</strong><small>Unique confirmed transactions</small></article>" +
+      "<article class='gp-stat-card'><span>Members supported</span><strong>" + number(current.uniqueRecipients) + "</strong><small>Different recipients</small></article></section>" +
+      "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>Levels 1–50</h2>" +
+      "<p>Tap any level to inspect its badge and unlock requirement.</p></div><span class='gp-level-count'>" + current.level + " / 50</span></div>" +
+      "<div class='gp-selected-level' id='gp-selected-level'>" + detailMarkup(selected, current) + "</div>" +
+      "<div class='gp-level-grid' id='gp-level-grid'>" + chart + "</div></section>" +
+      "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +
+      "<p>Only successful, server-confirmed gifts are shown.</p></div></div>" + renderHistory(data.history || []) + "</section>" +
+      "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>COMMUNITY STANDINGS</span><h2>Top gifters</h2>" +
+      "<p>Ranked by confirmed lifetime gifting XP.</p></div></div>" + renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId }) + "</section></div>" +
+      "<section class='gp-rules card'><div><span class='gp-eyebrow'>HOW IT WORKS</span><h2>How gifter levels are earned</h2></div>" +
+      "<div class='gp-rule-grid'><article><strong>01 · Send a gift</strong><p>Member gifts and LIVE gifts count after Minglora confirms the transaction.</p></article>" +
+      "<article><strong>02 · Earn XP</strong><p>Each Minglora Coin spent on a confirmed gift earns 1 gifter XP.</p></article>" +
+      "<article><strong>03 · Unlock badges</strong><p>XP is lifetime-based. Your earned level badges stay unlocked as you progress.</p></article></div>" +
+      "<p class='gp-rule-note'>Coin purchases, gifts you receive, failed sends and duplicate transactions do not increase gifter XP. This gifter track is separate from Creator Leagues.</p></section>" +
+      "</div>";
+  }
+
+  function bindPage(data) {
+    document.getElementById("gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
+    document.getElementById("gp-level-grid")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-gp-level]");
+      if (!button) return;
+      state.selectedLevel = Number(button.dataset.gpLevel);
+      const item = (data.levels || []).find(level => level.level === state.selectedLevel);
+      const target = document.getElementById("gp-selected-level");
+      if (target) target.innerHTML = detailMarkup(item, data.current);
+      document.querySelectorAll("[data-gp-level]").forEach(node => {
+        const active = Number(node.dataset.gpLevel) === state.selectedLevel;
+        node.classList.toggle("is-current", active && state.selectedLevel === data.current.level);
+        node.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    });
+  }
+
+  async function render() {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.innerHTML = "<section class='card gp-loading'><strong>Loading your gifter progression…</strong><p>Checking confirmed Minglora gifts.</p></section>";
+    state.overview = await requestOverview();
+    state.selectedLevel = state.overview.current.level;
+    main.innerHTML = renderMarkup(state.overview);
+    bindPage(state.overview);
+  }
+
+  window.MingloraGifterProgression = { render };
+})();
