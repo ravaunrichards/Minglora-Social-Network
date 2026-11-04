@@ -397,6 +397,16 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ text: 'Friends-only story from the integration test', audience: 'friends' })
   });
   assert.equal(friendsStory.status, 201);
+  const followupStory = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'A second story must not replace the first', audience: 'public' })
+  });
+  assert.equal(followupStory.status, 201);
+  assert.equal(followupStory.body.createdCount, 1);
+  const ownerStoriesAfterUpload = await request('/api/stories');
+  assert.equal(ownerStoriesAfterUpload.status, 200);
+  assert.equal(ownerStoriesAfterUpload.body.stories.some(story => story.id === publicStory.body.story.id), true);
+  assert.equal(ownerStoriesAfterUpload.body.stories.some(story => story.id === followupStory.body.story.id), true);
   const invalidStory = await request('/api/stories', {
     method: 'POST',
     body: JSON.stringify({ imageUrl: 'http://example.test/story.jpg' })
@@ -543,6 +553,7 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const secondStories = await request('/api/stories');
   assert.equal(secondStories.status, 200);
   assert.equal(secondStories.body.stories.some(story => story.id === publicStory.body.story.id), true);
+  assert.equal(secondStories.body.stories.some(story => story.id === followupStory.body.story.id), true);
   assert.equal(secondStories.body.stories.some(story => story.id === friendsStory.body.story.id), false);
   const deniedStoryView = await request(`/api/stories/${friendsStory.body.story.id}/view`, { method: 'POST', body: '{}' });
   assert.equal(deniedStoryView.status, 404);
