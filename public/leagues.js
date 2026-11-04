@@ -1,7 +1,11 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [] };
+  const state = { overview: null, sessions: [], gifts: [], lastUpdatedAt: null, refreshing: false, refreshError: "" };
   let refreshTimer = null;
+  let refreshController = null;
+  let refreshInFlight = false;
+  let viewGeneration = 0;
+  let refreshToken = 0;
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -20,6 +24,47 @@
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "The League request could not be completed.");
     return data;
+  }
+  function uniqueItems(items, keyFor) {
+    const seen = new Set();
+    return (Array.isArray(items) ? items : []).filter(item => {
+      const key = keyFor(item);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  function normalizeOverview(overview) {
+    const activeMatches = uniqueItems(overview.activeMatches, match => {
+      if (["pending", "live"].includes(match.status) && match.challengerId && match.opponentId) {
+        return "active:" + [String(match.challengerId), String(match.opponentId)].sort().join("|");
+      }
+      return match.id ? "id:" + match.id : "";
+    });
+    return {
+      ...overview,
+      activeMatches,
+      leaderboard: uniqueItems(overview.leaderboard, item => item.id || item.username),
+      recentEvents: uniqueItems(overview.recentEvents, item => item.id || [item.type, item.userId, item.createdAt].join(":"))
+    };
+  }
+  function updateRefreshStatus() {
+    const status = $("#league-refresh-status");
+    const button = $("[data-league-refresh]");
+    if (status) {
+      status.textContent = state.refreshError
+        ? "Refresh failed. Tap Refresh to retry."
+        : state.lastUpdatedAt
+          ? "Updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + " · Auto-refresh every 15s"
+          : "Auto-refresh every 15 seconds";
+    }
+    if (button) {
+      button.disabled = state.refreshing;
+      button.textContent = state.refreshing ? "Refreshing…" : "↻ Refresh";
+    }
+  }
+  function isLeagueViewActive() {
+    return Boolean($("#main-content") && document.querySelector("[data-view='leagues'].active"));
   }
   function image(member) {
     return member?.avatarUrl
@@ -112,7 +157,7 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Daily standings are based on confirmed LIVE Gift coin value within your region and current class.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>How to move up</strong><p>Top 20% of an active class group earns one fragment. Four fragments promote you one class and award a League Shield.</p></div><div><strong>How protection works</strong><p>Bottom 20% loses one fragment. If no fragment remains, a League Shield protects one demotion; otherwise the class can drop one level.</p></div><div><strong>Daily activity</strong><p>At least two active creators are needed for a class placement. Creators without a confirmed Gift score are not ranked for that day.</p></div></div></section>" +
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
-      "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
+      "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 15 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings.</p></div></div>" + (leaderboard.length ? "<div class='league-leaderboard'>" + leaderboard.map(item=>"<div class='league-leader-row'><b class='league-position'>#" + item.position + "</b>" + image(item) + "<div class='league-leader-name'><strong>" + esc(item.name) + "</strong><small>@" + esc(item.username) + "</small></div><strong class='league-leader-points'>" + Number(item.seasonPoints).toLocaleString() + " pts</strong></div>").join("") + "</div>" : "<div class='league-empty-inline'>Your class leaderboard will appear when creators earn confirmed LIVE Gift points in your region.</div>") + "</section>" +
       "<section class='card league-events-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
       "<section class='league-powerup-info'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2>Match Power-Ups</h2><p>These temporary effects never multiply Creator League points or official class standings.</p></div></div><div class='league-powerup-info-grid'>" + overview.powerups.map(power=>"<article class='league-powerup-info-card'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p><small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small></article>").join("") + "</div></section>" +
@@ -154,41 +199,84 @@
       try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/powerups", {method:"POST",body:JSON.stringify({powerupId:button.dataset.matchPowerup})}); toast("Match power-up activated."); await render(); }
       catch(error) { toast(error.message); button.disabled = false; }
     }));
+    const refreshButton = $("[data-league-refresh]");
+    if (refreshButton) refreshButton.addEventListener("click", () => { void refreshScores({force:true}); });
+    updateRefreshStatus();
   }
   function onNavigateAway() {
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = null;
+    viewGeneration += 1;
+    refreshToken += 1;
+    refreshInFlight = false;
+    if (refreshController) refreshController.abort();
+    refreshController = null;
+    state.refreshing = false;
   }
-  async function refreshScores() {
+  async function refreshScores({force = false} = {}) {
     const main = $("#main-content");
-    if (!main || !document.querySelector("[data-view='leagues'].active")) { onNavigateAway(); return; }
+    if (!main || !isLeagueViewActive()) { onNavigateAway(); return; }
+    if (refreshInFlight) return;
     const focused = document.activeElement;
-    if (focused && ["INPUT","SELECT","TEXTAREA"].includes(focused.tagName)) return;
+    if (!force && focused && ["INPUT","SELECT","TEXTAREA"].includes(focused.tagName)) return;
+
+    refreshInFlight = true;
+    const token = ++refreshToken;
+    const generation = viewGeneration;
+    const controller = new AbortController();
+    refreshController = controller;
+    state.refreshing = true;
+    state.refreshError = "";
+    updateRefreshStatus();
     try {
-      const [overview, sessions] = await Promise.all([request("/leagues/overview"), request("/live/sessions")]);
-      state.overview = overview;
-      state.sessions = sessions.sessions || [];
+      const [overview, sessions] = await Promise.all([
+        request("/leagues/overview", {signal:controller.signal}),
+        request("/live/sessions", {signal:controller.signal})
+      ]);
+      if (token !== refreshToken || generation !== viewGeneration || !isLeagueViewActive()) return;
+      state.overview = normalizeOverview(overview);
+      state.sessions = Array.isArray(sessions.sessions) ? sessions.sessions : [];
+      state.lastUpdatedAt = new Date();
+      state.refreshError = "";
       const scrollTop = main.scrollTop;
       main.innerHTML = renderMarkup(state.overview, state.sessions);
       main.scrollTop = scrollTop;
       bindActions();
-    } catch {}
+    } catch (error) {
+      if (token === refreshToken && error?.name !== "AbortError") {
+        state.refreshError = error.message || "The League could not refresh.";
+        if (force) toast(state.refreshError);
+      }
+    } finally {
+      if (token === refreshToken) {
+        refreshInFlight = false;
+        state.refreshing = false;
+        refreshController = null;
+        updateRefreshStatus();
+      }
+    }
   }
   async function render() {
     onNavigateAway();
+    const generation = ++viewGeneration;
     const main = $("#main-content");
     if (!main) return;
     main.innerHTML = "<section class='card empty-state'><h3>Loading League Arena</h3><p>Checking your league record and LIVE match rooms…</p></section>";
     const results = await Promise.allSettled([
       request("/leagues/overview"), request("/live/sessions"), request("/coins/catalog")
     ]);
+    if (generation !== viewGeneration || !isLeagueViewActive()) return;
     if (results[0].status !== "fulfilled") throw results[0].reason;
-    state.overview = results[0].value;
-    state.sessions = results[1].status === "fulfilled" ? (results[1].value.sessions || []) : [];
-    state.gifts = results[2].status === "fulfilled" ? (results[2].value.gifts || []) : [];
+    state.overview = normalizeOverview(results[0].value);
+    state.sessions = results[1].status === "fulfilled" && Array.isArray(results[1].value.sessions) ? results[1].value.sessions : [];
+    state.gifts = results[2].status === "fulfilled" && Array.isArray(results[2].value.gifts) ? results[2].value.gifts : [];
+    state.lastUpdatedAt = new Date();
+    state.refreshError = "";
+    state.refreshing = false;
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
-    refreshTimer = setInterval(refreshScores, 15000);
+    updateRefreshStatus();
+    if (isLeagueViewActive()) refreshTimer = setInterval(() => { void refreshScores(); }, 15000);
   }
   window.MingloraLeagues = { render, onNavigateAway };
 })();
