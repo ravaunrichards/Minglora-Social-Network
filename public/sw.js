@@ -1,6 +1,6 @@
 /* Minglora service worker: update-friendly shell caching, email-link handoff refresh, and background Web Push. */
 const CACHE_NAME='minglora-shell-v66-minglora-gift-motion-1';
-const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261104-minglora-gift-motion-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/gift-effects.js?v=20261104-minglora-gift-motion-1','/gifts.js?v=20261104-minglora-gift-studio-1','/app.js?v=20261104-minglora-gift-studio-1','/auth-login.js?v=20261103-auth-refresh-2','/settings.js?v=20261102-platform-shell-2','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
+const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261104-minglora-gift-motion-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/gift-effects.js?v=20261104-minglora-gift-motion-1','/gifts.js?v=20261104-minglora-gift-studio-1','/app.js?v=20261104-minglora-gift-motion-1','/auth-login.js?v=20261103-auth-refresh-2','/settings.js?v=20261102-platform-shell-2','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
