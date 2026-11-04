@@ -127,3 +127,19 @@ test("match completion awards match rating only once", () => {
   assert.equal(ensureCreatorLeagueProfile(db, "creator-b", "GLOBAL", now).matchRankPoints, 0);
   assert.equal(getCreatorLeagueOverview(db, {id:"creator-a",country:"JAMAICA"}, now).profile.matchRank, "Bronze III");
 });
+
+
+test("tied daily boundaries do not cause arbitrary promotions or demotions", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  ensureCreatorLeagueProfile(db, "creator-a", "JAMAICA", now);
+  ensureCreatorLeagueProfile(db, "creator-b", "JAMAICA", now);
+  const dayKey = now.toISOString().slice(0, 10);
+  db.creatorLeagueDailyScores.push(
+    { id: "score-a", userId: "creator-a", dayKey, points: 100 },
+    { id: "score-b", userId: "creator-b", dayKey, points: 100 }
+  );
+  settleCreatorLeagueDay(db, dayKey, now);
+  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-a").leagueClass, "D5");
+  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-b").leagueClass, "D5");
+});
