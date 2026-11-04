@@ -1213,6 +1213,7 @@ async function renderCoins(){
       return hex.slice(0,8)+"-"+hex.slice(8,12)+"-"+hex.slice(12,16)+"-"+hex.slice(16,20)+"-"+hex.slice(20);
     };
     let exchangeRequestId=makeRequestId();
+    let exchangeRequestAmountMinor=null;
     const previewExchange=()=>{
       const raw=String(amountInput?.value||"").trim();
       const amount=Number(raw);
@@ -1234,7 +1235,10 @@ async function renderCoins(){
         if(status)status.textContent="Enter at least USD $1.00 and no more than your available money balance.";
         return;
       }
+      if(exchangeRequestAmountMinor!==null&&exchangeRequestAmountMinor!==amountMinor)exchangeRequestId=makeRequestId();
+      exchangeRequestAmountMinor=amountMinor;
       if(confirmButton)confirmButton.disabled=true;
+      if(amountInput)amountInput.disabled=true;
       if(status)status.textContent="Confirming your exchange securely…";
       try{
         const result=await api("/coins/exchange",{method:"POST",body:JSON.stringify({amountMinor,requestId:exchangeRequestId})});
@@ -1246,6 +1250,7 @@ async function renderCoins(){
         if(status)status.textContent=error.message||"The exchange could not be completed. Your balance has not been changed unless the server confirms the transaction.";
         toast(error.message);
         if(confirmButton)confirmButton.disabled=false;
+        if(amountInput)amountInput.disabled=false;
       }
     });
     previewExchange();
