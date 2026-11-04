@@ -521,6 +521,17 @@ async function subscriptionAccessSet(viewerId, creatorIds){
   const result=await requestSupabaseState('subscription_access_check',{userId:viewerId,creatorIds:ids});
   return new Set(result.authorizedCreatorIds||[]);
 }
+async function canViewLiveSession(session,viewerId){
+  if(!session||session.status!=='live'||blockedBetween(viewerId,session.hostId))return false;
+  const audienceAllowed=session.hostId===viewerId||session.visibility==='public'||
+    (session.visibility==='friends'&&isFriend(viewerId,session.hostId));
+  if(!audienceAllowed)return false;
+  if(session.subscriberOnly===true&&session.hostId!==viewerId){
+    const allowed=await subscriptionAccessSet(viewerId,[session.hostId]);
+    return allowed.has(session.hostId);
+  }
+  return true;
+}
 async function canViewSubscriptionPost(post,viewerId){
   if(!post||post.accessLevel!=='subscribers'||post.userId===viewerId)return true;
   const allowed=await subscriptionAccessSet(viewerId,[post.userId]);
@@ -1472,14 +1483,16 @@ async function route(req, res) {
         await liveSessionCleanupReady;
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 200, { sessions: [] });
-        const canView = session => {
-          if (session.hostId === user.id || session.visibility === 'public') return true;
-          if (session.visibility !== 'friends') return false;
-          return isFriend(user.id, session.hostId);
-        };
-        const activeSessions = (db.liveSessions || [])
-          .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const directoryCandidates=(db.liveSessions||[]).filter(session=>{
+          const audienceAllowed=session.hostId===user.id||session.visibility==='public'||
+            (session.visibility==='friends'&&isFriend(user.id,session.hostId));
+          return session.status==='live'&&!blockedBetween(user.id,session.hostId)&&audienceAllowed;
+        });
+        const subscriberLiveAccess=await subscriptionAccessSet(user.id,
+          directoryCandidates.filter(session=>session.subscriberOnly===true&&session.hostId!==user.id).map(session=>session.hostId));
+        const activeSessions=directoryCandidates
+          .filter(session=>session.subscriberOnly!==true||session.hostId===user.id||subscriberLiveAccess.has(session.hostId))
+          .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const sessions = [];
         for (const session of activeSessions) {
           try {
@@ -1522,6 +1535,15 @@ async function route(req, res) {
             !['video_audio', 'audio_only'].includes(broadcastType)) {
           return json(res, 400, { error: 'Enter a live title, choose an audience and select Video + Audio or Audio Only.' });
         }
+        const subscriberOnly=input.subscriberOnly===true;
+        if(subscriberOnly){
+          const creatorSubscriptions=await requestSupabaseState('subscription_creator_get',{userId:user.id});
+          if(creatorSubscriptions.settings?.application_status!=='approved'||
+             !creatorSubscriptions.settings?.subscriber_only_live_enabled||
+             !creatorSubscriptions.tier?.paypal_plan_id){
+            return json(res,403,{error:'Minglora approval and an active PayPal membership offer are required for subscriber-only LIVE.'});
+          }
+        }
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
         const publishSources = broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA];
@@ -1534,7 +1556,7 @@ async function route(req, res) {
         });
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
-        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, liveTheme, status: 'live', createdAt: now(), endedAt: null };
+        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, subscriberOnly, liveTheme, status: 'live', createdAt: now(), endedAt: null };
         await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
         db.liveSessions = db.liveSessions || [];
         db.liveSessions.unshift(session);
@@ -1548,9 +1570,7 @@ async function route(req, res) {
       const liveThemeMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/theme$/);
       if (method === 'GET' && liveThemeMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveThemeMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
-        const allowed = session.hostId === user.id || session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
-        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'Live session not found.' });
         const liveTheme = LIVE_ROOM_THEMES.includes(session.liveTheme) ? session.liveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
         return json(res, 200, { liveTheme });
       }
@@ -1592,7 +1612,7 @@ async function route(req, res) {
       const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerStatusMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'LIVE session not found.' });
         const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === user.id) || null;
         return json(res, 200, { request });
       }
@@ -1623,12 +1643,7 @@ async function route(req, res) {
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
-        const friendAccess = isFriend(user.id, session.hostId);
-        const allowed = session.hostId === user.id ||
-          session.visibility === 'public' ||
-          (session.visibility === 'friends' && friendAccess);
-        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'Live session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
@@ -1648,10 +1663,7 @@ async function route(req, res) {
       const liveConnectedMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/connected$/);
       if (method === 'POST' && liveConnectedMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveConnectedMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
-        const canView = session.hostId === user.id || session.visibility === 'public' ||
-          (session.visibility === 'friends' && isFriend(user.id, session.hostId));
-        if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'LIVE session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
