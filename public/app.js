@@ -482,8 +482,33 @@ function createSoundtrackEditor(root,initialTrack=null){
     root.querySelector('[data-create-sound]').onclick=()=>openOriginalSoundComposer(sound=>{selected=sound;values={startMs:0,endMs:Number(sound.durationMs||0),volume:1,fadeInMs:0,fadeOutMs:0};render();});
     root.querySelector('[data-clear-soundtrack]')?.addEventListener('click',()=>{selected=null;values={startMs:0,endMs:0,volume:1,fadeInMs:0,fadeOutMs:0};render();});
     const volume=root.querySelector('[data-track-volume]'),audio=root.querySelector('.soundtrack-editor-preview');
-    volume?.addEventListener('input',()=>{values.volume=Number(volume.value)/100;root.querySelector('[data-track-volume-label]').textContent=volume.value+'%';if(audio)audio.volume=values.volume;});
-    if(audio){audio.volume=values.volume;audio.addEventListener('loadedmetadata',()=>{audio.currentTime=Math.min(values.startMs/1000,Math.max(0,audio.duration-.1));});audio.addEventListener('timeupdate',()=>{const end=values.endMs?values.endMs/1000:audio.duration;if(end&&audio.currentTime>=end){audio.pause();audio.currentTime=Math.min(values.startMs/1000,Math.max(0,audio.duration-.1));}});}
+    const startInput=root.querySelector('[data-track-start]'),endInput=root.querySelector('[data-track-end]');
+    const fadeInInput=root.querySelector('[data-track-fade-in]'),fadeOutInput=root.querySelector('[data-track-fade-out]');
+    const seekPreview=()=>{if(audio&&Number.isFinite(audio.duration))audio.currentTime=Math.min(values.startMs/1000,Math.max(0,audio.duration-.1));};
+    const updateFadePreview=()=>{
+      if(!audio)return;
+      const end=values.endMs?values.endMs/1000:audio.duration;
+      const elapsed=Math.max(0,audio.currentTime-values.startMs/1000);
+      let gain=values.volume;
+      if(values.fadeInMs>0&&elapsed<values.fadeInMs/1000)gain*=elapsed/(values.fadeInMs/1000);
+      if(values.fadeOutMs>0&&end&&audio.currentTime>end-values.fadeOutMs/1000)gain*=Math.max(0,(end-audio.currentTime)/(values.fadeOutMs/1000));
+      audio.volume=Math.max(0,Math.min(1,gain));
+    };
+    volume?.addEventListener('input',()=>{values.volume=Number(volume.value)/100;root.querySelector('[data-track-volume-label]').textContent=volume.value+'%';updateFadePreview();});
+    startInput?.addEventListener('change',()=>{values.startMs=Math.max(0,Math.round(Number(startInput.value||0)*1000));seekPreview();updateFadePreview();});
+    endInput?.addEventListener('change',()=>{values.endMs=Math.max(0,Math.round(Number(endInput.value||0)*1000));if(audio&&values.endMs>0&&audio.currentTime>values.endMs/1000){audio.pause();seekPreview();}updateFadePreview();});
+    fadeInInput?.addEventListener('change',()=>{values.fadeInMs=Math.max(0,Math.round(Number(fadeInInput.value||0)*1000));updateFadePreview();});
+    fadeOutInput?.addEventListener('change',()=>{values.fadeOutMs=Math.max(0,Math.round(Number(fadeOutInput.value||0)*1000));updateFadePreview();});
+    if(audio){
+      audio.volume=values.volume;
+      audio.addEventListener('loadedmetadata',()=>seekPreview());
+      audio.addEventListener('play',updateFadePreview);
+      audio.addEventListener('timeupdate',()=>{
+        const end=values.endMs?values.endMs/1000:audio.duration;
+        if(end&&audio.currentTime>=end){audio.pause();seekPreview();return;}
+        updateFadePreview();
+      });
+    }
   }
   render();
   return {
