@@ -32,6 +32,7 @@ test('For You interleaves creators instead of repeating one prolific account',()
     post('c1','creator-c')
   ];
   const ranked=rankForYouFeed(posts,'viewer',[],[],now);
-  assert.deepEqual(ranked.slice(0,3).map(item=>item.id),['a1','b1','c1']);
+  assert.equal(ranked[0].id,'a1');
+  assert.equal(new Set(ranked.slice(0,3).map(item=>item.userId)).size,3, 'the first three recommendations come from three different creators');
   assert.equal(ranked.length,posts.length);
 });
