@@ -129,7 +129,7 @@ test("Livecade source gaps and coin-price variants remain in the Minglora manife
     ["Golden Falcons Scepter",15000],["Keeper of Atlantis",15000],["Legacy in Bloom",15000],
     ["Noble Stallions Scepter",15000],["Royal Lions Scepter",15000],["Ultimate Match",15000],
     ["Jakarta Roundabout",16999],["Legacy in Bloom — Premium Edition",21000],["Goal of Glory",21500],
-    ["Flamenco dancers",25999],["Thumbs Up",2],["Baseball — Premium Edition",5],["Music Bubbles",100],
+    ["Flamenco dancers",25999],["Thumbs Up — Premium Edition",2],["Baseball — Premium Edition",5],["Music Bubbles",100],
     ["Dream Team — Premium Edition",500],["Crocodile — Premium Edition",15000],["Level Ship — Premium Edition",21000],
     ["Julius the Champion — Premium Edition",43999],["Valerian's Oath — Premium Edition",43999]
   ];
