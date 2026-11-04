@@ -2912,11 +2912,53 @@ async function openDeviceCapture({mode='both',onCapture}={}){
   setControls();
   try{await openStream();}catch(error){status.textContent=error.message||'Camera permission was denied.';toast(status.textContent);photoButton.disabled=true;recordButton.disabled=true;}
 }
+async function openDeviceAudioCapture({onCapture}={}){
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
+    toast('Microphone recording is not supported in this browser. Choose an audio file instead.');return;
+  }
+  const modal=document.createElement('div');modal.className='modal-backdrop device-audio-backdrop';
+  modal.innerHTML='<section class="modal device-audio-modal" role="dialog" aria-modal="true" aria-labelledby="device-audio-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA SOUNDS</span><h2 id="device-audio-title">Record original audio</h2></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="audio-recording-indicator" data-audio-recording-indicator><span></span><span></span><span></span><span></span><span></span></div><p class="device-audio-status muted" role="status">Ready to record from your microphone.</p><audio controls hidden data-audio-recording-preview></audio><div class="modal-actions"><button type="button" class="secondary" data-audio-record-start>Start recording</button><button type="button" class="danger" data-audio-record-stop disabled>Stop recording</button></div><button type="button" class="secondary full modal-cancel">Cancel</button></div></section>';
+  document.body.append(modal);
+  const status=modal.querySelector('.device-audio-status'),start=modal.querySelector('[data-audio-record-start]'),stop=modal.querySelector('[data-audio-record-stop]'),preview=modal.querySelector('[data-audio-recording-preview]'),indicator=modal.querySelector('[data-audio-recording-indicator]');
+  let stream=null,recorder=null,chunks=[],recordedFile=null,closed=false,startedAt=0;
+  const stopTracks=()=>{if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}};
+  const close=()=>{if(closed)return;closed=true;try{if(recorder&&recorder.state!=='inactive')recorder.stop();}catch{}stopTracks();if(preview.src)URL.revokeObjectURL(preview.src);modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  start.onclick=async()=>{
+    start.disabled=true;status.textContent='Requesting microphone permission…';
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+      const candidates=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4','audio/webm','audio/ogg'];
+      const mimeType=candidates.find(type=>MediaRecorder.isTypeSupported?.(type));
+      recorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);chunks=[];
+      recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data);};
+      recorder.onerror=()=>{status.textContent='The microphone recording failed. Try again or choose an audio file.';start.disabled=false;stop.disabled=true;indicator.classList.remove('is-recording');stopTracks();};
+      recorder.onstop=()=>{
+        const type=recorder.mimeType||mimeType||'audio/webm';
+        const extension=type.includes('ogg')?'ogg':type.includes('mp4')?'m4a':'webm';
+        const blob=new Blob(chunks,{type});
+        stopTracks();indicator.classList.remove('is-recording');stop.disabled=true;
+        if(!blob.size){status.textContent='No audio was captured. Try recording again.';start.disabled=false;return;}
+        recordedFile=new File([blob],'minglora-original-sound-'+Date.now()+'.'+extension,{type,lastModified:Date.now()});
+        preview.src=URL.createObjectURL(recordedFile);preview.hidden=false;
+        status.textContent='Recording ready · '+Math.max(1,Math.round(recordedFile.size/1024))+' KB. Preview it, then add it to your sound.';
+        start.textContent='Record again';start.disabled=false;
+        let add=modal.querySelector('[data-audio-record-add]');
+        if(!add){add=document.createElement('button');add.type='button';add.className='primary';add.dataset.audioRecordAdd='true';add.textContent='Use this recording';modal.querySelector('.modal-actions').append(add);}
+        add.onclick=async()=>{const file=recordedFile;close();try{await onCapture?.(file);}catch(error){toast(error.message||'The recording could not be added.');}};
+      };
+      recorder.start(500);startedAt=Date.now();stop.disabled=false;indicator.classList.add('is-recording');
+      status.textContent='Recording… speak clearly and press Stop when finished.';
+    }catch(error){status.textContent=error.message||'Microphone permission was denied.';start.disabled=false;stop.disabled=true;stopTracks();}
+  };
+  stop.onclick=()=>{if(recorder&&recorder.state!=='inactive'){status.textContent='Finalizing your recording…';recorder.stop();}};
+}
 function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
   initialMedia.forEach(item=>entries.push({existing:true,id:item.id,url:item.url,mimeType:item.mimeType||'image/jpeg',mediaType:item.mediaType||'image',name:'Attached media',zoom:1,rotation:0}));
-  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>Take photo / video</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
+  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
   const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress');
   function mediaCard(entry,index){
     let preview='';
@@ -2954,7 +2996,7 @@ function createMediaPicker(root,options={}){
   gallery.addEventListener('change',()=>{addFiles(gallery.files);gallery.value='';});
   camera.addEventListener('change',()=>{addFiles(camera.files);camera.value='';});
   root.querySelector('[data-media-gallery]').addEventListener('click',()=>gallery.click());
-  root.querySelector('[data-media-camera]').addEventListener('click',()=>openDeviceCapture({mode:'both',onCapture:file=>addFiles([file])}));
+  root.querySelector('[data-media-camera]').addEventListener('click',()=>slot==='sound'?openDeviceAudioCapture({onCapture:file=>addFiles([file])}):openDeviceCapture({mode:'both',onCapture:file=>addFiles([file])}));
   render();
   return {
     hasSelection:()=>entries.length>0,
