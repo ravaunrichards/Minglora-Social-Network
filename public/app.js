@@ -18,9 +18,13 @@ function thoughtAvatarMarkup(member,className='avatar',clickToProfile=false){
   if(!member?.profileThought?.text)return image;
   return '<span class="ml-thought-avatar-wrap">'+image+'<button type="button" class="ml-thought-avatar-indicator" data-view-profile-thought-user="'+esc(member.id)+'" aria-label="View '+esc(member.name||'member')+'’s thought" title="View thought">…</button></span>';
 }
-const verifiedProfileBadge = member => member?.verificationBadge==='blue'
-  ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
-  : '';
+const verifiedProfileBadge = member =>
+  (member?.verificationBadge==='blue'
+    ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
+    : '')+
+  (member?.subscriberBadge
+    ? '<span class="ml-subscriber-badge" role="img" aria-label="Minglora subscriber" title="Minglora subscriber">✦ SUBSCRIBER</span>'
+    : '');
 const gifterProfileBadge = member => {
   const badge=member?.gifterBadge;
   if(!badge?.level)return '';
