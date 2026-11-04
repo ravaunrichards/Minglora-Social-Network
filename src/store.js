@@ -15,7 +15,7 @@ const COLLECTIONS = [
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
     'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents',
-    'creatorSubscriptions', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
+    'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
@@ -122,6 +122,9 @@ function stripLegacyDemoData(state) {
   state.friendships = (state.friendships || []).filter(f => !demoUsers.has(f.from) && !demoUsers.has(f.to));
   state.follows = (state.follows || []).filter(f => !demoUsers.has(f.followerId) && !demoUsers.has(f.followedId));
   state.creatorSubscriptions = (state.creatorSubscriptions || []).filter(subscription => !demoUsers.has(subscription.creatorId) && !demoUsers.has(subscription.subscriberId));
+  state.giftGalleryEvents = (state.giftGalleryEvents || []).filter(event => !demoUsers.has(event.creatorId) && !demoUsers.has(event.senderId));
+  state.giftGallerySettings = (state.giftGallerySettings || []).filter(setting => !demoUsers.has(setting.userId));
+  state.giftGalleryPreferences = (state.giftGalleryPreferences || []).filter(preference => !demoUsers.has(preference.userId));
   state.blocks = (state.blocks || []).filter(b => !demoUsers.has(b.blockerId) && !demoUsers.has(b.blockedId));
   state.savedPosts = (state.savedPosts || []).filter(s => !demoUsers.has(s.userId) && !demoPostIds.has(s.postId));
   const removedGroupIds = new Set((state.groups || []).filter(g => g.id === 'group-creators').map(g => g.id));
