@@ -1308,6 +1308,18 @@ async function creatorSettingsMarkup(){
     "<p class='creator-settings-note'>LIVE room design remains managed in the separate LIVE experience. Creator Studio does not duplicate broadcast-room controls.</p></section>"+
     "<div class='creator-settings-savebar'><p class='creator-inline-status' id='creator-settings-status' role='status'>Unsaved changes stay on this form until you save.</p><button type='submit' class='primary' id='creator-settings-save'>Save settings</button></div></form>";
 }
+function creatorSubscriptionAdminMarkup(){
+  const role=state.user?.platformRole;
+  if(!["platform_owner","admin","moderator"].includes(role))return "";
+  const data=state.creatorStudio?.subscriptionData||{},applications=data.applications||[];
+  if(data.adminError){
+    return "<section class='creator-studio-panel subscription-admin-panel'><h3>Creator application review</h3><p class='creator-inline-status'>"+esc(data.adminError)+"</p></section>";
+  }
+  const rows=applications.length?applications.map(item=>
+    "<article class='subscription-admin-row'><div><strong>@"+esc(item.username||"member")+"</strong><small>"+esc(item.application_note||"No application note supplied.")+"</small><small>Submitted "+esc(item.created_at?new Date(item.created_at).toLocaleString():"date unavailable")+"</small></div><label class='subscription-admin-reason'>Review note<input type='text' maxlength='1000' data-subscription-reason='"+esc(item.creator_id)+"' placeholder='Optional reason'></label><div class='subscription-admin-actions'><button type='button' class='primary' data-subscription-review='approved' data-subscription-creator='"+esc(item.creator_id)+"'>Approve</button><button type='button' class='secondary' data-subscription-review='rejected' data-subscription-creator='"+esc(item.creator_id)+"'>Reject</button></div></article>"
+  ).join(""):"<p class='muted'>No creator applications are waiting for review.</p>";
+  return "<section class='creator-studio-panel subscription-admin-panel'><div class='subscription-panel-heading'><div><span class='creator-eyebrow'>MINGLORA MODERATION</span><h3>Creator application review</h3><p>Only platform moderators can approve, reject or suspend creator monetization.</p></div><span class='subscription-status'>"+applications.length+" pending</span></div>"+rows+"</section>";
+}
 function creatorSubscriptionsMarkup(){
   const data=state.creatorStudio?.subscriptionData||{};
   const settings=data.settings||null,tier=data.tier||null,status=settings?.application_status||'not_applied';
@@ -1323,17 +1335,25 @@ function creatorSubscriptionsMarkup(){
     const form=(status==="not_applied"||status==="rejected")
       ?"<form id='subscription-apply-form' class='subscription-form'><label for='subscription-application-note'>Tell us about the content and benefits you plan to offer</label><textarea id='subscription-application-note' name='applicationNote' maxlength='1200' rows='4' placeholder='Describe your creator content and membership benefits…'>"+esc(settings?.application_note||"")+"</textarea><button class='primary' type='submit'>Submit application</button><p class='creator-inline-status' id='subscription-application-status' role='status'></p></form>"
       :"";
-    return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>PayPal monthly memberships for your community.</p></div></div><section class='creator-studio-panel subscription-panel'><div class='subscription-status-line'><span class='subscription-status-dot "+(status==="pending"?"pending":"")+"'></span><strong>"+esc(status.replace(/_/g," ").toUpperCase())+"</strong></div><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p>"+form+"</section>";
+    return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>PayPal monthly memberships for your community.</p></div></div><section class='creator-studio-panel subscription-panel'><div class='subscription-status-line'><span class='subscription-status-dot "+(status==="pending"?"pending":"")+"'></span><strong>"+esc(status.replace(/_/g," ").toUpperCase())+"</strong></div><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p>"+form+"</section>"+creatorSubscriptionAdminMarkup();
   }
   const benefitValues=Array.isArray(tier?.benefits)?tier.benefits.join("\n"):"";
   const amount=tier?Number(tier.price_minor)/100:5;
   const subscribers=Number(data.activeSubscribers||0);
+  const creatorRows=(data.mySubscriptions?.subscriptions||[]).filter(item=>item.creator_id===state.user?.id&&["active","past_due"].includes(item.status));
+  const memberMap=new Map((data.mySubscriptions?.members||[]).map(member=>[member.id,member]));
+  const subscriberRows=creatorRows.length?creatorRows.map(item=>{
+    const member=memberMap.get(item.subscriber_id)||{};
+    const name=member.username?"@"+member.username:"Minglora member";
+    return "<article class='subscription-subscriber-row'><strong>"+esc(name)+"</strong><span>"+esc(String(item.status).replace(/_/g," "))+"</span><small>"+esc(item.current_period_end?("Paid through "+new Date(item.current_period_end).toLocaleDateString()):"Payment period not confirmed")+"</small></article>";
+  }).join(""):"<p class='muted'>Your active subscriber list will appear here after members complete their first PayPal payment.</p>";
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>Offer a monthly membership through PayPal. No card details are stored by Minglora.</p></div><span class='creator-finance-lock'>50% creator · 50% Minglora</span></div>"+
     "<div class='subscription-overview-grid'><article class='creator-metric'><strong>"+subscribers.toLocaleString()+"</strong><small>Active subscribers</small></article><article class='creator-metric'><strong>"+(tier?subscriptionMoneyLabel(tier.price_minor,tier.currency):"Not set")+"</strong><small>Monthly membership price</small></article><article class='creator-metric'><strong>50 / 50</strong><small>Creator / Minglora split</small></article></div>"+
     "<section class='creator-studio-panel subscription-panel'><div class='subscription-panel-heading'><div><h3>Membership offer</h3><p>One monthly membership per creator. Changes to the price apply to new subscriptions; existing PayPal agreements keep their current plan.</p></div><span class='subscription-status "+(enabled?"enabled":"")+"'>"+(enabled?"Accepting subscribers":"Not accepting subscribers")+"</span></div>"+
     "<form id='subscription-tier-form' class='subscription-form'><label>Membership name<input name='name' maxlength='48' required value='"+esc(tier?.name||"Monthly membership")+"'></label><label>Description<textarea name='description' maxlength='500' rows='3' placeholder='What members get…'>"+esc(tier?.description||"")+"</textarea></label><label>Monthly price (USD)<input name='price' type='number' min='1.00' max='10000.00' step='0.02' required value='"+amount.toFixed(2)+"'></label><label>Member benefits (one per line)<textarea name='benefits' maxlength='900' rows='4' placeholder='Subscriber-only posts&#10;Subscriber-only LIVE&#10;Special member badge'>"+esc(benefitValues)+"</textarea></label><button class='primary' type='submit' id='subscription-tier-save'>Save PayPal membership</button><p class='creator-inline-status' id='subscription-tier-status' role='status'>PayPal bills monthly. Members approve the recurring payment in PayPal.</p></form>"+
     "<div class='subscription-toggle-row'><div><strong>Accept new subscriptions</strong><small>Turning this off stops new checkouts. Existing paid subscriptions are not silently canceled.</small></div><label class='subscription-switch'><input id='subscription-enabled-toggle' type='checkbox' "+(enabled?"checked":"")+"><span></span></label></div></section>"+
-    "<section class='creator-studio-panel subscription-policy-panel'><h3>Membership rules</h3><ul><li>Members subscribe through PayPal and manage recurring billing securely there.</li><li>Only PayPal-confirmed payments activate membership access.</li><li>Subscribers keep access through the paid period when they cancel.</li><li>Creator and Minglora shares are recorded separately at 50% each.</li></ul></section>";
+    "<section class='creator-studio-panel subscription-policy-panel'><h3>Membership rules</h3><ul><li>Members subscribe through PayPal and manage recurring billing securely there.</li><li>Only PayPal-confirmed payments activate membership access.</li><li>Subscribers keep access through the paid period when they cancel.</li><li>Creator and Minglora shares are recorded separately at 50% each.</li></ul></section>"+
+    "<section class='creator-studio-panel subscription-subscriber-panel'><div class='subscription-panel-heading'><div><h3>Your subscribers</h3><p>Members with a current paid period on your creator membership.</p></div><span class='subscription-status'>"+creatorRows.length+" members</span></div>"+subscriberRows+"</section>"+creatorSubscriptionAdminMarkup();
 }
 async function renderCreatorSection(section){
   const s=state.creatorStudio;
@@ -1370,8 +1390,17 @@ async function renderCreatorSection(section){
     catch(error){s.earnings=null;s.earningsError=error.message;}
     content=creatorMonetizationMarkup();
   }else if(section==="subscriptions"){
-    try{s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));s.subscriptionError=null;}
-    catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
+    try{
+      s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));
+      const membershipData=await api("/subscriptions/mine");
+      s.subscriptionData.mySubscriptions=membershipData;
+      s.subscriptionData.adminError=null;
+      if(["platform_owner","admin","moderator"].includes(state.user?.platformRole)){
+        try{s.subscriptionData.applications=(await api("/subscriptions/admin/applications")).applications||[];}
+        catch(error){s.subscriptionData.adminError=error.message;}
+      }
+      s.subscriptionError=null;
+    }catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
     content=creatorSubscriptionsMarkup();
   }else if(section==="settings"){
     try{content=await creatorSettingsMarkup();}
@@ -1415,6 +1444,18 @@ async function renderCreatorSection(section){
       try{await api("/subscriptions/settings",{method:"PUT",body:JSON.stringify({enabled:toggle.checked})});toast(toggle.checked?"New subscriptions are enabled.":"New subscriptions are paused.");await renderCreatorSection("subscriptions");}
       catch(error){toast(error.message);toggle.checked=!toggle.checked;toggle.disabled=false;}
     });
+    document.querySelectorAll("[data-subscription-review]").forEach(button=>button.addEventListener("click",async()=>{
+      const creatorId=button.dataset.subscriptionCreator,status=button.dataset.subscriptionReview;
+      const reason=document.querySelector("[data-subscription-reason='"+creatorId+"']")?.value||"";
+      const prompt=status==="approved"?"Approve this creator for paid subscriptions?":"Reject this creator application?";
+      if(!window.confirm(prompt))return;
+      button.disabled=true;
+      try{
+        await api("/subscriptions/admin/review",{method:"POST",body:JSON.stringify({creatorId,status,reason})});
+        toast(status==="approved"?"Creator approved. They can now publish a PayPal subscription offer.":"Creator application rejected.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){toast(error.message);button.disabled=false;}
+    }));
   }
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
