@@ -523,7 +523,9 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(universalSearch.status, 200);
   assert.equal('channels' in universalSearch.body, false);
   assert.equal('videos' in universalSearch.body, false);
-  for (const category of ['users', 'posts', 'groups', 'pages', 'listings', 'jobs']) assert.equal(Array.isArray(universalSearch.body[category]), true);
+  for (const category of ['users', 'posts', 'groups', 'pages']) assert.equal(Array.isArray(universalSearch.body[category]), true);
+  assert.equal('listings' in universalSearch.body, false);
+  assert.equal('jobs' in universalSearch.body, false);
   const deniedPagePublish = await request(`/api/pages/${page.body.page.id}/posts`, { method: 'POST', body: JSON.stringify({ text: 'Not an editor' }) });
   assert.equal(deniedPagePublish.status, 403);
   const deniedPagePostDelete = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });
