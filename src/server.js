@@ -1556,7 +1556,7 @@ async function route(req, res) {
         });
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
-        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, subscriberOnly, liveTheme, status: 'live', createdAt: now(), endedAt: null };
+        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, liveTheme, status: 'live', createdAt: now(), endedAt: null, subscriberOnly };
         await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
         db.liveSessions = db.liveSessions || [];
         db.liveSessions.unshift(session);
@@ -1961,10 +1961,7 @@ async function route(req, res) {
       let liveChat=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat$/);
       if(liveChat&&['GET','POST'].includes(method)){
         const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
-        if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
-        const friends=isFriend(user.id,session.hostId);
-        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
-        if(!canView)return json(res,404,{error:'LIVE session not found.'});
+        if(!(await canViewLiveSession(session,user.id)))return json(res,404,{error:'LIVE session not found.'});
         if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
         return json(res,201,sent);
