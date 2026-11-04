@@ -526,8 +526,14 @@ function resolveSoundtrackForUser(userId, raw) {
   if(!sound||!canUseSound(sound,userId)||blockedBetween(userId,sound.ownerId)){
     throw Object.assign(new Error("That sound is unavailable or its creator has not allowed reuse."),{status:404});
   }
-  if(sound.durationMs>0&&validation.value.endMs>sound.durationMs){
-    throw Object.assign(new Error("The selected sound trim extends beyond the recording."),{status:400});
+  if(sound.durationMs>0){
+    const effectiveEnd=validation.value.endMs||sound.durationMs;
+    if(validation.value.startMs>=sound.durationMs||effectiveEnd>sound.durationMs){
+      throw Object.assign(new Error("The selected sound trim must stay within the recording."),{status:400});
+    }
+    if(validation.value.fadeInMs+validation.value.fadeOutMs>effectiveEnd-validation.value.startMs){
+      throw Object.assign(new Error("Fade durations cannot exceed the selected sound clip."),{status:400});
+    }
   }
   return validation.value;
 }
