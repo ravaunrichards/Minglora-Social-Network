@@ -1,0 +1,49 @@
+/* Minglora creator subscriptions — compact, responsive and accessible. */
+.subscription-panel,.subscription-policy-panel,.subscriptions-page{min-width:0}
+.subscription-panel{display:grid;gap:18px}
+.subscription-status-line{display:flex;align-items:center;gap:9px;color:var(--muted,#64748b);font-size:.78rem;font-weight:700;letter-spacing:.06em}
+.subscription-status-dot{width:9px;height:9px;border-radius:50%;background:#d97706;box-shadow:0 0 0 4px #d9770618}
+.subscription-status-dot.pending{background:#2563eb;box-shadow:0 0 0 4px #2563eb18}
+.subscription-status{display:inline-flex;align-items:center;border-radius:999px;padding:7px 11px;background:var(--surface-soft,#f1f5f9);font-size:.76rem;font-weight:700;white-space:nowrap}
+.subscription-status.enabled{color:#137547;background:#e9f8ef}
+.subscription-panel-heading,.subscription-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.subscription-panel-heading h3,.subscription-policy-panel h3{margin:0 0 5px}
+.subscription-panel-heading p,.subscription-toggle-row small{display:block;color:var(--muted,#64748b);font-size:.88rem;line-height:1.5;margin:0}
+.subscription-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.subscription-overview-grid .creator-metric{min-width:0}
+.subscription-form{display:grid;gap:14px;max-width:720px}
+.subscription-form label{display:grid;gap:7px;font-weight:650;font-size:.9rem}
+.subscription-form input,.subscription-form textarea{box-sizing:border-box;width:100%;min-width:0;padding:12px 13px;border:1px solid var(--border,#dbe2ea);border-radius:12px;background:var(--surface,#fff);color:var(--text,inherit);font:inherit}
+.subscription-form textarea{resize:vertical;min-height:84px}
+.subscription-form button{justify-self:start;max-width:100%}
+.subscription-form .creator-inline-status{margin:0;color:var(--muted,#64748b);font-size:.82rem;line-height:1.45}
+.subscription-toggle-row{border-top:1px solid var(--border,#e2e8f0);padding-top:16px}
+.subscription-toggle-row>div{min-width:0}
+.subscription-toggle-row strong{display:block;margin-bottom:4px}
+.subscription-switch{position:relative;display:inline-flex;flex:0 0 auto;width:48px;height:28px}
+.subscription-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.subscription-switch span{width:48px;height:28px;border-radius:999px;background:#94a3b8;transition:background .18s;cursor:pointer}
+.subscription-switch span:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #0003;transition:transform .18s}
+.subscription-switch input:checked+span{background:#16834a}
+.subscription-switch input:checked+span:after{transform:translateX(20px)}
+.subscription-switch input:focus-visible+span{outline:3px solid #2563eb;outline-offset:3px}
+.subscription-policy-panel ul{margin:10px 0 0;padding-left:20px;color:var(--muted,#64748b);line-height:1.7}
+.profile-subscribe-button{border-color:var(--brand,#1769e0);color:var(--brand,#1769e0);font-weight:750}
+.subscriptions-page{display:grid;gap:16px}
+.subscriptions-page-heading h1{margin:4px 0}
+.subscriptions-page-heading p{margin:0;color:var(--muted,#64748b)}
+.subscription-member-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:16px;background:var(--surface,#fff);min-width:0}
+.subscription-member-copy{display:grid;gap:5px;min-width:0}
+.subscription-member-copy strong{overflow-wrap:anywhere}
+.subscription-member-copy small,.subscription-member-status{color:var(--muted,#64748b);font-size:.83rem;line-height:1.4}
+.subscription-member-status{font-weight:700;text-transform:capitalize}
+.subscription-member-card button{flex:0 0 auto}
+@media(max-width:700px){
+ .subscription-overview-grid{grid-template-columns:1fr 1fr;gap:9px}
+ .subscription-overview-grid .creator-metric:last-child{grid-column:1/-1}
+ .subscription-panel-heading,.subscription-toggle-row{align-items:flex-start}
+ .subscription-panel-heading{flex-direction:column}
+ .subscription-member-card{align-items:flex-start;flex-direction:column}
+ .subscription-member-card button{width:100%}
+ .subscription-form button{width:100%}
+}

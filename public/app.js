@@ -1096,6 +1096,7 @@ function creatorStudioChrome(section,content){
     ["analytics","Analytics","explore","Measure real activity"],
     ["pages","Pages & channels","pages","Manage your Pages"],
     ["monetization","Monetization","coins","Earnings and payouts"],
+    ["subscriptions","Subscriptions","coins","Monthly memberships and subscribers"],
     ["settings","Studio settings","settings","Creator preferences"]
   ];
   const nav=sections.map(([id,label,icon,description])=>"<button type='button' class='creator-studio-nav-item live-format-card "+(id===section?"active":"")+"' data-creator-section='"+id+"' aria-current='"+(id===section?"page":"false")+"'><span class='live-format-icon "+(["audience","analytics"].includes(id)?"audio":"")+"'>"+creatorIcon(icon)+"</span><span class='creator-tab-copy'><strong>"+label+"</strong><small>"+description+"</small></span></button>").join("");
@@ -1305,6 +1306,33 @@ async function creatorSettingsMarkup(){
     "<p class='creator-settings-note'>LIVE room design remains managed in the separate LIVE experience. Creator Studio does not duplicate broadcast-room controls.</p></section>"+
     "<div class='creator-settings-savebar'><p class='creator-inline-status' id='creator-settings-status' role='status'>Unsaved changes stay on this form until you save.</p><button type='submit' class='primary' id='creator-settings-save'>Save settings</button></div></form>";
 }
+function creatorSubscriptionsMarkup(){
+  const data=state.creatorStudio?.subscriptionData||{};
+  const settings=data.settings||null,tier=data.tier||null,status=settings?.application_status||'not_applied';
+  const enabled=Boolean(settings?.subscriptions_enabled);
+  if(state.creatorStudio?.subscriptionError){
+    return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>PayPal monthly memberships for your community.</p></div></div><div class='creator-studio-panel'>"+creatorEmpty("Subscriptions unavailable",esc(state.creatorStudio.subscriptionError),"coins")+"</div>";
+  }
+  if(status!=="approved"){
+    let title="Apply to offer subscriptions",description="Any eligible Minglora member can apply. Minglora reviews your application before paid memberships can be enabled.";
+    if(status==="pending"){title="Application under review";description="Your application has been submitted. You can keep using Creator Studio while Minglora reviews it.";}
+    if(status==="rejected"){title="Application not approved";description=String(settings?.rejection_reason||"You may update your information and submit a new application.");}
+    if(status==="suspended"){title="Subscriptions suspended";description=String(settings?.rejection_reason||"This creator account is currently suspended from subscriptions. Contact Minglora support for a review.");}
+    const form=(status==="not_applied"||status==="rejected")
+      ?"<form id='subscription-apply-form' class='subscription-form'><label for='subscription-application-note'>Tell us about the content and benefits you plan to offer</label><textarea id='subscription-application-note' name='applicationNote' maxlength='1200' rows='4' placeholder='Describe your creator content and membership benefits…'>"+esc(settings?.application_note||"")+"</textarea><button class='primary' type='submit'>Submit application</button><p class='creator-inline-status' id='subscription-application-status' role='status'></p></form>"
+      :"";
+    return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>PayPal monthly memberships for your community.</p></div></div><section class='creator-studio-panel subscription-panel'><div class='subscription-status-line'><span class='subscription-status-dot "+(status==="pending"?"pending":"")+"'></span><strong>"+esc(status.replace(/_/g," ").toUpperCase())+"</strong></div><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p>"+form+"</section>";
+  }
+  const benefitValues=Array.isArray(tier?.benefits)?tier.benefits.join("\n"):"";
+  const amount=tier?Number(tier.price_minor)/100:5;
+  const subscribers=Number(data.activeSubscribers||0);
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>Offer a monthly membership through PayPal. No card details are stored by Minglora.</p></div><span class='creator-finance-lock'>50% creator · 50% Minglora</span></div>"+
+    "<div class='subscription-overview-grid'><article class='creator-metric'><strong>"+subscribers.toLocaleString()+"</strong><small>Active subscribers</small></article><article class='creator-metric'><strong>"+(tier?subscriptionMoneyLabel(tier.price_minor,tier.currency):"Not set")+"</strong><small>Monthly membership price</small></article><article class='creator-metric'><strong>50 / 50</strong><small>Creator / Minglora split</small></article></div>"+
+    "<section class='creator-studio-panel subscription-panel'><div class='subscription-panel-heading'><div><h3>Membership offer</h3><p>One monthly membership per creator. Changes to the price apply to new subscriptions; existing PayPal agreements keep their current plan.</p></div><span class='subscription-status "+(enabled?"enabled":"")+"'>"+(enabled?"Accepting subscribers":"Not accepting subscribers")+"</span></div>"+
+    "<form id='subscription-tier-form' class='subscription-form'><label>Membership name<input name='name' maxlength='48' required value='"+esc(tier?.name||"Monthly membership")+"'></label><label>Description<textarea name='description' maxlength='500' rows='3' placeholder='What members get…'>"+esc(tier?.description||"")+"</textarea></label><label>Monthly price (USD)<input name='price' type='number' min='1.00' max='10000.00' step='0.02' required value='"+amount.toFixed(2)+"'></label><label>Member benefits (one per line)<textarea name='benefits' maxlength='900' rows='4' placeholder='Subscriber-only posts&#10;Subscriber-only LIVE&#10;Special member badge'>"+esc(benefitValues)+"</textarea></label><button class='primary' type='submit' id='subscription-tier-save'>Save PayPal membership</button><p class='creator-inline-status' id='subscription-tier-status' role='status'>PayPal bills monthly. Members approve the recurring payment in PayPal.</p></form>"+
+    "<div class='subscription-toggle-row'><div><strong>Accept new subscriptions</strong><small>Turning this off stops new checkouts. Existing paid subscriptions are not silently canceled.</small></div><label class='subscription-switch'><input id='subscription-enabled-toggle' type='checkbox' "+(enabled?"checked":"")+"><span></span></label></div></section>"+
+    "<section class='creator-studio-panel subscription-policy-panel'><h3>Membership rules</h3><ul><li>Members subscribe through PayPal and manage recurring billing securely there.</li><li>Only PayPal-confirmed payments activate membership access.</li><li>Subscribers keep access through the paid period when they cancel.</li><li>Creator and Minglora shares are recorded separately at 50% each.</li></ul></section>";
+}
 async function renderCreatorSection(section){
   const s=state.creatorStudio;
   if(!s)return;
@@ -1339,6 +1367,10 @@ async function renderCreatorSection(section){
     try{s.earnings=await api("/creator/earnings");s.earningsError=null;}
     catch(error){s.earnings=null;s.earningsError=error.message;}
     content=creatorMonetizationMarkup();
+  }else if(section==="subscriptions"){
+    try{s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));s.subscriptionError=null;}
+    catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
+    content=creatorSubscriptionsMarkup();
   }else if(section==="settings"){
     try{content=await creatorSettingsMarkup();}
     catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
@@ -1354,6 +1386,34 @@ async function renderCreatorSection(section){
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
   document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
   $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
+  if(section==="subscriptions"){
+    const applyForm=document.getElementById("subscription-apply-form");
+    applyForm?.addEventListener("submit",async event=>{
+      event.preventDefault();const button=applyForm.querySelector("button[type='submit']"),status=document.getElementById("subscription-application-status");
+      button.disabled=true;if(status)status.textContent="Submitting your application…";
+      try{await api("/subscriptions/apply",{method:"POST",body:JSON.stringify({applicationNote:applyForm.applicationNote.value})});toast("Creator subscription application submitted.");await renderCreatorSection("subscriptions");}
+      catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+    });
+    const tierForm=document.getElementById("subscription-tier-form");
+    tierForm?.addEventListener("submit",async event=>{
+      event.preventDefault();const button=document.getElementById("subscription-tier-save"),status=document.getElementById("subscription-tier-status");
+      const values=new FormData(tierForm),price=Number(values.get("price")),priceMinor=Math.round(price*100);
+      if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||priceMinor%2!==0){toast("Use an even USD cent amount, from $1.00 to $10,000.00.");return;}
+      button.disabled=true;if(status)status.textContent="Creating your monthly plan with PayPal…";
+      try{
+        await api("/subscriptions/tier",{method:"POST",body:JSON.stringify({
+          name:String(values.get("name")||""),description:String(values.get("description")||""),
+          priceMinor,benefits:String(values.get("benefits")||"").split("\n").map(item=>item.trim()).filter(Boolean)
+        })});
+        toast("Your PayPal monthly membership was saved.");await renderCreatorSection("subscriptions");
+      }catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+    });
+    document.getElementById("subscription-enabled-toggle")?.addEventListener("change",async event=>{
+      const toggle=event.currentTarget;toggle.disabled=true;
+      try{await api("/subscriptions/settings",{method:"PUT",body:JSON.stringify({enabled:toggle.checked})});toast(toggle.checked?"New subscriptions are enabled.":"New subscriptions are paused.");await renderCreatorSection("subscriptions");}
+      catch(error){toast(error.message);toggle.checked=!toggle.checked;toggle.disabled=false;}
+    });
+  }
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
   }
@@ -1820,7 +1880,7 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profile?.user?.id!==id)state.profileTab='posts';try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profile?.user?.id!==id)state.profileTab='posts';try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights'),api('/subscriptions/creator/'+encodeURIComponent(id))]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];data.subscriptionOffer=extras[4].status==='fulfilled'?extras[4].value:null;state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 window.addEventListener('minglora:open-profile',event=>{const userId=event.detail?.userId;if(state.user&&userId)void openProfile(String(userId));});
 
@@ -2447,11 +2507,17 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='verified'){await openProfileVerificationManager();return;}
   if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
+function subscriptionMoneyLabel(minor,currency='USD'){
+  const value=Number(minor);
+  if(!Number.isFinite(value))return 'Monthly';
+  try{return new Intl.NumberFormat(undefined,{style:'currency',currency}).format(value/100);}
+  catch{return (value/100).toFixed(2)+' '+currency;}
+}
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
-    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
+    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button>'+(data.subscriptionOffer?.available?'<button class="secondary profile-edit profile-subscribe-button" id="profile-subscribe">'+(['active','past_due'].includes(data.subscriptionOffer.mySubscription?.status)?'Manage subscription':'Subscribe · '+subscriptionMoneyLabel(data.subscriptionOffer.tier?.priceMinor,data.subscriptionOffer.tier?.currency))+'</button>':'')+'<button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const tab=state.profileTab||'posts';
   setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div>'+(isMe?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">'+(isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'</div><div class="profile-info-main"><h1>'+esc(u.name)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(data.profileStatus?'<p class="profile-status-badge" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+relationshipActions+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status"><span aria-hidden="true">✎</span><span>Profile status</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
@@ -2485,6 +2551,13 @@ function renderProfile(data){
     const following=$('#profile-follow')?.dataset.following==='true';
     try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
     catch(error){toast(error.message);}
+  });
+  $('#profile-subscribe')?.addEventListener('click',async()=>{
+    const current=data.subscriptionOffer?.mySubscription;
+    if(['active','past_due'].includes(current?.status)){activateNav('subscriptions');return;}
+    const button=$('#profile-subscribe');if(!button)return;button.disabled=true;
+    try{const checkout=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:u.id})});window.location.assign(checkout.approveUrl);}
+    catch(error){toast(error.message);button.disabled=false;}
   });
   $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
   document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
@@ -4009,6 +4082,7 @@ function renderMoreHub(){
     ]},
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
+      {label:'My Subscriptions',detail:'Manage monthly creator memberships',view:'subscriptions',icon:'<span class="mobile-hub-emoji" aria-hidden="true">★</span>'},
       {label:'Notifications',detail:'See your recent activity',action:'notifications',icon:messenger3dIcon('activity','mobile-hub-icon')},
       {label:'Settings & privacy',detail:'Account, safety and preferences',action:'settings',icon:messenger3dIcon('settings','mobile-hub-icon')},
       {label:'Appearance & themes',detail:'Change the Minglora look',action:'themes',icon:messenger3dIcon('palette','mobile-hub-icon')}
@@ -4029,7 +4103,33 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='live')await renderLive();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderSubscriptions(){
+  activateSilent("subscriptions");
+  setContent("<section class='card'><h1>My Subscriptions</h1><p>Loading your memberships…</p></section>");
+  try{
+    const data=await api("/subscriptions/mine"),rows=(data.subscriptions||[]).filter(item=>item.subscriber_id===state.user.id);
+    const tiers=new Map((data.tiers||[]).map(item=>[item.id,item]));
+    const members=new Map((data.members||[]).map(item=>[item.id,item]));
+    const cards=rows.map(item=>{
+      const tier=tiers.get(item.tier_id)||{},creator=members.get(item.creator_id)||{};
+      const active=["active","past_due"].includes(item.status)&&(!item.current_period_end||Date.parse(item.current_period_end)>Date.now());
+      const date=item.current_period_end?new Date(item.current_period_end).toLocaleDateString():"Not confirmed";
+      const status=item.cancel_at_period_end?"Canceled · access through paid period":item.status.replace(/_/g," ");
+      return "<article class='subscription-member-card'><div class='subscription-member-copy'><strong>@"+esc(creator.username||"creator")+"</strong><small>"+esc(tier.name||"Creator membership")+" · "+subscriptionMoneyLabel(item.amount_minor,item.currency)+" / month</small><span class='subscription-member-status'>"+esc(status)+"</span><small>"+(item.cancel_at_period_end?"Access ends ":"Next billing period ends ")+esc(date)+"</small></div>"+(active&&!item.cancel_at_period_end?"<button type='button' class='secondary' data-cancel-subscription='"+esc(item.id)+"'>Cancel</button>":"")+"</article>";
+    }).join("");
+    setContent("<section class='subscriptions-page'><header class='subscriptions-page-heading'><div><span class='creator-eyebrow'>YOUR MEMBERSHIPS</span><h1>My Subscriptions</h1><p>Manage your creator memberships and recurring PayPal payments.</p></div></header>"+(cards||"<div class='creator-studio-panel'>"+creatorEmpty("No subscriptions yet","When you subscribe to a Minglora creator, your membership and renewal details will appear here.","coins")+"</div>")+"</section>");
+    document.querySelectorAll("[data-cancel-subscription]").forEach(button=>button.addEventListener("click",async()=>{
+      if(!window.confirm("Cancel this PayPal subscription? You will keep access through the paid period."))return;
+      button.disabled=true;
+      try{await api("/subscriptions/cancel",{method:"POST",body:JSON.stringify({subscriptionId:button.dataset.cancelSubscription})});toast("Your PayPal subscription is canceled for the next renewal. Access continues through the paid period.");await renderSubscriptions();}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+  }catch(error){
+    setContent("<section class='card'><h1>My Subscriptions</h1><p>"+esc(error.message||"Subscriptions could not be loaded.")+"</p><button class='primary' id='retry-subscriptions'>Try again</button></section>");
+    document.getElementById("retry-subscriptions")?.addEventListener("click",renderSubscriptions);
+  }
+}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='live')await renderLive();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='subscriptions')await renderSubscriptions();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
