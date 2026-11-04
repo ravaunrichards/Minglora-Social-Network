@@ -52,3 +52,7 @@ Register the existing Minglora endpoint `/api/webhooks/paypal` as a webhook for 
 Existing creator payout settings continue to use the same PayPal payout integration. Subscription creator share is added to the existing creator earnings balance and uses the existing PayPal payout route.
 
 Before going live, confirm that the PayPal REST app/account is entitled to create and manage Billing Plans and Subscriptions for this platform. PayPal's platform subscription integration documentation describes partner onboarding/eligibility for some platform arrangements; the code does not grant those PayPal account permissions.
+
+
+## Creator earnings and PayPal payouts
+Settled subscription payments enter the same creator earnings view and payout queue used for LIVE gifts. Minglora calculates the subscription creator share at 50% and reserves any requested, processing or paid payout against the combined creator balance. Refunds and reversals reduce subscription net earnings before any later payout request is accepted. Payouts continue through Minglora's existing PayPal payout pipeline.
