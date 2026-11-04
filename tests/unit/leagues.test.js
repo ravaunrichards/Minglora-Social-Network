@@ -364,3 +364,35 @@ test("League daily, season and lifetime Gift points rebuild from unique confirme
   assert.equal(normalizedProfile.lifetimeGiftPoints, 30);
   assert.equal(normalizedProfile.seasonPoints, 30);
 });
+
+
+test("duplicate match score events count each confirmed Gift and viewer support only once", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const match = {
+    id: "duplicate-score-events",
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    status: "live", scores: { challenger: 99, opponent: 0 },
+    supporters: [{ userId: "viewer-1", side: "challenger", points: 3 }],
+    activeEffects: [], pendingEffects: [],
+    events: [
+      { id: "gift-one-copy-a", type: "gift_score", side: "challenger", giftId: "gift-1", matchPoints: 10, createdAt: now.toISOString() },
+      { id: "gift-one-copy-b", type: "gift_score", side: "challenger", giftId: "gift-1", matchPoints: 10, createdAt: now.toISOString() },
+      { id: "gift-two", type: "gift_score", side: "challenger", giftId: "gift-2", matchPoints: 15, createdAt: now.toISOString() },
+      { id: "support-copy-a", type: "viewer_support", side: "challenger", userId: "viewer-1", matchPoints: 3, createdAt: now.toISOString() },
+      { id: "support-copy-b", type: "viewer_support", side: "challenger", userId: "viewer-1", matchPoints: 3, createdAt: now.toISOString() }
+    ],
+    timeBoostUsed: { challenger: false, opponent: false },
+    createdAt: now.toISOString(), startedAt: now.toISOString(),
+    endsAt: new Date(now.getTime() + 300000).toISOString()
+  };
+  db.creatorLeagueMatches.push(match);
+
+  const matches = listCreatorLeagueMatches(db, db.users, "viewer-1", now);
+  const refreshed = matches[0];
+
+  assert.equal(refreshed.scores.challenger, 28);
+  assert.equal(refreshed.events.filter(item => item.type === "gift_score").length, 2);
+  assert.equal(refreshed.events.filter(item => item.type === "viewer_support").length, 1);
+});
