@@ -1699,7 +1699,7 @@ async function route(req, res) {
         if(!hostIsPresent)return json(res,409,{error:'This host is no longer LIVE. Refresh the LIVE directory.'});
         const result=await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
         const confirmedGift=result.gift||{};
-        const confirmedGiftId=confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
+        const confirmedGiftId=confirmedGift.giftTransactionId||confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
         const confirmedCoinAmount=Number(confirmedGift.coinAmount??confirmedGift.coin_amount??confirmedGift.coins??0);
         if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
           try{
