@@ -1,8 +1,8 @@
 BEGIN;
 CREATE OR REPLACE FUNCTION public.minglora_guard_creator_subscription_settings()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+RETURNS trigger LANGUAGE plpgsql AS $
 BEGIN
- IF auth.role() <> 'service_role' THEN
+ IF current_user <> 'service_role' THEN
    IF TG_OP = 'INSERT' THEN
      NEW.application_status := 'not_applied';
      NEW.subscriptions_enabled := false;
@@ -45,3 +45,4 @@ CREATE POLICY subscription_tiers_update ON public.subscription_tiers FOR UPDATE 
    WHERE c.creator_id=auth.uid() AND c.application_status='approved' AND c.subscriptions_enabled
  ));
 COMMIT;
+REVOKE ALL ON FUNCTION public.minglora_guard_creator_subscription_settings() FROM PUBLIC, anon, authenticated;
