@@ -1716,6 +1716,74 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{gift:result.gift});
       }
+      if(method==='GET'&&p==='/api/leagues/overview'){
+        const overview=getCreatorLeagueOverview(db,user);
+        await saveStore();
+        return json(res,200,{viewerId:user.id,...overview});
+      }
+      if(method==='GET'&&p==='/api/leagues/matches'){
+        const matches=listCreatorLeagueMatches(db,db.users,user.id);
+        await saveStore();
+        return json(res,200,{matches});
+      }
+      if(method==='POST'&&p==='/api/leagues/matches'){
+        const ownSessionId=String(input.ownSessionId||'');
+        const opponentSessionId=String(input.opponentSessionId||'');
+        const ownSession=(db.liveSessions||[]).find(item=>item.id===ownSessionId&&item.status==='live');
+        const opponentSession=(db.liveSessions||[]).find(item=>item.id===opponentSessionId&&item.status==='live');
+        if(!ownSession||ownSession.hostId!==user.id)return json(res,409,{error:'Start your own LIVE broadcast before sending a League Match challenge.'});
+        if(!opponentSession||opponentSession.hostId===user.id||blockedBetween(user.id,opponentSession.hostId))return json(res,404,{error:'Choose another available creator who is currently LIVE.'});
+        const canViewOpponent=opponentSession.visibility==='public'||(opponentSession.visibility==='friends'&&isFriend(user.id,opponentSession.hostId));
+        if(!canViewOpponent)return json(res,404,{error:'That LIVE session is not available to you.'});
+        try{
+          const [ownParticipants,opponentParticipants]=await Promise.all([
+            listLiveKitParticipants(ownSession.roomName),
+            listLiveKitParticipants(opponentSession.roomName)
+          ]);
+          if(!ownParticipants.some(participant=>participant.identity===user.id))return json(res,409,{error:'Your LIVE room must be connected before starting a League Match.'});
+          if(!opponentParticipants.some(participant=>participant.identity===opponentSession.hostId))return json(res,409,{error:'The other creator is no longer connected to LIVE.'});
+        }catch{
+          return json(res,503,{error:'Minglora could not verify both LIVE rooms. Try again shortly.'});
+        }
+        try{
+          const match=createCreatorLeagueMatch(db,{
+            challengerId:user.id,opponentId:opponentSession.hostId,
+            challengerSessionId:ownSession.id,opponentSessionId:opponentSession.id,
+            giftMode:input.giftMode==='specific'?'specific':'all',
+            selectedGiftCode:String(input.selectedGiftCode||'')
+          });
+          notify(opponentSession.hostId,user.id,'league_match',user.name+' challenged you to a Minglora League Match.');
+          await saveStore();
+          return json(res,201,{match});
+        }catch(error){
+          return json(res,error.status||400,{error:error.message||'The League Match challenge could not be created.'});
+        }
+      }
+      let leagueMatchAction=p.match(/^\/api\/leagues\/matches\/([^/]+)\/(accept|support|powerups)$/);
+      if(method==='POST'&&leagueMatchAction){
+        const match=(db.creatorLeagueMatches||[]).find(item=>item.id===leagueMatchAction[1]);
+        if(!match)return json(res,404,{error:'League Match not found.'});
+        const action=leagueMatchAction[2];
+        try{
+          if(action==='accept'){
+            if(match.status!=='pending')return json(res,409,{error:'This League Match invitation is no longer available.'});
+            const sessions=[match.challengerSessionId,match.opponentSessionId].map(id=>(db.liveSessions||[]).find(item=>item.id===id&&item.status==='live'));
+            if(sessions.some(item=>!item))return json(res,409,{error:'Both creators must still be LIVE to begin this match.'});
+            const participantLists=await Promise.all(sessions.map(item=>listLiveKitParticipants(item.roomName)));
+            if(!participantLists[0].some(item=>item.identity===match.challengerId)||!participantLists[1].some(item=>item.identity===match.opponentId))return json(res,409,{error:'Both creators must be connected to their LIVE rooms before accepting.'});
+            acceptCreatorLeagueMatch(db,match,user.id);
+            notify(match.challengerId,user.id,'league_match','Your League Match challenge was accepted.');
+          }else if(action==='support'){
+            supportCreatorLeagueMatch(db,match,user.id,String(input.side||''));
+          }else{
+            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''));
+          }
+          await saveStore();
+          return json(res,200,{match});
+        }catch(error){
+          return json(res,error.status||400,{error:error.message||'The League Match action could not be completed.'});
+        }
+      }
       let liveChat=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat$/);
       if(liveChat&&['GET','POST'].includes(method)){
         const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
