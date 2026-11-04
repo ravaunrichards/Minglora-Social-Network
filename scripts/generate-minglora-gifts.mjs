@@ -86,6 +86,30 @@ function symbolFor(gift) {
   for (const pair of rules) if (pair[0].test(name)) return pair[1];
   return gift.emoji || "🎁";
 }
+
+function premiumSvgShape(gift) {
+  const n = String(gift.name || "").toLowerCase();
+  if (/you are wanted/.test(n)) return '<circle cx="256" cy="250" r="150" fill="none" stroke="url(#shine)" stroke-width="27"/><circle cx="256" cy="250" r="94" fill="none" stroke="#fff" stroke-width="18"/><circle cx="256" cy="250" r="38" fill="url(#main)"/><path d="M256 95v-40m0 390v-40M101 250H61m390 0h-40" stroke="#fff" stroke-width="15" stroke-linecap="round"/>';
+  if (/hot rods/.test(n)) return '<path d="M91 305l35-91q12-27 48-31l38-62h104l54 61q38 5 51 38l20 85-24 28H111z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M215 151h91l42 60H176z" fill="#b8f5ff" stroke="#fff" stroke-width="7"/><circle cx="165" cy="329" r="47" fill="#1c2541" stroke="#fff" stroke-width="11"/><circle cx="357" cy="329" r="47" fill="#1c2541" stroke="#fff" stroke-width="11"/><path d="M83 242l-38-18m37 51-52-3m411-42 38-18m-38 51 52-3" stroke="url(#shine)" stroke-width="15" stroke-linecap="round"/>';
+  if (/red lightning/.test(n)) return '<path d="M292 67 139 274h99l-21 171 158-234h-99z" fill="url(#main)" stroke="#fff" stroke-width="13" stroke-linejoin="round"/><path d="M106 156l23 27m254 164 27 23" stroke="url(#shine)" stroke-width="17" stroke-linecap="round"/>';
+  if (/monster truck/.test(n)) return '<path d="M95 245q0-44 43-44h232q43 0 50 47l18 63H78z" fill="url(#main)" stroke="#fff" stroke-width="10"/><path d="M171 203l34-72h102l37 72" fill="#b7edff" stroke="#fff" stroke-width="8"/><circle cx="153" cy="333" r="69" fill="#172039" stroke="#fff" stroke-width="13"/><circle cx="359" cy="333" r="69" fill="#172039" stroke="#fff" stroke-width="13"/><circle cx="153" cy="333" r="28" fill="url(#shine)"/><circle cx="359" cy="333" r="28" fill="url(#shine)"/>';
+  if (/crystal heart/.test(n)) return '<path d="M256 395 121 268q-64-76 1-137 61-57 134 13 73-70 134-13 65 61 1 137z" fill="url(#main)" stroke="#fff" stroke-width="10"/><path d="M256 144v251m-134-127h268m-201-96 67 96 67-96m-134 96 67 127 67-127" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="8"/>';
+  if (/iron resolve/.test(n)) return '<path d="M256 76 391 126v122q0 112-135 190Q121 360 121 248V126z" fill="url(#main)" stroke="#fff" stroke-width="12"/><path d="m256 133 17 93 82 18-82 18-17 94-17-94-82-18 82-18z" fill="url(#shine)" stroke="#fff" stroke-width="6"/><path d="M256 115v267" stroke="#fff" stroke-opacity=".75" stroke-width="7"/>';
+  if (/a fun house/.test(n)) return '<path d="M105 396V205q0-44 46-44h210q46 0 46 44v191z" fill="url(#main)" stroke="#fff" stroke-width="10"/><path d="m91 169 165-111 165 111z" fill="url(#shine)" stroke="#fff" stroke-width="10"/><path d="M202 396V276q0-58 54-58t54 58v120" fill="#29244e" stroke="#fff" stroke-width="9"/><circle cx="174" cy="210" r="17" fill="#fff"/><circle cx="338" cy="210" r="17" fill="#fff"/>';
+  if (/corgi/.test(n)) return '<path d="m139 193-18-107 101 48q34-18 68 0l101-48-19 107q26 38 9 104-25 97-125 97t-125-97q-17-66 8-104z" fill="url(#main)" stroke="#fff" stroke-width="10"/><ellipse cx="211" cy="247" rx="15" ry="21" fill="#222943"/><ellipse cx="301" cy="247" rx="15" ry="21" fill="#222943"/><ellipse cx="256" cy="300" rx="49" ry="34" fill="#fff0d5"/><path d="M240 291q16 17 32 0" fill="none" stroke="#8b5263" stroke-width="8" stroke-linecap="round"/><path d="M158 352q98 57 196 0" fill="none" stroke="url(#shine)" stroke-width="12"/>';
+  if (/dreamy night/.test(n)) return '<path d="M332 91q-122 16-125 144-3 121 121 154-39 37-95 32-133-13-133-156 0-148 145-164 47-5 87-10z" fill="url(#shine)" stroke="#fff" stroke-width="9"/><path d="m354 137 13 38 40 13-40 13-13 40-13-40-40-13 40-13zM151 288l9 25 26 9-26 9-9 26-9-26-26-9 26-9z" fill="#fff"/><circle cx="364" cy="326" r="12" fill="#fff"/>';
+  if (/vintage car/.test(n)) return '<path d="M104 302q22-77 75-103h155q56 26 74 103l15 29H89z" fill="url(#main)" stroke="#fff" stroke-width="10"/><path d="M187 201q23-74 72-74t74 74" fill="none" stroke="url(#shine)" stroke-width="15"/><path d="M191 208h130l39 77H153z" fill="#bdeeff" stroke="#fff" stroke-width="7"/><circle cx="163" cy="332" r="42" fill="#25283d" stroke="#fff" stroke-width="10"/><circle cx="352" cy="332" r="42" fill="#25283d" stroke="#fff" stroke-width="10"/>';
+  if (/gobble grab/.test(n)) return '<ellipse cx="256" cy="289" rx="81" ry="113" fill="url(#main)" stroke="#fff" stroke-width="9"/><path d="M256 193q-124-106-127 14 0 56 76 68-92 43-48 104 48 47 103-26 55 73 103 26 44-61-48-104 76-12 76-68-3-120-127-14z" fill="url(#shine)" stroke="#fff" stroke-width="7"/><circle cx="225" cy="233" r="10" fill="#24243d"/><circle cx="287" cy="233" r="10" fill="#24243d"/><path d="m245 259 22 0-11 27z" fill="#f59b36"/>';
+  if (/jet car/.test(n)) return '<path d="M92 305 148 227l95-20 75-76 56 78 49 45-23 48H92z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="m218 216 35-63 69-22-43 74z" fill="#b8f6ff" stroke="#fff" stroke-width="7"/><path d="m130 292-75 40m335-105 62-39" stroke="url(#shine)" stroke-width="16" stroke-linecap="round"/><circle cx="168" cy="329" r="34" fill="#22283f" stroke="#fff" stroke-width="9"/><circle cx="357" cy="329" r="34" fill="#22283f" stroke="#fff" stroke-width="9"/>';
+  if (/super car/.test(n)) return '<path d="M82 307q45-86 111-95l48-65h112l70 67q17 16 26 93l-19 29H102z" fill="url(#main)" stroke="#fff" stroke-width="10"/><path d="M230 165h101l59 66H180z" fill="#b9f2ff" stroke="#fff" stroke-width="7"/><path d="M100 282h316" stroke="url(#shine)" stroke-width="10"/><circle cx="161" cy="337" r="39" fill="#1d253d" stroke="#fff" stroke-width="10"/><circle cx="361" cy="337" r="39" fill="#1d253d" stroke="#fff" stroke-width="10"/>';
+  if (/masquerade/.test(n)) return '<path d="M91 191q165-104 330 0l-27 137q-60 37-119-12-59 49-119 12z" fill="url(#main)" stroke="#fff" stroke-width="11"/><path d="M133 218q53-42 105 0-53 73-105 0zm141 0q53-42 105 0-53 73-105 0z" fill="#171d39" stroke="#fff" stroke-width="7"/><path d="m256 260-31 77h62z" fill="url(#shine)"/><path d="M340 91q72-66 98 13-49 12-98-13z" fill="url(#shine)"/>';
+  if (/pop out/.test(n)) return '<path d="M180 352q-54-60 0-103t0-102q76-50 76 24t0 105q-2 76 0 107" fill="none" stroke="url(#shine)" stroke-width="25" stroke-linecap="round"/><path d="M332 352q54-60 0-103t0-102q-76-50-76 24t0 105q2 76 0 107" fill="none" stroke="url(#main)" stroke-width="25" stroke-linecap="round"/><path d="m256 59 24 91 88-26-47 80 84 45-96 12 11 95-64-71-64 71 11-95-96-12 84-45-47-80 88 26z" fill="none" stroke="#fff" stroke-width="9"/>';
+  if (/villainy slain/.test(n)) return '<path d="M256 73 395 128v122q0 108-139 183Q117 358 117 250V128z" fill="url(#main)" stroke="#fff" stroke-width="11"/><path d="m256 112 22 125 103 21-103 20-22 124-22-124-103-20 103-21z" fill="url(#shine)" stroke="#fff" stroke-width="7"/><path d="m151 360 211-211" stroke="#fff" stroke-width="17" stroke-linecap="round"/>';
+  if (/live pro face-off/.test(n)) return '<path d="M93 203q0-52 55-52h41q45 0 45 48v96q0 62-68 62h-18q-55 0-55-56zM419 203q0-52-55-52h-41q-45 0-45 48v96q0 62 68 62h18q55 0 55-56z" fill="url(#main)" stroke="#fff" stroke-width="10"/><path d="m231 165 25-56 25 56-25 56z" fill="url(#shine)" stroke="#fff" stroke-width="8"/><text x="256" y="286" font-size="88" text-anchor="middle" font-weight="900" fill="#fff" stroke="#5b357f" stroke-width="5" paint-order="stroke">VS</text>';
+  if (/fair king/.test(n)) return '<path d="M87 175 171 254l85-139 85 139 84-79-27 204H114z" fill="url(#main)" stroke="#fff" stroke-width="11"/><path d="M114 379h284v49H114z" fill="url(#shine)" stroke="#fff" stroke-width="8"/><circle cx="171" cy="254" r="20" fill="#fff"/><circle cx="256" cy="115" r="24" fill="#fff"/><circle cx="341" cy="254" r="20" fill="#fff"/>';
+  return "";
+}
+
 function svgArt(gift) {
   const colors = palette(gift);
   const seed = hash32(gift.code);
@@ -109,8 +133,9 @@ function svgArt(gift) {
     gift.category === "travel" ? "horizon" :
     gift.category === "games" ? "pixel" :
     gift.category === "community" ? "bond" : "spark");
-  let shape = "";
-  if (/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(name)) {
+  let shape = premiumSvgShape(gift);
+  if (shape) { /* gift-specific premium illustration */
+  } else if (/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(name)) {
     shape = '<path d="M256 304v122m0-78c-58-39-81 8-81 8 40 37 62 12 81-8zm0 31c57-42 81 7 81 7-41 37-62 12-81-7z" fill="none" stroke="#58c27b" stroke-width="17" stroke-linecap="round"/><path d="M246 325q-52-39-43-82m65 82q52-39 43-82" fill="none" stroke="#429c68" stroke-width="7"/><g fill="url(#main)" stroke="#fff" stroke-opacity=".7" stroke-width="5"><ellipse cx="256" cy="208" rx="37" ry="79"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(55 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(110 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(165 256 256)"/></g><circle cx="256" cy="256" r="39" fill="url(#shine)"/>';
   } else if (/cnc coin/.test(name)) {
     shape = '<circle cx="256" cy="256" r="145" fill="url(#main)" stroke="#fff" stroke-width="13"/><circle cx="256" cy="256" r="115" fill="none" stroke="url(#shine)" stroke-width="12"/><path d="M256 166v180m-43-143h58q38 0 38 33t-38 33h-46q-37 0-37 32t38 32h59" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/><path d="M256 126v-24m0 308v-24" stroke="#fff" stroke-width="8" stroke-linecap="round"/>';
@@ -152,14 +177,27 @@ function svgArt(gift) {
     shape = '<path d="M256 110l38 99 107 5-83 69 29 105-91-59-91 59 29-105-83-69 107-5z" fill="url(#main)" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><circle cx="256" cy="250" r="42" fill="url(#shine)"/>';
   }
   const spark = '<path d="M'+star1+' 110l9 20 20 9-20 9-9 20-9-20-20-9 20-9zM'+star2+' 332l8 18 18 8-18 8-8 18-8-18-18-8 18-8z" fill="'+shine+'" opacity=".9"/>';
+  const sigils = [
+    '<path d="M256 72l15 42 42 15-42 15-15 42-15-42-42-15 42-15z" fill="none" stroke="#fff" stroke-width="8"/>',
+    '<circle cx="256" cy="120" r="33" fill="none" stroke="#fff" stroke-width="9"/><path d="M256 76v88m-44-44h88" stroke="#fff" stroke-width="7"/>',
+    '<path d="m256 76 48 49-48 49-48-49z" fill="none" stroke="#fff" stroke-width="9"/><circle cx="256" cy="125" r="12" fill="#fff"/>',
+    '<path d="M206 85q50-39 100 0v72q-50 39-100 0z" fill="none" stroke="#fff" stroke-width="9"/><path d="M206 121h100" stroke="#fff" stroke-width="7"/>',
+    '<path d="M212 82q44 41 88 0m-88 85q44-41 88 0" fill="none" stroke="#fff" stroke-width="9"/>',
+    '<path d="m256 72 14 39 41 14-41 14-14 41-14-41-41-14 41-14z" fill="#fff" fill-opacity=".18" stroke="#fff" stroke-width="7"/>',
+    '<path d="M211 165V95l45-23 45 23v70" fill="none" stroke="#fff" stroke-width="9"/><circle cx="256" cy="116" r="13" fill="#fff"/>',
+    '<path d="M205 80h102v84H205z" fill="none" stroke="#fff" stroke-width="8"/><path d="m205 80 102 84m0-84L205 164" stroke="#fff" stroke-width="7"/>'
+  ];
+  const sigil = sigils[seed % sigils.length];
+  const safeLabel = String(gift.name || "Minglora Gift").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").slice(0,30);
   return '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="'+String(gift.name).replace(/&/g,"&amp;").replace(/</g,"&lt;")+'">'+
     '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+bg1+'"/><stop offset="1" stop-color="'+bg2+'"/></linearGradient><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+shine+'"/><stop offset=".55" stop-color="'+bg2+'"/><stop offset="1" stop-color="'+bg1+'"/></linearGradient><radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="'+shine+'"/><stop offset="1" stop-color="'+bg1+'"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter></defs>'+
     '<rect width="512" height="512" rx="82" fill="url(#bg)"/><circle cx="256" cy="257" r="'+ring+'" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="22"/><circle cx="256" cy="265" r="160" fill="#100d36" opacity=".17" filter="url(#shadow)"/>'+
     '<ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>'+
-    '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+
+    '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+
     '<circle cx="392" cy="108" r="7" fill="#fff" opacity=".9"/><circle cx="115" cy="390" r="6" fill="#fff" opacity=".75"/>'+
     '<text x="256" y="286" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif" font-size="118" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#fff" stroke-opacity=".2" stroke-width="4">'+symbol+'</text>'+
     '<path d="M90 72q90-48 174-26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>'+
+    '<rect x="86" y="438" width="340" height="43" rx="21" fill="#10162d" fill-opacity=".48"/><text x="256" y="467" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle" fill="#fff">'+safeLabel+'</text>'+
     '</svg>';
 }
 
@@ -257,7 +295,67 @@ function modelDocument(gift) {
   cylinder(0,-.68,0,.64,.12,dark,28);
   torus(0,-.59,0,.55,.035,light,28,8);
   const c=gift.category,n=gift.name.toLowerCase();
-  if(/cnc coin/.test(n)){
+  if(/you are wanted/.test(n)){
+    torus(0,.2,0,.46,.055,light,32,10);torus(0,.2,0,.27,.04,base,28,8);
+    sphere(0,.2,.04,.13,.13,.09,"#ffffff",12,8);cylinder(0,.2,0,.06,.82,base,14,.015);
+  } else if(/hot rods/.test(n)){
+    box(0,-.05,0,1.18,.28,.58,base);box(.04,.19,0,.62,.27,.52,light);
+    for(const x of [-.4,.4])for(const z of [-.31,.31]){torus(x,-.27,z,.16,.07,dark,20,8);cylinder(x,-.27,z,.045,.09,light,12);}
+    box(-.2,.03,.34,.42,.07,.06,"#ffffff");box(.22,.03,.34,.42,.07,.06,"#ffffff");
+  } else if(/red lightning/.test(n)){
+    box(0,.12,0,.16,.96,base);box(-.1,.28,0,.4,.16,light);box(.1,-.18,0,.4,.16,light);
+    cone(0,.68,0,.16,.32,light);sphere(0,-.38,0,.2,.12,.18,light,12,7);
+  } else if(/monster truck/.test(n)){
+    box(0,.05,0,1.12,.28,.64,base);box(0,.26,0,.62,.27,.55,light);
+    for(const x of [-.4,.4])for(const z of [-.34,.34]){torus(x,-.33,z,.24,.09,dark,22,9);cylinder(x,-.33,z,.095,.1,light,16);}
+    box(0,-.1,0,.72,.08,.66,light);
+  } else if(/crystal heart/.test(n)){
+    heart();torus(0,.18,0,.5,.035,light,32,8);for(let i=0;i<6;i++){const a=i*Math.PI/3;sphere(Math.cos(a)*.42,.2,Math.sin(a)*.42,.055,.055,.055,"#ffffff",8,5);}
+  } else if(/iron resolve|villainy slain/.test(n)){
+    box(0,.12,0,.68,.82,.16,base);torus(0,.18,.1,.31,.04,light,24,8);cone(0,.48,.2,.14,.4,light);
+    box(0,.22,-.16,.12,.92,.1,light);box(0,.6,-.16,.38,.09,.1,light);
+  } else if(/a fun house/.test(n)){
+    box(0,.02,0,.84,.75,.62,base);cone(0,.59,0,.56,.48,light);cylinder(0,-.1,.34,.16,.56,dark,16,.16);
+    sphere(-.22,.15,.34,.08,.08,.05,light);sphere(.22,.15,.34,.08,.08,.05,light);
+  } else if(/corgi/.test(n)){
+    sphere(0,-.12,0,.39,.38,.34,base);sphere(0,.34,.04,.32,.3,.29,light);
+    cone(-.23,.62,0,.14,.42,base);cone(.23,.62,0,.14,.42,base);
+    sphere(-.12,.37,.28,.045,.06,.035,dark,8,5);sphere(.12,.37,.28,.045,.06,.035,dark,8,5);
+    sphere(0,.18,.31,.09,.06,.05,light,9,6);
+  } else if(/dreamy night/.test(n)){
+    sphere(0,.2,0,.4,.4,.12,light);sphere(.16,.33,.1,.34,.37,.13,dark);
+    for(let i=0;i<5;i++){const a=i*2*Math.PI/5;sphere(Math.cos(a)*.52,.22+Math.sin(a)*.4,.12,.055,.055,.055,light,8,5);}
+  } else if(/vintage car/.test(n)){
+    box(0,-.06,0,1.02,.27,.58,base);box(0,.18,0,.59,.32,.51,light);
+    sphere(-.4,-.27,.29,.18,.18,.09,dark);sphere(.4,-.27,.29,.18,.18,.09,dark);
+    torus(0,-.06,-.32,.26,.035,light,20,7);box(0,-.25,0,.9,.07,.58,light);
+  } else if(/gobble grab/.test(n)){
+    sphere(0,.05,0,.3,.42,.29,base);sphere(0,.45,.02,.22,.22,.2,light);
+    for(let i=0;i<5;i++){const a=(i-2)*.42;sphere(Math.sin(a)*.38,.32+Math.cos(a)*.08,-.08,.13,.25,.08,[base,light,"#e88b47","#c74e51","#e6c05b"][i],12,8);}
+    cone(0,.29,.2,.09,.15,"#f6a23a");sphere(0,-.38,.02,.08,.12,.08,light);
+  } else if(/jet car/.test(n)){
+    box(0,-.08,0,1.1,.22,.48,base);box(.08,.19,0,.43,.26,.42,light);
+    cone(.58,.04,0,.2,.4,light);box(-.1,.06,.36,.35,.07,.45,base);
+    torus(-.39,-.25,.25,.12,.055,dark,18,7);torus(.39,-.25,.25,.12,.055,dark,18,7);
+    cylinder(-.62,-.05,0,.1,.3,"#f28b49",12,.01);
+  } else if(/super car/.test(n)){
+    box(0,-.08,0,1.18,.2,.57,base);box(0,.1,0,.65,.26,.48,light);
+    for(const x of [-.42,.42]){torus(x,-.25,.3,.14,.055,dark,18,7);torus(x,-.25,-.3,.14,.055,dark,18,7);}
+    box(0,-.19,0,1.05,.07,.62,light);
+  } else if(/masquerade/.test(n)){
+    box(0,.22,0,.8,.35,.12,base);sphere(-.2,.22,.09,.16,.11,.07,dark);sphere(.2,.22,.09,.16,.11,.07,dark);
+    torus(0,.24,0,.47,.035,light,24,7);cone(.33,.53,0,.17,.48,light);
+  } else if(/pop out/.test(n)){
+    cylinder(0,-.05,0,.32,.25,base,20,.32);for(let i=0;i<4;i++)torus(0,.12+i*.13,0,.2,.025,light,18,6);
+    sphere(0,.64,0,.23,.22,.22,light);cone(0,.9,0,.13,.22,base);
+  } else if(/live pro face-off/.test(n)){
+    sphere(-.28,.16,0,.24,.25,.22,base);sphere(.28,.16,0,.24,.25,.22,light);
+    torus(-.28,.16,0,.27,.055,light,20,8);torus(.28,.16,0,.27,.055,base,20,8);
+    box(0,.58,0,.32,.1,.1,light);
+  } else if(/fair king/.test(n)){
+    cylinder(0,.02,0,.4,.14,light,24,.36);for(let i=0;i<5;i++){const x=(i-2)*.16;cone(x,.32,0,.11,.48,base,12);sphere(x,.58,0,.06,.06,.06,light,9,6);}
+    torus(0,.02,0,.42,.035,dark,24,7);
+  } else if(/cnc coin/.test(n)){
     cylinder(0,.02,0,.43,.13,"#d7a83d",32,.025);
     cylinder(0,.02,.075,.4,.07,"#f3d36d",32,.02);
     torus(0,.02,0,.4,.025,"#fff0a8",32,8);
