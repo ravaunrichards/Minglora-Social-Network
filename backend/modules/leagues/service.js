@@ -62,15 +62,37 @@ function uniqueMatchEffects(effects) {
     }
   );
 }
+function uniqueMatchEvents(events) {
+  return uniqueRecords(events, item => {
+    if (item.type === "gift_score" && item.giftId) return "gift:" + item.giftId;
+    if (item.type === "shield_blocked_bonus" && item.giftId) return "shield_block:" + item.giftId;
+    if (item.type === "viewer_support" && item.userId) return "support:" + item.userId;
+    if (["shield_used", "time_boost_used", "score_effect_used"].includes(item.type) && item.side) {
+      return [item.type, item.side, item.powerupId || ""].join(":");
+    }
+    return item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":");
+  }, (current, incoming) => recordTime(incoming) > recordTime(current) ? incoming : current);
+}
 function normalizeMatch(match) {
-  match.scores = {
-    challenger: Math.max(0, asNumber(match.scores?.challenger)),
-    opponent: Math.max(0, asNumber(match.scores?.opponent))
-  };
-  match.supporters = uniqueRecords(match.supporters, item => item.userId, (current) => current);
+  const storedScores = match.scores || {};
+  match.supporters = uniqueRecords(match.supporters, item => item.userId, current => current);
   match.activeEffects = uniqueMatchEffects(match.activeEffects);
   match.pendingEffects = uniqueMatchEffects(match.pendingEffects);
-  match.events = uniqueRecords(match.events, item => item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":"));
+  match.events = uniqueMatchEvents(match.events);
+  match.scores = {
+    challenger: Math.max(0, asNumber(storedScores.challenger)),
+    opponent: Math.max(0, asNumber(storedScores.opponent))
+  };
+  for (const side of ["challenger", "opponent"]) {
+    const scoreEvents = match.events.filter(item =>
+      item.side === side && ["gift_score", "viewer_support"].includes(item.type)
+    );
+    if (scoreEvents.length) {
+      match.scores[side] = Math.max(0, scoreEvents.reduce((total, item) =>
+        total + (item.type === "viewer_support" && !Number.isFinite(Number(item.matchPoints))
+          ? 3 : asNumber(item.matchPoints)), 0));
+    }
+  }
   match.timeBoostUsed = {
     challenger: Boolean(match.timeBoostUsed?.challenger),
     opponent: Boolean(match.timeBoostUsed?.opponent)
@@ -99,7 +121,7 @@ function mergeMatchRecords(current, incoming) {
     opponent: Math.max(...opponentScores)
   };
   merged.supporters = uniqueRecords([...(preferred.supporters || []), ...((preferred === current ? incoming : current).supporters || [])], item => item.userId);
-  merged.events = uniqueRecords([...(preferred.events || []), ...((preferred === current ? incoming : current).events || [])], item => item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":"));
+  merged.events = uniqueMatchEvents([...(preferred.events || []), ...((preferred === current ? incoming : current).events || [])]);
   merged.activeEffects = uniqueMatchEffects([...(preferred.activeEffects || []), ...((preferred === current ? incoming : current).activeEffects || [])]);
   merged.pendingEffects = uniqueMatchEffects([...(preferred.pendingEffects || []), ...((preferred === current ? incoming : current).pendingEffects || [])]);
   merged.timeBoostUsed = {
