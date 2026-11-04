@@ -112,7 +112,26 @@
     if(!gift)return false;
     play(gift);
     const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image");
-    if(target){target.classList.remove("minglora-gift-preview-pulse");void target.offsetWidth;target.classList.add("minglora-gift-preview-pulse");}
+    if(target){
+      const identity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
+      const seed=hash([identity,gift.code,gift.name].join("|"));
+      const dx=(seed%121)-60,dy=-24-((seed>>>7)%76),tilt=(seed>>>13)%81-40;
+      const spin=((seed>>>19)%2?1:-1)*(70+((seed>>>20)%420));
+      const peak=(108+((seed>>>3)%31))/100,rebound=(88+((seed>>>11)%19))/100;
+      const frames=[
+        {offset:0,opacity:0,transform:"translate3d(0,22px,0) rotateZ("+(-tilt*.6)+"deg) scale(.68)",filter:"brightness(.78) saturate(.8)"},
+        {offset:.2,opacity:1,transform:"translate3d("+dx+"px,"+dy+"px,0) rotateZ("+tilt+"deg) scale("+peak+")",filter:"brightness(1.3) saturate(1.35)"},
+        {offset:.52,opacity:1,transform:"translate3d("+(-dx*.62)+"px,"+(-dy*.16)+"px,0) rotateZ("+spin+"deg) scale("+rebound+")",filter:"brightness(1.12) saturate(1.12)"},
+        {offset:.76,opacity:1,transform:"translate3d("+(dx*.18)+"px,"+(dy*.08)+"px,0) rotateZ("+(-tilt*.25)+"deg) scale(1.035)",filter:"brightness(1.05) saturate(1.05)"},
+        {offset:1,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"}
+      ];
+      if(typeof target.animate==="function"){
+        const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+        target.animate(frames,{duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.animation_duration_ms)||2200)),easing:"cubic-bezier(.17,.85,.3,1)",fill:"none"});
+      }else{
+        target.classList.remove("minglora-gift-preview-pulse");void target.offsetWidth;target.classList.add("minglora-gift-preview-pulse");
+      }
+    }
     return true;
   }
   window.MingloraGiftFX={prime,play,show,mount,preview};
