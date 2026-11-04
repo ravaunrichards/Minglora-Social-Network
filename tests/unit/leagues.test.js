@@ -52,7 +52,7 @@ test("match boosts affect match score only, not Creator League points", () => {
   assert.equal(profile.seasonPoints, 10);
 });
 
-test("Shield cannot erase scores and Time Boost is blocked in fixed-timer matches", () => {
+test("Shield blocks an opposing boost bonus but never removes the base Gift score; fixed-timer matches reject Time Boost", () => {
   const db = blankDb();
   const now = new Date("2026-11-04T12:00:00.000Z");
   const match = createCreatorLeagueMatch(db, {
@@ -61,7 +61,16 @@ test("Shield cannot erase scores and Time Boost is blocked in fixed-timer matche
     giftMode: "all", now
   });
   acceptCreatorLeagueMatch(db, match, "creator-b", now);
-  assert.throws(() => useCreatorLeaguePowerup(db, match, "creator-a", "shield", now), /no eligible temporary effect/i);
+  useCreatorLeaguePowerup(db, match, "creator-a", "shield", now);
+  useCreatorLeaguePowerup(db, match, "creator-b", "score_multiplier", now);
+  const result = recordLiveGiftForLeagues(db, {
+    giftId: "gift-shield-block", recipientId: "creator-b", broadcastId: "live-b",
+    giftCode: "rose", coinAmount: 10, now: new Date(now.getTime() + 1000)
+  });
+  assert.equal(result.creatorLeaguePoints, 10);
+  assert.equal(result.matchPoints, 10);
+  assert.equal(match.scores.opponent, 10);
+  assert.ok(match.events.some(item => item.type === "shield_blocked_bonus" && item.side === "challenger"));
   match.timerMode = "fixed";
   assert.throws(() => useCreatorLeaguePowerup(db, match, "creator-a", "time_boost", now), /fixed-timer/i);
 });
