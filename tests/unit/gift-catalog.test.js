@@ -10,6 +10,7 @@ const manifest = JSON.parse(readFileSync(path.join(root, "data/minglora-gift-cat
 const gifts = manifest.gifts;
 const assetRoot = path.join(root, "public/assets/gifts/catalog");
 const generatedStamp = path.join(assetRoot, "catalog-build.json");
+const giftEffectsSource = readFileSync(path.join(root, "public/gift-effects.js"), "utf8");
 function giftAnimationMotionSignature(gift) {
   let seed = 2166136261;
   for (const ch of [gift.animation_key, gift.code, gift.name].join("|")) {
@@ -74,6 +75,13 @@ test("every gift has an animation and generated-sound profile", () => {
 test("every gift has its own animation key and a distinct movement signature", () => {
   assert.equal(new Set(gifts.map(gift => gift.animation_key)).size, gifts.length);
   assert.equal(new Set(gifts.map(giftAnimationMotionSignature)).size, gifts.length);
+});
+
+test("catalog previews and sent gifts use each gift animation identity", () => {
+  assert.match(giftEffectsSource, /const animationIdentity=String\(gift\.animation_key/);
+  assert.match(giftEffectsSource, /target\.animate\(frames/);
+  assert.match(giftEffectsSource, /minglora-gift-fx-particles/);
+  assert.match(giftEffectsSource, /data\.giftAnimation=animationIdentity/);
 });
 
 test("Minglora gift identities and generated asset paths are platform-neutral", () => {
