@@ -29,7 +29,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
     assert.ok(nav.includes(`<small>${label}</small>`), `${label} label remains visible`);
   }
   assert.match(nav,/data-view="leagues"/);
-  assert.ok(nav.includes('🏆<small>Leagues</small>'));
+  assert.ok(nav.includes('<span>🏆</span><small>Leagues</small>'));
 });
 
 test('mobile navigation uses the same 3D icon artwork and keeps the main destinations', () => {
