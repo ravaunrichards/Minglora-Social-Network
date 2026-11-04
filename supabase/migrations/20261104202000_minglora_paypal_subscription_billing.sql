@@ -32,8 +32,7 @@ CREATE OR REPLACE FUNCTION public.minglora_has_active_subscription(
   p_subscriber_id uuid DEFAULT auth.uid()
 )
 RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, pg_temp
+LANGUAGE sql STABLE
 AS $$
   SELECT EXISTS (
     SELECT 1
@@ -48,6 +47,5 @@ AS $$
       AND s.current_period_end > now()
   );
 $$;
-REVOKE ALL ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.minglora_has_active_subscription(uuid,uuid) FROM PUBLIC, anon, authenticated;
 COMMIT;
