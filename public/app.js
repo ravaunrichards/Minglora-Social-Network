@@ -713,10 +713,38 @@ let liveSpeakerRefreshTimer=null;
 let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
 let liveDirectoryFilter='all';
+let liveViewportCleanup=null;
+function bindLiveRoomVisualViewport(){
+  const viewport=window.visualViewport;
+  if(!viewport)return ()=>{};
+  const update=()=>{
+    const height=Math.max(240,Math.round(viewport.height||window.innerHeight));
+    const top=Math.max(0,Math.round(viewport.offsetTop||0));
+    document.documentElement.style.setProperty('--minglora-live-visible-height',height+'px');
+    document.documentElement.style.setProperty('--minglora-live-viewport-top',top+'px');
+  };
+  viewport.addEventListener('resize',update);
+  viewport.addEventListener('scroll',update);
+  update();
+  return ()=>{
+    viewport.removeEventListener('resize',update);
+    viewport.removeEventListener('scroll',update);
+    document.documentElement.style.removeProperty('--minglora-live-visible-height');
+    document.documentElement.style.removeProperty('--minglora-live-viewport-top');
+  };
+}
 function setLiveRoomMobileMode(enabled){
   const method=enabled?'add':'remove';
   document.documentElement.classList[method]('live-room-active');
   document.body.classList[method]('live-room-active');
+  if(enabled){
+    liveViewportCleanup?.();
+    liveViewportCleanup=bindLiveRoomVisualViewport();
+  }else{
+    liveViewportCleanup?.();
+    liveViewportCleanup=null;
+    document.body.classList.remove('live-room-chat-focused');
+  }
 }
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
@@ -1025,6 +1053,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
       : "<div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
     "</aside></div></section>");
   setLiveRoomMobileMode(true);
+  const liveChatComposer=$("#live-chat-form input");
+  liveChatComposer?.addEventListener("focus",()=>document.body.classList.add("live-room-chat-focused"));
+  liveChatComposer?.addEventListener("blur",()=>document.body.classList.remove("live-room-chat-focused"));
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
