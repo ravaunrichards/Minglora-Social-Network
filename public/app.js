@@ -236,6 +236,48 @@ function renderPostMedia(post){
   }).join('');
   return items;
 }
+function renderPostSoundtrack(post){
+  const track=post.soundtrack,sound=track?.sound;
+  if(!sound?.url)return '';
+  return '<section class="post-soundtrack" aria-label="Minglora soundtrack"><div class="post-soundtrack-title"><span aria-hidden="true">♫</span><span><strong>'+esc(sound.title)+'</strong><small>'+(sound.attribution?esc(sound.attribution)+' · ':'')+'@'+esc(sound.author?.username||'creator')+'</small></span></div><audio controls preload="none" data-minglora-soundtrack data-start-ms="'+Number(track.startMs||0)+'" data-end-ms="'+Number(track.endMs||0)+'" data-volume="'+Number.isFinite(Number(track.volume))?Number(track.volume):1+'" data-fade-in-ms="'+Number(track.fadeInMs||0)+'" data-fade-out-ms="'+Number(track.fadeOutMs||0)+'" src="'+esc(sound.url)+'" aria-label="Play '+esc(sound.title)+'"></audio></section>';
+}
+function bindSoundtrackPlayback(root=document){
+  root.querySelectorAll('[data-minglora-soundtrack]').forEach(player=>{
+    if(player.dataset.soundtrackBound==='true')return;
+    player.dataset.soundtrackBound='true';
+    const start=Math.max(0,Number(player.dataset.startMs||0))/1000;
+    const end=Math.max(0,Number(player.dataset.endMs||0))/1000;
+    const baseVolume=Math.max(0,Math.min(1,Number(player.dataset.volume??1)));
+    const fadeIn=Math.max(0,Number(player.dataset.fadeInMs||0))/1000;
+    const fadeOut=Math.max(0,Number(player.dataset.fadeOutMs||0))/1000;
+    player.volume=baseVolume;
+    const seekTo=seconds=>{
+      if(!Number.isFinite(player.duration)||!player.duration)return;
+      player.currentTime=Math.max(0,Math.min(player.duration-.05,seconds));
+    };
+    player.addEventListener('loadedmetadata',()=>seekTo(start));
+    player.addEventListener('timeupdate',()=>{
+      const clipEnd=end||player.duration;
+      if(clipEnd&&player.currentTime>=clipEnd){player.pause();seekTo(start);return;}
+      let gain=baseVolume;
+      const elapsed=Math.max(0,player.currentTime-start);
+      if(fadeIn>0&&elapsed<fadeIn)gain*=elapsed/fadeIn;
+      if(fadeOut>0&&clipEnd&&player.currentTime>clipEnd-fadeOut)gain*=Math.max(0,(clipEnd-player.currentTime)/fadeOut);
+      player.volume=Math.max(0,Math.min(1,gain));
+    });
+    const post=player.closest('[data-post]');
+    const videos=post?[...post.querySelectorAll('video.post-media-video')]:[...root.querySelectorAll('video.story-viewer-image')];
+    videos.forEach(video=>{
+      video.addEventListener('play',()=>{
+        const offset=Math.max(0,Number(video.currentTime||0));
+        seekTo(start+offset);player.play().catch(()=>{});
+      });
+      video.addEventListener('pause',()=>player.pause());
+      video.addEventListener('seeking',()=>{if(!player.paused)seekTo(start+Number(video.currentTime||0));});
+      video.addEventListener('ended',()=>player.pause());
+    });
+  });
+}
 function postCard(post){
   const author=post.author||{}, comments=post.comments||[];
   return `<article class="card post" data-post="${esc(post.id)}">
@@ -245,6 +287,7 @@ function postCard(post){
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
     ${renderPostMedia(post)}
+    ${renderPostSoundtrack(post)}
     <div class="post-stats"><span>👍 ${post.reactionCount||0} ${post.reactionCount===1?'reaction':'reactions'}</span><span>${comments.length} comments</span></div>
     <div class="post-actions">
       <button class="${post.myReaction?'liked':''}" data-react="${esc(post.id)}">${post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction?'👍':'♡'} &nbsp; ${post.myReaction?esc(post.myReaction[0].toUpperCase()+post.myReaction.slice(1)):'Like'}</button>
@@ -272,6 +315,7 @@ async function refreshVisiblePosts(){
   await loadFeed();await renderFeed();
 }
 function bindFeed(){
+  bindSoundtrackPlayback(document);
   $('#create-story')?.addEventListener('click',()=>openStoryComposer());
   document.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
   $('#open-composer')?.addEventListener('click',()=>openComposer());
@@ -3294,8 +3338,8 @@ async function openStory(id){
     const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
     const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
     const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';
-    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+(s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
-    document.body.append(modal);modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
+    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+(s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
+    document.body.append(modal);bindSoundtrackPlayback(modal);modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
     modal.querySelector('#report-story')?.addEventListener('click',()=>{modal.remove();openReportComposer('story',s.id);});
     modal.querySelector('#delete-story')?.addEventListener('click',async()=>{if(!window.confirm('Delete this story?'))return;try{await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');}catch(err){toast(err.message);}});
   }catch(err){toast(err.message);}
