@@ -78,7 +78,7 @@ async function paypalRequest(path,method='POST',payload={},requestId){
         'Content-Type':'application/json',
         ...(requestId?{'PayPal-Request-Id':String(requestId).slice(0,108)}:{})
       },
-      ...(payload===undefined?{}:{body:JSON.stringify(payload)})
+      ...(!['GET','HEAD'].includes(method)&&payload!==undefined?{body:JSON.stringify(payload)}:{})
     });
   }catch{throw Object.assign(new Error('Could not reach PayPal to process this request.'),{status:503});}
   const data=await response.json().catch(()=>({}));
@@ -90,9 +90,17 @@ async function paypalRequest(path,method='POST',payload={},requestId){
 }
 
 function activeSubscriptionForPair(creatorId, subscriberId) {
+  const currentTime = Date.now();
   return (db.creatorSubscriptions || [])
-    .filter(item => item.creatorId === creatorId && item.subscriberId === subscriberId &&
-      ['active','approval_pending'].includes(String(item.status || '').toLowerCase()))
+    .filter(item => {
+      if (item.creatorId !== creatorId || item.subscriberId !== subscriberId) return false;
+      const status = String(item.status || '').toLowerCase();
+      if (status === 'approval_pending') return true;
+      if (status !== 'active') return false;
+      if (!item.currentPeriodEnd) return true;
+      const periodEnd = new Date(item.currentPeriodEnd).getTime();
+      return Number.isFinite(periodEnd) && periodEnd > currentTime;
+    })
     .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null;
 }
 
@@ -1854,7 +1862,7 @@ async function route(req, res) {
         tracked.updatedAt=now();
         if(tracked.status==='active')tracked.activatedAt=tracked.activatedAt||now();
         await saveStore();
-        return json(res,200,{ok:true,subscription:{id:tracked.id,status:tracked.status,planName:tracked.planName,currentPeriodEnd:tracked.currentPeriodEnd,cancelAtPeriodEnd:tracked.cancelAtPeriodEnd}});
+        return json(res,200,{ok:true,creatorId:tracked.creatorId,subscription:{id:tracked.id,status:tracked.status,planName:tracked.planName,currentPeriodEnd:tracked.currentPeriodEnd,cancelAtPeriodEnd:tracked.cancelAtPeriodEnd}});
       }
       const subscriptionCancelMatch=p.match(/^\/api\/subscriptions\/([^/]+)\/cancel$/);
       if(method==='POST'&&subscriptionCancelMatch){
