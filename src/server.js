@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import webpush from 'web-push';
-import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { appOrigin } from './app-origin.js';
@@ -447,7 +446,7 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':notification.type==='profile_view'?'Profile view':notification.type==='marketplace_review'?'Marketplace application review':notification.type==='marketplace_status'?'Marketplace application update':'Minglora notification',
+    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':notification.type==='profile_view'?'Profile view':'Minglora notification',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
     data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,sellerId:notification.sellerId||null}
