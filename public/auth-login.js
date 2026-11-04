@@ -86,6 +86,7 @@
 
   async function submitLogin(form) {
     const button = form.querySelector('button[type="submit"]');
+    if (!button || button.disabled) return;
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
     button.textContent = 'Signing in…';
@@ -148,8 +149,23 @@
     }
   }
 
-  // Capture phase runs before app.js's form-level listener. Stop the old handler
-  // from issuing a second password request.
+  // Handle a physical/tap click directly as well as Enter-key form submission.
+  // Prevent the browser's implicit submit from racing the click handler.
+  document.addEventListener('click', event => {
+    const target = event.target;
+    const button = target && typeof target.closest === 'function'
+      ? target.closest('button[type="submit"]')
+      : null;
+    const form = button?.form;
+    if (!form || (!form.matches(LOGIN_FORM_SELECTOR) && !form.matches(REGISTER_FORM_SELECTOR))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!form.reportValidity()) return;
+    if (form.matches(LOGIN_FORM_SELECTOR)) void submitLogin(form);
+    else void submitRegistration(form);
+  }, true);
+
+  // Capture phase also handles Enter-key submission before app.js listeners.
   document.addEventListener('submit', event => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
