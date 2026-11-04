@@ -55,7 +55,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /app\.js\?v=20261104-minglora-gift-motion-1/);
   assert.match(html, /auth-login\.js\?v=20261103-auth-refresh-2/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
-  assert.match(sw, /minglora-shell-v68-unique-gift-animations-1/);
+  assert.match(sw, /minglora-shell-v70-league-arena-1/);
   assert.match(sw, /auth-login\.js\?v=20261103-auth-refresh-2/);
   assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
 });
