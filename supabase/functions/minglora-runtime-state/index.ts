@@ -219,7 +219,7 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_catalog") {
     const [packagesResult, giftsResult] = await Promise.all([
       admin.from("coin_packages").select("code,name,coin_amount,price_minor,currency").eq("active", true).order("sort_order"),
-      admin.from("live_gift_catalog").select("code,name,category,emoji,animation_key,coin_price,model_url,animation_preset").eq("active", true).order("sort_order")
+      admin.from("live_gift_catalog").select("code,name,category,emoji,animation_key,coin_price,image_url,model_url,animation_preset,sound_preset,animation_duration_ms,asset_version").eq("active", true).order("sort_order")
     ]);
     if (packagesResult.error || giftsResult.error) return json(503, { error: "Minglora coin and gift catalogue is unavailable." });
     return json(200, { packages: packagesResult.data || [], gifts: giftsResult.data || [], currency: "USD", coinName: "Minglora Coins" });
