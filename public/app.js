@@ -445,7 +445,7 @@ function renderStoriesPanel(){
   const visible=[...byAuthor.values()].map(stories=>{
     const chronological=stories.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)||Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
     const firstUnseen=chronological.find(story=>!story.viewedByMe);
-    return {story:firstUnseen||chronological[chronological.length-1],count:chronological.length,allViewed:chronological.every(story=>story.viewedByMe)};
+    return {story:firstUnseen||chronological[0],count:chronological.length,allViewed:chronological.every(story=>story.viewedByMe)};
   }).filter(item=>item.story);
   const cards=visible.map(({story,count,allViewed})=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+
     (story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+
