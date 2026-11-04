@@ -3392,3 +3392,17 @@ body.auth-mode .auth-screen{
   .mobile-nav .mobile-more-link span{font-size:21px;line-height:1.1}
   .mobile-nav .mobile-more-link.active{border-color:var(--blue);color:var(--blue);background:var(--surface)}
 }
+
+
+/* Five stable core destinations fit without hiding or horizontal-scrolling tabs. */
+@media(min-width:761px){
+  .top-nav{gap:clamp(2px,.8vw,12px);overflow:visible;justify-content:center}
+  .top-nav .nav-item{min-width:52px;flex:1 1 70px;max-width:88px}
+}
+@media(min-width:761px) and (max-width:1150px){
+  .top-nav{gap:2px}
+  .top-nav .nav-item{min-width:48px;flex:0 1 52px;max-width:58px}
+}
+@media(max-width:760px){
+  .mobile-nav>button{flex:1 1 16.666%;max-width:16.666%;min-width:0}
+}
