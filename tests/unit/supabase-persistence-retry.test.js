@@ -5,10 +5,10 @@ import { execFileSync } from 'node:child_process';
 const storeUrl = new URL('../../src/store.js', import.meta.url).href;
 const collections = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
-  'marketplaceSellers', 'marketplaceSellerEvents', 'marketplaceQuotes', 'marketplaceBookings',
-  'jobPostings', 'jobApplications', 'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
-  'pageRoles', 'pageFollows', 'pagePosts', 'marketplaceListings', 'marketplaceSaved',
-  'marketplaceInquiries', 'messages', 'messageConversationHides', 'notifications', 'sessions',
+  
+   'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
+  'pageRoles', 'pageFollows', 
+   'messages', 'messageConversationHides', 'notifications', 'sessions',
   'liveSessions', 'liveParticipants', 'liveSpeakerRequests', 'reports', 'supportTickets',
   'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',
   'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance',
