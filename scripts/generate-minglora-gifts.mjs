@@ -531,7 +531,7 @@ function modelDocument(gift) {
     accessors.push({bufferView:pv,componentType:5126,count:p.positions.length/3,type:"VEC3",min,max});
     const na=accessors.length;accessors.push({bufferView:nv,componentType:5126,count:p.normals.length/3,type:"VEC3"});
     const ia=accessors.length;accessors.push({bufferView:iv,componentType:use32?5125:5123,count:p.indices.length,type:"SCALAR"});
-    const color=p.color.startsWith("#")?p.color:"#ffffff";
+    const color=typeof p.color==="string" && /^#[0-9a-f]{6}$/i.test(p.color)?p.color:base;
     const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255);
     const materialIndex=primitives.length;
     const materialsRef=materials.length;
