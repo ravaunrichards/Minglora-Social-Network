@@ -1016,13 +1016,14 @@ async function route(req, res) {
           avatar:['image/jpeg','image/png','image/webp','image/avif'],
           cover:['image/jpeg','image/png','image/webp','image/avif'],
           post:Object.keys(mimeKinds),
+          sound:SOUND_AUDIO_MIME_TYPES,
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
           group:['image/jpeg','image/png','image/webp','video/mp4'],
           page:['image/jpeg','image/png','image/webp','video/mp4'],
           message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation'],
           ringtone:Object.keys(CALL_RINGTONE_MIME_TYPES)
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,sound:50*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
