@@ -94,6 +94,11 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
+  const initialLeague = await request('/api/leagues/overview');
+  assert.equal(initialLeague.status, 200, JSON.stringify(initialLeague.body));
+  assert.equal(initialLeague.body.profile.leagueClass, 'D5');
+  assert.equal(initialLeague.body.profile.matchRank, 'Bronze III');
+
 
   const duplicateUsername = await request('/api/auth/register', {
     method: 'POST',
