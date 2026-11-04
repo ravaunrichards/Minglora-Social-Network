@@ -34,3 +34,17 @@ test('phone viewport reserves the display cutout and screen safe areas', () => {
   assert.match(html, /mobile-layout\.css\?v=20261104-mobile-live-room-1/);
   assert.match(html, /app\.js\?v=20261104-money-to-coins-1/);
 });
+
+test('mobile LIVE adapts when the phone rotates into a wider landscape viewport', () => {
+  assert.match(mobileCss, /@media\\(max-width:980px\\)\\{[\\s\\S]*?body\\.live-room-active \\.layout/);
+  assert.match(mobileCss, /@media\\(max-width:980px\\) and \\(orientation:landscape\\)/);
+});
+
+test('mobile LIVE follows the visual viewport when the keyboard opens', () => {
+  assert.match(app, /function bindLiveRoomVisualViewport\\(\\)/);
+  assert.match(app, /viewport\\.addEventListener\\('resize',update\\)/);
+  assert.match(app, /--minglora-live-visible-height/);
+  assert.match(app, /live-room-chat-focused/);
+  assert.match(mobileCss, /live-room-chat-focused \\.live-gift-panel\\{display:none!important\\}/);
+  assert.match(mobileCss, /live-room-chat-focused \\.live-chat-list/);
+});
