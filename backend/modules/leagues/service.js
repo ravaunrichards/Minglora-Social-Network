@@ -14,7 +14,7 @@ export const MATCH_RANKS = Object.freeze([
 ]);
 export const MATCH_POWERUPS = Object.freeze([
   { id: "momentum_boost", name: "Momentum Boost", symbol: "⚡", durationMs: 30000, multiplier: 1.25, description: "25% extra eligible match points for 30 seconds." },
-  { id: "shield", name: "Shield", symbol: "🛡️", description: "Blocks one explicitly shieldable temporary effect. Never changes a score or referee decision." },
+  { id: "shield", name: "Shield", symbol: "🛡️", durationMs: 30000, description: "Blocks the next opposing Momentum Boost or Score Multiplier bonus for 30 seconds. Base Gift points still count." },
   { id: "time_boost", name: "Time Boost", symbol: "⏳", durationMs: 30000, description: "Adds 30 seconds in flexible-timer matches only." },
   { id: "score_multiplier", name: "Score Multiplier", symbol: "⭐", durationMs: 15000, multiplier: 2, description: "Doubles eligible match points for 15 seconds only." }
 ]);
@@ -221,11 +221,21 @@ export function recordLiveGiftForLeagues(db, details) {
     const side = match.challengerSessionId === details.broadcastId ? "challenger" : "opponent";
     const matchesGift = match.giftMode !== "specific" || match.selectedGiftCode === details.giftCode;
     if (matchesGift && new Date(match.startedAt).getTime() <= now.getTime() && new Date(match.endsAt).getTime() > now.getTime()) {
-      const effects = (match.activeEffects || []).filter(item => item.side === side && new Date(item.expiresAt).getTime() > now.getTime());
-      const multiplier = effects.reduce((best, item) => Math.max(best, Number(item.multiplier || 1)), 1);
+      match.activeEffects = (match.activeEffects || []).filter(item => new Date(item.expiresAt).getTime() > now.getTime());
+      const effects = match.activeEffects.filter(item => item.side === side && item.type !== "shield");
+      let multiplier = effects.reduce((best, item) => Math.max(best, Number(item.multiplier || 1)), 1);
+      const protectedSide = side === "challenger" ? "opponent" : "challenger";
+      const shieldIndex = match.activeEffects.findIndex(item => item.type === "shield" && item.side === protectedSide);
+      let shieldBlockedBonus = false;
+      if (shieldIndex >= 0 && multiplier > 1) {
+        match.activeEffects.splice(shieldIndex, 1);
+        multiplier = 1;
+        shieldBlockedBonus = true;
+        match.events.push({ id: randomUUID(), type: "shield_blocked_bonus", side: protectedSide, protectedFrom: side, giftId, blockedMultiplier: true, createdAt: now.toISOString() });
+      }
       matchPoints = Math.round(amount * multiplier);
       match.scores[side] = Number(match.scores[side] || 0) + matchPoints;
-      match.events.push({ id: randomUUID(), type: "gift_score", side, giftId, rawPoints: amount, matchPoints, multiplier, createdAt: now.toISOString() });
+      match.events.push({ id: randomUUID(), type: "gift_score", side, giftId, rawPoints: amount, matchPoints, multiplier, shieldBlockedBonus, createdAt: now.toISOString() });
     }
   }
   return { recorded: true, creatorLeaguePoints: amount, matchPoints, matchId: match ? match.id : null };
@@ -286,10 +296,17 @@ export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new 
   const dayKey = utcDayKey(now);
   if (db.creatorLeaguePowerupUses.some(item => item.userId === userId && item.powerupId === powerupId && item.dayKey === dayKey)) throw Object.assign(new Error("You have already used this power-up today."), { status: 409 });
   if (powerupId === "shield") {
-    const index = match.pendingEffects.findIndex(item => item.side === side && item.shieldable === true && item.source !== "referee" && item.type !== "official_result");
-    if (index < 0) throw Object.assign(new Error("Shield is unavailable. There is no eligible temporary effect to block; it cannot change scores or referee decisions."), { status: 409 });
-    const blocked = match.pendingEffects.splice(index, 1)[0];
-    match.events.push({ id: randomUUID(), type: "shield_used", side, blockedEffect: blocked.type, createdAt: now.toISOString() });
+    match.activeEffects = match.activeEffects.filter(item => new Date(item.expiresAt).getTime() > now.getTime());
+    if (match.activeEffects.some(item => item.type === "shield" && item.side === side)) {
+      throw Object.assign(new Error("Your side already has an active Shield."), { status: 409 });
+    }
+    match.activeEffects.push({
+      id: randomUUID(), type: "shield", side, shieldable: true,
+      durationMs: powerup.durationMs,
+      expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(),
+      createdAt: now.toISOString()
+    });
+    match.events.push({ id: randomUUID(), type: "shield_used", side, blocks: "one opposing score boost", durationMs: powerup.durationMs, createdAt: now.toISOString() });
   } else if (powerupId === "time_boost") {
     if (match.timerMode === "fixed") throw Object.assign(new Error("Time Boost is disabled in this fixed-timer match format."), { status: 409 });
     if (match.timeBoostUsed[side]) throw Object.assign(new Error("Your side has already used Time Boost in this match."), { status: 409 });
@@ -325,6 +342,14 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
   ensureCollections(db);
   settlePastDays(db, now);
   settleExpiredLeagueMatches(db, now);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  for (const member of db.creatorLeagueProfiles) {
+    if (member.seasonKey !== seasonKey) {
+      member.seasonKey = seasonKey;
+      member.seasonPoints = 0;
+      member.updatedAt = now.toISOString();
+    }
+  }
   const profile = ensureCreatorLeagueProfile(db, user.id, user.country || user.region || "GLOBAL", now);
   const dayKey = utcDayKey(now);
   const daily = db.creatorLeagueDailyScores.find(item => item.userId === user.id && item.dayKey === dayKey);
