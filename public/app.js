@@ -1373,6 +1373,10 @@ async function renderCoins(){
   const history=(wallet.ledger||[]).length?(wallet.ledger||[]).slice(0,30).map(item=>
     "<article class='recharge-history-row'><div><strong>"+esc(item.description||item.entry_type||"Wallet activity")+"</strong><small>"+timeAgo(item.created_at)+"</small></div><b class='"+(Number(item.delta_coins)>=0?"positive":"negative")+"'>"+(Number(item.delta_coins)>0?"+":"")+Number(item.delta_coins).toLocaleString()+" Coins</b></article>"
   ).join(""):"<div class='recharge-empty'><strong>No Coin activity yet</strong><p>Your real Coin purchases and spending will appear here.</p></div>";
+  const isCreatorHubCoinOwner=state.user?.id==='28e1df97-3fe1-488e-bb84-bdc353c58653'&&state.user?.verificationStatus==='verified'&&state.user?.verificationBadge==='blue';
+  const ownerIssuancePanel=isCreatorHubCoinOwner
+    ? "<section class='card recharge-owner-issuance'><div class='recharge-owner-issuance-head'><div><span class='eyebrow'>CREATOR HUB CREATOR NETWORK</span><h2>Owner Coin issuance</h2><p class='muted'>Issue Minglora Coins directly into your own wallet. This is owner issuance, not a purchase or a member credit.</p></div><span class='recharge-owner-verified'>✓ Verified owner</span></div><div class='recharge-owner-presets'><button type='button' data-owner-issuance='100000'><strong>100,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='1000000'><strong>1,000,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='10000000'><strong>10,000,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='100000000'><strong>100,000,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='custom'><strong>Unlimited</strong><small>Custom amount</small></button></div><form id='owner-issuance-form' class='recharge-owner-issuance-form'><label for='owner-issuance-amount'>Coin amount</label><input id='owner-issuance-amount' type='number' min='1' max='9007199254740991' step='1' inputmode='numeric' placeholder='Choose a preset or enter any amount' required><label for='owner-issuance-note'>Issuance note (optional)</label><input id='owner-issuance-note' type='text' maxlength='240' placeholder='Example: Creator community promotion gifts'><button class='primary' id='owner-issuance-submit' type='submit'>Issue Coins to my wallet</button><p id='owner-issuance-status' class='recharge-form-status' role='status' aria-live='polite'></p><small>No fixed preset cap. The database still protects against numeric overflow and duplicate requests.</small></form></section>"
+    : "";
   const content=
     "<div class='recharge-layout'><section class='card recharge-main-card'><div class='recharge-section-heading'><div><span class='eyebrow'>MINGLORA COINS</span><h2>Choose your package</h2><p class='muted'>Select a package or enter a custom Coin amount.</p></div><span class='recharge-payment-note'>PayPal checkout · USD</span></div>"+
     (packageCards?"<div class='recharge-package-grid' id='recharge-package-grid'>"+packageCards+"</div>":"<div class='recharge-empty'><strong>Coin packages are unavailable</strong><p>You can still enter a valid custom amount below.</p></div>")+
@@ -1380,8 +1384,46 @@ async function renderCoins(){
     "<aside class='card recharge-checkout-card'><span class='eyebrow'>ORDER SUMMARY</span><h2>Your recharge</h2><div id='recharge-order-summary' class='recharge-order-summary'></div><div class='recharge-checkout-rule'></div><div class='recharge-checkout-total'><span>Total</span><strong id='recharge-total'>"+(selection?liveMoney(selection.amountMinor):"—")+"</strong></div><div class='recharge-payment-method'><span class='recharge-paypal-mark'>P</span><div><strong>PayPal</strong><small>Secure checkout</small></div></div><button type='button' id='recharge-confirm' class='primary full' "+(selection?"":"disabled")+">Recharge</button><small class='recharge-secure-note'>You will review and approve the payment on PayPal before Coins are credited.</small></aside></div>"+
     "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>YOUR WALLET</span><h2>Coin activity</h2></div><span class='muted'>Latest transactions</span></div><div class='recharge-history-list'>"+history+"</div></section>"+
     "<p class='recharge-exchange-note'>Minglora Coins are for use within Minglora, including sending gifts. Creator earnings are handled separately in the Exchange tab.</p>";
-  setContent("<div class='recharge-page'>"+header+tabs+content+"</div>");
+  setContent("<div class='recharge-page'>"+header+tabs+ownerIssuancePanel+content+"</div>");
   bindTabs();
+  if(isCreatorHubCoinOwner){
+    const form=$("#owner-issuance-form"), amountField=$("#owner-issuance-amount");
+    const noteField=$("#owner-issuance-note"), submitButton=$("#owner-issuance-submit");
+    const status=$("#owner-issuance-status");
+    document.querySelectorAll("[data-owner-issuance]").forEach(button=>button.addEventListener("click",()=>{
+      const choice=button.dataset.ownerIssuance;
+      if(choice==="custom"){if(amountField){amountField.value="";amountField.focus();}}
+      else if(amountField){amountField.value=choice;amountField.focus();}
+    }));
+    form?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const raw=String(amountField?.value||"").trim(), amountCoins=Number(raw);
+      if(!/^\d+$/.test(raw)||!Number.isSafeInteger(amountCoins)||amountCoins<1){
+        if(status)status.textContent="Enter a positive whole-number Coin amount.";
+        return;
+      }
+      const requestId=globalThis.crypto?.randomUUID?.();
+      if(!requestId){if(status)status.textContent="Secure request generation is unavailable on this device.";return;}
+      if(submitButton)submitButton.disabled=true;
+      if(amountField)amountField.disabled=true;
+      if(noteField)noteField.disabled=true;
+      if(status)status.textContent="Issuing Coins to your owner wallet securely…";
+      try{
+        const result=await api("/coins/owner-issuance",{method:"POST",body:JSON.stringify({
+          amountCoins,requestId,note:String(noteField?.value||"").trim()
+        })});
+        const issued=Number(result.issuance?.amountCoins||amountCoins);
+        toast(issued.toLocaleString()+" Minglora Coins issued to your owner wallet.");
+        await renderCoins();
+      }catch(error){
+        if(status)status.textContent=error.message||"The owner issuance could not be confirmed. Check your wallet before retrying.";
+        toast(error.message);
+        if(submitButton)submitButton.disabled=false;
+        if(amountField)amountField.disabled=false;
+        if(noteField)noteField.disabled=false;
+      }
+    });
+  }
 
   const customInput=$("#recharge-custom-amount");
   const customError=$("#recharge-custom-error");
