@@ -83,6 +83,7 @@ export function recordGifterGift(db, details = {}) {
   if (Number.isNaN(createdAt.getTime())) throw new TypeError("Gifter progression requires a valid timestamp.");
 
   const event = {
+    id: giftId,
     giftId,
     senderId,
     recipientId,
