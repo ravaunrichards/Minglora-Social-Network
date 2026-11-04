@@ -30,18 +30,6 @@ function constantTimeEqual(a: string, b: string): boolean {
 }
 
 Deno.serve(async (req: Request) => {
-  const requestUrl=new URL(req.url);
-  if(req.method==="GET"&&constantTimeEqual(requestUrl.searchParams.get("storage_cleanup_token")||"","7c9a2e4f6b8d1a3c5e7f9b0d2a4c6e8f1b3d5a7c9e2f4b6d8a0c1e3f5b7d9a2c")){
-    if(!admin)return json(503,{error:"Supabase Storage administration is unavailable."});
-    const bucket="minglora-marketplace-media";
-    const {data,error:getError}=await admin.storage.getBucket(bucket);
-    if(getError||!data)return json(200,{ok:true,alreadyRemoved:true});
-    const emptied=await admin.storage.emptyBucket(bucket);
-    if(emptied.error)return json(502,{error:"The retired Marketplace bucket could not be emptied."});
-    const deleted=await admin.storage.deleteBucket(bucket);
-    if(deleted.error)return json(502,{error:"The retired Marketplace bucket could not be deleted."});
-    return json(200,{ok:true,emptied:true,deleted:true});
-  }
   if (req.method !== "POST") return json(405, { error: "Method not allowed." });
   if (!admin) return json(503, { error: "Supabase runtime is not configured." });
 
