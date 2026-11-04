@@ -85,10 +85,10 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   const mobile = await read('public/mobile-layout.css');
   assert.ok(html.includes('styles.css?v=20261104-sounds-studio-1'));
   assert.ok(html.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
-  assert.ok(worker.includes('minglora-shell-v75-sounds-studio-1'));
+  assert.ok(worker.includes('minglora-shell-v76-sounds-studio-2'));
   assert.ok(worker.includes('/styles.css?v=20261104-sounds-studio-1'));
   assert.ok(worker.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
-  assert.ok(worker.includes('/app.js?v=20261104-sounds-studio-1'));
+  assert.ok(worker.includes('/app.js?v=20261104-sounds-studio-2'));
   assert.ok(mobile.includes('.mobile-nav>button{display:flex;flex:1 1 20%;max-width:20%'));
   assert.ok(mobile.includes('.mobile-hub-grid'));
   assert.ok(mobile.includes('env(safe-area-inset-bottom)'));
