@@ -33,7 +33,7 @@
     const c=audio();if(!c)return false;
     try{
       if(c.state==="suspended")void c.resume();
-      const p=profiles[gift.category]||profiles.other,seed=hash(gift.sound_preset||gift.code||gift.name),variation=(seed%9)-4,now=c.currentTime;
+      const p=profiles[gift.category]||profiles.other,seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),variation=(seed%9)-4,now=c.currentTime;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
         const osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
