@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   const state = { overview: null, sessions: [], gifts: [] };
+  let refreshTimer = null;
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -154,7 +155,27 @@
       catch(error) { toast(error.message); button.disabled = false; }
     }));
   }
+  function onNavigateAway() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+  async function refreshScores() {
+    const main = $("#main-content");
+    if (!main || !document.querySelector("[data-view='leagues'].active")) { onNavigateAway(); return; }
+    const focused = document.activeElement;
+    if (focused && ["INPUT","SELECT","TEXTAREA"].includes(focused.tagName)) return;
+    try {
+      const [overview, sessions] = await Promise.all([request("/leagues/overview"), request("/live/sessions")]);
+      state.overview = overview;
+      state.sessions = sessions.sessions || [];
+      const scrollTop = main.scrollTop;
+      main.innerHTML = renderMarkup(state.overview, state.sessions);
+      main.scrollTop = scrollTop;
+      bindActions();
+    } catch {}
+  }
   async function render() {
+    onNavigateAway();
     const main = $("#main-content");
     if (!main) return;
     main.innerHTML = "<section class='card empty-state'><h3>Loading League Arena</h3><p>Checking your league record and LIVE match rooms…</p></section>";
@@ -167,6 +188,7 @@
     state.gifts = results[2].status === "fulfilled" ? (results[2].value.gifts || []) : [];
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
+    refreshTimer = setInterval(refreshScores, 15000);
   }
-  window.MingloraLeagues = { render };
+  window.MingloraLeagues = { render, onNavigateAway };
 })();
