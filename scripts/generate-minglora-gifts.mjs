@@ -49,7 +49,15 @@ function symbolFor(gift) {
   const name = gift.name.toLowerCase();
   const rules = [
     [/rose|flower|tulip|bouquet|hibiscus|blossom|sakura|orchid|lotus/,"🌹"],
-    [/heart|love|kiss|cupid|hug|romance|valentine/,"💖"],
+    [/cnc coin/,"🪙"], [/easter heart/,"💖"], [/fighting|boxing glove|boxing/,"🥊"],
+    [/kitty pillow/,"🐱"], [/otter/,"🦦"], [/four leaf clover|clover/,"🍀"],
+    [/dj headphone|headphone/,"🎧"], [/yalla sahel/,"👋"], [/merdeka|festival/,"🎊"],
+    [/pop, don/,"🎈"], [/house hat/,"🎩"], [/let.?s be friends/,"🤝"],
+    [/audience laughter/,"😂"], [/star hero stage/,"🌟"], [/picture perfect/,"📸"],
+    [/championship hall/,"🏆"], [/klcc|jakarta roundabout/,"🏙️"],
+    [/alpha wolves/,"🐺"], [/golden falcons|falcon/,"🦅"], [/keeper of atlantis/,"🔱"],
+    [/noble stallions|stallion/,"🐎"], [/royal lions|lion/,"🦁"],
+    [/ultimate match/,"⚔️"], [/goal of glory/,"🏆"], [/flamenco dancers/,"💃"],
     [/baseball/,"⚾"], [/basketball/,"🏀"], [/football|soccer/,"⚽"], [/volleyball/,"🏐"],
     [/tennis/,"🎾"], [/cricket/,"🏏"], [/boxing glove|boxing/,"🥊"], [/golf/,"⛳"],
     [/cat|kitten/,"🐱"], [/dog|puppy|shiba|corgi/,"🐶"], [/bear|panda/,"🐻"],
@@ -104,6 +112,10 @@ function svgArt(gift) {
   let shape = "";
   if (/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(name)) {
     shape = '<path d="M256 304v122m0-78c-58-39-81 8-81 8 40 37 62 12 81-8zm0 31c57-42 81 7 81 7-41 37-62 12-81-7z" fill="none" stroke="#58c27b" stroke-width="17" stroke-linecap="round"/><path d="M246 325q-52-39-43-82m65 82q52-39 43-82" fill="none" stroke="#429c68" stroke-width="7"/><g fill="url(#main)" stroke="#fff" stroke-opacity=".7" stroke-width="5"><ellipse cx="256" cy="208" rx="37" ry="79"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(55 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(110 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(165 256 256)"/></g><circle cx="256" cy="256" r="39" fill="url(#shine)"/>';
+  } else if (/cnc coin/.test(name)) {
+    shape = '<circle cx="256" cy="256" r="145" fill="url(#main)" stroke="#fff" stroke-width="13"/><circle cx="256" cy="256" r="115" fill="none" stroke="url(#shine)" stroke-width="12"/><path d="M256 166v180m-43-143h58q38 0 38 33t-38 33h-46q-37 0-37 32t38 32h59" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/><path d="M256 126v-24m0 308v-24" stroke="#fff" stroke-width="8" stroke-linecap="round"/>';
+  } else if (/fighting/.test(name)) {
+    shape = '<path d="M163 311q-13-22 5-43l39-49q14-16 31-5l20 13 23-43q15-24 34-9 13 10 5 29l-19 45 24-33q17-20 34-5 13 12 1 31l-26 42q25-19 40-1 12 15-3 33l-48 61q-23 30-62 28l-59-7q-40-7-50-43z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M162 346l-34 28 41 59 37-30" fill="#f3b2c9" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M225 253l25 20m21-47 24 19m21-17 22 18" fill="none" stroke="url(#shine)" stroke-width="13" stroke-linecap="round"/>';
   } else if (/baseball/.test(name)) {
     shape = '<circle cx="256" cy="252" r="132" fill="#fff" stroke="#d6e2ef" stroke-width="12"/><path d="M158 154q98 98 0 196m196-196q-98 98 0 196" fill="none" stroke="#d84854" stroke-width="12" stroke-linecap="round"/><path d="M165 173l-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34-173 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15" stroke="#d84854" stroke-width="7" stroke-linecap="round"/>';
   } else if (/ice cream|gelato|popsicle/.test(name)) {
@@ -245,7 +257,28 @@ function modelDocument(gift) {
   cylinder(0,-.68,0,.64,.12,dark,28);
   torus(0,-.59,0,.55,.035,light,28,8);
   const c=gift.category,n=gift.name.toLowerCase();
-  if(/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(n)){
+  if(/cnc coin/.test(n)){
+    cylinder(0,.02,0,.43,.13,"#d7a83d",32,.025);
+    cylinder(0,.02,.075,.4,.07,"#f3d36d",32,.02);
+    torus(0,.02,0,.4,.025,"#fff0a8",32,8);
+    sphere(0,.1,.12,.075,.075,.035,"#fff4bb",10,7);
+  } else if(/fighting/.test(n)){
+    sphere(0,.17,0,.34,.28,.3,"#d85c73",18,10);
+    sphere(.21,.3,.04,.19,.17,.19,"#f0788d",14,9);
+    sphere(.03,.39,.03,.17,.16,.17,"#f0788d",14,9);
+    sphere(-.14,.34,.02,.16,.15,.16,"#f0788d",14,9);
+    cylinder(-.12,-.12,0,.23,.25,"#b33d5a",16,.03);
+    torus(0,.12,0,.34,.025,light,24,7);
+  } else if(/four leaf clover/.test(n)){
+    for(let i=0;i<4;i++){const a=Math.PI/4+i*Math.PI/2;sphere(Math.cos(a)*.18,.34+Math.sin(a)*.04,Math.sin(a)*.18,.19,.19,.16,"#55b96d",12,8);}
+    cylinder(0,-.08,0,.025,.5,"#36894e",10,.005);
+  } else if(/dj headphone/.test(n)){
+    torus(0,.28,0,.34,.055,"#6d70ba",24,8);
+    sphere(-.34,.08,0,.11,.2,.12,"#4a4d9c",12,8);
+    sphere(.34,.08,0,.11,.2,.12,"#4a4d9c",12,8);
+    sphere(-.34,.08,.13,.06,.12,.04,light,10,7);
+    sphere(.34,.08,.13,.06,.12,.04,light,10,7);
+  } else if(/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(n)){
     cylinder(0,-.28,0,.035,.76,"#55b975",12);
     sphere(-.23,-.34,0,.24,.075,.12,"#6cc88a");
     sphere(.21,-.18,0,.23,.075,.12,"#72d99a");
