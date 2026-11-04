@@ -8,7 +8,9 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
 
 test('desktop and mobile primary navigation stay focused while secondary destinations remain accessible',()=>{
-  const desktop=html.match(/<nav class="top-nav" aria-label="Main navigation">([\\s\\S]*?)<\\/nav>/)?.[1]||'';
+  const desktopStart=html.indexOf('<nav class="top-nav" aria-label="Main navigation">');
+  const desktopEnd=html.indexOf('</nav>',desktopStart);
+  const desktop=html.slice(desktopStart,desktopEnd);
   const expected=['feed','for-you','live','meetwave','leagues'];
   assert.deepEqual([...desktop.matchAll(/data-view="([^"]+)"/g)].map(match=>match[1]),expected);
 
