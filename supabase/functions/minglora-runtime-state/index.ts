@@ -225,7 +225,7 @@ Deno.serve(async (req: Request) => {
 
   if (action === "subscription_admin_queue") {
     const { data, error } = await admin.from("subscription_creator_settings")
-      .select("creator_id,application_status,application_note,created_at,updated_at,is_verified")
+      .select("creator_id,application_status,application_note,created_at,updated_at")
       .eq("application_status", "pending").order("created_at", { ascending: true }).limit(200);
     if (error) return json(503, { error: "Creator subscription applications are unavailable." });
     return json(200, { applications: data || [] });
@@ -401,7 +401,7 @@ Deno.serve(async (req: Request) => {
     const eventId = String(event?.id || ""), eventType = String(event?.event_type || "");
     const resource = event?.resource || {};
     const allowedEvents = new Set([
-      "BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED",
+      "BILLING.SUBSCRIPTION.CREATED", "BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED",
       "BILLING.SUBSCRIPTION.CANCELLED", "BILLING.SUBSCRIPTION.EXPIRED",
       "BILLING.SUBSCRIPTION.SUSPENDED", "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
       "PAYMENT.SALE.COMPLETED", "PAYMENT.SALE.REFUNDED", "PAYMENT.SALE.REVERSED"
