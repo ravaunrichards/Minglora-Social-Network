@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, rechargeTab:'recharge' };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
 const fallbackAvatar = name => {
@@ -1148,17 +1148,161 @@ async function openLiveRoom(session,role,issuedLiveKit){
     throw error;
   }
 }
+
 async function renderCoins(){
-  activateSilent("coins");const results=await Promise.all([api("/coins/catalog"),api("/coins/wallet")]),catalog=results[0],wallet=results[1];
-  const balance=Number(wallet.wallet?.balance_coins||0),packages=catalog.packages||[];
-  setContent("<div class='page-heading'><div><span class='eyebrow'>Minglora Coins</span><h1>Your Coins</h1><p class='muted'>Recharge securely and use Coins to support creators during LIVE.</p></div><div class='coin-balance-card'><small>Available balance</small><strong>"+balance.toLocaleString()+"</strong><span>Minglora Coins</span></div></div>"+
-    "<section class='card'><div class='feed-header'><h2>Choose a recharge package</h2><span class='muted'>Secure PayPal checkout · USD</span></div><div class='coin-package-grid'>"+
-    packages.map(pack=>"<button type='button' class='coin-package-card' data-coin-package='"+esc(pack.code)+"'><span>"+esc(pack.name)+"</span><strong>"+Number(pack.coin_amount).toLocaleString()+"</strong><small>Minglora Coins</small><b>"+liveMoney(pack.price_minor)+"</b></button>").join("")+
-    "</div><form id='custom-coins-form' class='custom-coins-form'><label for='custom-coin-amount'>Or choose a custom amount</label><div><input id='custom-coin-amount' name='coinAmount' type='number' min='100' max='100000' step='2' value='200' required><button class='primary' type='submit'>Buy custom amount</button></div><small>100–100,000 Minglora Coins · 1 Coin = USD $0.01</small></form></section>"+
-    "<section class='card'><div class='feed-header'><h2>Coin activity</h2><span class='muted'>Your latest wallet transactions</span></div>"+
-    ((wallet.ledger||[]).length?wallet.ledger.slice(0,40).map(item=>"<div class='coin-ledger-row'><div><strong>"+esc(item.description||item.entry_type||"Wallet activity")+"</strong><small>"+timeAgo(item.created_at)+"</small></div><b class='"+(Number(item.delta_coins)>=0?"positive":"negative")+"'>"+(Number(item.delta_coins)>0?"+":"")+Number(item.delta_coins).toLocaleString()+" Coins</b></div>").join(""):"<p class='muted'>Your Coin activity will appear here.</p>")+"</section>");
-  document.querySelectorAll("[data-coin-package]").forEach(button=>button.addEventListener("click",()=>startCoinPurchase({packageCode:button.dataset.coinPackage,button})));
-  $("#custom-coins-form")?.addEventListener("submit",event=>{event.preventDefault();startCoinPurchase({coinAmount:Number(event.currentTarget.elements.coinAmount.value),button:event.currentTarget.querySelector("button")});});
+  activateSilent("coins");
+  const walletResults=await Promise.allSettled([api("/coins/catalog"),api("/coins/wallet")]);
+  if(walletResults[0].status==="rejected")throw walletResults[0].reason;
+  const catalog=walletResults[0].value||{};
+  const wallet=walletResults[1].status==="fulfilled"?walletResults[1].value:{wallet:null,ledger:[]};
+  const balance=Number(wallet.wallet?.balance_coins||0);
+  const packages=Array.isArray(catalog.packages)?catalog.packages:[];
+  const activeTab=state.rechargeTab==="exchange"?"exchange":"recharge";
+  const header="<header class='recharge-page-heading'><div><span class='eyebrow'>MINGLORA WALLET</span><h1>Recharge</h1><p class='muted'>Choose a Coin package, set a custom amount, and pay securely with PayPal.</p></div><div class='coin-balance-card'><small>AVAILABLE BALANCE</small><strong>"+(wallet.wallet&&wallet.wallet.balance_coins!=null?balance.toLocaleString():"—")+"</strong><span>Minglora Coins</span></div></header>";
+  const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button></nav>";
+  const bindTabs=()=>{
+    document.querySelectorAll("[data-recharge-tab]").forEach(button=>button.addEventListener("click",()=>{
+      state.rechargeTab=button.dataset.rechargeTab==="exchange"?"exchange":"recharge";
+      renderCoins().catch(error=>setContent("<section class='card empty-state'><h2>Recharge could not load</h2><p>"+esc(error.message)+"</p><button class='secondary' id='recharge-retry'>Try again</button></section>"));
+    }));
+  };
+
+  if(activeTab==="exchange"){
+    let earnings=null,earningsError="";
+    try{earnings=await api("/creator/earnings");}
+    catch(error){earningsError=error.message||"Creator earnings are unavailable.";}
+    if(earningsError||!earnings){
+      setContent("<div class='recharge-page'>"+header+tabs+"<section class='card recharge-exchange-unavailable'><span class='eyebrow'>CREATOR EXCHANGE</span><h2>Exchange is unavailable right now</h2><p class='muted'>"+esc(earningsError||"Minglora could not load your eligible creator earnings.")+"</p><button type='button' class='secondary' id='recharge-exchange-retry'>Try again</button></section></div>");
+      bindTabs();
+      $("#recharge-exchange-retry")?.addEventListener("click",()=>renderCoins().catch(error=>toast(error.message)));
+      return;
+    }
+
+    const ledger=Array.isArray(earnings.ledger)?earnings.ledger:[];
+    const payouts=Array.isArray(earnings.payouts)?earnings.payouts:[];
+    const payoutAccount=earnings.payoutAccount||null;
+    const eligibleMinor=Math.max(0,Number(earnings.earnedMinor)||0);
+    const availableMinor=Math.max(0,Number(earnings.availableMinor)||0);
+    const platformMinor=ledger.reduce((sum,item)=>sum+Math.max(0,Number(item.platform_share_minor)||0),0);
+    const earningRows=ledger.length?ledger.slice(0,30).map(item=>
+      "<article class='recharge-history-row'><div><strong>LIVE gift earnings</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span>Creator share</span><b>"+creatorMoney(item.creator_share_minor)+"</b></article>"
+    ).join(""):"<div class='recharge-empty'><strong>No eligible creator earnings yet</strong><p>Your real creator share from confirmed LIVE gifts will appear here.</p></div>";
+    const payoutRows=payouts.length?payouts.slice(0,20).map(item=>
+      "<article class='recharge-history-row'><div><strong>"+esc(String(item.status||"unknown").replace(/_/g," ").toUpperCase())+"</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span>PayPal</span><b>"+creatorMoney(item.amount_minor)+"</b></article>"
+    ).join(""):"<div class='recharge-empty'><strong>No exchange requests yet</strong><p>Submitted PayPal withdrawals will appear here with their latest recorded status.</p></div>";
+    const amountValue=availableMinor>=100?(availableMinor/100).toFixed(2):"1.00";
+    const exchangeContent=
+      "<section class='recharge-exchange-intro'><div><span class='eyebrow'>CREATOR EARNINGS</span><h2>Exchange eligible earnings</h2><p>Withdraw the creator share you have earned from eligible LIVE gifts to your PayPal account.</p></div><span class='recharge-exchange-mark' aria-hidden='true'>↗</span></section>"+
+      "<div class='recharge-exchange-metrics'>"+
+      "<article><small>Your eligible creator share</small><strong>"+creatorMoney(eligibleMinor)+"</strong><span>50% of eligible LIVE gift value</span></article>"+
+      "<article><small>Available to exchange</small><strong>"+creatorMoney(availableMinor)+"</strong><span>After existing payout reservations</span></article>"+
+      "<article><small>Minglora platform share</small><strong>"+creatorMoney(platformMinor)+"</strong><span>Recorded separately in the gift ledger</span></article></div>"+
+      "<div class='recharge-exchange-grid'><section class='card recharge-exchange-card'><span class='eyebrow'>PAYPAL PAYOUT</span><h3>PayPal recipient</h3><p class='muted'>Save the PayPal email where you receive creator earnings. You can update it at any time.</p>"+
+      "<form id='recharge-paypal-account-form' class='recharge-form'><label for='recharge-paypal-email'>PayPal account email</label><input id='recharge-paypal-email' name='paypalEmail' type='email' autocomplete='email' maxlength='254' required placeholder='your-paypal@example.com' value='"+esc(payoutAccount?.paypal_email||"")+"'><button type='submit' class='secondary'>Save PayPal email</button><p id='recharge-paypal-account-status' class='recharge-form-status' role='status'></p></form>"+
+      "<form id='recharge-exchange-form' class='recharge-form'><label for='recharge-exchange-amount'>Amount to exchange (USD)</label><div class='recharge-exchange-amount-wrap'><span>$</span><input id='recharge-exchange-amount' name='amount' type='number' min='1.00' step='0.01' max='"+(availableMinor/100).toFixed(2)+"' value='"+amountValue+"' required></div><small>Minimum exchange: USD $1.00. Maximum: "+creatorMoney(availableMinor)+".</small><button type='submit' class='primary' "+(payoutAccount&&availableMinor>=100?"":"disabled")+">Exchange to PayPal</button><p id='recharge-exchange-status' class='recharge-form-status' role='status'></p></form></section>"+
+      "<section class='card recharge-exchange-card'><span class='eyebrow'>PAYOUT HISTORY</span><h3>Your exchanges</h3><div class='recharge-history-list'>"+payoutRows+"</div></section></div>"+
+      "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>CREATOR LEDGER</span><h3>Eligible gift earnings</h3></div><span class='muted'>Real settled activity</span></div><div class='recharge-history-list'>"+earningRows+"</div></section>"+
+      "<p class='recharge-exchange-note'>Only eligible creator earnings can be exchanged for a PayPal payout. Coins purchased for gifting stay in your Minglora Coin balance and cannot be converted to cash. Payout requests are subject to PayPal processing and account eligibility.</p>";
+    setContent("<div class='recharge-page'>"+header+tabs+exchangeContent+"</div>");
+    bindTabs();
+    $("#recharge-paypal-account-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=$("#recharge-paypal-account-status");
+      button.disabled=true;
+      try{
+        await api("/creator/payout-account",{method:"PUT",body:JSON.stringify({paypalEmail:form.elements.paypalEmail.value})});
+        toast("PayPal payout details saved.");
+        if(status)status.textContent="Your PayPal recipient has been saved.";
+        await renderCoins();
+      }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+    $("#recharge-exchange-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,amount=Number(form.elements.amount.value),button=form.querySelector("button[type='submit']"),status=$("#recharge-exchange-status");
+      const amountMinor=Math.round(amount*100);
+      if(!Number.isFinite(amount)||!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>availableMinor){
+        if(status)status.textContent="Enter at least USD $1.00 and no more than your available creator earnings.";
+        return;
+      }
+      if(!payoutAccount){if(status)status.textContent="Save your PayPal recipient email first.";return;}
+      button.disabled=true;
+      try{
+        const result=await api("/creator/payouts",{method:"POST",body:JSON.stringify({amountMinor})});
+        toast("PayPal exchange submitted. Status: "+String(result.status||"processing")+".");
+        await renderCoins();
+      }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+    return;
+  }
+
+  let selection=packages.length?{
+    packageCode:String(packages[0].code),
+    coinAmount:Number(packages[0].coin_amount),
+    amountMinor:Number(packages[0].price_minor),
+    label:String(packages[0].name||"Coin package")
+  }:null;
+  const packageCards=packages.map(pack=>
+    "<button type='button' class='recharge-package-card "+(selection?.packageCode===pack.code?"is-selected":"")+"' data-coin-package='"+esc(pack.code)+"' aria-pressed='"+(selection?.packageCode===pack.code?"true":"false")+"'><span class='recharge-package-label'>"+esc(pack.name||"Coin package")+"</span><strong>"+Number(pack.coin_amount).toLocaleString()+"</strong><small>Minglora Coins</small><b>"+liveMoney(pack.price_minor)+"</b></button>"
+  ).join("");
+  const history=(wallet.ledger||[]).length?(wallet.ledger||[]).slice(0,30).map(item=>
+    "<article class='recharge-history-row'><div><strong>"+esc(item.description||item.entry_type||"Wallet activity")+"</strong><small>"+timeAgo(item.created_at)+"</small></div><b class='"+(Number(item.delta_coins)>=0?"positive":"negative")+"'>"+(Number(item.delta_coins)>0?"+":"")+Number(item.delta_coins).toLocaleString()+" Coins</b></article>"
+  ).join(""):"<div class='recharge-empty'><strong>No Coin activity yet</strong><p>Your real Coin purchases and spending will appear here.</p></div>";
+  const content=
+    "<div class='recharge-layout'><section class='card recharge-main-card'><div class='recharge-section-heading'><div><span class='eyebrow'>MINGLORA COINS</span><h2>Choose your package</h2><p class='muted'>Select a package or enter a custom Coin amount.</p></div><span class='recharge-payment-note'>PayPal checkout · USD</span></div>"+
+    (packageCards?"<div class='recharge-package-grid' id='recharge-package-grid'>"+packageCards+"</div>":"<div class='recharge-empty'><strong>Coin packages are unavailable</strong><p>You can still enter a valid custom amount below.</p></div>")+
+    "<div class='recharge-custom-panel'><label for='recharge-custom-amount'>Custom amount</label><div class='recharge-custom-controls'><input id='recharge-custom-amount' name='coinAmount' type='number' min='100' max='100000' step='2' inputmode='numeric' placeholder='Enter Coins (100–100,000)'><span>Minglora Coins</span></div><small>Enter an even amount from 100 to 100,000 Coins. Custom recharge is USD $0.01 per Coin.</small><p id='recharge-custom-error' class='recharge-form-status' role='status'></p></div></section>"+
+    "<aside class='card recharge-checkout-card'><span class='eyebrow'>ORDER SUMMARY</span><h2>Your recharge</h2><div id='recharge-order-summary' class='recharge-order-summary'></div><div class='recharge-checkout-rule'></div><div class='recharge-checkout-total'><span>Total</span><strong id='recharge-total'>"+(selection?liveMoney(selection.amountMinor):"—")+"</strong></div><div class='recharge-payment-method'><span class='recharge-paypal-mark'>P</span><div><strong>PayPal</strong><small>Secure checkout</small></div></div><button type='button' id='recharge-confirm' class='primary full' "+(selection?"":"disabled")+">Recharge</button><small class='recharge-secure-note'>You will review and approve the payment on PayPal before Coins are credited.</small></aside></div>"+
+    "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>YOUR WALLET</span><h2>Coin activity</h2></div><span class='muted'>Latest transactions</span></div><div class='recharge-history-list'>"+history+"</div></section>"+
+    "<p class='recharge-exchange-note'>Minglora Coins are for use within Minglora, including sending gifts. Creator earnings are handled separately in the Exchange tab.</p>";
+  setContent("<div class='recharge-page'>"+header+tabs+content+"</div>");
+  bindTabs();
+
+  const customInput=$("#recharge-custom-amount");
+  const customError=$("#recharge-custom-error");
+  const summary=$("#recharge-order-summary");
+  const total=$("#recharge-total");
+  const confirmButton=$("#recharge-confirm");
+  const updateSelection=()=>{
+    document.querySelectorAll("[data-coin-package]").forEach(button=>{
+      const selected=Boolean(selection?.packageCode&&button.dataset.coinPackage===selection.packageCode);
+      button.classList.toggle("is-selected",selected);
+      button.setAttribute("aria-pressed",selected?"true":"false");
+    });
+    if(summary){
+      summary.innerHTML=selection
+        ?"<div><span>"+esc(selection.label||"Custom recharge")+"</span><strong>"+Number(selection.coinAmount).toLocaleString()+" Coins</strong></div><p>Coins will be added after PayPal confirms the payment.</p>"
+        :"<div><span>No package selected</span><strong>—</strong></div><p>Select a package or enter a valid custom amount.</p>";
+    }
+    if(total)total.textContent=selection?liveMoney(selection.amountMinor):"—";
+    if(confirmButton)confirmButton.disabled=!selection;
+  };
+  document.querySelectorAll("[data-coin-package]").forEach(button=>button.addEventListener("click",()=>{
+    const pack=packages.find(item=>String(item.code)===button.dataset.coinPackage);
+    if(!pack)return;
+    selection={packageCode:String(pack.code),coinAmount:Number(pack.coin_amount),amountMinor:Number(pack.price_minor),label:String(pack.name||"Coin package")};
+    if(customInput)customInput.value="";
+    if(customError)customError.textContent="";
+    updateSelection();
+  }));
+  customInput?.addEventListener("input",()=>{
+    const raw=customInput.value;
+    const amount=Number(raw);
+    if(!raw){selection=null;if(customError)customError.textContent="";updateSelection();return;}
+    if(!Number.isSafeInteger(amount)||amount<100||amount>100000||amount%2!==0){
+      selection=null;
+      if(customError)customError.textContent="Enter an even amount from 100 to 100,000 Coins.";
+      updateSelection();
+      return;
+    }
+    selection={coinAmount:amount,amountMinor:amount,label:"Custom recharge"};
+    if(customError)customError.textContent="";
+    updateSelection();
+  });
+  confirmButton?.addEventListener("click",()=>{
+    if(!selection)return;
+    startCoinPurchase({...selection,button:confirmButton});
+  });
+  updateSelection();
 }
 async function startCoinPurchase(selection){
   const button=selection.button;if(button)button.disabled=true;
@@ -4298,7 +4442,7 @@ function renderMoreHub(){
       {label:'Leagues',detail:'Matches, rankings and rewards',view:'leagues',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏆</span>'},
       {label:'Gifts',detail:'Browse and send member gifts',view:'gifts',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🎁</span>'},
       {label:'Gifter Levels & Badges',detail:'Track your level, XP and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
-      {label:'Minglora Coins',detail:'Your coin balance and activity',view:'coins',icon:messenger3dIcon('coins','mobile-hub-icon')}
+      {label:'Recharge',detail:'Buy Minglora Coins and exchange creator earnings',view:'coins',icon:messenger3dIcon('coins','mobile-hub-icon')}
     ]},
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
