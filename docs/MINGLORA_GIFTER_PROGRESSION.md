@@ -16,6 +16,10 @@ The first level starts at 0 XP. For level N above 1, the cumulative threshold is
 
 Thresholds are lifetime totals. The maximum level is 50. The client receives the server-calculated current level, XP, progress, chart, history, and leaderboard; it cannot submit or award XP.
 
+## Level 25 milestone
+
+Level 25 is a special milestone that unlocks the Minglora LIVE entrance badge/recognition. The progression page shows whether this milestone is unlocked and the remaining lifetime XP.
+
 ## Persistence and deduplication
 
 Confirmed gift transaction IDs are stored in `gifterProgressionLedger`, a persisted Minglora runtime-state collection. The service rejects malformed events, self-gifts, non-positive Coin amounts, and duplicate transaction IDs. The direct-gift and LIVE-gift routes record events only after the Supabase economy operation confirms the transaction.
