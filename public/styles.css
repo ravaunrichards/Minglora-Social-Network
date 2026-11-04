@@ -3586,3 +3586,87 @@ body.auth-mode .auth-screen{
   .post-soundtrack{padding:9px}
 }
 @media(prefers-reduced-motion:reduce){.audio-recording-indicator.is-recording span{animation:none}}
+
+/* Recharge and creator earnings exchange */
+.recharge-page{display:grid;gap:18px;min-width:0}
+.recharge-page-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:0}
+.recharge-page-heading h1{margin:5px 0;font-size:clamp(1.7rem,3vw,2.25rem);line-height:1.1}
+.recharge-page-heading p{margin:0;max-width:620px}
+.recharge-page-heading .coin-balance-card{min-width:170px;flex:0 0 auto}
+.recharge-tabs{display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:0 2px}
+.recharge-tabs button{position:relative;border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:800;padding:12px 16px;cursor:pointer}
+.recharge-tabs button.active{color:var(--blue)}
+.recharge-tabs button.active:after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:3px;border-radius:99px;background:var(--blue)}
+.recharge-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,.75fr);gap:16px;align-items:start}
+.recharge-main-card,.recharge-checkout-card,.recharge-exchange-card,.recharge-history-card{min-width:0}
+.recharge-section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.recharge-section-heading h2{margin:4px 0;font-size:1.2rem}
+.recharge-section-heading p{margin:0;font-size:.85rem}
+.recharge-payment-note{font-size:.72rem;color:var(--muted);white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:7px 10px}
+.recharge-package-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.recharge-package-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:132px;padding:14px 9px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.recharge-package-card:hover{border-color:var(--blue)}
+.recharge-package-card.is-selected{border:2px solid var(--blue);padding:13px 8px;background:color-mix(in srgb,var(--blue) 6%,var(--surface));box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 9%,transparent)}
+.recharge-package-label{font-size:.74rem;color:var(--muted);text-align:center}
+.recharge-package-card strong{font-size:1.55rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.recharge-package-card small{font-size:.65rem;color:var(--muted)}
+.recharge-package-card b{font-size:.87rem;color:var(--blue)}
+.recharge-custom-panel{display:grid;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.recharge-custom-panel>label,.recharge-form>label{font-size:.84rem;font-weight:800}
+.recharge-custom-controls{display:flex;align-items:center;gap:10px;max-width:440px}
+.recharge-custom-controls input,.recharge-form input{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);padding:11px 12px;font:inherit}
+.recharge-custom-controls span{white-space:nowrap;color:var(--muted);font-size:.8rem}
+.recharge-custom-panel small,.recharge-secure-note{color:var(--muted);font-size:.72rem}
+.recharge-form-status{min-height:1em;margin:0;color:var(--muted);font-size:.76rem}
+.recharge-checkout-card{position:sticky;top:82px;display:grid;gap:12px}
+.recharge-checkout-card h2{font-size:1.2rem;margin:0}
+.recharge-order-summary{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.recharge-order-summary>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.recharge-order-summary>div span{font-size:.8rem;color:var(--muted)}
+.recharge-order-summary>div strong{font-size:.88rem;text-align:right}
+.recharge-order-summary p{margin:7px 0 0;font-size:.72rem;color:var(--muted)}
+.recharge-checkout-rule{height:1px;background:var(--line)}
+.recharge-checkout-total{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.recharge-checkout-total span{font-size:.85rem;color:var(--muted)}
+.recharge-checkout-total strong{font-size:1.35rem;font-variant-numeric:tabular-nums}
+.recharge-payment-method{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);border-radius:11px}
+.recharge-paypal-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#e9f1ff;color:#1452a3;font-size:1.25rem;font-weight:950;font-style:italic}
+.recharge-payment-method>div{display:grid;gap:2px}
+.recharge-payment-method strong{font-size:.82rem}
+.recharge-payment-method small{font-size:.68rem;color:var(--muted)}
+.recharge-checkout-card .primary:disabled{opacity:.5;cursor:not-allowed}
+.recharge-history-card{display:grid;gap:12px}
+.recharge-history-card .recharge-section-heading{margin-bottom:0}
+.recharge-history-list{display:grid}
+.recharge-history-row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);min-width:0}
+.recharge-history-row>div{display:grid;gap:4px;min-width:0;flex:1}
+.recharge-history-row strong{font-size:.82rem;overflow-wrap:anywhere}
+.recharge-history-row small,.recharge-history-row>span{font-size:.7rem;color:var(--muted)}
+.recharge-history-row>b{font-size:.82rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.recharge-empty{padding:25px 12px;text-align:center;color:var(--muted)}
+.recharge-empty strong{font-size:.85rem;color:var(--text)}
+.recharge-empty p{margin:5px auto 0;font-size:.76rem;max-width:380px}
+.recharge-exchange-intro{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px 20px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(115deg,var(--surface),var(--soft))}
+.recharge-exchange-intro h2{font-size:1.25rem;margin:5px 0}
+.recharge-exchange-intro p{font-size:.83rem;margin:0;color:var(--muted)}
+.recharge-exchange-mark{display:grid;place-items:center;width:52px;height:52px;flex:0 0 auto;border-radius:16px;background:var(--surface);border:1px solid var(--line);color:var(--blue);font-size:1.55rem}
+.recharge-exchange-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.recharge-exchange-metrics article{display:grid;gap:6px;min-width:0;padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.recharge-exchange-metrics small{font-size:.73rem;color:var(--muted)}
+.recharge-exchange-metrics strong{font-size:1.35rem;line-height:1.15;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.recharge-exchange-metrics span{font-size:.68rem;color:var(--muted)}
+.recharge-exchange-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.recharge-exchange-card h3{font-size:1.05rem;margin:5px 0}
+.recharge-exchange-card>p{font-size:.78rem;margin:0 0 15px}
+.recharge-form{display:grid;gap:8px;margin-top:14px}
+.recharge-form input{font-size:.88rem}
+.recharge-form button{justify-self:start}
+.recharge-form>small{font-size:.7rem;color:var(--muted)}
+.recharge-form-status{overflow-wrap:anywhere}
+.recharge-exchange-amount-wrap{position:relative}
+.recharge-exchange-amount-wrap>span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;font-weight:800;color:var(--muted)}
+.recharge-exchange-amount-wrap input{padding-left:28px}
+.recharge-exchange-note{margin:0;padding:0 2px;font-size:.74rem;line-height:1.55;color:var(--muted)}
+.recharge-exchange-unavailable{padding:24px}
+@media(max-width:900px){.recharge-layout{grid-template-columns:minmax(0,1fr) 270px}.recharge-package-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.recharge-page{gap:13px}.recharge-page-heading{align-items:stretch;flex-direction:column}.recharge-page-heading .coin-balance-card{width:100%}.recharge-tabs button{flex:1}.recharge-layout{grid-template-columns:1fr}.recharge-checkout-card{position:static}.recharge-package-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.recharge-package-card{min-height:116px;padding:11px 7px}.recharge-section-heading{flex-direction:column}.recharge-payment-note{align-self:flex-start}.recharge-custom-controls{max-width:none}.recharge-exchange-metrics{grid-template-columns:1fr 1fr}.recharge-exchange-metrics article:last-child{grid-column:1/-1}.recharge-exchange-grid{grid-template-columns:1fr}.recharge-exchange-intro{padding:15px}.recharge-exchange-mark{width:43px;height:43px}.recharge-exchange-card{padding:15px!important}.recharge-history-row{gap:8px}.recharge-history-row>span{display:none}}
