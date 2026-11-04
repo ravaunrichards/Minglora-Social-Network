@@ -727,6 +727,24 @@ async function route(req, res) {
     }
     const eventType = String(event.event_type || '');
     const resource = event.resource || {};
+    const subscriptionEvents = new Set([
+      'BILLING.SUBSCRIPTION.CREATED','BILLING.SUBSCRIPTION.ACTIVATED','BILLING.SUBSCRIPTION.UPDATED',
+      'BILLING.SUBSCRIPTION.CANCELLED','BILLING.SUBSCRIPTION.EXPIRED','BILLING.SUBSCRIPTION.SUSPENDED',
+      'BILLING.SUBSCRIPTION.PAYMENT.FAILED','PAYMENT.SALE.COMPLETED','PAYMENT.SALE.REFUNDED','PAYMENT.SALE.REVERSED'
+    ]);
+    if(subscriptionEvents.has(eventType)){
+      const paypalSubscriptionId=String(resource.billing_agreement_id||
+        (eventType.startsWith('BILLING.SUBSCRIPTION.')?resource.id:'')||'');
+      let subscriptionDetails=null;
+      if(paypalSubscriptionId){
+        subscriptionDetails=await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(paypalSubscriptionId),'GET',undefined);
+      }
+      const result=await requestSupabaseState('subscription_paypal_webhook',{
+        event,subscriptionDetails
+      });
+      if(result.matched===false)return json(res,202,{received:true,matched:false});
+      return json(res,200,{received:true,processed:Boolean(result.processed),duplicate:Boolean(result.duplicate)});
+    }
     const batchId = String(resource.payout_batch_id || resource.batch_header?.payout_batch_id || '');
     const succeeded = ['PAYMENT.PAYOUTSBATCH.SUCCESS', 'PAYMENT.PAYOUTS-ITEM.SUCCEEDED'].includes(eventType);
     const failed = ['PAYMENT.PAYOUTSBATCH.DENIED', 'PAYMENT.PAYOUTS-ITEM.FAILED', 'PAYMENT.PAYOUTS-ITEM.BLOCKED'].includes(eventType);
@@ -743,6 +761,138 @@ async function route(req, res) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
     try {
+      if (p.startsWith('/api/subscriptions/')) {
+        requireAuth(user);
+        if(method==='POST'&&p==='/api/subscriptions/apply'){
+          const result=await requestSupabaseState('subscription_apply',{userId:user.id,applicationNote:String(input.applicationNote||'').trim()});
+          return json(res,200,result);
+        }
+        if(method==='GET'&&p==='/api/subscriptions/mine'){
+          return json(res,200,await requestSupabaseState('subscription_my',{userId:user.id}));
+        }
+        const creatorMatch=p.match(/^\/api\/subscriptions\/creator\/([0-9a-f-]{36})$/i);
+        if(method==='GET'&&creatorMatch){
+          const creatorId=creatorMatch[1];
+          const [creator,all]=await Promise.all([
+            requestSupabaseState('subscription_creator_get',{userId:creatorId}),
+            requestSupabaseState('subscription_my',{userId:user.id})
+          ]);
+          const mySubscription=(all.subscriptions||[]).find(item=>item.creator_id===creatorId&&item.subscriber_id===user.id)||null;
+          const approved=creator.settings?.application_status==='approved';
+          return json(res,200,{
+            creatorId,
+            available:Boolean(approved&&creator.settings?.subscriptions_enabled&&creator.tier?.paypal_plan_id),
+            tier:approved&&creator.settings?.subscriptions_enabled&&creator.tier?{
+              id:creator.tier.id,name:creator.tier.name,description:creator.tier.description,
+              currency:creator.tier.currency,priceMinor:creator.tier.price_minor,
+              billingInterval:creator.tier.billing_interval,benefits:creator.tier.benefits
+            }:null,
+            activeSubscribers:creator.activeSubscribers||0,
+            mySubscription:mySubscription?{
+              id:mySubscription.id,status:mySubscription.status,currentPeriodEnd:mySubscription.current_period_end,
+              cancelAtPeriodEnd:mySubscription.cancel_at_period_end
+            }:null
+          });
+        }
+        if(method==='POST'&&p==='/api/subscriptions/tier'){
+          const priceMinor=Number(input.priceMinor);
+          const name=String(input.name||'Monthly membership').trim();
+          const description=String(input.description||'').trim();
+          const benefits=Array.isArray(input.benefits)?input.benefits.map(value=>String(value).trim()).filter(Boolean).slice(0,8):[];
+          if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||priceMinor%2!==0||
+            name.length<2||name.length>48||description.length>500||benefits.some(value=>value.length>100)){
+            return json(res,400,{error:'Set an even monthly price from USD 1.00 to USD 10,000.00, with a short title and benefits.'});
+          }
+          const creator=await requestSupabaseState('subscription_creator_get',{userId:user.id});
+          if(creator.settings?.application_status!=='approved')return json(res,403,{error:'Minglora must approve your creator application before you can create paid subscriptions.'});
+          const product=await paypalRequest('/v1/catalogs/products','POST',{
+            name:'Minglora creator membership',
+            description:'Monthly creator subscription offered through Minglora.',
+            type:'SERVICE',category:'SOFTWARE'
+          },'minglora-product-'+uid());
+          if(!product.id)throw Object.assign(new Error('PayPal did not return a subscription product reference.'),{status:502});
+          const plan=await paypalRequest('/v1/billing/plans','POST',{
+            product_id:product.id,
+            name:name.slice(0,127),
+            description:(description||('Monthly subscription to '+String(user.name||'a Minglora creator'))).slice(0,127),
+            billing_cycles:[{
+              frequency:{interval_unit:'MONTH',interval_count:1},
+              tenure_type:'REGULAR',sequence:1,total_cycles:0,
+              pricing_scheme:{fixed_price:{value:(priceMinor/100).toFixed(2),currency_code:'USD'}}
+            }],
+            payment_preferences:{
+              auto_bill_outstanding:true,
+              setup_fee_failure_action:'CONTINUE',
+              payment_failure_threshold:3
+            }
+          },'minglora-plan-'+uid());
+          if(!plan.id)throw Object.assign(new Error('PayPal did not return a monthly billing plan reference.'),{status:502});
+          const saved=await requestSupabaseState('subscription_tier_store',{
+            creatorId:user.id,paypalProductId:product.id,paypalPlanId:plan.id,
+            priceMinor,currency:'USD',name,description,benefits
+          });
+          const enabled=await requestSupabaseState('subscription_enable',{creatorId:user.id,enabled:true});
+          return json(res,201,{tier:saved.tier,settings:enabled.settings,provider:'paypal'});
+        }
+        if(method==='PUT'&&p==='/api/subscriptions/settings'){
+          if(typeof input.enabled!=='boolean')return json(res,400,{error:'Choose whether subscriptions should be enabled.'});
+          const result=await requestSupabaseState('subscription_enable',{creatorId:user.id,enabled:input.enabled});
+          return json(res,200,result);
+        }
+        if(method==='POST'&&p==='/api/subscriptions/checkout'){
+          const creatorId=String(input.creatorId||'');
+          if(!/^[0-9a-f-]{36}$/i.test(creatorId))return json(res,400,{error:'Choose a valid creator.'});
+          if(creatorId===user.id)return json(res,400,{error:'You cannot subscribe to your own creator account.'});
+          const subscriptionId=uid();
+          const prepared=await requestSupabaseState('subscription_checkout_prepare',{
+            subscriberId:user.id,creatorId,subscriptionId
+          });
+          const origin=appOrigin(req);
+          const paypalSubscription=await paypalRequest('/v1/billing/subscriptions','POST',{
+            plan_id:prepared.tier.paypal_plan_id,
+            custom_id:subscriptionId,
+            application_context:{
+              brand_name:'Minglora',
+              locale:'en-US',
+              user_action:'SUBSCRIBE_NOW',
+              return_url:origin+'/?paypal=subscription&subscription_id='+encodeURIComponent(subscriptionId),
+              cancel_url:origin+'/?paypal=subscription-cancelled&subscription_id='+encodeURIComponent(subscriptionId)
+            }
+          },'minglora-subscription-'+subscriptionId);
+          const approveUrl=(paypalSubscription.links||[]).find(link=>link.rel==='approve')?.href;
+          if(!paypalSubscription.id||!approveUrl)throw Object.assign(new Error('PayPal did not return an approval link for this subscription.'),{status:502});
+          await requestSupabaseState('subscription_checkout_attach',{
+            subscriberId:user.id,subscriptionId,paypalSubscriptionId:paypalSubscription.id
+          });
+          return json(res,201,{subscriptionId,paypalSubscriptionId:paypalSubscription.id,approveUrl,amountMinor:prepared.tier.price_minor,currency:prepared.tier.currency});
+        }
+        if(method==='POST'&&p==='/api/subscriptions/cancel'){
+          const subscriptionId=String(input.subscriptionId||'');
+          if(!/^[0-9a-f-]{36}$/i.test(subscriptionId))return json(res,400,{error:'Choose a valid subscription.'});
+          const result=await requestSupabaseState('subscription_cancel_lookup',{userId:user.id,subscriptionId});
+          if(result.alreadyCanceled)return json(res,200,{ok:true,alreadyCanceled:true,subscription:result.subscription});
+          await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(result.subscription.provider_subscription_id)+'/cancel','POST',{
+            reason:'Member canceled Minglora creator subscription'
+          },'minglora-sub-cancel-'+subscriptionId);
+          const updated=await requestSupabaseState('subscription_cancel_mark',{userId:user.id,subscriptionId});
+          return json(res,200,{ok:true,subscription:updated.subscription});
+        }
+        if(method==='GET'&&p==='/api/subscriptions/admin/applications'){
+          if(!isModerator(user,req))return json(res,403,{error:'Moderator access with an active reviewer session is required.'});
+          return json(res,200,await requestSupabaseState('subscription_admin_queue'));
+        }
+        if(method==='POST'&&p==='/api/subscriptions/admin/review'){
+          if(!isModerator(user,req))return json(res,403,{error:'Moderator access with an active reviewer session is required.'});
+          const creatorId=String(input.creatorId||''),status=String(input.status||''),reason=String(input.reason||'').trim();
+          if(!/^[0-9a-f-]{36}$/i.test(creatorId)||!['approved','rejected','suspended'].includes(status)||reason.length>1000){
+            return json(res,400,{error:'Choose a valid creator application decision.'});
+          }
+          return json(res,200,await requestSupabaseState('subscription_admin_review',{
+            creatorId,reviewerId:user.id,status,reason
+          }));
+        }
+        return json(res,404,{error:'Subscription endpoint not found.'});
+      }
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
         if (name.length<2 || !validateUsername(username).valid || !validateEmail(email).valid || password.length<10 || password.length>1024) return json(res,400,{error:'Enter a name, username (3+ letters/numbers/underscores), valid email, and password of at least 10 characters.'});
