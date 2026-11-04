@@ -37,3 +37,18 @@ The migration adds the provider-neutral data model and an RLS baseline. The curr
 5. Server-side content and LIVE authorization using the active paid period.
 6. Profile Subscribe CTA, checkout, My Subscriptions, Creator Studio and admin review UI.
 7. Tests for RLS, duplicate webhook delivery, renewals, failed payments, cancellation, refunds, chargebacks and 50/50 calculations.
+
+
+## PayPal server configuration
+Set these variables only in the private Minglora Render service environment (never in browser code or committed files):
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_MODE=sandbox` for testing; switch to `live` only after end-to-end verification
+- `PAYPAL_WEBHOOK_ID` for the webhook configured on the same PayPal REST application
+- `PAYPAL_API_BASE_URL` only when using a non-default PayPal API base
+
+Register the existing Minglora endpoint `/api/webhooks/paypal` as a webhook for the PayPal REST application. Subscribe to the relevant `BILLING.SUBSCRIPTION.*` events and `PAYMENT.SALE.COMPLETED`, `PAYMENT.SALE.REFUNDED`, and `PAYMENT.SALE.REVERSED`. Copy its webhook ID into the server environment. The endpoint verifies the PayPal transmission signature before forwarding an event to the private Supabase runtime gateway. A browser return to Minglora is not payment confirmation.
+
+Existing creator payout settings continue to use the same PayPal payout integration. Subscription creator share is added to the existing creator earnings balance and uses the existing PayPal payout route.
+
+Before going live, confirm that the PayPal REST app/account is entitled to create and manage Billing Plans and Subscriptions for this platform. PayPal's platform subscription integration documentation describes partner onboarding/eligibility for some platform arrangements; the code does not grant those PayPal account permissions.
