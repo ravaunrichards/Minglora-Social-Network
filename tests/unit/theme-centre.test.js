@@ -52,7 +52,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
   assert.match(html, /styles\.css\?v=20261104-sounds-studio-1/);
-  assert.match(html, /app\.js\?v=20261104-sounds-studio-1/);
+  assert.match(html, /app\.js\?v=20261104-sounds-studio-2/);
   assert.match(html, /auth-login\.js\?v=20261104-account-auth-click-2/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
   assert.match(sw, /minglora-shell-v77-gifter-progression-1/);
