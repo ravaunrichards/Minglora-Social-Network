@@ -3264,3 +3264,71 @@ body.auth-mode .auth-screen{
   .gift-send-form{grid-template-columns:1fr}
   .gift-context-help,.gift-send-status,.gift-send-form-footer{grid-column:1}
 }
+
+
+/* Minglora complete original gift catalogue */
+.gift-browse-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,220px);align-items:end;gap:12px;margin-top:12px}
+.gift-sort-label{display:grid;gap:7px;font-size:12px;font-weight:650}
+.gift-sort-label select{width:100%;min-height:43px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);padding:9px 12px;font:inherit}
+.gift-catalogue-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.gift-catalog-card{grid-template-rows:104px auto auto;overflow:hidden}
+.gift-card-image{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.gift-load-more{display:block;margin:18px auto 0;min-width:180px}
+.gift-preview-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,360px);gap:18px;align-items:center;margin-top:18px;overflow:hidden}
+.gift-preview-copy h2{margin:6px 0}
+.gift-preview-stage{position:relative;display:grid;place-items:center;min-height:250px;max-height:360px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--accent) 18%,var(--card)),var(--soft))}
+.gift-preview-stage img{width:100%;height:100%;max-height:320px;object-fit:contain;border-radius:14px}
+.gift-preview-stage model-viewer{width:100%;height:320px;background:transparent}
+.gift-preview-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.gift-send-form [hidden]{display:none!important}
+.live-gift-search{display:block;width:100%;min-height:38px;margin:9px 0;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text)}
+.live-gift-grid{max-height:430px;overflow:auto;overscroll-behavior:contain}
+.live-gift-button{grid-template-rows:68px auto auto;min-width:0}
+.live-gift-model-slot{display:grid;place-items:center;overflow:hidden}
+.live-gift-image{width:100%;height:100%;object-fit:contain;border-radius:8px}
+.live-gift-button strong,.live-gift-button small{font-size:10px;line-height:1.2}
+.minglora-gift-fx{position:fixed;inset:0;z-index:99990;display:grid;place-items:center;pointer-events:none;overflow:hidden}
+.minglora-gift-fx-card{position:relative;display:grid;justify-items:center;gap:7px;width:min(68vw,360px);filter:drop-shadow(0 18px 32px #10122b65);transform-origin:50% 55%}
+.minglora-gift-fx-model{width:100%;height:min(58vw,330px);background:transparent}
+.minglora-gift-fx-emoji{font-size:clamp(100px,24vw,190px);line-height:1}
+.minglora-gift-fx-caption{padding:6px 13px;border:1px solid #ffffff40;border-radius:999px;background:#15162bd9;color:#fff;font-size:14px;font-weight:800;letter-spacing:.02em;text-shadow:0 2px 8px #0008}
+.minglora-gift-fx-rays{position:absolute;inset:18% 18%;border:2px solid #fff5;border-radius:50%;box-shadow:0 0 34px #ffffff55,inset 0 0 32px #ffffff35;animation:minglora-rays 1.5s ease-out infinite}
+.minglora-gift-preview-pulse{animation:minglora-gift-preview-pulse .85s ease-out}
+@keyframes minglora-gift-preview-pulse{0%{transform:scale(.94)}45%{transform:scale(1.06);filter:brightness(1.35)}100%{transform:scale(1);filter:brightness(1)}}
+.minglora-fx-gift-reveal .minglora-gift-fx-card{animation:minglora-fx-reveal var(--minglora-gift-duration) cubic-bezier(.18,.8,.25,1) both}
+.minglora-fx-petal-bloom .minglora-gift-fx-card{animation:minglora-fx-petal var(--minglora-gift-duration) ease-out both}
+.minglora-fx-heart-pulse .minglora-gift-fx-card{animation:minglora-fx-heart var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-creature-entrance .minglora-gift-fx-card{animation:minglora-fx-creature var(--minglora-gift-duration) cubic-bezier(.17,.85,.3,1) both}
+.minglora-fx-grand-entry .minglora-gift-fx-card{animation:minglora-fx-grand var(--minglora-gift-duration) cubic-bezier(.17,.85,.3,1) both}
+.minglora-fx-soundwave-ripple .minglora-gift-fx-card{animation:minglora-fx-soundwave var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-power-impact .minglora-gift-fx-card{animation:minglora-fx-impact var(--minglora-gift-duration) cubic-bezier(.16,.9,.3,1) both}
+.minglora-fx-delight-pop .minglora-gift-fx-card{animation:minglora-fx-pop var(--minglora-gift-duration) cubic-bezier(.17,.9,.3,1) both}
+.minglora-fx-glam-spin .minglora-gift-fx-card{animation:minglora-fx-spin var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-royal-shimmer .minglora-gift-fx-card{animation:minglora-fx-shimmer var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-celebration-burst .minglora-gift-fx-card{animation:minglora-fx-burst var(--minglora-gift-duration) ease-out both}
+.minglora-fx-cosmic-orbit .minglora-gift-fx-card{animation:minglora-fx-orbit var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-nature-rise .minglora-gift-fx-card{animation:minglora-fx-rise var(--minglora-gift-duration) ease-out both}
+.minglora-fx-horizon-sweep .minglora-gift-fx-card{animation:minglora-fx-sweep var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-pixel-burst .minglora-gift-fx-card{animation:minglora-fx-pixel var(--minglora-gift-duration) steps(8,end) both}
+.minglora-fx-warm-wave .minglora-gift-fx-card{animation:minglora-fx-wave var(--minglora-gift-duration) ease-in-out both}
+.minglora-fx-spark-float .minglora-gift-fx-card{animation:minglora-fx-float var(--minglora-gift-duration) ease-out both}
+@keyframes minglora-fx-reveal{0%{opacity:0;transform:translateY(52px) scale(.45)}20%{opacity:1}65%{transform:translateY(-12px) scale(1.08)}100%{opacity:0;transform:translateY(-30px) scale(.96)}}
+@keyframes minglora-fx-petal{0%{opacity:0;transform:scale(.25) rotate(-30deg)}25%{opacity:1;transform:scale(1.15) rotate(8deg)}65%{transform:scale(.98)}100%{opacity:0;transform:translateY(-55px) scale(.88)}}
+@keyframes minglora-fx-heart{0%{opacity:0;transform:scale(.3)}22%{opacity:1;transform:scale(1.18)}38%{transform:scale(.94)}54%{transform:scale(1.08)}100%{opacity:0;transform:translateY(-38px) scale(.8)}}
+@keyframes minglora-fx-creature{0%{opacity:0;transform:translateX(-45vw) scale(.5) rotate(-12deg)}35%{opacity:1;transform:translateX(7px) scale(1.13) rotate(5deg)}62%{transform:scale(1)}100%{opacity:0;transform:translateY(-35px) scale(.88)}}
+@keyframes minglora-fx-grand{0%{opacity:0;transform:translateX(50vw) scale(.55)}38%{opacity:1;transform:translateX(-7px) scale(1.08)}70%{transform:scale(1)}100%{opacity:0;transform:translateY(-30px) scale(.92)}}
+@keyframes minglora-fx-soundwave{0%{opacity:0;transform:scale(.5)}22%{opacity:1}52%{transform:scale(1.1)}100%{opacity:0;transform:scale(1.32) translateY(-12px)}}
+@keyframes minglora-fx-impact{0%{opacity:0;transform:translateY(-48px) scale(.5)}32%{opacity:1;transform:translateY(8px) scale(1.16)}48%{transform:translateY(-4px) scale(.96)}100%{opacity:0;transform:translateY(-28px) scale(.9)}}
+@keyframes minglora-fx-pop{0%{opacity:0;transform:scale(.1)}48%{opacity:1;transform:scale(1.22)}72%{transform:scale(.94)}100%{opacity:0;transform:translateY(-25px) scale(.85)}}
+@keyframes minglora-fx-spin{0%{opacity:0;transform:rotate(-90deg) scale(.4)}35%{opacity:1;transform:rotate(15deg) scale(1.12)}70%{transform:scale(1)}100%{opacity:0;transform:translateY(-32px) rotate(30deg) scale(.9)}}
+@keyframes minglora-fx-shimmer{0%{opacity:0;filter:brightness(.7);transform:scale(.55)}30%{opacity:1;filter:brightness(1.6);transform:scale(1.12)}65%{filter:brightness(1.25)}100%{opacity:0;filter:brightness(1);transform:translateY(-35px) scale(.94)}}
+@keyframes minglora-fx-burst{0%{opacity:0;transform:scale(.22) rotate(-15deg)}30%{opacity:1;transform:scale(1.18) rotate(7deg)}58%{transform:scale(.98)}100%{opacity:0;transform:translateY(-44px) scale(.84)}}
+@keyframes minglora-fx-orbit{0%{opacity:0;transform:rotate(-35deg) scale(.4)}30%{opacity:1;transform:rotate(10deg) scale(1.08)}75%{transform:scale(1)}100%{opacity:0;transform:translateY(-30px) rotate(18deg) scale(.9)}}
+@keyframes minglora-fx-rise{0%{opacity:0;transform:translateY(55px) scale(.6)}30%{opacity:1;transform:translateY(-8px) scale(1.06)}65%{transform:scale(1)}100%{opacity:0;transform:translateY(-50px) scale(.9)}}
+@keyframes minglora-fx-sweep{0%{opacity:0;transform:translateX(-45vw) scale(.8)}35%{opacity:1;transform:scale(1.1)}70%{transform:scale(1)}100%{opacity:0;transform:translateX(20vw) scale(.9)}}
+@keyframes minglora-fx-pixel{0%{opacity:0;transform:scale(.2);filter:blur(8px)}30%{opacity:1;transform:scale(1.16);filter:blur(0)}100%{opacity:0;transform:scale(.82) translateY(-22px)}}
+@keyframes minglora-fx-wave{0%{opacity:0;transform:translateY(25px) scale(.8)}30%{opacity:1;transform:translateY(-8px) scale(1.06)}70%{transform:translateY(0)}100%{opacity:0;transform:translateY(-35px) scale(.94)}}
+@keyframes minglora-fx-float{0%{opacity:0;transform:translateY(30px) scale(.7)}28%{opacity:1;transform:translateY(-8px) scale(1.05)}100%{opacity:0;transform:translateY(-50px) scale(.9)}}
+@keyframes minglora-rays{0%{opacity:.12;transform:scale(.82) rotate(0)}50%{opacity:.72;transform:scale(1.13) rotate(18deg)}100%{opacity:.12;transform:scale(.82) rotate(36deg)}}
+@media(max-width:620px){.gift-browse-controls,.gift-preview-panel{grid-template-columns:1fr}.gift-preview-stage{min-height:220px}.gift-preview-stage model-viewer{height:240px}.gift-catalogue-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.gift-catalog-card{grid-template-rows:82px auto auto;padding:7px 5px}.live-gift-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.minglora-gift-fx-card{width:min(82vw,340px)}}
+@media(prefers-reduced-motion:reduce){.minglora-gift-fx-card,.minglora-gift-fx-rays{animation-duration:.3s!important;animation-iteration-count:1!important}}
