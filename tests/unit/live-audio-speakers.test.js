@@ -93,7 +93,6 @@ test('Opening another LIVE room clears a previous participant-presence retry', (
   assert.match(app,/async function openLiveRoom\(session,role,issuedLiveKit\)\{\s*stopLiveChatRefresh\(\);stopLiveSpeakerRefresh\(\);stopLiveParticipantSync\(\);/);
 });
 
-
 test('Minglora LIVE presents compact accessible icon controls with working room actions', () => {
   assert.match(app, /function liveControlIcon\(/);
   assert.match(app, /class='live-player-controls live-icon-controls'/);
