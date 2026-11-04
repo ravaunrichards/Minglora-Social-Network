@@ -46,5 +46,5 @@ test('mobile LIVE follows the visual viewport when the keyboard opens', () => {
   assert.match(app, /--minglora-live-visible-height/);
   assert.match(app, /live-room-chat-focused/);
   assert.match(mobileCss, /live-room-chat-focused \.live-gift-panel\{display:none!important\}/);
-  assert.match(mobileCss, /live-room-chat-focused \\.live-chat-list/);
+  assert.match(mobileCss, /live-room-chat-focused \.live-chat-list/);
 });
