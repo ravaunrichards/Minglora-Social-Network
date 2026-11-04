@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import webpush from 'web-push';
-import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { appOrigin } from './app-origin.js';
@@ -17,9 +16,6 @@ import { paginateDescending } from './domain/pagination.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
-import { MARKETPLACE_PRODUCT_CATEGORIES, MARKETPLACE_SERVICE_CATEGORIES, MARKETPLACE_CURRENCIES, validateMarketplaceListingInput, canManageMarketplaceListing, isMarketplaceListingActive } from '../backend/modules/marketplace/service.js';
-import { validateMarketplaceSellerApplication, calculateMarketplaceCheckoutQuote, validateMarketplaceServiceBookingInput, transitionMarketplaceBooking } from '../backend/modules/marketplace/commerce.js';
-import { validateJobPostingInput, validateJobApplicationInput, transitionJobApplication } from '../backend/modules/jobs/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -435,47 +431,6 @@ function safeTenorGifUrl(value){
 }
 
 let webPushConfigKey='';
-let marketplaceMailTransport=null;
-let marketplaceMailTransportKey='';
-function marketplaceMailConfig(){
-  const provider=String(process.env.EMAIL_PROVIDER||'none').trim().toLowerCase();
-  const host=String(process.env.SMTP_HOST||'').trim();
-  const port=Number(process.env.SMTP_PORT||587);
-  const user=String(process.env.SMTP_USER||'').trim();
-  const pass=String(process.env.SMTP_PASS||'');
-  const from=String(process.env.EMAIL_FROM||'').trim();
-  const recipients=String(process.env.MARKETPLACE_REVIEW_EMAILS||'larryjones2019ersky@gmail.com')
-    .split(',').map(value=>normalizeEmail(value)).filter(value=>validateEmail(value).valid);
-  return {provider,host,port,user,pass,from,recipients,secure:String(process.env.SMTP_SECURE||'').toLowerCase()==='true'||port===465};
-}
-async function sendMarketplaceReviewEmail(subject,text){
-  const cfg=marketplaceMailConfig();
-  if(cfg.provider!=='smtp'||!cfg.host||!Number.isInteger(cfg.port)||cfg.port<1||cfg.port>65535||
-     !cfg.user||!cfg.pass||!validateEmail(cfg.from).valid||!cfg.recipients.length)return {sent:false,reason:'smtp_not_configured'};
-  const key=[cfg.host,cfg.port,cfg.user,cfg.pass,cfg.from,cfg.secure].join('|');
-  try{
-    if(!marketplaceMailTransport||marketplaceMailTransportKey!==key){
-      marketplaceMailTransport=nodemailer.createTransport({
-        host:cfg.host,port:cfg.port,secure:cfg.secure,
-        auth:{user:cfg.user,pass:cfg.pass},
-        connectionTimeout:5000,greetingTimeout:5000,socketTimeout:8000,
-        pool:true,maxConnections:2,maxMessages:50
-      });
-      marketplaceMailTransportKey=key;
-    }
-    const result=await marketplaceMailTransport.sendMail({
-      from:cfg.from,to:cfg.recipients.join(','),
-      subject:String(subject||'Minglora Marketplace review').slice(0,180),
-      text:String(text||'A Marketplace application requires review.').slice(0,5000)
-    });
-    return {sent:true,messageId:String(result.messageId||'')};
-  }catch(error){
-    console.warn('[Minglora Marketplace email] Delivery failed.',{
-      message:String(error?.message||'SMTP delivery error').slice(0,180)
-    });
-    return {sent:false,reason:'smtp_delivery_failed'};
-  }
-}
 function configureWebPush(){
   const publicKey=String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim();
   const privateKey=String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim();
@@ -491,7 +446,7 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':notification.type==='profile_view'?'Profile view':notification.type==='marketplace_review'?'Marketplace application review':notification.type==='marketplace_status'?'Marketplace application update':'Minglora notification',
+    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':notification.type==='profile_view'?'Profile view':'Minglora notification',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
     data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,sellerId:notification.sellerId||null}
@@ -524,17 +479,6 @@ function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
     if(reviewer.id===applicantId||!hasActiveReviewerSession(reviewer))continue;
     notify(reviewer.id,actorId,type,text,{applicantId,...extra});
   }
-}
-function notifyMarketplaceReviewers(applicantId,actorId,text,extra={}){
-  notifyPlatformReviewers('marketplace_review',applicantId,actorId,text,{sellerId:applicantId,...extra});
-  const due=extra.reviewDueAt?new Date(extra.reviewDueAt).toLocaleString('en-JM',{timeZone:'America/Jamaica'}):'within four hours';
-  void sendMarketplaceReviewEmail(
-    'Minglora Marketplace: application review required',
-    String(text||'A Marketplace application is waiting for review.')+'\n\nPriority: '+String(extra.priority||'normal')+
-    '\nReview target (Jamaica time): '+due+
-    '\nOpen Minglora Seller Centre > Marketplace review desk to inspect the application. '+
-    'Identity, business documents and payout details must be independently verified.'
-  );
 }
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
@@ -615,11 +559,6 @@ async function publicGroupPost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.userId&&(item.slot==='group'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
   const {imageUrl,...cleanPost}=post;
   return {...cleanPost,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.userId))};
-}
-async function publicMarketplaceListing(listing,viewerId){
-  const media=await Promise.all((listing.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===listing.sellerId&&item.slot==='marketplace'&&item.status!=='deleted');if(!asset)return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
-  const {mediaIds,...safeListing}=listing;
-  return {...safeListing,media:Array.isArray(listing.media)?listing.media:media.filter(Boolean),seller:listing.seller||safeUser(db.users.find(member=>member.id===listing.sellerId),viewerId),isSaved:typeof listing.isSaved==='boolean'?listing.isSaved:(db.marketplaceSaved||[]).some(item=>item.userId===viewerId&&item.listingId===listing.id)};
 }
 async function publicPagePost(post) {
   const media=await Promise.all((post.mediaIds||[]).map(async id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===post.publishedBy&&(item.slot==='page'||item.slot==='post'));if(!asset||asset.status==='deleted')return null;try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}}));
@@ -765,30 +704,9 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && p !== '/api/webhooks/marketplace-paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
-  if (method === 'POST' && p === '/api/webhooks/marketplace-paypal') {
-    let event;
-    try { event = await body(req, 1_000_000); }
-    catch (error) { return json(res, error.status || 400, { error: error.message }); }
-    if (!isSupabasePersistence()) {
-      return json(res, 503, { error: 'Marketplace PayPal webhook requires the hosted Minglora database.' });
-    }
-    const headers=req.headers||{};
-    const result=await requestSupabaseState('marketplace_paypal_webhook_receive',{
-      event,
-      headers:{
-        authAlgo:String(headers['paypal-auth-algo']||''),
-        certUrl:String(headers['paypal-cert-url']||''),
-        transmissionId:String(headers['paypal-transmission-id']||''),
-        transmissionSig:String(headers['paypal-transmission-sig']||''),
-        transmissionTime:String(headers['paypal-transmission-time']||'')
-      }
-    });
-    return json(res,200,result);
-  }
-
   if (method === 'POST' && p === '/api/webhooks/paypal') {
     let event;
     try { event = await body(req, 1_000_000); }
@@ -1022,515 +940,6 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
-      if(method==='POST'&&p==='/api/marketplace/paypal/seller-onboarding'){
-        if(input.shareDataConsent!==true)return json(res,400,{error:'Explicit consent is required before sharing the seller information PayPal needs for onboarding.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'PayPal marketplace onboarding requires Minglora’s hosted PostgreSQL database.'});
-        const callbackState=crypto.randomBytes(48).toString('base64url');
-        const returnUrl=appOrigin(req)+'/?marketplacePayPal=complete';
-        const result=await requestSupabaseState('marketplace_paypal_seller_start',{
-          userId:user.id,callbackState,returnUrl,shareDataConsent:true
-        });
-        if(!result.actionUrl)return json(res,502,{error:'PayPal did not return a seller onboarding link.'});
-        return json(res,201,result);
-      }
-      if(method==='POST'&&p==='/api/marketplace/paypal/seller-complete'){
-        if(!isSupabasePersistence())return json(res,503,{error:'PayPal seller verification requires Minglora’s hosted PostgreSQL database.'});
-        const result=await requestSupabaseState('marketplace_paypal_seller_complete',{
-          userId:user.id,
-          trackingId:String(input.trackingId||''),
-          merchantId:String(input.merchantId||''),
-          callbackState:String(input.callbackState||''),
-          permissionsGranted:input.permissionsGranted===true,
-          consentGranted:input.consentGranted===true,
-          emailConfirmed:input.emailConfirmed===true,
-          accountType:String(input.accountType||'')
-        });
-        return json(res,200,result);
-      }
-      if(method==='GET'&&p==='/api/marketplace/cart'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
-        return json(res,200,await requestSupabaseState('marketplace_cart_get',{buyerId:user.id}));
-      }
-      if(method==='POST'&&p==='/api/marketplace/cart/items'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
-        const result=await requestSupabaseState('marketplace_cart_add',{
-          buyerId:user.id,listingId:String(input.listingId||''),quantity:input.quantity===undefined?1:Number(input.quantity),
-          fulfillmentMethod:String(input.fulfillmentMethod||'pickup')
-        });
-        return json(res,200,result);
-      }
-      const cartItemMatch=p.match(/^\/api\/marketplace\/cart\/items\/([0-9a-f-]{36})$/i);
-      if(cartItemMatch&&method==='PATCH'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
-        const result=await requestSupabaseState('marketplace_cart_update',{
-          buyerId:user.id,listingId:cartItemMatch[1],quantity:Number(input.quantity),
-          fulfillmentMethod:String(input.fulfillmentMethod||'pickup')
-        });
-        return json(res,200,result);
-      }
-      if(cartItemMatch&&method==='DELETE'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
-        const result=await requestSupabaseState('marketplace_cart_remove',{buyerId:user.id,listingId:cartItemMatch[1]});
-        return json(res,200,result);
-      }
-      if(method==='DELETE'&&p==='/api/marketplace/cart'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Persistent marketplace carts require the hosted Minglora database.'});
-        const result=await requestSupabaseState('marketplace_cart_clear',{buyerId:user.id});
-        return json(res,200,result);
-      }
-      if(method==='POST'&&p==='/api/marketplace/refunds'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
-        const result=await requestSupabaseState('marketplace_refund_request',{
-          buyerId:user.id,
-          sellerOrderId:String(input.sellerOrderId||''),
-          amountMinor:Number(input.amountMinor),
-          reason:String(input.reason||'').trim(),
-          idempotencyKey:String(input.idempotencyKey||'')
-        });
-        return json(res,201,result);
-      }
-      if(method==='GET'&&p==='/api/marketplace/admin/refunds'){
-        if(!isModerator(user,req))return json(res,403,{error:'Marketplace refund review is restricted to authorized moderators.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
-        return json(res,200,await requestSupabaseState('marketplace_refunds_admin_list'));
-      }
-      const marketplaceRefundMatch=p.match(/^\/api\/marketplace\/admin\/refunds\/([0-9a-f-]{36})\/approve$/i);
-      if(method==='POST'&&marketplaceRefundMatch){
-        if(!isModerator(user,req))return json(res,403,{error:'Only an authorized marketplace moderator may approve a refund.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Marketplace refunds require the hosted financial database.'});
-        const result=await requestSupabaseState('marketplace_refund_approve',{
-          refundId:marketplaceRefundMatch[1],actorId:user.id
-        });
-        return json(res,result.paid?200:202,result);
-      }
-      if(method==='GET'&&p==='/api/marketplace/seller'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_get',{userId:user.id});return json(res,200,result);}
-        const seller=(db.marketplaceSellers||[]).find(item=>item.userId===user.id)||null;
-        return json(res,200,{seller:seller?{sellerType:seller.sellerType,storeName:seller.storeName,description:seller.description,countryCode:seller.countryCode,contactEmail:seller.contactEmail,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,createdAt:seller.createdAt,updatedAt:seller.updatedAt}:null});
-      }
-      if(method==='GET'&&p==='/api/profile-verification'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
-        const result=await requestSupabaseState('profile_verification_get',{userId:user.id});
-        user.verificationStatus=result.verificationStatus||'not_submitted';
-        user.verificationBadge=result.verificationBadge==='blue'?'blue':'none';
-        await saveStore();
-        return json(res,200,result);
-      }
-      if(method==='POST'&&p==='/api/profile-verification'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
-        const payload={
-          userId:user.id,accountCategory:String(input.accountCategory||''),
-          publicDisplayName:String(input.publicDisplayName||'').trim(),
-          officialWebsite:String(input.officialWebsite||'').trim(),
-          evidenceLinks:Array.isArray(input.evidenceLinks)?input.evidenceLinks:[],
-          evidenceSummary:String(input.evidenceSummary||'').trim()
-        };
-        const result=await requestSupabaseState('profile_verification_submit',payload);
-        notifyPlatformReviewers('profile_verification_review',user.id,user.id,
-          'A profile verification application is waiting in the review desk.',
-          {applicationId:result.application?.id,priority:result.application?.reviewPriority||'normal',reviewDueAt:result.application?.reviewDueAt||null});
-        return json(res,201,result);
-      }
-      if(method==='GET'&&p==='/api/admin/profile-verification/queue'){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access profile verification review.':'Moderator access is required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
-        return json(res,200,await requestSupabaseState('profile_verification_admin_queue',{reviewerId:user.id}));
-      }
-      const profileVerificationReviewMatch=p.match(/^\/api\/admin\/profile-verification\/([^/]+)\/review$/);
-      if(method==='PATCH'&&profileVerificationReviewMatch){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to review profile verification.':'Moderator access is required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
-        const decision=String(input.decision||''),note=String(input.note||'').trim().slice(0,1500);
-        const result=await requestSupabaseState('profile_verification_admin_review',{
-          actorId:user.id,applicationId:profileVerificationReviewMatch[1],decision,note
-        });
-        const applicant=db.users.find(item=>item.id===result.application.userId);
-        if(applicant){
-          applicant.verificationStatus=result.application.verificationStatus;
-          applicant.verificationBadge=result.application.verificationBadge==='blue'?'blue':'none';
-          await saveStore();
-        }
-        notify(result.application.userId,user.id,'profile_verification_status',
-          'Your Minglora profile verification status is now '+decision.replaceAll('_',' ')+'.',
-          {applicationId:result.application.id,verificationBadge:result.application.verificationBadge});
-        return json(res,200,result);
-      }
-      const profileVerificationAlertMatch=p.match(/^\/api\/admin\/profile-verification\/alerts\/([^/]+)\/read$/);
-      if(method==='POST'&&profileVerificationAlertMatch){
-        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Profile verification requires the hosted verification database.'});
-        return json(res,200,await requestSupabaseState('profile_verification_alert_mark_read',{
-          reviewerId:user.id,alertId:profileVerificationAlertMatch[1]
-        }));
-      }
-
-      if(method==='POST'&&p==='/api/marketplace/seller'){
-        const validation=validateMarketplaceSellerApplication(input);if(!validation.valid)return json(res,400,{error:validation.error});
-        if(isSupabasePersistence()){
-          const result=await requestSupabaseState('marketplace_seller_apply',{userId:user.id,...validation.value,acceptTerms:input.acceptTerms===true});
-          notifyMarketplaceReviewers(user.id,user.id,'A new seller application is waiting in the Marketplace review desk.',{priority:result.seller?.reviewPriority||'normal',reviewDueAt:result.seller?.reviewDueAt||null});
-          return json(res,201,result);
-        }
-        db.marketplaceSellers||=[];let seller=db.marketplaceSellers.find(item=>item.userId===user.id);
-        if(seller&&seller.status!=='rejected')return json(res,409,{error:'A seller application already exists for this account.',status:seller.status});
-        const previousStatus=seller?.status||null,values=validation.value,stamp=now();
-        if(seller){Object.assign(seller,values,{status:'pending',identityStatus:'not_started',payoutStatus:'not_connected',reviewedAt:null,reviewedBy:null,reviewReason:'',submittedAt:stamp,updatedAt:stamp});}
-        else{seller={userId:user.id,...values,status:'pending',identityStatus:'not_started',payoutStatus:'not_connected',createdAt:stamp,submittedAt:stamp,updatedAt:stamp};db.marketplaceSellers.unshift(seller);}
-        db.marketplaceSellerEvents||=[];db.marketplaceSellerEvents.unshift({id:uid(),sellerId:user.id,actorId:user.id,eventType:'submitted',reason:previousStatus?'Resubmitted after rejection':'New application',createdAt:stamp});
-        db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'marketplace_seller_application_submitted',targetType:'marketplace_seller',targetId:user.id,createdAt:stamp});
-        await saveStore();
-        return json(res,201,{seller:{storeName:seller.storeName,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus,submittedAt:seller.submittedAt}});
-      }
-      if(method==='POST'&&p==='/api/marketplace/seller/business-identity'){
-        if(!isSupabasePersistence())return json(res,503,{error:'Business identity review requires the hosted secure marketplace database.'});
-        const payload={
-          legalBusinessName:String(input.legalBusinessName||'').trim(),
-          registrationType:String(input.registrationType||''),
-          registrationNumber:String(input.registrationNumber||'').trim(),
-          registeredAddress:String(input.registeredAddress||'').trim(),
-          countryCode:String(input.countryCode||'').trim().toUpperCase(),
-          contactEmail:normalizeEmail(input.contactEmail||user.email)
-        };
-        if(payload.legalBusinessName.length<2||payload.registeredAddress.length<5||!validateEmail(payload.contactEmail).valid)return json(res,400,{error:'Complete the legal business name, registered address and contact email.'});
-        if(!['registered_company','sole_trader','partnership','other'].includes(payload.registrationType))return json(res,400,{error:'Choose a valid business structure.'});
-        if(['registered_company','partnership'].includes(payload.registrationType)&&payload.registrationNumber.length<3)return json(res,400,{error:'Enter the registration number for a company or partnership.'});
-        const result=await requestSupabaseState('marketplace_business_identity_submit',{userId:user.id,...payload});
-        notifyMarketplaceReviewers(user.id,user.id,'Business identity details were submitted and require independent review.',{priority:result.seller?.reviewPriority||'high',reviewDueAt:result.seller?.reviewDueAt||null});
-        return json(res,201,result);
-      }
-      if(method==='GET'&&p==='/api/marketplace/admin/sellers'){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
-        const status=String(url.searchParams.get('status')||'pending');
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_admin_list',{status});return json(res,200,result);}
-        const sellers=(db.marketplaceSellers||[]).filter(item=>!status||item.status===status).map(item=>({userId:item.userId,sellerType:item.sellerType,storeName:item.storeName,description:item.description,countryCode:item.countryCode,contactEmail:item.contactEmail,status:item.status,identityStatus:item.identityStatus,payoutStatus:item.payoutStatus,submittedAt:item.submittedAt}));
-        return json(res,200,{sellers});
-      }
-      if(method==='GET'&&p==='/api/marketplace/admin/queue'){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_seller_queue',{reviewerId:user.id});return json(res,200,result);}
-        const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
-        const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
-        return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
-      }
-      if(method==='GET'&&p==='/api/marketplace/admin/queue'){
-        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
-        const sellers=(db.marketplaceSellers||[]).filter(item=>item.status==='pending').map(item=>({userId:item.userId,storeName:item.storeName,sellerType:item.sellerType,countryCode:item.countryCode,contactEmail:item.contactEmail,identityStatus:item.identityStatus,submittedAt:item.submittedAt}));
-        const jobs=(db.jobPostings||[]).filter(item=>item.status==='pending_review').map(item=>({id:item.id,employerId:item.employerId,title:item.title,companyName:item.companyName,description:item.description,category:item.category,employmentType:item.employmentType,workplaceType:item.workplaceType,location:item.location,createdAt:item.createdAt}));
-        return json(res,200,{sellers,jobs,commerce:{enabled:false,blockers:['Marketplace payment capture and seller payouts remain disabled.','Provider marketplace approval and a transactional order repository are required.']}});
-      }
-      const businessIdentityReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/business-identity$/);
-      if(method==='PATCH'&&businessIdentityReviewMatch){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Business identity review requires the hosted marketplace database.'});
-        const status=String(input.status||''),reason=String(input.reason||'').trim().slice(0,1000);
-        if(!['verified','needs_information','rejected'].includes(status)||reason.length<5)return json(res,400,{error:'Choose a valid identity decision and record the review reason.'});
-        const result=await requestSupabaseState('marketplace_business_identity_review',{actorId:user.id,sellerId:businessIdentityReviewMatch[1],status,reason});
-        notify(businessIdentityReviewMatch[1],user.id,'marketplace_status','Your business identity review was updated: '+status.replaceAll('_',' ')+'.',{sellerId:businessIdentityReviewMatch[1]});
-        return json(res,200,result);
-      }
-      const reviewAlertMatch=p.match(/^\/api\/marketplace\/admin\/alerts\/([^/]+)\/read$/);
-      if(method==='POST'&&reviewAlertMatch){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Application alerts require the hosted marketplace database.'});
-        const result=await requestSupabaseState('marketplace_review_alert_mark_read',{reviewerId:user.id,alertId:reviewAlertMatch[1]});
-        return json(res,200,result);
-      }
-      const sellerReviewMatch=p.match(/^\/api\/marketplace\/admin\/sellers\/([^/]+)\/review$/);
-      if(method==='PATCH'&&sellerReviewMatch){
-        if(!isModerator(user,req))return json(res,403,{error:PLATFORM_OWNER_USER_IDS.has(user.id)?'Verify your authenticator to access the owner review desk.':'Moderator access is required.'});
-        if(isSupabasePersistence()){const status=String(input.status||''),identityStatus=String(input.identityStatus||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['pending','approved','rejected','suspended'].includes(status)||!['not_started','pending','verified','rejected'].includes(identityStatus)||!reason)return json(res,400,{error:'A valid seller review decision and audit reason are required.'});const result=await requestSupabaseState('marketplace_seller_review',{actorId:user.id,sellerId:sellerReviewMatch[1],status,identityStatus,reason});notify(sellerReviewMatch[1],user.id,'marketplace_status','Your Marketplace seller application status is now '+status+'.',{sellerId:sellerReviewMatch[1]});return json(res,200,result);}
-        const seller=(db.marketplaceSellers||[]).find(item=>item.userId===sellerReviewMatch[1]);if(!seller)return json(res,404,{error:'Seller application not found.'});
-        const identityStatus=String(input.identityStatus||seller.identityStatus),status=String(input.status||seller.status);
-        const reason=String(input.reason||'').trim().slice(0,1000);
-        if(!['not_started','pending','verified','rejected'].includes(identityStatus))return json(res,400,{error:'Choose a valid identity verification status.'});
-        if(!['pending','approved','rejected','suspended'].includes(status))return json(res,400,{error:'Choose a valid seller application status.'});
-        if(status==='approved'&&identityStatus!=='verified')return json(res,409,{error:'Identity or business verification must be completed before approval.'});
-        if(status==='approved'&&!reason)return json(res,400,{error:'Record the verification review reason before approving this seller.'});
-        const stamp=now();seller.identityStatus=identityStatus;seller.status=status;seller.reviewedAt=stamp;seller.reviewedBy=user.id;seller.reviewReason=reason;seller.updatedAt=stamp;
-        db.marketplaceSellerEvents||=[];db.marketplaceSellerEvents.unshift({id:uid(),sellerId:seller.userId,actorId:user.id,eventType:identityStatus==='verified'?'identity_verified':status,reason,createdAt:stamp});
-        db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'marketplace_seller_reviewed',targetType:'marketplace_seller',targetId:seller.userId,metadata:{status,identityStatus,reason},createdAt:stamp});
-        notify(seller.userId,user.id,'system','Your Minglora seller application status changed to '+status+'.',{marketplaceSellerStatus:status,identityStatus});
-        await saveStore();return json(res,200,{seller:{userId:seller.userId,status:seller.status,identityStatus:seller.identityStatus,payoutStatus:seller.payoutStatus}});
-      }
-      if(method==='POST'&&p==='/api/marketplace/checkout/quote'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_quote',{buyerId:user.id,items:input.items,fulfillmentByListing:input.fulfillmentByListing||{}});return json(res,200,result);}
-        const bps=Number(process.env.MARKETPLACE_COMMISSION_BPS||0),quoteId=uid(),created=now(),expires=new Date(Date.now()+10*60*1000).toISOString();
-        const result=calculateMarketplaceCheckoutQuote({buyerId:user.id,items:input.items,listings:db.marketplaceListings||[],sellerProfiles:db.marketplaceSellers||[],commissionBps:bps,fulfillmentByListing:input.fulfillmentByListing||{},quoteId,createdAt:created,expiresAt:expires});
-        if(!result.valid)return json(res,400,{error:result.error});
-        db.marketplaceQuotes||=[];db.marketplaceQuotes.unshift({...result.value,status:'informational'});
-        await saveStore();return json(res,200,{quote:result.value,notice:'This is an informational quote only. No stock is reserved and no payment has been taken.'});
-      }
-      if(method==='GET'&&p==='/api/marketplace/checkout/status'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_checkout_status');return json(res,200,result);}
-        return json(res,200,{enabled:false,orderCreationEnabled:false,payoutsEnabled:false,blockers:['Marketplace provider approval and seller settlement route are not verified.','Tax and customs calculation is not configured.','Transactional inventory reservation and order processing are not yet connected to the hosted relational database.']});
-      }
-      
-      if(method==='POST'&&p==='/api/marketplace/paypal/create'){
-        const orderId=String(input.orderId||'');
-        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId))return json(res,400,{error:'A valid marketplace order ID is required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Hosted marketplace checkout requires the transactional PostgreSQL database.'});
-        const origin=appOrigin(req);
-        const encoded=encodeURIComponent(orderId);
-        const result=await requestSupabaseState('marketplace_paypal_payment_prepare',{
-          buyerId:user.id,orderId,paymentMethod:'paypal',
-          returnUrl:origin+'/?marketplacePayment=return&orderId='+encoded,
-          cancelUrl:origin+'/?marketplacePayment=cancel&orderId='+encoded
-        });
-        return json(res,200,result);
-      }
-      if(method==='POST'&&p==='/api/marketplace/paypal/capture'){
-        const orderId=String(input.orderId||''),providerOrderId=String(input.providerOrderId||input.token||'');
-        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)||!providerOrderId||providerOrderId.length>128)return json(res,400,{error:'A valid marketplace order and PayPal order reference are required.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Hosted marketplace payment reconciliation requires the transactional PostgreSQL database.'});
-        const result=await requestSupabaseState('marketplace_paypal_capture_execute',{buyerId:user.id,orderId,providerOrderId});
-        return json(res,result.processing?202:200,result);
-      }
-      if(method==='GET'&&p==='/api/marketplace/payouts'){
-        if(isSupabasePersistence()){
-          const result=await requestSupabaseState('marketplace_seller_payouts',{sellerId:user.id});
-          return json(res,200,result);
-        }
-        return json(res,200,{payouts:[]});
-      }
-      const payoutReleaseParts=p.split('/');
-      if(method==='POST'&&payoutReleaseParts.length===6&&payoutReleaseParts[1]==='api'&&payoutReleaseParts[2]==='marketplace'&&payoutReleaseParts[3]==='payouts'&&payoutReleaseParts[5]==='release'){
-        const payoutId=String(payoutReleaseParts[4]||'');
-        if(!/^[0-9a-f-]{36}$/i.test(payoutId))return json(res,400,{error:'Invalid seller payout reference.'});
-        if(isSupabasePersistence()){
-          const result=await requestSupabaseState('marketplace_paypal_payout_release',{sellerId:user.id,payoutId});
-          return json(res,result.paid?200:202,result);
-        }
-        return json(res,503,{error:'Independent marketplace payouts require the hosted financial ledger and approved PayPal integration.'});
-      }
-      if(method==='POST'&&p==='/api/marketplace/admin/financial-reconciliation/provider'){
-        if(!isModerator(user,req))return json(res,403,{error:'Provider reconciliation is restricted to authorized Marketplace moderators.'});
-        if(!isSupabasePersistence())return json(res,503,{error:'Provider reconciliation requires the hosted Marketplace financial database.'});
-        const startAt=String(input.startAt||''),endAt=String(input.endAt||'');
-        const result=await requestSupabaseState('marketplace_financial_provider_reconcile',{
-          startAt,endAt,requestedBy:user.id
-        });
-        return json(res,200,result);
-      }
-      if(method==='GET'&&p==='/api/marketplace/admin/financial-reconciliation'){
-        if(!isModerator(user,req))return json(res,403,{error:'Marketplace financial reconciliation is restricted to authorized moderators.'});
-        if(isSupabasePersistence()){
-          const result=await requestSupabaseState('marketplace_financial_reconcile',{requestedBy:user.id});
-          return json(res,200,result);
-        }
-        return json(res,503,{error:'Marketplace financial reconciliation requires the hosted financial ledger.'});
-      }
-      if(method==='GET'&&p==='/api/marketplace/orders'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_orders_list',{userId:user.id});return json(res,200,result);}
-        return json(res,200,{orders:[]});
-      }
-      const orderPathParts=p.split('/');
-      const marketplaceOrderMatch=orderPathParts.length===5&&orderPathParts[1]==='api'&&orderPathParts[2]==='marketplace'&&orderPathParts[3]==='orders'&&orderPathParts[4]?[p,orderPathParts[4]]:null;
-      if(method==='GET'&&marketplaceOrderMatch){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_get',{userId:user.id,orderId:marketplaceOrderMatch[1]});return json(res,200,result);}
-        return json(res,404,{error:'Order not found.'});
-      }
-      if(method==='POST'&&p==='/api/marketplace/orders'){
-        const quoteId=String(input.quoteId||''),idempotencyKey=String(input.idempotencyKey||'');
-        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(quoteId)||idempotencyKey.length<8||idempotencyKey.length>128)return json(res,400,{error:'A valid checkout quote and idempotency key are required.'});
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_create',{buyerId:user.id,quoteId,idempotencyKey});return json(res,201,result);}
-        return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
-      }
-      const cancelPathParts=p.split('/');
-      const marketplaceOrderCancelMatch=cancelPathParts.length===6&&cancelPathParts[1]==='api'&&cancelPathParts[2]==='marketplace'&&cancelPathParts[3]==='orders'&&cancelPathParts[4]&&cancelPathParts[5]==='cancel'?[p,cancelPathParts[4]]:null;
-      if(method==='POST'&&marketplaceOrderCancelMatch){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_order_cancel',{userId:user.id,orderId:marketplaceOrderCancelMatch[1]});return json(res,200,result);}
-        return json(res,503,{error:'Transactional Marketplace order storage is not available in local JSON mode.'});
-      }
-      if(method==='GET'&&p==='/api/marketplace/bookings'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_bookings_list',{userId:user.id});return json(res,200,result);}
-        const bookings=(db.marketplaceBookings||[]).filter(item=>item.buyerId===user.id||item.sellerId===user.id).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(item=>{const listing=(db.marketplaceListings||[]).find(entry=>entry.id===item.listingId);const otherId=item.buyerId===user.id?item.sellerId:item.buyerId;const other=db.users.find(entry=>entry.id===otherId);return {...item,listingTitle:listing?.title||'Service appointment',otherName:other?.name||'Minglora member'};});
-        return json(res,200,{bookings});
-      }
-      if(method==='POST'&&p==='/api/marketplace/bookings'){
-        if(isSupabasePersistence()){const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});const result=await requestSupabaseState('marketplace_booking_create',{buyerId:user.id,...validation.value});return json(res,201,result);}
-        const validation=validateMarketplaceServiceBookingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===validation.value.listingId&&item.kind==='service'&&isMarketplaceListingActive(item));
-        if(!listing||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This service is not available for booking.'});
-        const seller=(db.marketplaceSellers||[]).find(item=>item.userId===listing.sellerId);
-        if(seller?.status!=='approved'||seller.identityStatus!=='verified')return json(res,409,{error:'This service provider has not completed seller verification.'});
-        const collision=(db.marketplaceBookings||[]).some(item=>item.sellerId===listing.sellerId&&['requested','accepted','completed_by_seller'].includes(item.status)&&new Date(validation.value.startAt)<new Date(item.endAt)&&new Date(validation.value.endAt)>new Date(item.startAt));
-        if(collision)return json(res,409,{error:'That appointment time is already requested or booked. Choose another time.'});
-        const booking={id:uid(),listingId:listing.id,buyerId:user.id,sellerId:listing.sellerId,...validation.value,status:'requested',priceMinor:listing.priceMinor??null,currency:listing.currency,createdAt:now(),updatedAt:now()};
-        db.marketplaceBookings||=[];db.marketplaceBookings.unshift(booking);
-        notify(listing.sellerId,user.id,'system',user.name+' requested a service appointment for '+listing.title+'.',{marketplaceBookingId:booking.id});
-        await saveStore();return json(res,201,{booking});
-      }
-      const bookingMatch=p.match(/^\/api\/marketplace\/bookings\/([^/]+)$/);
-      if(method==='PATCH'&&bookingMatch){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_booking_update',{actorId:user.id,bookingId:bookingMatch[1],status:String(input.status||'')});return json(res,200,result);}
-        const booking=(db.marketplaceBookings||[]).find(item=>item.id===bookingMatch[1]);if(!booking)return json(res,404,{error:'Booking not found.'});
-        const transition=transitionMarketplaceBooking(booking,user.id,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
-        Object.assign(booking,transition.value);
-        const recipient=booking.buyerId===user.id?booking.sellerId:booking.buyerId;
-        notify(recipient,user.id,'system','A service booking status changed to '+booking.status+'.',{marketplaceBookingId:booking.id});
-        await saveStore();return json(res,200,{booking});
-      }
-      if(method==='GET'&&p==='/api/jobs'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_list',{userId:user.id,q:url.searchParams.get('q')||'',category:url.searchParams.get('category')||'',location:url.searchParams.get('location')||''});return json(res,200,result);}
-        const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120);
-        const jobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(!query||(item.title+' '+item.companyName+' '+item.description).toLowerCase().includes(query))&&(!category||item.category===category)&&(!location||String(item.location||'').toLowerCase().includes(location))).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        return json(res,200,{jobs});
-      }
-      if(method==='GET'&&p==='/api/jobs/applications/mine'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_mine',{applicantId:user.id});return json(res,200,result);}
-        const applications=(db.jobApplications||[]).filter(item=>item.applicantId===user.id).map(item=>({...item,job:(db.jobPostings||[]).find(job=>job.id===item.jobId)||null}));
-        return json(res,200,{applications});
-      }
-      if(method==='GET'&&p==='/api/jobs/mine'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_mine',{userId:user.id});return json(res,200,result);}
-        return json(res,200,{jobs:(db.jobPostings||[]).filter(item=>item.employerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))});
-      }
-      if(method==='POST'&&p==='/api/jobs'){
-        const validation=validateJobPostingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_create',{employerId:user.id,job:validation.value});return json(res,201,{...result,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});}
-        const job={id:uid(),employerId:user.id,...validation.value,status:'pending_review',createdAt:now(),updatedAt:now()};
-        db.jobPostings||=[];db.jobPostings.unshift(job);db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'job_posting_submitted',targetType:'job_posting',targetId:job.id,createdAt:now()});
-        await saveStore();return json(res,201,{job,notice:'Your job posting was submitted for moderation. It will not appear publicly until approved.'});
-      }
-      const jobReviewMatch=p.match(/^\/api\/jobs\/([^/]+)\/review$/);
-      if(method==='PATCH'&&jobReviewMatch){
-        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
-        if(isSupabasePersistence()){const status=String(input.status||''),reason=String(input.reason||'').trim().slice(0,1000);if(!['open','rejected'].includes(status)||!reason)return json(res,400,{error:'A valid vacancy moderation decision and reason are required.'});const result=await requestSupabaseState('marketplace_job_review',{actorId:user.id,jobId:jobReviewMatch[1],status,reason});return json(res,200,result);}
-        const job=(db.jobPostings||[]).find(item=>item.id===jobReviewMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
-        const status=String(input.status||'');if(!['open','rejected'].includes(status))return json(res,400,{error:'Choose open or rejected.'});
-        if(status==='open'&&new Date(job.applicationDeadline)<=new Date())return json(res,409,{error:'The application deadline has passed.'});
-        job.status=status;job.reviewedBy=user.id;job.reviewedAt=now();job.reviewReason=String(input.reason||'').trim().slice(0,1000);job.updatedAt=now();
-        db.auditLog||=[];db.auditLog.unshift({id:uid(),actorId:user.id,action:'job_posting_'+status,targetType:'job_posting',targetId:job.id,createdAt:now()});
-        notify(job.employerId,user.id,'system','Your job posting was '+status+'.',{jobId:job.id});
-        await saveStore();return json(res,200,{job});
-      }
-      const jobMatch=p.match(/^\/api\/jobs\/([^/]+)$/);
-      if(jobMatch&&method==='PATCH'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_update',{userId:user.id,jobId:jobMatch[1],status:String(input.status||'')});return json(res,200,result);}
-        const job=(db.jobPostings||[]).find(item=>item.id===jobMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
-        if(job.employerId!==user.id)return json(res,403,{error:'Only the employer can manage this posting.'});
-        const status=String(input.status||'');if(!['paused','closed'].includes(status)||!['open','paused'].includes(job.status))return json(res,400,{error:'Open job postings can be paused or closed.'});
-        job.status=status;job.updatedAt=now();await saveStore();return json(res,200,{job});
-      }
-      const jobApplyMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
-      if(method==='POST'&&jobApplyMatch){
-        if(isSupabasePersistence()){const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});const result=await requestSupabaseState('marketplace_job_apply',{applicantId:user.id,jobId:jobApplyMatch[1],coverLetter:validation.value.coverLetter});return json(res,201,result);}
-        const job=(db.jobPostings||[]).find(item=>item.id===jobApplyMatch[1]&&item.status==='open'&&new Date(item.applicationDeadline)>new Date());
-        if(!job||job.employerId===user.id)return json(res,404,{error:'This vacancy is unavailable for applications.'});
-        const validation=validateJobApplicationInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
-        db.jobApplications||=[];if(db.jobApplications.some(item=>item.jobId===job.id&&item.applicantId===user.id))return json(res,409,{error:'You have already applied for this vacancy.'});
-        const application={id:uid(),jobId:job.id,applicantId:user.id,...validation.value,status:'submitted',createdAt:now(),updatedAt:now()};
-        db.jobApplications.unshift(application);notify(job.employerId,user.id,'system',user.name+' submitted a job application for '+job.title+'.',{jobId:job.id,applicationId:application.id});
-        await saveStore();return json(res,201,{application});
-      }
-      const jobApplicationsMatch=p.match(/^\/api\/jobs\/([^/]+)\/applications$/);
-      if(jobApplicationsMatch&&method==='GET'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_applications_for_job',{viewerId:user.id,jobId:jobApplicationsMatch[1]});return json(res,200,result);}
-        const job=(db.jobPostings||[]).find(item=>item.id===jobApplicationsMatch[1]);if(!job)return json(res,404,{error:'Job posting not found.'});
-        if(job.employerId!==user.id&&!isModerator(user,req))return json(res,403,{error:'Only the employer can review applications.'});
-        return json(res,200,{applications:(db.jobApplications||[]).filter(item=>item.jobId===job.id).map(item=>({...item,candidate:safeUser(db.users.find(member=>member.id===item.applicantId),user.id)}))});
-      }
-      const jobApplicationMatch=p.match(/^\/api\/jobs\/applications\/([^/]+)$/);
-      if(method==='PATCH'&&jobApplicationMatch){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_job_application_update',{actorId:user.id,applicationId:jobApplicationMatch[1],status:String(input.status||'')});return json(res,200,result);}
-        const application=(db.jobApplications||[]).find(item=>item.id===jobApplicationMatch[1]);if(!application)return json(res,404,{error:'Application not found.'});
-        const job=(db.jobPostings||[]).find(item=>item.id===application.jobId);
-        const transition=transitionJobApplication(application,user.id,job,String(input.status||''));if(!transition.valid)return json(res,403,{error:transition.error});
-        Object.assign(application,transition.value);notify(application.applicantId,user.id,'system','Your job application status changed to '+application.status+'.',{jobId:job.id,applicationId:application.id});
-        await saveStore();return json(res,200,{application});
-      }
-      if(method==='GET'&&p==='/api/marketplace/categories')return json(res,200,{productCategories:MARKETPLACE_PRODUCT_CATEGORIES,serviceCategories:MARKETPLACE_SERVICE_CATEGORIES,currencies:MARKETPLACE_CURRENCIES});
-      if(method==='GET'&&p==='/api/marketplace/listings'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'browse',q:url.searchParams.get('q')||'',kind:url.searchParams.get('kind')||'',category:url.searchParams.get('category')||'',location:url.searchParams.get('location')||'',sort:url.searchParams.get('sort')||'recent',limit:Math.min(60,Math.max(1,Number(url.searchParams.get('limit')||36)||36))});const listings=await Promise.all((result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId)).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings,total:result.total??listings.length});}
-        const q=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100),kind=String(url.searchParams.get('kind')||''),category=String(url.searchParams.get('category')||''),location=String(url.searchParams.get('location')||'').trim().toLowerCase().slice(0,120),sort=String(url.searchParams.get('sort')||'recent');
-        let listings=(db.marketplaceListings||[]).filter(item=>isMarketplaceListingActive(item)&&!blockedBetween(user.id,item.sellerId));
-        if(kind==='product'||kind==='service')listings=listings.filter(item=>item.kind===kind);
-        if(category)listings=listings.filter(item=>item.category===category);
-        if(location)listings=listings.filter(item=>String(item.location||'').toLowerCase().includes(location));
-        if(q)listings=listings.filter(item=>(item.title+' '+item.description+' '+item.category+' '+(item.tags||[]).join(' ')+' '+(item.location||'')).toLowerCase().includes(q));
-        if(sort==='price_low')listings.sort((a,b)=>(a.priceMinor??Number.MAX_SAFE_INTEGER)-(b.priceMinor??Number.MAX_SAFE_INTEGER));
-        else if(sort==='price_high')listings.sort((a,b)=>(b.priceMinor??-1)-(a.priceMinor??-1));
-        else listings.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        const total=listings.length,limit=Math.min(60,Math.max(1,Number(url.searchParams.get('limit')||36)||36));
-        return json(res,200,{listings:await Promise.all(listings.slice(0,limit).map(item=>publicMarketplaceListing(item,user.id))),total});
-      }
-      if(method==='GET'&&p==='/api/marketplace/mine'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'mine',limit:60});const listings=await Promise.all((result.listings||[]).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings});}
-        const listings=(db.marketplaceListings||[]).filter(item=>item.sellerId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        return json(res,200,{listings:await Promise.all(listings.map(item=>publicMarketplaceListing(item,user.id)))});
-      }
-      if(method==='GET'&&p==='/api/marketplace/saved'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'saved',limit:60});const listings=await Promise.all((result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId)).map(item=>publicMarketplaceListing(item,user.id)));return json(res,200,{listings});}
-        const saved=(db.marketplaceSaved||[]).filter(item=>item.userId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        const listings=await Promise.all(saved.map(async item=>{const listing=(db.marketplaceListings||[]).find(candidate=>candidate.id===item.listingId);if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return null;return {...await publicMarketplaceListing(listing,user.id),savedAt:item.createdAt};}));
-        return json(res,200,{listings:listings.filter(Boolean)});
-      }
-      if(method==='POST'&&p==='/api/marketplace/listings'){
-        const sellerApproval=isSupabasePersistence()?(await requestSupabaseState('marketplace_seller_get',{userId:user.id})).seller:(db.marketplaceSellers||[]).find(item=>item.userId===user.id);
-        const testBypass=process.env.NODE_ENV==='test'&&process.env.MARKETPLACE_ALLOW_UNVERIFIED_SELLERS==='true';
-        if(!testBypass&&(sellerApproval?.status!=='approved'||sellerApproval?.identityStatus!=='verified'))return json(res,403,{error:'Complete the Minglora seller application and identity or business verification before publishing listings.'});
-        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'External image URLs are not accepted. Upload listing photos from your device.'});
-        const validation=validateMarketplaceListingInput(input);if(!validation.valid)return json(res,400,{error:validation.error});
-        const mediaIds=[...new Set((Array.isArray(input.mediaIds)?input.mediaIds:[]).map(value=>String(value||'')))];
-        if(mediaIds.length>8)return json(res,400,{error:'Choose no more than 8 listing photos.'});
-        const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='marketplace'&&asset.status==='uploaded'&&asset.mediaType==='image'));
-        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more listing photos are unavailable. Upload them again.'});
-        const listing={id:uid(),sellerId:user.id,...validation.value,mediaIds,status:'active',views:0,createdAt:now(),updatedAt:now()};
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_sync',{userId:user.id,listing});return json(res,201,{listing:await publicMarketplaceListing(result.listing||listing,user.id)});}
-        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='marketplace:'+listing.id;});
-        db.marketplaceListings||=[];db.marketplaceListings.unshift(listing);await saveStore();
-        return json(res,201,{listing:await publicMarketplaceListing(listing,user.id)});
-      }
-      const marketplaceSaveMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/save$/);
-      if((method==='POST'||method==='DELETE')&&marketplaceSaveMatch){
-        if(isSupabasePersistence()){const listing=(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceSaveMatch[1]})).listing;if(!listing||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'Marketplace listing not found.'});const result=await requestSupabaseState('marketplace_listing_save',{userId:user.id,listingId:marketplaceSaveMatch[1],save:method==='POST'});return json(res,200,result);}
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceSaveMatch[1]);
-        if(!isMarketplaceListingActive(listing)||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'Marketplace listing not found.'});
-        db.marketplaceSaved||=[];const existing=db.marketplaceSaved.find(item=>item.userId===user.id&&item.listingId===listing.id);
-        if(method==='POST'&&!existing)db.marketplaceSaved.unshift({id:uid(),userId:user.id,listingId:listing.id,createdAt:now()});
-        if(method==='DELETE'&&existing)db.marketplaceSaved=db.marketplaceSaved.filter(item=>item.id!==existing.id);
-        await saveStore();return json(res,200,{saved:method==='POST'});
-      }
-      const marketplaceEnquiryMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)\/enquiries$/);
-      if(method==='POST'&&marketplaceEnquiryMatch){
-        const listing=isSupabasePersistence()?(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceEnquiryMatch[1]})).listing:(db.marketplaceListings||[]).find(item=>item.id===marketplaceEnquiryMatch[1]);
-        if(!isMarketplaceListingActive(listing)||listing.sellerId===user.id||blockedBetween(user.id,listing.sellerId))return json(res,404,{error:'This listing is unavailable for enquiries.'});
-        const seller=db.users.find(member=>member.id===listing.sellerId),text=String(input.text||'').trim();
-        if(!seller||text.length<5||text.length>2000)return json(res,400,{error:'Write an enquiry of 5–2000 characters.'});
-        const audience=getUserSettings(seller).privacy.messageAudience;
-        if(audience!=='everyone'&&!isFriend(user.id,seller.id))return json(res,403,{error:'This seller only accepts new messages from confirmed friends.'});
-        const message={id:uid(),from:user.id,to:seller.id,text:'Marketplace enquiry: '+listing.title+'\n\n'+text,marketplaceListingId:listing.id,messageKind:'marketplace_inquiry',createdAt:now(),read:false};
-        db.messages.push(message);db.marketplaceInquiries||=[];
-        const inquiry={id:uid(),listingId:listing.id,senderId:user.id,sellerId:seller.id,messageId:message.id,status:'sent',createdAt:now()};
-        db.marketplaceInquiries.unshift(inquiry);notify(seller.id,user.id,'message',user.name+' sent an enquiry about '+listing.title+'.',{marketplaceListingId:listing.id});
-        await saveStore();return json(res,201,{inquiry:{id:inquiry.id,listingId:listing.id,status:inquiry.status,createdAt:inquiry.createdAt},messageId:message.id});
-      }
-      const marketplaceListingMatch=p.match(/^\/api\/marketplace\/listings\/([^/]+)$/);
-      if(marketplaceListingMatch&&method==='GET'){
-        const listing=isSupabasePersistence()?(await requestSupabaseState('marketplace_listing_get',{userId:user.id,listingId:marketplaceListingMatch[1]})).listing:(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
-        if(!listing||blockedBetween(user.id,listing.sellerId)||(!isMarketplaceListingActive(listing)&&!canManageMarketplaceListing(listing,user.id)))return json(res,404,{error:'Marketplace listing not found.'});
-        if(listing.sellerId!==user.id){listing.views=Number(listing.views||0)+1;await saveStore();}
-        return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
-      }
-      if(marketplaceListingMatch&&method==='PATCH'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_set_status',{userId:user.id,listingId:marketplaceListingMatch[1],status:String(input.status||'')});return json(res,200,{listing:await publicMarketplaceListing(result.listing,user.id)});}
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
-        if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
-        if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can manage this listing.'});
-        const status=String(input.status||'');if(!['active','paused','sold'].includes(status))return json(res,400,{error:'Choose Active, Paused or Sold.'});
-        if(status==='active'&&listing.kind==='product'&&Number(listing.quantity||0)<1)return json(res,409,{error:'Add available stock before reactivating this product.'});
-        listing.status=status;if(status==='sold'&&listing.kind==='product')listing.quantity=0;listing.updatedAt=now();
-        await saveStore();return json(res,200,{listing:await publicMarketplaceListing(listing,user.id)});
-      }
-      if(marketplaceListingMatch&&method==='DELETE'){
-        if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listing_set_status',{userId:user.id,listingId:marketplaceListingMatch[1],status:'removed'});return json(res,200,{ok:true,id:result.listing.id});}
-        const listing=(db.marketplaceListings||[]).find(item=>item.id===marketplaceListingMatch[1]);
-        if(!listing)return json(res,404,{error:'Marketplace listing not found.'});
-        if(!canManageMarketplaceListing(listing,user.id))return json(res,403,{error:'Only the seller can remove this listing.'});
-        listing.status='removed';listing.removedAt=now();listing.updatedAt=now();
-        (listing.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
-        await saveStore();return json(res,200,{ok:true,id:listing.id});
-      }
       if(method==='POST'&&p==='/api/auth/phone/change'){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Verified phone authentication requires Supabase Auth.'});
         const phone=normalizeContactPhone(input.phone||'');
@@ -1575,11 +984,10 @@ async function route(req, res) {
           story:['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm','video/quicktime'],
           group:['image/jpeg','image/png','image/webp','video/mp4'],
           page:['image/jpeg','image/png','image/webp','video/mp4'],
-          marketplace:['image/jpeg','image/png','image/webp','image/avif'],
           message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation'],
           ringtone:Object.keys(CALL_RINGTONE_MIME_TYPES)
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,marketplace:15*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
@@ -1800,7 +1208,7 @@ async function route(req, res) {
       }
       if(method==='POST'&&p==='/api/reports'){
         const targetType=String(input.targetType||''),targetId=String(input.targetId||''),category=String(input.category||''),details=String(input.details||'').trim();
-        const allowedTypes=['user','post','comment','story','group','page','message','marketplace_listing'];
+        const allowedTypes=['user','post','comment','story','group','page','message'];
         const allowedCategories=['spam','harassment','hate','nudity','violence','scam','impersonation','copyright','privacy','other'];
         if(!allowedTypes.includes(targetType)||!targetId||!allowedCategories.includes(category)||details.length>2000)return json(res,400,{error:'Choose a report type, reason and optional details (maximum 2000 characters).'});
         let exists=false;
@@ -1810,7 +1218,6 @@ async function route(req, res) {
         if(targetType==='story')exists=(db.stories||[]).some(item=>item.id===targetId);
         if(targetType==='group')exists=(db.groups||[]).some(item=>item.id===targetId);
         if(targetType==='page')exists=(db.pages||[]).some(item=>item.id===targetId);
-        if(targetType==='marketplace_listing')exists=(db.marketplaceListings||[]).some(item=>item.id===targetId&&item.status!=='removed');
         if(targetType==='message')exists=(db.messages||[]).some(item=>item.id===targetId&&(item.from===user.id||item.to===user.id));
         if(!exists)return json(res,404,{error:'The content you are reporting could not be found.'});
         const duplicate=(db.reports||[]).find(item=>item.reporterId===user.id&&item.targetType===targetType&&item.targetId===targetId&&['open','triaged'].includes(item.status));
@@ -1827,7 +1234,7 @@ async function route(req, res) {
         const status=String(url.searchParams.get('status')||'open');
         const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>({
           ...item,reporter:safeUser(db.users.find(u=>u.id===item.reporterId)),
-          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):item.targetType==='marketplace_listing'?db.users.find(u=>u.id===(db.marketplaceListings||[]).find(listing=>listing.id===item.targetId)?.sellerId):null))
+          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null))
         }));
         return json(res,200,{reports});
       }
@@ -3546,26 +2953,13 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/search'){
         const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
         const q=rawQuery.replace(/^@/,'').trim();
-        const empty={users:[],posts:[],groups:[],pages:[],listings:[],jobs:[]};
+        const empty={users:[],posts:[],groups:[],pages:[]};
         if(!q)return json(res,200,empty);
         const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
         const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
         const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
         const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
-        let listings=[],jobs=[];
-        try{
-          let sourceListings=[];
-          if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_listings_list',{userId:user.id,mode:'browse',q,kind:'',category:'',location:'',sort:'recent',limit:8});sourceListings=(result.listings||[]).filter(item=>!blockedBetween(user.id,item.sellerId));}
-          else sourceListings=(db.marketplaceListings||[]).filter(item=>isMarketplaceListingActive(item)&&!blockedBetween(user.id,item.sellerId)&&(String(item.title||'')+' '+String(item.description||'')+' '+String(item.category||'')+' '+(item.tags||[]).join(' ')+' '+String(item.location||'')).toLowerCase().includes(q)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
-          listings=await Promise.all(sourceListings.map(item=>publicMarketplaceListing(item,user.id)));
-        }catch(error){console.warn('[Minglora search] Marketplace discovery unavailable:',String(error?.message||error).slice(0,160));}
-        try{
-          let sourceJobs=[];
-          if(isSupabasePersistence()){const result=await requestSupabaseState('marketplace_jobs_list',{userId:user.id,q,category:'',location:''});sourceJobs=result.jobs||[];}
-          else sourceJobs=(db.jobPostings||[]).filter(item=>item.status==='open'&&new Date(item.applicationDeadline)>new Date()&&(String(item.title||'')+' '+String(item.companyName||'')+' '+String(item.description||'')).toLowerCase().includes(q));
-          jobs=sourceJobs.filter(item=>!blockedBetween(user.id,item.employerId)).slice(0,8);
-        }catch(error){console.warn('[Minglora search] Job discovery unavailable:',String(error?.message||error).slice(0,160));}
-        return json(res,200,{users,posts,groups,pages,listings,jobs});
+        return json(res,200,{users,posts,groups,pages});
       }
       return json(res,404,{error:'API route not found.'});
     } catch(e) {
