@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  CREATOR_LEAGUE_CLASSES, MATCH_RANKS, ensureCreatorLeagueProfile,
+  CREATOR_LEAGUE_CLASSES, MATCH_RANKS, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues, settleCreatorLeagueDay, createCreatorLeagueMatch,
   acceptCreatorLeagueMatch, useCreatorLeaguePowerup, supportCreatorLeagueMatch,
   settleExpiredLeagueMatches, getCreatorLeagueOverview, listCreatorLeagueMatches
@@ -330,4 +330,37 @@ test("duplicate power-up effect snapshots cannot stack extra Shields on one side
   assert.equal(matches.length, 1);
   assert.equal(matches[0].activeEffects.filter(item => item.type === "shield" && item.side === "challenger").length, 1);
   assert.equal(matches[0].activeEffects[0].expiresAt, laterExpiry);
+});
+
+
+test("League daily, season and lifetime Gift points rebuild from unique confirmed transactions", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  const dayKey = now.toISOString().slice(0, 10);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  const profile = {
+    userId: "creator-a", region: "JAMAICA", leagueClass: "D5",
+    fragments: 0, leagueShields: 0, lifetimeGiftPoints: 20,
+    seasonPoints: 20, seasonKey, matchRankIndex: 0, matchRankPoints: 0,
+    matchWins: 0, matchLosses: 0, matchDraws: 0,
+    createdAt: now.toISOString(), updatedAt: now.toISOString()
+  };
+  db.creatorLeagueProfiles.push({ ...profile }, { ...profile, lifetimeGiftPoints: 10, seasonPoints: 10 });
+  db.creatorLeagueGiftLedger.push(
+    { id: "ledger-1", giftId: "gift-1", userId: "creator-a", coinAmount: 10, dayKey, seasonKey },
+    { id: "ledger-1-copy", giftId: "gift-1", userId: "creator-a", coinAmount: 10, dayKey, seasonKey },
+    { id: "ledger-2", giftId: "gift-2", userId: "creator-a", coinAmount: 20, dayKey, seasonKey }
+  );
+  db.creatorLeagueDailyScores.push(
+    { id: "daily-1", userId: "creator-a", dayKey, points: 10 },
+    { id: "daily-2", userId: "creator-a", dayKey, points: 20 }
+  );
+
+  const normalizedProfile = ensureCreatorLeagueProfile(db, "creator-a", "JAMAICA", now);
+
+  assert.equal(db.creatorLeagueGiftLedger.length, 2);
+  assert.equal(db.creatorLeagueDailyScores.length, 1);
+  assert.equal(db.creatorLeagueDailyScores[0].points, 30);
+  assert.equal(normalizedProfile.lifetimeGiftPoints, 30);
+  assert.equal(normalizedProfile.seasonPoints, 30);
 });
