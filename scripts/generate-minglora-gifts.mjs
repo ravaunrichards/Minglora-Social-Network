@@ -48,22 +48,32 @@ function palette(gift) {
 function symbolFor(gift) {
   const name = gift.name.toLowerCase();
   const rules = [
-    [/rose|flower|tulip|bouquet|hibiscus|blossom|sakura/,"🌹"],
-    [/heart|love|kiss|cupid|hug|romance/,"💖"],
-    [/cat|kitten/,"🐱"], [/dog|puppy|shiba/,"🐶"], [/bear|panda/,"🐻"],
-    [/lion|tiger/,"🦁"], [/fox/,"🦊"], [/rabbit|bunny/,"🐰"],
-    [/horse|unicorn|pegasus/,"🦄"], [/dragon/,"🐉"],
-    [/whale|dolphin|shark|fish/,"🐬"], [/bird|eagle|falcon|parrot|swan|penguin/,"🦜"],
-    [/butterfly/,"🦋"], [/car|vehicle|sports car|truck|bus/,"🏎️"],
-    [/train/,"🚂"], [/plane|jet|aircraft|shuttle/,"✈️"], [/boat|ship|yacht/,"🛥️"],
-    [/rocket/,"🚀"], [/guitar/,"🎸"], [/drum/,"🥁"], [/mic|microphone/,"🎤"],
-    [/music|headphone|speaker/,"🎵"], [/trophy|medal|champion/,"🏆"],
-    [/football|soccer/,"⚽"], [/basketball/,"🏀"], [/tennis/,"🎾"],
-    [/cake|birthday/,"🎂"], [/pizza/,"🍕"], [/coffee/,"☕"], [/tea/,"🫖"],
+    [/rose|flower|tulip|bouquet|hibiscus|blossom|sakura|orchid|lotus/,"🌹"],
+    [/heart|love|kiss|cupid|hug|romance|valentine/,"💖"],
+    [/baseball/,"⚾"], [/basketball/,"🏀"], [/football|soccer/,"⚽"], [/volleyball/,"🏐"],
+    [/tennis/,"🎾"], [/cricket/,"🏏"], [/boxing glove|boxing/,"🥊"], [/golf/,"⛳"],
+    [/cat|kitten/,"🐱"], [/dog|puppy|shiba|corgi/,"🐶"], [/bear|panda/,"🐻"],
+    [/lion/,"🦁"], [/tiger/,"🐯"], [/fox/,"🦊"], [/rabbit|bunny/,"🐰"],
+    [/horse|unicorn|pegasus/,"🦄"], [/dragon/,"🐉"], [/dinosaur|t.rex|trex/,"🦖"],
+    [/whale/,"🐳"], [/dolphin/,"🐬"], [/shark/,"🦈"], [/fish/,"🐠"],
+    [/eagle|falcon/,"🦅"], [/parrot/,"🦜"], [/swan|dove/,"🕊️"], [/penguin/,"🐧"],
+    [/butterfly/,"🦋"], [/bee/,"🐝"], [/frog/,"🐸"], [/turtle/,"🐢"],
+    [/car|vehicle|sports car|truck|bus/,"🏎️"], [/motorcycle|motorbike/,"🏍️"],
+    [/bicycle|bike|cycling/,"🚲"], [/helicopter/,"🚁"], [/train/,"🚂"],
+    [/plane|jet|aircraft|shuttle/,"✈️"], [/boat|ship|yacht/,"🛥️"], [/rocket/,"🚀"],
+    [/guitar/,"🎸"], [/drum/,"🥁"], [/piano|keyboard/,"🎹"], [/mic|microphone/,"🎤"],
+    [/music|headphone|speaker|melody|beat/,"🎵"], [/trophy|medal|champion|award/,"🏆"],
+    [/ice cream|gelato|popsicle/,"🍦"], [/cake|cupcake|birthday/,"🎂"], [/pizza/,"🍕"],
+    [/coffee/,"☕"], [/tea/,"🫖"], [/juice|smoothie/,"🧃"], [/watermelon/,"🍉"],
+    [/mango/,"🥭"], [/cherry/,"🍒"], [/corn/,"🌽"], [/chili|chilli|pepper/,"🌶️"],
     [/perfume/,"🧴"], [/diamond|crystal|gem/,"💎"], [/crown|tiara/,"👑"],
-    [/money|cash|coin|gold mine/,"💰"], [/firework|confetti|balloon|party/,"🎉"],
-    [/tree|forest|garden|island/,"🌳"], [/star|moon|sun|galaxy|universe|space/,"🌌"],
-    [/alien/,"👽"], [/game|gaming|controller|arcade/,"🎮"], [/flag|jamaica|parish/,"🇯🇲"]
+    [/ring|necklace|jewelry/,"💍"], [/money|cash|coin|gold mine/,"💰"],
+    [/firework|confetti|balloon|party|celebration/,"🎉"], [/tree|forest|garden|island/,"🌳"],
+    [/star|moon|sun|galaxy|universe|space|nebula/,"🌌"], [/alien/,"👽"],
+    [/game|gaming|controller|arcade/,"🎮"], [/camera|photo/,"📸"],
+    [/clapperboard|movie|film/,"🎬"], [/book|study|school/,"📚"],
+    [/castle|palace|kingdom/,"🏰"], [/house|home/,"🏠"], [/flag|jamaica|parish/,"🇯🇲"],
+    [/umbrella/,"☂️"], [/clock|watch|time/,"⌚"], [/phone|mobile/,"📱"]
   ];
   for (const pair of rules) if (pair[0].test(name)) return pair[1];
   return gift.emoji || "🎁";
@@ -72,6 +82,7 @@ function svgArt(gift) {
   const colors = palette(gift);
   const seed = hash32(gift.code);
   const symbol = symbolFor(gift);
+  const name = String(gift.name || "").toLowerCase();
   const rot = (seed % 31) - 15;
   const star1 = 45 + (seed % 50);
   const star2 = 370 + (seed % 60);
@@ -91,7 +102,15 @@ function svgArt(gift) {
     gift.category === "games" ? "pixel" :
     gift.category === "community" ? "bond" : "spark");
   let shape = "";
-  if (icon === "heart") {
+  if (/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(name)) {
+    shape = '<path d="M256 304v122m0-78c-58-39-81 8-81 8 40 37 62 12 81-8zm0 31c57-42 81 7 81 7-41 37-62 12-81-7z" fill="none" stroke="#58c27b" stroke-width="17" stroke-linecap="round"/><path d="M246 325q-52-39-43-82m65 82q52-39 43-82" fill="none" stroke="#429c68" stroke-width="7"/><g fill="url(#main)" stroke="#fff" stroke-opacity=".7" stroke-width="5"><ellipse cx="256" cy="208" rx="37" ry="79"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(55 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(110 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(165 256 256)"/></g><circle cx="256" cy="256" r="39" fill="url(#shine)"/>';
+  } else if (/baseball/.test(name)) {
+    shape = '<circle cx="256" cy="252" r="132" fill="#fff" stroke="#d6e2ef" stroke-width="12"/><path d="M158 154q98 98 0 196m196-196q-98 98 0 196" fill="none" stroke="#d84854" stroke-width="12" stroke-linecap="round"/><path d="M165 173l-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34-173 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15" stroke="#d84854" stroke-width="7" stroke-linecap="round"/>';
+  } else if (/ice cream|gelato|popsicle/.test(name)) {
+    shape = '<path d="M186 252h140l-65 174q-5 13-12 0z" fill="#b87b48" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M186 256q-28-18-28-56 0-75 98-75t98 75q0 38-28 56z" fill="url(#main)" stroke="#fff" stroke-width="9"/><circle cx="224" cy="193" r="14" fill="#fff" fill-opacity=".6"/><circle cx="277" cy="174" r="10" fill="#fff" fill-opacity=".7"/>';
+  } else if (/coffee/.test(name)) {
+    shape = '<path d="M167 209h177l-18 165q-4 28-31 28h-79q-27 0-31-28z" fill="url(#main)" stroke="#fff" stroke-width="9"/><path d="M344 241h42q52 0 42 60-9 50-63 48" fill="none" stroke="#fff" stroke-width="18"/><path d="M218 175q-28-38 0-69m52 69q-28-38 0-69m52 69q-28-38 0-69" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="10" stroke-linecap="round"/>';
+  } else if (icon === "heart") {
     shape = '<path d="M256 356C198 309 132 259 132 194c0-43 31-73 72-73 25 0 43 13 52 32 11-19 30-32 55-32 42 0 73 31 73 73 0 65-66 115-128 162z" fill="url(#main)" stroke="#fff" stroke-opacity=".7" stroke-width="8"/>';
   } else if (icon === "petal") {
     shape = '<g fill="url(#main)" stroke="#fff" stroke-opacity=".68" stroke-width="5"><ellipse cx="256" cy="181" rx="34" ry="81"/><ellipse cx="256" cy="181" rx="34" ry="81" transform="rotate(45 256 256)"/><ellipse cx="256" cy="181" rx="34" ry="81" transform="rotate(90 256 256)"/><ellipse cx="256" cy="181" rx="34" ry="81" transform="rotate(135 256 256)"/></g><circle cx="256" cy="256" r="48" fill="url(#shine)"/><path d="M256 304v111m0-64c-58-42-80 6-80 6 40 37 62 13 80-6zm0 22c57-42 81 8 81 8-41 37-62 12-81-8z" fill="none" stroke="#72d39c" stroke-width="16" stroke-linecap="round"/>';
@@ -226,7 +245,34 @@ function modelDocument(gift) {
   cylinder(0,-.68,0,.64,.12,dark,28);
   torus(0,-.59,0,.55,.035,light,28,8);
   const c=gift.category,n=gift.name.toLowerCase();
-  if(c==="flowers"||/rose|flower|tulip|bouquet|hibiscus|sakura|blossom/.test(n)){
+  if(/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(n)){
+    cylinder(0,-.28,0,.035,.76,"#55b975",12);
+    sphere(-.23,-.34,0,.24,.075,.12,"#6cc88a");
+    sphere(.21,-.18,0,.23,.075,.12,"#72d99a");
+    for(let ring=0;ring<3;ring++)for(let i=0;i<6;i++){
+      const a=2*Math.PI*i/6+(ring*.48),r=.09+ring*.095;
+      sphere(Math.cos(a)*r,.4+ring*.055,Math.sin(a)*r,.12,.095,.15,ring===2?light:base,10,7);
+    }
+    sphere(0,.51,0,.12,.12,.12,light,12,8);
+  } else if(/baseball/.test(n)){
+    sphere(0,.18,0,.43,.43,.43,"#f8f8f4",18,12);
+    torus(0,.18,0,.39,.018,"#d94f59",24,6);
+    torus(0,.18,0,.27,.014,"#d94f59",24,6);
+    for(let i=0;i<7;i++){const y=-.16+i*.055;sphere(-.34,y,.19,.025,.012,.012,"#d94f59",7,4);sphere(.34,y,-.19,.025,.012,.012,"#d94f59",7,4);}
+  } else if(/basketball/.test(n)){
+    sphere(0,.18,0,.43,.43,.43,"#df873e",18,12);
+    torus(0,.18,0,.42,.018,"#302d34",24,6);
+    torus(0,.18,0,.29,.018,"#302d34",24,6);
+  } else if(/ice cream|gelato|popsicle/.test(n)){
+    cylinder(0,-.03,0,.23,.5,"#ba854e",18,.015);
+    sphere(0,.37,0,.31,.28,.3,base,16,10);
+    sphere(-.12,.49,.13,.06,.05,.05,light,8,5);
+  } else if(/coffee/.test(n)){
+    cylinder(0,.05,0,.27,.42,base,20,.24);
+    torus(.28,.11,0,.16,.045,light,16,7);
+    cylinder(0,.3,0,.25,.07,dark,20);
+    sphere(0,.46,0,.07,.12,.06,light,9,6);
+  } else if(c==="flowers"||/flower|tulip|bouquet|hibiscus|sakura|blossom|orchid|lotus/.test(n)){
     cylinder(0,-.28,0,.045,.72,"#55b975",12);
     sphere(-.23,-.34,0,.24,.08,.12,"#6cc88a");
     sphere(.21,-.18,0,.23,.08,.12,"#72d99a");
@@ -379,17 +425,30 @@ function main(){
   const checkOnly=process.argv.includes("--check");
   const data=JSON.parse(fs.readFileSync(MANIFEST,"utf8"));
   if(!Array.isArray(data.gifts)||data.gifts.length!==data.gift_count)throw new Error("Gift catalogue manifest count does not match its records.");
+  const codes=new Set(),namePricePairs=new Set(),imagePaths=new Set(),modelPaths=new Set();
+  for(const gift of data.gifts){
+    if(!gift||typeof gift!=="object")throw new Error("Gift catalogue contains a non-object record.");
+    if(!Number.isSafeInteger(gift.coin_price)||gift.coin_price<1)throw new Error("Invalid coin price: "+gift.name);
+    if(!/^[a-z0-9_-]{1,59}$/.test(String(gift.code||"")))throw new Error("Invalid gift code: "+gift.code);
+    if(!String(gift.name||"").trim()||!String(gift.category||"").trim())throw new Error("Gift is missing its name or category: "+gift.code);
+    if(!String(gift.animation_preset||"").trim()||!String(gift.sound_preset||"").trim())throw new Error("Gift is missing its animation or sound profile: "+gift.code);
+    const pair=gift.name.toLocaleLowerCase("en-US")+"|"+gift.coin_price;
+    if(codes.has(gift.code))throw new Error("Duplicate gift code: "+gift.code);
+    if(namePricePairs.has(pair))throw new Error("Duplicate gift name and price: "+pair);
+    if(gift.image_url!=="/assets/gifts/catalog/"+gift.code+".svg"||gift.model_url!=="/assets/gifts/catalog/"+gift.code+".gltf")throw new Error("Gift asset paths are not canonical: "+gift.code);
+    if(imagePaths.has(gift.image_url)||modelPaths.has(gift.model_url))throw new Error("Duplicate gift asset path: "+gift.code);
+    codes.add(gift.code);namePricePairs.add(pair);imagePaths.add(gift.image_url);modelPaths.add(gift.model_url);
+  }
   fs.mkdirSync(ASSET_DIR,{recursive:true});
   let count=0;
   for(const gift of data.gifts){
-    if(!Number.isSafeInteger(gift.coin_price)||gift.coin_price<1)throw new Error("Invalid coin price: "+gift.name);
     const svg=svgArt(gift);
     const gltf=JSON.stringify(modelDocument(gift));
     writeAsset(path.join(ASSET_DIR,gift.code+".svg"),svg,checkOnly);
     writeAsset(path.join(ASSET_DIR,gift.code+".gltf"),gltf,checkOnly);
     count++;
   }
-  const stamp={version:1,giftCount:count,svgAssets:count,gltfAssets:count,generatedAt:new Date().toISOString()};
+  const stamp={version:1,giftCount:count,svgAssets:count,gltfAssets:count,generatedAt:String(data.generated_at||"unspecified")};
   const stampText=JSON.stringify(stamp,null,2);
   writeAsset(path.join(ASSET_DIR,"catalog-build.json"),stampText,checkOnly);
   process.stdout.write("[Minglora Gift Studio] "+(checkOnly?"verified ":"generated ")+count+" individual SVG artworks and "+count+" 3D GLTF gift models.\n");

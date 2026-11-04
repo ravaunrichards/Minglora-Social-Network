@@ -918,7 +918,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         const filtered=liveGiftCatalogue.filter(item=>!query||(item.name+" "+item.category).toLowerCase().includes(query));
         const shown=filtered.slice(0,liveGiftVisible);
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
-          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name)+"'>":esc(gift.emoji||"🎁");
+          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name)+"'>":esc(gift.emoji||"🎁");
           return "<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>";
         }).join(""):"<p class='muted'>No gifts match your search.</p>";
         if(liveGiftMore){liveGiftMore.hidden=shown.length>=filtered.length;liveGiftMore.textContent="Show more gifts · "+Math.max(0,filtered.length-shown.length).toLocaleString()+" remaining";}

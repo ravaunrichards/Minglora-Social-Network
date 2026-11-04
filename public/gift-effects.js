@@ -26,6 +26,10 @@
     games:{wave:"square",notes:[0,12,19,24],base:340,length:.08,pan:0},
     community:{wave:"triangle",notes:[0,4,7,12],base:490,length:.17,pan:0},
     symbols:{wave:"sine",notes:[0,7,12],base:580,length:.16,pan:0},
+    everyday:{wave:"sine",notes:[0,3,7],base:530,length:.21,pan:-.08},
+    reactions:{wave:"square",notes:[0,12,19],base:680,length:.07,pan:.04},
+    seasonal:{wave:"sine",notes:[0,7,12,16],base:720,length:.2,pan:.12},
+    jamaican_culture:{wave:"triangle",notes:[0,3,7,10,12],base:390,length:.13,pan:0},
     other:{wave:"triangle",notes:[0,5,12],base:460,length:.15,pan:0}
   };
   function play(gift){
