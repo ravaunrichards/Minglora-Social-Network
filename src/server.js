@@ -104,7 +104,7 @@ function publicCreatorSubscriptionPlans(creatorId) {
 
 async function ensurePaypalCreatorSubscriptionPlan(req, creator, plan) {
   let saved = (db.creatorSubscriptionPlans || []).find(item =>
-    item.creatorId === creator.id && item.planCode === plan.planCode
+    item.creatorId === creator.id && item.planCode === plan.code
   );
   if (!saved) throw Object.assign(new Error('This creator subscription package is no longer available.'), { status: 404 });
 
@@ -1766,11 +1766,13 @@ async function route(req, res) {
         return json(res,200,{ok:true,exchange:result.exchange||result,wallet});
       }
       if(method==='GET'&&p==='/api/creator/subscriptions'){
+        if(!user)return json(res,401,{error:'Sign in to manage creator subscriptions.'});
         const plans=getCreatorSubscriptionPlans(db.creatorSubscriptionPlans,user.id)
           .map(({paypalProductId,paypalPlanId,...plan})=>plan);
         return json(res,200,{plans,packages:CREATOR_SUBSCRIPTION_PACKAGES,perks:CREATOR_SUBSCRIPTION_PERKS});
       }
       if(method==='PUT'&&p==='/api/creator/subscriptions'){
+        if(!user)return json(res,401,{error:'Sign in to manage creator subscriptions.'});
         let normalized;
         try{
           normalized=normalizeCreatorSubscriptionPlans(user.id,input.plans,db.creatorSubscriptionPlans);
@@ -1824,6 +1826,7 @@ async function route(req, res) {
           perks:{...plan.perks},
           paypalPlanId:savedPlan.paypalPlanId,
           paypalSubscriptionId:checkout.id,
+          paypalApproveUrl:approveUrl,
           status:'approval_pending',
           cancelAtPeriodEnd:false,
           currentPeriodEnd:null,
@@ -1853,7 +1856,7 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{ok:true,subscription:{id:tracked.id,status:tracked.status,planName:tracked.planName,currentPeriodEnd:tracked.currentPeriodEnd,cancelAtPeriodEnd:tracked.cancelAtPeriodEnd}});
       }
-      const subscriptionCancelMatch=p.match(/^\\/api\\/subscriptions\\/([^/]+)\\/cancel$/);
+      const subscriptionCancelMatch=p.match(/^\/api\/subscriptions\/([^/]+)\/cancel$/);
       if(method==='POST'&&subscriptionCancelMatch){
         if(!user)return json(res,401,{error:'Sign in to manage your subscription.'});
         const tracked=(db.creatorSubscriptions||[]).find(item=>item.id===subscriptionCancelMatch[1]&&item.subscriberId===user.id);
@@ -2731,7 +2734,7 @@ async function route(req, res) {
           friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
           subscribersCount:listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).filter(subscription=>!blockedBetween(user.id,subscription.subscriberId)).length,
           subscriptionPlans:publicCreatorSubscriptionPlans(target.id),
-          viewerSubscription:(()=>{const subscription=activeSubscriptionForPair(target.id,user.id);return subscription?{id:subscription.id,status:subscription.status,planCode:subscription.planCode,planName:subscription.planName,currentPeriodEnd:subscription.currentPeriodEnd||null,cancelAtPeriodEnd:subscription.cancelAtPeriodEnd===true}:null;})(),
+          viewerSubscription:(()=>{const subscription=activeSubscriptionForPair(target.id,user.id);return subscription?{id:subscription.id,status:subscription.status,planCode:subscription.planCode,planName:subscription.planName,currentPeriodEnd:subscription.currentPeriodEnd||null,cancelAtPeriodEnd:subscription.cancelAtPeriodEnd===true,approvalUrl:subscription.paypalApproveUrl||null}:null;})(),
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
         });
