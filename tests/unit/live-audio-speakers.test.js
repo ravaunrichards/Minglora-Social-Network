@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('public/app.js');
+const styles = read('public/styles.css');
 const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 
@@ -87,4 +88,18 @@ test('LIVE participant confirmation retries until the server verifies LiveKit pr
 
 test('Opening another LIVE room clears a previous participant-presence retry', () => {
   assert.match(app,/async function openLiveRoom\(session,role,issuedLiveKit\)\{\s*stopLiveChatRefresh\(\);stopLiveSpeakerRefresh\(\);stopLiveParticipantSync\(\);/);
+});
+
+
+test('Minglora LIVE presents compact accessible icon controls with working room actions', () => {
+  assert.match(app, /function liveControlIcon\(/);
+  assert.match(app, /class='live-player-controls live-icon-controls'/);
+  assert.match(app, /Manage multi-guest stage/);
+  assert.match(app, /Switch front\/back camera/);
+  assert.match(app, /restartTrack\(\{facingMode:nextFacing\}\)/);
+  assert.match(app, /navigator\.share/);
+  assert.match(app, /live-gifts-toggle/);
+  assert.match(styles, /\.live-player-controls\.live-icon-controls/);
+  assert.match(styles, /\.live-control-caption/);
+  assert.doesNotMatch(app, /class='live-player-controls'><button id='live-mic-toggle'/);
 });
