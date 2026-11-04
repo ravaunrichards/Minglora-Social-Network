@@ -32,25 +32,23 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
   assert.ok(nav.includes('<span>🏆</span><small>Leagues</small>'));
 });
 
-test('mobile navigation uses the same 3D icon artwork and keeps the main destinations', () => {
-  const nav = html.match(/<div class="mobile-nav"[\s\S]*?<\/div>/)?.[0] || '';
+test('mobile navigation keeps five clear destinations and secondary features in the organised More page', () => {
+  const nav = html.match(/<div class="mobile-nav"[\\s\\S]*?<\\/div>/)?.[0] || '';
   assert.ok(nav, 'mobile navigation exists');
-
   for (const [view, icon] of [
     ['feed', 'home'],
     ['for-you', 'explore'],
     ['live', 'live'],
-    ['meetwave', 'meetwave'],
+    ['messages', 'messages'],
   ]) {
-    assert.match(nav, new RegExp(`data-view="${view}"`));
-    assert.ok(nav.includes(useIcon(icon)), `${view} uses the shared 3D artwork`);
+    assert.match(nav, new RegExp('data-view="' + view + '"'));
+    assert.ok(nav.includes(useIcon(icon)), view + ' uses the shared 3D artwork');
   }
-  assert.match(nav,/data-view="leagues"/);
-  assert.match(nav,/id="mobile-more-btn"/);
-  assert.match(nav,/data-view="creator"/);
-  assert.match(nav,/data-view="friends"/);
+  assert.match(nav,/data-view="more"/);
+  assert.match(nav,/id="mobile-more-nav"/);
+  assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
+  assert.ok(html.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
 });
-
 test('utility rail and header actions use the matching rendered icon assets', () => {
   for (const icon of ['live', 'coins', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
     assert.ok(html.includes(useIcon(icon)), `utility icon ${icon} is wired into the interface`);
@@ -81,7 +79,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v72-compact-primary-nav-1/);
+  assert.match(serviceWorker, /minglora-shell-v73-mobile-navigation-1/);
   assert.match(serviceWorker, /styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
