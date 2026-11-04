@@ -57,6 +57,6 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(serviceWorker.includes('styles.css?v=20261104-money-to-coins-1'));
   assert.ok(serviceWorker.includes('app.js?v=20261104-money-to-coins-1'));
   assert.ok(serviceWorker.includes('settings.js?v=20261102-platform-shell-2'));
-  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
+  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261104-mobile-live-room-1'));
   assert.ok(mobileCss.includes('.top-actions #settings-btn{display:none!important}'));
 });
