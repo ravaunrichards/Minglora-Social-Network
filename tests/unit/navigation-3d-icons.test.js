@@ -20,16 +20,16 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
 
   for (const [view, icon, label] of [
     ['feed', 'home', 'Home'],
+    ['for-you', 'explore', 'For You'],
     ['live', 'live', 'LIVE'],
-    ['creator', 'creator', 'Studio'],
-    ['friends', 'friends', 'Friends'],
-    ['messages', 'messages', 'Messenger'],
-    ['coins', 'coins', 'Coins'],
+    ['meetwave', 'meetwave', 'MeetWave'],
   ]) {
     assert.match(nav, new RegExp(`data-view="${view}"`));
     assert.ok(nav.includes(useIcon(icon)), `${label} has its matching dimensional icon`);
     assert.ok(nav.includes(`<small>${label}</small>`), `${label} label remains visible`);
   }
+  assert.match(nav,/data-view="leagues"/);
+  assert.ok(nav.includes('🏆<small>Leagues</small>'));
 });
 
 test('mobile navigation uses the same 3D icon artwork and keeps the main destinations', () => {
@@ -38,15 +38,17 @@ test('mobile navigation uses the same 3D icon artwork and keeps the main destina
 
   for (const [view, icon] of [
     ['feed', 'home'],
+    ['for-you', 'explore'],
     ['live', 'live'],
-    ['creator', 'creator'],
-    ['friends', 'friends'],
-    ['messages', 'messages'],
-    ['coins', 'coins'],
+    ['meetwave', 'meetwave'],
   ]) {
     assert.match(nav, new RegExp(`data-view="${view}"`));
     assert.ok(nav.includes(useIcon(icon)), `${view} uses the shared 3D artwork`);
   }
+  assert.match(nav,/data-view="leagues"/);
+  assert.match(nav,/id="mobile-more-btn"/);
+  assert.match(nav,/data-view="creator"/);
+  assert.match(nav,/data-view="friends"/);
 });
 
 test('utility rail and header actions use the matching rendered icon assets', () => {
@@ -79,7 +81,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v71-account-auth-click-1/);
+  assert.match(serviceWorker, /minglora-shell-v72-compact-primary-nav-1/);
   assert.match(serviceWorker, /styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
