@@ -114,6 +114,8 @@ function safeUser(u,viewerId=null){
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
   const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:u.verificationBadge==='blue'?'blue':null,verificationStatus:u.verificationStatus||'not_submitted'};
+  const profileThought=typeof viewerId==='string'?(db.profileStatuses||[]).filter(item=>item.userId===u.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(viewerId,u.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]:null;
+  if(profileThought)result.profileThought={text:profileThought.text,mood:profileThought.mood||'',audience:profileThought.audience,createdAt:profileThought.createdAt,expiresAt:profileThought.expiresAt};
   const gifterBadge=getGifterBadgeSummary(db,u.id);
   if(gifterBadge)result.gifterBadge=gifterBadge;
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
@@ -2269,6 +2271,12 @@ async function route(req, res) {
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         const status=(db.profileStatuses||[]).filter(item=>item.userId===target.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(user.id,target.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]||null;
         return json(res,200,{status:status?{text:status.text,mood:status.mood,audience:status.audience,expiresAt:status.expiresAt,createdAt:status.createdAt}:null});
+      }
+      if(method==='DELETE'&&p==='/api/profile-status'){
+        const previous=(db.profileStatuses||[]).filter(item=>item.userId===user.id).length;
+        db.profileStatuses=(db.profileStatuses||[]).filter(item=>item.userId!==user.id);
+        if(previous)recordProfileActivity(user.id,'profile_thought_deleted','Removed profile thought.');
+        await saveStore();return json(res,200,{ok:true,status:null});
       }
       if(method==='POST'&&p==='/api/profile-status'){
         const text=String(input.text||'').trim(),mood=String(input.mood||'').trim().slice(0,24),audience=String(input.audience||'public');

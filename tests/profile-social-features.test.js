@@ -49,11 +49,15 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   const status=await request(alice.cookie,'/api/profile-status',{method:'POST',body:JSON.stringify({text:'Building on Minglora',mood:'Focused',audience:'followers',expiresInHours:24})});
   assert.equal(status.status,201,JSON.stringify(status.body));assert.equal(status.body.status.text,'Building on Minglora');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).body.status,null);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought,undefined,'followers-only thoughts must not leak to non-followers');
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id)).body.user.profileThought.text,'Building on Minglora');
   assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/profile-status')).body.status.text,'Building on Minglora');
 
   const checkIn=await request(alice.cookie,'/api/check-ins',{method:'POST',body:JSON.stringify({place:'Spanish Town',note:'Profile feature integration test',visibility:'followers'})});
   assert.equal(checkIn.status,201,JSON.stringify(checkIn.body));assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,0);
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/follow',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).body.status.text,'Building on Minglora');
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought.text,'Building on Minglora');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,1);
 
   const event=await request(alice.cookie,'/api/events',{method:'POST',body:JSON.stringify({title:'Minglora Community Night',description:'Profile API integration check',location:'Spanish Town',startAt:new Date(Date.now()+86400000).toISOString(),visibility:'public'})});
@@ -86,6 +90,11 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   const activity=await request(alice.cookie,'/api/users/'+alice.id+'/activity');
   assert.equal(activity.status,200);assert.ok(activity.body.activity.some(item=>item.action==='profile_status_updated'));
   assert.ok(activity.body.activity.some(item=>item.action==='check_in_created'));assert.ok(activity.body.activity.some(item=>item.action==='event_created'));
+  const removedThought=await request(alice.cookie,'/api/profile-status',{method:'DELETE',body:'{}'});
+  assert.equal(removedThought.status,200,JSON.stringify(removedThought.body));
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/profile-status')).body.status,null);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought,undefined);
+  assert.ok((await request(alice.cookie,'/api/users/'+alice.id+'/activity')).body.activity.some(item=>item.action==='profile_thought_deleted'));
 
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/block',{method:'POST',body:'{}'})).status,200);
   const blockedRsvp=await request(bob.cookie,'/api/events/'+event.body.event.id+'/rsvp',{method:'POST',body:JSON.stringify({status:'going'})});

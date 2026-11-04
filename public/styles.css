@@ -3670,3 +3670,30 @@ body.auth-mode .auth-screen{
 .recharge-exchange-unavailable{padding:24px}
 @media(max-width:900px){.recharge-layout{grid-template-columns:minmax(0,1fr) 270px}.recharge-package-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.recharge-page{gap:13px}.recharge-page-heading{align-items:stretch;flex-direction:column}.recharge-page-heading .coin-balance-card{width:100%}.recharge-tabs button{flex:1}.recharge-layout{grid-template-columns:1fr}.recharge-checkout-card{position:static}.recharge-package-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.recharge-package-card{min-height:116px;padding:11px 7px}.recharge-section-heading{flex-direction:column}.recharge-payment-note{align-self:flex-start}.recharge-custom-controls{max-width:none}.recharge-exchange-metrics{grid-template-columns:1fr 1fr}.recharge-exchange-metrics article:last-child{grid-column:1/-1}.recharge-exchange-grid{grid-template-columns:1fr}.recharge-exchange-intro{padding:15px}.recharge-exchange-mark{width:43px;height:43px}.recharge-exchange-card{padding:15px!important}.recharge-history-row{gap:8px}.recharge-history-row>span{display:none}}
+
+/* Minglora thought bubbles attached to member avatars */
+.ml-thought-avatar-wrap{display:inline-flex;position:relative;flex:0 0 auto;align-self:flex-start;width:max-content;max-width:100%}
+.ml-thought-avatar-wrap>.avatar{display:block;flex:0 0 auto}
+.ml-thought-avatar-indicator{position:absolute;right:-4px;top:-5px;z-index:4;display:grid;place-items:center;width:22px;height:22px;padding:0;border:2px solid var(--surface,#fff);border-radius:50%;background:var(--primary,#1769e0);color:#fff;font-size:15px;font-weight:900;line-height:1;box-shadow:0 2px 7px #0f172a40;cursor:pointer}
+.ml-thought-avatar-add{font-size:17px}
+.profile-avatar-edit-wrap{position:relative;z-index:3;overflow:visible}
+.ml-profile-thought-bubble,.ml-profile-thought-add{position:absolute;z-index:8;top:-10px;left:82px;width:min(215px,calc(100vw - 150px));max-height:68px;overflow:hidden;padding:9px 12px;border:1px solid var(--primary,#1769e0);border-radius:15px 15px 15px 4px;background:var(--surface,#fff);color:var(--text,#172033);box-shadow:0 5px 18px #0f172a22;text-align:left;font-size:.77rem;font-weight:650;line-height:1.35;overflow-wrap:anywhere;cursor:pointer}
+.ml-profile-thought-bubble>span{color:var(--muted,#64748b);font-size:.68rem;font-weight:750}
+.ml-profile-thought-add{width:auto;max-width:160px;max-height:none;white-space:nowrap;font-size:.72rem}
+.ml-thought-editor-note{margin:0 0 12px;color:var(--muted,#64748b);font-size:.82rem;line-height:1.5}
+.ml-thought-remove-inline{margin:0 20px 18px;color:#b42318}
+.ml-profile-thought-backdrop{z-index:3000}
+.ml-profile-thought-viewer{width:min(480px,calc(100vw - 28px))}
+.ml-thought-author{display:flex;align-items:center;gap:11px}
+.ml-thought-author>.avatar{width:46px;height:46px;flex:0 0 46px}
+.ml-thought-author>span{display:grid;gap:3px;min-width:0}
+.ml-thought-author small,.ml-thought-time{color:var(--muted,#64748b);font-size:.76rem}
+.ml-thought-quote{margin:18px 0 10px;padding:20px;border:1px solid var(--line,#dce3ef);border-radius:17px;background:var(--surface-soft,#f7f9fc);font-size:1.15rem;font-weight:650;line-height:1.5;overflow-wrap:anywhere}
+.ml-thought-time{margin:0 0 16px;line-height:1.5}
+.profile-status-badge{display:none!important}
+@media(max-width:650px){
+  .ml-profile-thought-bubble,.ml-profile-thought-add{top:-9px;left:64px;width:min(175px,calc(100vw - 126px));padding:8px 10px;font-size:.7rem}
+  .ml-profile-thought-add{width:auto;max-width:145px}
+  .ml-profile-thought-viewer .modal-actions{flex-wrap:wrap}
+  .ml-profile-thought-viewer .modal-actions button{flex:1 1 auto}
+}
