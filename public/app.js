@@ -365,6 +365,93 @@ async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;stat
 async function loadStories(){state.stories=(await api('/stories')).stories;}
 function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):('<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>'))+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
+
+function measureAudioDurationMs(file){
+  if(!file)return Promise.resolve(0);
+  const url=URL.createObjectURL(file),audio=new Audio();
+  return new Promise(resolve=>{
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);resolve(value);};
+    audio.preload='metadata';audio.onloadedmetadata=()=>finish(Number.isFinite(audio.duration)?Math.min(3600000,Math.round(audio.duration*1000)):0);
+    audio.onerror=()=>finish(0);audio.src=url;
+  });
+}
+function openOriginalSoundComposer(onCreated){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal composer-modal sound-original-modal" role="dialog" aria-modal="true" aria-labelledby="original-sound-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA SOUNDS</span><h2 id="original-sound-title">Publish an original sound</h2></div><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Sound title</span><input name="title" maxlength="100" minlength="2" required placeholder="Give your sound a title"></label><label class="field"><span>Attribution (optional)</span><input name="attribution" maxlength="100" placeholder="Producer, performer or source credit"></label><div class="field"><span>Audio recording</span><div data-original-sound-picker></div></div><label class="sound-permission-check"><input type="checkbox" name="allowReuse"><span><strong>Allow other members to use this sound</strong><small>You can keep it private to your own posts, or let other creators reuse it with attribution.</small></span></label><label class="sound-permission-check"><input type="checkbox" name="rightsConfirmed" required><span><strong>I own this recording or have permission to publish it on Minglora.</strong><small>Do not upload commercial music or another person's recording without the necessary rights.</small></span></label><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish original sound</button></div></form></section>';
+  document.body.append(modal);
+  const picker=createMediaPicker(modal.querySelector('[data-original-sound-picker]'),{slot:'sound',maxFiles:1,accept:mediaAccept('sound')});
+  const close=()=>{picker.destroy();modal.remove();};
+  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('form').addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;
+    try{
+      const values=new FormData(form),file=picker.selectedFiles()[0];
+      if(!file)throw new Error('Choose an audio recording first.');
+      const durationMs=await measureAudioDurationMs(file),ids=await picker.upload();
+      const result=await api('/sounds',{method:'POST',body:JSON.stringify({assetId:ids[0],title:values.get('title'),attribution:values.get('attribution'),allowReuse:values.get('allowReuse')==='on',rightsConfirmed:values.get('rightsConfirmed')==='on',durationMs})});
+      close();toast('Your original sound was added to Minglora Sounds.');onCreated?.(result.sound);
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
+}
+function openSoundLibrary(onSelect){
+  const modal=document.createElement('div');modal.className='modal-backdrop';
+  modal.innerHTML='<section class="modal composer-modal sound-library-modal" role="dialog" aria-modal="true" aria-labelledby="sound-library-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA ORIGINAL AUDIO</span><h2 id="sound-library-title">Sounds</h2><p class="muted">Discover creator-published recordings and sounds you have saved.</p></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><form class="sound-search-form"><input name="q" type="search" maxlength="100" placeholder="Search sounds or creators" aria-label="Search sounds"><button class="secondary" type="submit">Search</button></form><div class="sound-library-filters" role="group" aria-label="Sound library filters"><button type="button" class="active" data-sound-sort="trending">Trending</button><button type="button" data-sound-sort="new">New</button><button type="button" data-sound-sort="saved">Saved</button><button type="button" data-sound-sort="mine">My sounds</button></div><div class="sound-library-list" data-sound-list><section class="card empty-state"><p>Loading Minglora Sounds…</p></section></div><div class="sound-library-footer"><button type="button" class="primary full" data-create-original-sound>＋ Publish an original sound</button><small>Licensed commercial music is not included in this original-sounds library.</small></div></div></section>';
+  document.body.append(modal);
+  let sort='trending',query='',requestToken=0;
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close').onclick=close;modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  async function load(){
+    const token=++requestToken,list=modal.querySelector('[data-sound-list]');
+    list.innerHTML='<section class="card empty-state"><p>Loading sounds…</p></section>';
+    try{
+      const params=new URLSearchParams({sort});if(query)params.set('q',query);
+      const result=await api('/sounds?'+params.toString());
+      if(token!==requestToken||!modal.isConnected)return;
+      const sounds=result.sounds||[];
+      list.innerHTML=sounds.length?sounds.map(sound=>'<article class="sound-library-card"><div class="sound-library-art"><span>♫</span></div><div class="sound-library-info"><strong>'+esc(sound.title)+'</strong><small>'+(sound.attribution?esc(sound.attribution)+' · ':'')+'@'+esc(sound.author?.username||'creator')+'</small><small>'+Number(sound.usageCount||0).toLocaleString()+' uses'+(sound.durationMs?' · '+(sound.durationMs/1000).toFixed(1)+'s':'')+'</small><audio controls preload="none" src="'+esc(sound.url)+'" aria-label="Preview '+esc(sound.title)+'"></audio></div><div class="sound-library-actions"><button type="button" class="primary" data-use-sound="'+esc(sound.id)+'">Use sound</button><button type="button" class="secondary" data-favorite-sound="'+esc(sound.id)+'" data-favorite="'+(sound.isFavorite?'true':'false')+'">'+(sound.isFavorite?'♥ Saved':'♡ Save')+'</button>'+(sound.author?.id===state.user.id?'<button type="button" class="text-button" data-archive-sound="'+esc(sound.id)+'">Remove</button>':'')+'</div></article>').join(''):'<section class="card empty-state"><div class="empty-icon">♫</div><h3>'+(sort==='saved'?'No saved sounds yet':sort==='mine'?'You have not published an original sound yet':'No original sounds found')+'</h3><p>'+(sort==='saved'?'Save sounds from the library and they will appear here.':sort==='mine'?'Publish a recording to create your own sound library.':'Search for another title or publish the first original sound in your library.')+'</p></section>';
+      list.querySelectorAll('[data-use-sound]').forEach(button=>button.onclick=()=>{const sound=sounds.find(item=>item.id===button.dataset.useSound);if(sound){close();onSelect?.(sound);}});
+      list.querySelectorAll('[data-favorite-sound]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{const saved=button.dataset.favorite!=='true';await api('/sounds/'+encodeURIComponent(button.dataset.favoriteSound)+'/favorite',{method:saved?'POST':'DELETE',body:'{}'});await load();}catch(error){toast(error.message);button.disabled=false;}});
+      list.querySelectorAll('[data-archive-sound]').forEach(button=>button.onclick=async()=>{if(!window.confirm('Remove this sound from your library? Existing posts that use it will keep their soundtrack.'))return;button.disabled=true;try{await api('/sounds/'+encodeURIComponent(button.dataset.archiveSound),{method:'DELETE',body:'{}'});await load();toast('Sound removed from your library.');}catch(error){toast(error.message);button.disabled=false;}});
+    }catch(error){list.innerHTML='<section class="card empty-state"><h3>Sounds could not be loaded</h3><p>'+esc(error.message)+'</p><button type="button" class="secondary" data-retry-sounds>Retry</button></section>';list.querySelector('[data-retry-sounds]')?.addEventListener('click',load);}
+  }
+  modal.querySelector('.sound-search-form').onsubmit=event=>{event.preventDefault();query=String(new FormData(event.currentTarget).get('q')||'').trim();load();};
+  modal.querySelectorAll('[data-sound-sort]').forEach(button=>button.onclick=()=>{sort=button.dataset.soundSort;modal.querySelectorAll('[data-sound-sort]').forEach(item=>item.classList.toggle('active',item===button));load();});
+  modal.querySelector('[data-create-original-sound]').onclick=()=>openOriginalSoundComposer(sound=>{close();onSelect?.(sound);});
+  load();
+}
+function createSoundtrackEditor(root,initialTrack=null){
+  let selected=initialTrack?.sound||null;
+  function settings(){return {
+    startMs:Number(initialTrack?.startMs||0),endMs:Number(initialTrack?.endMs||selected?.durationMs||0),
+    volume:Number.isFinite(Number(initialTrack?.volume))?Number(initialTrack.volume):1,
+    fadeInMs:Number(initialTrack?.fadeInMs||0),fadeOutMs:Number(initialTrack?.fadeOutMs||0)
+  };}
+  let values=settings();
+  function render(){
+    root.innerHTML='<div class="soundtrack-editor">'+(selected?'<div class="soundtrack-selected"><span class="soundtrack-note">♫</span><div><strong>'+esc(selected.title)+'</strong><small>'+(selected.attribution?esc(selected.attribution)+' · ':'')+'@'+esc(selected.author?.username||'creator')+'</small></div><button type="button" class="text-button" data-clear-soundtrack>Remove</button></div><audio class="soundtrack-editor-preview" controls preload="metadata" src="'+esc(selected.url)+'" aria-label="Preview selected soundtrack"></audio><div class="soundtrack-edit-grid"><label>Start (seconds)<input type="number" min="0" max="3600" step="0.1" data-track-start value="'+(values.startMs/1000)+'"></label><label>End (seconds)<input type="number" min="0" max="3600" step="0.1" data-track-end value="'+(values.endMs?values.endMs/1000:'')+'" placeholder="End of recording"></label><label>Volume <output data-track-volume-label>'+Math.round(values.volume*100)+'%</output><input type="range" min="0" max="100" step="1" value="'+Math.round(values.volume*100)+'" data-track-volume></label><label>Fade in (seconds)<input type="number" min="0" max="30" step="0.1" data-track-fade-in value="'+(values.fadeInMs/1000)+'"></label><label>Fade out (seconds)<input type="number" min="0" max="30" step="0.1" data-track-fade-out value="'+(values.fadeOutMs/1000)+'"></label></div><small class="soundtrack-edit-help">Trim the section, set playback volume and add smooth fades.</small>':'<div class="soundtrack-empty"><span class="soundtrack-note">♫</span><div><strong>No sound selected</strong><small>Add an original Minglora sound to your photos or videos.</small></div></div>')+'<div class="soundtrack-editor-actions"><button type="button" class="secondary" data-open-sound-library>'+(selected?'Change sound':'Browse sounds')+'</button><button type="button" class="secondary" data-create-sound>＋ Original sound</button></div></div>';
+    root.querySelector('[data-open-sound-library]').onclick=()=>openSoundLibrary(sound=>{selected=sound;values={startMs:0,endMs:Number(sound.durationMs||0),volume:1,fadeInMs:0,fadeOutMs:0};render();});
+    root.querySelector('[data-create-sound]').onclick=()=>openOriginalSoundComposer(sound=>{selected=sound;values={startMs:0,endMs:Number(sound.durationMs||0),volume:1,fadeInMs:0,fadeOutMs:0};render();});
+    root.querySelector('[data-clear-soundtrack]')?.addEventListener('click',()=>{selected=null;values={startMs:0,endMs:0,volume:1,fadeInMs:0,fadeOutMs:0};render();});
+    const volume=root.querySelector('[data-track-volume]'),audio=root.querySelector('.soundtrack-editor-preview');
+    volume?.addEventListener('input',()=>{values.volume=Number(volume.value)/100;root.querySelector('[data-track-volume-label]').textContent=volume.value+'%';if(audio)audio.volume=values.volume;});
+    if(audio){audio.volume=values.volume;audio.addEventListener('loadedmetadata',()=>{audio.currentTime=Math.min(values.startMs/1000,Math.max(0,audio.duration-.1));});audio.addEventListener('timeupdate',()=>{const end=values.endMs?values.endMs/1000:audio.duration;if(end&&audio.currentTime>=end){audio.pause();audio.currentTime=Math.min(values.startMs/1000,Math.max(0,audio.duration-.1));}});}
+  }
+  render();
+  return {
+    value(){
+      if(!selected)return null;
+      const start=Math.max(0,Number(root.querySelector('[data-track-start]')?.value||0));
+      const end=Math.max(0,Number(root.querySelector('[data-track-end]')?.value||0));
+      const volume=Number(root.querySelector('[data-track-volume]')?.value??100)/100;
+      const fadeIn=Math.max(0,Number(root.querySelector('[data-track-fade-in]')?.value||0));
+      const fadeOut=Math.max(0,Number(root.querySelector('[data-track-fade-out]')?.value||0));
+      return {soundId:selected.id,startMs:Math.round(start*1000),endMs:Math.round(end*1000),volume,fadeInMs:Math.round(fadeIn*1000),fadeOutMs:Math.round(fadeOut*1000)};
+    },
+    destroy(){root.innerHTML='';}
+  };
+}
 function openComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Public · Anyone can see this</small></div></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos, audio and 3D models</label><div id="create-post-media-picker"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
