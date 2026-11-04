@@ -17,6 +17,7 @@ import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../bac
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
+import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches } from '../backend/modules/leagues/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1702,6 +1703,20 @@ async function route(req, res) {
         }
         if(!hostIsPresent)return json(res,409,{error:'This host is no longer LIVE. Refresh the LIVE directory.'});
         const result=await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
+        const confirmedGift=result.gift||{};
+        const confirmedGiftId=confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
+        const confirmedCoinAmount=Number(confirmedGift.coinAmount??confirmedGift.coin_amount??confirmedGift.coins??0);
+        if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
+          try{
+            recordLiveGiftForLeagues(db,{
+              giftId:confirmedGiftId,recipientId:session.hostId,broadcastId:session.id,
+              giftCode:String(input.giftCode||''),coinAmount:confirmedCoinAmount,
+              region:db.users.find(member=>member.id===session.hostId)?.country||'GLOBAL'
+            });
+          }catch(error){
+            console.error('[Minglora League] A confirmed LIVE Gift could not be added to League totals.',{giftId:String(confirmedGiftId),message:String(error?.message||'league update failed').slice(0,160)});
+          }
+        }
         notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
         await saveStore();
         return json(res,200,{gift:result.gift});
