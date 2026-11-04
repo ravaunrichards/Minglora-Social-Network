@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
     "subscription_creator_get", "subscription_apply", "subscription_admin_queue", "subscription_admin_review",
     "subscription_tier_store", "subscription_enable", "subscription_checkout_prepare",
-    "subscription_checkout_attach", "subscription_my", "subscription_cancel_lookup",
+    "subscription_checkout_attach", "subscription_my", "subscription_access_check", "subscription_cancel_lookup",
     "subscription_cancel_mark", "subscription_paypal_webhook",
   ];
   if (!supportedActions.includes(String(action))) {
@@ -372,6 +372,24 @@ Deno.serve(async (req: Request) => {
     return json(200, { subscriptions: all, tiers: tiersResult.data || [], members: profilesResult.data || [] });
   }
 
+  if (action === "subscription_access_check") {
+    const userId = String(input.userId || "");
+    const creatorIds = Array.isArray(input.creatorIds) ? [...new Set(input.creatorIds.map((id: unknown) => String(id)))].filter(validUuid).slice(0, 100) : [];
+    if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
+    if (!creatorIds.length) return json(200, { authorizedCreatorIds: [] });
+    const nowIso = new Date().toISOString();
+    const { data: active, error } = await admin.from("creator_subscriptions")
+      .select("creator_id").eq("subscriber_id", userId).in("creator_id", creatorIds)
+      .in("status", ["active", "past_due"]).gt("current_period_end", nowIso);
+    if (error) return json(503, { error: "Subscriber access could not be checked." });
+    const eligible = [...new Set((active || []).map((row: any) => row.creator_id))];
+    if (!eligible.length) return json(200, { authorizedCreatorIds: [] });
+    const { data: approved, error: settingsError } = await admin.from("subscription_creator_settings")
+      .select("creator_id").in("creator_id", eligible).eq("application_status", "approved");
+    if (settingsError) return json(503, { error: "Creator subscription status could not be checked." });
+    return json(200, { authorizedCreatorIds: (approved || []).map((row: any) => row.creator_id) });
+  }
+
   if (action === "subscription_cancel_lookup") {
     const userId = String(input.userId || ""), subscriptionId = String(input.subscriptionId || "");
     if (!validUuid(userId) || !validUuid(subscriptionId)) return json(400, { error: "Invalid subscription." });
@@ -447,10 +465,12 @@ Deno.serve(async (req: Request) => {
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
     if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" || eventType === "BILLING.SUBSCRIPTION.UPDATED") {
-      if (detailsStatus === "ACTIVE" || eventType === "BILLING.SUBSCRIPTION.ACTIVATED") {
-        patch.status = "active";
-        patch.current_period_start = details?.billing_info?.last_payment?.time || subscription.current_period_start || new Date().toISOString();
-        patch.current_period_end = periodEnd;
+      if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED") {
+        // Approval of the billing agreement alone is not proof of a settled payment.
+        // Only PAYMENT.SALE.COMPLETED grants membership access.
+        if (periodEnd) patch.current_period_end = periodEnd;
+      } else if (detailsStatus === "ACTIVE") {
+        if (periodEnd) patch.current_period_end = periodEnd;
       } else if (detailsStatus === "SUSPENDED") {
         patch.status = "past_due";
       } else if (detailsStatus === "CANCELLED" || detailsStatus === "EXPIRED") {
@@ -494,16 +514,16 @@ Deno.serve(async (req: Request) => {
       const amountMinor = Math.round(amountValue * 100);
       const currency = String(amountNode.currency || amountNode.currency_code || subscription.currency).toUpperCase();
       const refundId = String(resource.id || eventId);
-      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor % 2 !== 0 || currency !== subscription.currency) {
+      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || currency !== subscription.currency) {
         await admin.from("subscription_payment_events").update({ processing_error: "PayPal refund or reversal amount requires manual reconciliation." }).eq("id", paymentEvent.id);
         return json(409, { error: "PayPal refund or reversal requires manual reconciliation." });
       }
-      const half = amountMinor / 2;
+      const creatorRefund = Math.floor(amountMinor / 2), platformRefund = amountMinor - creatorRefund;
       const { error: refundError } = await admin.from("subscription_earnings_ledger").insert({
         subscription_id: subscription.id, payment_event_id: paymentEvent.id,
         provider_transaction_id: refundId,
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
-        currency, gross_minor: amountMinor, creator_minor: half, platform_minor: half, entry_type: "refund"
+        currency, gross_minor: amountMinor, creator_minor: creatorRefund, platform_minor: platformRefund, entry_type: "refund"
       });
       if (refundError && refundError.code !== "23505") return fail(refundError, "PayPal refund was received but Minglora could not reconcile the earnings ledger.");
       if (eventType === "PAYMENT.SALE.REVERSED") patch.status = "past_due";
@@ -655,13 +675,26 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_creator_earnings") {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
-    const [ledgerResult, payoutsResult, accountResult] = await Promise.all([
+    const [ledgerResult, subscriptionLedgerResult, payoutsResult, accountResult] = await Promise.all([
       admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
+      admin.from("subscription_earnings_ledger").select("id,gross_minor,creator_minor,platform_minor,currency,entry_type,created_at,provider_transaction_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle()
     ]);
-    if (ledgerResult.error || payoutsResult.error || accountResult.error) return json(503, { error: "Creator earnings are temporarily unavailable." });
-    const ledger = ledgerResult.data || [], payouts = payoutsResult.data || [];
+    if (ledgerResult.error || subscriptionLedgerResult.error || payoutsResult.error || accountResult.error) return json(503, { error: "Creator earnings are temporarily unavailable." });
+    const giftLedger = ledgerResult.data || [], subscriptionLedger = (subscriptionLedgerResult.data || []).map((row: any) => {
+      const sign = row.entry_type === "refund" ? -1 : 1;
+      return {
+        id: row.id, gross_minor: Number(row.gross_minor) * sign,
+        creator_share_minor: Number(row.creator_minor) * sign,
+        platform_share_minor: Number(row.platform_minor) * sign,
+        currency: row.currency, status: "settled", created_at: row.created_at,
+        gift_transaction_id: null, source: "subscription", entry_type: row.entry_type
+      };
+    });
+    const ledger = [...giftLedger.map((row: any) => ({ ...row, source: "live_gift" })), ...subscriptionLedger]
+      .sort((a: any, b: any) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 400);
+    const payouts = payoutsResult.data || [];
     const earnedMinor = ledger.reduce((sum: number, row: any) => sum + Number(row.creator_share_minor || 0), 0);
     const reservedMinor = payouts.filter((row: any) => ["requested", "processing", "paid"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.amount_minor || 0), 0);
     return json(200, { ledger, payouts, payoutAccount: accountResult.data || null, earnedMinor, reservedMinor, availableMinor: Math.max(0, earnedMinor - reservedMinor), currency: "USD", creatorSharePercent: 50, platformSharePercent: 50 });
