@@ -77,6 +77,7 @@ Deno.serve(async (req: Request) => {
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
+    "economy_exchange_creator_earnings",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
@@ -349,16 +350,49 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_creator_earnings") {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
-    const [ledgerResult, payoutsResult, accountResult] = await Promise.all([
+    const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult] = await Promise.all([
       admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
-      admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle()
+      admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle(),
+      admin.from("creator_coin_exchanges").select("id,amount_minor,coin_amount,currency,created_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
+      admin.rpc("minglora_get_creator_money_balance", { p_creator_id: creatorId })
     ]);
-    if (ledgerResult.error || payoutsResult.error || accountResult.error) return json(503, { error: "Creator earnings are temporarily unavailable." });
+    if (ledgerResult.error || payoutsResult.error || accountResult.error || exchangesResult.error || balanceResult.error) {
+      return json(503, { error: "Creator money balance is temporarily unavailable." });
+    }
     const ledger = ledgerResult.data || [], payouts = payoutsResult.data || [];
-    const earnedMinor = ledger.reduce((sum: number, row: any) => sum + Number(row.creator_share_minor || 0), 0);
-    const reservedMinor = payouts.filter((row: any) => ["requested", "processing", "paid"].includes(row.status)).reduce((sum: number, row: any) => sum + Number(row.amount_minor || 0), 0);
-    return json(200, { ledger, payouts, payoutAccount: accountResult.data || null, earnedMinor, reservedMinor, availableMinor: Math.max(0, earnedMinor - reservedMinor), currency: "USD", creatorSharePercent: 50, platformSharePercent: 50 });
+    const moneyBalance = balanceResult.data || {};
+    return json(200, {
+      ledger,
+      payouts,
+      exchanges: exchangesResult.data || [],
+      payoutAccount: accountResult.data || null,
+      earnedMinor: Number(moneyBalance.earnedMinor || 0),
+      reservedMinor: Number(moneyBalance.reservedMinor || 0),
+      exchangedMinor: Number(moneyBalance.exchangedMinor || 0),
+      availableMinor: Number(moneyBalance.availableMinor || 0),
+      currency: "USD",
+      creatorSharePercent: 50,
+      platformSharePercent: 50,
+      coinPerCent: 1
+    });
+  }
+
+  if (action === "economy_exchange_creator_earnings") {
+    const creatorId = String(input.creatorId || "");
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    if (!validUuid(creatorId) || !validUuid(requestId) ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100) {
+      return json(400, { error: "Enter a valid money amount and exchange request reference." });
+    }
+    const { data, error } = await admin.rpc("minglora_exchange_creator_earnings_for_coins", {
+      p_creator_id: creatorId,
+      p_amount_minor: amountMinor,
+      p_request_id: requestId
+    });
+    if (error) return fail(error, "Minglora could not exchange this money balance into Coins.");
+    return json(200, { exchange: data });
   }
 
   if (action === "economy_get_payout_account") {
