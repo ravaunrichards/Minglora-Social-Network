@@ -52,14 +52,24 @@ function mergeProfileRecords(current, incoming) {
   }
   return merged;
 }
+function uniqueMatchEffects(effects) {
+  return uniqueRecords(effects, item =>
+    item?.type && item?.side ? [item.type, item.side].join(":") : item?.id,
+    (current, incoming) => {
+      const currentExpiry = Date.parse(current.expiresAt || "") || 0;
+      const incomingExpiry = Date.parse(incoming.expiresAt || "") || 0;
+      return incomingExpiry > currentExpiry ? incoming : current;
+    }
+  );
+}
 function normalizeMatch(match) {
   match.scores = {
     challenger: Math.max(0, asNumber(match.scores?.challenger)),
     opponent: Math.max(0, asNumber(match.scores?.opponent))
   };
   match.supporters = uniqueRecords(match.supporters, item => item.userId, (current) => current);
-  match.activeEffects = uniqueRecords(match.activeEffects, item => item.id || [item.type, item.side, item.expiresAt].join(":"));
-  match.pendingEffects = uniqueRecords(match.pendingEffects, item => item.id || [item.type, item.side, item.expiresAt].join(":"));
+  match.activeEffects = uniqueMatchEffects(match.activeEffects);
+  match.pendingEffects = uniqueMatchEffects(match.pendingEffects);
   match.events = uniqueRecords(match.events, item => item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":"));
   match.timeBoostUsed = {
     challenger: Boolean(match.timeBoostUsed?.challenger),
@@ -90,8 +100,8 @@ function mergeMatchRecords(current, incoming) {
   };
   merged.supporters = uniqueRecords([...(preferred.supporters || []), ...((preferred === current ? incoming : current).supporters || [])], item => item.userId);
   merged.events = uniqueRecords([...(preferred.events || []), ...((preferred === current ? incoming : current).events || [])], item => item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":"));
-  merged.activeEffects = uniqueRecords([...(preferred.activeEffects || []), ...((preferred === current ? incoming : current).activeEffects || [])], item => item.id || [item.type, item.side, item.expiresAt].join(":"));
-  merged.pendingEffects = uniqueRecords([...(preferred.pendingEffects || []), ...((preferred === current ? incoming : current).pendingEffects || [])], item => item.id || [item.type, item.side, item.expiresAt].join(":"));
+  merged.activeEffects = uniqueMatchEffects([...(preferred.activeEffects || []), ...((preferred === current ? incoming : current).activeEffects || [])]);
+  merged.pendingEffects = uniqueMatchEffects([...(preferred.pendingEffects || []), ...((preferred === current ? incoming : current).pendingEffects || [])]);
   merged.timeBoostUsed = {
     challenger: Boolean(current.timeBoostUsed?.challenger || incoming.timeBoostUsed?.challenger),
     opponent: Boolean(current.timeBoostUsed?.opponent || incoming.timeBoostUsed?.opponent)
