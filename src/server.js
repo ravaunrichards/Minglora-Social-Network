@@ -74,7 +74,7 @@ async function paypalRequest(path,method='POST',payload={},requestId){
         'Content-Type':'application/json',
         ...(requestId?{'PayPal-Request-Id':String(requestId).slice(0,108)}:{})
       },
-      ...(payload===undefined?{}:{body:JSON.stringify(payload)})
+      ...(method==='GET'||method==='HEAD'||payload===undefined?{}:{body:JSON.stringify(payload)})
     });
   }catch{throw Object.assign(new Error('Could not reach PayPal to process this request.'),{status:503});}
   const data=await response.json().catch(()=>({}));
