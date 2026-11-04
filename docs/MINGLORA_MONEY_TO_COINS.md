@@ -20,3 +20,5 @@ Each conversion uses a unique request UUID. The database procedure serializes mo
 The exchange history is kept in `public.creator_coin_exchanges`; the matching Coin credit is recorded in `public.coin_ledger` with entry type `exchange`. The table is protected by RLS and is readable only by the trusted server runtime through its service role. No client-side direct write is granted.
 
 Creator PayPal cash-outs remain separate from the Recharge Exchange tab.
+
+Creator Studio's lifetime eligible-share total remains separate from the spendable amount: the balance RPC preserves the lifetime total, while `availableMinor` counts only available creator earnings plus net subscription earnings, less payout reservations and exchanges.
