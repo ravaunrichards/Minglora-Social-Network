@@ -306,7 +306,7 @@ export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new 
 }
 function publicMember(users, id) {
   const user = (users || []).find(item => item.id === id);
-  return user ? { id: user.id, name: user.name || user.displayName || user.username || "Minglora creator", username: user.username || "creator", avatarUrl: user.avatarUrl || user.avatar_url || null } :
+  return user ? { id: user.id, name: user.name || user.displayName || user.username || "Minglora creator", username: user.username || "creator", avatarUrl: user.avatarUrl || user.avatar_url || user.avatar || null } :
     { id, name: "Minglora creator", username: "creator", avatarUrl: null };
 }
 function decorateMatch(match, users) {
