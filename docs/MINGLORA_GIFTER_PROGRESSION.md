@@ -27,3 +27,9 @@ Confirmed gift transaction IDs are stored in `gifterProgressionLedger`, a persis
 ## User page
 
 The dedicated page includes the current badge and progress bar, the full 50-level chart and badge gallery, recent confirmed gift activity, real community gifter rankings, and an explanation of the XP rules. Empty states are shown until real transactions exist; no demonstration members or sample gift totals are inserted.
+
+## Where earned badges appear
+
+A member's public gifter badge is included in the member profile, post/comment bylines, and LIVE directory identity after at least one confirmed gift has been sent. The badge level is calculated by the server from the deduplicated confirmed-gift ledger; the browser cannot assign or unlock it.
+
+Members who have reached Level 25 or higher receive a special LIVE entry recognition banner when they enter a LIVE room. The Level 25 LIVE recognition is permanent because gifter XP is lifetime-based. Creator League rank and gifts received do not grant gifter badges.
