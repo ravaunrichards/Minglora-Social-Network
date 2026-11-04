@@ -708,6 +708,7 @@ let liveChatRefreshTimer=null;
 let liveDirectoryRefreshTimer=null;
 let liveCameraEnabled=true;
 let liveMicrophoneEnabled=true;
+let liveCameraFacing='user';
 let liveGiftCatalogue=[];
 let liveSpeakerRefreshTimer=null;
 let liveParticipantSyncTimer=null;
@@ -984,6 +985,40 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
       esc(person.name)+"<small>"+(person.speaking?"Speaking":person.connected?(person.muted?"Microphone muted":"Microphone connected"):"Connected · microphone starting")+"</small></span>"
   ).join("");
 }
+
+function liveControlIcon(name){
+  const paths={
+    mic:"<rect x='9' y='3' width='6' height='12' rx='3'/><path d='M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6'/>",
+    "mic-off":"<path d='m3 3 18 18M9 9v2a3 3 0 0 0 5.1 2.1M15 9V6a3 3 0 0 0-5.8-1M5 11a7 7 0 0 0 12 5M12 18v3M9 21h6'/>",
+    camera:"<rect x='3' y='6' width='13' height='12' rx='2'/><path d='m16 10 5-3v10l-5-3z'/>",
+    "camera-off":"<path d='m3 3 18 18M10 6h4a2 2 0 0 1 2 2v2l5-3v10l-5-3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2'/>",
+    flip:"<path d='M20 7v5h-5M4 17v-5h5'/><path d='M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3'/>",
+    users:"<path d='M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/>",
+    gift:"<rect x='3' y='8' width='18' height='13' rx='2'/><path d='M12 8v13M3 12h18M12 8H7.5a2.5 2.5 0 1 1 2.4-3.2L12 8Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 8Z'/>",
+    share:"<path d='M12 16V3m0 0L7 8m5-5 5 5'/><path d='M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7'/>",
+    end:"<path d='M4 14.5c4.7-4.7 11.3-4.7 16 0l-2.2 3.2a1 1 0 0 1-1.2.35l-2.8-1.15a1 1 0 0 1-.62-.93v-1.1a10 10 0 0 0-2.36 0V16a1 1 0 0 1-.62.93l-2.8 1.15a1 1 0 0 1-1.2-.35L4 14.5Z'/>"
+  };
+  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'>"+(paths[name]||"")+"</svg>";
+}
+function liveControlButton(id,icon,label,caption,options={}){
+  const pressed=options.pressed===undefined?"":" aria-pressed='"+String(Boolean(options.pressed))+"'";
+  return "<button type='button' class='live-control-button"+(options.danger?" is-danger":"")+"' id='"+id+"' aria-label='"+esc(label)+"' title='"+esc(label)+"'"+pressed+"><span class='live-control-icon'>"+liveControlIcon(icon)+"</span><span class='live-control-caption'>"+esc(caption)+"</span></button>";
+}
+function updateLiveControlButton(button,icon,label,caption,pressed){
+  if(!button)return;
+  button.innerHTML="<span class='live-control-icon'>"+liveControlIcon(icon)+"</span><span class='live-control-caption'>"+esc(caption)+"</span>";
+  button.setAttribute("aria-label",label);
+  button.title=label;
+  if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
+}
+function focusLiveRoomPanel(selector){
+  const target=$(selector);
+  if(!target){toast("That LIVE panel is not available in this room.");return;}
+  target.scrollIntoView?.({behavior:"smooth",block:"center"});
+  target.classList.add("is-focused");
+  window.setTimeout(()=>target.classList.remove("is-focused"),1500);
+}
+
 async function openLiveRoom(session,role,issuedLiveKit){
   stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
@@ -994,7 +1029,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;
+  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
     : "<div id='live-video-stage' class='live-video-stage'><div class='live-video-placeholder'>Connecting to LIVE…</div></div>";
@@ -1002,20 +1037,27 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>Level 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
-    ? "<section class='live-speaker-request-panel host'><div class='live-speaker-panel-heading'><strong>Speaker stage</strong><small>Up to 8 guest speakers</small></div><div id='live-speaker-request-list'><p class='muted'>Loading speaker requests…</p></div></section>"
+    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host'><div class='live-speaker-panel-heading'><strong>Speaker stage</strong><small>Up to 8 guest speakers</small></div><div id='live-speaker-request-list'><p class='muted'>Loading speaker requests…</p></div></section>"
     : role==="viewer"
-      ? "<section class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>"
-      : "<section class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>Your microphone is live. Your camera stays off.</small></section>";
+      ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>"
+      : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>Your microphone is live. Your camera stays off.</small></section>";
+  const liveControls=[
+    (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
+    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
+    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
+    liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
+    role!=="host"?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
+    liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
+    liveControlButton("live-leave","end",role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE",role==="host"?"End":role==="guest"?"Leave":"Leave",{danger:true})
+  ].filter(Boolean).join("");
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+(broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO")+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+liveEntryBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-player-controls'><button id='live-mic-toggle' class='secondary' "+((role==="host"||role==="guest")?"":"disabled")+">"+((role==="host"||role==="guest")?"Mute microphone":"Microphone unavailable")+"</button>"+
-    (role==="host"&&broadcastType==="video_audio"?"<button id='live-camera-toggle' class='secondary'>Turn camera off</button>":"")+
-    "<button id='live-leave' class='danger'>"+(role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE")+"</button></div></div>"+
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
     "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div>"+speakerTools+"<div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
     "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form>"+
     (role==="host"
       ? "<div class='live-gift-host-note'><strong>Your LIVE is ready for gifts</strong><p>Viewers can send you gifts while you are broadcasting.</p></div>"
-      : "<div class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
+      : "<div id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></div>")+
     "</aside></div></section>");
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
@@ -1063,11 +1105,65 @@ async function openLiveRoom(session,role,issuedLiveKit){
     updatePresence();
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
-    $("#live-mic-toggle").disabled=!(role==="host"||role==="guest");
-    if($("#live-camera-toggle"))$("#live-camera-toggle").disabled=role!=="host";
-    $("#live-mic-toggle")?.addEventListener("click",async()=>{try{liveMicrophoneEnabled=!liveMicrophoneEnabled;await room.localParticipant.setMicrophoneEnabled(liveMicrophoneEnabled);$("#live-mic-toggle").textContent=liveMicrophoneEnabled?"Mute microphone":"Unmute microphone";refreshSpeakerRoster();}catch(error){toast(error.message);}});
-    $("#live-camera-toggle")?.addEventListener("click",async()=>{try{liveCameraEnabled=!liveCameraEnabled;await room.localParticipant.setCameraEnabled(liveCameraEnabled);$("#live-camera-toggle").textContent=liveCameraEnabled?"Turn camera off":"Turn camera on";}catch(error){toast(error.message);}});
+    const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
+    if(micControl)micControl.disabled=!(role==="host"||role==="guest");
+    if(cameraControl)cameraControl.disabled=role!=="host";
+    if(flipCameraControl)flipCameraControl.disabled=!liveCameraEnabled;
+    micControl?.addEventListener("click",async()=>{
+      const nextEnabled=!liveMicrophoneEnabled;micControl.disabled=true;
+      try{
+        await room.localParticipant.setMicrophoneEnabled(nextEnabled);
+        liveMicrophoneEnabled=nextEnabled;
+        updateLiveControlButton(micControl,nextEnabled?"mic":"mic-off",nextEnabled?"Mute microphone":"Unmute microphone",nextEnabled?"Mute":"Unmute",nextEnabled);
+        refreshSpeakerRoster();
+      }catch(error){toast(error.message);}
+      finally{micControl.disabled=false;}
+    });
+    cameraControl?.addEventListener("click",async()=>{
+      const nextEnabled=!liveCameraEnabled;cameraControl.disabled=true;
+      try{
+        await room.localParticipant.setCameraEnabled(nextEnabled);
+        liveCameraEnabled=nextEnabled;
+        updateLiveControlButton(cameraControl,nextEnabled?"camera":"camera-off",nextEnabled?"Turn camera off":"Turn camera on",nextEnabled?"Camera":"Camera off",nextEnabled);
+        if(flipCameraControl)flipCameraControl.disabled=!nextEnabled;
+      }catch(error){toast(error.message);}
+      finally{cameraControl.disabled=false;}
+    });
+    flipCameraControl?.addEventListener("click",async()=>{
+      if(!liveCameraEnabled){toast("Turn your camera on before switching cameras.");return;}
+      const publications=Array.from(room.localParticipant.videoTrackPublications?.values?.()||[]);
+      const publication=publications.find(item=>item?.track?.kind==="video"||item?.videoTrack)||publications[0];
+      const videoTrack=publication?.videoTrack||publication?.track;
+      if(!videoTrack?.restartTrack){toast("Camera switching is not available on this device.");return;}
+      const nextFacing=liveCameraFacing==="user"?"environment":"user";
+      flipCameraControl.disabled=true;
+      try{
+        await videoTrack.restartTrack({facingMode:nextFacing});
+        liveCameraFacing=nextFacing;
+        toast(nextFacing==="environment"?"Back camera selected.":"Front camera selected.");
+      }catch(error){toast(error.message||"Could not switch cameras.");}
+      finally{flipCameraControl.disabled=!liveCameraEnabled;}
+    });
+    $("#live-guests-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-speaker-request-panel"));
+    $("#live-gifts-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-gift-panel"));
+    $("#live-share-toggle")?.addEventListener("click",async()=>{
+      const shareUrl=new URL(window.location.pathname,window.location.origin);
+      shareUrl.searchParams.set("minglora-push","live");
+      shareUrl.searchParams.set("liveSessionId",session.id);
+      const url=shareUrl.toString();
+      if(typeof navigator.share==="function"){
+        try{await navigator.share({title:session.title||"Minglora LIVE",text:"Join me on Minglora LIVE.",url});return;}
+        catch(error){if(error?.name==="AbortError")return;}
+      }
+      try{
+        if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);toast("LIVE link copied. Share it with your community.");return;}
+        const field=document.createElement("textarea");field.value=url;field.setAttribute("readonly","");field.style.position="fixed";field.style.opacity="0";document.body.append(field);field.select();
+        const copied=document.execCommand("copy");field.remove();
+        toast(copied?"LIVE link copied. Share it with your community.":"Copy this LIVE link: "+url);
+      }catch(error){toast("Share this LIVE link: "+url);}
+    });
     $("#live-leave")?.addEventListener("click",async()=>{
+      if(role==="host"&&!window.confirm("End this LIVE for everyone? The broadcast will close and disappear from Live now."))return;
       const button=$("#live-leave");if(button)button.disabled=true;
       try{
         if(role==="host")await endHostedLiveSession(session);
