@@ -1151,13 +1151,16 @@ async function openLiveRoom(session,role,issuedLiveKit){
 
 async function renderCoins(){
   activateSilent("coins");
-  const walletResults=await Promise.allSettled([api("/coins/catalog"),api("/coins/wallet")]);
-  if(walletResults[0].status==="rejected")throw walletResults[0].reason;
-  const catalog=walletResults[0].value||{};
+  const activeTab=state.rechargeTab==="exchange"?"exchange":"recharge";
+  const walletResults=await Promise.allSettled([
+    activeTab==="recharge"?api("/coins/catalog"):Promise.resolve({packages:[]}),
+    api("/coins/wallet")
+  ]);
+  if(activeTab==="recharge"&&walletResults[0].status==="rejected")throw walletResults[0].reason;
+  const catalog=walletResults[0].status==="fulfilled"?walletResults[0].value||{}:{};
   const wallet=walletResults[1].status==="fulfilled"?walletResults[1].value:{wallet:null,ledger:[]};
   const balance=Number(wallet.wallet?.balance_coins||0);
   const packages=Array.isArray(catalog.packages)?catalog.packages:[];
-  const activeTab=state.rechargeTab==="exchange"?"exchange":"recharge";
   const header="<header class='recharge-page-heading'><div><span class='eyebrow'>MINGLORA WALLET</span><h1>Recharge</h1><p class='muted'>Choose a Coin package, set a custom amount, and pay securely with PayPal.</p></div><div class='coin-balance-card'><small>AVAILABLE BALANCE</small><strong>"+(wallet.wallet&&wallet.wallet.balance_coins!=null?balance.toLocaleString():"—")+"</strong><span>Minglora Coins</span></div></header>";
   const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button></nav>";
   const bindTabs=()=>{
