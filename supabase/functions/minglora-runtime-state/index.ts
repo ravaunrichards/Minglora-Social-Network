@@ -460,7 +460,7 @@ Deno.serve(async (req: Request) => {
     }
     const subscription = subResult.data;
     const detailsStatus = String(details?.status || "");
-    const periodEndRaw = details?.billing_info?.next_billing_time || details?.billing_info?.final_payment_time || null;
+    const periodEndRaw = details?.billing_info?.next_billing_time || null;
     const periodEnd = periodEndRaw && !Number.isNaN(Date.parse(periodEndRaw)) ? new Date(periodEndRaw).toISOString() : subscription.current_period_end;
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
