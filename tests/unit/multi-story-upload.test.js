@@ -19,6 +19,8 @@ test('story publishing sends all uploaded media IDs in one idempotent batch requ
   assert.match(app, /window\.crypto\?\.randomUUID\?\.\(\)/);
   assert.match(server, /normalizeStoryMediaIds\(input,10\)/);
   assert.match(server, /assets\.some\(asset=>!asset\)/);
+  assert.match(server, /totalBytes>500\*1024\*1024/);
+  assert.match(server, /combined story upload is larger than 500 MB/);
   assert.match(server, /Nothing was published/);
 });
 
