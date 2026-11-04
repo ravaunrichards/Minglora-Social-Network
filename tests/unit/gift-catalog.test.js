@@ -114,6 +114,16 @@ test("Livecade source gaps and coin-price variants remain in the Minglora manife
   }
 });
 
+test("newly audited object gifts render their matching Minglora icons", () => {
+  const expected = [["CNC Coin","🪙"],["Fighting","🥊"],["Hibiscus","🌺"],["DJ Headphone","🎧"],["Four Leaf Clover","🍀"]];
+  for (const [name,symbol] of expected) {
+    const gift = gifts.find(item => item.name === name);
+    assert.ok(gift, name + " should exist in the manifest");
+    const svg = readFileSync(path.join(assetRoot,gift.code + ".svg"),"utf8");
+    assert.ok(svg.includes(symbol), name + " should render the matching icon");
+  }
+});
+
 test("recognisable gifts use their matching object artwork instead of an unrelated category symbol", () => {
   const rose = gifts.find(gift => gift.name === "Rose");
   const baseball = gifts.find(gift => gift.name === "Baseball");
