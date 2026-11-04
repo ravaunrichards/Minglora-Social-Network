@@ -29,7 +29,7 @@
   }
   function selected(){return state.gifts.find(g=>g.code===state.selectedCode)||null;}
   function card(g){
-    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='"+esc(g.name)+" Minglora gift artwork'>":"<span class='gift-emoji-preview'>"+esc(g.emoji||"🎁")+"</span>";
+    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Original Minglora artwork: "+esc(g.name)+"'>":"<span class='gift-emoji-preview' aria-label='"+esc(g.name)+"'>"+esc(g.emoji||"🎁")+"</span>";
     return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
@@ -72,7 +72,7 @@
     if(!state.selectedCode&&state.gifts.length)state.selectedCode=state.gifts[0].code;
     const balance=state.balance===null?"Balance unavailable":state.balance.toLocaleString()+" Coins available";
     main.innerHTML=
-      "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Every gift has original artwork, a 3D model, animation profile and a custom-generated sound.</p></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
+      "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Each gift is built as original Minglora artwork and a 3D model, with its own animated presentation and synthesized sound effect.</p></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
       "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original assets</p></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
       "<div class='gift-browse-controls'><label class='gift-search-label'><span>Find a gift</span><input id='minglora-gift-search' type='search' placeholder='Search every gift by name…' value='"+esc(state.search)+"'></label><label class='gift-sort-label'><span>Sort</span><select id='minglora-gift-sort'><option value='price'>Price: low to high</option><option value='high'>Price: high to low</option><option value='name'>Name A–Z</option></select></label></div>"+
       "<div class='gift-category-row' id='minglora-gift-categories'>"+categoryMarkup()+"</div><div class='gift-catalogue-grid' id='minglora-gift-grid'></div><button type='button' class='secondary gift-load-more' id='minglora-gift-more' hidden>Show more gifts</button></section>"+
@@ -80,7 +80,7 @@
       "<section class='card gift-send-panel'><div class='gift-send-panel-heading'><div><span class='eyebrow'>Send a gift</span><h2>Choose who receives it</h2></div></div><form id='minglora-gift-form' class='gift-send-form'>"+
       "<label>Recipient username<input id='minglora-gift-recipient' name='username' maxlength='31' autocomplete='off' placeholder='@Username' value='"+esc(state.recipient)+"' required></label>"+
       "<label>Gift destination<select id='minglora-gift-context' name='contextType'><option value='user'>Direct to member</option><option value='post'>Post / photo / attached video</option><option value='video'>Short video</option><option value='photo'>Photo album</option></select></label>"+
-      "<label id='minglora-gift-context-id-wrap' hidden>Content reference<input id='minglora-gift-context-id' name='contextId' value='"+esc(state.contextId)+"' placeholder='Content ID'></label>"+
+      "<label id='minglora-gift-context-id-wrap' hidden>Content ID<input id='minglora-gift-context-id' name='contextId' value='"+esc(state.contextId)+"' placeholder='Content ID'></label>"+
       "<p class='gift-context-help' id='minglora-gift-context-help'>Send directly to a member using their unique @username.</p>"+
       "<div class='gift-send-form-footer'><span class='muted'>The selected gift's exact coin price is deducted after the recipient and destination pass verification.</span><button type='submit' class='primary' id='minglora-gift-send' disabled>Send gift</button></div><p id='minglora-gift-status' class='gift-send-status' role='status'></p></form></section>";
     const sort=document.getElementById("minglora-gift-sort");if(sort)sort.value=state.sort;
@@ -106,7 +106,7 @@
     const contextId=contextType==="user"?null:String(document.getElementById("minglora-gift-context-id")?.value||"").trim();
     if(!gift){if(status)status.textContent="Select a gift before sending.";return;}
     if(!/^[a-z0-9_]{3,30}$/.test(username)){if(status)status.textContent="Enter a valid @username (3–30 letters, numbers or underscores).";return;}
-    if(contextType!=="user"&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contextId||"")){if(status)status.textContent="Enter a valid content reference, or open Gifts from the relevant post.";return;}
+    if(contextType!=="user"&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contextId||"")){if(status)status.textContent="Enter a valid content ID, or open Gifts from the relevant post.";return;}
     window.MingloraGiftFX?.prime();if(button)button.disabled=true;if(status)status.textContent="Verifying recipient and sending gift…";
     try{
       const result=await request("/gifts/send",{method:"POST",body:JSON.stringify({username,giftCode:gift.code,contextType,contextId})});
