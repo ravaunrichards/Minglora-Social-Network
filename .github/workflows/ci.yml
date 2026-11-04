@@ -104,5 +104,7 @@ jobs:
           node --check src/domain/validation.js
           node --check src/domain/pagination.js
           node --check src/domain/relationships.js
+      - name: Generate original Minglora gift assets
+        run: npm run build:gifts
       - name: Run automated tests
         run: npm test
