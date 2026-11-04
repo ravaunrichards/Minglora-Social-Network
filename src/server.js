@@ -2259,6 +2259,27 @@ async function route(req, res) {
           throw error;
         }
       }
+      if(method==='POST'&&p==='/api/gifts/send'){
+        const recipientUsername=String(input.username||'').trim().replace(/^@/,'').toLowerCase();
+        const giftCode=String(input.giftCode||'').trim();
+        const contextType=String(input.contextType||'user');
+        const contextId=input.contextId==null||input.contextId===''?null:String(input.contextId);
+        if(!/^[a-z0-9_]{3,30}$/.test(recipientUsername)||
+           !/^[a-z0-9_-]{1,60}$/.test(giftCode)||
+           !['user','post','video','photo'].includes(contextType)||
+           (contextType==='user'&&contextId!==null)||
+           (contextType!=='user'&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contextId||''))){
+          return json(res,400,{error:'Enter a valid @username, gift and gifting destination.'});
+        }
+        const result=await requestSupabaseState('economy_send_social_gift',{
+          senderId:user.id,recipientUsername,giftCode,contextType,contextId
+        });
+        const gift=result.gift;
+        if(!gift?.receiverId)return json(res,502,{error:'Minglora could not confirm the gift transaction.'});
+        notify(gift.receiverId,user.id,'gift',user.name+' sent you a gift.');
+        await saveStore();
+        return json(res,201,{gift});
+      }
       let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
