@@ -85,12 +85,12 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
     assert.ok(statSync(svgPath).size > 1000, gift.name + " SVG should contain real artwork");
     assert.ok(statSync(modelPath).size > 1000, gift.name + " GLTF should contain real mesh geometry");
     const svg = readFileSync(svgPath, "utf8");
-    assert.match(svg, /^<svg\\b/);
+    assert.ok(svg.startsWith("<svg"), gift.name + " SVG should be a valid SVG document");
     assert.ok(svg.includes("Minglora") || svg.includes("aria-label"), gift.name);
     const model = JSON.parse(readFileSync(modelPath, "utf8"));
     assert.equal(model.asset?.version, "2.0", gift.name);
     assert.ok(model.meshes?.[0]?.primitives?.length > 0, gift.name);
-    assert.match(model.buffers?.[0]?.uri || "", /^data:application\\/octet-stream;base64,/);
+    assert.ok((model.buffers?.[0]?.uri || "").startsWith("data:application/octet-stream;base64,"), gift.name + " GLTF must include embedded mesh data");
   }
 });
 
