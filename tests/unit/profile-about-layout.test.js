@@ -92,8 +92,8 @@ test('private contact information is only supplied to its owner or viewers allow
 
 test('profile shell and service worker load the organised About UI without stale cached assets',()=>{
   assert.match(html,/app\.js\?v=20261104-profile-subscribers-2/);
-  assert.match(html,/styles\.css\?v=20261104-minglora-gift-motion-1/);
+  assert.match(html,/styles\.css\?v=20261104-profile-stats-single-row-1/);
   assert.match(worker,/minglora-shell-v74-league-refresh-dedupe-1/);
   assert.match(worker,/app\.js\?v=20261104-profile-subscribers-2/);
-  assert.match(worker,/styles\.css\?v=20261104-minglora-gift-motion-1/);
+  assert.match(worker,/styles\.css\?v=20261104-profile-stats-single-row-1/);
 });
