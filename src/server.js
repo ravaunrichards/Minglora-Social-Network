@@ -1595,9 +1595,7 @@ async function route(req, res) {
       }
       if (liveSpeakerRequestsMatch && method === 'POST') {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerRequestsMatch[1] && item.status === 'live');
-        if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
-        const allowed = session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
-        if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
+        if (!(await canViewLiveSession(session,user.id)) || session.hostId === user.id) return json(res, 404, { error: 'LIVE session not found.' });
         const joined = (db.liveParticipants || []).some(item => item.sessionId === session.id && item.userId === user.id && !item.leftAt);
         if (!joined) return json(res, 409, { error: 'Join the LIVE room before requesting a speaker place.' });
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
