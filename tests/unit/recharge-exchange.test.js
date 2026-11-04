@@ -14,7 +14,7 @@ const [app, html, css, worker, server, runtime, migration] = await Promise.all([
   read('public/sw.js'),
   read('src/server.js'),
   read('supabase/functions/minglora-runtime-state/index.ts'),
-  read('supabase/migrations/20261104215200_minglora_money_balance_to_coins.sql')
+  read('supabase/migrations/20261104215934_minglora_money_balance_to_coins.sql')
 ]);
 
 test('the Coins destination is presented as Recharge in navigation', () => {
