@@ -114,9 +114,13 @@ export function settleCreatorLeagueDay(db, dayKey, now = new Date()) {
     if (members.length < 2) continue;
     members.sort((a, b) => b.points - a.points || a.profile.userId.localeCompare(b.profile.userId));
     const slots = Math.max(1, Math.ceil(members.length * 0.2));
-    const promoted = new Set(members.slice(0, slots).map(item => item.profile.userId));
-    const demoted = new Set(members.slice(-slots).map(item => item.profile.userId));
+    const promotionBoundary = members[slots - 1].points;
+    const demotionBoundary = members[members.length - slots].points;
+    const promoted = new Set(members.filter(item => item.points >= promotionBoundary).map(item => item.profile.userId));
+    const demoted = new Set(members.filter(item => item.points <= demotionBoundary).map(item => item.profile.userId));
     for (const item of members) {
+      // A score tied across both cutoffs is neutral rather than arbitrarily moved.
+      if (promoted.has(item.profile.userId) && demoted.has(item.profile.userId)) continue;
       if (promoted.has(item.profile.userId)) { applyClassMovement(item.profile, 1, db, now); moved += 1; }
       else if (demoted.has(item.profile.userId)) { applyClassMovement(item.profile, -1, db, now); moved += 1; }
     }
