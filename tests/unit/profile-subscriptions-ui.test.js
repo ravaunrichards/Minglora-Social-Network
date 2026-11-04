@@ -43,6 +43,13 @@ test('subscription receipts use an idempotent 50/50 creator and platform ledger'
   assert.match(migration, /platform_amount := p_gross_minor - creator_amount/);
 });
 
+test('the subscriber-badge perk is reflected on a member identity while active', () => {
+  assert.match(server, /result\.subscriberBadge=\(db\.creatorSubscriptions\|\|\[\]\)\.some/);
+  assert.match(server, /item\.perks\?\.subscriber_badge===true/);
+  assert.match(app, /ml-subscriber-badge/);
+  assert.match(css, /\.ml-subscriber-badge\s*\{/);
+});
+
 test('subscription controls and package cards fit and scroll on phones', () => {
   assert.match(css, /\.creator-subscription-modal\s*\{[^}]*max-height:calc\(100dvh - 16px\)/s);
   assert.match(css, /\.creator-subscription-perks\{grid-template-columns:minmax\(0,1fr\)\}/);
