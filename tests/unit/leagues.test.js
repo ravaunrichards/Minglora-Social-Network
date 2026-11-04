@@ -4,7 +4,7 @@ import {
   CREATOR_LEAGUE_CLASSES, MATCH_RANKS, ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues, settleCreatorLeagueDay, createCreatorLeagueMatch,
   acceptCreatorLeagueMatch, useCreatorLeaguePowerup, supportCreatorLeagueMatch,
-  settleExpiredLeagueMatches, getCreatorLeagueOverview
+  settleExpiredLeagueMatches, getCreatorLeagueOverview, listCreatorLeagueMatches
 } from "../../backend/modules/leagues/service.js";
 
 function blankDb() { return { users: [], creatorLeagueProfiles: [], creatorLeagueGiftLedger: [], creatorLeagueDailyScores: [], creatorLeagueDailySettlements: [], creatorLeagueMatches: [], creatorLeaguePowerupUses: [], creatorLeagueEvents: [] }; }
