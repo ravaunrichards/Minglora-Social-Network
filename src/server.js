@@ -1881,6 +1881,57 @@ async function route(req, res) {
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
       }
+      if(method==='GET'&&p==='/api/sounds'){
+        const query=String(url.searchParams.get('q')||'').trim().toLowerCase();
+        const sort=String(url.searchParams.get('sort')||'trending');
+        const favorites=new Set((db.soundFavorites||[]).filter(item=>item.userId===user.id).map(item=>item.soundId));
+        const usageCounts=soundUsageCounts(db);
+        let sounds=(db.sounds||[]).filter(sound=>
+          sound.status==='active'&&(sound.allowReuse===true||sound.ownerId===user.id)&&
+          !blockedBetween(user.id,sound.ownerId)&&
+          (!query||[sound.title,sound.attribution,db.users.find(item=>item.id===sound.ownerId)?.username].some(value=>String(value||'').toLowerCase().includes(query)))
+        );
+        if(sort==='mine')sounds=sounds.filter(sound=>sound.ownerId===user.id);
+        if(sort==='saved')sounds=sounds.filter(sound=>favorites.has(sound.id));
+        if(sort==='new')sounds.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        else if(sort==='mine')sounds.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        else sounds.sort((a,b)=>(usageCounts.get(b.id)||0)-(usageCounts.get(a.id)||0)||new Date(b.createdAt)-new Date(a.createdAt));
+        const cards=await Promise.all(sounds.slice(0,60).map(sound=>publicSoundCard(sound,user.id,usageCounts)));
+        return json(res,200,{sounds:cards.filter(Boolean),sort,hasLicensedCatalogue:false});
+      }
+      if(method==='POST'&&p==='/api/sounds'){
+        const validation=validateSoundInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='sound'&&item.status==='uploaded');
+        if(!asset||asset.mediaType!=='audio'||!SOUND_AUDIO_MIME_TYPES.includes(asset.mimeType)){
+          return json(res,400,{error:'Upload a supported audio recording before publishing your original sound.'});
+        }
+        if((db.sounds||[]).some(sound=>sound.assetId===asset.id))return json(res,409,{error:'This recording has already been added to Minglora Sounds.'});
+        const sound={id:uid(),ownerId:user.id,assetId:asset.id,...validation.value,status:'active',createdAt:now()};
+        db.sounds.push(sound);asset.status='attached';asset.attachedTo='sound:'+sound.id;
+        await saveStore();
+        const card=await publicSoundCard(sound,user.id);
+        return json(res,201,{sound:card});
+      }
+      let soundFavorite=p.match(/^\\/api\\/sounds\\/([^/]+)\\/favorite$/);
+      if(soundFavorite&&(method==='POST'||method==='DELETE')){
+        const sound=(db.sounds||[]).find(item=>item.id===soundFavorite[1]);
+        if(!sound||!canUseSound(sound,user.id)||blockedBetween(user.id,sound.ownerId))return json(res,404,{error:'Sound not found or unavailable for reuse.'});
+        const exists=(db.soundFavorites||[]).some(item=>item.userId===user.id&&item.soundId===sound.id);
+        if(method==='POST'&&!exists)db.soundFavorites.push({id:uid(),userId:user.id,soundId:sound.id,createdAt:now()});
+        if(method==='DELETE'&&exists)db.soundFavorites=db.soundFavorites.filter(item=>!(item.userId===user.id&&item.soundId===sound.id));
+        await saveStore();
+        return json(res,200,{favorite:method==='POST',soundId:sound.id});
+      }
+      let soundRoute=p.match(/^\\/api\\/sounds\\/([^/]+)$/);
+      if(method==='DELETE'&&soundRoute){
+        const sound=(db.sounds||[]).find(item=>item.id===soundRoute[1]);
+        if(!sound)return json(res,404,{error:'Sound not found.'});
+        if(sound.ownerId!==user.id)return json(res,403,{error:'Only the sound creator can remove it from the library.'});
+        sound.status='archived';sound.archivedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,id:sound.id});
+      }
       if(method==='POST'&&p==='/api/posts'){
         const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
