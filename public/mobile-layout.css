@@ -64,3 +64,198 @@
 @media(prefers-reduced-motion:reduce){
   .mobile-hub-link,.mobile-nav>button{scroll-behavior:auto;transition:none}
 }
+
+
+/* Mobile LIVE room: immersive viewport, safe-area aware controls and bounded overlays. */
+@media(max-width:760px){
+  html.live-room-active,body.live-room-active{
+    width:100%;height:100%;min-height:100%;
+    overflow:hidden!important;overscroll-behavior:none;
+  }
+  body.live-room-active{
+    padding:0!important;margin:0;background:#07090e;
+    height:100vh;height:100dvh;
+  }
+  body.live-room-active #app{
+    width:100%;height:100vh;height:100dvh;min-height:0;overflow:hidden;
+  }
+  body.live-room-active .topbar,
+  body.live-room-active .mobile-nav,
+  body.live-room-active .left-rail,
+  body.live-room-active .right-rail{
+    display:none!important;
+  }
+  body.live-room-active .layout{
+    position:fixed;inset:0;z-index:1000;
+    display:block;width:100%;height:100vh;height:100dvh;
+    max-width:none;margin:0;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overflow:hidden;background:#07090e;
+  }
+  body.live-room-active .main-content{
+    width:100%;height:100%;max-width:none;min-width:0;
+    margin:0;padding:0;overflow:hidden;
+  }
+  body.live-room-active .live-player-shell{
+    display:flex;flex-direction:column;
+    width:100%;height:100%;min-height:0;max-height:100%;
+    margin:0;padding:0;border:0;border-radius:0;
+    overflow:hidden;box-shadow:none;
+  }
+  body.live-room-active .live-player-header{
+    position:relative;z-index:12;flex:0 0 auto;
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;gap:8px;min-height:54px;
+    padding:6px 10px;background:rgba(10,13,20,.94);
+  }
+  body.live-room-active .live-player-header>div{
+    display:flex;flex-direction:column;align-items:flex-start;
+    flex:initial;gap:3px;min-width:0;
+  }
+  body.live-room-active .live-player-header>div strong{
+    display:block;width:100%;max-width:100%;
+    font-size:12px;line-height:1.25;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  body.live-room-active .live-player-header .text-button{
+    min-height:44px;padding:8px 5px;white-space:nowrap;font-size:11px;
+  }
+  body.live-room-active .live-player-header .live-indicator,
+  body.live-room-active .live-player-header .live-broadcast-type{
+    font-size:9px;line-height:1.1;
+  }
+  body.live-room-active .live-viewer-count{
+    max-width:88px;font-size:10px;line-height:1.25;
+    white-space:normal;text-align:right;overflow-wrap:anywhere;
+  }
+  body.live-room-active .live-player-layout{
+    position:relative;display:block;flex:1 1 auto;
+    width:100%;height:0;min-height:0;overflow:hidden;
+  }
+  body.live-room-active .live-video-column{
+    position:absolute;inset:0;display:block;
+    width:100%;height:100%;min-height:0;margin:0;padding:0;
+  }
+  body.live-room-active .live-video-stage{
+    position:absolute;inset:0;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(min(48%,220px),1fr));
+    grid-auto-rows:minmax(0,1fr);align-content:stretch;
+    width:100%;height:100%;min-width:0;min-height:0;max-height:none;
+    margin:0;padding:0;aspect-ratio:auto;border:0;border-radius:0;
+  }
+  body.live-room-active .live-video-tile,
+  body.live-room-active .live-video-element{
+    width:100%;height:100%;min-width:0;min-height:0;
+  }
+  body.live-room-active .live-video-element{object-fit:cover}
+  body.live-room-active .live-audio-root{display:none}
+  body.live-room-active .live-player-controls{
+    position:absolute;z-index:14;left:10px;right:10px;
+    bottom:max(8px,env(safe-area-inset-bottom));
+    display:flex;justify-content:center;gap:7px;
+    width:auto;max-width:none;min-width:0;
+    padding:7px;border:1px solid rgba(255,255,255,.15);
+    border-radius:14px;background:rgba(7,10,16,.82);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  }
+  body.live-room-active .live-player-controls button{
+    flex:1 1 0;min-width:0;min-height:44px;max-width:100%;
+    padding:9px 7px;font-size:11px;line-height:1.2;
+    white-space:normal;overflow-wrap:anywhere;
+  }
+  body.live-room-active .live-community-panel{
+    position:absolute;z-index:10;
+    left:10px;right:10px;
+    bottom:calc(67px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;
+    width:auto;max-width:none;min-width:0;
+    min-height:0;max-height:min(43dvh,360px);
+    border:1px solid rgba(255,255,255,.16);border-radius:14px;
+    background:linear-gradient(180deg,rgba(8,11,18,.72),rgba(8,11,18,.92));
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+  }
+  body.live-room-active .live-community-title{
+    flex:0 0 auto;padding:8px 10px 4px;
+    border:0;background:transparent;
+  }
+  body.live-room-active .live-community-title strong{font-size:12px}
+  body.live-room-active .live-community-title small{font-size:10px}
+  body.live-room-active .live-speaker-request-panel{
+    flex:0 0 auto;min-width:0;max-height:16dvh;
+    padding:8px 10px;overflow-y:auto;
+  }
+  body.live-room-active .live-speaker-request-panel button{
+    min-height:42px;max-width:100%;white-space:normal;
+  }
+  body.live-room-active .live-chat-list{
+    flex:0 1 auto;min-width:0;min-height:58px;
+    max-height:16dvh;padding:8px 10px;
+    overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+  }
+  body.live-room-active .live-chat-line{font-size:11px;gap:3px 6px}
+  body.live-room-active .live-chat-form{
+    position:sticky;bottom:0;z-index:2;
+    flex:0 0 auto;gap:6px;padding:7px 8px;
+    background:rgba(9,12,19,.96);
+  }
+  body.live-room-active .live-chat-form input{
+    min-width:0;min-height:42px;font-size:14px;
+  }
+  body.live-room-active .live-chat-form button{
+    min-width:54px;min-height:42px;padding:0 10px;
+  }
+  body.live-room-active .live-gift-panel{
+    flex:0 0 auto;min-width:0;padding:8px 10px;
+    max-height:none;overflow:visible;
+  }
+  body.live-room-active .live-gift-heading{gap:8px;flex-wrap:wrap;font-size:11px}
+  body.live-room-active .live-gift-search,
+  body.live-room-active .live-gift-sort-label select{
+    width:100%;min-width:0;min-height:40px;font-size:14px;
+  }
+  body.live-room-active .live-gift-grid{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    max-height:17dvh;min-width:0;overflow-y:auto;overscroll-behavior:contain;
+  }
+  body.live-room-active .live-gift-button{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-width:0;min-height:68px;padding:6px 4px;
+  }
+  body.live-room-active .live-gift-button strong,
+  body.live-room-active .live-gift-button small{
+    max-width:100%;font-size:10px;text-align:center;overflow-wrap:anywhere;
+  }
+  body.live-room-active .live-gift-model-slot{height:34px;max-width:100%}
+  body.live-room-active .live-gift-image{max-width:34px;max-height:34px;object-fit:contain}
+  body.live-room-active .live-gift-more,
+  body.live-room-active #live-gift-more,
+  body.live-room-active #live-recharge{min-height:40px}
+  body.live-room-active .live-gift-host-note{padding:10px;font-size:11px}
+  body.live-room-active .gp-live-entry-banner{
+    position:absolute;z-index:13;top:58px;left:10px;right:10px;
+    width:auto;max-width:none;margin:0;pointer-events:none;
+  }
+  body.live-room-active .toast{
+    z-index:1200;bottom:calc(76px + env(safe-area-inset-bottom));
+    max-width:calc(100vw - 24px);
+  }
+}
+@media(max-width:390px){
+  body.live-room-active .live-player-header{gap:5px;padding-left:7px;padding-right:7px}
+  body.live-room-active .live-player-header .text-button{font-size:10px;padding-left:3px;padding-right:3px}
+  body.live-room-active .live-viewer-count{max-width:70px;font-size:9px}
+  body.live-room-active .live-player-controls{left:7px;right:7px;gap:5px;padding:5px}
+  body.live-room-active .live-player-controls button{padding:8px 4px;font-size:10px}
+  body.live-room-active .live-community-panel{left:7px;right:7px;max-height:min(44dvh,340px)}
+  body.live-room-active .live-gift-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px) and (max-height:640px){
+  body.live-room-active .live-community-panel{max-height:37dvh}
+  body.live-room-active .live-chat-list{max-height:12dvh;min-height:42px}
+  body.live-room-active .live-gift-grid{max-height:12dvh}
+}
+@media(max-width:760px) and (orientation:landscape){
+  body.live-room-active .live-community-panel{max-height:42dvh}
+  body.live-room-active .live-player-controls{bottom:max(5px,env(safe-area-inset-bottom))}
+}
