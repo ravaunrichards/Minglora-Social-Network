@@ -48,6 +48,11 @@
       recentEvents: uniqueItems(overview.recentEvents, item => item.id || [item.type, item.userId, item.createdAt].join(":"))
     };
   }
+  function normalizeSessions(sessions) {
+    return uniqueItems(sessions, session =>
+      session.id || session.sessionId || [session.hostId, session.roomName].filter(Boolean).join(":")
+    );
+  }
   function updateRefreshStatus() {
     const status = $("#league-refresh-status");
     const button = $("[data-league-refresh]");
@@ -235,7 +240,7 @@
       ]);
       if (token !== refreshToken || generation !== viewGeneration || !isLeagueViewActive()) return;
       state.overview = normalizeOverview(overview);
-      state.sessions = Array.isArray(sessions.sessions) ? sessions.sessions : [];
+      state.sessions = normalizeSessions(sessions.sessions);
       state.lastUpdatedAt = new Date();
       state.refreshError = "";
       const scrollTop = main.scrollTop;
@@ -268,7 +273,7 @@
     if (generation !== viewGeneration || !isLeagueViewActive()) return;
     if (results[0].status !== "fulfilled") throw results[0].reason;
     state.overview = normalizeOverview(results[0].value);
-    state.sessions = results[1].status === "fulfilled" && Array.isArray(results[1].value.sessions) ? results[1].value.sessions : [];
+    state.sessions = normalizeSessions(results[1].status === "fulfilled" ? results[1].value.sessions : []);
     state.gifts = results[2].status === "fulfilled" && Array.isArray(results[2].value.gifts) ? results[2].value.gifts : [];
     state.lastUpdatedAt = new Date();
     state.refreshError = "";
