@@ -22,7 +22,7 @@ export function rankForYouFeed(posts = [], viewerId, follows = [], savedPosts = 
     if (savedByViewer.has(post.id)) addAffinity(post.userId,4);
   }
 
-  const scored = posts.map(post => {
+  const scored = posts.map((post,index) => {
     const timestamp = Date.parse(post.createdAt||'');
     const ageHours = Number.isFinite(timestamp) ? Math.max(0,(now-timestamp)/3600000) : 24*30;
     const freshness = Math.max(0,14-ageHours/12);
@@ -39,9 +39,10 @@ export function rankForYouFeed(posts = [], viewerId, follows = [], savedPosts = 
     return {
       post,
       score:freshness+engagement+relationship+personalAffinity+discovery+mediaBonus-ownPostPenalty,
-      timestamp:Number.isFinite(timestamp)?timestamp:0
+      timestamp:Number.isFinite(timestamp)?timestamp:0,
+      originalIndex:index
     };
-  }).sort((a,b)=>b.score-a.score||b.timestamp-a.timestamp||String(b.post.id).localeCompare(String(a.post.id)));
+  }).sort((a,b)=>b.score-a.score||b.timestamp-a.timestamp||a.originalIndex-b.originalIndex);
 
   // Interleave creator queues to make discovery more varied and avoid repeated authors.
   const queuesByCreator = new Map();
@@ -53,7 +54,7 @@ export function rankForYouFeed(posts = [], viewerId, follows = [], savedPosts = 
   let queues = [...queuesByCreator.values()];
   const ranked = [];
   while (queues.length) {
-    queues.sort((a,b)=>b[0].score-a[0].score);
+    queues.sort((a,b)=>b[0].score-a[0].score||a[0].originalIndex-b[0].originalIndex);
     const round = queues;
     queues = [];
     for (const queue of round) {
