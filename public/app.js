@@ -197,7 +197,7 @@ async function handleMingloraPushNavigation(){
     await renderNotifications();
   }catch(error){toast(error.message);}
 }
-function syncNavigationActive(){const activeView=state.view==='feed'&&state.feedScope==='for-you'?'for-you':state.view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===activeView));}
+function syncNavigationActive(){const activeView=state.view==='feed'&&state.feedScope==='for-you'?'for-you':state.view;document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===activeView));const moreMenu=document.querySelector('#mobile-more-menu');const moreButton=document.querySelector('#mobile-more-btn');moreMenu?.classList.add('hidden');moreButton?.setAttribute('aria-expanded','false');moreButton?.classList.toggle('active',!['feed','for-you','meetwave','live'].includes(activeView));}
 function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();syncNavigationActive();renderView();}
 function setContent(html){$('#main-content').innerHTML=html;}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2';
@@ -3990,6 +3990,13 @@ async function renderSearch(q){
 async function renderView(){try{if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='live')await renderLive();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
+  $('#mobile-more-btn')?.addEventListener('click',()=>{
+    const menu=$('#mobile-more-menu');
+    if(!menu)return;
+    const opening=menu.classList.contains('hidden');
+    menu.classList.toggle('hidden',!opening);
+    $('#mobile-more-btn')?.setAttribute('aria-expanded',String(opening));
+  });
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
   $('#home-brand').onclick=()=>activateNav('feed');
   $('#rail-profile').onclick=()=>openProfile(state.user.id);
