@@ -56,7 +56,7 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(html,/app\.js\?v=20261104-minglora-gift-motion-1/);
-  assert.match(worker,/minglora-shell-v71-account-auth-click-1/);
+  assert.match(worker,/minglora-shell-v72-compact-primary-nav-1/);
   assert.match(worker,/styles\.css\?v=20261104-minglora-gift-motion-1/);
   assert.match(worker,/app\.js\?v=20261104-minglora-gift-motion-1/);
 });
