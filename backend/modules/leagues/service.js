@@ -68,7 +68,9 @@ function normalizeMatch(match) {
   return match;
 }
 function mergeMatchRecords(current, incoming) {
-  const priority = { live: 4, pending: 3, completed: 2, expired: 1 };
+  // Terminal states always beat stale active snapshots so refresh/dedupe cannot
+  // accidentally resurrect a match after it has completed or expired.
+  const priority = { completed: 4, expired: 3, live: 2, pending: 1 };
   const currentTime = recordTime(current);
   const incomingTime = recordTime(incoming);
   const preferred = (priority[incoming.status] || 0) > (priority[current.status] || 0) ||
