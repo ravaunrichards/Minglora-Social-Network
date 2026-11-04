@@ -1217,7 +1217,7 @@ async function renderCoins(){
       const raw=String(amountInput?.value||"").trim();
       const amount=Number(raw);
       const amountMinor=Math.round(amount*100);
-      const valid=/^\\d{1,8}(?:\\.\\d{1,2})?$/.test(raw)&&Number.isSafeInteger(amountMinor)&&amountMinor>=100&&amountMinor<=availableMinor;
+      const valid=/^\d{1,8}(?:\.\d{1,2})?$/.test(raw)&&Number.isSafeInteger(amountMinor)&&amountMinor>=100&&amountMinor<=availableMinor;
       if(preview){
         preview.innerHTML=valid
           ?"<div><span>You will receive</span><strong>"+amountMinor.toLocaleString()+" Coins</strong></div><p>"+creatorMoney(amountMinor)+" will be deducted from your money balance at 100 Coins per USD $1.00.</p>"
