@@ -24,8 +24,106 @@ const COLLECTIONS = [
   "creatorLeagueDailySettlements", "creatorLeagueMatches", "creatorLeaguePowerupUses",
   "creatorLeagueEvents"
 ];
+
+const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+const recordTime = record => {
+  const value = Date.parse(record?.updatedAt || record?.completedAt || record?.startedAt || record?.createdAt || "");
+  return Number.isFinite(value) ? value : 0;
+};
+function uniqueRecords(records, keyFor, merge = current => current) {
+  const unique = new Map();
+  for (const record of Array.isArray(records) ? records : []) {
+    if (!record || typeof record !== "object") continue;
+    const key = keyFor(record);
+    if (!key) continue;
+    const current = unique.get(key);
+    unique.set(key, current ? merge(current, record) : record);
+  }
+  return [...unique.values()];
+}
+function mergeProfileRecords(current, incoming) {
+  const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
+  const merged = { ...(preferred === current ? incoming : current), ...preferred };
+  for (const key of ["lifetimeGiftPoints", "matchWins", "matchLosses", "matchDraws"]) {
+    merged[key] = Math.max(asNumber(current[key]), asNumber(incoming[key]));
+  }
+  if (current.seasonKey === incoming.seasonKey) {
+    merged.seasonPoints = Math.max(asNumber(current.seasonPoints), asNumber(incoming.seasonPoints));
+  }
+  return merged;
+}
+function normalizeMatch(match) {
+  match.scores = {
+    challenger: Math.max(0, asNumber(match.scores?.challenger)),
+    opponent: Math.max(0, asNumber(match.scores?.opponent))
+  };
+  match.supporters = uniqueRecords(match.supporters, item => item.userId, (current) => current);
+  match.activeEffects = uniqueRecords(match.activeEffects, item => item.id || [item.type, item.side, item.expiresAt].join(":"));
+  match.pendingEffects = uniqueRecords(match.pendingEffects, item => item.id || [item.type, item.side, item.expiresAt].join(":"));
+  match.events = uniqueRecords(match.events, item => item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":"));
+  match.timeBoostUsed = {
+    challenger: Boolean(match.timeBoostUsed?.challenger),
+    opponent: Boolean(match.timeBoostUsed?.opponent)
+  };
+  return match;
+}
+function mergeMatchRecords(current, incoming) {
+  const priority = { live: 4, pending: 3, completed: 2, expired: 1 };
+  const currentTime = recordTime(current);
+  const incomingTime = recordTime(incoming);
+  const preferred = (priority[incoming.status] || 0) > (priority[current.status] || 0) ||
+    ((priority[incoming.status] || 0) === (priority[current.status] || 0) && incomingTime > currentTime)
+    ? incoming : current;
+  const merged = { ...(preferred === current ? incoming : current), ...preferred };
+  const challengerScores = [];
+  const opponentScores = [];
+  for (const item of [current, incoming]) {
+    const sameOrientation = item.challengerId === preferred.challengerId && item.opponentId === preferred.opponentId;
+    challengerScores.push(asNumber(item.scores?.[sameOrientation ? "challenger" : "opponent"]));
+    opponentScores.push(asNumber(item.scores?.[sameOrientation ? "opponent" : "challenger"]));
+  }
+  merged.scores = {
+    challenger: Math.max(...challengerScores),
+    opponent: Math.max(...opponentScores)
+  };
+  merged.supporters = uniqueRecords([...(preferred.supporters || []), ...((preferred === current ? incoming : current).supporters || [])], item => item.userId);
+  merged.events = uniqueRecords([...(preferred.events || []), ...((preferred === current ? incoming : current).events || [])], item => item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":"));
+  merged.activeEffects = uniqueRecords([...(preferred.activeEffects || []), ...((preferred === current ? incoming : current).activeEffects || [])], item => item.id || [item.type, item.side, item.expiresAt].join(":"));
+  merged.pendingEffects = uniqueRecords([...(preferred.pendingEffects || []), ...((preferred === current ? incoming : current).pendingEffects || [])], item => item.id || [item.type, item.side, item.expiresAt].join(":"));
+  merged.timeBoostUsed = {
+    challenger: Boolean(current.timeBoostUsed?.challenger || incoming.timeBoostUsed?.challenger),
+    opponent: Boolean(current.timeBoostUsed?.opponent || incoming.timeBoostUsed?.opponent)
+  };
+  merged.ratingAwarded = Boolean(current.ratingAwarded || incoming.ratingAwarded);
+  return normalizeMatch(merged);
+}
+function compactMatches(matches) {
+  const byId = uniqueRecords(matches, match => match.id ? "id:" + match.id : null, mergeMatchRecords);
+  return uniqueRecords(byId, match => {
+    if (["pending", "live"].includes(match.status) && match.challengerId && match.opponentId) {
+      return "active:" + [String(match.challengerId), String(match.opponentId)].sort().join("|");
+    }
+    return match.id ? "id:" + match.id : null;
+  }, mergeMatchRecords);
+}
 const ensureCollections = db => {
   for (const name of COLLECTIONS) if (!Array.isArray(db[name])) db[name] = [];
+  db.creatorLeagueProfiles = uniqueRecords(db.creatorLeagueProfiles, item => item.userId, mergeProfileRecords);
+  db.creatorLeagueGiftLedger = uniqueRecords(db.creatorLeagueGiftLedger, item => item.giftId || item.id);
+  db.creatorLeagueDailyScores = uniqueRecords(
+    db.creatorLeagueDailyScores,
+    item => item.userId && item.dayKey ? item.userId + ":" + item.dayKey : null,
+    (current, incoming) => {
+      const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
+      return { ...(preferred === current ? incoming : current), ...preferred, points: Math.max(asNumber(current.points), asNumber(incoming.points)) };
+    }
+  );
+  db.creatorLeagueDailySettlements = uniqueRecords(db.creatorLeagueDailySettlements, item => item.dayKey);
+  db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
+    item.userId && item.powerupId && item.dayKey ? [item.userId, item.powerupId, item.dayKey].join(":") : item.id
+  );
+  db.creatorLeagueEvents = uniqueRecords(db.creatorLeagueEvents, item => item.id);
+  db.creatorLeagueMatches = compactMatches(db.creatorLeagueMatches).map(normalizeMatch);
 };
 export const utcDayKey = value => new Date(value || Date.now()).toISOString().slice(0, 10);
 export function creatorLeagueSeasonKey(value = new Date()) {
@@ -248,7 +346,10 @@ export function createCreatorLeagueMatch(db, input) {
   ensureCollections(db);
   const now = input.now || new Date();
   settleExpiredLeagueMatches(db, now);
-  if (input.challengerId === input.opponentId) throw Object.assign(new Error("You cannot challenge your own LIVE session."), { status: 400 });
+  if (!input.challengerId || !input.opponentId || input.challengerId === input.opponentId) throw Object.assign(new Error("Choose two different creators for this League Match."), { status: 400 });
+  if (!input.challengerSessionId || !input.opponentSessionId || input.challengerSessionId === input.opponentSessionId) {
+    throw Object.assign(new Error("Choose two different active LIVE sessions for this League Match."), { status: 400 });
+  }
   if (!["all", "specific"].includes(input.giftMode)) throw Object.assign(new Error("Choose all Gifts or a specific Gift scoring mode."), { status: 400 });
   if (input.giftMode === "specific" && !/^[a-z0-9_-]{1,60}$/i.test(input.selectedGiftCode || "")) throw Object.assign(new Error("Choose a valid Gift for this match."), { status: 400 });
   const busy = db.creatorLeagueMatches.find(match => ["pending", "live"].includes(match.status) &&
@@ -286,7 +387,7 @@ export function supportCreatorLeagueMatch(db, match, viewerId, side, now = new D
   if ([match.challengerId, match.opponentId].includes(viewerId)) throw Object.assign(new Error("Creators cannot support their own match."), { status: 403 });
   if (match.supporters.some(item => item.userId === viewerId)) throw Object.assign(new Error("You have already supported a side in this match."), { status: 409 });
   match.supporters.push({ userId: viewerId, side, points: 3, createdAt: now.toISOString() });
-  match.scores[side] += 3;
+  match.scores[side] = asNumber(match.scores[side]) + 3;
   match.events.push({ id: randomUUID(), type: "viewer_support", userId: viewerId, side, matchPoints: 3, createdAt: now.toISOString() });
   return match;
 }
@@ -336,9 +437,17 @@ function decorateMatch(match, users) {
 export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   ensureCollections(db);
   settleExpiredLeagueMatches(db, now);
-  return db.creatorLeagueMatches.filter(match => match.status === "live" ||
-    ([match.challengerId, match.opponentId].includes(userId) &&
-      (match.status === "pending" || (match.status === "completed" && Date.now() - new Date(match.completedAt).getTime() < 604800000))))
+  const currentTime = now instanceof Date ? now.getTime() : Date.parse(now);
+  const matches = compactMatches(db.creatorLeagueMatches).filter(match => {
+    if (match.status === "live") return true;
+    if (![match.challengerId, match.opponentId].includes(userId)) return false;
+    if (match.status === "pending") return true;
+    if (match.status !== "completed") return false;
+    const completedAt = Date.parse(match.completedAt || "");
+    return Number.isFinite(completedAt) && Number.isFinite(currentTime) &&
+      currentTime >= completedAt && currentTime - completedAt < 604800000;
+  });
+  return matches
     .sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt))
     .slice(0, 50).map(match => decorateMatch(match, users));
 }
