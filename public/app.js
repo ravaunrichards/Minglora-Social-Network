@@ -378,7 +378,7 @@ function openComposer(){
     event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,accessLevel:values.get('accessLevel')||'public'})});
       close();await loadFeed();await renderFeed();toast('Your post is published.');
     }catch(error){toast(error.message);button.disabled=false;}
   });
