@@ -846,6 +846,78 @@ async function route(req, res) {
         status: succeeded ? 'paid' : 'failed'
       });
     }
+    const subscriptionId = String(
+      resource.id || resource.billing_agreement_id || resource.billingAgreementId || resource.subscription_id || ''
+    );
+    const trackedSubscription = (db.creatorSubscriptions || []).find(item =>
+      item.paypalSubscriptionId === subscriptionId
+    );
+
+    if (trackedSubscription && eventType.startsWith('BILLING.SUBSCRIPTION.')) {
+      const nextBillingTime = resource.billing_info?.next_billing_time || resource.billingInfo?.nextBillingTime || null;
+      if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED' ||
+          eventType === 'BILLING.SUBSCRIPTION.RE-ACTIVATED') {
+        trackedSubscription.status = 'active';
+        trackedSubscription.currentPeriodEnd = nextBillingTime || trackedSubscription.currentPeriodEnd || null;
+        trackedSubscription.activatedAt = trackedSubscription.activatedAt || now();
+      } else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
+        const end = trackedSubscription.currentPeriodEnd ? new Date(trackedSubscription.currentPeriodEnd).getTime() : 0;
+        trackedSubscription.cancelAtPeriodEnd = true;
+        trackedSubscription.status = end > Date.now() ? 'active' : 'cancelled';
+        if (nextBillingTime) trackedSubscription.currentPeriodEnd = nextBillingTime;
+      } else if (eventType === 'BILLING.SUBSCRIPTION.SUSPENDED') {
+        trackedSubscription.status = 'suspended';
+      } else if (eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
+        trackedSubscription.status = 'expired';
+        trackedSubscription.currentPeriodEnd = nextBillingTime || trackedSubscription.currentPeriodEnd || now();
+      } else if (eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
+        trackedSubscription.status = 'past_due';
+      }
+      trackedSubscription.updatedAt = now();
+      await saveStore();
+    }
+
+    if (eventType === 'PAYMENT.SALE.COMPLETED') {
+      const billingSubscriptionId = String(resource.billing_agreement_id || resource.billingAgreementId || '');
+      const subscription = (db.creatorSubscriptions || []).find(item =>
+        item.paypalSubscriptionId === billingSubscriptionId
+      );
+      const saleId = String(resource.id || '');
+      const amountValue = resource.amount?.total ?? resource.amount?.value ?? resource.amount?.value?.value;
+      const currency = String(resource.amount?.currency || resource.amount?.currency_code || 'USD').toUpperCase();
+      const grossMinor = Math.round(Number(amountValue || 0) * 100);
+      if (subscription && saleId.length >= 5 && Number.isSafeInteger(grossMinor) &&
+          grossMinor >= 100 && currency === 'USD' && grossMinor === Number(subscription.priceMinor)) {
+        await requestSupabaseState('economy_subscription_payment', {
+          creatorId: subscription.creatorId,
+          subscriberId: subscription.subscriberId,
+          paypalSubscriptionId: billingSubscriptionId,
+          paypalSaleId: saleId,
+          grossMinor,
+          currency
+        });
+        if (!(db.creatorSubscriptionEarnings || []).some(entry => entry.paypalSaleId === saleId)) {
+          db.creatorSubscriptionEarnings.push({
+            id: uid(),
+            creatorId: subscription.creatorId,
+            subscriberId: subscription.subscriberId,
+            paypalSubscriptionId: billingSubscriptionId,
+            paypalSaleId: saleId,
+            grossMinor,
+            creatorMinor: Math.floor(grossMinor / 2),
+            platformMinor: grossMinor - Math.floor(grossMinor / 2),
+            currency,
+            status: 'posted',
+            createdAt: now()
+          });
+        }
+        subscription.lastPaymentAt = now();
+        subscription.status = subscription.status === 'approval_pending' ? 'active' : subscription.status;
+        subscription.updatedAt = now();
+        await saveStore();
+      }
+    }
+
     return json(res, 200, { received: true });
   }
 
