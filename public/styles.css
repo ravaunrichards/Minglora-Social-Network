@@ -3698,6 +3698,37 @@ body.auth-mode .auth-screen{
   .ml-profile-thought-viewer .modal-actions button{flex:1 1 auto}
 }
 
+/* Story retention and multi-item story sequence controls. */
+.story-count{
+  position:absolute;top:9px;right:7px;z-index:2;
+  padding:4px 7px;border:1px solid #ffffff75;border-radius:999px;
+  background:#142238c9;color:#fff;font-size:9px;font-weight:850;
+  line-height:1.2;white-space:nowrap;
+}
+.story-viewed{top:36px}
+.story-navigation{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin:12px 0 3px;padding:10px 0;
+  border-top:1px solid var(--line);
+}
+.story-navigation>span{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}
+.story-navigation>div{display:flex;gap:7px;min-width:0}
+.story-navigation button{min-height:44px;padding:9px 13px;white-space:nowrap}
+.story-viewer{max-height:90dvh}
+.story-viewer-image{max-height:65dvh}
+.story-composer-modal{max-height:90dvh}
+@media(max-width:760px){
+  .story-card{flex-basis:105px;height:158px}
+  .story-navigation{align-items:flex-start;flex-wrap:wrap}
+  .story-navigation>div{width:100%}
+  .story-navigation button{flex:1 1 0}
+  .story-viewer-backdrop{align-items:flex-start;padding:8px 8px max(8px,env(safe-area-inset-bottom))}
+  .story-viewer{width:100%;max-width:100%;max-height:calc(100dvh - 16px);margin:auto}
+  .story-viewer .modal-body{padding:12px}
+  .story-viewer-image{max-height:58dvh}
+  .story-composer-modal{width:100%;max-height:calc(100dvh - 16px);margin:auto}
+  .story-composer-modal .modal-body{max-height:calc(100dvh - 90px);overflow-y:auto}
+}
 
 /* Minglora LIVE: compact, accessible icon-first room controls. */
 .live-player-controls.live-icon-controls{

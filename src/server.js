@@ -14,11 +14,11 @@ import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateConta
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
-import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
+import { canViewStory as canViewStoryPolicy, removeExpiredStories, normalizeStoryMediaIds, createStoryBatch, appendStoryBatch } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
-import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
+import { CREATOR_SUBSCRIPTION_PACKAGES, CREATOR_SUBSCRIPTION_PERKS, getCreatorSubscriptionPlans, normalizeCreatorSubscriptionPlans, listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
@@ -78,7 +78,7 @@ async function paypalRequest(path,method='POST',payload={},requestId){
         'Content-Type':'application/json',
         ...(requestId?{'PayPal-Request-Id':String(requestId).slice(0,108)}:{})
       },
-      ...(payload===undefined?{}:{body:JSON.stringify(payload)})
+      ...(!['GET','HEAD'].includes(method)&&payload!==undefined?{body:JSON.stringify(payload)}:{})
     });
   }catch{throw Object.assign(new Error('Could not reach PayPal to process this request.'),{status:503});}
   const data=await response.json().catch(()=>({}));
@@ -87,6 +87,75 @@ async function paypalRequest(path,method='POST',payload={},requestId){
     throw Object.assign(new Error(String(detail||data.message||data.name||'PayPal could not complete the request.')),{status:502,code:data.name||null});
   }
   return data;
+}
+
+function activeSubscriptionForPair(creatorId, subscriberId) {
+  const currentTime = Date.now();
+  return (db.creatorSubscriptions || [])
+    .filter(item => {
+      if (item.creatorId !== creatorId || item.subscriberId !== subscriberId) return false;
+      const status = String(item.status || '').toLowerCase();
+      if (status === 'approval_pending') return true;
+      if (status !== 'active') return false;
+      if (!item.currentPeriodEnd) return true;
+      const periodEnd = new Date(item.currentPeriodEnd).getTime();
+      return Number.isFinite(periodEnd) && periodEnd > currentTime;
+    })
+    .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null;
+}
+
+function publicCreatorSubscriptionPlans(creatorId) {
+  return getCreatorSubscriptionPlans(db.creatorSubscriptionPlans, creatorId)
+    .filter(plan => plan.enabled && Object.values(plan.perks || {}).some(Boolean))
+    .map(({ paypalProductId, paypalPlanId, ...plan }) => plan);
+}
+
+async function ensurePaypalCreatorSubscriptionPlan(req, creator, plan) {
+  let saved = (db.creatorSubscriptionPlans || []).find(item =>
+    item.creatorId === creator.id && item.planCode === plan.code
+  );
+  if (!saved) throw Object.assign(new Error('This creator subscription package is no longer available.'), { status: 404 });
+
+  const origin = appOrigin(req);
+  if (!saved.paypalProductId) {
+    const product = await paypalRequest('/v1/catalogs/products', 'POST', {
+      name: ('Minglora ' + plan.name + ' Subscription · ' + String(creator.username || creator.id)).slice(0, 127),
+      description: 'Monthly creator subscription on Minglora.',
+      type: 'SERVICE',
+      category: 'SOFTWARE',
+      home_url: origin
+    }, 'minglora-sub-product-' + creator.id + '-' + plan.code);
+    if (!product.id) throw Object.assign(new Error('PayPal did not create the subscription product.'), { status: 502 });
+    saved.paypalProductId = product.id;
+    await saveStore();
+  }
+
+  if (!saved.paypalPlanId) {
+    const billingPlan = await paypalRequest('/v1/billing/plans', 'POST', {
+      product_id: saved.paypalProductId,
+      name: ('Minglora ' + plan.name + ' · ' + String(creator.username || creator.id)).slice(0, 127),
+      description: 'Monthly access to creator-selected Minglora subscription perks.',
+      status: 'ACTIVE',
+      billing_cycles: [{
+        frequency: { interval_unit: 'MONTH', interval_count: 1 },
+        tenure_type: 'REGULAR',
+        sequence: 1,
+        total_cycles: 0,
+        pricing_scheme: {
+          fixed_price: { value: (Number(plan.priceMinor) / 100).toFixed(2), currency_code: 'USD' }
+        }
+      }],
+      payment_preferences: {
+        auto_bill_outstanding: true,
+        setup_fee_failure_action: 'CONTINUE',
+        payment_failure_threshold: 3
+      }
+    }, 'minglora-sub-plan-' + creator.id + '-' + plan.code);
+    if (!billingPlan.id) throw Object.assign(new Error('PayPal did not create the recurring subscription plan.'), { status: 502 });
+    saved.paypalPlanId = billingPlan.id;
+    await saveStore();
+  }
+  return saved;
 }
 
 const SECURITY_HEADERS = {
@@ -118,6 +187,12 @@ function safeUser(u,viewerId=null){
   if(profileThought)result.profileThought={text:profileThought.text,mood:profileThought.mood||'',audience:profileThought.audience,createdAt:profileThought.createdAt,expiresAt:profileThought.expiresAt};
   const gifterBadge=getGifterBadgeSummary(db,u.id);
   if(gifterBadge)result.gifterBadge=gifterBadge;
+  result.subscriberBadge=(db.creatorSubscriptions||[]).some(item=>{
+    if(item.subscriberId!==u.id||item.status!=='active'||item.perks?.subscriber_badge!==true)return false;
+    if(!item.currentPeriodEnd)return true;
+    const periodEnd=new Date(item.currentPeriodEnd).getTime();
+    return Number.isFinite(periodEnd)&&periodEnd>Date.now();
+  });
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
@@ -485,6 +560,23 @@ function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
     notify(reviewer.id,actorId,type,text,{applicantId,...extra});
   }
 }
+const storyBatchRequestLocks = new Map();
+async function acquireStoryBatchRequestLock(key) {
+  const previous = storyBatchRequestLocks.get(key) || Promise.resolve();
+  let releaseGate;
+  const gate = new Promise(resolve => { releaseGate = resolve; });
+  const next = previous.then(() => gate);
+  storyBatchRequestLocks.set(key, next);
+  await previous;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    releaseGate();
+    if (storyBatchRequestLocks.get(key) === next) storyBatchRequestLocks.delete(key);
+  };
+}
+
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
@@ -785,6 +877,78 @@ async function route(req, res) {
         status: succeeded ? 'paid' : 'failed'
       });
     }
+    const subscriptionId = String(
+      resource.id || resource.billing_agreement_id || resource.billingAgreementId || resource.subscription_id || ''
+    );
+    const trackedSubscription = (db.creatorSubscriptions || []).find(item =>
+      item.paypalSubscriptionId === subscriptionId
+    );
+
+    if (trackedSubscription && eventType.startsWith('BILLING.SUBSCRIPTION.')) {
+      const nextBillingTime = resource.billing_info?.next_billing_time || resource.billingInfo?.nextBillingTime || null;
+      if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED' ||
+          eventType === 'BILLING.SUBSCRIPTION.RE-ACTIVATED') {
+        trackedSubscription.status = 'active';
+        trackedSubscription.currentPeriodEnd = nextBillingTime || trackedSubscription.currentPeriodEnd || null;
+        trackedSubscription.activatedAt = trackedSubscription.activatedAt || now();
+      } else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
+        const end = trackedSubscription.currentPeriodEnd ? new Date(trackedSubscription.currentPeriodEnd).getTime() : 0;
+        trackedSubscription.cancelAtPeriodEnd = true;
+        trackedSubscription.status = end > Date.now() ? 'active' : 'cancelled';
+        if (nextBillingTime) trackedSubscription.currentPeriodEnd = nextBillingTime;
+      } else if (eventType === 'BILLING.SUBSCRIPTION.SUSPENDED') {
+        trackedSubscription.status = 'suspended';
+      } else if (eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
+        trackedSubscription.status = 'expired';
+        trackedSubscription.currentPeriodEnd = nextBillingTime || trackedSubscription.currentPeriodEnd || now();
+      } else if (eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
+        trackedSubscription.status = 'past_due';
+      }
+      trackedSubscription.updatedAt = now();
+      await saveStore();
+    }
+
+    if (eventType === 'PAYMENT.SALE.COMPLETED') {
+      const billingSubscriptionId = String(resource.billing_agreement_id || resource.billingAgreementId || '');
+      const subscription = (db.creatorSubscriptions || []).find(item =>
+        item.paypalSubscriptionId === billingSubscriptionId
+      );
+      const saleId = String(resource.id || '');
+      const amountValue = resource.amount?.total ?? resource.amount?.value ?? resource.amount?.value?.value;
+      const currency = String(resource.amount?.currency || resource.amount?.currency_code || 'USD').toUpperCase();
+      const grossMinor = Math.round(Number(amountValue || 0) * 100);
+      if (subscription && saleId.length >= 5 && Number.isSafeInteger(grossMinor) &&
+          grossMinor >= 100 && currency === 'USD' && grossMinor === Number(subscription.priceMinor)) {
+        await requestSupabaseState('economy_subscription_payment', {
+          creatorId: subscription.creatorId,
+          subscriberId: subscription.subscriberId,
+          paypalSubscriptionId: billingSubscriptionId,
+          paypalSaleId: saleId,
+          grossMinor,
+          currency
+        });
+        if (!(db.creatorSubscriptionEarnings || []).some(entry => entry.paypalSaleId === saleId)) {
+          db.creatorSubscriptionEarnings.push({
+            id: uid(),
+            creatorId: subscription.creatorId,
+            subscriberId: subscription.subscriberId,
+            paypalSubscriptionId: billingSubscriptionId,
+            paypalSaleId: saleId,
+            grossMinor,
+            creatorMinor: Math.floor(grossMinor / 2),
+            platformMinor: grossMinor - Math.floor(grossMinor / 2),
+            currency,
+            status: 'posted',
+            createdAt: now()
+          });
+        }
+        subscription.lastPaymentAt = now();
+        subscription.status = subscription.status === 'approval_pending' ? 'active' : subscription.status;
+        subscription.updatedAt = now();
+        await saveStore();
+      }
+    }
+
     return json(res, 200, { received: true });
   }
 
@@ -1631,6 +1795,124 @@ async function route(req, res) {
         });
         const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
         return json(res,200,{ok:true,exchange:result.exchange||result,wallet});
+      }
+      if(method==='GET'&&p==='/api/creator/subscriptions'){
+        if(!user)return json(res,401,{error:'Sign in to manage creator subscriptions.'});
+        const plans=getCreatorSubscriptionPlans(db.creatorSubscriptionPlans,user.id)
+          .map(({paypalProductId,paypalPlanId,...plan})=>plan);
+        return json(res,200,{plans,packages:CREATOR_SUBSCRIPTION_PACKAGES,perks:CREATOR_SUBSCRIPTION_PERKS});
+      }
+      if(method==='PUT'&&p==='/api/creator/subscriptions'){
+        if(!user)return json(res,401,{error:'Sign in to manage creator subscriptions.'});
+        let normalized;
+        try{
+          normalized=normalizeCreatorSubscriptionPlans(user.id,input.plans,db.creatorSubscriptionPlans);
+        }catch(error){
+          return json(res,400,{error:error.message||'Choose at least one perk for every enabled package.'});
+        }
+        if(!normalized.valid)return json(res,400,{error:normalized.error});
+        db.creatorSubscriptionPlans=(db.creatorSubscriptionPlans||[])
+          .filter(item=>item.creatorId!==user.id).concat(normalized.plans);
+        await saveStore();
+        const plans=getCreatorSubscriptionPlans(db.creatorSubscriptionPlans,user.id)
+          .map(({paypalProductId,paypalPlanId,...plan})=>plan);
+        return json(res,200,{ok:true,plans});
+      }
+      if(method==='POST'&&p==='/api/subscriptions/checkout'){
+        if(!user)return json(res,401,{error:'Sign in before subscribing to a creator.'});
+        const creatorId=String(input.creatorId||'').trim();
+        const planCode=String(input.planCode||'').trim();
+        if(!creatorId||creatorId===user.id)return json(res,400,{error:'Choose another member to subscribe to.'});
+        const creator=db.users.find(item=>item.id===creatorId);
+        if(!creator||blockedBetween(user.id,creatorId))return json(res,404,{error:'Creator profile not found.'});
+        const plan=publicCreatorSubscriptionPlans(creatorId).find(item=>item.code===planCode);
+        if(!plan)return json(res,404,{error:'This subscription package is not currently available.'});
+        const existing=activeSubscriptionForPair(creatorId,user.id);
+        if(existing)return json(res,409,{error:existing.status==='approval_pending'?'A PayPal subscription approval is already pending for this creator.':'You already have an active subscription to this creator.'});
+        const savedPlan=await ensurePaypalCreatorSubscriptionPlan(req,creator,plan);
+        const origin=appOrigin(req);
+        const localSubscriptionId=uid();
+        const checkout=await paypalRequest('/v1/billing/subscriptions','POST',{
+          plan_id:savedPlan.paypalPlanId,
+          custom_id:user.id,
+          application_context:{
+            brand_name:'Minglora',
+            locale:'en-US',
+            shipping_preference:'NO_SHIPPING',
+            user_action:'SUBSCRIBE_NOW',
+            return_url:origin+'/?minglora_subscription=return',
+            cancel_url:origin+'/?minglora_subscription=cancel&subscription_ref='+encodeURIComponent(localSubscriptionId)
+          }
+        },'minglora-subscribe-'+localSubscriptionId);
+        const approveUrl=(checkout.links||[]).find(link=>link.rel==='approve'||link.rel==='payer-action')?.href;
+        if(!checkout.id||!approveUrl)return json(res,502,{error:'PayPal did not return a subscription approval link.'});
+        const subscription={
+          id:localSubscriptionId,
+          creatorId,
+          subscriberId:user.id,
+          planCode:plan.code,
+          planName:plan.name,
+          priceMinor:plan.priceMinor,
+          currency:'USD',
+          interval:'month',
+          perks:{...plan.perks},
+          paypalPlanId:savedPlan.paypalPlanId,
+          paypalSubscriptionId:checkout.id,
+          paypalApproveUrl:approveUrl,
+          status:'approval_pending',
+          cancelAtPeriodEnd:false,
+          currentPeriodEnd:null,
+          createdAt:now(),
+          updatedAt:now()
+        };
+        db.creatorSubscriptions.push(subscription);
+        await saveStore();
+        return json(res,201,{ok:true,subscriptionId:subscription.id,paypalSubscriptionId:checkout.id,approveUrl,plan:{code:plan.code,name:plan.name,priceMinor:plan.priceMinor,currency:'USD',interval:'month',perks:plan.perks}});
+      }
+      if(method==='POST'&&p==='/api/subscriptions/confirm'){
+        if(!user)return json(res,401,{error:'Sign in to confirm your subscription.'});
+        const paypalSubscriptionId=String(input.paypalSubscriptionId||input.subscriptionId||'').trim();
+        if(!paypalSubscriptionId||paypalSubscriptionId.length>160)return json(res,400,{error:'A PayPal subscription reference is required.'});
+        const tracked=(db.creatorSubscriptions||[]).find(item=>item.paypalSubscriptionId===paypalSubscriptionId&&item.subscriberId===user.id);
+        if(!tracked)return json(res,404,{error:'This PayPal subscription does not belong to your Minglora account.'});
+        const remote=await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(paypalSubscriptionId),'GET',undefined);
+        if(remote.id!==paypalSubscriptionId||String(remote.plan_id||'')!==String(tracked.paypalPlanId||'')){
+          return json(res,409,{error:'PayPal subscription details do not match this Minglora checkout.'});
+        }
+        if(remote.custom_id&&remote.custom_id!==user.id)return json(res,403,{error:'PayPal returned a different subscriber identity.'});
+        const remoteStatus=String(remote.status||'').toUpperCase();
+        tracked.status=remoteStatus==='ACTIVE'?'active':remoteStatus==='CANCELLED'?'cancelled':remoteStatus==='SUSPENDED'?'suspended':remoteStatus==='EXPIRED'?'expired':'approval_pending';
+        tracked.currentPeriodEnd=remote.billing_info?.next_billing_time||tracked.currentPeriodEnd||null;
+        tracked.updatedAt=now();
+        if(tracked.status==='active')tracked.activatedAt=tracked.activatedAt||now();
+        await saveStore();
+        return json(res,200,{ok:true,creatorId:tracked.creatorId,subscription:{id:tracked.id,status:tracked.status,planName:tracked.planName,currentPeriodEnd:tracked.currentPeriodEnd,cancelAtPeriodEnd:tracked.cancelAtPeriodEnd}});
+      }
+      const subscriptionCheckoutCancelMatch=p.match(/^\/api\/subscriptions\/([^/]+)\/checkout-cancel$/);
+      if(method==='POST'&&subscriptionCheckoutCancelMatch){
+        if(!user)return json(res,401,{error:'Sign in to manage your subscription.'});
+        const tracked=(db.creatorSubscriptions||[]).find(item=>item.id===subscriptionCheckoutCancelMatch[1]&&item.subscriberId===user.id);
+        if(!tracked)return json(res,404,{error:'Pending subscription checkout not found.'});
+        if(tracked.status!=='approval_pending')return json(res,409,{error:'This checkout is no longer pending.'});
+        tracked.status='checkout_cancelled';
+        tracked.checkoutCancelledAt=now();
+        tracked.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,status:tracked.status});
+      }
+      const subscriptionCancelMatch=p.match(/^\/api\/subscriptions\/([^/]+)\/cancel$/);
+      if(method==='POST'&&subscriptionCancelMatch){
+        if(!user)return json(res,401,{error:'Sign in to manage your subscription.'});
+        const tracked=(db.creatorSubscriptions||[]).find(item=>item.id===subscriptionCancelMatch[1]&&item.subscriberId===user.id);
+        if(!tracked)return json(res,404,{error:'Subscription not found.'});
+        if(!['active','approval_pending'].includes(String(tracked.status||'').toLowerCase()))return json(res,409,{error:'This subscription is not active.'});
+        await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(tracked.paypalSubscriptionId)+'/cancel','POST',{reason:'Cancelled by member through Minglora.'},'minglora-cancel-'+tracked.paypalSubscriptionId);
+        const end=tracked.currentPeriodEnd?new Date(tracked.currentPeriodEnd).getTime():0;
+        tracked.cancelAtPeriodEnd=true;
+        tracked.status=end>Date.now()?'active':'cancelled';
+        tracked.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,status:tracked.status,cancelAtPeriodEnd:true,currentPeriodEnd:tracked.currentPeriodEnd});
       }
       if(method==='POST'&&p==='/api/coins/purchase'){
         const catalogue=await requestSupabaseState('economy_catalog');
@@ -2495,6 +2777,8 @@ async function route(req, res) {
           followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
           friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
           subscribersCount:listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).filter(subscription=>!blockedBetween(user.id,subscription.subscriberId)).length,
+          subscriptionPlans:publicCreatorSubscriptionPlans(target.id),
+          viewerSubscription:(()=>{const subscription=activeSubscriptionForPair(target.id,user.id);return subscription?{id:subscription.id,status:subscription.status,planCode:subscription.planCode,planName:subscription.planName,currentPeriodEnd:subscription.currentPeriodEnd||null,cancelAtPeriodEnd:subscription.cancelAtPeriodEnd===true,approvalUrl:subscription.paypalApproveUrl||null}:null;})(),
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
         });
@@ -2611,18 +2895,66 @@ async function route(req, res) {
         return json(res,200,{stories});
       }
       if(method==='POST'&&p==='/api/stories'){
-        const text=String(input.text||'').trim(),mediaId=String(input.mediaId||''),audience=String(input.audience||'public');
-        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose a photo or video from your device.'});
+        const text=String(input.text||'').trim(),audience=String(input.audience||'public');
+        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose photos or videos from your device.'});
         if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
-        if(!text&&!mediaId&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
+        const mediaSelection=normalizeStoryMediaIds(input,10);
+        if(!mediaSelection.valid)return json(res,400,{error:mediaSelection.error});
+        const mediaIds=mediaSelection.mediaIds;
+        if(!text&&!mediaIds.length&&!input.soundtrack)return json(res,400,{error:'Add text, at least one photo or video, or a sound to your Story.'});
+        const requestId=String(input.requestId||'').trim();
+        if(requestId&&(!/^[A-Za-z0-9_-]{8,128}$/.test(requestId)))return json(res,400,{error:'The story upload request is invalid. Close the composer and try again.'});
+        const releaseStoryBatchLock=requestId?await acquireStoryBatchRequestLock(user.id+':'+requestId):()=>{};
+        try{
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
-        let asset=null;
-        if(mediaId){asset=(db.mediaAssets||[]).find(item=>item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded');if(!asset)return json(res,400,{error:'The selected story media is unavailable. Select it again.'});}
+
+        // A retried client request must return its already-created items rather than
+        // publishing the same upload batch twice.
+        if(requestId){
+          const prior=(db.stories||[]).filter(item=>item.userId===user.id&&item.storyRequestId===requestId)
+            .sort((a,b)=>Number(a.storyBatchIndex||0)-Number(b.storyBatchIndex||0));
+          if(prior.length){
+            const priorIds=prior.map(item=>item.mediaId).filter(Boolean);
+            if(priorIds.length!==mediaIds.length||mediaIds.some(id=>!priorIds.includes(id))){
+              return json(res,409,{error:'This story upload request was already used for a different batch. Close the composer and start a new story.'});
+            }
+            const stories=await Promise.all(prior.map(item=>publicStory(item,user.id)));
+            return json(res,200,{story:stories[0],stories,alreadyPublished:true});
+          }
+        }
+
+        // Validate the complete set before changing any asset status or publishing
+        // any story, so one missing file cannot leave a partial batch.
+        const assets=mediaIds.map(mediaId=>(db.mediaAssets||[]).find(item=>
+          item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&
+          item.status==='uploaded'&&['image','video'].includes(item.mediaType)
+        ));
+        if(assets.some(asset=>!asset)){
+          return json(res,400,{error:'One or more selected photos or videos are unavailable. Nothing was published. Remove the missing file, select it again, and retry.'});
+        }
+        const totalBytes=assets.reduce((total,asset)=>total+Number(asset.byteSize||0),0);
+        if(totalBytes>500*1024*1024){
+          return json(res,400,{error:'The combined story upload is larger than 500 MB. Nothing was published. Remove a file or choose smaller media.'});
+        }
+
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaId:asset?.id||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
-        if(asset){asset.status='attached';asset.attachedTo=story.id;}
-        db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
+        const createdStories=createStoryBatch({
+          userId:user.id,text,mediaIds,audience,soundtrack,
+          requestId:requestId||null,idFactory:uid,
+          createdAt,
+          expiresAt:new Date(Date.parse(createdAt)+24*60*60*1000).toISOString()
+        });
+        assets.forEach((asset,index)=>{
+          const story=createdStories[index];
+          asset.status='attached';
+          asset.attachedTo=story.id;
+        });
+        db.stories=appendStoryBatch(db.stories||[],createdStories);
+        await saveStore();
+        const stories=await Promise.all(createdStories.map(story=>publicStory(story,user.id)));
+        return json(res,201,{story:stories[0],stories,createdCount:stories.length});
+        }finally{releaseStoryBatchLock();}
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
       if(method==='POST'&&m){
