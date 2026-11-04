@@ -3411,3 +3411,7 @@ body.auth-mode .auth-screen{
   .mobile-more-menu .mobile-more-link .nav-3d-icon{width:28px;height:28px}
   .mobile-more-menu .mobile-more-link small{font-size:10px;font-weight:800;line-height:1.2}
 }
+
+
+/* Six profile statistics remain readable on narrow phones by using a balanced 3-by-2 grid. */
+@media(max-width:560px){.profile-counts{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-counts>*:nth-child(3n){border-right:0}.profile-counts>*:nth-child(-n+3){border-bottom:1px solid var(--line)}.profile-counts>*:nth-child(n+4){padding-top:9px}}
