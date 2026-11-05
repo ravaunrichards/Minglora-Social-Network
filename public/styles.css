@@ -4083,3 +4083,33 @@ body.live-tools-open{overflow:hidden}
   border-radius:10px;color:#f5f7fc;background:#121b2b;font:inherit;
 }
 .live-room-appearance option{color:#111;background:#fff}
+
+/* Source-aware Minglora Coin balances */
+.recharge-page-heading{flex-wrap:wrap}
+.recharge-page-heading>div:first-child{flex:1 1 250px;min-width:0}
+.coin-source-breakdown{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  flex:1 1 100%;
+  min-width:0;
+}
+.coin-source-breakdown>span{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+  padding:11px 13px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+}
+.coin-source-breakdown small{font-size:10px;font-weight:750;color:var(--muted)}
+.coin-source-breakdown strong{font-size:19px;line-height:1.2;overflow-wrap:anywhere}
+.coin-source-breakdown em{font-size:10px;font-style:normal;color:var(--muted);line-height:1.35}
+@media(max-width:650px){
+  .coin-source-breakdown{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .coin-source-breakdown>span{padding:9px 7px}
+  .coin-source-breakdown strong{font-size:15px}
+  .coin-source-breakdown small,.coin-source-breakdown em{font-size:9px}
+}
