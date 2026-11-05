@@ -2258,73 +2258,7 @@ async function route(req, res) {
         if(session.liveSettings?.qaEnabled===false)return json(res,403,{error:'The host has disabled LIVE Q&A.'});
         const question=String(input.question||input.body||'').trim();
         if(question.length<4||question.length>300)return json(res,400,{error:'Enter a question between 4 and 300 characters.'});
-        if(session.liveSettings?.guardianMode===true&&/(https?:\\/\\/|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}|\\+?[0-9][0-9\\s().-]{7,}[0-9])/i.test(question)){
-          return json(res,400,{error:'Guardian safety mode blocks external links, email addresses and phone numbers in LIVE questions.'});
-        }
-        let participants;
-        try{participants=await listLiveKitParticipants(session.roomName);}
-        catch{return json(res,503,{error:'Minglora could not verify that you are connected to this LIVE room.'});}
-        if(!participants.some(participant=>participant.identity===user.id))return json(res,409,{error:'Join this LIVE room before asking a question.'});
-        db.liveQuestions=db.liveQuestions||[];
-        const recent=db.liveQuestions.filter(item=>item.sessionId===session.id&&item.userId===user.id&&
-          Date.now()-new Date(item.createdAt).getTime()<30000);
-        if(recent.length)return json(res,429,{error:'Please wait before submitting another LIVE question.'});
-        const record={id:uid(),sessionId:session.id,userId:user.id,body:question,status:'open',
-          voters:[],answer:'',answeredBy:null,pinnedAt:null,createdAt:now(),updatedAt:now()};
-        db.liveQuestions.unshift(record);
-        await saveStore();
-        return json(res,201,{question:{...record,asker:safeUser(user,user.id),voteCount:0,myVote:false}});
-      }
-      const liveQuestionAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/questions\/([^/]+)(?:\/(vote))?$/);
-      if(liveQuestionAction&&(method==='PATCH'||method==='POST'||method==='DELETE')){
-        const session=(db.liveSessions||[]).find(item=>item.id===liveQuestionAction[1]&&item.status==='live');
-        if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
-        const question=(db.liveQuestions||[]).find(item=>item.id===liveQuestionAction[2]&&item.sessionId===session.id);
-        if(!question)return json(res,404,{error:'LIVE question not found.'});
-        const voteAction=liveQuestionAction[3]==='vote'&&method==='POST';
-        if(voteAction){
-          if(session.liveSettings?.qaEnabled===false)return json(res,403,{error:'The host has disabled LIVE Q&A.'});
-          let participants;
-          try{participants=await listLiveKitParticipants(session.roomName);}
-          catch{return json(res,503,{error:'Minglora could not verify that you are connected to this LIVE room.'});}
-          if(!participants.some(participant=>participant.identity===user.id))return json(res,409,{error:'Join this LIVE room before voting on a question.'});
-          question.voters=Array.isArray(question.voters)?question.voters:[];
-          const already=question.voters.includes(user.id);
-          question.voters=already?question.voters.filter(id=>id!==user.id):[...question.voters,user.id];
-          question.updatedAt=now();await saveStore();
-          return json(res,200,{ok:true,voted:!already,voteCount:question.voters.length});
-        }
-        if(session.hostId!==user.id&&!((session.liveModerators||[]).includes(user.id)))return json(res,403,{error:'Only the LIVE host or an assigned moderator can manage Q&A.'});
-        if(method==='DELETE'){
-          db.liveQuestions=db.liveQuestions.filter(item=>item.id!==question.id);
-          await saveStore();return json(res,200,{ok:true,deleted:true});
-        }
-        const action=String(input.action||'');
-        if(!['pin','unpin','answer','close','reopen'].includes(action))return json(res,400,{error:'Choose a valid LIVE Q&A action.'});
-        if(action==='pin'){
-          for(const item of db.liveQuestions)if(item.sessionId===session.id)item.pinnedAt=null;
-          question.pinnedAt=now();
-        }else if(action==='unpin')question.pinnedAt=null;
-        else if(action==='answer'){
-          const answer=String(input.answer||'').trim();
-          if(answer.length<1||answer.length>500)return json(res,400,{error:'Enter an answer between 1 and 500 characters.'});
-          question.answer=answer;question.answeredBy=user.id;question.answeredAt=now();question.status='answered';
-        }else question.status=action==='close'?'closed':'open';
-        question.updatedAt=now();await saveStore();
-        return json(res,200,{question:{...question,asker:safeUser(db.users.find(member=>member.id===question.userId),user.id),
-          voteCount:(question.voters||[]).length,myVote:(question.voters||[]).includes(user.id)}});
-      }
-      let liveChat=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat$/);
-      if(liveChat&&['GET','POST'].includes(method)){
-        const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
-        if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
-        if(session.liveSettings?.groupChatEnabled===false)return json(res,403,{error:'The host has disabled group LIVE chat for this broadcast.'});
-        const friends=isFriend(user.id,session.hostId);
-        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
-        if(!canView)return json(res,404,{error:'LIVE session not found.'});
-        if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
-        const chatBody=String(input.body||'').trim();
-        if(session.liveSettings?.guardianMode===true&&/(https?:\\/\\/|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}|\\+?[0-9][0-9\\s().-]{7,}[0-9])/i.test(chatBody)){
+        if(session.liveSettings?.guardianMode===true&&/(https?:|www[.]|[a-z0-9._%+-]+@[a-z0-9.-]+[.][a-z]{2,}|[+]?[0-9][0-9\s().-]{7,}[0-9])/i.test(chatBody)){
           return json(res,400,{error:'Guardian safety mode blocks external links, email addresses and phone numbers in LIVE chat.'});
         }
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:chatBody});
