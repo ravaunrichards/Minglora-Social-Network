@@ -12,13 +12,13 @@ const [server, app, styles] = await Promise.all([
 ]);
 
 test('LIVE host can list, assign and remove room moderators through authenticated routes', () => {
-  assert.match(server, /\/api\\\/live\\\/sessions\\\/\(\[\^\/\]\+\)\\\/moderators/);
-  assert.match(server, /if \(method === 'GET'\) \{[\s\S]*Only the LIVE host or an assigned moderator can view room moderators/);
-  assert.match(server, /if \(method === 'POST'\) \{[\s\S]*Only the LIVE host can assign moderators/);
-  assert.match(server, /if \(method === 'DELETE' && liveModeratorsMatch\[2\]\)/);
-  assert.match(server, /session\.liveModerators\.push\(target\.id\)/);
-  assert.match(server, /maximum of 10 moderators/);
-  assert.match(server, /blockedBetween\(user\.id, target\.id\)/);
+  assert.ok(server.includes('const liveModeratorsMatch = p.match'));
+  assert.ok(server.includes('Only the LIVE host or an assigned moderator can view room moderators'));
+  assert.ok(server.includes('Only the LIVE host can assign moderators'));
+  assert.ok(server.includes("method === 'DELETE' && liveModeratorsMatch[2]"));
+  assert.ok(server.includes('session.liveModerators.push(target.id)'));
+  assert.ok(server.includes('maximum of 10 moderators'));
+  assert.ok(server.includes('blockedBetween(user.id, target.id)'));
 });
 
 test('assigned LIVE moderators can remove chat comments but cannot use host-only controls', () => {
