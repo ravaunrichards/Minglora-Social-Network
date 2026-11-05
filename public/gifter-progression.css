@@ -102,3 +102,13 @@
 @keyframes gp-live-entry-arrive{0%{opacity:0;transform:translateY(-7px) scale(.985)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:650px){.gp-live-entry-banner{gap:9px;padding:10px 11px;border-radius:13px}.gp-live-entry-seal{width:40px;height:40px;border-radius:12px;font-size:.9rem}.gp-live-entry-wordmark{display:none}.gp-inline-badge{padding:3px 5px;margin-left:4px}}
 @media(prefers-reduced-motion:reduce){.gp-live-entry-banner{animation:none}}
+
+
+/* Special Milestone LV 25 badge alignment — responsive, without changing milestone content */
+.gp-level25{display:flex;align-items:center;gap:clamp(12px,2vw,18px);min-width:0;box-sizing:border-box;overflow:hidden}
+.gp-level25-emblem{display:flex;align-items:center;justify-content:center;flex:0 0 clamp(58px,8vw,72px);width:clamp(58px,8vw,72px);height:clamp(58px,8vw,72px);box-sizing:border-box;margin:0;line-height:1;text-align:center;white-space:nowrap;}
+.gp-level25-copy{flex:1 1 auto;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.gp-level25-copy .gp-eyebrow{display:block;line-height:1.25;margin:0 0 3px}
+.gp-level25-copy h2,.gp-level25-copy p,.gp-level25-copy strong{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:650px){.gp-level25{align-items:center!important;gap:12px;padding:14px!important}.gp-level25-emblem{flex-basis:56px;width:56px;height:56px;border-radius:16px;font-size:1.25rem}.gp-level25-copy h2{font-size:1rem;line-height:1.25}.gp-level25-copy p{font-size:.82rem;line-height:1.4}}
+@media(max-width:360px){.gp-level25{gap:9px;padding:11px!important}.gp-level25-emblem{flex-basis:50px;width:50px;height:50px;font-size:1.1rem}.gp-level25-copy h2{font-size:.92rem}}
