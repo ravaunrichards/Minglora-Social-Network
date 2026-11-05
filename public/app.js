@@ -1320,12 +1320,53 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+(broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO")+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+liveEntryBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
+    "<div class='live-reaction-bar' role='group' aria-label='Send a LIVE reaction'><strong>LIVE likes <span id='live-reaction-count' data-count='0'>0</span></strong><div class='live-reaction-buttons'><button type='button' class='live-reaction-button' data-live-reaction='heart' aria-label='Send a heart' title='Send a heart'>❤️</button><button type='button' class='live-reaction-button' data-live-reaction='clap' aria-label='Send applause' title='Send applause'>👏</button><button type='button' class='live-reaction-button' data-live-reaction='fire' aria-label='Send fire' title='Send fire'>🔥</button><button type='button' class='live-reaction-button' data-live-reaction='laugh' aria-label='Send laughter' title='Send laughter'>😂</button></div></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
     "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
     "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside></div>"+liveToolsDrawer+"</section>");
+  const reactionLayer=document.createElement("div");
+  reactionLayer.className="live-reaction-layer";
+  reactionLayer.setAttribute("aria-hidden","true");
+  $("#live-video-stage")?.append(reactionLayer);
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
+  const liveReactionEmoji=Object.freeze({heart:"❤️",clap:"👏",fire:"🔥",laugh:"😂"});
+  const receivedLiveReactionAt=new Map();
+  let lastLiveReactionSentAt=0;
+  const showLiveReaction=(reaction)=>{
+    const emoji=liveReactionEmoji[reaction];
+    if(!emoji)return;
+    const counter=$("#live-reaction-count");
+    if(counter){
+      const count=Math.max(0,Number(counter.dataset.count||0))+1;
+      counter.dataset.count=String(count);
+      counter.textContent=count.toLocaleString();
+    }
+    const layer=$("#live-video-stage .live-reaction-layer");
+    if(!layer)return;
+    const bubble=document.createElement("span");
+    bubble.className="live-reaction-float reaction-"+reaction;
+    bubble.textContent=emoji;
+    bubble.style.left=(14+Math.random()*72).toFixed(1)+"%";
+    bubble.style.setProperty("--reaction-drift",(Math.random()*48-24).toFixed(1)+"px");
+    layer.append(bubble);
+    while(layer.childElementCount>18)layer.firstElementChild?.remove();
+    bubble.addEventListener("animationend",()=>bubble.remove(),{once:true});
+  };
+  if(client.RoomEvent.DataReceived)room.on(client.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
+    if(topic!=="minglora-live-reaction"||!payload||!participant?.identity)return;
+    let packet;
+    try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
+    if(packet?.type!=="minglora.live.reaction"||packet.version!==1||!Object.hasOwn(liveReactionEmoji,packet.reaction))return;
+    const identity=String(participant.identity),now=Date.now(),last=receivedLiveReactionAt.get(identity)||0;
+    if(now-last<150)return;
+    receivedLiveReactionAt.set(identity,now);
+    if(receivedLiveReactionAt.size>250){
+      for(const [key,at] of receivedLiveReactionAt)if(now-at>10000)receivedLiveReactionAt.delete(key);
+    }
+    showLiveReaction(packet.reaction);
+  });
   const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);};
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false);refreshSpeakerRoster();});
   room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>{element.closest?.(".live-video-tile")?.remove();element.remove();});refreshSpeakerRoster();});
@@ -1433,6 +1474,22 @@ async function openLiveRoom(session,role,issuedLiveKit){
       }catch(error){toast(error.message||"Could not switch cameras.");}
       finally{flipCameraControl.disabled=!liveCameraEnabled;}
     });
+    document.querySelectorAll(".live-reaction-button[data-live-reaction]").forEach(button=>button.addEventListener("click",async()=>{
+      const reaction=String(button.dataset.liveReaction||"");
+      if(!Object.hasOwn(liveReactionEmoji,reaction))return;
+      const now=Date.now();
+      if(now-lastLiveReactionSentAt<120)return;
+      lastLiveReactionSentAt=now;
+      button.classList.add("is-sent");
+      window.setTimeout(()=>button.classList.remove("is-sent"),220);
+      try{
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction}));
+        await room.localParticipant.publishData(packet,{reliable:false,topic:"minglora-live-reaction"});
+        showLiveReaction(reaction);
+      }catch(error){
+        toast(error.message||"LIVE reactions could not be sent right now.");
+      }
+    }));
     $("#live-settings-toggle")?.addEventListener("click",()=>openLiveToolsPanel());
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
