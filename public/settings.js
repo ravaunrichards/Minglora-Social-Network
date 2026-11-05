@@ -2,7 +2,7 @@
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false },
-    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
   const APP_THEMES = [
@@ -154,10 +154,14 @@
                 <div><small>Email address</small><strong>${escapeHtml(result.account?.email || 'Not available')}</strong></div>
               </div>
               <div class="settings-wallet-summary">
-                <div><small>AVAILABLE MONEY · USD</small><strong>${escapeHtml(settingsMoneyAvailable)}</strong></div>
-                <div><small>LIFETIME EARNED · USD</small><strong>${escapeHtml(settingsLifetimeEarned)}</strong></div>
+                <div><small>AVAILABLE MONEY · <span id="settings-money-currency">USD</span></small><strong id="settings-money-available">${escapeHtml(settingsMoneyAvailable)}</strong></div>
+                <div><small>LIFETIME EARNED · <span id="settings-earned-currency">USD</span></small><strong id="settings-money-earned">${escapeHtml(settingsLifetimeEarned)}</strong></div>
                 <div><small>COIN BALANCE</small><strong>${settingsCoinBalance==null?'Unavailable':Number(settingsCoinBalance).toLocaleString()+' Coins'}</strong></div>
               </div>
+              <label class="settings-field"><span><strong>Display currency</strong><small>Changes estimated display amounts only. Wallet accounting, PayPal checkout and payouts remain in USD.</small></span>
+                <select id="settings-display-currency" name="displayCurrency">${[['USD','US Dollar'],['JMD','Jamaican Dollar'],['CAD','Canadian Dollar'],['GBP','British Pound'],['EUR','Euro'],['TTD','Trinidad & Tobago Dollar'],['BBD','Barbadian Dollar'],['XCD','East Caribbean Dollar'],['GYD','Guyanese Dollar'],['AUD','Australian Dollar'],['JPY','Japanese Yen'],['INR','Indian Rupee'],['NGN','Nigerian Naira'],['ZAR','South African Rand'],['KES','Kenyan Shilling']].map(([code,label])=>`<option value="${code}" ${(settings.preferences.displayCurrency||'USD')===code?'selected':''}>${label} (${code})</option>`).join('')}</select>
+              </label>
+              <p class="settings-note" id="settings-currency-rate-status" role="status" aria-live="polite">Amounts are shown in USD.</p>
               <div class="settings-wallet-actions">
                 <button type="button" class="secondary" data-settings-wallet-tab="recharge">Coins &amp; Get Coins</button>
                 <button type="button" class="secondary" data-settings-wallet-tab="earnings">Live gift rewards &amp; monetization</button>
@@ -180,6 +184,15 @@
               <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
                 <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
               </label>
+              <div class="settings-subsection-heading"><strong>Who can view your lists?</strong><small>These choices apply to the corresponding profile relationship lists.</small></div>
+              ${[['friendsListAudience','Friends list'],['followersListAudience','Followers list'],['followingListAudience','Following list'],['subscribersListAudience','Subscribers list']].map(([name,label])=>`<label class="settings-field"><span><strong>${label}</strong></span><select name="${name}">${[['public','Everyone'],['friends','Friends'],['followers','Followers'],['private','Only you']].map(([value,text])=>`<option value="${value}" ${(settings.privacy[name]||'public')===value?'selected':''}>${text}</option>`).join('')}</select></label>`).join('')}
+            </section>
+            <section class="settings-card" id="settings-interaction-preferences" data-settings-category="interactions">
+              ${sectionHeading('Comments &amp; interactions')}
+              <label class="settings-field"><span><strong>Who can comment on your posts?</strong><small>This is checked by the server when someone submits a comment.</small></span>
+                <select name="commentAudience"><option value="everyone" ${(settings.privacy.commentAudience||'everyone')==='everyone'?'selected':''}>Everyone</option><option value="friends" ${settings.privacy.commentAudience==='friends'?'selected':''}>Friends only</option><option value="nobody" ${settings.privacy.commentAudience==='nobody'?'selected':''}>Nobody else</option></select>
+              </label>
+              <p class="settings-note">Mention controls, content reuse permissions and viewer download permissions will be connected when those specific publishing workflows expose enforceable audience checks. No inactive switches are shown here.</p>
             </section>
             <section class="settings-card" id="settings-blocking" data-settings-category="interactions">
               ${sectionHeading('Blocking')}
@@ -512,7 +525,49 @@
         finally{ringtoneRemove.disabled=false;}
       });
 
+      let displayCurrency=settings.preferences.displayCurrency||'USD';
+      let displayRate=displayCurrency==='USD'?1:null;
+      let displayRateDate=null;
+      const formatSettingsMoney=(minor)=>{
+        if(minor===null||minor===undefined||!Number.isFinite(Number(minor)))return 'Unavailable';
+        if(!displayRate)return 'Unavailable';
+        try{return new Intl.NumberFormat(undefined,{style:'currency',currency:displayCurrency}).format((Number(minor)/100)*displayRate);}
+        catch{return formatSettingsUSD(minor);}
+      };
+      async function refreshSettingsCurrency(){
+        const status=document.querySelector('#settings-currency-rate-status');
+        if(displayCurrency==='USD'){displayRate=1;displayRateDate='';}
+        else{
+          if(status)status.textContent='Loading the latest available reference rate…';
+          try{
+            const response=await fetch('https://api.frankfurter.dev/v2/rate/usd/'+encodeURIComponent(displayCurrency.toLowerCase()),{headers:{Accept:'application/json'},cache:'no-cache'});
+            if(!response.ok)throw new Error('Reference rate unavailable for '+displayCurrency+'.');
+            const rate=await response.json();
+            if(rate.base!=='USD'||rate.quote!==displayCurrency||!Number.isFinite(Number(rate.rate))||Number(rate.rate)<=0)throw new Error('The currency provider returned an invalid rate.');
+            displayRate=Number(rate.rate);displayRateDate=String(rate.date||'');
+          }catch(error){
+            displayRate=null;displayRateDate=null;
+            if(status)status.textContent='Could not load a current reference rate. Amounts remain in USD until the rate is available.';
+          }
+        }
+        if(displayRate!==null){
+          const available=document.querySelector('#settings-money-available');
+          const earned=document.querySelector('#settings-money-earned');
+          const moneyCurrency=document.querySelector('#settings-money-currency');
+          const earnedCurrency=document.querySelector('#settings-earned-currency');
+          if(available)available.textContent=formatSettingsMoney(creatorEarningsResult.availableMinor);
+          if(earned)earned.textContent=formatSettingsMoney(creatorEarningsResult.earnedMinor);
+          if(moneyCurrency)moneyCurrency.textContent=displayCurrency;
+          if(earnedCurrency)earnedCurrency.textContent=displayCurrency;
+          if(status)status.textContent=displayCurrency==='USD'?'Balances shown in USD.':('Estimated display conversion · '+displayCurrency+' · reference rate dated '+(displayRateDate||'date not supplied')+'. This does not change wallet settlement.');
+        }
+      }
       const settingsForm = document.querySelector('#settings-form');
+      document.querySelector('#settings-display-currency')?.addEventListener('change',event=>{
+        displayCurrency=event.currentTarget.value||'USD';
+        void refreshSettingsCurrency();
+      });
+      void refreshSettingsCurrency();
       document.querySelectorAll('[data-settings-wallet-tab]').forEach(button=>button.addEventListener('click',()=>{
         const tab=button.dataset.settingsWalletTab;
         window.dispatchEvent(new CustomEvent('minglora:open-wallet',{detail:{tab}}));
@@ -590,7 +645,12 @@
             profileVisibility: formData.get('profileVisibility'),
             allowFriendRequests: formData.has('allowFriendRequests'),
             messageAudience: formData.get('messageAudience'),
-            meetWaveAudience: formData.get('meetWaveAudience')
+            meetWaveAudience: formData.get('meetWaveAudience'),
+            friendsListAudience: formData.get('friendsListAudience'),
+            followersListAudience: formData.get('followersListAudience'),
+            followingListAudience: formData.get('followingListAudience'),
+            subscribersListAudience: formData.get('subscribersListAudience'),
+            commentAudience: formData.get('commentAudience')
           },
           notifications: {
             inApp: formData.has('notificationInApp'),
@@ -606,7 +666,8 @@
             liveRoomTheme: formData.get('liveRoomTheme') || 'studio',
             feedSort: formData.get('feedSort'),
             reducedMotion: formData.has('reducedMotion'),
-            liteMode: formData.has('liteMode')
+            liteMode: formData.has('liteMode'),
+            displayCurrency: formData.get('displayCurrency') || 'USD'
           }
         };
       }
