@@ -69,7 +69,7 @@ test('the database exchange is atomic, idempotent, ledger-backed and deducted fr
 test('the Recharge app and service worker use matching updated cache versions', () => {
   assert.match(html, /styles\.css\?v=20261105-coin-funding-sources-1/);
   assert.match(html, /app\.js\?v=20261105-coin-funding-sources-1/);
-  assert.match(worker, /minglora-shell-v84-wallet-earnings-dashboard-1/);
+  assert.match(worker, /minglora-shell-v83-coin-funding-sources-1/);
   assert.match(worker, /\/styles\.css\?v=20261105-coin-funding-sources-1/);
   assert.match(worker, /\/app\.js\?v=20261105-coin-funding-sources-1/);
   assert.match(css, /\.recharge-package-grid/);
