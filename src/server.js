@@ -2217,7 +2217,7 @@ async function route(req, res) {
         const canModerateLiveChat=Boolean(session&&(session.hostId===user.id||(session.liveModerators||[]).includes(user.id)));
         if(!session||!canModerateLiveChat)return json(res,403,{error:'Only the LIVE host or an assigned room moderator can remove comments.'});
         const result=await requestSupabaseState('live_chat_delete',{
-          broadcastId:session.id,hostId:user.id,messageId:liveChatDelete[2]
+          broadcastId:session.id,hostId:session.hostId,messageId:liveChatDelete[2]
         });
         return json(res,200,result);
       }
