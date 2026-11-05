@@ -4636,3 +4636,15 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 .layout,.main-content,.profile-body,.settings-panels,.message-layout{min-width:0!important}
 .modal-backdrop{overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain}
 .modal{max-height:calc(100dvh - 24px)!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain}
+
+/* Compact profile-backed author row for TikTok-style LIVE chat messages. */
+.live-chat-overlay .live-chat-line{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:start;gap:3px 7px;width:min(100%,460px)}
+.live-chat-overlay .live-chat-avatar{grid-column:1;grid-row:1 / span 2;display:block;width:27px;height:27px;object-fit:cover;border:1px solid rgba(255,255,255,.26);border-radius:50%;background:#252b38}
+.live-chat-overlay .live-chat-copy{grid-column:2;display:grid;gap:2px;min-width:0}
+.live-chat-overlay .live-chat-copy strong{grid-column:1;display:block;min-width:0;overflow-wrap:anywhere}
+.live-chat-overlay .live-chat-copy>span{grid-column:1;display:block}
+.live-chat-overlay .live-chat-copy .live-chat-time{grid-column:1}
+.live-chat-overlay .live-chat-handle{display:inline;color:rgba(255,255,255,.64);font-size:9px;font-weight:650}
+.live-chat-overlay .live-chat-actions{grid-column:2;margin-top:3px}
+.live-pinned-comment{top:58px}
+@media(max-width:520px){.live-pinned-comment{top:53px}}
