@@ -3768,3 +3768,6 @@ body.auth-mode .auth-screen{
   .live-control-icon{width:41px;height:41px;flex-basis:41px}
   .live-control-caption{font-size:8.5px}
 }
+
+/* Shared multi-file drop target for desktop and mobile upload pickers */
+.media-picker.is-dragging{border-color:var(--blue);background:#eaf2ff;box-shadow:inset 0 0 0 2px #1769e055}
