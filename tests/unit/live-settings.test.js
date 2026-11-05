@@ -22,6 +22,7 @@ test('LIVE settings provide compact, safe defaults', () => {
   assert.equal(result.settings.optimizeForStability, true);
   assert.equal(result.settings.markViewers, true);
   assert.equal(result.settings.communitySafety, true);
+  assert.equal(result.settings.groupChatEnabled, true);
   assert.equal(result.settings.liveGifts, true);
 });
 
@@ -35,6 +36,7 @@ test('practice mode automatically disables gifts', () => {
 test('LIVE setup rejects unknown fields and malformed values', () => {
   assert.equal(normalizeLiveSettings({ guardian: true }).valid, false);
   assert.equal(normalizeLiveSettings({ noiseSuppression: 'yes' }).valid, false);
+  assert.equal(normalizeLiveSettings({ groupChatEnabled: 'yes' }).valid, false);
   assert.equal(normalizeLiveSettings({ liveQuality: '4k' }).valid, false);
 });
 
