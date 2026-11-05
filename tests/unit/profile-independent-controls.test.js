@@ -55,10 +55,10 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261104-money-to-coins-1/);
-  assert.match(html,/app\.js\?v=20261104-money-to-coins-1/);
-  assert.match(worker,/minglora-shell-v79-money-to-coins-1/);
+  assert.match(html,/app\.js\?v=20261105-verified-username-1/);
+  assert.match(worker,/minglora-shell-v80-verified-username-1/);
   assert.match(worker,/styles\.css\?v=20261104-money-to-coins-1/);
-  assert.match(worker,/app\.js\?v=20261104-money-to-coins-1/);
+  assert.match(worker,/app\.js\?v=20261105-verified-username-1/);
 });
 
 test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{
@@ -77,4 +77,14 @@ test('profile Likes total is supplied by the server from actual like reactions o
   assert.match(server,/likesCount:profilePosts\.reduce\(\(total,post\)=>total\+Object\.values\(post\.reactions\|\|\{\}\)\.filter\(reaction=>reaction==='like'\)\.length,0\)/);
   assert.match(app,/Number\(data\.likesCount\|\|0\)\.toLocaleString\(\)/);
   assert.match(app,/<span>Likes<\/span>/);
+});
+
+test('the Creator Hub verification sticker appears beside the profile username as well as the display name', () => {
+  const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
+  const badges=fs.readFileSync(path.join(root,'src/platform-badges.js'),'utf8');
+  assert.match(badges,/creatorhubcreatornetwork@gmail\\.com/);
+  assert.match(server,/verificationBadge:getProfileVerificationBadge\\(u\\)/);
+  assert.match(app,/profile-name-with-badges[^;]*verifiedProfileBadge\\(u\\)/);
+  assert.match(app,/profile-username-line\">@'\\+esc\\(u\\.username\\)\\+' '\\+verifiedProfileBadge\\(u\\)\\+gifterProfileBadge\\(u\\)/);
+  assert.match(css,/\\.profile-username-line\\{[^}]*display:flex/);
 });
