@@ -23,10 +23,16 @@
   }
 
   function badgeMarkup(level, tier, small = false) {
+    const numericLevel = Math.max(1, Math.min(50, Math.floor(Number(level) || 1)));
+    const tierBand = Math.ceil(numericLevel / 5);
+    const badgeName = (typeof tier === "string" ? tier + " Gifter · " : "Gifter · ") + "LV " + numericLevel;
+    const art = window.MingloraGifterBadgeArt;
+    if (art?.render) return art.render({
+      level: numericLevel, tier: tierBand, badgeName, compact: small
+    });
     const className = "gp-badge" + (small ? " gp-badge--small" : "");
-    return "<span class='" + className + " gp-tier-" + Math.ceil(Number(level) / 5) + "' aria-label='" +
-      esc(tier + " Gifter, LV " + level) + "'><span class='gp-badge-crown'>✦</span><strong>" +
-      "LV " + number(level) + "</strong><small>GIFTER</small></span>";
+    return "<span class='" + className + " gp-tier-" + tierBand + "' aria-label='" +
+      esc(badgeName) + "'><strong>LV " + number(numericLevel) + "</strong><small>GIFTER</small></span>";
   }
 
   function levelCard(item) {
@@ -77,8 +83,12 @@
       "<article class='gp-leader-row " + (item.userId === current.userId ? "is-you" : "") + "'>" +
       "<span class='gp-rank-number'>" + item.rank + "</span>" +
       "<span class='gp-leader-avatar'>" + esc((item.name || item.username || "M").slice(0, 1).toUpperCase()) + "</span>" +
-      "<span class='gp-leader-copy'><strong>" + esc(item.name) + "</strong><small>@" + esc(item.username) +
-      " · LV " + item.level + "</small></span><strong class='gp-leader-xp'>" + number(item.xp) + " Coins sent</strong></article>"
+      "<span class='gp-leader-copy'><span class='gp-leader-name'><strong>" + esc(item.name) + "</strong>" +
+      (window.MingloraGifterBadgeArt?.render ? window.MingloraGifterBadgeArt.render({
+        level: item.level, tier: Math.ceil(Number(item.level) / 5), badgeName: item.badgeName, inline: true
+      }) : "<span class='gp-inline-badge'><strong>" + item.level + "</strong></span>") +
+      "</span><small>@" + esc(item.username) + "</small></span><strong class='gp-leader-xp'>" +
+      number(item.xp) + " Coins sent</strong></article>"
     ).join("") + "</div>";
   }
 
