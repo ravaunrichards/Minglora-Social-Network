@@ -71,7 +71,7 @@ test('Minglora LIVE exposes the nine requested switchable screen layouts', () =>
   const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   for (const layout of layouts) {
     assert.match(app, new RegExp("value:'" + layout + "'"));
-    assert.match(styles, new RegExp('data-live-layout=\\\\"' + layout + '\\\\"'));
+    assert.ok(styles.includes('data-live-layout="' + layout + '"'));
   }
   assert.match(server, /LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'\]/);
   assert.match(app, /function applyLiveScreenLayout/);
@@ -97,7 +97,7 @@ test('Guest requests, co-host permissions, auto-accept, gifter priority and mode
 });
 
 test('Guest camera can be disabled by the host and voice rings can be switched off', () => {
-  assert.match(app, /session\.liveSettings\?\.guestCamera!==false/);
+  assert.match(app, /liveSettings\.guestCamera!==false/);
   assert.match(app, /topic==="minglora-live-setting"/);
   assert.match(app, /setCameraEnabled\(false\)/);
   assert.match(app, /name='voiceRings' checked/);
