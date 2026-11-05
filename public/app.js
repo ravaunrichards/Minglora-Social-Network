@@ -2208,7 +2208,7 @@ function creatorMonetizationMarkup(){
   const payoutHistory=payouts.length?payouts.map(item=>"<article class='creator-ledger-row'><div><strong>"+esc(String(item.status||"unknown").replace(/_/g," ").toUpperCase())+"</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span class='creator-ledger-share'>PayPal payout</span><strong>"+creatorMoney(item.amount_minor)+"</strong></article>").join(""):creatorEmpty("No withdrawals yet","Confirmed payout requests will appear in this history.","coins");
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CREATOR BUSINESS</span><h2>Monetization</h2><p>Manage actual creator gift earnings and PayPal withdrawal details.</p></div><span class='creator-finance-lock'>"+creatorIcon("settings")+" Server-authoritative amounts</span></div>"+
     "<div class='creator-earning-metrics'>"+creatorMetric("Your eligible share",creatorMoney(data.earnedMinor),"50% creator share from eligible LIVE gifts","coins")+creatorMetric("Available to withdraw",creatorMoney(data.availableMinor),"Current server-calculated amount","saved")+creatorMetric("Minglora platform share",creatorMoney(platformTotal),"Recorded platform share from the ledger","profile")+"</div>"+
-    "<div class='creator-monetization-grid'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PAYOUT SETTINGS</span><h3>PayPal recipient</h3></div></div><p class='creator-settings-note'>Add or update the PayPal email used for creator withdrawals. Minglora sends a request only after checking the current available balance.</p><form id='creator-payout-account-form' class='creator-payout-form'><label class='creator-field-label' for='creator-paypal-email'>PayPal account email</label><input id='creator-paypal-email' name='paypalEmail' type='email' autocomplete='email' maxlength='254' required placeholder='your-paypal@example.com' value='"+esc(account?.paypal_email||"")+"'><button type='submit' class='primary'>Save payout email</button><p class='creator-inline-status' id='creator-payout-account-status' role='status'></p></form>"+
+    "<div class='creator-monetization-grid'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PAYOUT SETTINGS</span><h3>PayPal recipient</h3></div></div><p class='creator-settings-note'>Link the PayPal email address that should receive creator withdrawals. You can save a replacement or unlink it at any time. Your payout history and earnings remain unchanged when you unlink.</p><form id='creator-payout-account-form' class='creator-payout-form'><label class='creator-field-label' for='creator-paypal-email'>PayPal account email</label><input id='creator-paypal-email' name='paypalEmail' type='email' autocomplete='email' maxlength='254' required placeholder='your-paypal@example.com' value='"+esc(account?.paypal_email||"")+"'><div class='creator-payout-actions'><button type='submit' class='primary'>"+(account?"Save payout email":"Link PayPal email")+"</button>"+(account?"<button type='button' class='creator-unlink-paypal' id='creator-unlink-paypal'>Unlink PayPal email</button>":"")+"</div><small>Use the email address registered to your PayPal account. Linking saves it privately to your Minglora account.</small><p class='creator-inline-status' id='creator-payout-account-status' role='status' aria-live='polite'></p></form>"+
     "<form id='creator-withdraw-form' class='creator-payout-form creator-withdraw-form'><label class='creator-field-label' for='creator-payout-amount'>Withdrawal amount (USD)</label><input id='creator-payout-amount' name='amount' type='number' min='1' step='0.01' max='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' value='"+(Number(data.availableMinor||0)/100).toFixed(2)+"' required><button type='submit' class='primary' "+(account&&Number(data.availableMinor)>=100?"":"disabled")+">Request PayPal withdrawal</button><small>Minimum withdrawal: USD $1.00. A submitted request is not the same as a completed payout.</small><p class='creator-inline-status' id='creator-withdraw-status' role='status'></p></form></section>"+
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PAYOUT TRACKING</span><h3>Withdrawal history</h3></div></div>"+payoutHistory+"</section></div>"+
     "<section class='creator-studio-panel creator-ledger-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>EARNINGS LEDGER</span><h3>Gift earnings history</h3></div><small>Creator and platform shares are settled separately.</small></div>"+history+"</section>";
@@ -2410,6 +2410,22 @@ async function renderCreatorSection(section){
         s.earnings=await api("/creator/earnings");
         await renderCreatorSection("monetization");
       }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+    });
+    $("#creator-unlink-paypal")?.addEventListener("click",async()=>{
+      const button=$("#creator-unlink-paypal"),status=$("#creator-payout-account-status");
+      if(!button)return;
+      button.disabled=true;
+      try{
+        await api("/creator/payout-account",{method:"DELETE"});
+        if(status)status.textContent="PayPal payout email unlinked. You can link another email whenever you are ready.";
+        toast("PayPal payout email unlinked.");
+        s.earnings=await api("/creator/earnings");
+        await renderCreatorSection("monetization");
+      }catch(error){
+        if(status)status.textContent=error.message;
+        toast(error.message);
+        button.disabled=false;
+      }
     });
     $("#creator-withdraw-form")?.addEventListener("submit",async event=>{
       event.preventDefault();
