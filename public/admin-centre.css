@@ -174,3 +174,57 @@
 .admin-owner-coin-issuance input{width:100%;min-width:0;min-height:40px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface-soft,var(--card));color:var(--text);font:inherit}
 .admin-owner-coin-issuance button{justify-self:start}
 .admin-owner-coin-issuance button:disabled{opacity:.65;cursor:wait}
+
+/* Funded CreatorHub marketing budget controls */
+.admin-marketing-budget {
+  display:grid;
+  gap:14px;
+  margin-top:20px;
+  padding:18px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));
+  border-radius:16px;
+  background:var(--surface-raised,rgba(127,127,127,.06));
+}
+.admin-marketing-budget-heading {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.admin-marketing-budget-heading strong,
+.admin-marketing-form > strong {display:block;font-weight:750}
+.admin-marketing-budget-heading p,
+.admin-marketing-form > p {margin:5px 0 0;color:var(--muted-text,#777);font-size:.9rem;line-height:1.5}
+.admin-marketing-budget-summary {
+  padding:12px 14px;
+  border-radius:12px;
+  background:var(--surface,rgba(127,127,127,.08));
+  font-size:.92rem;
+  line-height:1.55;
+  overflow-wrap:anywhere;
+}
+.admin-marketing-form {
+  display:grid;
+  gap:9px;
+  padding:14px;
+  border:1px solid var(--border-color,rgba(127,127,127,.2));
+  border-radius:12px;
+}
+.admin-marketing-form label {font-size:.88rem;font-weight:650}
+.admin-marketing-form input {
+  width:100%;
+  min-width:0;
+  padding:11px 12px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));
+  border-radius:9px;
+  color:inherit;
+  background:var(--surface,transparent);
+}
+.admin-marketing-form button {justify-self:start}
+.admin-marketing-form [aria-live] {min-height:1.3em;margin:0;font-size:.88rem}
+@media(max-width:560px){
+  .admin-marketing-budget {padding:12px}
+  .admin-marketing-form {padding:11px}
+  .admin-marketing-form button {width:100%}
+}
