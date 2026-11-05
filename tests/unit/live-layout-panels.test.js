@@ -118,3 +118,13 @@ test('Full Screen is inset and constrained on phones, desktops and larger displa
   assert.match(styles, /width:min\(calc\(100vw - 28px\),420px,calc\(\(100dvh - 28px\) \* 9 \/ 16\)\)!important/);
   assert.match(styles, /height:min\(calc\(100dvh - 28px\),746px\)!important/);
 });
+
+
+test('Full Screen clusters room controls in a compact centered dock and uses consistent compact chat bubbles', () => {
+  assert.match(styles, /grid-template-columns:repeat\(4,42px\)!important/);
+  assert.match(styles, /width:min\(360px,calc\(100% - 18px\)\)!important/);
+  assert.match(styles, /justify-content:center!important/);
+  assert.match(styles, /\.live-chat-quick-actions\{[\s\S]*?gap:2px!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-line\{[\s\S]*?border-radius:12px!important[\s\S]*?font-size:12px!important/);
+  assert.match(styles, /bottom:calc\(112px \+ env\(safe-area-inset-bottom\)\)!important/);
+});
