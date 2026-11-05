@@ -1817,6 +1817,10 @@ async function route(req, res) {
           return json(res,200,result);
         }
         if(session.hostId!==user.id)return json(res,403,{error:'Only the LIVE host can launch a Goody Bag or Treasure Box.'});
+        const requestId=String(input.requestId||uid());
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)){
+          return json(res,400,{error:'Invalid reward request reference.'});
+        }
         const kind=String(input.kind||'');
         const totalCoins=Number(input.totalCoins);
         const winnerCount=Number(input.winnerCount);
@@ -1840,7 +1844,7 @@ async function route(req, res) {
           return json(res,503,{error:'Minglora could not verify your LIVE room. Try again shortly.'});
         }
         const result=await requestSupabaseState('economy_live_reward_create',{
-          creatorId:user.id,broadcastId:session.id,requestId:uid(),kind,totalCoins,winnerCount,
+          creatorId:user.id,broadcastId:session.id,requestId,kind,totalCoins,winnerCount,
           countdownSeconds,participationMethod,keyword
         });
         return json(res,201,result);
