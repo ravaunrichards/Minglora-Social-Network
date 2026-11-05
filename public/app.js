@@ -1088,6 +1088,7 @@ function openLiveToolsPanel(focusSelector){
   const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer");
   if(!backdrop||!drawer){toast("LIVE settings are not available in this room.");return;}
   backdrop.classList.remove("hidden");backdrop.setAttribute("aria-hidden","false");
+  $("#live-settings-toggle")?.setAttribute("aria-expanded","true");
   document.body.classList.add("live-tools-open");
   if(focusSelector)focusLiveRoomPanel(focusSelector);
   else $("#live-tools-close")?.focus();
@@ -1096,6 +1097,7 @@ function closeLiveToolsPanel(){
   const backdrop=$("#live-tools-backdrop");
   if(!backdrop)return;
   backdrop.classList.add("hidden");backdrop.setAttribute("aria-hidden","true");
+  $("#live-settings-toggle")?.setAttribute("aria-expanded","false");
   document.body.classList.remove("live-tools-open");
   $("#live-settings-toggle")?.focus();
 }
@@ -1291,8 +1293,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div id='live-reward-list' class='live-reward-list'><p class='muted'>Loading LIVE rewards…</p></div></section>";
   const liveControls=[
     (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
-    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
-    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
+    (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
+    (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     role!=="host"?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
@@ -1301,7 +1303,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-leave","end",role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE",role==="host"?"End":role==="guest"?"Leave":"Leave",{danger:true})
   ].filter(Boolean).join("");
   const liveGiftTools=role==="host"
-    ? "<section class='live-tools-card live-gift-host-note'><strong>Gift activity</strong><p>Viewers can send gifts while you are broadcasting. Your gift-enabled room is ready.</p></section>"
+    ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
     : "<section id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
@@ -1363,6 +1365,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
       if(!microphonePublished){
         throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check browser microphone permission and try again.");
       }
+      if(role==="guest"&&broadcastType==="video_audio"){
+        await room.localParticipant.setCameraEnabled(true);
+        for(const publication of room.localParticipant.videoTrackPublications.values()){
+          if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
+        }
+      }
     }
     updatePresence();
     refreshSpeakerRoster();
@@ -1372,7 +1380,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     const roomAudioControl=$("#live-audio-toggle");
     liveAudioMuted=false;
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
-    if(cameraControl)cameraControl.disabled=role!=="host";
+    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&broadcastType==="video_audio");
     if(flipCameraControl)flipCameraControl.disabled=!liveCameraEnabled;
     roomAudioControl?.addEventListener("click",()=>{
       liveAudioMuted=!liveAudioMuted;
