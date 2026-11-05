@@ -19,12 +19,14 @@ export function getPlatformAdminBadge(user, viewerId = null) {
     id === SECONDARY_CREATOR_HUB_USER_ID || email === SECONDARY_CREATOR_HUB_EMAIL;
   if (isSecondaryTestAccount) return null;
 
-  const isDesignatedCreatorHubAdmin =
-    id === CREATOR_HUB_ADMIN_USER_ID &&
-    email === CREATOR_HUB_ADMIN_EMAIL &&
-    role === 'platform_owner';
-
-  if (isDesignatedCreatorHubAdmin) {
+  const matchesReservedOwnerIdentity =
+    id === CREATOR_HUB_ADMIN_USER_ID || email === CREATOR_HUB_ADMIN_EMAIL;
+  if (matchesReservedOwnerIdentity) {
+    const isDesignatedCreatorHubAdmin =
+      id === CREATOR_HUB_ADMIN_USER_ID &&
+      email === CREATOR_HUB_ADMIN_EMAIL &&
+      role === 'platform_owner';
+    if (!isDesignatedCreatorHubAdmin) return null;
     return String(viewerId || '') === id ? 'admin' : null;
   }
 
