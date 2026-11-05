@@ -53,3 +53,12 @@ test('LIVE tools drawer closes on leave and is responsive on phones and desktop'
   assert.match(styles, /env\(safe-area-inset-bottom\)/);
   assert.match(styles, /prefers-reduced-motion:reduce/);
 });
+
+test('Host can change the LIVE stage appearance from the settings drawer using the existing room-theme API', () => {
+  assert.match(app, /const liveThemeAppearance=role==="host"/);
+  assert.match(app, /LIVE_ROOM_THEME_OPTIONS\.map\(option=>/);
+  assert.match(app, /id='live-room-theme-select'/);
+  assert.match(app, /api\("\/live\/sessions\/"\+encodeURIComponent\(session\.id\)\+"\/theme"/);
+  assert.match(app, /classList\.add\("live-theme-"\+nextTheme\)/);
+  assert.match(styles, /\.live-room-appearance/);
+});
