@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
-    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search",
+    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_campaign_history",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
@@ -384,6 +384,44 @@ Deno.serve(async (req: Request) => {
     });
     if (error) return fail(error, "Minglora could not credit the member wallet.");
     return json(200, { credit: data });
+  }
+
+  if (action === "economy_admin_campaign_wallet") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    if (adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" || adminEmail !== "creatorhubcreatornetwork@gmail.com") return json(403, { error: "Only the Creator Hub administrator can view the campaign wallet." });
+    const { data, error } = await admin.rpc("admin_campaign_coins_get_wallet", { p_admin_user_id: adminUserId, p_admin_email: adminEmail });
+    if (error) return fail(error, "Admin Campaign Coins wallet could not be loaded.");
+    return json(200, data || {});
+  }
+
+  if (action === "economy_admin_campaign_allocate") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const memberLookup = String(input.memberLookup || "").trim().replace(/^@/, "").toLowerCase();
+    const amountCoins = Number(input.amountCoins);
+    const requestId = String(input.requestId || "");
+    const note = String(input.note || "").trim().slice(0, 500);
+    if (adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" || adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) || !/^[a-z0-9_]{3,30}$/.test(memberLookup) || !Number.isSafeInteger(amountCoins) || amountCoins < 1 || amountCoins > 1000000000000) return json(400, { error: "Enter a valid member username, Coin amount and request reference." });
+    const { data: member, error: memberError } = await admin.from("profiles").select("id,username,display_name").eq("username", memberLookup).maybeSingle();
+    if (memberError) return json(503, { error: "Minglora could not look up that member." });
+    if (!member?.id) return json(404, { error: "Minglora member was not found." });
+    const { data, error } = await admin.rpc("admin_campaign_coins_allocate", { p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_member_user_id: member.id, p_amount_coins: amountCoins, p_request_id: requestId, p_campaign_name: "Minglora Admin Promotional Gift Campaign", p_note: note });
+    if (error) return fail(error, "Admin Campaign Coins could not be allocated.");
+    return json(200, { allocation: data, member: { id: member.id, username: member.username, displayName: member.display_name || "" } });
+  }
+
+  if (action === "economy_admin_campaign_history") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    if (adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" || adminEmail !== "creatorhubcreatornetwork@gmail.com") return json(403, { error: "Only the Creator Hub administrator can view campaign history." });
+    const { data: rows, error } = await admin.from("admin_campaign_coins_ledger").select("id,member_user_id,delta_coins,balance_after,campaign_name,note,created_at").eq("admin_user_id", adminUserId).eq("event_type", "allocation").order("created_at", { ascending: false }).limit(100);
+    if (error) return json(503, { error: "Admin Campaign Coins history could not be loaded." });
+    const memberIds = [...new Set((rows || []).map((row: any) => row.member_user_id).filter(Boolean))];
+    const { data: profiles, error: profilesError } = memberIds.length ? await admin.from("profiles").select("id,username,display_name").in("id", memberIds) : { data: [], error: null };
+    if (profilesError) return json(503, { error: "Campaign recipient details could not be loaded." });
+    const byId = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
+    return json(200, { items: (rows || []).map((row: any) => { const member = byId.get(row.member_user_id); return { id: row.id, memberUsername: member?.username || "", memberDisplayName: member?.display_name || "", amountCoins: Math.abs(Number(row.delta_coins || 0)), note: row.note || row.campaign_name || "", createdAt: row.created_at, balanceAfter: row.balance_after }; }) });
   }
 
   if (action === "economy_admin_member_search") {
