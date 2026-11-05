@@ -1385,6 +1385,16 @@ Deno.serve(async (req: Request) => {
       attached_to:assetStatus==="attached"?"profile:"+slot:null,completed_at:new Date().toISOString()
     },{onConflict:"id"});
     if(assetError)return json(503,{error:"Upload completed in Storage but media metadata could not be registered. Retry completion."});
+    if(slot==="avatar"||slot==="cover"){
+      const profilePatch:Record<string,unknown>=slot==="avatar"
+        ?{avatar_url:String(result.url||""),avatar_asset_id:assetId,updated_at:new Date().toISOString()}
+        :{cover_url:String(result.url||""),cover_asset_id:assetId,updated_at:new Date().toISOString()};
+      const {data:profile,error:profileError}=await admin.from("profiles")
+        .update(profilePatch).eq("id",ownerId).select("id").maybeSingle();
+      if(profileError||!profile){
+        return json(503,{error:"Upload completed but profile media could not be synchronized. Retry completion."});
+      }
+    }
     return json(200,result);
   }
 
