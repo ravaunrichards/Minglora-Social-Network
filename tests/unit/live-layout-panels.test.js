@@ -82,3 +82,19 @@ test('Full Screen keeps every primary LIVE control on-screen without scrolling o
   assert.match(styles, /bottom:calc\(118px \+ env\(safe-area-inset-bottom\)\)!important/);
   assert.match(styles, /height:auto!important;min-height:0!important;max-height:none!important/);
 });
+
+
+test('Full Screen is viewport-fitted and not an oversized full-width desktop canvas', () => {
+  assert.match(styles, /align-items:center!important;justify-content:center!important/);
+  assert.match(styles, /width:min\(100vw,480px,calc\(100dvh \* 9 \/ 16\)\)!important/);
+  assert.match(styles, /height:min\(100dvh,854px\)!important/);
+  assert.match(styles, /width:min\(100vw,calc\(100dvh \* 16 \/ 9\),720px\)!important/);
+});
+
+test('Full Screen comments sit in the middle and the composer stays above compact bottom controls', () => {
+  assert.match(styles, /\.live-video-stage>\.live-chat-overlay\{[\s\S]*?top:40%!important[\s\S]*?bottom:calc\(98px \+ env\(safe-area-inset-bottom\)\)!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-list\{[\s\S]*?justify-content:flex-end!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-composer-wrap\{[\s\S]*?flex:0 0 auto!important/);
+  assert.match(styles, /\.live-player-controls\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
+  assert.match(styles, /\.live-player-controls \.live-control-icon\{[\s\S]*?width:28px!important;height:28px!important/);
+});
