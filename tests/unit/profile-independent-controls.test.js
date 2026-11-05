@@ -82,9 +82,9 @@ test('profile Likes total is supplied by the server from actual like reactions o
 test('the Creator Hub verification sticker appears beside the profile username as well as the display name', () => {
   const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
   const badges=fs.readFileSync(path.join(root,'src/platform-badges.js'),'utf8');
-  assert.match(badges,/creatorhubcreatornetwork@gmail\\.com/);
-  assert.match(server,/verificationBadge:getProfileVerificationBadge\\(u\\)/);
-  assert.match(app,/profile-name-with-badges[^;]*verifiedProfileBadge\\(u\\)/);
-  assert.match(app,/profile-username-line\">@'\\+esc\\(u\\.username\\)\\+' '\\+verifiedProfileBadge\\(u\\)\\+gifterProfileBadge\\(u\\)/);
-  assert.match(css,/\\.profile-username-line\\{[^}]*display:flex/);
+  assert.match(badges,/creatorhubcreatornetwork@gmail\.com/);
+  assert.match(server,/verificationBadge:getProfileVerificationBadge\(u\)/);
+  assert.match(app,/profile-name-with-badges[^;]*verifiedProfileBadge\(u\)/);
+  assert.match(app,/profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
+  assert.match(css,/\.profile-username-line\{[^}]*display:flex/);
 });
