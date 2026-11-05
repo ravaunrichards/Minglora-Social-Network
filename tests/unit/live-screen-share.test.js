@@ -10,8 +10,9 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const styles=read('public/styles.css');
 
-test('Only the host of a video LIVE can publish a screen-share track',()=>{
-  assert.match(server,/session\.broadcastType === 'audio_only' \? \[LIVEKIT_TRACK_SOURCE\.MICROPHONE\] : \[LIVEKIT_TRACK_SOURCE\.MICROPHONE, LIVEKIT_TRACK_SOURCE\.CAMERA, LIVEKIT_TRACK_SOURCE\.SCREEN_SHARE\]/);
+test('Video-based LIVE modes allow host screen sharing while audio-only and viewers remain restricted',()=>{
+  assert.match(server,/getLivePublishSourceNames\(liveMode, 'host', broadcastType\)/);
+  assert.match(server,/getLivePublishSourceNames\(session\.liveMode, role, session\.broadcastType\)/);
   assert.match(app,/role==="host"&&broadcastType==="video_audio"\?liveControlButton\("live-screen-share-toggle","screen"/);
   assert.match(app,/setScreenShareEnabled\(nextEnabled/);
 });
