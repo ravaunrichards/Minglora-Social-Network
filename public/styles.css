@@ -4260,3 +4260,12 @@ body.live-tools-open{overflow:hidden}
 .creator-unlink-paypal{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
 .creator-unlink-paypal:disabled{opacity:.6;cursor:wait}
 @media(max-width:640px){.creator-payout-actions{align-items:stretch;flex-direction:column}.creator-payout-actions button{width:100%;justify-self:stretch}}
+
+.live-speaker-remove{
+  flex:none;padding:5px 8px;border:1px solid rgba(242,128,141,.3);border-radius:8px;
+  color:#ffc1c8;background:rgba(195,52,72,.1);font-size:9px;font-weight:850;cursor:pointer;
+}
+.live-speaker-remove:hover,.live-speaker-remove:focus-visible{
+  border-color:rgba(255,139,153,.72);background:rgba(195,52,72,.22);outline:none;
+}
+.live-speaker-remove:disabled{opacity:.45;cursor:wait}
