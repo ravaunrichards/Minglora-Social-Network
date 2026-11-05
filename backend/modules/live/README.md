@@ -62,3 +62,7 @@ The `GET /api/live/sessions/:id/speaker-request` endpoint returns the signed-in 
 ### Presence and speaker connection integrity
 
 Minglora only records a participant as connected after the client has connected to its LiveKit room and the server verifies that identity through the LiveKit Room Service API. A connected listener can still create a hand-raise request; that request transitions the relational participant row from viewer/connected to guest/requested. Host approval moves it to guest/accepted, and a successful microphone-enabled speaker join moves it to guest/connected. The client roster shows published microphone participants regardless of whether they are currently speaking, with separate muted/speaking states.
+
+### LIVE reactions and viewer data permissions
+
+Video+audio and audio-only LIVE rooms support shared lightweight reactions (hearts, applause, fire and laughter) over LiveKit data packets. Viewer tokens may publish data packets for these allow-listed in-room reactions while remaining unable to publish microphone or camera tracks. Reaction packets are ephemeral, client-validated and are not Coins, gifts, earnings or a persisted engagement ledger. Audio-only broadcasts continue to withhold camera publishing permissions from every role.
