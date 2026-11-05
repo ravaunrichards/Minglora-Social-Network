@@ -1406,7 +1406,7 @@ async function renderCoins(){
       event.preventDefault();
       const raw=String(issueAmount?.value||"").trim();
       const amountCoins=Number(raw);
-      if(!/^\\d+$/.test(raw)||!Number.isSafeInteger(amountCoins)||amountCoins<1){
+      if(!/^\d+$/.test(raw)||!Number.isSafeInteger(amountCoins)||amountCoins<1){
         if(issueStatus)issueStatus.textContent="Enter a positive whole-number Coin amount.";
         return;
       }
@@ -1447,7 +1447,7 @@ async function renderCoins(){
         if(memberStatus)memberStatus.textContent="Enter the member's Minglora username or account ID.";
         return;
       }
-      if(!/^\\d+$/.test(raw)||!Number.isSafeInteger(amountCoins)||amountCoins<1){
+      if(!/^\d+$/.test(raw)||!Number.isSafeInteger(amountCoins)||amountCoins<1){
         if(memberStatus)memberStatus.textContent="Enter a positive whole-number Coin amount.";
         return;
       }
