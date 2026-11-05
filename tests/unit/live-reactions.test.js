@@ -73,7 +73,7 @@ test('Host-selectable LIVE layouts expose all nine choices and persist during th
     assert.match(styles, new RegExp('\\.live-guest-layout\\.live-layout-'+layout.replace('_','_')));
   }
   assert.match(app, /function applyLiveRoomLayout/);
-  assert.match(app, /data-live-layout/);
+  assert.match(app, /dataset\.liveLayout/);
   assert.match(app, /api\('\/live\/sessions\/'\+encodeURIComponent\(session\.id\)\+'\/settings'/);
   assert.match(server, /const liveSettingsMatch = p\.match/);
   assert.match(server, /Only the LIVE host can change room settings/);
