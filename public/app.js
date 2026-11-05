@@ -28,19 +28,25 @@ const platformAdminProfileBadge = member => member?.platformBadge==='admin'
   ? '<span class="platform-admin-profile-badge" role="img" aria-label="Minglora platform administrator" title="Minglora platform administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8 21 5.2v6.5c0 5.4-3.6 9.1-9 11.5-5.4-2.4-9-6.1-9-11.5V5.2L12 1.8Z"></path><path d="m8.3 12.2 2.3 2.3 5.2-5.3"></path></svg><span>Admin</span></span>'
   : '';
 const gifterProfileBadge = member => {
+  const identity=member?.newGifterIdentity?.active
+    ? '<span class="gp-new-gifter-identity" role="status" aria-label="New Gifter identity active for one week" title="New Gifter · expires '+esc(member.newGifterIdentity.expiresAt)+'">NEW GIFTER</span>'
+    : '';
   const badge=member?.gifterBadge;
-  if(!badge?.level)return '';
+  if(!badge?.level)return identity;
   const level=Math.max(1,Math.min(50,Math.floor(Number(badge.level)||1)));
   const tier=Math.max(1,Math.min(10,Math.ceil(level/5)));
   const title=esc(badge.badgeName||('Gifter LV '+level));
   const artwork=window.MingloraGifterBadgeArt?.render
     ? window.MingloraGifterBadgeArt.render({level,tier,badgeName:title,inline:true})
     : '<span class="gp-inline-badge gp-tier-'+tier+'" role="img" aria-label="'+title+'" title="'+title+'"><strong>'+level+'</strong></span>';
-  return artwork+
+  return identity+artwork+
     (badge.liveEntranceUnlocked?'<span class="gp-live-entry-badge" role="img" aria-label="LV 25 LIVE entrance unlocked" title="LV 25 LIVE entrance unlocked">LIVE ENTRY</span>':'');
 };
 window.addEventListener('minglora:gifter-badge-updated',event=>{
-  if(state.user)state.user.gifterBadge=event.detail?.badge||null;
+  if(state.user){
+    state.user.gifterBadge=event.detail?.badge||null;
+    state.user.newGifterIdentity=event.detail?.newGifterIdentity||null;
+  }
 });
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok){const error=new Error(data.error||`Request failed (${res.status})`);error.status=res.status;error.code=data.code||'';const retryAfter=Number(res.headers?.get?.('Retry-After')||data.retryAfterSeconds);if(Number.isFinite(retryAfter)&&retryAfter>0)error.retryAfterSeconds=Math.ceil(retryAfter);throw error;}return data; }
@@ -1775,7 +1781,11 @@ function setupLiveRewardPanel(session,role){
 }
 async function openLiveRoom(session,role,issuedLiveKit){
   stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();liveFanClubState=null;refreshLiveGiftGrid=null;
-  try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
+  try{
+    const progression=await api('/gifter-progression/overview');
+    state.user.gifterBadge=progression.badge||null;
+    state.user.newGifterIdentity=progression.newGifterIdentity||null;
+  }catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
   role=liveKit?.role==="host"?"host":liveKit?.role==="guest"?"guest":"viewer";
