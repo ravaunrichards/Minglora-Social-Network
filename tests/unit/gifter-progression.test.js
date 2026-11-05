@@ -148,7 +148,7 @@ test("admin badge reset preserves lifetime ledger and starts a new progression e
     users: [{ id: "owner", username: "creatorhub", name: "Creator Hub" }],
     gifterProgressionLedger: [],
     gifterBadgeAdminOverrides: [{
-      id: "admin-award-2", userId: "owner", grantedLevel: 50,
+      id: "admin-award-2", userId: "owner", grantedLevel: 0,
       progressionResetAt: resetAt, grantedBy: "admin"
     }]
   };
