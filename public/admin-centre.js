@@ -237,7 +237,8 @@
       }
     });
 
-    const money = minor => 'USD 
+    const money = minor => 'USD ' + (Number(minor || 0) / 100).toFixed(2);
+    const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
     const refreshMarketingBudget = async () => {
       if (!budgetSummary) return;
       budgetSummary.textContent = 'Loading verified budget…';
