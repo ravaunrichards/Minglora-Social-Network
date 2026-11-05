@@ -36,7 +36,8 @@ test('saved LIVE room style remains in Settings and is applied to newly created 
   assert.match(settings, /renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings, /liveRoomTheme: formData\.get\('liveRoomTheme'\)/);
   assert.match(server, /getUserSettings\(user\)\.preferences\.liveRoomTheme/);
-  assert.match(server, /broadcastType, liveMode, liveSettings,/);\n  assert.match(server, /liveTheme, status: 'live'/);
+  assert.match(server, /broadcastType, liveMode, liveSettings,/);
+  assert.match(server, /liveTheme, status: 'live'/);
   assert.match(app, /id='live-room-theme-select'/);
   assert.doesNotMatch(app, /live-style-field|live-room-theme-control/);
   assert.doesNotMatch(css, /\.live-style-field|\.live-room-theme-control/);
