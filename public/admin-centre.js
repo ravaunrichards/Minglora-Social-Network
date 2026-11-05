@@ -90,12 +90,12 @@
           </div>
           <div class="admin-badge-control-grid">
             <form id="admin-profile-verification-form" class="admin-badge-control-card">
-              <div><strong>Profile verification</strong><p>Set the blue verified check or update the member’s verification status.</p></div>
+              <div><strong>Profile verification</strong><p>Grant or remove one blue verification sticker. A verified member receives exactly one check beside the @username.</p></div>
               <label for="admin-profile-verification-member">Member account</label>
               <select id="admin-profile-verification-member" name="targetUserId" required><option value="">Loading accounts…</option></select>
               <label for="admin-profile-verification-status">Verification status</label>
               <select id="admin-profile-verification-status" name="verificationStatus" required>
-                <option value="verified">Verified — blue check ✔️</option>
+                <option value="verified">Verified — one blue check beside username</option>
                 <option value="not_submitted">Remove verification — not submitted</option>
                 <option value="needs_information">Needs more information</option>
                 <option value="pending">Pending review</option>
