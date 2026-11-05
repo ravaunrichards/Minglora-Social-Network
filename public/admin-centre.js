@@ -485,11 +485,235 @@
         if (submit) submit.disabled = false;
       }
     });
-    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => {
-      const enroll = document.querySelector('#enroll-totp');
-      enroll?.scrollIntoView({behavior:'smooth',block:'center'});
-      enroll?.click();
+    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => startAdminMfaEnrollment(panel));
+    panel.querySelector('#admin-centre-refresh-moderation')?.addEventListener('click', () => loadAdminModerationQueue(panel));
+    p  async function adminCentreApi(path, options = {}) {
+    const response = await fetch('/api' + path, {
+      credentials:'same-origin',
+      headers:{'Content-Type':'application/json',...(options.headers || {})},
+      ...options
     });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'The administrator request could not be completed.');
+    return payload;
+  }
+
+  async function loadAdminModerationQueue(panel) {
+    const target = panel.querySelector('#moderation-reports-list');
+    if (!target) return;
+    target.textContent = 'Loading reports…';
+    try {
+      const result = await adminCentreApi('/moderation/reports?status=open');
+      target.innerHTML = (result.reports || []).map(report => {
+        const actions = report.targetType === 'post'
+          ? '<option value="hide_post">Hide post</option><option value="remove_post">Remove post</option>'
+          : report.targetType === 'story' ? '<option value="remove_story">Remove story</option>'
+          : report.targetType === 'user' ? '<option value="suspend_account">Suspend account</option>' : '';
+        return '<article class="moderation-report"><div class="settings-inline-heading"><strong>' +
+          escapeText(report.targetType) + ' · ' + escapeText(report.category) +
+          '</strong><span class="settings-status-pill">' + escapeText(report.status) +
+          '</span></div><p>' + escapeText(report.details || 'No extra details') +
+          '</p><small>Reporter: ' + escapeText(report.reporter?.username || 'member') +
+          ' · Target owner: ' + escapeText(report.targetOwner?.username || 'unknown') +
+          '</small><form class="moderation-report-form" data-admin-moderate-report="' +
+          escapeText(report.id) + '"><select name="status"><option value="triaged">Mark in review</option>' +
+          '<option value="actioned">Mark actioned</option><option value="dismissed">Dismiss</option>' +
+          '<option value="open">Keep open</option></select><select name="action"><option value="">No content action</option>' +
+          actions + '</select><button class="primary" type="submit">Apply</button></form></article>';
+      }).join('') || '<p class="settings-empty">No open reports.</p>';
+      target.querySelectorAll('[data-admin-moderate-report]').forEach(form => form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const values = new FormData(form);
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+          await adminCentreApi('/moderation/reports/' + encodeURIComponent(form.dataset.adminModerateReport), {
+            method:'PATCH', body:JSON.stringify({status:values.get('status'),action:values.get('action') || null})
+          });
+          await loadAdminModerationQueue(panel);
+        } catch (error) {
+          window.alert(error.message);
+          button.disabled = false;
+        }
+      }));
+    } catch (error) {
+      target.textContent = error.message || 'Moderation reports could not be loaded.';
+    }
+  }
+
+  async function loadAdminSupportInbox(panel) {
+    const target = panel.querySelector('#moderator-support-tickets');
+    if (!target) return;
+    target.textContent = 'Loading support tickets…';
+    try {
+      const result = await adminCentreApi('/support/tickets?scope=all');
+      target.innerHTML = (result.tickets || []).map(ticket =>
+        '<article class="settings-ticket"><div class="settings-inline-heading"><div><strong>' +
+        escapeText(ticket.subject) + '</strong><small>' + escapeText(ticket.requester?.name || ticket.userId) +
+        ' · ' + escapeText(ticket.category) + '</small></div><span class="settings-status-pill">' +
+        escapeText(ticket.status) + '</span></div><div class="settings-ticket-messages">' +
+        (ticket.messages || []).map(message => '<p><strong>' +
+          escapeText(message.sender?.name || message.senderId) + ':</strong> ' +
+          escapeText(message.message) + '</p>').join('') +
+        '</div>' + (ticket.status === 'closed' ? '' :
+          '<form class="moderator-ticket-reply" data-admin-moderator-reply="' + escapeText(ticket.id) +
+          '"><textarea name="message" maxlength="5000" rows="2" required placeholder="Reply to this member"></textarea>' +
+          '<select name="status"><option value="waiting_for_member">Waiting for member</option>' +
+          '<option value="in_progress">In progress</option><option value="closed">Close ticket</option></select>' +
+          '<button class="primary" type="submit">Reply</button></form>') + '</article>'
+      ).join('') || '<p class="settings-empty">The support inbox is empty.</p>';
+      target.querySelectorAll('[data-admin-moderator-reply]').forEach(form => form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const values = new FormData(form);
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+          const message = String(values.get('message') || '').trim();
+          if (message) await adminCentreApi('/support/tickets/' + encodeURIComponent(form.dataset.adminModeratorReply) + '/messages', {
+            method:'POST',body:JSON.stringify({message})
+          });
+          await adminCentreApi('/support/tickets/' + encodeURIComponent(form.dataset.adminModeratorReply), {
+            method:'PATCH',body:JSON.stringify({status:values.get('status')})
+          });
+          await loadAdminSupportInbox(panel);
+        } catch (error) {
+          window.alert(error.message);
+          button.disabled = false;
+        }
+      }));
+    } catch (error) {
+      target.textContent = error.message || 'The support inbox could not be loaded.';
+    }
+  }
+
+  function adminTotpQrSource(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^data:image\/(?:svg\+xml|png|webp);/i.test(raw)) return raw;
+    if (/^(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(raw)) {
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(raw);
+    }
+    return '';
+  }
+
+  async function loadAdminSecuritySettings(panel) {
+    const status = panel.querySelector('#admin-centre-security-status');
+    const factorsPanel = panel.querySelector('#admin-centre-mfa-factors');
+    const sessionsPanel = panel.querySelector('#admin-centre-session-list');
+    try {
+      const result = await adminCentreApi('/security/mfa');
+      const factors = Array.isArray(result.factors) ? result.factors : [];
+      if (status) status.textContent = result.enabled
+        ? (window.__mingloraAdminAccess?.canAccess ? 'Authenticator is enabled and this session is verified for protected administrator actions.' : 'Authenticator is enabled. Sign in again with a current authenticator code to unlock protected administrator actions.')
+        : 'Authenticator is not enabled. Set it up here to protect your administrator account.';
+      if (factorsPanel) factorsPanel.innerHTML = factors.map(factor =>
+        '<div class="admin-centre-factor-row"><span><strong>' + escapeText(factor.friendlyName || 'Authenticator') +
+        '</strong><small>' + escapeText(factor.type || 'TOTP') + ' · ' + escapeText(factor.status || 'unknown') +
+        '</small></span></div>').join('') || '<p class="settings-empty">No authenticator factors enrolled.</p>';
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Authenticator status is unavailable.';
+      if (factorsPanel) factorsPanel.textContent = 'Authenticator details could not be loaded.';
+    }
+    try {
+      const result = await adminCentreApi('/security/sessions');
+      const sessions = Array.isArray(result.sessions) ? result.sessions : [];
+      if (sessionsPanel) sessionsPanel.innerHTML = sessions.map(session =>
+        '<div class="admin-centre-session-row"><div><strong>' + escapeText(session.userAgent || 'Unknown device') +
+        (session.current ? ' · This device' : '') + '</strong><small>Last active ' +
+        escapeText(session.lastSeenAt || 'Unknown') + ' · Expires ' + escapeText(session.expiresAt || 'Unknown') +
+        '</small></div>' + (session.current ? '<span class="settings-current-session">Current</span>' : '<span class="settings-status-pill">Active</span>') +
+        '</div>').join('') || '<p class="settings-empty">No active sessions found.</p>';
+    } catch (error) {
+      if (sessionsPanel) sessionsPanel.textContent = error.message || 'Active sessions are unavailable.';
+    }
+  }
+
+  async function startAdminMfaEnrollment(panel) {
+    const button = panel.querySelector('#admin-centre-enable-mfa');
+    const enrollment = panel.querySelector('#admin-centre-mfa-enrollment-panel');
+    const status = panel.querySelector('#admin-centre-security-status');
+    if (button) button.disabled = true;
+    if (status) status.textContent = 'Starting authenticator setup…';
+    try {
+      const result = await adminCentreApi('/security/mfa/totp/enroll', {method:'POST',body:'{}'});
+      const factor = result.factor || {};
+      const totp = result.totp || {};
+      const qr = adminTotpQrSource(totp.qr_code || totp.qrCode || totp.qr || '');
+      const secret = String(totp.secret || '').trim();
+      const uri = String(totp.uri || '').trim();
+      if (!factor.id || (!qr && !secret && !uri)) throw new Error('The authenticator provider did not return complete setup details. Restart setup and try again.');
+      enrollment.innerHTML = '<div class="mfa-enrollment"><p>1. Scan this QR code in your authenticator app, or enter the setup key manually.</p>' +
+        (qr ? '<img class="mfa-qr" src="' + escapeText(qr) + '" alt="Authenticator QR code" decoding="async" referrerpolicy="no-referrer">' : '') +
+        (secret ? '<div class="mfa-secret"><small>Authenticator setup key</small><code>' + escapeText(secret) + '</code></div>' : '') +
+        (uri ? '<p class="muted">Manual setup URI: ' + escapeText(uri) + '</p>' : '') +
+        '<form id="admin-centre-mfa-verify-form"><input type="hidden" name="factorId" value="' + escapeText(factor.id) +
+        '"><label class="field"><span>2. Enter the 6–8 digit code from your authenticator app</span>' +
+        '<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required></label>' +
+        '<p id="admin-centre-mfa-verify-status" class="settings-form-status" role="status"></p>' +
+        '<button class="primary" type="submit">Verify and enable two-factor authentication</button></form></div>';
+      enrollment.querySelector('#admin-centre-mfa-verify-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const verifyButton = form.querySelector('button[type="submit"]');
+        const verifyStatus = form.querySelector('#admin-centre-mfa-verify-status');
+        const values = new FormData(form);
+        verifyButton.disabled = true;
+        if (verifyStatus) verifyStatus.textContent = 'Checking your authenticator code…';
+        try {
+          await adminCentreApi('/security/mfa/totp/verify', {
+            method:'POST', body:JSON.stringify({factorId:values.get('factorId'),code:String(values.get('code') || '').replace(/\s/g,'')})
+          });
+          if (verifyStatus) verifyStatus.textContent = 'Authenticator verified. Refreshing your private administrator access…';
+          window.location.reload();
+        } catch (error) {
+          if (verifyStatus) verifyStatus.textContent = error.message || 'The authenticator code could not be verified.';
+          verifyButton.disabled = false;
+        }
+      });
+      if (status) status.textContent = 'Authenticator enrollment started. Verify the code to finish setup.';
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Authenticator setup could not be started.';
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function initializeAdminCentre() {
+    const root = document.querySelector('#admin-centre-root');
+    if (!root) return;
+    root.innerHTML = '<section class="admin-centre-loading"><h2>Verifying private administrator access…</h2><p>This workspace is separate from member Settings.</p></section>';
+    try {
+      const response = await fetch('/api/admin/access', {credentials:'same-origin',headers:{Accept:'application/json'}});
+      const access = await response.json().catch(() => ({}));
+      if (!response.ok || (!access.canAccess && !access.setupRequired)) {
+        root.innerHTML = '<section class="admin-centre-access-denied"><h2>Private Admin Centre</h2><p>This workspace is available only to the designated Creator Hub administrator. Sign in with that account and try again.</p><a class="secondary" href="/">Return to Minglora</a></section>';
+        return;
+      }
+      window.__mingloraAdminAccess = access;
+      addControlCentrePanel();
+    } catch (error) {
+      root.innerHTML = '<section class="admin-centre-access-denied"><h2>Admin access could not be checked</h2><p>' +
+        escapeText(error.message || 'Sign in with the designated administrator account and try again.') +
+        '</p><a class="secondary" href="/">Return to Minglora</a></section>';
+    }
+  }
+
+  if (document.querySelector('#admin-centre-root')) {
+    initializeAdminCentre();
+  } else {
+    const observer = new MutationObserver(addProfileEntry);
+    observer.observe(document.documentElement, {subtree:true,childList:true});
+    addProfileEntry();
+  }not be revoked.';
+      } finally {
+        button.disabled = false;
+      }
+    });
+    loadAdminSecuritySettings(panel);
+    if (unlocked) {
+      loadAdminModerationQueue(panel);
+      loadAdminSupportInbox(panel);
+    }
   }
 
   document.addEventListener('click', async event => {
