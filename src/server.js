@@ -1631,6 +1631,29 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
       }
+      if(method==='POST'&&p==='/api/admin/coins/owner-issuance'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can issue owner Coins.'});
+        }
+        const amountCoins=Number(input.amountCoins);
+        const requestId=String(input.requestId||'').trim();
+        const note=String(input.note||'Creator Hub administrative owner Coin issuance').trim().slice(0,240);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Number.isSafeInteger(amountCoins)||amountCoins<1){
+          return json(res,400,{error:'Enter a positive whole-number amount up to 9,007,199,254,740,991 Coins.'});
+        }
+        if(!uuidPattern.test(requestId)){
+          return json(res,400,{error:'A valid issuance request reference is required. Retry the request.'});
+        }
+        const issuance=await requestSupabaseState('economy_owner_issuance',{
+          ownerId:user.id,ownerEmail:adminEmail,amountCoins,requestId,note
+        });
+        const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
+        return json(res,200,{ok:true,recipientEmail:adminEmail,issuance,wallet});
+      }
       if(method==='POST'&&p==='/api/coins/exchange'){
         const amountMinor=Number(input.amountMinor);
         const requestId=String(input.requestId||'').trim();
