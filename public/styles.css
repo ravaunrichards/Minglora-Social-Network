@@ -4672,3 +4672,39 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 .live-moderator-row button{flex:none}
 .live-chat-disabled-note{margin:0;padding:12px 14px;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-size:13px}
 @media(max-width:520px){.live-moderator-form{grid-template-columns:minmax(0,1fr)}.live-moderator-form label{grid-column:auto}.live-moderator-form button{width:100%}}
+
+
+/* LIVE host identity, like count and host power action occupy their own
+   row above the media stage. They never cover the host, guests or chat. */
+.live-video-column>.live-stage-topbar{
+  position:static!important;inset:auto!important;top:auto!important;right:auto!important;
+  bottom:auto!important;left:auto!important;z-index:auto!important;
+  display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
+  justify-content:space-between!important;gap:8px!important;
+  width:100%!important;max-width:100%!important;max-height:none!important;
+  margin:0 0 2px!important;padding:0 2px!important;
+  pointer-events:auto!important;
+}
+.live-video-column>.live-stage-topbar .live-stage-top-left{
+  display:flex!important;flex:1 1 auto!important;align-items:center!important;
+  min-width:0!important;max-width:calc(100% - 52px)!important;
+  pointer-events:auto!important;
+}
+.live-video-column>.live-stage-topbar .live-host-profile,
+.live-video-column>.live-stage-topbar .live-like-count{pointer-events:auto!important}
+.live-video-column>.live-stage-topbar .live-host-power-button{
+  position:static!important;flex:0 0 42px!important;width:42px!important;height:42px!important;
+  margin:0!important;pointer-events:auto!important;
+}
+@media(max-width:700px){
+  .live-video-column>.live-stage-topbar{gap:6px!important;margin-bottom:0!important}
+  .live-video-column>.live-stage-topbar .live-host-power-button{
+    flex-basis:40px!important;width:40px!important;height:40px!important
+  }
+}
+@media(max-width:360px){
+  .live-video-column>.live-stage-topbar .live-stage-top-left{gap:5px!important}
+  .live-video-column>.live-stage-topbar .live-host-power-button{
+    flex-basis:38px!important;width:38px!important;height:38px!important
+  }
+}

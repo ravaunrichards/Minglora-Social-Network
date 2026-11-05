@@ -22,9 +22,12 @@ test('LIVE likes are sent by tapping the stream and chat surface, with no dedica
   assert.match(styles, /\.live-like-count/);
 });
 
-test('Host broadcast exit is a standard power symbol at the top-right of the LIVE stage', () => {
+test('Host profile, LIVE likes and power control occupy a separate row above the stage', () => {
   assert.match(app, /id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg/);
-  assert.match(styles, /\.live-video-stage>\.live-stage-topbar/);
+  assert.match(app, /stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
+  assert.match(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
+  assert.match(styles, /\.live-video-column>\.live-stage-topbar/);
+  assert.match(styles, /position:static!important/);
   assert.match(styles, /\.live-host-power-button svg/);
 });
 
