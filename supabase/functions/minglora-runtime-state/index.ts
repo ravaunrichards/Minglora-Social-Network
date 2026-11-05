@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit",
-    "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
+    "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
@@ -723,8 +723,10 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "economy_set_payout_account") {
-    const userId = String(input.userId || ""), email = String(input.paypalEmail || "").trim().toLowerCase();
-    if (!validUuid(userId) || email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    const userId = String(input.userId || "");
+    const email = String(input.paypalEmail || "").trim().toLowerCase();
+    const paypalEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!validUuid(userId) || email.length > 254 || !paypalEmailPattern.test(email)) {
       return json(400, { error: "Enter a valid PayPal email address." });
     }
     const { data, error } = await admin.from("creator_payout_accounts")
@@ -732,6 +734,18 @@ Deno.serve(async (req: Request) => {
       .select("paypal_email,updated_at").single();
     if (error) return fail(error, "PayPal payout details could not be saved.");
     return json(200, { payoutAccount: data });
+  }
+
+  if (action === "economy_unlink_payout_account") {
+    const userId = String(input.userId || "");
+    if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
+    const { data, error } = await admin.from("creator_payout_accounts")
+      .delete()
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
+    if (error) return fail(error, "PayPal payout details could not be unlinked.");
+    return json(200, { ok: true, unlinked: Boolean(data), payoutAccount: null });
   }
 
   if (action === "economy_request_payout") {
