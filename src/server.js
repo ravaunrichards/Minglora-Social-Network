@@ -1570,6 +1570,7 @@ async function route(req, res) {
           name: user.name,
           roomName: session.roomName,
           canPublish: role === 'host' || role === 'guest',
+          canPublishData: true,
           publishSources
         });
         return json(res, 200, { session, liveKit: { ...liveKit, role } });
