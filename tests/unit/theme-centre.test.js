@@ -54,9 +54,9 @@ test('all advertised themes have previews and responsive visual treatment', () =
   }
   assert.match(html, /styles\.css\?v=20261105-coin-funding-sources-1/);
   assert.match(html, /app\.js\?v=20261105-coin-funding-sources-1/);
-  assert.match(html, /auth-login\.js\?v=20261104-account-auth-click-2/);
+  assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(html, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
   assert.match(sw, /minglora-shell-v83-coin-funding-sources-1/);
-  assert.match(sw, /auth-login\.js\?v=20261104-account-auth-click-2/);
+  assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(sw, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
 });
