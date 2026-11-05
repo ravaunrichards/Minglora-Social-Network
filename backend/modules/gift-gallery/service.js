@@ -183,6 +183,7 @@ export function getGiftGallery(db, creator, at = new Date()) {
   }
 
   const currentEvents = db.giftGalleryEvents.filter(event =>
+    !event.refundedAt && event.status !== "refunded" &&
     event.creatorId === creatorId &&
     event.weekKey === period.weekKey &&
     preferences.get(event.senderId) !== false
