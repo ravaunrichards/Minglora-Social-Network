@@ -72,3 +72,22 @@ export function normalizeLiveSettings(value = {}) {
 
   return { valid: true, settings: next };
 }
+
+/**
+ * Resolve least-privilege LiveKit publishing tracks for an established role.
+ * Mobile Gaming host streams the captured screen; approved guests can only
+ * contribute microphone audio. Audio-only rooms never receive camera access.
+ */
+export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video_audio') {
+  if (!['host', 'guest'].includes(role)) return null;
+  const mode = LIVE_MODES.includes(liveMode)
+    ? liveMode
+    : broadcastType === 'audio_only' ? 'audio_only' : 'video_audio';
+  if (mode === 'audio_only') return ['MICROPHONE'];
+  if (mode === 'mobile_gaming') {
+    return role === 'host' ? ['MICROPHONE', 'SCREEN_SHARE'] : ['MICROPHONE'];
+  }
+  return role === 'host'
+    ? ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']
+    : ['MICROPHONE', 'CAMERA'];
+}
