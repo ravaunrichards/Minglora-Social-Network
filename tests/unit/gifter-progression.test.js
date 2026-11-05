@@ -7,7 +7,8 @@ import {
   recordGifterGift,
   getGifterProgressionOverview,
   getGifterBadgeSummary,
-  getNewGifterIdentity
+  getNewGifterIdentity,
+  refundGifterGift
 } from "../../backend/modules/gifter-progression/service.js";
 
 test("gifter levels use the fixed cumulative coin thresholds from the reference chart", () => {
@@ -224,4 +225,35 @@ test("new accounts have no gifter badge and all levels are locked until sent Coi
   assert.equal(afterFirstCoin.current.hasUnlockedBadge, true);
   assert.equal(afterFirstCoin.levels[0].unlocked, true);
   assert.equal(afterFirstCoin.levels[1].unlocked, false);
+});
+
+
+test("refunded gifts are excluded from Gifter XP, badges, history, NEW GIFTER, and rankings", () => {
+  const db = {
+    users: [{ id: "sender", username: "sender", name: "Sender" }],
+    gifterProgressionLedger: []
+  };
+  const now = new Date("2026-11-05T20:37:31.000Z");
+  recordGifterGift(db, {
+    giftId: "gift-refund-2", senderId: "sender", recipientId: "recipient",
+    giftCode: "rose", coinAmount: 30000, contextType: "live", now
+  });
+  assert.equal(getGifterProgressionOverview(db, "sender").current.xp, 30000);
+  assert.ok(getNewGifterIdentity(db, "sender", new Date("2026-11-05T21:00:00.000Z")));
+
+  const result = refundGifterGift(db, "gift-refund-2", new Date("2026-11-05T21:08:14.000Z"));
+  assert.equal(result.reversed, true);
+  assert.equal(db.gifterProgressionLedger.length, 1);
+  assert.ok(db.gifterProgressionLedger[0].refundedAt);
+
+  const overview = getGifterProgressionOverview(db, "sender");
+  assert.equal(overview.current.xp, 0);
+  assert.equal(overview.current.totalCoinsSent, 0);
+  assert.equal(overview.current.giftsSent, 0);
+  assert.equal(overview.current.level, 0);
+  assert.equal(overview.history.length, 0);
+  assert.equal(overview.leaderboard.length, 0);
+  assert.equal(getGifterBadgeSummary(db, "sender"), null);
+  assert.equal(getNewGifterIdentity(db, "sender", new Date("2026-11-05T21:00:00.000Z")), null);
+  assert.equal(refundGifterGift(db, "gift-refund-2").reason, "already_refunded");
 });
