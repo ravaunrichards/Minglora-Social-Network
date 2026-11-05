@@ -17,7 +17,7 @@ test('LIVE chat panel clearly reflects the host chat-enabled setting', () => {
 test('LIVE chat continues to reuse one conversation node and its existing controls', () => {
   assert.match(app, /function restoreLiveChatToStage\(\)/);
   assert.match(app, /body\.append\(chat\)/);
-  assert.ok(app.includes("$('#live-chat-form')?.addEventListener(\"submit\""), 'existing send handler must remain connected');
+  assert.ok(app.includes("$(\"#live-chat-form\")?.addEventListener(\"submit\""), 'existing send handler must remain connected');
   assert.ok(app.includes("$('#live-chat-emoji')?.addEventListener('click'"), 'existing emoji picker must remain connected');
   assert.ok(app.includes('[data-live-chat-pin]'), 'host comment pin controls must remain available');
   assert.ok(app.includes('[data-live-chat-delete]'), 'moderation remove controls must remain available');
