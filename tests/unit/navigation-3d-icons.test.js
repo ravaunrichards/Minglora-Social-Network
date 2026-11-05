@@ -81,7 +81,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v79-money-to-coins-1/);
-  assert.match(serviceWorker, /styles\.css\?v=20261104-money-to-coins-1/);
+  assert.match(serviceWorker, /minglora-shell-v81-live-reward-drops-1/);
+  assert.match(serviceWorker, /styles\.css\?v=20261105-live-reward-drops-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
