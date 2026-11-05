@@ -1394,7 +1394,7 @@ function renderLiveFanClubStatus(status){
     button.classList.toggle('is-member',member);
     button.disabled=false;
     button.setAttribute('aria-pressed',member?'true':'false');
-    button.textContent=member?'♥ Joined':paused?'♥ Rejoin':'♥ Join';
+    button.textContent=member?'♥ Joined':paused?'♥ Rejoin · 1 Coin':'♥ Join · 1 Coin';
     button.title=member?'Open your Fan Club status and Team Gifts':paused?'Rejoin this Fan Club for 1 Coin':'Follow the host, then join for 1 Coin';
   }
   const panelJoinButton=$('#live-fan-club-join-panel');
@@ -1889,8 +1889,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
         "</button>"+
         (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
         "</div>"+
-        "<div class='live-like-control'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
-        (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join</button>":"")+
+        "<div class='live-like-control live-like-count'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
+        (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
       "</div>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
     "</div>";
