@@ -174,6 +174,7 @@ function readProfileSections(userId){
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
 }
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
+  if(isAccountHiddenFromPublic(db.users.find(member=>member.id===ownerId)))return false;
   if(viewerId===ownerId)return true;
   if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
@@ -2203,7 +2204,7 @@ async function route(req, res) {
       }
       if(method==='POST'&&rewardDropEntry){
         const session=(db.liveSessions||[]).find(item=>item.id===rewardDropEntry[1]&&item.status==='live');
-        if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE reward room is not available.'});
+        if(!session||session.hostId===user.id||isAccountHiddenFromPublic(db.users.find(member=>member.id===session.hostId))||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE reward room is not available.'});
         const canViewRewardRoom=session.visibility==='public'||
           (session.visibility==='friends'&&isFriend(user.id,session.hostId));
         if(!canViewRewardRoom)return json(res,404,{error:'LIVE reward room is not available.'});
@@ -2234,7 +2235,7 @@ async function route(req, res) {
         const viewers = participants.filter(participant => participant.identity !== session.hostId)
           .map(participant => {
             const member = db.users.find(candidate => candidate.id === participant.identity);
-            if (!member || blockedBetween(user.id, member.id)) return null;
+            if (!member || isAccountHiddenFromPublic(member) || blockedBetween(user.id, member.id)) return null;
             const gifterBadge = getGifterBadgeSummary(db, member.id);
             return {
               user: safeUser(member, user.id),
@@ -3363,7 +3364,7 @@ async function route(req, res) {
       if(method==='POST'&&m){
         await pruneExpiredStories();
         const story=db.stories.find(x=>x.id===m[1]);
-        if(!story||!canViewStory(user.id,story))return json(res,404,{error:'Story not found.'});
+        if(!story||isAccountHiddenFromPublic(db.users.find(member=>member.id===story.userId))||!canViewStory(user.id,story))return json(res,404,{error:'Story not found.'});
         if(story.userId!==user.id&&!(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)){
           db.storyViews.push({storyId:story.id,viewerId:user.id,viewedAt:now()});await saveStore();
         }
@@ -3395,7 +3396,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/pages\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
         const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
-        if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        if(!page||isAccountHiddenFromPublic(db.users.find(member=>member.id===page.createdBy))||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
         if(page.createdBy===user.id)return json(res,400,{error:'You already manage this Page.'});
         const exists=(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id);
         if(method==='POST'&&!exists)db.pageFollows.push({pageId:page.id,userId:user.id,createdAt:now()});
@@ -3405,7 +3406,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/pages\/([^/]+)\/posts$/);
       if(method==='POST'&&m){
         const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
-        if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        if(!page||isAccountHiddenFromPublic(db.users.find(member=>member.id===page.createdBy))||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
         if(!canManagePage(page.id,user.id))return json(res,403,{error:'Only Page owners, admins or editors can publish.'});
         const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
@@ -3426,7 +3427,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/pages\/([^/]+)$/);
       if(method==='GET'&&m){
         const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
-        if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        if(!page||isAccountHiddenFromPublic(db.users.find(member=>member.id===page.createdBy))||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
         const posts=await Promise.all((db.pagePosts||[]).filter(post=>post.pageId===page.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async post=>({...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}})));
         return json(res,200,{page:{...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)},posts});
       }
