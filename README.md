@@ -8,6 +8,16 @@ A new installation starts empty. The application does **not** create example use
 
 The local JSON store includes narrowly scoped cleanup for explicitly identified legacy sample records. It must not remove unrelated user records. Automated tests use isolated temporary storage.
 
+## Promotional gift cash earnings and PayPal withdrawals
+
+Minglora keeps the Admin Promotional Gift Wallet separate from each member's Main Coin wallet. Promotional gift tokens are not cash and cannot be withdrawn by the sender. A promotional gift creates creator USD earnings only when the independent promotional gift USD reserve has available, verified funding. The sender's main Coin balance is not debited by promotional gifts.
+
+The reserve is credited only from a PayPal Checkout order whose capture is confirmed by the server for the exact USD amount. The funding ledger stores the PayPal order and capture references. Every promotional gift consumes reserve funds atomically with the promotional wallet debit, gift transaction, and 50/50 creator/platform earnings entry. If the reserve has insufficient funds, the promotional gift is rejected and no creator earnings are created.
+
+Creator withdrawals use the existing PayPal Payouts route and the creator's saved PayPal email. Production activation requires valid server-only PayPal API credentials, a PayPal Business account with Payouts enabled, a configured webhook ID and endpoint subscription, and a positive cash reserve funded by a real PayPal capture. The reserve deliberately starts at USD $0.00; promotional Coin allocation counts are not USD backing. There are no sample transactions or demo cash balances.
+
+Before enabling production withdrawals, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE=live`, and `PAYPAL_WEBHOOK_ID` in the Minglora Render service Environment. Confirm that the PayPal account can send Payouts and has sufficient available balance. Keep the credentials server-side only.
+
 ## What works in the current application
 
 - Responsive browser interface and account registration/sign-in/sign-out (Supabase Auth when configured)
