@@ -116,7 +116,7 @@
         canModerate=moderationAccess.canModerate===true&&!isPrivateAdmin;
       const formatSettingsUSD=minor=>{
         const value=Number(minor);
-        if(!Number.isFinite(value))return 'Unavailable';
+        if(minor===null||minor===undefined||!Number.isFinite(value))return 'Unavailable';
         return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(value/100);
       };
       const settingsMoneyAvailable=formatSettingsUSD(creatorEarningsResult.availableMinor);
