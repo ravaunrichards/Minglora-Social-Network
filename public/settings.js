@@ -43,6 +43,17 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[char]));
 
+  function totpQrImageSource(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^data:image\/(?:svg\+xml|png|webp);/i.test(raw)) return raw;
+    const svg = raw.replace(/^\uFEFF/, '');
+    if (/^(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(svg)) {
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+    return '';
+  }
+
   async function api(path, options = {}) {
     const response = await fetch('/api' + path, {
       credentials: 'same-origin',
@@ -336,14 +347,14 @@
         const button=buttonEvent.currentTarget,panel=document.querySelector('#mfa-enrollment-panel'),status=document.querySelector('#mfa-status');button.disabled=true;
         try{
           const result=await api('/security/mfa/totp/enroll',{method:'POST',body:'{}'}),factor=result.factor||{},totp=result.totp||{};
-          const qr=String(totp.qr_code||''),secret=String(totp.secret||''),uri=String(totp.uri||'');
-          const qrImage=qr.startsWith('data:image/')?qr:(/^\\s*<svg[\\s>]/i.test(qr)?'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(qr):'');
-          const enrollmentReady=Boolean(factor.id&&(secret||uri));
-          panel.innerHTML='<div class="mfa-enrollment"><p>1. Scan this QR code in your authenticator app, or enter the secret manually.</p>'+(qrImage?'<img class="mfa-qr" src="'+escapeHtml(qrImage)+'" alt="Authenticator QR code">':'<p class="muted">Minglora did not receive a displayable QR image from Supabase. Use the authenticator setup key below if shown, or restart setup.</p>')+'<div class="mfa-secret"><small>Authenticator setup key</small><code>'+escapeHtml(secret||'Setup key was not returned')+'</code></div>'+(uri?'<p class="muted">Manual setup URI: '+escapeHtml(uri)+'</p>':'')+(enrollmentReady?'<form id="mfa-verify-form"><input type="hidden" name="factorId" value="'+escapeHtml(factor.id)+'"><label class="field"><span>2. Enter the 6-digit code from your authenticator app</span><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" required></label><button class="primary" type="submit">Verify and enable two-factor authentication</button></form>':'<p class="settings-form-status" role="alert">Setup data is incomplete. Restart enrollment to request a fresh QR code.</p>')+'</div>';
+          const qr=String(totp.qr_code||totp.qrCode||totp.qr||'').trim(),secret=String(totp.secret||'').trim(),uri=String(totp.uri||'').trim();
+          const qrImage=totpQrImageSource(qr);
+          const enrollmentReady=Boolean(factor.id&&(secret||uri||qrImage));
+          panel.innerHTML='<div class="mfa-enrollment"><p>1. Scan this QR code in your authenticator app, or enter the secret manually.</p>'+(qrImage?'<img class="mfa-qr" src="'+escapeHtml(qrImage)+'" alt="Authenticator QR code" decoding="async" referrerpolicy="no-referrer">':'<p class="settings-form-status" role="alert">Supabase did not return a usable QR image. The setup key or manual authenticator URI will still be shown when available. Restart setup to request a fresh QR code.</p>')+'<div class="mfa-secret"><small>Authenticator setup key</small><code>'+escapeHtml(secret||'Setup key was not returned')+'</code></div>'+(uri?'<p class="muted">Manual setup URI: '+escapeHtml(uri)+'</p>':'')+(enrollmentReady?'<form id="mfa-verify-form"><input type="hidden" name="factorId" value="'+escapeHtml(factor.id)+'"><label class="field"><span>2. Enter the 6–8 digit code from your authenticator app</span><input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required></label><p class="settings-form-status" id="mfa-verify-status" role="alert"></p><button class="primary" type="submit">Verify and enable two-factor authentication</button></form>':'<p class="settings-form-status" role="alert">Setup data is incomplete. Restart enrollment to request a fresh QR code.</p>')+'</div>';
           panel.querySelector('#mfa-verify-form')?.addEventListener('submit',async formEvent=>{
-            formEvent.preventDefault();const verifyButton=formEvent.currentTarget.querySelector('button[type="submit"]');verifyButton.disabled=true;
-            try{const data=new FormData(formEvent.currentTarget);await api('/security/mfa/totp/verify',{method:'POST',body:JSON.stringify({factorId:data.get('factorId'),code:data.get('code')})});window.alert('Two-factor authentication is enabled. You will need an authenticator code at your next sign-in.');await openSettings();}
-            catch(error){status.textContent=error.message;verifyButton.disabled=false;}
+            formEvent.preventDefault();const verifyForm=formEvent.currentTarget,verifyButton=verifyForm.querySelector('button[type="submit"]'),verifyStatus=verifyForm.querySelector('#mfa-verify-status');verifyButton.disabled=true;if(verifyStatus)verifyStatus.textContent='Checking your authenticator code…';
+            try{const data=new FormData(verifyForm);await api('/security/mfa/totp/verify',{method:'POST',body:JSON.stringify({factorId:data.get('factorId'),code:String(data.get('code')||'').replace(/\\s/g,'')})});if(verifyStatus)verifyStatus.textContent='Authenticator verified. Your administrator security session is now elevated.';window.alert('Two-factor authentication is enabled. Your next sign-in will require an authenticator code.');await openSettings();}
+            catch(error){if(verifyStatus)verifyStatus.textContent=error.message;status.textContent=error.message;verifyButton.disabled=false;}
           });
           status.textContent='Authenticator enrollment started. Verify the code to finish setup.';
         }catch(error){status.textContent=error.message;}
