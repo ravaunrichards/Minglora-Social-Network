@@ -12,7 +12,7 @@ const styles=read('public/styles.css');
 
 test('Video-based LIVE modes allow host screen sharing while audio-only and viewers remain restricted',()=>{
   assert.match(server,/getLivePublishSourceNames\(liveMode, 'host', broadcastType\)/);
-  assert.match(server,/getLivePublishSourceNames\(session\.liveMode, role, session\.broadcastType\)/);
+  assert.match(server,/getLivePublishSourceNames\(session\.liveMode, role, session\.broadcastType, session\.liveSettings \|\| \{\}\)/);
   assert.match(app,/role==="host"&&broadcastType==="video_audio"\?liveControlButton\("live-screen-share-toggle","screen"/);
   assert.match(app,/setScreenShareEnabled\(nextEnabled/);
 });

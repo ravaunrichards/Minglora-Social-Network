@@ -17,7 +17,16 @@ export const DEFAULT_LIVE_SETTINGS = Object.freeze({
   contentDisclosure: 'none',
   clientAcquisitionEnabled: false,
   clientCtaLabel: '',
-  clientCtaUrl: ''
+  clientCtaUrl: '',
+  allowGuestRequests: true,
+  guestCamera: true,
+  autoAcceptRequests: false,
+  prioritizeGifters: false,
+  allowCoHost: true,
+  manageModerators: true,
+  voiceRings: true,
+  multiGuestExtraRewards: false,
+  shareRecordingsWithGuests: false
 });
 
 export function broadcastTypeForLiveMode(liveMode) {
@@ -37,7 +46,7 @@ export function normalizeLiveSettings(value = {}) {
   const next = { ...DEFAULT_LIVE_SETTINGS, ...value };
   if (!LIVE_BOARDS.includes(next.board)) return { valid: false, error: 'Choose a supported LIVE board.' };
   if (!LIVE_QUALITIES.includes(next.liveQuality)) return { valid: false, error: 'Choose Auto, 720p or 1080p LIVE quality.' };
-  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled']) {
+  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled', 'allowGuestRequests', 'guestCamera', 'autoAcceptRequests', 'prioritizeGifters', 'allowCoHost', 'manageModerators', 'voiceRings', 'multiGuestExtraRewards', 'shareRecordingsWithGuests']) {
     if (typeof next[key] !== 'boolean') return { valid: false, error: key + ' must be true or false.' };
   }
   if (!['none', 'branded', 'sponsored'].includes(next.contentDisclosure)) {
@@ -79,7 +88,7 @@ export function normalizeLiveSettings(value = {}) {
  * Mobile Gaming host streams the captured screen; approved guests can only
  * contribute microphone audio. Audio-only rooms never receive camera access.
  */
-export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video_audio') {
+export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video_audio', liveSettings = {}) {
   if (!['host', 'guest'].includes(role)) return null;
   const mode = LIVE_MODES.includes(liveMode)
     ? liveMode
@@ -90,5 +99,5 @@ export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video
   }
   return role === 'host'
     ? ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']
-    : ['MICROPHONE', 'CAMERA'];
+    : liveSettings?.guestCamera === false ? ['MICROPHONE'] : ['MICROPHONE', 'CAMERA'];
 }

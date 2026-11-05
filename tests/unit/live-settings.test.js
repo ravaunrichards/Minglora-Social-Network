@@ -24,6 +24,15 @@ test('LIVE settings provide compact, safe defaults', () => {
   assert.equal(result.settings.communitySafety, true);
   assert.equal(result.settings.groupChatEnabled, true);
   assert.equal(result.settings.liveGifts, true);
+  assert.equal(result.settings.allowGuestRequests, true);
+  assert.equal(result.settings.guestCamera, true);
+  assert.equal(result.settings.autoAcceptRequests, false);
+  assert.equal(result.settings.prioritizeGifters, false);
+  assert.equal(result.settings.allowCoHost, true);
+  assert.equal(result.settings.manageModerators, true);
+  assert.equal(result.settings.voiceRings, true);
+  assert.equal(result.settings.multiGuestExtraRewards, false);
+  assert.equal(result.settings.shareRecordingsWithGuests, false);
 });
 
 test('practice mode automatically disables gifts', () => {
@@ -37,12 +46,15 @@ test('LIVE setup rejects unknown fields and malformed values', () => {
   assert.equal(normalizeLiveSettings({ guardian: true }).valid, false);
   assert.equal(normalizeLiveSettings({ noiseSuppression: 'yes' }).valid, false);
   assert.equal(normalizeLiveSettings({ groupChatEnabled: 'yes' }).valid, false);
+  assert.equal(normalizeLiveSettings({ allowGuestRequests: 'yes' }).valid, false);
+  assert.equal(normalizeLiveSettings({ shareRecordingsWithGuests: 'yes' }).valid, false);
   assert.equal(normalizeLiveSettings({ liveQuality: '4k' }).valid, false);
 });
 
 test('LiveKit publisher tracks follow mode and role with least privilege', () => {
   assert.deepEqual(getLivePublishSourceNames('video_audio', 'host'), ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']);
   assert.deepEqual(getLivePublishSourceNames('video_audio', 'guest'), ['MICROPHONE', 'CAMERA']);
+  assert.deepEqual(getLivePublishSourceNames('video_audio', 'guest', 'video_audio', { guestCamera: false }), ['MICROPHONE']);
   assert.deepEqual(getLivePublishSourceNames('audio_only', 'host', 'audio_only'), ['MICROPHONE']);
   assert.deepEqual(getLivePublishSourceNames('mobile_gaming', 'host'), ['MICROPHONE', 'SCREEN_SHARE']);
   assert.deepEqual(getLivePublishSourceNames('mobile_gaming', 'guest'), ['MICROPHONE']);
