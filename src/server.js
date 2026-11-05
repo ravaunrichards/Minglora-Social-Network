@@ -19,6 +19,7 @@ import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../bac
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
+import { isAccountBanned, isAccountHiddenFromPublic } from '../backend/modules/moderation/account-visibility.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
@@ -114,7 +115,7 @@ function canViewAboutSection(viewerId,target,visibility){
   return false;
 }
 function safeUser(u,viewerId=null){
-  if(!u)return null;
+  if(!u||isAccountHiddenFromPublic(u))return null;
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
@@ -166,7 +167,7 @@ const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid'
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
-function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
+function canViewProfile(viewerId,target){if(!target||isAccountHiddenFromPublic(target))return false;if(viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 const DEFAULT_PROFILE_SECTIONS={about:true,friends:true,photos:true,reels:true,groups:true,events:true,checkIns:true,highlights:true};
 function readProfileSections(userId){
   const saved=(db.profileSections||[]).find(item=>item.userId===userId);
@@ -329,7 +330,7 @@ function sessionUser(req){
   const session=sessionFromRequest(req);
   const account=session?db.users.find(item=>item.id===session.userId)||null:null;
   if(session?.authInvalidatedAt&&AUTH_PROVIDER==='supabase')return null;
-  return ['suspended','deactivated'].includes(account?.status)?null:account;
+  return isAccountHiddenFromPublic(account)?null:account;
 }
 const sessionAuth=createSessionAuthManager({
   openSession:openSessionAuth,sealSession:sealSessionAuth,
@@ -917,7 +918,7 @@ async function route(req, res) {
         if(!verifiedUser?.id||!verifiedUser?.email)return json(res,401,{error:'Supabase could not validate this sign-in link. Request a new one.'});
         if(!verifiedUser.email_confirmed_at)return json(res,403,{error:'Confirm your email address before signing in with a magic link.'});
         const account=ensureLocalUser(verifiedUser);
-        if(account.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        if(isAccountBanned(account))return json(res,403,{error:'This Minglora account is banned or suspended. Contact support to appeal.'});
         const authenticated={
           user:verifiedUser,access_token:accessToken,refresh_token:refreshToken,
           expires_in:Number.isFinite(expiresIn)&&expiresIn>0&&expiresIn<=86400?expiresIn:3600,
@@ -972,7 +973,7 @@ async function route(req, res) {
             }
           }
           const signedInUser=ensureLocalUser(authenticated.user);
-          if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+          if(isAccountBanned(signedInUser))return json(res,403,{error:'This Minglora account is banned or suspended. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
           let verifiedTotp=null;
           if(accessToken){
@@ -994,7 +995,7 @@ async function route(req, res) {
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
-        if(found.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        if(isAccountBanned(found))return json(res,403,{error:'This Minglora account is banned or suspended. Contact support to appeal.'});
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -1014,6 +1015,7 @@ async function route(req, res) {
         if(!verified?.access_token||tokenAal(verified.access_token)!=='aal2')return json(res,502,{error:'Supabase did not return a verified multi-factor session. Try the authenticator code again.'});
         const account=db.users.find(item=>item.id===pending.userId);
         if(!account)return json(res,401,{error:'Account not found.'});
+        if(isAccountBanned(account))return json(res,403,{error:'This Minglora account is banned or suspended. Contact support to appeal.'});
         db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
         if(account.status==='deactivated'){account.status='active';await supabaseUpdateUserMetadata(verified.access_token,{account_status:'active'});}
         const sessionCookie=await createAppSession(account,verified,req);
@@ -1325,16 +1327,37 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/moderation/reports'){
         if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
         const status=String(url.searchParams.get('status')||'open');
-        const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>({
-          ...item,reporter:safeUser(db.users.find(u=>u.id===item.reporterId)),
-          targetOwner:safeUser((item.targetType==='user'?db.users.find(u=>u.id===item.targetId):item.targetType==='post'?db.users.find(u=>u.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(u=>u.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null))
-        }));
+        const reports=(db.reports||[]).filter(item=>status==='all'||item.status===status).map(item=>{
+          const targetOwnerUser=item.targetType==='user'?db.users.find(member=>member.id===item.targetId):item.targetType==='post'?db.users.find(member=>member.id===findReportedPost(item.targetId)?.ownerId):item.targetType==='story'?db.users.find(member=>member.id===(db.stories||[]).find(story=>story.id===item.targetId)?.userId):null;
+          const targetOwner=targetOwnerUser?{id:targetOwnerUser.id,name:targetOwnerUser.name||'',username:targetOwnerUser.username||'',status:targetOwnerUser.status||'active'}:null;
+          return {...item,reporter:safeUser(db.users.find(member=>member.id===item.reporterId)),targetOwner,targetAccountStatus:targetOwner?.status||null};
+        });
         return json(res,200,{reports});
+      }
+      if(method==='GET'&&p==='/api/moderation/banned-users'){
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
+        const users=(db.users||[]).filter(isAccountBanned).map(member=>({id:member.id,name:member.name||'',username:member.username||'',status:member.status||'banned',bannedAt:member.bannedAt||member.suspendedAt||null}));
+        return json(res,200,{users});
+      }
+      const moderationUnbanMatch=p.match(/^\/api\/moderation\/users\/([^/]+)\/unban$/);
+      if(method==='POST'&&moderationUnbanMatch){
+        if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
+        const target=db.users.find(member=>member.id===moderationUnbanMatch[1]);
+        if(!target||!isAccountBanned(target))return json(res,404,{error:'Banned account not found.'});
+        if(target.id===user.id)return json(res,400,{error:'You cannot unban the active administrator account through this action.'});
+        target.status='active';target.unbannedAt=now();target.unbannedBy=user.id;
+        db.sessions=(db.sessions||[]).filter(session=>session.userId!==target.id);
+        db.pendingAuth=(db.pendingAuth||[]).filter(pending=>pending.userId!==target.id);
+        (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,action:'unban_account',targetType:'user',targetId:target.id,createdAt:now()});
+        (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.unban_account',targetType:'user',targetId:target.id,createdAt:now()});
+        await saveStore();
+        return json(res,200,{ok:true,user:{id:target.id,username:target.username||'',status:target.status}});
       }
       const moderationReportMatch=p.match(/^\/api\/moderation\/reports\/([^/]+)$/);
       if((method==='PATCH'||method==='DELETE')&&moderationReportMatch){
         if(!isModerator(user,req))return json(res,403,{error:'Moderator access is required.'});
         const report=(db.reports||[]).find(item=>item.id===moderationReportMatch[1]);if(!report)return json(res,404,{error:'Report not found.'});
+        if(['ban_account','suspend_account'].includes(String(input.action||''))&&report.targetType==='user'&&report.targetId===user.id)return json(res,400,{error:'You cannot ban the active administrator account.'});
         if(method==='DELETE')report.status='dismissed';
         else{
           const status=String(input.status||''),allowed=['open','triaged','actioned','dismissed','appealed'];
@@ -1342,7 +1365,7 @@ async function route(req, res) {
           report.status=status;
         }
         report.reviewedAt=now();report.reviewedBy=user.id;
-        if(input.action&&['hide_post','remove_post','remove_story','suspend_account'].includes(input.action)){
+        if(input.action&&['hide_post','remove_post','remove_story','suspend_account','ban_account','unban_account'].includes(input.action)){
           const action=String(input.action);
           if(action==='hide_post'&&report.targetType==='post'){const found=findReportedPost(report.targetId);if(found){found.post.status='hidden';found.post.hiddenAt=now();}}
           if(action==='remove_post'&&report.targetType==='post'){
@@ -1354,7 +1377,8 @@ async function route(req, res) {
             }
           }
           if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}}}
-          if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);}}
+          if(['suspend_account','ban_account'].includes(action)&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='banned';target.bannedAt=now();target.bannedBy=user.id;delete target.unbannedAt;delete target.unbannedBy;db.sessions=(db.sessions||[]).filter(session=>session.userId!==target.id);db.pendingAuth=(db.pendingAuth||[]).filter(pending=>pending.userId!==target.id);}}
+           if(action==='unban_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target&&isAccountBanned(target)){target.status='active';target.unbannedAt=now();target.unbannedBy=user.id;db.sessions=(db.sessions||[]).filter(session=>session.userId!==target.id);db.pendingAuth=(db.pendingAuth||[]).filter(pending=>pending.userId!==target.id);}}
           (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,reportId:report.id,action,targetType:report.targetType,targetId:report.targetId,createdAt:now()});
           (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.action',targetType:report.targetType,targetId:report.targetId,createdAt:now()});
         }
@@ -1413,7 +1437,7 @@ async function route(req, res) {
           return isFriend(user.id, session.hostId);
         };
         const activeSessions = (db.liveSessions || [])
-          .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
+          .filter(session => session.status === 'live' && !isAccountHiddenFromPublic(db.users.find(member=>member.id===session.hostId)) && !blockedBetween(user.id, session.hostId) && canView(session))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const sessions = [];
         for (const session of activeSessions) {
@@ -2706,7 +2730,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       if(method==='GET'&&p==='/api/saved-posts'){
-        const posts=await Promise.all((db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        const posts=await Promise.all((db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&canViewProfile(user.id,db.users.find(member=>member.id===post.userId))).map(post=>publicPost(post,user.id)));
         return json(res,200,{posts});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/save$/);
@@ -2756,7 +2780,7 @@ async function route(req, res) {
             .map(edge=>edge.followerId)
             .filter(id=>!blockedBetween(user.id,id)))];
           const memberPosts=(db.posts||[])
-            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!blockedBetween(user.id,post.userId))
+            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!blockedBetween(user.id,post.userId)&&canViewProfile(user.id,member))
             .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
           const recentPosts=await Promise.all(memberPosts.slice(0,2).map(publicDiscoveryPost));
           const storyRecord=(db.stories||[])
@@ -2824,7 +2848,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
-        if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
+        if(!target||target.id===user.id||isAccountHiddenFromPublic(target))return json(res,400,{error:'Choose another active Minglora account.'});
         if(blockedBetween(user.id,target.id))return json(res,403,{error:'This relationship is unavailable.'});
         db.follows ||= [];db.friendships ||= [];
         const exists=db.follows.some(f=>f.followerId===user.id&&f.followedId===target.id);
@@ -3264,7 +3288,7 @@ async function route(req, res) {
           else if(friendship.status!=='accepted'&&friendship.source!=='manual_request'){friendship.status='accepted';friendship.source='mutual_follow';friendship.updatedAt=now();}
         }
         await saveStore();
-        const list=[...new Set(followed.filter(targetId=>(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)&&!blockedBetween(user.id,targetId)))].map(targetId=>safeUser(db.users.find(u=>u.id===targetId),user.id)).filter(Boolean);
+        const list=[...new Set(followed.filter(targetId=>(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)&&!blockedBetween(user.id,targetId)&&canViewProfile(user.id,db.users.find(member=>member.id===targetId))))].map(targetId=>safeUser(db.users.find(u=>u.id===targetId),user.id)).filter(Boolean);
         return json(res,200,{friends:list,incoming:[]});
       }
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
@@ -3306,12 +3330,12 @@ async function route(req, res) {
       m=p.match(/^\/api\/groups\/([^/]+)$/);
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status!=='hidden').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post)));
+        const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status!=='hidden'&&canViewProfile(user.id,db.users.find(member=>member.id===post.userId))).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post)));
         return json(res,200,{group:{...group,owner:safeUser(db.users.find(u=>u.id===group.ownerId)),members:group.members.map(id=>safeUser(db.users.find(u=>u.id===id))).filter(Boolean),memberCount:group.members.length,isMember:group.members.includes(user.id)},posts});
       }
       if(method==='GET'&&p==='/api/stories'){
         await pruneExpiredStories();
-        const visible=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const visible=(db.stories||[]).filter(story=>!isAccountHiddenFromPublic(db.users.find(member=>member.id===story.userId))&&canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const stories=await Promise.all(visible.map(story=>publicStory(story,user.id)));
         return json(res,200,{stories});
       }
@@ -3357,7 +3381,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:story.id});
       }
       if(method==='GET'&&p==='/api/pages'){
-        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)}));
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!isAccountHiddenFromPublic(db.users.find(member=>member.id===page.createdBy))&&!blockedBetween(user.id,page.createdBy)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)}));
         return json(res,200,{pages});
       }
       if(method==='POST'&&p==='/api/pages'){
@@ -3649,7 +3673,7 @@ async function route(req, res) {
         const kind=String(input.kind||'video');
         if(!['audio','video'].includes(kind)||!recipientIds.length||recipientIds.length>CALL_MAX_PARTICIPANTS-1)return json(res,400,{error:'Choose audio or video and invite between one and seven other members.'});
         const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
-        if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
+        if(recipients.some(member=>!member||isAccountHiddenFromPublic(member)||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
         if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
         const reservationIds=[...new Set([user.id,...recipientIds])];
         if(reservationIds.some(id=>callCreationReservations.has(id)))return json(res,409,{error:'A call is already being started for one of these members. Finish or cancel it before starting another.'});
@@ -3799,7 +3823,7 @@ async function route(req, res) {
         return json(res,200,{gifs});
       }
       if(method==='GET'&&p==='/api/messages'){
-        const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
+        const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id)&&!isAccountHiddenFromPublic(db.users.find(member=>member.id===id)));
         const conversations=await Promise.all(peers.map(async id=>{
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
           const visibleMessages=db.messages.filter(item=>
@@ -3953,7 +3977,7 @@ async function route(req, res) {
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
         if(db.notifications.length!==before)await saveStore();
-        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});
+        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!isAccountHiddenFromPublic(db.users.find(member=>member.id===n.actorId))))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});
       }
       if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){
@@ -3962,7 +3986,7 @@ async function route(req, res) {
         const empty={users:[],posts:[],groups:[],pages:[]};
         if(!q)return json(res,200,empty);
         const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
-        const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
+        const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&canViewProfile(user.id,db.users.find(member=>member.id===post.userId))&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
         const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
         const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
         return json(res,200,{users,posts,groups,pages});
