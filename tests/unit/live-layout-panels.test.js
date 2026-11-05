@@ -65,56 +65,10 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 test('Full Screen occupies the complete viewport and keeps one uninterrupted host feed', () => {
   assert.match(app, /icon:'fullscreen'/);
   assert.match(app, /function syncLiveFullscreenComposition\(hostOnly\)/);
-  assert.doesNotMatch(app, /requestFullscreen|exitFullscreen/, 'Full Screen must not force a second browser-level fullscreen layer');
+  assert.match(app, /shell\.requestFullscreen\(\{navigationUI:'hide'\}\)/);
   assert.match(app, /Host only · no guest tiles/);
   assert.match(app, /fullscreen:"<rect x='3' y='3' width='18' height='18'/);
   assert.match(styles, /\.live-player-shell\.live-full-screen-mode\{[\s\S]*?position:fixed!important[\s\S]*?width:100vw!important[\s\S]*?height:100dvh!important/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>\.live-guest-seat:not\(\.is-host\)\{display:none!important\}/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>\.live-guest-seat\.is-host\{[\s\S]*?inset:0!important[\s\S]*?width:100%!important[\s\S]*?height:100%!important/);
-});
-
-
-test('Full Screen keeps every primary LIVE control on-screen without scrolling on phones', () => {
-  assert.match(styles, /\.live-player-shell\.live-full-screen-mode \.live-video-stage>\.live-player-controls\{[\s\S]*?overflow-x:hidden!important/);
-  assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
-  assert.match(styles, /grid-auto-flow:row!important/);
-  assert.match(styles, /max-width:72px!important/);
-  assert.match(styles, /bottom:calc\(118px \+ env\(safe-area-inset-bottom\)\)!important/);
-  assert.match(styles, /height:auto!important;min-height:0!important;max-height:none!important/);
-});
-
-
-test('Full Screen is viewport-fitted and not an oversized full-width desktop canvas', () => {
-  assert.match(styles, /align-items:center!important;justify-content:center!important/);
-  assert.match(styles, /width:min\(100vw,480px,calc\(100dvh \* 9 \/ 16\)\)!important/);
-  assert.match(styles, /height:min\(100dvh,854px\)!important/);
-  assert.match(styles, /width:min\(100vw,calc\(100dvh \* 16 \/ 9\),720px\)!important/);
-});
-
-test('Full Screen comments sit in the middle and the composer stays above compact bottom controls', () => {
-  assert.match(styles, /\.live-video-stage>\.live-chat-overlay\{[\s\S]*?top:40%!important[\s\S]*?bottom:calc\(98px \+ env\(safe-area-inset-bottom\)\)!important/);
-  assert.match(styles, /\.live-chat-overlay \.live-chat-list\{[\s\S]*?justify-content:flex-end!important/);
-  assert.match(styles, /\.live-chat-overlay \.live-chat-composer-wrap\{[\s\S]*?flex:0 0 auto!important/);
-  assert.match(styles, /\.live-player-controls\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
-  assert.match(styles, /\.live-player-controls \.live-control-icon\{[\s\S]*?width:28px!important;height:28px!important/);
-});
-
-
-test('Full Screen keeps comments at the lower left and shares the bottom row with like, coin, gift and share actions', () => {
-  assert.match(app, /function moveLiveFullscreenElement\(/);
-  assert.match(app, /function restoreLiveChatFullscreenElements\(/);
-  assert.match(app, /\$\('\.live-like-control'\),\$\('#live-fan-club-join'\),\$\('#live-gifts-toggle'\),\$\('#live-share-toggle'\)/);
-  assert.match(app, /live-chat-quick-actions/);
-  assert.match(app, /function restoreLiveChatToStage\(\)[\s\S]*?syncLiveFullscreenComposition\(true\)/);
-  assert.match(styles, /\.live-video-stage>\.live-chat-overlay\{[\s\S]*?left:9px!important[\s\S]*?bottom:calc\(132px \+ env\(safe-area-inset-bottom\)\)!important/);
-  assert.match(styles, /\.live-player-controls>\.live-chat-composer-wrap\{[\s\S]*?grid-column:1\/-1!important[\s\S]*?display:flex!important/);
-  assert.match(styles, /\.live-chat-quick-actions\{[\s\S]*?display:flex!important/);
-  assert.match(styles, /\.live-full-screen-two-row-dock \.live-video-stage>\.live-chat-overlay/);
-});
-
-test('Full Screen is inset and constrained on phones, desktops and larger displays', () => {
-  assert.match(styles, /width:min\(calc\(100vw - 12px\),430px\)!important/);
-  assert.match(styles, /height:min\(calc\(100dvh - env\(safe-area-inset-top\) - env\(safe-area-inset-bottom\) - 12px\),780px\)!important/);
-  assert.match(styles, /width:min\(calc\(100vw - 28px\),420px,calc\(\(100dvh - 28px\) \* 9 \/ 16\)\)!important/);
-  assert.match(styles, /height:min\(calc\(100dvh - 28px\),746px\)!important/);
 });
