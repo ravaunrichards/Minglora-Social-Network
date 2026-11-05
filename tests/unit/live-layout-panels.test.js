@@ -65,8 +65,16 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 test('Full Screen enlarges the host stage to a balanced responsive portrait size on every device', () => {
   assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
   assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
-  assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
-  assert.match(styles, /max-height:min\(78dvh,760px\)/);
+  assert.match(styles, /width:min\(100%,66dvh,640px\)/);
+  assert.match(styles, /max-height:min\(84dvh,800px\)/);
+  assert.match(styles, /width:min\(100%,64dvh,620px\)/);
   assert.match(styles, /aspect-ratio:4 \/ 5/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
+});
+
+
+test('Full Screen uses its own visible expand icon, not the featured-panel icon', () => {
+  assert.ok(app.includes("{value:'full-screen',label:'Full Screen',icon:'fullscreen'}"));
+  assert.ok(app.includes("fullscreen:\"<path d='M8 3H5a2 2 0 0 0-2 2v3"));
+  assert.ok(styles.includes('.live-layout-option[data-live-screen-layout="full-screen"] svg{'));
 });
