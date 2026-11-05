@@ -5498,7 +5498,7 @@ button.live-ranking-row{cursor:pointer}
 .live-full-screen-active.live-full-screen-tools-open #live-chat-disabled-note{display:none!important}
 
 /* Landscape tablets, laptops and desktops keep Chat/Tools beside the host video. */
-@media(min-width:760px) and (orientation:landscape){
+@media(min-width:760px){
   .live-player-shell.live-full-screen-active>.live-player-layout{
     display:grid!important;grid-template-columns:minmax(0,1fr) minmax(280px,clamp(300px,30vw,390px))!important;
     grid-template-rows:minmax(0,1fr)!important;
@@ -5510,7 +5510,7 @@ button.live-ranking-row{cursor:pointer}
 }
 
 /* Portrait phones and tablets show Chat or Tools as a separate full-width view. */
-@media(max-width:759px), (orientation:portrait){
+@media(max-width:759px){
   .live-full-screen-active.live-full-screen-chat-open>.live-player-layout,
   .live-full-screen-active.live-full-screen-tools-open>.live-player-layout{
     display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr) auto!important;

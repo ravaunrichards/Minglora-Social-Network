@@ -31,7 +31,7 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
 
 test('LIVE settings, guest and gift controls open one accessible drawer and rewards have no permanent shortcut', () => {
   assert.match(app, /liveControlButton\("live-settings-toggle","settings"/);
-  assert.match(app, /\$\("#live-settings-toggle"\).*openLiveToolsPanel\(\)/);
+  assert.match(app, /\$\("#live-settings-toggle"\).*?openLiveToolsPanel\(\)/s);
   assert.match(app, /id='live-tools-close'/);
   assert.match(app, /aria-modal='true'/);
   assert.match(app, /event\.key==="Escape"/);

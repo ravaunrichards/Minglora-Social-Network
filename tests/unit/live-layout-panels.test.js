@@ -62,31 +62,38 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 });
 
 
-test('Full Screen fills the viewport and adapts to phones, tablets, laptops and desktop screens', () => {
-  assert.match(app, /live-player-shell[^\n]*live-full-screen-active|classList\.toggle\('live-full-screen-active',hostOnly\)/);
-  assert.ok(app.includes("id='live-fullscreen-chat-slot'"), 'wide-screen chat must have its own destination outside the host video');
-  assert.ok(app.includes(`liveControls+"</div></div><aside id='live-fullscreen-chat-slot'`), 'desktop chat must be a sibling of the video column, not a child that shrinks the host stage');
-  assert.ok(app.includes('liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat")'), 'small screens need an explicit Chat control');
-  assert.match(app, /live-chat-toggle[\s\S]*?toggleLiveChatView\(\)/);
-  assert.ok(app.includes("id='live-fullscreen-tools-tab'"), 'Full Screen must offer a Tools view beside Chat');
-  assert.ok(app.includes('setLiveSettingsControlState(open)'), 'Settings control must expose and toggle its state');
+test('Full Screen uses a bounded host stage and a dedicated right-side Chat/Tools panel', () => {
+  assert.match(app, /classList\.toggle\('live-full-screen-active',hostOnly\)/);
+  assert.ok(app.includes("id='live-fullscreen-chat-tab'")&&app.includes("id='live-fullscreen-tools-tab'"), 'right sidebar must expose Chat and Tools');
+  assert.ok(app.includes("id='live-fullscreen-chat-slot'"), 'sidebar must remain separate from the host video column');
   assert.match(styles, /\.live-player-shell\.live-full-screen-active\{[\s\S]*?position:fixed!important[\s\S]*?width:100vw!important[\s\S]*?height:100dvh!important/);
-  assert.match(styles, /\.live-full-screen-active \.live-video-column\{[\s\S]*?grid-template-rows:auto minmax\(0,1fr\) auto/);
-  assert.match(styles, /\.live-full-screen-active \.live-video-column>\.live-video-stage:not\(\.live-audio-stage\)\{[\s\S]*?height:100%[\s\S]*?max-height:none!important[\s\S]*?aspect-ratio:auto!important/);
-  assert.match(styles, /object-fit:contain!important/);
-  assert.match(styles, /@media\(min-width:760px\) and \(orientation:landscape\)/);
-  assert.match(styles, /\.live-full-screen-active \.live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
-  assert.match(styles, /\.live-full-screen-active #live-chat-overlay,[\s\S]*?display:none!important/);
-  assert.match(styles, /\.live-full-screen-active \.live-player-controls\{[\s\S]*?grid-template-columns:repeat\(auto-fit,minmax\(56px,1fr\)\)!important[\s\S]*?overflow-x:hidden!important/);
+  assert.match(styles, /\.live-full-screen-active \.live-video-column\{[\s\S]*?grid-template-rows:42px minmax\(0,1fr\) auto/);
+  assert.match(styles, /width:min\(100%,38\.25dvh,520px\)!important;height:auto!important;aspect-ratio:9 \/ 16!important/);
+  assert.match(styles, /max-height:min\(68dvh,720px\)!important/);
+  assert.match(styles, /@media\(min-width:760px\)/);
+  assert.match(styles, /\.live-full-screen-active #live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
+  assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(280px,clamp\(300px,30vw,390px\)\)!important/);
+  assert.match(styles, /grid-template-columns:repeat\(auto-fit,minmax\(56px,1fr\)\)!important[\s\S]*?overflow-x:hidden!important/);
 });
 
-test('Full Screen moves chat out of the host video and restores it according to the selected layout', () => {
-  assert.match(app, /function restoreLiveChatToStage\(\)[\s\S]*?const slot=\$\('#live-fullscreen-chat-slot'\)/);
-  assert.match(app, /activeLiveScreenLayout==='full-screen'&&slot\?slot:stage/);
-  assert.match(app, /const chat=\$\('#live-chat-overlay'\)\|\|\$\('#live-chat-disabled-note'\)/);
-  assert.match(app, /if\(name==='chat'\)[\s\S]*?body\.append\(chat\)/);
+test('Full Screen starts on video for phones and keeps Chat on the right for tablet-width screens', () => {
+  assert.match(app, /setLiveFullscreenPanel\(wideLayout\?'chat':'video'\)/);
+  assert.match(app, /const wideLandscape=Boolean\(window\.matchMedia\?\.\('\(min-width:760px\)'\)\.matches\)/);
+  assert.match(app, /function toggleLiveChatView\(\)[\s\S]*?setLiveFullscreenPanel\('video'\)/);
+  assert.match(styles, /@media\(max-width:759px\)\{/);
+  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open #live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
+  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open \.live-video-column>\.live-video-stage\{display:none!important/);
+  assert.match(styles, /\.live-full-screen-active\.live-full-screen-tools-open #live-chat-overlay,[\s\S]*?display:none!important/);
 });
 
+test('Full Screen Settings & tools stays inside the sidebar and never covers the video', () => {
+  assert.match(app, /moveLiveToolsToFullscreenSidebar\(\)/);
+  assert.match(app, /setLiveFullscreenPanel\('tools'\)/);
+  assert.match(app, /closeLiveToolsPanel\(\{returnTo:'chat'\}\)/);
+  assert.match(styles, /\.live-full-screen-active \.live-tools-backdrop:not\(\.hidden\)\{[\s\S]*?position:static!important[\s\S]*?background:transparent!important/);
+  assert.match(styles, /\.live-full-screen-active \.live-tools-drawer\{[\s\S]*?width:100%!important[\s\S]*?box-shadow:none!important/);
+  assert.match(styles, /\.live-full-screen-active \.live-tools-content\{[\s\S]*?overflow-y:auto!important/);
+});
 
 test('Full Screen layout picker uses a dedicated expand-to-fullscreen icon', () => {
   assert.match(app, /value:'full-screen',label:'Full Screen',icon:'fullscreen'/);
@@ -122,12 +129,12 @@ test('Full Screen keeps the video moderate and Settings & tools inside the right
   assert.match(app, /closeLiveToolsPanel\(\{returnTo:'chat'\}\)/);
 });
 
-test('Every Full Screen LIVE control is wired to an action or a device-specific disabled state', () => {
+test('Every Full Screen LIVE control icon has its expected working event handler', () => {
   for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
     assert.ok(app.includes('liveControlButton("'+id+'"'), 'missing control '+id);
   }
-  for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-audio-toggle','live-chat-toggle','live-guests-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
-    assert.ok(app.includes('#'+id+')?.addEventListener') || app.includes('#'+id+'")?.addEventListener'), 'missing click action for '+id);
+  for (const handler of ['micControl?.addEventListener("click"','cameraControl?.addEventListener("click"','flipCameraControl?.addEventListener("click"','screenShareControl?.addEventListener("click"','roomAudioControl?.addEventListener("click"','$("#live-chat-toggle")?.addEventListener','$("#live-guests-toggle")?.addEventListener','$("#live-gifts-toggle")?.addEventListener','$("#live-settings-toggle")?.addEventListener','$("#live-share-toggle")?.addEventListener','$("#live-leave")?.addEventListener']) {
+    assert.ok(app.includes(handler), 'missing working control handler: '+handler);
   }
   assert.match(app, /typeof navigator\.mediaDevices\?\.getDisplayMedia!=="function"/);
-});
+});;

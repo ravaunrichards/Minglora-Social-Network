@@ -179,7 +179,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-1',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     await registration.update().catch(()=>{});
     if(!state.user)return;
@@ -200,7 +200,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-1',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2',{scope:'/',updateViaCache:'none'})
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
@@ -784,8 +784,9 @@ function applyLiveScreenLayout(value){
   shell?.classList.toggle('live-full-screen-active',hostOnly);
   if(hostOnly){
     moveLiveToolsToFullscreenSidebar();
-    setLiveFullscreenPanel('chat');
-    setLiveChatControlState(false,'Open LIVE chat','Chat');
+    const wideLayout=Boolean(window.matchMedia?.('(min-width:760px)').matches);
+    setLiveFullscreenPanel(wideLayout?'chat':'video');
+    setLiveChatControlState(wideLayout,'Hide LIVE chat',wideLayout?'Hide chat':'Chat');
     setLiveSettingsControlState(false);
   }else{
     shell?.classList.remove('live-full-screen-chat-open','live-full-screen-chat-hidden','live-full-screen-tools-open');
@@ -819,7 +820,7 @@ function setLiveFullscreenPanel(name){
   const shell=$('#live-player-shell');
   if(!shell?.classList.contains('live-full-screen-active'))return false;
   const mode=name==='tools'?'tools':name==='chat'?'chat':'video';
-  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px) and (orientation:landscape)').matches);
+  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px)').matches);
   shell.classList.toggle('live-full-screen-tools-open',mode==='tools');
   shell.classList.toggle('live-full-screen-chat-open',mode==='chat'&&!wideLandscape);
   shell.classList.remove('live-full-screen-chat-hidden');
@@ -848,7 +849,8 @@ function setLiveSettingsControlState(open){
 }
 function showFullscreenChat(){
   if(!setLiveFullscreenPanel('chat'))return false;
-  setLiveChatControlState(true,'Return to LIVE video','Video');
+  const wideLayout=Boolean(window.matchMedia?.('(min-width:760px)').matches);
+  setLiveChatControlState(true,wideLayout?'Hide LIVE chat':'Return to LIVE video',wideLayout?'Hide chat':'Video');
   setLiveSettingsControlState(false);
   return true;
 }
@@ -858,11 +860,11 @@ function toggleLiveChatView(){
     openLiveToolsPanel('#live-chat-panel');
     return;
   }
-  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px) and (orientation:landscape)').matches);
+  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px)').matches);
   const backdrop=$('#live-tools-backdrop');
   if(backdrop&&!backdrop.classList.contains('hidden')){
     closeLiveToolsPanel({returnTo:'chat'});
-    setLiveChatControlState(wideLandscape,'Hide LIVE chat','Hide chat');
+    setLiveChatControlState(true,wideLandscape?'Hide LIVE chat':'Return to LIVE video',wideLandscape?'Hide chat':'Video');
     return;
   }
   if(wideLandscape){
@@ -1773,7 +1775,8 @@ function closeLiveToolsPanel(options={}){
     setLiveSettingsControlState(false);
     if(options.returnTo==='chat'){
       setLiveFullscreenPanel('chat');
-      setLiveChatControlState(true,'Return to LIVE video','Video');
+      const wideLayout=Boolean(window.matchMedia?.('(min-width:760px)').matches);
+      setLiveChatControlState(true,wideLayout?'Hide LIVE chat':'Return to LIVE video',wideLayout?'Hide chat':'Video');
     }else{
       setLiveFullscreenPanel('video');
       setLiveChatControlState(false,'Open LIVE chat','Chat');
