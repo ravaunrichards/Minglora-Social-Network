@@ -1270,6 +1270,138 @@ async function route(req, res) {
           mfaVerified: canAccess
         });
       }
+
+      const canManageLivePro = () => isDesignatedCreatorHubAdmin(user) && isModerator(user,req) && hasActiveReviewerSession(user);
+      const liveProGrantFor = memberId => (db.liveProGrants || []).find(grant =>
+        grant.userId === memberId && grant.status === 'active' &&
+        (!grant.expiresAt || new Date(grant.expiresAt).getTime() > Date.now())
+      ) || null;
+      const hasLivePro = () => Boolean(canManageLivePro() || liveProGrantFor(user.id));
+      if (method === 'GET' && p === '/api/live-pro/access') {
+        const adminAccess = canManageLivePro();
+        const grant = adminAccess ? null : liveProGrantFor(user.id);
+        return json(res,200,{
+          hasAccess: adminAccess || Boolean(grant),
+          source: adminAccess ? 'designated_admin' : grant ? 'admin_grant' : 'none',
+          grantedAt: grant?.grantedAt || null,
+          expiresAt: grant?.expiresAt || null,
+          canManageAccess: adminAccess,
+          capabilities: [
+            {id:'live-studio',label:'LIVE Studio',description:'Camera, microphone and host screen sharing.'},
+            {id:'multi-guest',label:'Multi-guest stage',description:'Host-approved guest stage with up to eight guest seats.'},
+            {id:'room-moderators',label:'Room moderators',description:'Assign up to ten room-scoped chat moderators.'},
+            {id:'live-chat',label:'LIVE chat controls',description:'Group chat, pinned comments and host moderation.'},
+            {id:'broadcast-modes',label:'Broadcast modes',description:'Video + Audio, Audio Only, Mobile Gaming and LIVE Studio.'},
+            {id:'creator-engagement',label:'Creator engagement',description:'LIVE gifts, room themes and Fan Club tools.'}
+          ]
+        });
+      }
+      if (method === 'GET' && p === '/api/live-pro/dashboard') {
+        if (!hasLivePro()) return json(res,403,{error:'LIVE Pro access is required for this creator dashboard.'});
+        const sessions = (db.liveSessions || []).filter(session => session.hostId === user.id)
+          .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        const durationOf = session => {
+          const start = new Date(session.createdAt || session.startedAt || 0).getTime();
+          const end = session.status === 'live' ? Date.now() : new Date(session.endedAt || session.updatedAt || session.createdAt || 0).getTime();
+          return Number.isFinite(start) && Number.isFinite(end) && start > 0 && end >= start ? Math.round((end-start)/60000) : 0;
+        };
+        const participantRows = db.liveParticipants || [];
+        return json(res,200,{
+          stats:{
+            totalBroadcasts:sessions.length,
+            activeBroadcasts:sessions.filter(session => session.status === 'live').length,
+            totalMinutes:sessions.reduce((sum,session) => sum + durationOf(session),0),
+            recordedParticipantJoins:participantRows.filter(participant => sessions.some(session => session.id === participant.sessionId)).length
+          },
+          history:sessions.slice(0,20).map(session => ({
+            id:session.id,title:session.title || 'Untitled LIVE',status:session.status,
+            mode:session.liveMode || (session.broadcastType === 'audio_only' ? 'audio_only' : 'video_audio'),
+            startedAt:session.createdAt || session.startedAt || null,endedAt:session.endedAt || null,
+            durationMinutes:durationOf(session),
+            participantJoins:participantRows.filter(participant => participant.sessionId === session.id).length
+          }))
+        });
+      }
+      if (p.startsWith('/api/admin/live-pro/')) {
+        if (!canManageLivePro()) return json(res,403,{error:'The designated Creator Hub administrator must verify the authenticator session before managing LIVE Pro access.'});
+        if (method === 'GET' && p === '/api/admin/live-pro/members') {
+          const search = String(url.searchParams.get('search') || '').trim().toLowerCase();
+          const members = (db.users || [])
+            .filter(member => !['banned','suspended','deactivated','deleted'].includes(String(member.status || '').toLowerCase()))
+            .filter(member => !search || [member.username,member.name,member.displayName,member.email].some(value => String(value || '').toLowerCase().includes(search)))
+            .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+            .slice(0,50)
+            .map(member => ({
+              id:member.id,displayName:member.name || member.displayName || member.username || 'Minglora member',
+              username:member.username || '',email:member.email || '',
+              hasLivePro:Boolean(liveProGrantFor(member.id) || (isDesignatedCreatorHubAdmin(member) && member.id === user.id))
+            }));
+          return json(res,200,{members});
+        }
+        if (method === 'GET' && p === '/api/admin/live-pro/grants') {
+          const grants = (db.liveProGrants || [])
+            .filter(grant => grant.status === 'active' && (!grant.expiresAt || new Date(grant.expiresAt).getTime() > Date.now()))
+            .map(grant => {
+              const member = (db.users || []).find(item => item.id === grant.userId);
+              return {
+                id:grant.id,userId:grant.userId,status:grant.status,grantedAt:grant.grantedAt,
+                expiresAt:grant.expiresAt || null,durationDays:grant.durationDays,
+                displayName:member?.name || member?.displayName || member?.username || 'Unavailable account',
+                username:member?.username || '',email:member?.email || ''
+              };
+            })
+            .sort((a,b) => new Date(b.grantedAt || 0) - new Date(a.grantedAt || 0));
+          return json(res,200,{grants});
+        }
+        if (method === 'POST' && p === '/api/admin/live-pro/grants') {
+          const memberId = String(input.userId || '').trim();
+          const durationDays = Number(input.durationDays);
+          if (!memberId || !Number.isInteger(durationDays) || ![0,30,90,365].includes(durationDays)) {
+            return json(res,400,{error:'Choose a real member account and a valid LIVE Pro duration.'});
+          }
+          const member = (db.users || []).find(item => item.id === memberId);
+          if (!member || ['banned','suspended','deactivated','deleted'].includes(String(member.status || '').toLowerCase())) {
+            return json(res,404,{error:'That active Minglora member account could not be found.'});
+          }
+          db.liveProGrants = db.liveProGrants || [];
+          db.liveProGrants.filter(grant => grant.userId === memberId && grant.status === 'active').forEach(grant => {
+            grant.status = 'replaced';grant.revokedAt = now();grant.revokedBy = user.id;
+          });
+          const grantedAt = now();
+          const expiresAt = durationDays ? new Date(Date.now() + durationDays * 86400000).toISOString() : null;
+          const grant = {
+            id:uid(),userId:memberId,status:'active',grantedBy:user.id,grantedAt,expiresAt,durationDays,
+            reason:String(input.reason || '').trim().slice(0,500)
+          };
+          db.liveProGrants.push(grant);
+          db.liveProAudit = db.liveProAudit || [];
+          db.liveProAudit.push({id:uid(),action:'grant',userId:memberId,actorId:user.id,grantId:grant.id,createdAt:grantedAt,expiresAt});
+          await saveStore();
+          return json(res,201,{
+            ok:true,
+            grant:{
+              id:grant.id,userId:grant.userId,status:grant.status,grantedAt:grant.grantedAt,
+              expiresAt:grant.expiresAt,durationDays:grant.durationDays,
+              displayName:member.name || member.displayName || member.username || 'Minglora member',
+              username:member.username || '',email:member.email || ''
+            }
+          });
+        }
+        const revokeMatch = p.match(/^\/api\/admin\/live-pro\/grants\/([^/]+)$/);
+        if (method === 'DELETE' && revokeMatch) {
+          const memberId = decodeURIComponent(revokeMatch[1]);
+          const active = (db.liveProGrants || []).filter(grant => grant.userId === memberId && grant.status === 'active');
+          if (!active.length) return json(res,404,{error:'No active LIVE Pro grant was found for that account.'});
+          const revokedAt = now();
+          active.forEach(grant => {grant.status = 'revoked';grant.revokedAt = revokedAt;grant.revokedBy = user.id;});
+          db.liveProAudit = db.liveProAudit || [];
+          db.liveProAudit.push({id:uid(),action:'revoke',userId:memberId,actorId:user.id,createdAt:revokedAt});
+          await saveStore();
+          return json(res,200,{ok:true,revoked:active.length});
+        }
+        return json(res,404,{error:'LIVE Pro administration route not found.'});
+      }
+
       if(method==='GET'&&p==='/api/moderation/access')return json(res,200,{canModerate:isModerator(user,req)});
       if(method==='GET'&&p==='/api/security/sessions'){
         const sessions=(db.sessions||[]).filter(item=>item.userId===user.id&&new Date(item.expiresAt)>new Date()).map(item=>({

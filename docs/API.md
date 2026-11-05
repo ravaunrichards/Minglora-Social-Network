@@ -191,6 +191,19 @@ Calls require configured and reachable LiveKit credentials. The browser uses Liv
 
 The browser LiveKit client is responsible for connecting to the room and attaching published media tracks. Coins catalogue and wallet services are optional enrichments: a gifting-service failure must not block the LIVE directory or interrupt an established video session.
 
+## LIVE Pro administration
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/live-pro/access` | Read the signed-in member's LIVE Pro entitlement and production capabilities |
+| GET | `/api/live-pro/dashboard` | Read the entitled creator's saved LIVE broadcast history and recorded metrics |
+| GET | `/api/admin/live-pro/members?search=...` | MFA-gated designated-admin search of registered Minglora members |
+| GET | `/api/admin/live-pro/grants` | List active LIVE Pro member grants |
+| POST | `/api/admin/live-pro/grants` | Grant permanent or 30/90/365-day LIVE Pro access to a real member account |
+| DELETE | `/api/admin/live-pro/grants/:userId` | Revoke a member's LIVE Pro access |
+
+The designated Creator Hub administrator receives LIVE Pro automatically when the protected administrator session is authenticator-verified. Only that designated administrator can grant or revoke member access. LIVE Pro grants do not create platform-admin roles or modify Coins, wallets, or creator earnings. Existing host, guest, room-moderator and broadcast permissions remain enforced independently by the LIVE APIs.
+
 ## Messages, notifications and search
 
 | Method | Path | Purpose |

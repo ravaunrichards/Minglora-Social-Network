@@ -840,7 +840,7 @@ function bindLiveDirectoryCards(sessions){
   document.querySelectorAll('[data-live-filter]').forEach(button=>button.addEventListener('click',()=>applyLiveDirectoryFilter(button.dataset.liveFilter)));
   applyLiveDirectoryFilter(liveDirectoryFilter);
 }
-function renderLiveDirectory(sessions,status,catalog,wallet){
+function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   const liveReady=Boolean(status.configured&&status.connected===true);
   const liveStatusText=!status.configured?"Live provider not configured":liveReady?"LiveKit ready":"Live provider connection failed";
   const cards=sessions.length?sessions.map(liveSessionCardMarkup).join(""):status.liveDirectoryError
@@ -856,7 +856,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   ];
   const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#creator'></use></svg>")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
   const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
@@ -989,7 +989,8 @@ async function renderLive(){
     api("/live/status"),
     api("/live/sessions"),
     api("/coins/catalog"),
-    api("/coins/wallet")
+    api("/coins/wallet"),
+    api("/live-pro/access")
   ]);
   const status=results[0].status==="fulfilled"
     ? results[0].value
@@ -1000,9 +1001,39 @@ async function renderLive(){
   const catalog=results[2].status==="fulfilled"?results[2].value:{gifts:[],packages:[]};
   const wallet=results[3].status==="fulfilled"?results[3].value:{wallet:null,ledger:[]};
   liveGiftCatalogue=Array.isArray(catalog.gifts)?catalog.gifts:[];
-  renderLiveDirectory(sessions,status,catalog,wallet);
+  const livePro=results[4].status==="fulfilled"?results[4].value:{hasAccess:false};
+  renderLiveDirectory(sessions,status,catalog,wallet,livePro);
+  $("#live-pro-open")?.addEventListener("click",()=>activateNav("live-pro"));
   liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,12000);
 }
+
+async function renderLiveProStudio(){
+  activateSilent("live");stopLiveChatRefresh();stopLiveDirectoryRefresh();
+  setContent("<section class='card empty-state'><h2>Opening LIVE Pro Studio…</h2><p>Loading your saved Minglora broadcast history.</p></section>");
+  try{
+    const [access,dashboard]=await Promise.all([api("/live-pro/access"),api("/live-pro/dashboard")]);
+    if(!access.hasAccess)throw new Error("LIVE Pro access is not enabled for this account.");
+    const stats=dashboard.stats||{};
+    const sessions=Array.isArray(dashboard.history)?dashboard.history:[];
+    const modeLabel=value=>({video_audio:"Video + Audio",audio_only:"Audio Only",mobile_gaming:"Mobile Gaming",live_studio:"LIVE Studio"}[value]||"LIVE");
+    const history=sessions.length?sessions.map(session=>{
+      const started=session.startedAt?new Date(session.startedAt).toLocaleString():"Date unavailable";
+      const status=session.status==="live"?"LIVE NOW":session.status==="ended"?"Ended":String(session.status||"Saved");
+      return "<article class='live-pro-history-item'><div><strong>"+esc(session.title)+"</strong><small>"+esc(modeLabel(session.mode))+" · "+esc(status)+" · "+esc(started)+"</small></div><span>"+Number(session.durationMinutes||0).toLocaleString()+" min</span></article>";
+    }).join(""):"<p class='muted'>No previous broadcasts are recorded for this account yet.</p>";
+    const capabilities=Array.isArray(access.capabilities)?access.capabilities:[];
+    setContent("<div class='page-heading live-pro-page-heading'><div><span class='eyebrow'>Minglora creator tools</span><h1>LIVE Pro Studio</h1><p class='muted'>Advanced LIVE production and creator controls, with your real broadcast history.</p></div><span class='live-pro-access-pill'>LIVE Pro enabled</span></div>"+
+      "<section class='live-pro-stat-grid'><article class='card'><small>Total broadcasts</small><strong>"+Number(stats.totalBroadcasts||0).toLocaleString()+"</strong></article><article class='card'><small>Currently live</small><strong>"+Number(stats.activeBroadcasts||0).toLocaleString()+"</strong></article><article class='card'><small>Broadcast minutes</small><strong>"+Number(stats.totalMinutes||0).toLocaleString()+"</strong></article><article class='card'><small>Recorded participant joins</small><strong>"+Number(stats.recordedParticipantJoins||0).toLocaleString()+"</strong></article></section>"+
+      "<section class='card live-pro-tools-card'><div class='live-pro-card-heading'><div><h2>Production tools</h2><p class='muted'>These controls use Minglora's existing LiveKit LIVE room and server permissions.</p></div><button class='primary' id='live-pro-start-live' type='button'>Start a LIVE</button></div><div class='live-pro-capabilities'>"+capabilities.map(item=>"<article><strong>"+esc(item.label)+"</strong><p>"+esc(item.description)+"</p></article>").join("")+"</div></section>"+
+      "<section class='card live-pro-history-card'><div class='live-pro-card-heading'><div><h2>Broadcast history</h2><p class='muted'>Only broadcasts saved under your account are shown.</p></div><button class='secondary' id='live-pro-history-refresh' type='button'>Refresh</button></div>"+history+"</section>");
+    $("#live-pro-start-live")?.addEventListener("click",()=>activateNav("live"));
+    $("#live-pro-history-refresh")?.addEventListener("click",renderLiveProStudio);
+  }catch(error){
+    setContent("<section class='card empty-state'><h2>LIVE Pro Studio is unavailable</h2><p>"+esc(error.message||"Minglora could not load LIVE Pro.")+"</p><button class='secondary' id='live-pro-back-live'>Back to LIVE</button></section>");
+    $("#live-pro-back-live")?.addEventListener("click",()=>activateNav("live"));
+  }
+}
+
 function isLiveScreenSharePublication(publication){
   const source=publication?.source;
   const sdkSource=window.LivekitClient?.Track?.Source?.ScreenShare;
@@ -6268,7 +6299,7 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
