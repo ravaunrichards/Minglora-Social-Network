@@ -2048,7 +2048,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         "<div class='live-like-control live-like-count'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
         (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
       "</div>"+
-      "<div class='live-stage-top-actions'><button type='button' id='live-stage-gift-open' class='live-stage-gift-open"+(giftsEnabled?"":" is-disabled")+"' aria-label='Open LIVE gift catalogue' title='Open LIVE gifts'>🎁 <span>"+(giftsEnabled?"Gifts":"Gifts off")+"</span></button>"+
+      "<div class='live-stage-top-actions'>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
       "</div>"+
     "</div>";
