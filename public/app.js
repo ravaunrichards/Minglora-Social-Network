@@ -2727,8 +2727,9 @@ async function renderCoins(){
   const cashBackedBalance=Number(wallet.wallet?.cash_balance_coins||0);
   const marketingBackedBalance=Number(wallet.wallet?.marketing_balance_coins||0);
   const promoBalance=Number(wallet.wallet?.promo_balance_coins||0);
+  const giftBalance=earnings?.giftBalance||{};
   const moneyOverview=earnings
-    ?"<section class='wallet-money-overview'><div class='wallet-money-overview-heading'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Your Minglora money balance</strong><small>Money earned is separate from Minglora Coins.</small></div><button type='button' data-recharge-tab='earnings'>View earnings details ↗</button></div><div class='wallet-money-stat'><small>LIFETIME EARNED</small><strong>"+creatorMoney(earnings.earnedMinor||0)+"</strong><span>Your eligible creator share and subscription earnings</span></div><div class='wallet-money-stat'><small>AVAILABLE MONEY</small><strong>"+creatorMoney(earnings.availableMinor||0)+"</strong><span>Currently available after payouts and Coin exchanges</span></div></section>"
+    ?"<section class='wallet-money-overview'><div class='wallet-money-overview-heading'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Your Minglora money balance</strong><small>Money earned is separate from Minglora Coins.</small></div><button type='button' data-recharge-tab='earnings'>View earnings details ↗</button></div><div class='wallet-money-stat'><small>LIFETIME EARNED</small><strong>"+creatorMoney(earnings.earnedMinor||0)+"</strong><span>Your eligible creator share and subscription earnings</span></div><div class='wallet-money-stat'><small>AVAILABLE MONEY</small><strong>"+creatorMoney(earnings.availableMinor||0)+"</strong><span>Currently available after payouts and Coin exchanges</span></div><div class='wallet-money-stat'><small>GIFT COINS RECEIVED</small><strong>"+Number(giftBalance.receivedCoins||0).toLocaleString()+"</strong><span>"+Number(giftBalance.giftCount||0).toLocaleString()+" gifts recorded · see Earnings for details</span></div></section>"
     :"<section class='wallet-money-overview wallet-money-unavailable'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Money balance unavailable</strong><small>"+esc(earningsError||"Minglora could not load your money balance.")+"</small></div><button type='button' data-recharge-tab='earnings'>Open earnings details</button></section>";
   const header="<header class='recharge-page-heading'><div><span class='eyebrow'>MINGLORA WALLET</span><h1>Wallet &amp; earnings</h1><p class='muted'>See your real money earnings and Minglora Coins in separate balances.</p></div><div class='coin-balance-card'><small>COIN BALANCE</small><strong>"+(wallet.wallet&&wallet.wallet.balance_coins!=null?balance.toLocaleString():"—")+"</strong><span>Minglora Coins</span></div><div class='coin-source-breakdown' aria-label='Coin balance by funding source'><span><small>Cash-backed</small><strong>"+cashBackedBalance.toLocaleString()+"</strong><em>Purchased or earnings-exchanged</em></span><span><small>Marketing-funded</small><strong>"+marketingBackedBalance.toLocaleString()+"</strong><em>Reserved from funded campaigns</em></span><span><small>Promotional</small><strong>"+promoBalance.toLocaleString()+"</strong><em>Non-cash rewards and admin credits</em></span></div></header>";
   const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='earnings' class='"+(activeTab==="earnings"?"active":"")+"' aria-current='"+(activeTab==="earnings"?"page":"false")+"'>Earnings</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button></nav>";
@@ -2751,6 +2752,34 @@ async function renderCoins(){
     const payouts=Array.isArray(earnings.payouts)?earnings.payouts:[];
     const ledger=Array.isArray(earnings.ledger)?earnings.ledger:[];
     const exchanges=Array.isArray(earnings.exchanges)?earnings.exchanges:[];
+    const receivedGiftRows=Array.isArray(giftBalance.recent)?giftBalance.recent:[];
+    const giftSourceLabels={
+      cash:"Cash-backed",
+      marketing:"Funded marketing",
+      promo:"Promotional · non-cash",
+      mixed:"Mixed funding",
+      admin_promotional:"Cash-reserved Admin Promotional"
+    };
+    const giftReceiptRows=receivedGiftRows.length?receivedGiftRows.map(item=>{
+      const date=item.createdAt?new Date(item.createdAt).toLocaleString():"Date unavailable";
+      const sender=String(item.senderDisplayName||item.senderUsername||"Minglora member");
+      const giftName=String(item.giftName||"Gift");
+      const coinAmount=Number(item.coinAmount||0);
+      const creatorShare=Number(item.creatorShareMinor||0);
+      const earningsLabel=creatorShare>0
+        ?"<b class='positive'>+"+creatorMoney(creatorShare)+" creator share</b>"
+        :"<span class='muted'>No cash earnings · promotional Coins</span>";
+      return "<article class='recharge-history-row'><div><strong>"+esc(item.giftEmoji||"🎁")+" "+esc(giftName)+"</strong><small>From "+esc(sender)+(item.senderUsername?" · @"+esc(item.senderUsername):"")+" · "+esc(date)+" · "+esc(giftSourceLabels[item.fundingSource]||"Gift")+"</small></div><span>"+coinAmount.toLocaleString()+" Coins</span>"+earningsLabel+"</article>";
+    }).join(""):"<div class='recharge-empty'><strong>No gifts received yet</strong><p>Every confirmed LIVE or profile gift sent to you will appear here.</p></div>";
+    const giftReceiptsContent=
+      "<section class='card recharge-history-card wallet-received-gifts-card'><div class='recharge-section-heading'><div><span class='eyebrow'>GIFT RECEIPTS</span><h2>Gifts received</h2></div><span class='muted'>Latest 50</span></div>"+
+      "<div class='recharge-exchange-metrics wallet-received-gift-metrics'>"+
+      "<article><small>Total gifts</small><strong>"+Number(giftBalance.giftCount||0).toLocaleString()+"</strong><span>Confirmed gifts received</span></article>"+
+      "<article><small>Gift Coins received</small><strong>"+Number(giftBalance.receivedCoins||0).toLocaleString()+"</strong><span>Activity total · not spendable wallet Coins</span></article>"+
+      "<article><small>Backed gift Coins</small><strong>"+(Number(giftBalance.cashBackedCoins||0)+Number(giftBalance.marketingBackedCoins||0)+Number(giftBalance.adminPromotionalCoins||0)).toLocaleString()+"</strong><span>Eligible funding sources</span></article>"+
+      "<article><small>Ordinary promotional</small><strong>"+Number(giftBalance.promotionalCoins||0).toLocaleString()+"</strong><span>Non-cash promotional gift value</span></article></div>"+
+      "<div class='recharge-history-list'>"+giftReceiptRows+"</div>"+
+      "<p class='recharge-exchange-note'>Received gifts are recorded here; gift Coins are not added to your spendable Coin wallet. Cash-backed, funded-marketing and separately cash-reserved Admin Promotional gifts create the eligible 50/50 creator share. Ordinary promotional Coins remain visible in gift history but do not create withdrawable earnings.</p></section>";
     const paidMinor=payouts.filter(item=>String(item.status||"").toLowerCase()==="paid")
       .reduce((total,item)=>total+Math.max(0,Number(item.amount_minor)||0),0);
     const pendingMinor=payouts.filter(item=>["requested","processing"].includes(String(item.status||"").toLowerCase()))
@@ -2778,7 +2807,7 @@ async function renderCoins(){
       "<article><small>Payouts in progress</small><strong>"+creatorMoney(pendingMinor)+"</strong><span>Requested or processing PayPal withdrawals</span></article>"+
       "<article><small>Already paid out</small><strong>"+creatorMoney(paidMinor)+"</strong><span>Withdrawals recorded as paid</span></article>"+
       "<article><small>Exchanged for Coins</small><strong>"+creatorMoney(earnings.exchangedMinor||0)+"</strong><span>Money converted into Minglora Coins</span></article></div>"+
-      "<div class='wallet-earnings-columns'><section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>EARNINGS LEDGER</span><h2>Gift earnings</h2></div><span class='muted'>Latest entries</span></div><div class='recharge-history-list'>"+earningsRows+"</div></section>"+
+      giftReceiptsContent+      "<div class='wallet-earnings-columns'><section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>EARNINGS LEDGER</span><h2>Gift earnings</h2></div><span class='muted'>Latest entries</span></div><div class='recharge-history-list'>"+earningsRows+"</div></section>"+
       "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>PAYOUT HISTORY</span><h2>Withdrawals</h2></div></div><div class='recharge-history-list'>"+payoutRows+"</div></section></div>"+
       "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>MONEY CONVERSIONS</span><h2>Money exchanged for Coins</h2></div></div><div class='recharge-history-list'>"+exchangeRows+"</div></section>"+
       "<p class='recharge-exchange-note'>Your lifetime earned amount, available money, pending withdrawals, completed payouts and money exchanged for Coins are tracked separately. Coin purchases and promotional Coin credits are not displayed as cash earnings.</p>";
