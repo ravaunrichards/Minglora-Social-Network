@@ -39,7 +39,7 @@
       (item.current ? "true" : "false") + "'>" +
       badgeMarkup(item.level, item.tier, true) +
       "<span class='gp-level-card-copy'><strong>Level " + item.level + "</strong><small>" +
-      number(item.xpRequired) + " XP</small></span>" +
+      number(item.coinsRequired ?? item.xpRequired) + " Coins</small></span>" +
       (item.unlocked ? "<span class='gp-level-state' aria-label='Unlocked'>✓</span>" : "<span class='gp-level-state' aria-label='Locked'>⌑</span>") +
       "</button>";
   }
@@ -49,12 +49,12 @@
     return "<div class='gp-selected-badge'>" + badgeMarkup(item.level, item.tier) +
       "<div><span class='gp-eyebrow'>" + (item.unlocked ? "UNLOCKED BADGE" : "LOCKED BADGE") +
       "</span><h3>" + esc(item.badgeName) + "</h3><p>" + esc(item.reward) + "</p>" +
-      "<small>Lifetime requirement: " + number(item.xpRequired) + " XP</small></div></div>" +
+      "<small>Lifetime requirement: " + number(item.coinsRequired ?? item.xpRequired) + " Coins sent</small></div></div>" +
       (item.level === current.level
         ? "<p class='gp-selected-note'>This is your current badge.</p>"
         : item.unlocked
           ? "<p class='gp-selected-note'>You have already unlocked this badge.</p>"
-          : "<p class='gp-selected-note'>You need " + number(Math.max(0, item.xpRequired - current.xp)) + " more XP to unlock this badge.</p>");
+          : "<p class='gp-selected-note'>You need " + number(Math.max(0, (item.coinsRequired ?? item.xpRequired) - current.xp)) + " more Coins to unlock this badge.</p>");
   }
 
   function renderHistory(items) {
@@ -65,7 +65,7 @@
       "<article class='gp-history-row'><span class='gp-history-icon'>🎁</span><div class='gp-history-copy'><strong>" +
       esc(item.giftName) + "</strong><small>To @" + esc(item.recipientUsername || "member") + " · " +
       (item.contextType === "live" ? "LIVE gift" : "Member gift") + "</small><small>" + esc(date(item.createdAt)) +
-      "</small></div><strong class='gp-history-xp'>+" + number(item.coinAmount) + " XP</strong></article>"
+      "</small></div><strong class='gp-history-xp'>+" + number(item.coinAmount) + " Coins</strong></article>"
     ).join("") + "</div>";
   }
 
@@ -104,28 +104,28 @@
       "<div><h2>Level " + current.level + " · " + esc(current.tier) + "</h2><p>" + esc(current.badgeName) + "</p>" +
       "<span class='gp-rank-chip'>" + (current.rankPosition ? "Community rank #" + current.rankPosition : "Not ranked yet") + "</span></div></div>" +
       "<div class='gp-progress-heading'><strong>" + (current.maxLevel ? "Maximum level reached" : "Progress to Level " + current.nextLevel) +
-      "</strong><span>" + number(current.xp) + " XP</span></div><div class='gp-progress-track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='" +
+      "</strong><span>" + number(current.xp) + " Coins</span></div><div class='gp-progress-track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='" +
       current.progressPercent + "'><span style='width:" + current.progressPercent + "%'></span></div>" +
       "<p class='gp-progress-foot'>" + esc(progressText) + "</p></div></section>" +
       "<section class='gp-stats-grid' aria-label='Gifter statistics'>" +
-      "<article class='gp-stat-card'><span>Lifetime XP</span><strong>" + number(current.xp) + "</strong><small>From confirmed gifts sent</small></article>" +
-      "<article class='gp-stat-card'><span>Coins sent</span><strong>" + number(current.totalCoinsSent) + "</strong><small>1 XP for each Coin in a confirmed gift</small></article>" +
+      "<article class='gp-stat-card'><span>Total Coins sent</span><strong>" + number(current.totalCoinsSent) + "</strong><small>Lifetime Coins from confirmed gifts</small></article>" +
+      "<article class='gp-stat-card'><span>Coins to next level</span><strong>" + (current.maxLevel ? "MAX" : number(current.xpRemaining)) + "</strong><small>" + (current.maxLevel ? "Level 50 reached" : "More Coins needed") + "</small></article>" +
       "<article class='gp-stat-card'><span>Gifts sent</span><strong>" + number(current.giftsSent) + "</strong><small>Unique confirmed transactions</small></article>" +
       "<article class='gp-stat-card'><span>Members supported</span><strong>" + number(current.uniqueRecipients) + "</strong><small>Different recipients</small></article></section>" +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>Levels 1–50</h2>" +
-      "<p>Tap any level to inspect its badge and unlock requirement.</p></div><span class='gp-level-count'>" + current.level + " / 50</span></div>" +
+      "<p>Tap any level to see the total Coins needed to unlock its badge.</p></div><span class='gp-level-count'>" + current.level + " / 50</span></div>" +
       "<div class='gp-selected-level' id='gp-selected-level'>" + detailMarkup(selected, current) + "</div>" +
       "<div class='gp-level-grid' id='gp-level-grid'>" + chart + "</div></section>" +
       "<section class='gp-level25 card'><div class='gp-level25-emblem'>25</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>Level 25 · LIVE Entrance Badge</h2><p>Reach Level 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
       "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +
       "<p>Only successful, server-confirmed gifts are shown.</p></div></div>" + renderHistory(data.history || []) + "</section>" +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>COMMUNITY STANDINGS</span><h2>Top gifters</h2>" +
-      "<p>Ranked by confirmed lifetime gifting XP.</p></div></div>" + renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId }) + "</section></div>" +
+      "<p>Ranked by confirmed lifetime Coins sent.</p></div></div>" + renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId }) + "</section></div>" +
       "<section class='gp-rules card'><div><span class='gp-eyebrow'>HOW IT WORKS</span><h2>How gifter levels are earned</h2></div>" +
       "<div class='gp-rule-grid'><article><strong>01 · Send a gift</strong><p>Member gifts and LIVE gifts count after Minglora confirms the transaction.</p></article>" +
-      "<article><strong>02 · Earn XP</strong><p>Each Minglora Coin spent on a confirmed gift earns 1 gifter XP.</p></article>" +
-      "<article><strong>03 · Unlock badges</strong><p>XP is lifetime-based. Your earned level badges stay unlocked as you progress.</p></article></div>" +
-      "<p class='gp-rule-note'>Coin purchases, gifts you receive, failed sends and duplicate transactions do not increase gifter XP. This gifter track is separate from Creator Leagues.</p></section>" +
+      "<article><strong>02 · Earn Coins</strong><p>Each Minglora Coin spent on a confirmed gift adds one point to your lifetime gifter progress.</p></article>" +
+      "<article><strong>03 · Unlock badges</strong><p>Coin totals are lifetime-based. Your earned level badges stay unlocked as you progress.</p></article></div>" +
+      "<p class='gp-rule-note'>Coin purchases, gifts you receive, failed sends and duplicate transactions do not increase gifter progression. This gifter track is separate from Creator Leagues.</p></section>" +
       "</div>";
   }
 
