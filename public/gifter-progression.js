@@ -41,11 +41,16 @@
       item.unlocked ? "is-unlocked" : "is-locked",
       item.current ? "is-current" : ""
     ].filter(Boolean).join(" ");
-    return "<button type='button' class='" + classes + "' data-gp-level='" + item.level + "' aria-pressed='" +
+    const levelLabel = "LV " + item.level;
+    const coinsLabel = "Coins " + number(item.coinsRequired ?? item.xpRequired);
+    const stateLabel = item.unlocked ? "Unlocked" : "Locked";
+    return "<button type='button' class='" + classes + "' data-gp-level='" + item.level +
+      "' aria-label='" + esc(levelLabel + ", " + coinsLabel + ", " + stateLabel) +
+      "' title='" + esc(levelLabel + " · " + coinsLabel) + "' aria-pressed='" +
       (item.current ? "true" : "false") + "'>" +
       badgeMarkup(item.level, item.tier, true) +
-      "<span class='gp-level-card-copy'><strong>LV " + item.level + "</strong><small>" +
-      number(item.coinsRequired ?? item.xpRequired) + " Coins</small></span>" +
+      "<span class='gp-level-card-copy'><strong>" + levelLabel + "</strong><small>" +
+      coinsLabel + "</small></span>" +
       (item.unlocked ? "<span class='gp-level-state' aria-label='Unlocked'>✓</span>" : "<span class='gp-level-state' aria-label='Locked'>🔒</span>") +
       "</button>";
   }
