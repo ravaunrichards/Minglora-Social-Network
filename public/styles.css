@@ -3737,3 +3737,11 @@ body.auth-mode .auth-screen{
   .live-control-icon{width:41px;height:41px;flex-basis:41px}
   .live-control-caption{font-size:8.5px}
 }
+
+/* Multi-file media upload on desktop and batch story navigation on every device */
+.media-picker.is-dragging{border-color:var(--blue);background:#eaf2ff;box-shadow:inset 0 0 0 2px #1769e055}
+.story-media-stage{display:flex;align-items:center;justify-content:center;min-height:140px;overflow:hidden;border-radius:10px;background:#101827}
+.story-media-stage .story-viewer-image{display:block;width:100%;max-height:65vh;object-fit:contain;background:#101827}
+.story-media-controls{display:flex;align-items:center;justify-content:center;gap:22px;padding:10px;color:var(--muted);font-size:12px;font-weight:800}
+.story-media-controls button{min-width:42px;min-height:36px;padding:5px 12px;font-size:22px;line-height:1}
+.story-media-count{position:absolute;top:48px;right:7px;padding:4px 7px;border-radius:8px;background:#182238c9;color:#fff;font-size:10px;font-weight:800}
