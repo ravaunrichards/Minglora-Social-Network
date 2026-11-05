@@ -1,10 +1,24 @@
 export const LIVE_MODES = Object.freeze(['video_audio', 'audio_only', 'mobile_gaming', 'live_studio']);
 export const LIVE_BOARDS = Object.freeze(['general', 'gaming', 'music', 'talk', 'education', 'beauty', 'sports', 'business', 'lifestyle']);
 export const LIVE_QUALITIES = Object.freeze(['auto', '720p', '1080p']);
+export const LIVE_LAYOUTS = Object.freeze([
+  'full_screen', 'fluid_panel', 'fluid_grid', 'fixed_grid', 'fixed_panel',
+  'side_by_side', 'spotlight', 'roundtable_1', 'roundtable_2'
+]);
 
 export const DEFAULT_LIVE_SETTINGS = Object.freeze({
   board: 'general',
   aboutMe: '',
+  roomLayout: 'fluid_grid',
+  allowGuestRequests: true,
+  guestCamera: true,
+  autoAcceptRequests: false,
+  prioritizeGifters: false,
+  allowCoHost: true,
+  multiGuestExtraRewards: false,
+  manageModerators: true,
+  shareRecordingsWithGuests: false,
+  voiceRings: true,
   practiceMode: false,
   liveQuality: 'auto',
   noiseSuppression: true,
@@ -36,8 +50,9 @@ export function normalizeLiveSettings(value = {}) {
 
   const next = { ...DEFAULT_LIVE_SETTINGS, ...value };
   if (!LIVE_BOARDS.includes(next.board)) return { valid: false, error: 'Choose a supported LIVE board.' };
+  if (!LIVE_LAYOUTS.includes(next.roomLayout)) return { valid: false, error: 'Choose a supported LIVE room layout.' };
   if (!LIVE_QUALITIES.includes(next.liveQuality)) return { valid: false, error: 'Choose Auto, 720p or 1080p LIVE quality.' };
-  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled']) {
+  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled', 'allowGuestRequests', 'guestCamera', 'autoAcceptRequests', 'prioritizeGifters', 'allowCoHost', 'multiGuestExtraRewards', 'manageModerators', 'shareRecordingsWithGuests', 'voiceRings']) {
     if (typeof next[key] !== 'boolean') return { valid: false, error: key + ' must be true or false.' };
   }
   if (!['none', 'branded', 'sponsored'].includes(next.contentDisclosure)) {
@@ -79,7 +94,7 @@ export function normalizeLiveSettings(value = {}) {
  * Mobile Gaming host streams the captured screen; approved guests can only
  * contribute microphone audio. Audio-only rooms never receive camera access.
  */
-export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video_audio') {
+export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video_audio', liveSettings = {}) {
   if (!['host', 'guest'].includes(role)) return null;
   const mode = LIVE_MODES.includes(liveMode)
     ? liveMode
@@ -90,5 +105,5 @@ export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video
   }
   return role === 'host'
     ? ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']
-    : ['MICROPHONE', 'CAMERA'];
+    : liveSettings?.guestCamera === false ? ['MICROPHONE'] : ['MICROPHONE', 'CAMERA'];
 }
