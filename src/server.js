@@ -1487,10 +1487,26 @@ async function route(req, res) {
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
       }
+      const liveSettingsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/settings$/);
+      if (method === 'PATCH' && liveSettingsMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveSettingsMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change room settings.' });
+        const patch = input.settings && typeof input.settings === 'object' && !Array.isArray(input.settings) ? input.settings : null;
+        if (!patch) return json(res, 400, { error: 'Send LIVE settings as an object.' });
+        const normalized = normalizeLiveSettings({ ...(session.liveSettings || {}), ...patch });
+        if (!normalized.valid) return json(res, 400, { error: normalized.error });
+        session.liveSettings = normalized.settings;
+        session.description = normalized.settings.aboutMe;
+        if (normalized.settings.practiceMode) session.visibility = 'private';
+        else if (normalized.settings.audienceControl === false) session.visibility = 'public';
+        await saveStore();
+        return json(res, 200, { liveSettings: session.liveSettings, visibility: session.visibility });
+      }
       const liveModeratorsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/moderators(?:\/([^/]+))?$/);
       if (liveModeratorsMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveModeratorsMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        if (session.liveSettings?.manageModerators === false) return json(res, 403, { error: 'The LIVE host has disabled moderator management for this room.' });
         const roomModerators = () => Array.isArray(session.liveModerators) ? session.liveModerators : [];
         if (method === 'GET') {
           if (session.hostId !== user.id && !roomModerators().includes(user.id)) {
@@ -1565,6 +1581,10 @@ async function route(req, res) {
         const requests = (db.liveSpeakerRequests || [])
           .filter(item => item.sessionId === session.id && ['requested', 'accepted', 'connected'].includes(item.status))
           .map(item => ({ ...item, user: safeUser(db.users.find(member => member.id === item.userId), user.id) }));
+        if (session.liveSettings?.prioritizeGifters === true) requests.sort((a, b) =>
+          Number(b.user?.gifterBadge?.level || 0) - Number(a.user?.gifterBadge?.level || 0) ||
+          new Date(a.requestedAt || 0) - new Date(b.requestedAt || 0)
+        );
         return json(res, 200, { requests });
       }
       if (liveSpeakerRequestsMatch && method === 'POST') {
@@ -1572,16 +1592,24 @@ async function route(req, res) {
         if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
         const allowed = session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
         if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
+        if (session.liveSettings?.allowGuestRequests === false) return json(res, 403, { error: 'The host is not accepting guest speaker requests right now.' });
+        if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled co-host and guest stage requests for this LIVE.' });
         const joined = (db.liveParticipants || []).some(item => item.sessionId === session.id && item.userId === user.id && !item.leftAt);
         if (!joined) return json(res, 409, { error: 'Join the LIVE room before requesting a speaker place.' });
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
         const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id);
         if (previous && ['requested', 'accepted'].includes(previous.status)) return json(res, 200, { request: previous });
+        const autoAccepted = session.liveSettings?.autoAcceptRequests === true;
+        if (autoAccepted) {
+          const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)).length;
+          if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+        }
         await requestSupabaseState('live_speaker_request', { broadcastId: session.id, userId: user.id });
-        const request = { id: uid(), sessionId: session.id, userId: user.id, role: 'guest', status: 'requested', requestedAt: now(), acceptedAt: null, connectedAt: null, leftAt: null };
+        const requestedAt = now();
+        const request = { id: uid(), sessionId: session.id, userId: user.id, role: 'guest', status: autoAccepted ? 'accepted' : 'requested', requestedAt, acceptedAt: autoAccepted ? requestedAt : null, connectedAt: null, leftAt: null };
         if (previous) Object.assign(previous, request); else db.liveSpeakerRequests.unshift(request);
         await saveStore();
-        return json(res, 201, { request });
+        return json(res, 201, { request, autoAccepted });
       }
       const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
@@ -1647,7 +1675,7 @@ async function route(req, res) {
           item.sessionId === session.id && item.userId === user.id
         );
         const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
-        const publishSourceNames = getLivePublishSourceNames(session.liveMode, role, session.broadcastType);
+        const publishSourceNames = getLivePublishSourceNames(session.liveMode, role, session.broadcastType, session.liveSettings || {});
         const publishSources = publishSourceNames
           ? publishSourceNames.map(source => LIVEKIT_TRACK_SOURCE[source])
           : null;
