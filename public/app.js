@@ -1303,7 +1303,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveGiftTools=role==="host"
     ? "<section class='live-tools-card live-gift-host-note'><strong>Gift activity</strong><p>Viewers can send gifts while you are broadcasting. Your gift-enabled room is ready.</p></section>"
     : "<section id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+  const liveThemeAppearance=role==="host"
+    ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
+    : "<section class='live-tools-card live-room-appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE tools sections'>"+
+    "<button type='button' data-live-tools-target='.live-room-appearance'>Appearance</button>"+
     "<button type='button' data-live-tools-target='#live-speaker-request-panel'>Guest seats</button>"+
     "<button type='button' data-live-tools-target='#live-reward-panel'>Goody Bag & Treasure Box</button>"+
     "<button type='button' data-live-tools-target='#live-gift-panel'>Gifts</button></nav>";
@@ -1311,7 +1315,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+(broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO")+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+liveEntryBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
@@ -1418,6 +1422,22 @@ async function openLiveRoom(session,role,issuedLiveKit){
     $("#live-tools-backdrop")?.addEventListener("click",event=>{if(event.target?.id==="live-tools-backdrop")closeLiveToolsPanel();});
     $("#live-tools-drawer")?.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();closeLiveToolsPanel();}});
     $("#live-tools-drawer")?.querySelectorAll("[data-live-tools-target]").forEach(button=>button.addEventListener("click",()=>focusLiveRoomPanel(button.dataset.liveToolsTarget)));
+    $("#live-room-theme-select")?.addEventListener("change",async event=>{
+      const control=event.currentTarget,nextTheme=String(control.value||"");
+      if(role!=="host"||!LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===nextTheme)){control.value=activeLiveSession?.liveTheme||liveTheme;return;}
+      control.disabled=true;
+      try{
+        await api("/live/sessions/"+encodeURIComponent(session.id)+"/theme",{method:"PATCH",body:JSON.stringify({liveTheme:nextTheme})});
+        const player=$(".live-player-shell");
+        if(player){
+          player.classList.remove(...LIVE_ROOM_THEME_OPTIONS.map(option=>"live-theme-"+option.value));
+          player.classList.add("live-theme-"+nextTheme);
+        }
+        activeLiveSession.liveTheme=nextTheme;
+        toast("LIVE room appearance updated.");
+      }catch(error){control.value=activeLiveSession?.liveTheme||liveTheme;toast(error.message);}
+      finally{control.disabled=false;}
+    });
     $("#live-share-toggle")?.addEventListener("click",async()=>{
       const shareUrl=new URL(window.location.pathname,window.location.origin);
       shareUrl.searchParams.set("minglora-push","live");
