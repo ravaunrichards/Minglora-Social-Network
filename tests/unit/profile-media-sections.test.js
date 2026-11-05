@@ -76,8 +76,8 @@ test('profile tabs include a right-aligned three-dot overflow menu with requeste
   assert.match(app, /profileVisibility:next/);
   assert.match(css, /\.profile-tabs-overflow\{[^}]*align-items:center/);
   assert.match(css, /\.profile-overflow-trigger\{[^}]*align-self:center/);
-  assert.match(html, /styles\.css\?v=20261104-money-to-coins-1/);
-  assert.match(sw, /minglora-shell-v79-money-to-coins-1/);
+  assert.match(html, /styles\.css\?v=20261104-owner-coin-admin-credit-1/);
+  assert.match(sw, /minglora-shell-v81-owner-coin-admin-credit-1/);
   assert.match(html, /mobile-layout\.css\?v=20261104-mobile-navigation-1/);
   assert.match(sw, /mobile-layout\.css\?v=20261104-mobile-navigation-1/);
 });
