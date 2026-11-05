@@ -5443,3 +5443,163 @@ button.live-ranking-row{cursor:pointer}
     bottom:calc(62px + env(safe-area-inset-bottom))!important;max-height:22dvh!important;
   }
 }
+
+
+/* Compact Full Screen LIVE: fill a phone viewport exactly, but constrain the
+   portrait broadcast canvas on tablets/desktops instead of stretching it wide. */
+.live-player-shell.live-full-screen-mode{
+  position:fixed!important;inset:0!important;z-index:10050!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex-direction:column!important;
+  width:100vw!important;width:100dvw!important;
+  height:100vh!important;height:100dvh!important;
+  min-width:0!important;min-height:0!important;max-width:100dvw!important;max-height:100dvh!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  overflow:hidden!important;background:#05070b!important;box-shadow:none!important;
+}
+.live-player-shell.live-full-screen-mode>.live-player-layout{
+  position:relative!important;display:block!important;flex:0 0 auto!important;
+  width:100vw!important;width:100dvw!important;
+  height:100vh!important;height:100dvh!important;
+  min-width:0!important;min-height:0!important;max-width:100dvw!important;max-height:100dvh!important;
+  margin:0 auto!important;padding:0!important;overflow:hidden!important;
+}
+@media(min-width:641px) and (min-height:521px){
+  .live-player-shell.live-full-screen-mode>.live-player-layout{
+    width:min(100vw,480px,calc(100dvh * 9 / 16))!important;
+    height:min(100dvh,854px)!important;
+    max-width:480px!important;max-height:854px!important;
+    aspect-ratio:9 / 16!important;
+  }
+}
+@media(max-height:520px){
+  .live-player-shell.live-full-screen-mode>.live-player-layout{
+    width:min(100vw,calc(100dvh * 16 / 9),720px)!important;
+    height:100dvh!important;max-width:720px!important;max-height:100dvh!important;
+    aspect-ratio:16 / 9!important;
+  }
+}
+.live-player-shell.live-full-screen-mode>.live-player-layout>.live-video-column{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  margin:0!important;padding:0!important;gap:0!important;overflow:hidden!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  aspect-ratio:auto!important;overflow:hidden!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar{
+  inset:max(10px,env(safe-area-inset-top)) 10px auto!important;
+  z-index:72!important;gap:6px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar .live-host-profile img{
+  width:34px!important;height:34px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar .live-host-profile{
+  gap:7px!important;padding:4px 7px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar .live-stage-exit{
+  width:36px!important;height:36px!important;flex-basis:36px!important;
+}
+
+/* Comments sit in the middle/lower part of the video like TikTok LIVE. The
+   composer stays just above the compact bottom action dock. */
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay{
+  position:absolute!important;
+  top:40%!important;left:10px!important;right:auto!important;
+  bottom:calc(98px + env(safe-area-inset-bottom))!important;
+  z-index:54!important;display:flex!important;flex-direction:column!important;
+  justify-content:flex-end!important;gap:7px!important;
+  width:min(84%,390px)!important;max-width:calc(100% - 20px)!important;
+  height:auto!important;max-height:none!important;min-height:0!important;
+  margin:0!important;padding:0!important;background:transparent!important;
+  pointer-events:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-list{
+  display:flex!important;flex:1 1 auto!important;flex-direction:column!important;
+  justify-content:flex-end!important;min-height:0!important;max-height:none!important;
+  width:100%!important;margin:0!important;padding:0 2px 2px!important;
+  overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;
+  background:transparent!important;scrollbar-width:none!important;pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-line{
+  flex:0 0 auto!important;width:100%!important;max-width:100%!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-composer-wrap{
+  position:relative!important;z-index:2!important;flex:0 0 auto!important;
+  width:100%!important;min-width:0!important;margin:0!important;pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-form{
+  display:flex!important;align-items:center!important;gap:6px!important;
+  width:100%!important;min-width:0!important;min-height:42px!important;
+  padding:4px 6px!important;border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:24px!important;background:rgba(10,15,23,.78)!important;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-form input{
+  flex:1 1 auto!important;width:100%!important;min-width:0!important;min-height:32px!important;
+  max-width:none!important;padding:6px 8px!important;border:0!important;
+  border-radius:18px!important;background:transparent!important;color:#fff!important;font-size:14px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-form button{
+  display:grid!important;place-items:center!important;flex:0 0 34px!important;
+  width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;
+  padding:0!important;border:0!important;border-radius:50%!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-form .live-chat-emoji-button{
+  color:#fff!important;background:rgba(255,255,255,.12)!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-form button[type="submit"]{
+  color:#fff!important;background:#286be6!important;
+}
+
+/* Keep all host actions visible in a compact two-row bottom dock. */
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls{
+  position:absolute!important;inset:auto 0 0 0!important;z-index:68!important;
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;grid-auto-rows:42px!important;
+  align-items:center!important;justify-items:center!important;gap:1px 3px!important;
+  width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;
+  margin:0!important;padding:4px 7px calc(5px + env(safe-area-inset-bottom))!important;
+  overflow:hidden!important;border:0!important;border-radius:0!important;
+  background:linear-gradient(180deg,rgba(5,7,11,.08),rgba(5,7,11,.82) 22%,rgba(5,7,11,.97))!important;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls .live-control-button{
+  display:flex!important;flex:0 1 100%!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;gap:1px!important;
+  width:100%!important;min-width:0!important;max-width:72px!important;
+  min-height:40px!important;height:40px!important;padding:0!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls .live-control-icon{
+  width:28px!important;height:28px!important;flex:0 0 28px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls .live-control-caption{
+  display:block!important;max-width:68px!important;font-size:7px!important;line-height:1!important;
+}
+@media(max-width:360px){
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay{
+    left:7px!important;top:39%!important;width:86%!important;max-width:calc(100% - 14px)!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls{
+    gap:0 2px!important;padding-inline:4px!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls .live-control-icon{
+    width:26px!important;height:26px!important;flex-basis:26px!important;
+  }
+}
+@media(max-height:520px){
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay{
+    top:36%!important;left:10px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;
+    width:min(62%,420px)!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls{
+    grid-template-columns:repeat(8,minmax(0,1fr))!important;
+    grid-auto-rows:42px!important;padding:3px 8px!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-player-controls .live-control-button{
+    min-height:38px!important;height:38px!important;
+  }
+}
