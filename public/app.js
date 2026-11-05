@@ -2344,15 +2344,7 @@ activeLivePinnedComment=null;
       const nextLayout=String(button.dataset.liveScreenLayout||'');
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
       const previousLayout=activeLiveScreenLayout;
-      if(nextLayout!==previousLayout){
-        applyLiveScreenLayout(nextLayout);
-        const shell=$('.live-player-shell');
-        if(nextLayout==='full-screen'&&typeof shell?.requestFullscreen==='function'&&!document.fullscreenElement){
-          try{const request=shell.requestFullscreen({navigationUI:'hide'});request?.catch?.(()=>{});}catch{}
-        }else if(nextLayout!=='full-screen'&&document.fullscreenElement===shell&&typeof document.exitFullscreen==='function'){
-          try{const request=document.exitFullscreen();request?.catch?.(()=>{});}catch{}
-        }
-      }
+      if(nextLayout!==previousLayout)applyLiveScreenLayout(nextLayout);
       $("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
       const status=$("#live-layout-status");
       try{
@@ -2365,9 +2357,6 @@ activeLivePinnedComment=null;
         if(nextLayout==='full-screen')closeLiveToolsPanel();
       }catch(error){
         const restoreLayout=session.liveLayout||previousLayout||'full-screen';
-        if(nextLayout==='full-screen'&&previousLayout!=='full-screen'&&document.fullscreenElement===$('.live-player-shell')&&typeof document.exitFullscreen==='function'){
-          try{const request=document.exitFullscreen();request?.catch?.(()=>{});}catch{}
-        }
         applyLiveScreenLayout(restoreLayout);
         if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE layout could not be changed.');
