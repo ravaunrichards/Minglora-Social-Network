@@ -180,6 +180,7 @@
                 <button type="button" class="secondary" data-settings-wallet-tab="recharge">Coins &amp; Get Coins</button>
                 <button type="button" class="secondary" data-settings-wallet-tab="earnings">Live gift rewards &amp; monetization</button>
                 <button type="button" class="secondary" data-settings-wallet-tab="exchange">Exchange</button>
+                <button type="button" class="secondary" data-settings-creator-section="monetization">Creator Studio · Monetization</button>
               </div>
               <p class="settings-note">Balances above come from the existing Minglora Wallet &amp; earnings service. Wallet settlement is currently in USD; a selectable display-currency conversion is not yet connected.</p>
               <p class="settings-note">Campaign and subscription management will be added to their dedicated tools when those workflows are available. This page links to the existing wallet rather than creating duplicate transaction controls.</p>
@@ -590,6 +591,9 @@
       document.querySelectorAll('[data-settings-wallet-tab]').forEach(button=>button.addEventListener('click',()=>{
         const tab=button.dataset.settingsWalletTab;
         window.dispatchEvent(new CustomEvent('minglora:open-wallet',{detail:{tab}}));
+      }));
+      document.querySelectorAll('[data-settings-creator-section]').forEach(button=>button.addEventListener('click',()=>{
+        window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:button.dataset.settingsCreatorSection}}));
       }));
       const categoryTabs=[...document.querySelectorAll('[data-settings-category-button]')];
       const categorizedSections=[...settingsForm.querySelectorAll('[data-settings-category]')];
