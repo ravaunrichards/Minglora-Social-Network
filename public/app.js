@@ -1460,7 +1460,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-reaction-bar' role='group' aria-label='Send a LIVE reaction'><strong>LIVE likes <span id='live-reaction-count' data-count='0'>0</span></strong><div class='live-reaction-buttons'><button type='button' class='live-reaction-button' data-live-reaction='heart' aria-label='Send a heart' title='Send a heart'>❤️</button><button type='button' class='live-reaction-button' data-live-reaction='clap' aria-label='Send applause' title='Send applause'>👏</button><button type='button' class='live-reaction-button' data-live-reaction='fire' aria-label='Send fire' title='Send fire'>🔥</button><button type='button' class='live-reaction-button' data-live-reaction='laugh' aria-label='Send laughter' title='Send laughter'>😂</button></div></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
-    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
+    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>"+(liveSettings.communitySafety===false?"Use Report or Block when needed.":"Be kind. Keep it positive.")+"</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
     "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside></div>"+liveToolsDrawer+"</section>");
   activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
@@ -1546,7 +1546,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       liveScreenShareEnabled=false;
       $("#live-screen-share-stage")?.replaceChildren();
       $("#live-video-stage")?.classList.remove("has-live-screen-share");
-      updateLiveControlButton($("#live-screen-share-toggle"),"screen","Share your screen","Screen",false);
+      updateLiveControlButton($("#live-screen-share-toggle"),"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
     }
     refreshSpeakerRoster();
   });
@@ -1663,7 +1663,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
       const nextEnabled=!liveScreenShareEnabled;
       screenShareControl.disabled=true;
       try{
-        await room.localParticipant.setScreenShareEnabled(nextEnabled,{audio:false,contentHint:"detail"});
+        await room.localParticipant.setScreenShareEnabled(nextEnabled,{
+          audio:false,
+          contentHint:liveMode==="mobile_gaming"?"motion":"detail",
+          ...(qualityPreset?.resolution?{resolution:qualityPreset.resolution}:{})
+        });
         liveScreenShareEnabled=nextEnabled;
         if(nextEnabled){
           const source=client.Track?.Source?.ScreenShare??3;
@@ -1674,7 +1678,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
             liveScreenShareEnabled=false;
             $("#live-screen-share-stage")?.replaceChildren();
             $("#live-video-stage")?.classList.remove("has-live-screen-share");
-            updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
+            updateLiveControlButton(screenShareControl,"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
           },{once:true});
         }else{
           $("#live-screen-share-stage")?.replaceChildren();
@@ -1683,7 +1687,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         updateLiveControlButton(screenShareControl,"screen",nextEnabled?"Stop sharing":"Share "+(liveMode==="mobile_gaming"?"game screen":"screen"),nextEnabled?"Stop share":liveMode==="mobile_gaming"?"Game screen":"Screen",nextEnabled);
       }catch(error){
         liveScreenShareEnabled=false;
-        updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
+        updateLiveControlButton(screenShareControl,"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
         if(error?.name!=="NotAllowedError"&&error?.name!=="AbortError")toast(error.message||"Could not share your screen.");
       }finally{screenShareControl.disabled=false;}
     });
