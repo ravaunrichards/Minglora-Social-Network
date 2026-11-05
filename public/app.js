@@ -1492,14 +1492,42 @@ async function openLiveRoom(session,role,issuedLiveKit){
       "</div></div>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='End LIVE for everyone' title='End LIVE'><span aria-hidden='true'>⏻</span></button>":"")+
     "</div>"+
-    "<section class='live-chat-overlay' aria-label='LIVE chat and comments'>"+
-      "<div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div>"+
-      "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form>"+
-    "</section>";
+    (liveSettings.groupChatEnabled!==false
+      ? "<section class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></section>"
+      : "<p class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>");
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
-  activeLivePinnedComment=null;
+    if(role==="host"){
+    const moderatorList=$("#live-moderator-list");
+    const refreshLiveModerators=async()=>{
+      if(!moderatorList)return;
+      moderatorList.innerHTML="<p class='muted'>Loading moderators…</p>";
+      try{
+        const data=await api("/live/sessions/"+encodeURIComponent(session.id)+"/moderators");
+        const moderators=Array.isArray(data.moderators)?data.moderators:[];
+        moderatorList.innerHTML=moderators.length?moderators.map(member=>"<div class='live-moderator-row'><span><strong>"+esc(member.name||member.username||"Minglora member")+"</strong><small>@"+esc(member.username||"member")+"</small></span><button type='button' class='text-button' data-live-moderator-remove='"+esc(member.id)+"'>Remove</button></div>").join(""):"<p class='muted'>No moderators assigned yet.</p>";
+      }catch(error){moderatorList.innerHTML="<p class='muted'>"+esc(error.message||"Moderators could not be loaded.")+"</p>";}
+    };
+    $("#live-moderator-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),username=String(form.elements.username.value||"").trim();
+      if(!username)return;
+      button.disabled=true;
+      try{await api("/live/sessions/"+encodeURIComponent(session.id)+"/moderators",{method:"POST",body:JSON.stringify({username})});form.reset();await refreshLiveModerators();toast("LIVE moderator added.");}
+      catch(error){toast(error.message||"The moderator could not be added.");}
+      finally{button.disabled=false;}
+    });
+    moderatorList?.addEventListener("click",async event=>{
+      const button=event.target?.closest?.("[data-live-moderator-remove]");if(!button)return;
+      const memberId=button.dataset.liveModeratorRemove;if(!memberId)return;
+      button.disabled=true;
+      try{await api("/live/sessions/"+encodeURIComponent(session.id)+"/moderators/"+encodeURIComponent(memberId),{method:"DELETE"});await refreshLiveModerators();toast("LIVE moderator removed.");}
+      catch(error){toast(error.message||"The moderator could not be removed.");button.disabled=false;}
+    });
+    void refreshLiveModerators();
+  }
+activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
   reactionLayer.className="live-reaction-layer";
   reactionLayer.setAttribute("aria-hidden","true");
