@@ -1504,11 +1504,52 @@ async function route(req, res) {
         if (!patch) return json(res, 400, { error: 'Send LIVE settings as an object.' });
         const normalized = normalizeLiveSettings({ ...(session.liveSettings || {}), ...patch });
         if (!normalized.valid) return json(res, 400, { error: normalized.error });
+
+        let guestStageRemoved = 0;
+        let guestStageRemovalFailures = 0;
+        const disablingGuestStage = patch.guestStageEnabled === false && session.liveSettings?.guestStageEnabled !== false;
+        if (disablingGuestStage) {
+          const requests = (db.liveSpeakerRequests || []).filter(item =>
+            item.sessionId === session.id && ['requested', 'accepted', 'connected'].includes(item.status)
+          );
+          for (const request of requests) {
+            if (request.status === 'requested') {
+              await requestSupabaseState('live_speaker_request_review', {
+                broadcastId: session.id, hostId: user.id, speakerId: request.userId, decision: 'reject'
+              });
+              request.status = 'rejected';
+              request.reviewedAt = now();
+              continue;
+            }
+            try {
+              await removeLiveKitParticipant(session.roomName, request.userId);
+              await requestSupabaseState('live_speaker_mark_left', { broadcastId: session.id, userId: request.userId });
+              const leftAt = now();
+              request.status = 'left';
+              request.leftAt = leftAt;
+              const participant = (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === request.userId);
+              if (participant) { participant.status = 'left'; participant.leftAt = leftAt; }
+              guestStageRemoved++;
+            } catch (error) {
+              guestStageRemovalFailures++;
+              console.error('[Minglora LIVE] Guest-stage shutdown could not remove one speaker.', {
+                sessionId: session.id, message: String(error?.message || 'LiveKit removal failed').slice(0, 180)
+              });
+            }
+          }
+        }
+
         session.liveSettings = normalized.settings;
         if (normalized.settings.practiceMode) session.visibility = 'private';
         else if (normalized.settings.audienceControl === false) session.visibility = 'public';
         await saveStore();
-        return json(res, 200, { liveSettings: session.liveSettings, visibility: session.visibility });
+        return json(res, 200, {
+          liveSettings: session.liveSettings,
+          visibility: session.visibility,
+          guestStage: disablingGuestStage ? {
+            enabled: false, removed: guestStageRemoved, removalFailures: guestStageRemovalFailures
+          } : undefined
+        });
       }
       const liveLayoutMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/layout$/);
       if (liveLayoutMatch) {
@@ -1612,6 +1653,7 @@ async function route(req, res) {
         if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
         const allowed = session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
         if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
+        if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         if (session.liveSettings?.allowGuestRequests === false) return json(res, 403, { error: 'The host is not accepting guest speaker requests right now.' });
         if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled co-host and guest stage requests for this LIVE.' });
         const joined = (db.liveParticipants || []).some(item => item.sessionId === session.id && item.userId === user.id && !item.leftAt);
@@ -1667,6 +1709,7 @@ async function route(req, res) {
           return json(res, 200, { request, removed: true, wasConnected: Boolean(removal?.wasConnected) });
         }
         if (decision === 'accept') {
+          if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
           const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
             item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
           ).length;
@@ -1695,6 +1738,7 @@ async function route(req, res) {
           item.sessionId === session.id && item.userId === user.id
         );
         const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
+        if (role === 'guest' && session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         const publishSourceNames = getLivePublishSourceNames(session.liveMode, role, session.broadcastType, session.liveSettings || {});
         const publishSources = publishSourceNames
           ? publishSourceNames.map(source => LIVEKIT_TRACK_SOURCE[source])
@@ -1721,6 +1765,7 @@ async function route(req, res) {
         );
         const role = session.hostId === user.id ? 'host' :
           ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
+        if (role === 'guest' && session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         if (role === 'guest' && !speakerRequest) return json(res, 403, { error: 'Host approval is required before joining the speaker stage.' });
         let providerParticipants;
         try {
