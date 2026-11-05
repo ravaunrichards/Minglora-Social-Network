@@ -90,6 +90,9 @@ test('The Guest section shows request identity, status, time, counts and usable 
   assert.match(styles, /\.live-speaker-actions button\{[\s\S]*?min-height:34px/);
   assert.match(styles, /\.live-guest-seat-meta strong,\.live-guest-seat-meta small\{[\s\S]*?white-space:normal!important/);
   assert.match(styles, /overflow-wrap:anywhere!important/);
+  assert.match(styles, /repeat\(3,minmax\(92px,\.55fr\)\)/);
+  assert.match(styles, /min-height:480px!important/);
+  assert.match(styles, /position:relative!important;inset:auto!important;z-index:4!important/);
 });
 
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
