@@ -965,10 +965,10 @@ async function refreshLiveChat(broadcastId){
     list.innerHTML=(data.messages||[]).map(message=>{
       const author=message.user?.name||"Member";
       const isPinned=activeLivePinnedComment?.id===String(message.id);
-      const pinButton=activeLiveRole==="host"
-        ?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>"
+      const controls=activeLiveRole==="host"
+        ?"<span class='live-chat-actions'><button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button><button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
-      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><strong>"+esc(author)+"</strong><span>"+esc(message.body)+"</span><small>"+timeAgo(message.created_at)+"</small>"+pinButton+"</div>";
+      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><strong>"+esc(author)+"</strong><span>"+esc(message.body)+"</span><small>"+timeAgo(message.created_at)+"</small>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
     list.scrollTop=list.scrollHeight;
   }catch(error){if($("#live-chat-list"))toast(error.message);}
@@ -1577,6 +1577,26 @@ async function openLiveRoom(session,role,issuedLiveKit){
       }finally{screenShareControl.disabled=false;}
     });
     $("#live-chat-list")?.addEventListener("click",async event=>{
+      const deleteButton=event.target?.closest?.("[data-live-chat-delete]");
+      if(deleteButton&&role==="host"){
+        const messageId=String(deleteButton.dataset.liveChatDelete||"");
+        if(!messageId)return;
+        if(!window.confirm("Remove this comment from the LIVE chat?"))return;
+        deleteButton.disabled=true;
+        try{
+          await api("/live/sessions/"+encodeURIComponent(session.id)+"/chat/"+encodeURIComponent(messageId),{method:"DELETE"});
+          if(activeLivePinnedComment?.id===messageId){
+            try{
+              const packet={type:"minglora.live.pin",version:1,action:"unpin",messageId};
+              await room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(packet)),{reliable:true,topic:"minglora-live-pin"});
+              renderLivePinnedComment(null);
+            }catch(error){console.warn("[Minglora LIVE] Removed pinned comment but could not broadcast unpin.",error?.message||error);}
+          }
+          toast("LIVE comment removed.");
+          await refreshLiveChat(session.id);
+        }catch(error){toast(error.message||"This comment could not be removed.");deleteButton.disabled=false;}
+        return;
+      }
       const button=event.target?.closest?.("[data-live-chat-pin]");
       if(!button||role!=="host")return;
       const line=button.closest(".live-chat-line");
