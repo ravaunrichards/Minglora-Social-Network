@@ -1064,9 +1064,10 @@ async function route(req, res) {
           group:['image/jpeg','image/png','image/webp','video/mp4'],
           page:['image/jpeg','image/png','image/webp','video/mp4'],
           message:['image/jpeg','image/png','image/webp','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf','text/plain','text/csv','application/zip','application/x-zip-compressed','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-          ringtone:Object.keys(CALL_RINGTONE_MIME_TYPES)
+          ringtone:Object.keys(CALL_RINGTONE_MIME_TYPES),
+          live_recording:['video/webm','video/mp4']
         };
-        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,sound:50*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES};
+        const limits={avatar:10*1024*1024,cover:20*1024*1024,post:500*1024*1024,sound:50*1024*1024,story:200*1024*1024,group:250*1024*1024,page:250*1024*1024,message:100*1024*1024,ringtone:CALL_RINGTONE_MAX_BYTES,live_recording:1024*1024*1024};
         if(!allowedSlots[slot]||!allowedSlots[slot].includes(mimeType)||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>limits[slot])return json(res,400,{error:'The selected file type or size is not allowed for this media area.'});
         const prepared=await mediaGateway('media_upload_prepare',{ownerId:user.id,slot,mimeType,byteSize});
         const asset={id:uid(),ownerId:user.id,slot,bucket:prepared.bucket,path:prepared.path,mimeType,mediaType:mimeKinds[mimeType],byteSize,originalName:fileName||'Attachment',status:'uploading',createdAt:now()};
@@ -2240,6 +2241,66 @@ async function route(req, res) {
         }
       }
       const guardianRestricted=/(https?:|www[.]|[a-z0-9._%+-]+@[a-z0-9.-]+[.][a-z]{2,}|[+]?[0-9][0-9\s().-]{7,}[0-9])/i;
+      const liveRecordingListMatch=p.match(/^\/api\/live\/sessions\/([^/]+)\/recordings$/);
+      if(liveRecordingListMatch&&method==='GET'){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveRecordingListMatch[1]);
+        if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
+        const isHost=session.hostId===user.id;
+        const recordings=(db.liveRecordings||[]).filter(item=>item.sessionId===session.id&&item.status==='ready'&&
+          (isHost||(item.sharedWithGuests===true&&(item.allowedGuestIds||[]).includes(user.id))));
+        const items=await Promise.all(recordings.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async item=>{
+          const asset=(db.mediaAssets||[]).find(media=>media.id===item.assetId&&media.ownerId===session.hostId&&media.slot==='live_recording'&&media.status!=='deleted');
+          if(!asset)return null;
+          try{
+            const signed=await mediaGateway('media_sign',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
+            return {id:item.id,title:item.title,createdAt:item.createdAt,durationMs:item.durationMs,byteSize:asset.byteSize,url:signed.url,mimeType:asset.mimeType,sharedWithGuests:item.sharedWithGuests};
+          }catch{return null;}
+        }));
+        return json(res,200,{recordings:items.filter(Boolean)});
+      }
+      if(method==='POST'&&liveRecordingListMatch){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveRecordingListMatch[1]&&item.status==='live');
+        if(!session||session.hostId!==user.id)return json(res,403,{error:'Only the LIVE host can start a recording.'});
+        db.liveRecordings=db.liveRecordings||[];
+        if(db.liveRecordings.some(item=>item.sessionId===session.id&&item.status==='recording'))return json(res,409,{error:'A LIVE recording is already in progress.'});
+        let participants;
+        try{participants=await listLiveKitParticipants(session.roomName);}
+        catch{return json(res,503,{error:'Minglora could not verify the connected LIVE room participants.'});}
+        if(!participants.some(participant=>participant.identity===user.id))return json(res,409,{error:'Join your LIVE room before starting a recording.'});
+        const allowedGuestIds=participants.map(participant=>String(participant.identity)).filter(id=>id!==session.hostId);
+        const recording={id:uid(),sessionId:session.id,hostId:user.id,title:String(input.title||session.title||'Minglora LIVE recording').trim().slice(0,120),
+          status:'recording',sharedWithGuests:Boolean(input.shareWithGuests),allowedGuestIds,startedAt:now(),createdAt:now(),assetId:null,bucket:null,path:null};
+        db.liveRecordings.unshift(recording);await saveStore();
+        return json(res,201,{recording:{id:recording.id,title:recording.title,startedAt:recording.startedAt,allowedGuestCount:allowedGuestIds.length,sharedWithGuests:recording.sharedWithGuests}});
+      }
+      const liveRecordingItemMatch=p.match(/^\/api\/live\/sessions\/([^/]+)\/recordings\/([^/]+)$/);
+      if(liveRecordingItemMatch&&['PATCH','DELETE'].includes(method)){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveRecordingItemMatch[1]);
+        if(!session||session.hostId!==user.id)return json(res,403,{error:'Only the LIVE host can manage this recording.'});
+        const recording=(db.liveRecordings||[]).find(item=>item.id===liveRecordingItemMatch[2]&&item.sessionId===session.id&&item.hostId===user.id);
+        if(!recording)return json(res,404,{error:'LIVE recording not found.'});
+        if(method==='DELETE'){
+          const asset=(db.mediaAssets||[]).find(item=>item.id===recording.assetId&&item.ownerId===user.id&&item.slot==='live_recording');
+          if(asset&&asset.status!=='deleted'){
+            await mediaGateway('media_delete',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
+            asset.status='deleted';asset.deletedAt=now();
+          }
+          recording.status='deleted';recording.deletedAt=now();await saveStore();
+          return json(res,200,{ok:true,deleted:true});
+        }
+        if(recording.status!=='recording')return json(res,409,{error:'This LIVE recording is no longer being recorded.'});
+        const assetId=String(input.assetId||''),durationMs=Number(input.durationMs||0);
+        const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='live_recording'&&item.status==='uploaded'&&item.mimeType==='video/webm');
+        if(!asset)return json(res,409,{error:'Upload the completed WebM recording through Minglora secure media uploads before saving it.'});
+        if(!Number.isSafeInteger(durationMs)||durationMs<1000||durationMs>2*60*60*1000)return json(res,400,{error:'Recording duration must be between one second and two hours.'});
+        recording.assetId=asset.id;recording.bucket=asset.bucket;recording.path=asset.path;recording.durationMs=durationMs;
+        recording.status='ready';recording.endedAt=now();
+        recording.title=String(input.title||recording.title||'Minglora LIVE recording').trim().slice(0,120);
+        recording.sharedWithGuests=Boolean(input.shareWithGuests)&&recording.allowedGuestIds.length>0;
+        asset.status='attached';asset.attachedTo='live-recording:'+recording.id;
+        await saveStore();
+        return json(res,200,{recording:{id:recording.id,title:recording.title,status:recording.status,durationMs:recording.durationMs,sharedWithGuests:recording.sharedWithGuests}});
+      }
       const liveQuestionsMatch=p.match(/^\/api\/live\/sessions\/([^/]+)\/questions$/);
       if(liveQuestionsMatch&&['GET','POST'].includes(method)){
         const session=(db.liveSessions||[]).find(item=>item.id===liveQuestionsMatch[1]&&item.status==='live');
