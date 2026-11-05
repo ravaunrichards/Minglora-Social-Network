@@ -52,7 +52,7 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   assert.ok(html.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
 });
 test('utility rail and header actions use the matching rendered icon assets', () => {
-  for (const icon of ['live', 'coins', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
+  for (const icon of ['live', 'recharge', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
     assert.ok(html.includes(useIcon(icon)), `utility icon ${icon} is wired into the interface`);
   }
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
