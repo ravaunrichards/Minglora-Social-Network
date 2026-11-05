@@ -11,6 +11,7 @@ export const DEFAULT_LIVE_SETTINGS = Object.freeze({
   optimizeForStability: true,
   markViewers: true,
   communitySafety: true,
+  groupChatEnabled: true,
   liveGifts: true,
   audienceControl: true,
   contentDisclosure: 'none',
@@ -36,7 +37,7 @@ export function normalizeLiveSettings(value = {}) {
   const next = { ...DEFAULT_LIVE_SETTINGS, ...value };
   if (!LIVE_BOARDS.includes(next.board)) return { valid: false, error: 'Choose a supported LIVE board.' };
   if (!LIVE_QUALITIES.includes(next.liveQuality)) return { valid: false, error: 'Choose Auto, 720p or 1080p LIVE quality.' };
-  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled']) {
+  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled']) {
     if (typeof next[key] !== 'boolean') return { valid: false, error: key + ' must be true or false.' };
   }
   if (!['none', 'branded', 'sponsored'].includes(next.contentDisclosure)) {
