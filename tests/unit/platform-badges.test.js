@@ -31,3 +31,33 @@ test('badge exclusion is case-insensitive and does not affect verification badge
     verificationBadge: 'blue'
   }), null);
 });
+
+test('the designated Creator Hub account receives a blue profile verification sticker', () => {
+  const creator = {
+    email: 'CreatorHubCreatorNetwork@Gmail.Com',
+    role: undefined,
+    verificationBadge: null
+  };
+
+  assert.equal(getProfileVerificationBadge(creator), 'blue');
+  assert.equal(getPlatformAdminBadge(creator), null, 'verification must not grant the Admin badge');
+});
+
+test('the creator verification sticker matches the account email case-insensitively', () => {
+  assert.equal(getProfileVerificationBadge({
+    email: '  CREATORHUBCREATORNETWORK@GMAIL.COM ',
+    verificationBadge: null
+  }), 'blue');
+});
+
+test('other accounts keep their existing verification state', () => {
+  assert.equal(getProfileVerificationBadge({
+    email: 'member@example.test',
+    verificationBadge: null
+  }), null);
+
+  assert.equal(getProfileVerificationBadge({
+    email: 'verified@example.test',
+    verificationBadge: 'blue'
+  }), 'blue');
+});
