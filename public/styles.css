@@ -5907,3 +5907,60 @@ button.live-ranking-row{cursor:pointer}
 .gift-funding-source-label,.live-gift-funding-source{display:grid;gap:6px;margin:12px 0;font-weight:650}
 .gift-funding-source-label select,.live-gift-funding-source select{width:100%;min-height:42px;padding:9px 12px;border:1px solid var(--line,rgba(127,127,127,.24));border-radius:10px;background:var(--card,#fff);color:var(--text,#182230);font:inherit}
 .gift-funding-source-note,.live-gift-promo-fund-note{display:block;margin:6px 0 12px;color:var(--muted,#667085);font-size:.88rem;line-height:1.45}
+
+
+/* Phone profile header: keep the owner actions separate from the avatar area. */
+@media(max-width:760px){
+  .profile-info{
+    align-items:stretch!important;
+    gap:10px!important;
+    padding:12px 14px 16px!important;
+    min-width:0!important;
+  }
+  .profile-avatar-edit-wrap{
+    display:none!important;
+  }
+  .profile-info-main{
+    flex:1 1 100%!important;
+    width:100%!important;
+    min-width:0!important;
+    padding:2px 0 0!important;
+  }
+  .profile-actions,
+  .profile-owner-actions{
+    display:flex!important;
+    flex:0 0 100%!important;
+    width:100%!important;
+    min-width:0!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    gap:8px!important;
+    margin:0!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    z-index:auto!important;
+    overflow:visible!important;
+    pointer-events:auto!important;
+  }
+  .profile-actions .profile-edit,
+  .profile-owner-actions .profile-edit{
+    display:inline-flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-height:44px!important;
+    max-width:100%!important;
+    margin:0!important;
+    position:static!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    transform:none!important;
+  }
+  .profile-counts{
+    flex:1 0 100%!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+}
