@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
-    "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
+    "economy_catalog", "economy_wallet", "economy_refunded_gift_ids", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
@@ -95,6 +95,33 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "economy_refunded_gift_ids") {
+    const { data: refundRows, error: refundError } = await admin
+      .from("coin_ledger")
+      .select("reference_id,created_at")
+      .eq("entry_type", "refund")
+      .not("reference_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (refundError) return json(503, { error: "Minglora could not load refunded gift references." });
+    const references = [...new Set((refundRows || [])
+      .map((row: any) => String(row.reference_id || ""))
+      .filter((id: string) => uuidPattern.test(id)))];
+    if (!references.length) return json(200, { giftIds: [] });
+
+    const confirmedIds: string[] = [];
+    for (let offset = 0; offset < references.length; offset += 200) {
+      const batch = references.slice(offset, offset + 200);
+      const { data: gifts, error: giftError } = await admin
+        .from("live_gift_transactions")
+        .select("id")
+        .in("id", batch);
+      if (giftError) return json(503, { error: "Minglora could not verify refunded LIVE Gifts." });
+      for (const gift of gifts || []) confirmedIds.push(String(gift.id));
+    }
+    return json(200, { giftIds: [...new Set(confirmedIds)] });
+  }
 
   if (action === "auth_register_user") {
     const email = String(input.email || "").trim().toLowerCase();
