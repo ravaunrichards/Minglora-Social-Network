@@ -5793,3 +5793,271 @@ button.live-ranking-row{cursor:pointer}
     padding-inline:5px!important;font-size:12px!important;
   }
 }
+
+
+/* Minglora LIVE: cohesive TikTok-style Full Screen room.
+   The stage owns the viewport on phones and stays portrait-sized on wide screens.
+   Header, comments, room controls and engagement are separated into clear zones. */
+.live-player-shell.live-full-screen-mode{
+  position:fixed!important;inset:0!important;z-index:10050!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:100vw!important;height:100vh!important;height:100dvh!important;
+  min-width:0!important;min-height:0!important;max-width:100vw!important;max-height:100dvh!important;
+  margin:0!important;padding:max(4px,env(safe-area-inset-top)) 4px max(4px,env(safe-area-inset-bottom))!important;
+  overflow:hidden!important;background:#080b12!important;box-shadow:none!important;
+}
+.live-player-shell.live-full-screen-mode>.live-player-layout{
+  position:relative!important;display:block!important;flex:0 0 auto!important;
+  width:min(calc(100vw - 8px),430px)!important;
+  height:min(calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px),780px)!important;
+  min-width:0!important;min-height:0!important;max-width:430px!important;max-height:780px!important;
+  margin:0 auto!important;padding:0!important;overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.09)!important;border-radius:14px!important;
+  background:#05070b!important;box-shadow:0 10px 36px rgba(0,0,0,.34)!important;
+}
+@media(max-width:640px){
+  .live-player-shell.live-full-screen-mode>.live-player-layout{
+    width:calc(100vw - 8px)!important;
+    height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px)!important;
+    max-width:430px!important;max-height:780px!important;
+    border-radius:10px!important;
+  }
+}
+.live-player-shell.live-full-screen-mode>.live-player-layout>.live-video-column{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  margin:0!important;padding:0!important;gap:0!important;overflow:hidden!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  max-width:none!important;max-height:none!important;aspect-ratio:auto!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  overflow:hidden!important;background:#05070b!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar{
+  position:absolute!important;inset:max(8px,env(safe-area-inset-top)) 9px auto!important;
+  z-index:75!important;display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:6px!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important;
+  pointer-events:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar .live-host-profile{
+  max-width:min(55vw,220px)!important;min-height:38px!important;padding:3px 7px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar .live-host-profile img{
+  width:30px!important;height:30px!important;flex-basis:30px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar .live-like-control,
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-stage-topbar #live-fan-club-join{
+  display:none!important;
+}
+
+/* Comments form a stable, lower-left stream. They never occupy the action dock. */
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay{
+  position:absolute!important;inset:auto auto calc(102px + env(safe-area-inset-bottom)) 9px!important;
+  z-index:56!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;
+  align-items:stretch!important;width:min(86%,365px)!important;max-width:calc(100% - 18px)!important;
+  height:auto!important;max-height:min(27dvh,230px)!important;min-height:0!important;
+  margin:0!important;padding:0!important;background:transparent!important;
+  pointer-events:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-list{
+  display:flex!important;flex:0 1 auto!important;flex-direction:column!important;justify-content:flex-end!important;
+  align-items:stretch!important;width:100%!important;min-width:0!important;min-height:0!important;
+  max-height:min(27dvh,230px)!important;margin:0!important;padding:0 2px 2px!important;
+  overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;
+  border:0!important;background:transparent!important;scrollbar-width:none!important;
+  pointer-events:auto!important;scroll-behavior:smooth!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-line{
+  display:grid!important;grid-template-columns:24px minmax(0,1fr)!important;align-items:start!important;
+  gap:3px 6px!important;flex:0 0 auto!important;width:max-content!important;
+  max-width:min(100%,350px)!important;margin:0 0 5px!important;padding:5px 8px!important;
+  border:1px solid rgba(255,255,255,.08)!important;border-radius:12px!important;
+  background:rgba(5,9,16,.62)!important;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  color:#fff!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-avatar{
+  width:24px!important;height:24px!important;grid-column:1!important;grid-row:1!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-copy{
+  display:grid!important;gap:2px!important;grid-column:2!important;min-width:0!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-copy strong{
+  display:block!important;color:#fff!important;font-size:11px!important;line-height:1.2!important;
+  overflow-wrap:anywhere!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-copy>span{
+  display:block!important;color:#fff!important;font-size:12px!important;line-height:1.3!important;
+  overflow-wrap:anywhere!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-time{
+  display:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-actions{
+  grid-column:2!important;display:flex!important;gap:4px!important;flex-wrap:wrap!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-actions button{
+  min-height:23px!important;padding:2px 6px!important;font-size:8px!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay .live-chat-empty{
+  margin:0 0 5px!important;padding:7px 10px!important;width:max-content!important;max-width:100%!important;
+  border-radius:12px!important;background:rgba(5,9,16,.58)!important;color:#e8edf6!important;font-size:11px!important;
+}
+
+/* One contained bottom dock: tightly grouped room tools, then one chat/coin row. */
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-fullscreen-dock{
+  position:absolute!important;inset:auto 0 0 0!important;z-index:72!important;
+  display:grid!important;grid-template-rows:34px 42px!important;gap:5px!important;
+  width:100%!important;min-width:0!important;height:auto!important;max-width:none!important;
+  margin:0!important;padding:5px 7px calc(6px + env(safe-area-inset-bottom))!important;
+  border:0!important;border-radius:0!important;
+  background:linear-gradient(180deg,rgba(5,7,11,0),rgba(5,7,11,.76) 18%,rgba(5,7,11,.96) 66%)!important;
+  box-sizing:border-box!important;pointer-events:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-tools-row{
+  display:flex!important;align-items:center!important;justify-content:center!important;flex-wrap:nowrap!important;
+  gap:4px!important;width:100%!important;min-width:0!important;height:34px!important;min-height:34px!important;
+  margin:0!important;padding:0!important;overflow:visible!important;pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-player-controls{
+  position:static!important;inset:auto!important;display:flex!important;align-items:center!important;
+  justify-content:center!important;flex-wrap:nowrap!important;gap:4px!important;
+  width:100%!important;min-width:0!important;height:34px!important;min-height:34px!important;
+  max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;
+  overflow:visible!important;border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-control-button{
+  display:flex!important;flex:0 1 32px!important;align-items:center!important;justify-content:center!important;
+  width:32px!important;min-width:0!important;max-width:36px!important;height:32px!important;min-height:32px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;
+  background:transparent!important;color:#fff!important;box-shadow:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-control-icon{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:30px!important;height:30px!important;flex:0 0 30px!important;
+  border:1px solid rgba(255,255,255,.15)!important;border-radius:50%!important;
+  background:rgba(23,31,45,.86)!important;color:#fff!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-control-icon svg{
+  width:16px!important;height:16px!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-control-caption{
+  display:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:7px!important;width:100%!important;min-width:0!important;height:42px!important;min-height:42px!important;
+  margin:0!important;padding:3px 5px!important;border:1px solid rgba(255,255,255,.12)!important;
+  border-radius:24px!important;background:rgba(17,24,36,.96)!important;
+  box-sizing:border-box!important;pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row>.live-chat-composer-wrap{
+  display:flex!important;flex:1 1 auto!important;align-items:center!important;gap:4px!important;
+  width:auto!important;min-width:0!important;max-width:none!important;height:34px!important;min-height:34px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row .live-chat-emoji-picker{
+  bottom:calc(100% + 8px)!important;max-width:min(260px,calc(100vw - 28px))!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row .live-chat-form{
+  display:flex!important;flex:1 1 auto!important;align-items:center!important;flex-wrap:nowrap!important;
+  gap:4px!important;width:100%!important;min-width:0!important;height:34px!important;min-height:34px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row .live-chat-form input{
+  flex:1 1 auto!important;width:100%!important;min-width:0!important;max-width:none!important;
+  height:32px!important;min-height:32px!important;padding:5px 8px!important;
+  border:1px solid rgba(255,255,255,.09)!important;border-radius:18px!important;
+  background:rgba(255,255,255,.07)!important;color:#fff!important;font-size:13px!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row .live-chat-form button{
+  display:grid!important;place-items:center!important;flex:0 0 28px!important;
+  width:28px!important;min-width:28px!important;height:28px!important;min-height:28px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row .live-chat-form .live-chat-emoji-button{
+  color:#fff!important;background:rgba(255,255,255,.11)!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row .live-chat-form button[type="submit"]{
+  color:#fff!important;background:#286be6!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions{
+  display:flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:flex-end!important;
+  flex-wrap:nowrap!important;gap:4px!important;min-width:0!important;height:32px!important;
+  pointer-events:auto!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions .live-like-control{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 30px!important;width:30px!important;min-width:30px!important;height:30px!important;
+  margin:0!important;padding:0!important;gap:2px!important;background:transparent!important;color:#fff!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions .live-heart-like{
+  display:grid!important;place-items:center!important;flex:0 0 28px!important;
+  width:28px!important;height:28px!important;margin:0!important;padding:0!important;
+  border:0!important;border-radius:50%!important;background:transparent!important;color:#ff6b8b!important;
+  font-size:20px!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-fan-club-join,
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-gifts-toggle{
+  display:grid!important;place-items:center!important;flex:0 0 30px!important;
+  width:30px!important;min-width:30px!important;max-width:30px!important;height:30px!important;min-height:30px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;
+  background:transparent!important;color:#fff!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-fan-club-join{
+  font-size:0!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-fan-club-join:before{
+  content:"♥ 1";font-size:11px!important;font-weight:900!important;white-space:nowrap!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-gifts-toggle .live-control-icon{
+  width:29px!important;height:29px!important;flex:0 0 29px!important;
+  border:0!important;background:transparent!important;color:#ffd875!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-gifts-toggle .live-control-icon svg{
+  width:22px!important;height:22px!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions #live-gifts-toggle .live-control-caption{
+  display:none!important;
+}
+.live-player-shell.live-full-screen-mode .live-fullscreen-dock *{box-sizing:border-box}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-pinned-comment{
+  top:calc(54px + env(safe-area-inset-top))!important;left:10px!important;right:10px!important;
+  width:auto!important;max-width:calc(100% - 20px)!important;transform:none!important;
+  justify-content:flex-start!important;flex-wrap:wrap!important;
+}
+.live-player-shell.live-full-screen-mode .live-video-stage>.live-reaction-layer{
+  pointer-events:none!important;z-index:28!important;
+}
+@media(max-width:360px){
+  .live-player-shell.live-full-screen-mode .live-fullscreen-dock{padding-inline:4px!important;gap:4px!important}
+  .live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-player-controls,
+  .live-player-shell.live-full-screen-mode .live-fullscreen-tools-row{gap:2px!important}
+  .live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-control-button{
+    flex-basis:30px!important;width:30px!important;max-width:30px!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-control-icon{
+    width:28px!important;height:28px!important;flex-basis:28px!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row{gap:4px!important;padding-inline:4px!important}
+  .live-player-shell.live-full-screen-mode .live-fullscreen-engagement-actions{gap:2px!important}
+}
+@media(max-height:600px){
+  .live-player-shell.live-full-screen-mode .live-fullscreen-dock{
+    grid-template-rows:30px 38px!important;gap:3px!important;
+    padding-top:3px!important;padding-bottom:calc(4px + env(safe-area-inset-bottom))!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-fullscreen-tools-row,
+  .live-player-shell.live-full-screen-mode .live-fullscreen-tools-row .live-player-controls{
+    height:30px!important;min-height:30px!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-fullscreen-engagement-row{
+    height:38px!important;min-height:38px!important;
+  }
+  .live-player-shell.live-full-screen-mode .live-video-stage>.live-chat-overlay{
+    bottom:calc(91px + env(safe-area-inset-bottom))!important;
+  }
+}
