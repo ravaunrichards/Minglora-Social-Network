@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
-    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit",
+    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
@@ -384,6 +384,89 @@ Deno.serve(async (req: Request) => {
     });
     if (error) return fail(error, "Minglora could not credit the member wallet.");
     return json(200, { credit: data });
+  }
+
+  if (action === "economy_admin_member_search") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const rawSearch = String(input.search || "").trim().slice(0, 80);
+    const search = rawSearch.replace(/^@/, "").trim();
+
+    if (!validUuid(adminUserId) ||
+        adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(403, { error: "Only the Creator Hub administrative account can search Minglora members." });
+    }
+
+    // Recheck the owner profile and platform-staff grant in Supabase. The
+    // Render route separately enforces the signed-in MFA reviewer session.
+    const [ownerResult, staffResult] = await Promise.all([
+      admin.from("profiles")
+        .select("verification_status,verification_badge")
+        .eq("id", adminUserId)
+        .maybeSingle(),
+      admin.from("minglora_platform_staff")
+        .select("user_id")
+        .eq("user_id", adminUserId)
+        .eq("role", "owner")
+        .eq("active", true)
+        .contains("permissions", ["platform:admin"])
+        .limit(1)
+        .maybeSingle()
+    ]);
+    if (ownerResult.error || staffResult.error) {
+      return json(503, { error: "Minglora administrator permissions could not be verified." });
+    }
+    if (ownerResult.data?.verification_status !== "verified" ||
+        ownerResult.data?.verification_badge !== "blue" ||
+        !staffResult.data?.user_id) {
+      return json(403, { error: "The verified Creator Hub owner permission is not active." });
+    }
+
+    const columns = "id,username,display_name,avatar_url,created_at";
+    const newestMembers = () => admin.from("profiles")
+      .select(columns)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(50);
+
+    let profiles: any[] = [];
+    if (!search) {
+      const { data, error } = await newestMembers();
+      if (error) return json(503, { error: "Minglora member profiles could not be loaded." });
+      profiles = data || [];
+    } else {
+      // Pass the search term as a bound filter value and escape SQL wildcard
+      // characters so a typed "%" or "_" does not turn into a broad search.
+      const pattern = "%" + search.replace(/[\\%_]/g, "\\  if (action === "economy_owner_issuance") {") + "%";
+      const [usernameResult, displayNameResult] = await Promise.all([
+        newestMembers().ilike("username", pattern),
+        newestMembers().ilike("display_name", pattern)
+      ]);
+      if (usernameResult.error || displayNameResult.error) {
+        return json(503, { error: "Minglora member search could not be completed." });
+      }
+      const byId = new Map<string, any>();
+      for (const profile of [...(usernameResult.data || []), ...(displayNameResult.data || [])]) {
+        if (profile?.id) byId.set(String(profile.id), profile);
+      }
+      profiles = [...byId.values()]
+        .sort((a, b) => {
+          const dateDifference = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          return dateDifference || String(a.username || "").localeCompare(String(b.username || ""));
+        })
+        .slice(0, 50);
+    }
+
+    return json(200, {
+      members: profiles.map((profile: any) => ({
+        id: profile.id,
+        username: profile.username,
+        displayName: profile.display_name || "",
+        avatarUrl: profile.avatar_url || "",
+        joinedAt: profile.created_at || null
+      }))
+    });
   }
 
   if (action === "economy_owner_issuance") {
