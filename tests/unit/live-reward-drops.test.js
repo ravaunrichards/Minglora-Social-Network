@@ -26,7 +26,7 @@ test("reward pools are funded from the existing Minglora coin wallet and audited
   assert.match(migration, /'live_reward_escrow'/);
   assert.match(migration, /'live_reward_award'/);
   assert.match(migration, /'live_reward_refund'/);
-  assert.match(migration, /creator_share_minor|creator_earnings_ledger/);
+  assert.doesNotMatch(migration, /creator_earnings_ledger/);
   assert.match(migration, /greatest\(0,reward_drop\.total_coins-awarded_coins\)/);
 });
 
