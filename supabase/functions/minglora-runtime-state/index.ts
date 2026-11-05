@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
-    "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send",
+    "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
@@ -992,6 +992,25 @@ Deno.serve(async (req: Request) => {
       const profile = profileMap.get(row.user_id);
       return { ...row, user: profile ? { id: profile.id, name: profile.display_name, username: profile.username } : null };
     }) });
+  }
+
+  if (action === "live_chat_delete") {
+    const broadcastId = String(input.broadcastId || "");
+    const hostId = String(input.hostId || "");
+    const messageId = String(input.messageId || "");
+    if (!validUuid(broadcastId) || !validUuid(hostId) || !validUuid(messageId)) {
+      return json(400, { error: "Invalid LIVE comment removal request." });
+    }
+    const { data: broadcast, error: broadcastError } = await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id", broadcastId).eq("status", "live").maybeSingle();
+    if (broadcastError || !broadcast) return json(404, { error: "LIVE session not found." });
+    if (broadcast.host_id !== hostId) return json(403, { error: "Only the LIVE host can remove comments." });
+    const { data, error } = await admin.from("live_chat_messages")
+      .delete().eq("id", messageId).eq("broadcast_id", broadcastId)
+      .select("id").maybeSingle();
+    if (error) return json(503, { error: "LIVE comment could not be removed." });
+    if (!data) return json(404, { error: "This LIVE comment no longer exists." });
+    return json(200, { ok: true, messageId: data.id });
   }
 
   if (action === "media_upload_prepare") {
