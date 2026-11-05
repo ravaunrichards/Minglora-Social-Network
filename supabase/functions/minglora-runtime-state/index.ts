@@ -1026,9 +1026,10 @@ Deno.serve(async (req: Request) => {
     const communityMedia={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4"};
     const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","application/pdf":"pdf","text/plain":"txt","text/csv":"csv","application/zip":"zip","application/x-zip-compressed":"zip","application/msword":"doc","application/vnd.ms-excel":"xls","application/vnd.ms-powerpoint":"ppt","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"xlsx","application/vnd.openxmlformats-officedocument.presentationml.presentation":"pptx"};
     const ringtone={"audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","audio/wav":"wav","audio/x-wav":"wav","audio/flac":"flac","audio/aac":"aac"};
-    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="sound"?sound:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="message"?message:slot==="ringtone"?ringtone:{};
-    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="sound"?"minglora-sounds":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":slot==="ringtone"?"minglora-ringtones":"";
-    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="sound"?50*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="ringtone"?20*1024*1024:slot==="post"?500*1024*1024:0;
+    const liveRecording={"video/webm":"webm","video/mp4":"mp4"};
+    const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="sound"?sound:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="message"?message:slot==="ringtone"?ringtone:slot==="live_recording"?liveRecording:{};
+    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="sound"?"minglora-sounds":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":slot==="ringtone"?"minglora-ringtones":slot==="live_recording"?"minglora-live-recordings":"";
+    const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="sound"?50*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="ringtone"?20*1024*1024:slot==="live_recording"?1024*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
@@ -1071,7 +1072,8 @@ Deno.serve(async (req: Request) => {
       "minglora-group-media":["image/jpeg","image/png","image/webp","video/mp4"],
       "minglora-page-media":["image/jpeg","image/png","image/webp","video/mp4"],
       "minglora-ringtones":["audio/mpeg","audio/mp4","audio/ogg","audio/webm","audio/wav","audio/x-wav","audio/flac","audio/aac"],
-      "minglora-sounds":["audio/mpeg","audio/mp4","audio/ogg","audio/webm","audio/wav","audio/x-wav","audio/flac","audio/aac"]
+      "minglora-sounds":["audio/mpeg","audio/mp4","audio/ogg","audio/webm","audio/wav","audio/x-wav","audio/flac","audio/aac"],
+      "minglora-live-recordings":["video/webm","video/mp4"]
     };
     const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
     const objectName=objectPath.slice(objectPath.lastIndexOf("/")+1);
@@ -1126,7 +1128,7 @@ Deno.serve(async (req: Request) => {
     const assetId=String(input.assetId||"");
     const slot=String(input.slot||"");
     const originalName=String(input.originalName||"").trim().slice(0,255);
-    if(!uuidPattern.test(assetId)||!["avatar","cover","post","sound","story","group","page","message"].includes(slot)){
+    if(!uuidPattern.test(assetId)||!["avatar","cover","post","sound","story","group","page","message","live_recording"].includes(slot)){
       return json(400,{error:"A valid upload asset ID and media slot are required."});
     }
     const assetStatus=slot==="avatar"||slot==="cover"?"attached":"uploaded";
@@ -1144,7 +1146,7 @@ Deno.serve(async (req: Request) => {
     const ownerId=String(input.ownerId||"");
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
-    const allowedBuckets=["minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-live-thumbnails","minglora-data-exports","minglora-ringtones","minglora-sounds"];
+    const allowedBuckets=["minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-live-thumbnails","minglora-data-exports","minglora-ringtones","minglora-sounds","minglora-live-recordings"];
     if(!validUuid(ownerId)||!allowedBuckets.includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")||objectPath.includes("\\\\")){
       return json(400,{error:"Invalid media deletion reference."});
     }
@@ -1160,7 +1162,7 @@ Deno.serve(async (req: Request) => {
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
     const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-ringtones","minglora-sounds"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
+    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-ringtones","minglora-sounds","minglora-live-recordings"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
       return json(400,{error:"Invalid media reference."});
     }
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){

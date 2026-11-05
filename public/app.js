@@ -741,7 +741,30 @@ let liveParticipantSyncBusy=false;
 let liveRewardRefreshTimer=null;
 let liveRewardRefreshBusy=false;
 let liveRewardWalletFetchedAt=0;
+let liveQaRefreshTimer=null;
+let liveQaRefreshBusy=false;
+let liveMatchRefreshTimer=null;
+let liveMatchRefreshBusy=false;
+let activeLiveRecording=null;
+let activeLiveCameraEffect='none';
+let liveRecordingFrame=null;
+let liveRecordingClock=null;
+let liveRecordingListTimer=null;
 let liveDirectoryFilter='all';
+const LIVE_CAMERA_EFFECTS=Object.freeze([
+  {value:'none',label:'Natural',filter:'none'},
+  {value:'soft',label:'Soft Glow',filter:'brightness(1.06) saturate(1.12) contrast(.98)'},
+  {value:'warm',label:'Warm',filter:'sepia(.14) saturate(1.18) hue-rotate(-8deg)'},
+  {value:'cool',label:'Cool',filter:'saturate(1.08) hue-rotate(10deg)'},
+  {value:'vivid',label:'Vivid',filter:'saturate(1.35) contrast(1.08)'},
+  {value:'mono',label:'Monochrome',filter:'grayscale(1) contrast(1.1)'}
+]);
+function applyLiveStageCameraEffect(value){
+  const effect=LIVE_CAMERA_EFFECTS.find(item=>item.value===value)?.value||'none';
+  activeLiveCameraEffect=effect;
+  const root=$('#live-guest-layout');if(root)root.dataset.liveCameraEffect=effect;
+  const select=$('#live-camera-effect-select');if(select&&select.value!==effect)select.value=effect;
+}
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'full-screen',label:'Full Screen',icon:'featured'},
   {value:'fluid-panel',label:'Fluid Panel',icon:'featured'},
@@ -839,6 +862,10 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
       "<label class='live-preflight-toggle'><input type='checkbox' name='allowCoHost' checked><span class='live-preflight-switch'></span><span><strong>Allow co-host</strong><small>Allow other members to join your LIVE stage</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='manageModerators' checked><span class='live-preflight-switch'></span><span><strong>Manage moderators</strong><small>Allow the host to assign and remove LIVE moderators</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='voiceRings' checked><span class='live-preflight-switch'></span><span><strong>Voice rings</strong><small>Play an audio alert for new guest stage requests</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='qaEnabled' checked><span class='live-preflight-switch'></span><span><strong>LIVE Q&A</strong><small>Let connected viewers ask and vote on questions</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='shareRecordingsWithGuests'><span class='live-preflight-switch'></span><span><strong>Share recordings with guest speakers</strong><small>Allow speakers who are on stage when recording starts to view the saved replay</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='guardianMode'><span class='live-preflight-switch'></span><span><strong>Guardian safety mode</strong><small>Block off-platform links, email addresses and phone numbers in LIVE chat and questions</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='effectsEnabled' checked><span class='live-preflight-switch'></span><span><strong>LIVE camera effects</strong><small>Allow camera effect choices where supported by this device</small></span></label>"+
     "</div></div>"+
     "<details class='live-preflight-advanced'><summary>Disclosure & client acquisition <span>More settings</span></summary><div class='live-preflight-fields'>"+
       "<label class='live-preflight-field'><span>Content disclosure</span><select name='contentDisclosure'><option value='none'>No disclosure</option><option value='branded'>Branded content / partnership</option><option value='sponsored'>Sponsored content</option></select></label>"+
@@ -908,6 +935,10 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
         allowCoHost:values.has("allowCoHost"),
         manageModerators:values.has("manageModerators"),
         voiceRings:values.has("voiceRings"),
+        qaEnabled:values.has("qaEnabled"),
+        shareRecordingsWithGuests:values.has("shareRecordingsWithGuests"),
+        guardianMode:values.has("guardianMode"),
+        effectsEnabled:values.has("effectsEnabled"),
         clientAcquisitionEnabled:values.has("clientAcquisitionEnabled"),
         clientCtaLabel:String(values.get("clientCtaLabel")||"").trim(),
         clientCtaUrl:String(values.get("clientCtaUrl")||"").trim()
@@ -1462,8 +1493,333 @@ function setupLiveRewardPanel(session,role){
   void refreshLiveRewardPanel(session,role);
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
+function stopLiveQaRefresh(){if(liveQaRefreshTimer){clearInterval(liveQaRefreshTimer);liveQaRefreshTimer=null;}liveQaRefreshBusy=false;}
+function stopLiveMatchRefresh(){if(liveMatchRefreshTimer){clearInterval(liveMatchRefreshTimer);liveMatchRefreshTimer=null;}liveMatchRefreshBusy=false;}
+async function refreshLiveQaPanel(session,role){
+  if(liveQaRefreshBusy||!session?.id||!$('#live-qa-list'))return;
+  liveQaRefreshBusy=true;
+  try{
+    const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions');
+    if(activeLiveSession?.id!==session.id)return;
+    const list=$('#live-qa-list');
+    if(!list)return;
+    const qaEnabled=data.qaEnabled!==false;
+    const status=$('#live-qa-status');if(status&&role!=='host')status.textContent=qaEnabled?"Ask a question, vote for the ones you want answered, and follow the host's replies.":'The host has disabled audience questions.';
+    const form=$('#live-qa-form');form?.querySelectorAll('textarea,button').forEach(control=>{control.disabled=!qaEnabled;});
+    const questions=Array.isArray(data.questions)?data.questions:[];
+    list.innerHTML=questions.length?questions.map(item=>{
+      const status=item.status==='answered'?'Answered':item.status==='closed'?'Closed':'Open';
+      const mine=item.userId===state.user?.id;
+      const canManage=role==='host'||(session.liveModerators||[]).includes(state.user?.id);
+      const controls=canManage
+        ?"<div class='live-qa-actions'>"+
+          "<button type='button' data-live-qa-action='pin' data-live-qa-id='"+esc(item.id)+"'>"+(item.pinnedAt?'Unpin':'Pin')+"</button>"+
+          "<button type='button' data-live-qa-action='answer' data-live-qa-id='"+esc(item.id)+"'>Answer</button>"+
+          "<button type='button' data-live-qa-action='"+(item.status==='closed'?'reopen':'close')+"' data-live-qa-id='"+esc(item.id)+"'>"+(item.status==='closed'?'Reopen':'Close')+"</button>"+
+          "<button type='button' data-live-qa-action='delete' data-live-qa-id='"+esc(item.id)+"'>Delete</button></div>"
+        :"<button type='button' class='live-qa-vote' data-live-qa-vote='"+esc(item.id)+"' "+(item.myVote?'aria-pressed="true"':'aria-pressed="false"')+">"+(item.myVote?'Voted · ':'Vote · ')+Number(item.voteCount||0).toLocaleString()+"</button>";
+      return "<article class='live-qa-question "+(item.pinnedAt?'is-pinned':'')+"'><div class='live-qa-question-head'><strong>"+esc(item.asker?.name||'Minglora member')+"</strong><span>"+status+"</span></div><p>"+esc(item.body)+"</p>"+(item.answer?"<div class='live-qa-answer'><strong>Host answer</strong><p>"+esc(item.answer)+"</p></div>":"")+"<div class='live-qa-question-foot'><small>"+(item.pinnedAt?'Pinned · ':'')+Number(item.voteCount||0).toLocaleString()+" votes"+(mine?' · Your question':'')+"</small>"+controls+"</div></article>";
+    }).join(""):"<div class='live-qa-empty'><strong>No questions yet</strong><small>Be the first to ask the host something.</small></div>";
+  }catch(error){
+    const list=$('#live-qa-list');if(list&&!list.children.length)list.innerHTML="<p class='muted'>Q&A could not be refreshed: "+esc(error.message)+"</p>";
+  }finally{liveQaRefreshBusy=false;}
+}
+function setupLiveQaPanel(session,role){
+  stopLiveQaRefresh();
+  const panel=$('#live-qa-panel');if(!panel)return;
+  const form=$('#live-qa-form'),list=$('#live-qa-list');
+  form?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const field=form.elements.question,question=String(field?.value||'').trim();
+    if(question.length<4||question.length>300){toast('Enter a question between 4 and 300 characters.');return;}
+    const button=form.querySelector("button[type='submit']");if(button)button.disabled=true;
+    try{await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions',{method:'POST',body:JSON.stringify({question})});form.reset();toast('Your LIVE question was submitted.');await refreshLiveQaPanel(session,role);}
+    catch(error){toast(error.message||'Your question could not be submitted.');}
+    finally{if(button)button.disabled=false;}
+  });
+  list?.addEventListener('click',async event=>{
+    const vote=event.target?.closest?.('[data-live-qa-vote]');
+    if(vote){
+      vote.disabled=true;
+      try{await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions/'+encodeURIComponent(vote.dataset.liveQaVote)+'/vote',{method:'POST',body:'{}'});await refreshLiveQaPanel(session,role);}
+      catch(error){toast(error.message);}
+      finally{vote.disabled=false;}
+      return;
+    }
+    const action=event.target?.closest?.('[data-live-qa-action]');
+    if(!action||!(role==='host'||(session.liveModerators||[]).includes(state.user?.id)))return;
+    const questionId=String(action.dataset.liveQaId||''),decision=String(action.dataset.liveQaAction||'');
+    let answer='';
+    if(decision==='answer'){answer=String(window.prompt('Write your answer for everyone in LIVE Q&A:')||'').trim();if(!answer)return;}
+    if(decision==='delete'&&!window.confirm('Delete this LIVE question?'))return;
+    action.disabled=true;
+    try{
+      if(decision==='delete')await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions/'+encodeURIComponent(questionId),{method:'DELETE'});
+      else await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions/'+encodeURIComponent(questionId),{method:'PATCH',body:JSON.stringify({action:decision,...(answer?{answer}:{})})});
+      await refreshLiveQaPanel(session,role);
+    }catch(error){toast(error.message||'The Q&A change could not be saved.');}
+    finally{action.disabled=false;}
+  });
+  void refreshLiveQaPanel(session,role);
+  liveQaRefreshTimer=setInterval(()=>void refreshLiveQaPanel(session,role),5000);
+}
+function liveMatchStatusLabel(match){
+  if(match.status==='live')return 'LIVE MATCH';
+  if(match.status==='pending')return 'Invitation pending';
+  return String(match.status||'Match').replace(/_/g,' ');
+}
+function renderLiveMatches(matches){
+  const root=$('#live-match-list');if(!root)return;
+  const items=Array.isArray(matches)?matches:[];
+  if(!items.length){root.innerHTML="<div class='live-match-empty'><strong>No League Matches yet</strong><small>Challenge another creator who is currently broadcasting.</small></div>";return;}
+  root.innerHTML=items.map(match=>{
+    const challenger=match.challenger?.name||'Challenger',opponent=match.opponent?.name||'Opponent';
+    const active=match.status==='live',pending=match.status==='pending';
+    const score=match.scores||{challenger:0,opponent:0};
+    const challengerPoints=Number(score.challenger||0),opponentPoints=Number(score.opponent||0);
+    const total=Math.max(1,challengerPoints+opponentPoints);
+    const mine=[match.challengerId,match.opponentId].includes(state.user?.id);
+    const acceptedByMe=match.opponentId===state.user?.id&&pending;
+    const alreadySupported=(match.supporters||[]).some(item=>item.userId===state.user?.id);
+    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+challengerPoints.toLocaleString()+"</b><small>Challenger</small></div>";
+    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+opponentPoints.toLocaleString()+"</b><small>Opponent</small></div>";
+    const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
+    const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
+    const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
+    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='momentum_boost' data-match-id='"+esc(match.id)+"'>Momentum</button><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
+    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+  }).join('');
+}
+async function refreshLiveMatchPanel(session,role){
+  if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
+  liveMatchRefreshBusy=true;
+  try{const data=await api('/leagues/matches');if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[]);}
+  catch(error){const root=$('#live-match-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Creator League could not be loaded: "+esc(error.message)+"</p>";}
+  finally{liveMatchRefreshBusy=false;}
+}
+async function setupLiveMatchPanel(session,role){
+  stopLiveMatchRefresh();
+  const panel=$('#live-match-panel');if(!panel)return;
+  const form=$('#live-match-create-form'),opponentSelect=$('#live-match-opponent'),giftMode=$('#live-match-gift-mode'),giftCode=$('#live-match-gift-code');
+  if(form&&role==='host'){
+    try{
+      const directory=await api('/live/sessions');
+      const sessions=(directory.sessions||[]).filter(item=>item.status==='live'&&item.id!==session.id&&item.hostId!==state.user?.id);
+      opponentSelect.innerHTML=sessions.length?"<option value=''>Select a creator currently LIVE</option>"+sessions.map(item=>"<option value='"+esc(item.id)+"'>"+esc(item.host?.name||item.host?.username||'Minglora creator')+" · "+esc(item.title||'LIVE')+"</option>").join(''):"<option value=''>No other eligible creators are live</option>";
+    }catch(error){opponentSelect.innerHTML="<option value=''>Live creator list unavailable</option>";}
+    giftMode?.addEventListener('change',()=>{if(giftCode){giftCode.disabled=giftMode.value!=='specific';giftCode.required=giftMode.value==='specific';if(giftMode.value!=='specific')giftCode.value='';}});
+    giftMode?.dispatchEvent(new Event('change'));
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const button=form.querySelector("button[type='submit']");
+      const opponentSessionId=String(opponentSelect?.value||'');
+      if(!opponentSessionId){toast('Choose a creator who is currently live.');return;}
+      button.disabled=true;
+      try{
+        const data=await api('/leagues/matches',{method:'POST',body:JSON.stringify({ownSessionId:session.id,opponentSessionId,giftMode:giftMode?.value||'all',selectedGiftCode:String(giftCode?.value||'').trim()})});
+        toast('League Match challenge sent to '+(data.match?.opponent?.name||'the other creator')+'.');
+        await refreshLiveMatchPanel(session,role);
+      }catch(error){toast(error.message||'The League Match challenge could not be sent.');}
+      finally{button.disabled=false;}
+    });
+  }
+  $('#live-match-list')?.addEventListener('click',async event=>{
+    const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
+    const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
+    const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
+    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId}:{};
+    button.disabled=true;
+    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'League Match power-up activated.');await refreshLiveMatchPanel(session,role);}
+    catch(error){toast(error.message||'The League Match action could not be completed.');}
+    finally{button.disabled=false;}
+  });
+  await refreshLiveMatchPanel(session,role);
+  liveMatchRefreshTimer=setInterval(()=>void refreshLiveMatchPanel(session,role),5000);
+}
+function stopLiveRecordingListRefresh(){if(liveRecordingListTimer){clearInterval(liveRecordingListTimer);liveRecordingListTimer=null;}if(liveRecordingClock){clearInterval(liveRecordingClock);liveRecordingClock=null;}}
+function liveRecordingClockText(startedAt){
+  const ms=Math.max(0,Date.now()-new Date(startedAt).getTime()),seconds=Math.floor(ms/1000);
+  return String(Math.floor(seconds/3600)).padStart(2,'0')+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+}
+function drawLiveRecordingFrame(canvas,ctx,session){
+  const width=canvas.width,height=canvas.height;
+  ctx.fillStyle='#0b1222';ctx.fillRect(0,0,width,height);
+  const gradient=ctx.createLinearGradient(0,0,width,height);gradient.addColorStop(0,'#192b48');gradient.addColorStop(1,'#0b1222');
+  ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);
+  ctx.fillStyle='#f5f8ff';ctx.font='700 22px system-ui,sans-serif';ctx.fillText(String(session.title||'Minglora LIVE').slice(0,64),32,42);
+  ctx.fillStyle='#ff5b6e';ctx.beginPath();ctx.arc(width-64,34,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffe3e6';ctx.font='800 13px system-ui,sans-serif';ctx.fillText('LIVE RECORDING',width-204,39);
+  const root=$('#live-guest-layout');
+  const seats=root?[...root.querySelectorAll('.live-guest-seat:not(.empty)')]:[];
+  const columns=3,rows=3,gap=12,pad=28,top=74;
+  const cellW=(width-pad*2-gap*(columns-1))/columns,cellH=(height-top-pad-gap*(rows-1))/rows;
+  if(!seats.length){
+    ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(pad,top,width-pad*2,height-top-pad);
+    ctx.fillStyle='#dfeaff';ctx.font='700 32px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText('MINGLORA LIVE',width/2,height/2-10);ctx.font='18px system-ui,sans-serif';ctx.fillText('Voice and community recording',width/2,height/2+30);ctx.textAlign='left';return;
+  }
+  seats.slice(0,9).forEach((seat,index)=>{
+    const x=pad+(index%columns)*(cellW+gap),y=top+Math.floor(index/columns)*(cellH+gap);
+    ctx.save();ctx.beginPath();ctx.roundRect(x,y,cellW,cellH,14);ctx.clip();
+    ctx.fillStyle='#17243c';ctx.fillRect(x,y,cellW,cellH);
+    const video=seat.querySelector('video.live-video-element,video');
+    if(video&&video.readyState>=2&&video.videoWidth>0){
+      const scale=Math.max(cellW/video.videoWidth,cellH/video.videoHeight),dw=video.videoWidth*scale,dh=video.videoHeight*scale;
+      const effect=LIVE_CAMERA_EFFECTS.find(item=>item.value===activeLiveCameraEffect)?.filter||'none';
+      try{ctx.filter=effect;ctx.drawImage(video,x+(cellW-dw)/2,y+(cellH-dh)/2,dw,dh);ctx.filter='none';}catch{ctx.filter='none';}
+    }else{
+      const image=seat.querySelector('img.live-guest-seat-avatar, img.live-audio-host-avatar, img');
+      if(image&&image.complete&&image.naturalWidth>0){
+        const size=Math.min(cellH*.5,cellW*.42),cx=x+(cellW-size)/2,cy=y+(cellH-size)/2-12;
+        try{ctx.save();ctx.beginPath();ctx.arc(cx+size/2,cy+size/2,size/2,0,Math.PI*2);ctx.clip();ctx.drawImage(image,cx,cy,size,size);ctx.restore();}catch{}
+      }else{
+        ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(x+cellW/2,y+cellH/2-8,Math.min(50,cellH*.22),0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.fillStyle='rgba(3,8,18,.76)';ctx.fillRect(x,y+cellH-38,cellW,38);
+    const rawName=String(seat.dataset.name||seat.getAttribute('aria-label')||seat.querySelector('strong')?.textContent||seat.textContent||'Minglora member').trim().replace(/\s+/g,' ').slice(0,40);
+    ctx.fillStyle='#fff';ctx.font='700 14px system-ui,sans-serif';ctx.fillText(rawName||'Minglora member',x+12,y+cellH-14,cellW-24);
+    ctx.restore();
+  });
+}
+function createLiveRecordingComposite(session,room){
+  if(typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream)throw new Error('This browser does not support LIVE recording. Update Chrome or use a supported browser.');
+  const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
+  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Minglora could not prepare the recording canvas.');
+  drawLiveRecordingFrame(canvas,ctx,session);
+  const videoStream=canvas.captureStream(24);
+  const audioContext=new (window.AudioContext||window.webkitAudioContext)();
+  const destination=audioContext.createMediaStreamDestination();
+  const sources=[];
+  const participants=[room.localParticipant,...(room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[])];
+  const seen=new Set();
+  participants.forEach(participant=>{
+    const publications=participant?.trackPublications?.values?Array.from(participant.trackPublications.values()):[];
+    publications.forEach(publication=>{
+      const track=publication?.track,mediaTrack=track?.mediaStreamTrack;
+      if(track?.kind!=='audio'&&mediaTrack?.kind!=='audio')return;
+      if(!mediaTrack||mediaTrack.readyState!=='live'||seen.has(mediaTrack.id))return;
+      seen.add(mediaTrack.id);
+      try{const source=audioContext.createMediaStreamSource(new MediaStream([mediaTrack]));source.connect(destination);sources.push(source);}catch(error){console.warn('[Minglora LIVE] Audio track could not be mixed into recording.',error?.message||error);}
+    });
+  });
+  const audioTracks=destination.stream.getAudioTracks();
+  const mediaStream=new MediaStream([...videoStream.getVideoTracks(),...audioTracks]);
+  const candidates=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  const mimeType=candidates.find(type=>MediaRecorder.isTypeSupported(type));
+  if(!mimeType){audioContext.close().catch(()=>{});throw new Error('This browser cannot encode a WebM LIVE recording.');}
+  const recorder=new MediaRecorder(mediaStream,{mimeType,videoBitsPerSecond:2200000,audioBitsPerSecond:128000});
+  let frameId=null;
+  const draw=()=>{if(!activeLiveRecording||activeLiveRecording.recorder!==recorder)return;drawLiveRecordingFrame(canvas,ctx,session);frameId=requestAnimationFrame(draw);};
+  frameId=requestAnimationFrame(draw);
+  return {recorder,canvas,mediaStream,audioContext,sources,stopDrawing:()=>{if(frameId!==null)cancelAnimationFrame(frameId);videoStream.getTracks().forEach(track=>track.stop());}};
+}
+function renderLiveRecordingList(recordings,role){
+  const root=$('#live-recording-list');if(!root)return;
+  const items=Array.isArray(recordings)?recordings:[];
+  root.innerHTML=items.length?items.map(item=>"<article class='live-recording-item'><div class='live-recording-item-head'><strong>"+esc(item.title||'LIVE recording')+"</strong><small>"+new Date(item.createdAt).toLocaleString()+" · "+liveRecordingClockText(new Date(Date.now()-(Number(item.durationMs)||0)))+"</small></div><video controls playsinline preload='metadata' src='"+esc(item.url)+"'></video><div class='live-recording-item-foot'><small>"+(item.sharedWithGuests?'Shared with approved guest speakers':'Private to host')+" · "+(Number(item.byteSize||0)/1024/1024).toFixed(1)+" MB</small>"+(role==='host'?"<button type='button' class='text-button' data-live-recording-delete='"+esc(item.id)+"'>Delete</button>":"")+"</div></article>").join(""):"<div class='live-recording-empty'><strong>No saved recordings</strong><small>"+(role==='host'?'Start recording to create a private replay.':'The host has not shared a recording with this room.')+"</small></div>";
+}
+async function refreshLiveRecordings(session,role){
+  if(!session?.id||!$('#live-recording-list'))return;
+  try{const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings');if(activeLiveSession?.id!==session.id)return;renderLiveRecordingList(data.recordings||[],role);}
+  catch(error){const root=$('#live-recording-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Recordings could not be loaded: "+esc(error.message)+"</p>";}
+}
+async function finishLiveRecording(session,{discard=false}={}){
+  const active=activeLiveRecording;if(!active||active.sessionId!==session?.id)return;
+  const startButton=$('#live-recording-start'),stopButton=$('#live-recording-stop'),progress=$('#live-recording-progress'),bar=$('#live-recording-upload-progress');
+  if(stopButton)stopButton.disabled=true;
+  if(startButton)startButton.disabled=true;
+  const blob=await new Promise((resolve,reject)=>{
+    if(active.recorder.state==='inactive')return resolve(new Blob(active.chunks,{type:active.recorder.mimeType||'video/webm'}));
+    active.recorder.addEventListener('stop',()=>resolve(new Blob(active.chunks,{type:active.recorder.mimeType||'video/webm'})),{once:true});
+    active.recorder.addEventListener('error',event=>reject(event.error||new Error('The browser recording failed.')),{once:true});
+    try{active.recorder.stop();}catch(error){reject(error);}
+  });
+  active.stopDrawing();active.mediaStream.getTracks().forEach(track=>track.stop());active.sources.forEach(source=>{try{source.disconnect();}catch{}});await active.audioContext.close().catch(()=>{});
+  const durationMs=Math.max(0,Date.now()-active.startedAt);
+  try{
+    if(discard){
+      await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(active.id),{method:'DELETE'});
+      if(progress)progress.textContent='Recording discarded.';
+    }else{
+      if(!blob.size)throw new Error('The recording contained no media. Check camera and microphone permissions, then retry.');
+      if(blob.size>1024*1024*1024)throw new Error('This recording exceeds Minglora’s 1 GB upload limit.');
+      if(progress)progress.textContent='Uploading your recording…';
+      if(bar){bar.hidden=false;bar.value=0;}
+      const title=String(active.title||session.title||'Minglora LIVE recording').trim().slice(0,120);
+      const file=new File([blob],'minglora-live-'+active.id+'.webm',{type:'video/webm',lastModified:Date.now()});
+      const asset=await uploadMediaFile('live_recording',file,1,0,update=>{
+        if(progress)progress.textContent=update.finalizing?'Verifying private recording upload…':'Uploading recording · '+Number(update.percentage||0)+'%';
+        if(bar)bar.value=Number(update.percentage||0);
+      });
+      const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(active.id),{method:'PATCH',body:JSON.stringify({assetId:asset.id,durationMs,title,shareWithGuests:active.shareWithGuests})});
+      if(progress)progress.textContent=saved.recording?.sharedWithGuests?'Recording saved and shared with guest speakers.':'Recording saved privately to your account.';
+      if(bar){bar.value=100;bar.hidden=true;}
+      toast('Minglora LIVE recording saved.');
+    }
+  }catch(error){
+    await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(active.id),{method:'DELETE'}).catch(()=>{});
+    if(progress)progress.textContent='Recording was not saved: '+(error.message||'Upload failed.');
+    throw error;
+  }finally{
+    activeLiveRecording=null;
+    if(startButton)startButton.disabled=false;
+    if(stopButton){stopButton.disabled=true;stopButton.textContent='Stop & save';}
+    await refreshLiveRecordings(session,activeLiveRole||'host');
+  }
+}
+async function setupLiveRecordingPanel(session,role,room){
+  stopLiveRecordingListRefresh();
+  const panel=$('#live-recording-panel');if(!panel)return;
+  const form=$('#live-recording-form'),startButton=$('#live-recording-start'),stopButton=$('#live-recording-stop'),progress=$('#live-recording-progress');
+  if(role==='host'){
+    startButton?.addEventListener('click',async()=>{
+      if(activeLiveRecording){toast('A LIVE recording is already in progress.');return;}
+      if(!navigator.mediaDevices||!window.MediaRecorder){toast('LIVE recording is not supported on this browser.');return;}
+      startButton.disabled=true;
+      if(progress)progress.textContent='Preparing the LIVE recording…';
+      const title=String(form?.elements.title?.value||session.title||'Minglora LIVE recording').trim().slice(0,120);
+      const shareWithGuests=Boolean(form?.elements.shareWithGuests?.checked);
+      let created;
+      try{
+        const response=await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings',{method:'POST',body:JSON.stringify({title,shareWithGuests})});
+        created=response.recording;
+        const composite=createLiveRecordingComposite(session,room);
+        activeLiveRecording={id:created.id,sessionId:session.id,title,shareWithGuests,startedAt:Date.now(),...composite,chunks:[]};
+        activeLiveRecording.recorder.ondataavailable=event=>{if(event.data?.size)activeLiveRecording?.chunks.push(event.data);};
+        activeLiveRecording.recorder.start(1000);
+        if(stopButton)stopButton.disabled=false;
+        if(progress)progress.textContent='Recording · '+liveRecordingClockText(activeLiveRecording.startedAt)+' · Keep Minglora open.';
+        if(liveRecordingClock)clearInterval(liveRecordingClock);
+        liveRecordingClock=setInterval(()=>{if(activeLiveRecording&&progress)progress.textContent='Recording · '+liveRecordingClockText(activeLiveRecording.startedAt)+' · Keep Minglora open.';},1000);
+        startButton.disabled=true;
+        toast('LIVE recording started. Keep this screen open until you save it.');
+      }catch(error){
+        if(created?.id)await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(created.id),{method:'DELETE'}).catch(()=>{});
+        if(progress)progress.textContent='Recording could not start: '+(error.message||'Unsupported browser.');
+        startButton.disabled=false;toast(error.message||'LIVE recording could not start.');
+      }
+    });
+    stopButton?.addEventListener('click',async()=>{
+      if(!activeLiveRecording||activeLiveRecording.sessionId!==session.id)return;
+      stopButton.disabled=true;stopButton.textContent='Saving…';
+      if(liveRecordingClock){clearInterval(liveRecordingClock);liveRecordingClock=null;}
+      try{await finishLiveRecording(session);}
+      catch(error){toast(error.message||'The recording could not be saved.');}
+      finally{stopButton.textContent='Stop & save';}
+    });
+    $('#live-recording-list')?.addEventListener('click',async event=>{
+      const button=event.target?.closest?.('[data-live-recording-delete]');if(!button)return;
+      if(!window.confirm('Delete this saved LIVE recording permanently?'))return;
+      button.disabled=true;
+      try{await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(button.dataset.liveRecordingDelete),{method:'DELETE'});await refreshLiveRecordings(session,role);toast('LIVE recording deleted.');}
+      catch(error){button.disabled=false;toast(error.message||'The recording could not be deleted.');}
+    });
+  }
+  await refreshLiveRecordings(session,role);
+  liveRecordingListTimer=setInterval(()=>void refreshLiveRecordings(session,role),15000);
+}
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveQaRefresh();stopLiveMatchRefresh();stopLiveRecordingListRefresh();
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1530,6 +1886,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
+    (role==="host"?"<button type='button' data-live-tools-panel-target='effects' aria-pressed='false'>Effects</button>":"")+
+    "<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>"+
+    "<button type='button' data-live-tools-panel-target='recordings' aria-pressed='false'>Recordings</button>"+
+    "<button type='button' data-live-tools-panel-target='matches' aria-pressed='false'>Match</button>"+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
@@ -1542,6 +1902,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (liveSettings.board?"<span class='live-board-badge'>"+esc(String(liveSettings.board).replace(/^./,x=>x.toUpperCase()))+"</span>":"")+
     (session.description?"<p class='live-session-about'>"+esc(session.description)+"</p>":"")+
     (liveSettings.clientAcquisitionEnabled&&liveSettings.clientCtaUrl&&liveSettings.clientCtaLabel?"<a class='live-client-cta' href='"+esc(liveSettings.clientCtaUrl)+"' target='_blank' rel='noopener noreferrer'>"+esc(liveSettings.clientCtaLabel)+"</a>":"")+"</div>";
+  const liveEffectPanel=role==='host'?"<section id='live-effect-panel' class='live-tools-card live-effect-panel' data-live-tools-panel='effects'><div class='live-panel-title'><strong>LIVE stage effects</strong><small>Apply a visual color look to the stage for everyone. These are not AR masks or face-tracking effects.</small></div><label for='live-camera-effect-select'>Stage look</label><select id='live-camera-effect-select' "+(liveSettings.effectsEnabled===false?'disabled':'')+">"+LIVE_CAMERA_EFFECTS.map(option=>"<option value='"+option.value+"'"+(option.value===activeLiveCameraEffect?' selected':'')+">"+esc(option.label)+"</option>").join('')+"</select><p class='live-effect-status' id='live-effect-status'>"+(liveSettings.effectsEnabled===false?'Stage effects are disabled by host settings.':'This visual look is synchronized to everyone watching the LIVE stage.')+"</p></section>":"";
   const liveRoomPermissionSettings=[
     ['allowGuestRequests','Allow guest requests',true,'Let viewers request a guest seat'],
     ['guestCamera','Guest camera',true,'Allow approved guests to publish video'],
@@ -1549,17 +1910,24 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['prioritizeGifters','Prioritize gifters',false,'Sort pending requests by verified gifter level'],
     ['allowCoHost','Allow co-host',true,'Allow other members to join the LIVE stage'],
     ['manageModerators','Manage moderators',true,'Allow moderator assignment and removal'],
-    ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
+    ['voiceRings','Voice rings',true,'Play a short tone for new guest requests'],
+    ['qaEnabled','LIVE Q&A',true,'Allow connected viewers to ask and vote on questions'],
+    ['guardianMode','Guardian safety mode',false,'Block off-platform contact details and links in LIVE chat and questions'],
+    ['effectsEnabled','LIVE camera effects',true,'Allow the host to choose a visual stage look'],
+    ['shareRecordingsWithGuests','Share recordings with guest speakers',false,'Enable guest access to recordings made while they are on stage']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Viewers and guests follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveChatTools="<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Use the existing chat and moderation controls in this panel.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Chat will appear here when you select this panel.</p></div></section>";
+  const liveQaTools="<section id='live-qa-panel' class='live-tools-card live-qa-panel' data-live-tools-panel='qa'><div class='live-panel-title'><strong>LIVE Q&A</strong><small id='live-qa-status'>"+(liveSettings.qaEnabled===false?"The host has disabled audience questions.":"Ask a question, vote for the ones you want answered, and follow the host's replies.")+"</small></div><form id='live-qa-form' class='live-qa-form'><label for='live-qa-question'>Your question</label><textarea id='live-qa-question' name='question' maxlength='300' rows='2' placeholder='Ask the host a question…' "+(liveSettings.qaEnabled===false?"disabled":"")+" required></textarea><button type='submit' class='secondary' "+(liveSettings.qaEnabled===false?"disabled":"")+">Submit question</button></form><div id='live-qa-list' class='live-qa-list'><p class='muted'>Loading LIVE questions…</p></div></section>";
+  const liveMatchTools="<section id='live-match-panel' class='live-tools-card live-match-panel' data-live-tools-panel='matches'><div class='live-panel-title'><strong>Creator League Match</strong><small>Challenge another live creator, accept an invitation, or support a side.</small></div>"+(role==='host'?"<form id='live-match-create-form' class='live-match-create-form'><label for='live-match-opponent'>Challenge a creator who is live</label><select id='live-match-opponent' name='opponentSessionId' required><option value=''>Finding live creators…</option></select><label for='live-match-gift-mode'>Scoring gifts</label><select id='live-match-gift-mode' name='giftMode'><option value='all'>All eligible gifts</option><option value='specific'>One selected gift</option></select><label for='live-match-gift-code'>Selected gift code</label><input id='live-match-gift-code' name='selectedGiftCode' maxlength='60' placeholder='Required only for specific gift mode'><button type='submit' class='secondary'>Send League Match challenge</button></form>":"")+"<div id='live-match-list' class='live-match-list'><p class='muted'>Loading Creator League matches…</p></div></section>";
+  const liveRecordingTools="<section id='live-recording-panel' class='live-tools-card live-recording-panel' data-live-tools-panel='recordings'><div class='live-panel-title'><strong>LIVE recordings</strong><small>Browser-composited recording of the host and guest stage. Keep Minglora open while recording.</small></div>"+(role==='host'?"<form id='live-recording-form' class='live-recording-form'><label for='live-recording-title'>Recording title</label><input id='live-recording-title' name='title' maxlength='120' value='"+esc(session.title||'Minglora LIVE recording')+"'><label class='live-recording-share'><input type='checkbox' name='shareWithGuests' "+(liveSettings.shareRecordingsWithGuests===true?'checked':'')+"><span>Share with guest speakers who are on stage when recording starts</span></label><div class='live-recording-actions'><button type='button' id='live-recording-start' class='secondary'>Start recording</button><button type='button' id='live-recording-stop' class='live-recording-stop' disabled>Stop & save</button></div><div id='live-recording-progress' class='live-recording-progress' role='status'>Not recording</div><progress id='live-recording-upload-progress' max='100' value='0' hidden></progress></form>":"<p class='live-recording-note'>Only recordings the host shared with guest speakers who were on stage when recording started appear here.</p>")+"<div id='live-recording-list' class='live-recording-list'><p class='muted'>Loading shared recordings…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveQaTools+liveMatchTools+liveRecordingTools+liveEffectPanel+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
@@ -1658,7 +2026,18 @@ activeLivePinnedComment=null;
     if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
-    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
+    if(topic==="minglora-live-effect"&&participant.identity===session.hostId&&packet?.type==="minglora.live.effect"&&packet.version===1&&LIVE_CAMERA_EFFECTS.some(option=>option.value===packet.effect)){
+      if(activeLiveSession?.liveSettings?.effectsEnabled!==false)applyLiveStageCameraEffect(packet.effect);
+      return;
+    }
+    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='effectsEnabled'&&typeof packet.enabled==='boolean'){
+      activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),effectsEnabled:packet.enabled};
+      session.liveSettings={...(session.liveSettings||{}),effectsEnabled:packet.enabled};
+      const effectSelect=$('#live-camera-effect-select');if(effectSelect)effectSelect.disabled=!packet.enabled;
+      if(!packet.enabled)applyLiveStageCameraEffect('none');
+      return;
+    }
+        if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
       activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
       session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
       if(role==='guest'&&!packet.enabled){
@@ -1760,6 +2139,7 @@ activeLivePinnedComment=null;
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
     if(giftsEnabled)setupLiveRewardPanel(session,role);
+    setupLiveQaPanel(session,role);void setupLiveMatchPanel(session,role);setupLiveRecordingPanel(session,role,room);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
     const screenShareControl=$("#live-screen-share-toggle");
@@ -1953,15 +2333,39 @@ activeLivePinnedComment=null;
         const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/settings',{method:'PATCH',body:JSON.stringify({settings:{[key]:input.checked}})});
         activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),...(saved.liveSettings||{})};
         session.liveSettings={...(session.liveSettings||{}),...(saved.liveSettings||{})};
+        if(key==='effectsEnabled'){
+          const select=$('#live-camera-effect-select'),status=$('#live-effect-status');
+          if(select)select.disabled=!input.checked;
+          if(!input.checked){applyLiveStageCameraEffect('none');if(select)select.value='none';if(status)status.textContent='Stage effects are disabled by host settings.';}
+          else if(status)status.textContent='Choose a visual look for the LIVE stage.';
+          if(room.localParticipant?.publishData){const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'effectsEnabled',enabled:input.checked}));await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});}
+        }
         if(key==='guestCamera'&&room.localParticipant?.publishData){
           const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'guestCamera',enabled:input.checked}));
           await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});
         }
         if(key==='manageModerators')$('#live-moderator-panel')?.classList.toggle('hidden',!input.checked);
+        if(key==='qaEnabled'){
+          const form=$('#live-qa-form');if(form)form.querySelectorAll('textarea,button').forEach(control=>control.disabled=!input.checked);
+          const status=$('#live-qa-status');if(status)status.textContent=input.checked?'Ask a question, vote for the ones you want answered, and follow the host\'s replies.':'The host has disabled audience questions.';
+          if(input.checked)await refreshLiveQaPanel(session,role);
+        }
         if(key==='prioritizeGifters')await refreshLiveSpeakerPanel(session,role,room);
         toast((input.checked?'Enabled ':'Disabled ')+input.closest('label')?.querySelector('strong')?.textContent+'.');
       }catch(error){input.checked=previous;toast(error.message||'The LIVE setting could not be updated.');}
       finally{input.disabled=false;}
+    });
+    $('#live-camera-effect-select')?.addEventListener('change',async event=>{
+      const control=event.currentTarget,effect=String(control.value||'none');
+      if(role!=='host'||activeLiveSession?.liveSettings?.effectsEnabled===false||!LIVE_CAMERA_EFFECTS.some(item=>item.value===effect)){control.value=activeLiveCameraEffect;return;}
+      control.disabled=true;
+      try{
+        const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.effect',version:1,effect}));
+        await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-effect'});
+        applyLiveStageCameraEffect(effect);
+        $('#live-effect-status').textContent=(LIVE_CAMERA_EFFECTS.find(item=>item.value===effect)?.label||'Natural')+' look is now active for the LIVE stage.';
+      }catch(error){control.value=activeLiveCameraEffect;toast(error.message||'The stage effect could not be synchronized.');}
+      finally{control.disabled=false;}
     });
     $("#live-room-theme-select")?.addEventListener("change",async event=>{
       const control=event.currentTarget,nextTheme=String(control.value||"");
@@ -4001,10 +4405,10 @@ function bindProfileTabActions(panel){
   }));
 }
 function mediaMaxBytes(slot){
-  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='sound'?50*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
+  return slot==='live_recording'?1024*1024*1024:slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='sound'?50*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
 }
 function mediaMaxLabel(slot){
-  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='sound'?'50 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
+  return slot==='live_recording'?'1 GB':slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='sound'?'50 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
 }
 async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
