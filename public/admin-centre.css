@@ -147,20 +147,20 @@
 }
 
 
-/* Keep the Admin marker consistently to the right of the profile name and verification sticker. */
+/* Show the profile identity in this order: name, Admin badge, then blue verification check. */
 .profile-info-main h1.profile-name-with-badges{
   display:flex;
   align-items:center;
   flex-wrap:wrap;
 }
 .profile-info-main h1.profile-name-with-badges>span:first-child{order:0}
-.profile-info-main h1.profile-name-with-badges>.profile-blue-verification{order:1}
-.profile-info-main h1.profile-name-with-badges>.platform-admin-profile-badge{order:2;margin-left:4px;margin-right:0}
+.profile-info-main h1.profile-name-with-badges>.platform-admin-profile-badge{order:1;margin-left:4px;margin-right:0}
+.profile-info-main h1.profile-name-with-badges>.profile-blue-verification{order:2;margin-left:3px}
 .profile-view-as-person .profile-preview-name{
   display:inline-flex;
   align-items:center;
   flex-wrap:wrap;
   gap:5px;
 }
-.profile-view-as-person .profile-preview-name>.profile-blue-verification{order:1}
-.profile-view-as-person .profile-preview-name>.platform-admin-profile-badge{order:2;margin-left:3px}
+.profile-view-as-person .profile-preview-name>.platform-admin-profile-badge{order:1;margin-left:3px}
+.profile-view-as-person .profile-preview-name>.profile-blue-verification{order:2;margin-left:2px}
