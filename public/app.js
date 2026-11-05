@@ -1487,11 +1487,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
         "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
         "<span><strong>"+esc(liveHostName)+"</strong><small>LIVE</small></span>"+
       "</div>"+
-      "<div class='live-like-cluster' role='group' aria-label='LIVE likes'>"+
-        "<button type='button' id='live-heart-like' class='live-heart-button live-reaction-button' data-live-reaction='heart' aria-label='Send a heart like' title='Send a heart like'>♥</button>"+
-        "<strong id='live-reaction-count' data-count='0'>0</strong>"+
+      "<div class='live-like-count' role='status' aria-label='LIVE likes'>"+
+        "<strong id='live-reaction-count' data-count='0'>0</strong><span>likes</span>"+
       "</div></div>"+
-      (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='End LIVE for everyone' title='End LIVE'><span aria-hidden='true'>⏻</span></button>":"")+
+      (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
     "</div>"+
     (liveSettings.groupChatEnabled!==false
       ? "<section class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></section>"
@@ -1798,22 +1797,23 @@ activeLivePinnedComment=null;
       }catch(error){toast(error.message||"This comment could not be pinned.");}
       finally{button.disabled=false;}
     });
-    document.querySelectorAll(".live-reaction-button[data-live-reaction]").forEach(button=>button.addEventListener("click",async()=>{
-      const reaction=String(button.dataset.liveReaction||"");
-      if(!Object.hasOwn(liveReactionEmoji,reaction))return;
+    const sendLiveLike=async()=>{
       const now=Date.now();
-      if(now-lastLiveReactionSentAt<120)return;
+      if(now-lastLiveReactionSentAt<65)return;
       lastLiveReactionSentAt=now;
-      button.classList.add("is-sent");
-      window.setTimeout(()=>button.classList.remove("is-sent"),220);
       try{
-        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction}));
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction:"heart"}));
         await room.localParticipant.publishData(packet,{reliable:false,topic:"minglora-live-reaction"});
-        showLiveReaction(reaction);
+        showLiveReaction("heart");
       }catch(error){
-        toast(error.message||"LIVE reactions could not be sent right now.");
+        toast(error.message||"LIVE likes could not be sent right now.");
       }
-    }));
+    };
+    stage?.addEventListener("click",event=>{
+      const interactiveTarget=event.target?.closest?.("button,a,input,textarea,select,[contenteditable='true'],[role='button'],.live-stage-topbar,.live-chat-form,.live-tools-drawer");
+      if(interactiveTarget)return;
+      void sendLiveLike();
+    });
     $("#live-settings-toggle")?.addEventListener("click",()=>openLiveToolsPanel());
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
