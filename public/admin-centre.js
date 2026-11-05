@@ -48,6 +48,18 @@
             <strong>Member support inbox</strong><small>Review support tickets and respond to members.</small>
           </button>
         </div>
+        <form class="admin-owner-coin-issuance" id="admin-owner-coin-issuance-form">
+          <div>
+            <strong>Owner Coin issuance</strong>
+            <p>Issue Coins directly to CreatorHubCreatorNetwork@gmail.com. These are owner-issued promotional Coins, not member credit.</p>
+          </div>
+          <label for="admin-owner-coin-amount">Coin amount</label>
+          <input id="admin-owner-coin-amount" name="amountCoins" type="number" min="1" max="9007199254740991" step="1" value="9007199254740991" inputmode="numeric" required>
+          <label for="admin-owner-coin-note">Issuance note</label>
+          <input id="admin-owner-coin-note" name="note" type="text" maxlength="240" value="Creator Hub owner promotional Coins">
+          <button type="submit" class="primary" id="admin-owner-coin-issue-submit">Issue owner Coins to CreatorHub</button>
+          <p id="admin-owner-coin-issuance-status" aria-live="polite"></p>
+        </form>
       ` : `
         <div class="admin-control-centre-note">
           The owner account is recognized, but protected tools are not unlocked in this session. Set up an authenticator app, then sign in again using its current code.
@@ -63,6 +75,44 @@
       button.addEventListener('click', () => {
         document.getElementById(button.dataset.adminJump)?.scrollIntoView({behavior:'smooth',block:'start'});
       });
+    });
+    panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-owner-coin-amount');
+      const noteInput = form.querySelector('#admin-owner-coin-note');
+      const status = form.querySelector('#admin-owner-coin-issuance-status');
+      const submit = form.querySelector('#admin-owner-coin-issue-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 9,007,199,254,740,991.';
+        return;
+      }
+      const formattedAmount = amountCoins.toLocaleString();
+      if (!window.confirm('Issue ' + formattedAmount + ' owner-issued Coins to CreatorHubCreatorNetwork@gmail.com? This is not member credit.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Submitting owner Coin issuance…';
+      try {
+        if (!window.crypto?.randomUUID) throw new Error('A secure request reference could not be generated on this device.');
+        const response = await fetch('/api/admin/coins/owner-issuance', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amountCoins,
+            requestId: window.crypto.randomUUID(),
+            note: String(noteInput?.value || 'Creator Hub owner promotional Coins').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Owner Coin issuance failed.');
+        const balance = Number(result.wallet?.wallet?.balance_coins ?? result.issuance?.issuance?.balanceAfter ?? 0);
+        if (status) status.textContent = 'Issued ' + formattedAmount + ' owner Coins to CreatorHubCreatorNetwork@gmail.com. Wallet balance: ' + balance.toLocaleString() + ' Coins.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Owner Coin issuance could not be completed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
     });
     panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => {
       const enroll = document.querySelector('#enroll-totp');
