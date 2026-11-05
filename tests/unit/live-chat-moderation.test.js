@@ -12,7 +12,7 @@ const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const styles = read('public/styles.css');
 
 test('Only the LIVE host sees comment removal controls in chat', () => {
-  assert.match(app, /activeLiveRole==="host"\?/);
+  assert.match(app, /const controls=activeLiveRole==="host"\s*\?/);
   assert.match(app, /data-live-chat-delete=/);
   assert.match(app, /if\(deleteButton&&role==="host"\)/);
   assert.match(app, /Remove this comment from the LIVE chat/);
