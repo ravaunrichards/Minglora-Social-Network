@@ -4113,3 +4113,63 @@ body.live-tools-open{overflow:hidden}
   .coin-source-breakdown strong{font-size:15px}
   .coin-source-breakdown small,.coin-source-breakdown em{font-size:9px}
 }
+
+
+/* Wallet and real-money earnings visibility */
+.wallet-money-overview{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+  min-width:0;padding:14px;border:1px solid var(--line);border-radius:15px;
+  background:var(--surface)
+}
+.wallet-money-overview-heading{
+  grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;min-width:0
+}
+.wallet-money-overview-heading>div,.wallet-money-unavailable>div{
+  display:grid;gap:3px;min-width:0
+}
+.wallet-money-overview-heading>div>strong,.wallet-money-unavailable>div>strong{
+  font-size:1rem
+}
+.wallet-money-overview-heading small,.wallet-money-unavailable small{
+  color:var(--muted);font-size:.72rem
+}
+.wallet-money-overview-heading button,.wallet-money-unavailable button{
+  flex:0 0 auto;border:1px solid var(--line);border-radius:9px;padding:8px 11px;
+  background:var(--soft);color:var(--blue);font:inherit;font-size:.74rem;font-weight:800;
+  cursor:pointer
+}
+.wallet-money-stat{
+  display:grid;gap:5px;min-width:0;padding:12px;border:1px solid var(--line);
+  border-radius:11px;background:var(--soft)
+}
+.wallet-money-stat>small{
+  color:var(--muted);font-size:.67rem;font-weight:850;letter-spacing:.055em
+}
+.wallet-money-stat>strong{
+  font-size:clamp(1.25rem,2.4vw,1.75rem);line-height:1.15;
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.wallet-money-stat>span{color:var(--muted);font-size:.68rem;line-height:1.4}
+.wallet-money-unavailable{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--surface)
+}
+.wallet-earnings-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+.wallet-earnings-columns{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start
+}
+.wallet-earnings-columns>.card{min-width:0}
+.wallet-earnings-columns .recharge-history-row>span{white-space:nowrap}
+@media(max-width:900px){
+  .wallet-earnings-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wallet-earnings-columns{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .wallet-money-overview{grid-template-columns:1fr;padding:12px}
+  .wallet-money-overview-heading{align-items:flex-start;flex-direction:column}
+  .wallet-money-overview-heading button,.wallet-money-unavailable button{width:100%}
+  .wallet-money-stat>strong{font-size:1.45rem}
+  .wallet-money-unavailable{align-items:stretch;flex-direction:column}
+  .wallet-earnings-metrics{grid-template-columns:1fr}
+}
