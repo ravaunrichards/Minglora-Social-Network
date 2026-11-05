@@ -53,3 +53,13 @@ test('Minglora call ringtone uploads complete through the shared media gateway',
   assert.match(edge, /\[\"avatar\",\"cover\",\"post\",\"sound\",\"story\",\"group\",\"page\",\"message\",\"ringtone\"\]\.includes\(slot\)/);
   assert.match(migration, /'minglora-ringtones','minglora-ringtones',false,20971520/);
 });
+
+test('Minglora avatar and cover uploads synchronize their normalized profile asset references', async () => {
+  const edge = await read('../../supabase/functions/minglora-runtime-state/index.ts');
+
+  assert.match(edge, /if\(slot===\"avatar\"\|\|slot===\"cover\"\)/);
+  assert.match(edge, /avatar_url:String\(result\.url\|\|\"\"\),avatar_asset_id:assetId/);
+  assert.match(edge, /cover_url:String\(result\.url\|\|\"\"\),cover_asset_id:assetId/);
+  assert.match(edge, /admin\.from\(\"profiles\"\)\s*\.update\(profilePatch\)\.eq\(\"id\",ownerId\)/);
+  assert.match(edge, /Upload completed but profile media could not be synchronized/);
+});
