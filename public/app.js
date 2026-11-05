@@ -720,6 +720,7 @@ let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
 let liveRewardRefreshTimer=null;
 let liveRewardRefreshBusy=false;
+let liveRewardWalletFetchedAt=0;
 let liveDirectoryFilter='all';
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
@@ -1104,13 +1105,19 @@ async function refreshLiveRewardPanel(session,role){
   liveRewardRefreshBusy=true;
   try{
     const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/reward-drops');
+    if(activeLiveSession?.id!==session.id)return;
     renderLiveRewardDrops(data.drops||[],role);
     const balance=$('#live-reward-balance');
-    if(balance&&role==='host'){
+    if(balance&&role==='host'&&Date.now()-liveRewardWalletFetchedAt>=30000){
+      liveRewardWalletFetchedAt=Date.now();
       try{
         const wallet=await api('/coins/wallet');
-        balance.textContent=Number(wallet.wallet?.balance_coins??0).toLocaleString()+' Coins available';
-      }catch{balance.textContent='Wallet unavailable';}
+        if(activeLiveSession?.id===session.id&&$('#live-reward-balance')){
+          $('#live-reward-balance').textContent=Number(wallet.wallet?.balance_coins??0).toLocaleString()+' Coins available';
+        }
+      }catch{
+        if(activeLiveSession?.id===session.id&&$('#live-reward-balance'))$('#live-reward-balance').textContent='Wallet unavailable';
+      }
     }
   }catch(error){
     const root=$('#live-reward-list');
@@ -1230,7 +1237,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     $("#live-audio-waveform")?.classList.toggle("is-active",activeLiveSpeakerIds.size>0);
     refreshSpeakerRoster();
   });
-  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room)toast("Your LIVE connection was disconnected.");});
+  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();toast("Your LIVE connection was disconnected.");}});
   // Render the host/speaker seat immediately; the connection label upgrades when
   // the microphone publication is confirmed, so the stage never waits for speech.
   refreshSpeakerRoster();
@@ -1335,7 +1342,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
