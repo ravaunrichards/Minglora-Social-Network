@@ -232,6 +232,11 @@ window.addEventListener('minglora:open-wallet',event=>{
   state.rechargeTab=tab;
   activateNav('coins');
 });
+window.addEventListener('minglora:open-creator-section',async event=>{
+  const section=['monetization','overview','audience','analytics','pages','settings'].includes(event.detail?.section)?event.detail.section:'monetization';
+  await renderCreator();
+  await renderCreatorSection(section);
+});
 function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-wallet-3d-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
