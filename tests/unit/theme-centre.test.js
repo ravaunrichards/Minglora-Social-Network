@@ -57,7 +57,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
   assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(html, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
-  assert.match(sw, /minglora-shell-v93-flow-layout-safety-1/);
+  assert.match(sw, /v97-gifts-preview-visible-1/);
   assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(sw, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
 });
