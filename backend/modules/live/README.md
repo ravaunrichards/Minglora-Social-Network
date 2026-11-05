@@ -104,6 +104,18 @@ The viewer-count option hides the in-room count and directory presence for that 
 
 The Community safety option controls the room's safety reminder. Existing platform reporting/blocking protections remain separate and are not disabled by this visual preference.
 
+### Host-assigned LIVE moderators and Group LIVE chat
+
+Group LIVE chat is enabled by default for new broadcasts and can be disabled in the pre-LIVE setup. The preference is saved in the broadcast's `liveSettings.groupChatEnabled` value. Both the room UI and authenticated `/api/live/sessions/:id/chat` GET/POST routes enforce the stored preference; a disabled room omits its chat composer and does not poll for messages.
+
+The host can assign up to 10 existing Minglora members by username from the LIVE settings drawer. Assignments are room-scoped and stored on the active LIVE session. The host can list, add and remove assignments through:
+
+- `GET /api/live/sessions/:id/moderators`
+- `POST /api/live/sessions/:id/moderators` with `{ username }`
+- `DELETE /api/live/sessions/:id/moderators/:memberId`
+
+Only the host can change assignments. The host and assigned room moderators may remove inappropriate comments from that LIVE's chat; only the host can pin or unpin comments, manage the guest stage, change room settings or end the broadcast. Moderator assignments do not grant platform-admin or account-wide moderation privileges.
+
 ### Features intentionally not exposed as working switches yet
 
-Assigned LIVE moderators, separate group LIVE chats, Guardian/family controls, stream recording/egress, visual effects, LIVE Services and Fan Club require additional workflows and enforcement. The pre-LIVE screen identifies these as future work instead of showing nonfunctional switches. Full Android mobile-game capture also requires native Android integration; browser screen sharing alone cannot provide that capability.
+Guardian/family controls, stream recording/egress, advanced visual effects, LIVE Services and Fan Club require their own provider, storage, safety and creator workflows. They are not shown as active controls until those workflows are implemented and verified. Full Android mobile-game capture also requires native Android integration; browser screen sharing alone cannot provide that capability.

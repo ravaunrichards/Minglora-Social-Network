@@ -805,7 +805,8 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
       "<label class='live-preflight-toggle'><input type='checkbox' name='optimizeForStability' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore'></use></svg></span><span><strong>Optimize for stability</strong><small>Adaptive video and bandwidth-saving publishing</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='markViewers' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile'></use></svg></span><span><strong>Show viewer count</strong><small>Display the verified LIVE audience count</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='communitySafety' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#privacy'></use></svg></span><span><strong>Community safety</strong><small>Keep LIVE safety and reporting guidance visible</small></span></label>"+
-      "<label class='live-preflight-toggle'><input type='checkbox' name='liveGifts' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#coins'></use></svg></span><span><strong>LIVE gifts</strong><small>Allow Coins gifts and reward drops in this LIVE</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='groupChatEnabled' checked><span class='live-preflight-switch'></span><span><strong>Group LIVE chat</strong><small>Allow viewers to read and send LIVE comments</small></span></label>"+
+       "<label class='live-preflight-toggle'><input type='checkbox' name='liveGifts' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#coins'></use></svg></span><span><strong>LIVE gifts</strong><small>Allow Coins gifts and reward drops in this LIVE</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='audienceControl' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends'></use></svg></span><span><strong>Audience control</strong><small>Use the audience selector above</small></span></label>"+
     "</div></div>"+
     "<details class='live-preflight-advanced'><summary>Disclosure & client acquisition <span>More settings</span></summary><div class='live-preflight-fields'>"+
@@ -865,6 +866,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
         optimizeForStability:values.has("optimizeForStability"),
         markViewers:values.has("markViewers"),
         communitySafety:values.has("communitySafety"),
+        groupChatEnabled:values.has("groupChatEnabled"),
         liveGifts:values.has("liveGifts"),
         audienceControl:values.has("audienceControl"),
         contentDisclosure:String(values.get("contentDisclosure")||"none"),
@@ -1066,8 +1068,9 @@ async function refreshLiveChat(broadcastId){
       const chatAvatar=member.avatar||member.avatar_url||member.avatarUrl||message.avatar||message.avatar_url||"";
       const authorAvatar=avatar({name:author,avatar:chatAvatar});
       const isPinned=activeLivePinnedComment?.id===String(message.id);
-      const controls=activeLiveRole==="host"
-        ?"<span class='live-chat-actions'><button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button><button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
+      const canModerateChat=activeLiveRole==="host"||Boolean(activeLiveSession?.liveModerators?.includes(state.user?.id));
+      const controls=canModerateChat
+        ?"<span class='live-chat-actions'>"+(activeLiveRole==="host"?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>":"")+"<button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
       return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
@@ -1457,9 +1460,13 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
+  const liveModeratorTools=role==="host"
+    ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
+    : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE tools sections'>"+
     "<button type='button' data-live-tools-target='.live-room-appearance'>Appearance</button>"+
     "<button type='button' data-live-tools-target='#live-speaker-request-panel'>Guest seats</button>"+
+    (role==="host"?"<button type='button' data-live-tools-target='#live-moderator-panel'>Moderators</button>":"")+
     (giftsEnabled?"<button type='button' data-live-tools-target='#live-reward-panel'>Goody Bag & Treasure Box</button><button type='button' data-live-tools-target='#live-gift-panel'>Gifts</button>":"")+"</nav>";
   const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
@@ -1472,7 +1479,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
@@ -1486,14 +1493,42 @@ async function openLiveRoom(session,role,issuedLiveKit){
       "</div></div>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='End LIVE for everyone' title='End LIVE'><span aria-hidden='true'>⏻</span></button>":"")+
     "</div>"+
-    "<section class='live-chat-overlay' aria-label='LIVE chat and comments'>"+
-      "<div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div>"+
-      "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form>"+
-    "</section>";
+    (liveSettings.groupChatEnabled!==false
+      ? "<section class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></section>"
+      : "<p class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>");
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
-  activeLivePinnedComment=null;
+    if(role==="host"){
+    const moderatorList=$("#live-moderator-list");
+    const refreshLiveModerators=async()=>{
+      if(!moderatorList)return;
+      moderatorList.innerHTML="<p class='muted'>Loading moderators…</p>";
+      try{
+        const data=await api("/live/sessions/"+encodeURIComponent(session.id)+"/moderators");
+        const moderators=Array.isArray(data.moderators)?data.moderators:[];
+        moderatorList.innerHTML=moderators.length?moderators.map(member=>"<div class='live-moderator-row'><span><strong>"+esc(member.name||member.username||"Minglora member")+"</strong><small>@"+esc(member.username||"member")+"</small></span><button type='button' class='text-button' data-live-moderator-remove='"+esc(member.id)+"'>Remove</button></div>").join(""):"<p class='muted'>No moderators assigned yet.</p>";
+      }catch(error){moderatorList.innerHTML="<p class='muted'>"+esc(error.message||"Moderators could not be loaded.")+"</p>";}
+    };
+    $("#live-moderator-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),username=String(form.elements.username.value||"").trim();
+      if(!username)return;
+      button.disabled=true;
+      try{await api("/live/sessions/"+encodeURIComponent(session.id)+"/moderators",{method:"POST",body:JSON.stringify({username})});form.reset();await refreshLiveModerators();toast("LIVE moderator added.");}
+      catch(error){toast(error.message||"The moderator could not be added.");}
+      finally{button.disabled=false;}
+    });
+    moderatorList?.addEventListener("click",async event=>{
+      const button=event.target?.closest?.("[data-live-moderator-remove]");if(!button)return;
+      const memberId=button.dataset.liveModeratorRemove;if(!memberId)return;
+      button.disabled=true;
+      try{await api("/live/sessions/"+encodeURIComponent(session.id)+"/moderators/"+encodeURIComponent(memberId),{method:"DELETE"});await refreshLiveModerators();toast("LIVE moderator removed.");}
+      catch(error){toast(error.message||"The moderator could not be removed.");button.disabled=false;}
+    });
+    void refreshLiveModerators();
+  }
+activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
   reactionLayer.className="live-reaction-layer";
   reactionLayer.setAttribute("aria-hidden","true");
@@ -1725,7 +1760,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     });
     $("#live-chat-list")?.addEventListener("click",async event=>{
       const deleteButton=event.target?.closest?.("[data-live-chat-delete]");
-      if(deleteButton&&role==="host"){
+      if(deleteButton&&(role==="host"||Boolean(session.liveModerators?.includes(state.user?.id)))){
         const messageId=String(deleteButton.dataset.liveChatDelete||"");
         if(!messageId)return;
         if(!window.confirm("Remove this comment from the LIVE chat?"))return;
@@ -1890,7 +1925,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
     }
-    await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);
+    if(liveSettings.groupChatEnabled!==false){await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);}
     startLiveSpeakerRefresh(session,role,room);
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");

@@ -1487,6 +1487,58 @@ async function route(req, res) {
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
       }
+      const liveModeratorsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/moderators(?:\/([^/]+))?$/);
+      if (liveModeratorsMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveModeratorsMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        const roomModerators = () => Array.isArray(session.liveModerators) ? session.liveModerators : [];
+        if (method === 'GET') {
+          if (session.hostId !== user.id && !roomModerators().includes(user.id)) {
+            return json(res, 403, { error: 'Only the LIVE host or an assigned moderator can view room moderators.' });
+          }
+          const moderators = roomModerators().map(id => db.users.find(member => member.id === id))
+            .filter(Boolean).map(member => safeUser(member, user.id));
+          return json(res, 200, { moderators, count: moderators.length, limit: 10 });
+        }
+        if (method === 'POST') {
+          if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can assign moderators.' });
+          const requestedUsername = normalizeUsername(input.username || input.memberUsername || '');
+          const requestedId = String(input.userId || '').trim();
+          const target = db.users.find(member =>
+            (requestedId && member.id === requestedId) ||
+            (requestedUsername && normalizeUsername(member.username) === requestedUsername)
+          );
+          if (!target || target.status === 'suspended') return json(res, 404, { error: 'Choose an active Minglora member to moderate this LIVE.' });
+          if (target.id === session.hostId) return json(res, 400, { error: 'The LIVE host already controls this room.' });
+          if (blockedBetween(user.id, target.id)) return json(res, 409, { error: 'This member cannot be assigned because the accounts are blocked.' });
+          session.liveModerators = roomModerators();
+          if (session.liveModerators.includes(target.id)) {
+            return json(res, 200, { moderator: safeUser(target, user.id), moderators: session.liveModerators.map(id => safeUser(db.users.find(member => member.id === id), user.id)).filter(Boolean) });
+          }
+          if (session.liveModerators.length >= 10) return json(res, 409, { error: 'This LIVE already has the maximum of 10 moderators.' });
+          session.liveModerators.push(target.id);
+          await saveStore();
+          notify(target.id, user.id, 'live_moderator', 'You were assigned as a moderator for ' + String(session.title || 'a Minglora LIVE').slice(0, 120) + '.');
+          return json(res, 201, {
+            moderator: safeUser(target, user.id),
+            moderators: session.liveModerators.map(id => safeUser(db.users.find(member => member.id === id), user.id)).filter(Boolean),
+            count: session.liveModerators.length
+          });
+        }
+        if (method === 'DELETE' && liveModeratorsMatch[2]) {
+          if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can remove assigned moderators.' });
+          const memberId = decodeURIComponent(liveModeratorsMatch[2]);
+          if (!roomModerators().includes(memberId)) return json(res, 404, { error: 'This member is not an assigned LIVE moderator.' });
+          session.liveModerators = roomModerators().filter(id => id !== memberId);
+          await saveStore();
+          return json(res, 200, {
+            removed: true,
+            moderators: session.liveModerators.map(id => safeUser(db.users.find(member => member.id === id), user.id)).filter(Boolean),
+            count: session.liveModerators.length
+          });
+        }
+        return json(res, 405, { error: 'This LIVE moderator action is not supported.' });
+      }
       const liveThemeMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/theme$/);
       if (method === 'GET' && liveThemeMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveThemeMatch[1] && item.status === 'live');
@@ -2151,6 +2203,7 @@ async function route(req, res) {
       if(liveChat&&['GET','POST'].includes(method)){
         const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
         if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
+        if(session.liveSettings?.groupChatEnabled===false)return json(res,403,{error:'The host has disabled group LIVE chat for this broadcast.'});
         const friends=isFriend(user.id,session.hostId);
         const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
@@ -2161,9 +2214,10 @@ async function route(req, res) {
       const liveChatDelete=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat\/([^/]+)$/);
       if(method==='DELETE'&&liveChatDelete){
         const session=(db.liveSessions||[]).find(item=>item.id===liveChatDelete[1]&&item.status==='live');
-        if(!session||session.hostId!==user.id)return json(res,403,{error:'Only the LIVE host can remove comments.'});
+        const canModerateLiveChat=Boolean(session&&(session.hostId===user.id||(session.liveModerators||[]).includes(user.id)));
+        if(!session||!canModerateLiveChat)return json(res,403,{error:'Only the LIVE host or an assigned room moderator can remove comments.'});
         const result=await requestSupabaseState('live_chat_delete',{
-          broadcastId:session.id,hostId:user.id,messageId:liveChatDelete[2]
+          broadcastId:session.id,hostId:session.hostId,messageId:liveChatDelete[2]
         });
         return json(res,200,result);
       }
