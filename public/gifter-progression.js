@@ -167,7 +167,10 @@
     if (!main) return;
     main.innerHTML = "<section class='card gp-loading'><strong>Loading your gifter progression…</strong><p>Checking confirmed Minglora gifts.</p></section>";
     state.overview = await requestOverview();
-    window.dispatchEvent(new CustomEvent('minglora:gifter-badge-updated',{detail:{badge:state.overview.badge||null}}));
+    window.dispatchEvent(new CustomEvent('minglora:gifter-badge-updated',{detail:{
+      badge:state.overview.badge||null,
+      newGifterIdentity:state.overview.newGifterIdentity||null
+    }}));
     state.selectedLevel = Math.max(1, state.overview.current.level);
     main.innerHTML = renderMarkup(state.overview);
     bindPage(state.overview);
