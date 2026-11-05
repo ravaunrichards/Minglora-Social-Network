@@ -4973,3 +4973,20 @@ button.live-ranking-row{cursor:pointer}
 @media(min-width:641px){
   .live-profile-preview{max-width:450px;margin-left:auto;margin-right:16px}
 }
+
+.live-stage-topbar .live-stage-top-left>*{pointer-events:auto}
+.live-host-profile-wrap,.live-like-control,.live-fan-club-join{pointer-events:auto}
+.live-viewer-row.is-priority-gifter{border-color:rgba(255,185,83,.28);background:linear-gradient(90deg,rgba(255,185,83,.09),transparent 75%)}
+.live-viewer-identity{display:grid;gap:3px;min-width:0}
+.live-viewer-gifter-badge,.live-viewer-fan-points{display:inline-flex;align-items:center;justify-self:start;max-width:100%;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-viewer-gifter-badge{color:#ffdb8b;border:1px solid rgba(255,193,94,.35);background:rgba(162,106,27,.19)}
+.live-viewer-fan-points{color:#ff9bb2;border:1px solid rgba(255,93,135,.25);background:rgba(184,34,79,.15)}
+.live-viewer-panel.has-prioritized-gifters:before{content:'Gifters are prioritized';display:block;margin:0 0 8px;color:#ffdc9a;font-size:10px;font-weight:850;letter-spacing:.03em}
+.live-discovery-content{min-width:0}
+@media(max-width:390px){
+ .live-host-profile-wrap{max-width:100%;gap:3px}
+ button.live-host-profile{max-width:38vw}
+ .live-stage-top-left{max-width:calc(100% - 40px)}
+ .live-fan-club-join{padding:0 7px;font-size:8px}
+ .live-like-control{gap:2px;padding:2px 4px}
+}
