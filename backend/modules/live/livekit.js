@@ -198,3 +198,43 @@ export async function removeLiveKitParticipant(roomName, identity) {
   await service.removeParticipant(roomName, String(identity));
   return { removed: true, wasConnected: true };
 }
+
+
+/**
+ * Change the active guest's media publishing allow-list without removing
+ * their microphone or data-channel access. LiveKit rotates the participant
+ * token when permissions change, so a guest can enable the camera again
+ * without leaving the speaker stage.
+ */
+export async function updateLiveKitGuestCameraPermission(roomName, identity, enabled) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName) ||
+      !identity || String(identity).length > 128 || typeof enabled !== 'boolean') {
+    const error = new Error('A valid LIVE room, guest identity and camera permission are required.');
+    error.status = 400;
+    throw error;
+  }
+
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  const participants = await service.listParticipants(roomName);
+  if (!participants.some(participant => participant.identity === String(identity))) {
+    return { updated: false, wasConnected: false };
+  }
+
+  const canPublishSources = [LIVEKIT_TRACK_SOURCE.MICROPHONE];
+  if (enabled) canPublishSources.push(LIVEKIT_TRACK_SOURCE.CAMERA);
+  await service.updateParticipant(roomName, String(identity), {
+    permission: {
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true,
+      canPublishSources
+    }
+  });
+  return { updated: true, wasConnected: true, identity: String(identity), cameraEnabled: enabled };
+}
