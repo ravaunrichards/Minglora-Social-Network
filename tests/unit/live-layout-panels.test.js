@@ -107,12 +107,13 @@ test('The Guest section shows request identity, status, time, counts and usable 
 
 test('LIVE gift catalogue is visible from the room for viewers, guests and host previews', () => {
   assert.match(app, /id='live-stage-gift-open' class='live-stage-gift-open/);
-  assert.match(app, /id='live-gifts-toggle'/);
+  assert.match(app, /liveControlButton\(\"live-gifts-toggle\"/);
   assert.match(app, /id='live-gift-panel' class='live-gift-panel/);
   assert.match(app, /data-live-tools-panel-target='gifts'/);
   assert.match(app, /role===\"host\"\?\"LIVE gift catalogue\"/);
   assert.match(app, /role===\"host\"\?\"Viewer preview · sending to your own LIVE is disabled\"/);
   assert.match(app, /const loadLiveGiftCatalogue=async\(\)=>/);
+  assert.match(app, /liveGiftCatalogue=\[\];liveGiftScope='all';refreshLiveGiftGrid=null/);
   assert.match(app, /api\(\"\/coins\/catalog\"\)/);
   assert.match(app, /giftGrid\.innerHTML=shown\.length\?/);
   assert.match(app, /Retry gift catalogue/);
