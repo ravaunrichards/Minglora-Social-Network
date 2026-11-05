@@ -56,7 +56,7 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(html,/app\.js\?v=20261105-live-layout-expand-1/);
-  assert.match(worker,/minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1/);
+  assert.match(worker,/minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
   assert.match(worker,/styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(worker,/app\.js\?v=20261105-live-layout-expand-1/);
 });
