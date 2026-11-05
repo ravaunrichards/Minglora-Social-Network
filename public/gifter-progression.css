@@ -112,3 +112,57 @@
 .gp-level25-copy h2,.gp-level25-copy p,.gp-level25-copy strong{max-width:100%;overflow-wrap:anywhere}
 @media(max-width:650px){.gp-level25{align-items:center!important;gap:12px;padding:14px!important}.gp-level25-emblem{flex-basis:56px;width:56px;height:56px;border-radius:16px;font-size:1.25rem}.gp-level25-copy h2{font-size:1rem;line-height:1.25}.gp-level25-copy p{font-size:.82rem;line-height:1.4}}
 @media(max-width:360px){.gp-level25{gap:9px;padding:11px!important}.gp-level25-emblem{flex-basis:50px;width:50px;height:50px;font-size:1.1rem}.gp-level25-copy h2{font-size:.92rem}}
+
+
+/* Minglora original faceted 3D gifter badge system */
+.gp-tier-1{--gp-gem-light:#e7f7ff;--gp-gem-mid:#76b8dc;--gp-gem-dark:#285b83;--gp-gem-edge:#f8fdff;--gp-gem-glow:rgba(76,170,226,.34)}
+.gp-tier-2{--gp-gem-light:#ffe0b2;--gp-gem-mid:#c17a3b;--gp-gem-dark:#6d351d;--gp-gem-edge:#fff0d9;--gp-gem-glow:rgba(209,127,59,.34)}
+.gp-tier-3{--gp-gem-light:#f6fbff;--gp-gem-mid:#9fb2c8;--gp-gem-dark:#465e7c;--gp-gem-edge:#fff;--gp-gem-glow:rgba(153,184,218,.34)}
+.gp-tier-4{--gp-gem-light:#fff2b0;--gp-gem-mid:#e3a928;--gp-gem-dark:#7f4b0c;--gp-gem-edge:#fff9df;--gp-gem-glow:rgba(245,188,66,.36)}
+.gp-tier-5{--gp-gem-light:#f5eaff;--gp-gem-mid:#a88bd8;--gp-gem-dark:#55428e;--gp-gem-edge:#fff7ff;--gp-gem-glow:rgba(168,137,226,.34)}
+.gp-tier-6{--gp-gem-light:#e0fcff;--gp-gem-mid:#62c6ed;--gp-gem-dark:#1d5f9d;--gp-gem-edge:#f4ffff;--gp-gem-glow:rgba(69,195,238,.38)}
+.gp-tier-7{--gp-gem-light:#ffd6ee;--gp-gem-mid:#d15c9a;--gp-gem-dark:#70234e;--gp-gem-edge:#fff2fa;--gp-gem-glow:rgba(225,90,164,.36)}
+.gp-tier-8{--gp-gem-light:#eadbff;--gp-gem-mid:#9867db;--gp-gem-dark:#49227d;--gp-gem-edge:#fbf3ff;--gp-gem-glow:rgba(151,97,222,.4)}
+.gp-tier-9{--gp-gem-light:#d9fff2;--gp-gem-mid:#4bbf9c;--gp-gem-dark:#176252;--gp-gem-edge:#f1fff9;--gp-gem-glow:rgba(62,198,158,.38)}
+.gp-tier-10{--gp-gem-light:#ffe8c9;--gp-gem-mid:#e1a9ed;--gp-gem-dark:#7c328d;--gp-gem-edge:#fff9ee;--gp-gem-glow:rgba(236,151,219,.44)}
+.gp-badge{position:relative;display:inline-flex;flex:0 0 auto;flex-direction:column;align-items:center;justify-content:flex-start;width:104px;height:112px;padding:0;background:transparent;color:var(--gp-gem-dark);border-radius:0;box-shadow:none;transform:none;isolation:isolate;}
+.gp-badge::before{content:"";position:absolute;top:8px;left:50%;width:68px;height:68px;transform:translateX(-50%);border-radius:50%;background:var(--gp-gem-glow);filter:blur(13px);opacity:.78;z-index:-1;animation:gp-gem-aura 3.8s ease-in-out infinite;}
+.gp-gem-stage{position:absolute;top:0;left:50%;width:84px;height:82px;transform:translateX(-50%);display:grid;place-items:center;perspective:420px;}
+.gp-gem-orbit{position:absolute;width:76px;height:34px;border:1.5px solid var(--gp-gem-edge);border-left-color:transparent;border-right-color:var(--gp-gem-mid);border-radius:50%;opacity:.65;transform:rotateX(67deg) rotateZ(-18deg);animation:gp-gem-orbit 8s linear infinite;}
+.gp-gem-svg{position:relative;display:block;width:76px;height:76px;overflow:visible;transform-style:preserve-3d;filter:drop-shadow(0 6px 5px rgba(12,20,40,.28));animation:gp-gem-float 4.8s ease-in-out infinite;}
+.gp-gem-drop{fill:var(--gp-gem-dark);opacity:.72;transform:translateY(3px)}
+.gp-gem-body{stroke:var(--gp-gem-edge)}
+.gp-gem-facet--top{fill:#fff;opacity:.34}
+.gp-gem-facet--bottom{fill:var(--gp-gem-dark);opacity:.34}
+.gp-gem-cut-lines{fill:none;stroke:rgba(255,255,255,.62);stroke-width:1.35;stroke-linejoin:round;opacity:.78}
+.gp-gem-flash{fill:#fff;opacity:.66;filter:blur(.25px);animation:gp-gem-flash 3.6s ease-in-out infinite;}
+.gp-gem-base{fill:none;stroke:var(--gp-gem-dark);stroke-width:2.5;stroke-linecap:round;opacity:.6}
+.gp-gem-sparkle{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff,0 0 14px var(--gp-gem-mid);animation:gp-gem-spark 2.8s ease-in-out infinite;}
+.gp-gem-sparkle--one{top:18px;right:10px}.gp-gem-sparkle--two{left:9px;bottom:21px;width:4px;height:4px;animation-delay:1.1s}
+.gp-badge-level{position:absolute;left:50%;bottom:10px;z-index:2;display:inline-flex;align-items:center;gap:3px;transform:translateX(-50%);padding:4px 9px;border:1px solid var(--gp-gem-edge);border-radius:999px;background:linear-gradient(145deg,var(--gp-gem-dark),#17253c);color:#fff;font-size:.62rem;font-weight:850;line-height:1;white-space:nowrap;box-shadow:0 3px 8px rgba(12,20,40,.24),inset 0 1px 1px rgba(255,255,255,.35);}
+.gp-badge-level b{font-size:.75rem;font-weight:950;}
+.gp-badge-caption{position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);font-size:.42rem;line-height:1;font-weight:950;letter-spacing:.18em;color:var(--gp-gem-dark);white-space:nowrap;text-shadow:0 1px 0 rgba(255,255,255,.85);}
+.gp-badge--small{width:50px;height:50px;min-width:50px;}
+.gp-badge--small::before{top:8px;width:32px;height:32px;filter:blur(8px);}
+.gp-badge--small .gp-gem-stage{width:50px;height:50px;top:0;}
+.gp-badge--small .gp-gem-svg{width:48px;height:48px;animation-duration:7.5s;}
+.gp-badge--small .gp-gem-orbit{width:43px;height:19px;}
+.gp-badge--small .gp-gem-sparkle{width:3px;height:3px;}
+.gp-badge--small .gp-badge-level,.gp-badge--small .gp-badge-caption{display:none;}
+.gp-inline-badge{display:inline-flex;align-items:center;justify-content:center;gap:3px;vertical-align:middle;margin:0 0 0 5px;padding:1px 6px 1px 2px;min-width:28px;height:23px;box-sizing:border-box;border:1px solid var(--gp-gem-edge);border-radius:999px;background:linear-gradient(145deg,var(--gp-gem-light),var(--gp-gem-mid));color:var(--gp-gem-dark);font-size:.62rem;font-weight:950;line-height:1;white-space:nowrap;box-shadow:0 2px 7px rgba(12,20,40,.17),inset 0 1px 1px rgba(255,255,255,.8);}
+.gp-inline-gem{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;}
+.gp-inline-gem-svg{display:block;width:20px;height:20px;overflow:visible;filter:drop-shadow(0 1px 1px rgba(12,20,40,.24));animation:gp-gem-float 5.8s ease-in-out infinite;}
+.gp-inline-gem-svg .gp-gem-drop{opacity:.55}
+.gp-inline-gem-svg .gp-gem-cut-lines{stroke-width:2;}
+.gp-inline-badge strong{font-size:.65rem;font-weight:950;line-height:1;}
+.gp-inline-badge small{display:none}
+.gp-leader-name{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;}
+.gp-leader-name>.gp-badge--small{vertical-align:middle;}
+.gp-badge:hover .gp-gem-svg,.gp-inline-badge:hover .gp-inline-gem-svg{animation-duration:2.1s;}
+@keyframes gp-gem-float{0%,100%{transform:translateY(1px) rotateY(-9deg) rotateX(5deg)}50%{transform:translateY(-4px) rotateY(11deg) rotateX(-4deg)}}
+@keyframes gp-gem-orbit{from{transform:rotateX(67deg) rotateZ(-18deg)}to{transform:rotateX(67deg) rotateZ(342deg)}}
+@keyframes gp-gem-aura{0%,100%{opacity:.48;scale:.92}50%{opacity:.9;scale:1.12}}
+@keyframes gp-gem-flash{0%,65%,100%{opacity:.24}72%{opacity:.9}84%{opacity:.38}}
+@keyframes gp-gem-spark{0%,100%{opacity:.15;scale:.7}50%{opacity:1;scale:1.25}}
+@media(max-width:650px){.gp-badge{width:96px;height:106px}.gp-gem-stage{transform:translateX(-50%) scale(.92);transform-origin:top center}.gp-badge--small{width:46px;height:46px;min-width:46px}.gp-badge--small .gp-gem-stage{transform:translateX(-50%) scale(.92)}.gp-inline-badge{height:22px;gap:2px;padding-right:5px}}
+@media(prefers-reduced-motion:reduce){.gp-badge::before,.gp-gem-orbit,.gp-gem-svg,.gp-gem-flash,.gp-gem-sparkle,.gp-inline-gem-svg{animation:none!important}.gp-gem-svg{transform:none}}
