@@ -12,7 +12,7 @@ const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 test('PWA cache keys advance with the LIVE chat app and styles', () => {
   const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const worker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
-  const version = '20261105-live-fullscreen-responsive-1';
+  const version = '20261105-live-layout-expand-1-live-fullscreen-responsive-1';
   assert.ok(html.includes('/styles.css?v=' + version), 'HTML must request the updated LIVE chat styles');
   assert.ok(html.includes('/app.js?v=' + version), 'HTML must request the updated LIVE chat client');
   assert.ok(worker.includes("minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1"), 'service worker must activate a new cache');

@@ -13,7 +13,7 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.match(app, /const rewardTools=!giftsEnabled\?"":.*live-reward-panel/s);
   assert.match(app, /const liveToolsDrawer=.*speakerTools\+rewardTools\+liveGiftTools/s);
   assert.match(app, /id='live-tools-backdrop' class='live-tools-backdrop hidden'/);
-  const roomMarkup = app.slice(app.indexOf('setContent("<section class=\'live-player-shell'), app.indexOf('const room=new client.Room'));
+  const roomMarkup = app.slice(app.indexOf('setContent("<section id=\'live-player-shell\' class=\'live-player-shell'), app.indexOf('const room=new client.Room'));
   assert.doesNotMatch(roomMarkup, /live-reaction-bar|live-reaction-buttons|live-community-panel/);
   assert.match(app, /const liveStageHud=/);
   assert.match(app, /class='live-host-profile'/);
