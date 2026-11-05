@@ -98,16 +98,19 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, ringtoneResult, profileViewsResult] = await Promise.all([
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, ringtoneResult, profileViewsResult] = await Promise.all([
         api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
         api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
         api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
         api('/reports/mine').catch(error=>({error:error.message,reports:[]})),
         api('/moderation/access').catch(()=>({canModerate:false})),
+        api('/admin/access').catch(()=>({canAccess:false,setupRequired:false})),
         api('/calls/ringtone').catch(error=>({error:error.message,ringtone:null})),
         api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message}))
       ]);
-      const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],canModerate=moderationAccess.canModerate===true;
+      const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],
+        isPrivateAdmin=adminWorkspaceAccess.canAccess===true||adminWorkspaceAccess.setupRequired===true,
+        canModerate=moderationAccess.canModerate===true&&!isPrivateAdmin;
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
