@@ -42,6 +42,8 @@ test('Wallet and Earnings display received gifts independently from spendable Co
   assert.match(app, /Activity total · not spendable wallet Coins/);
   assert.match(app, /Ordinary promotional Coins remain visible in gift history but do not create withdrawable earnings/);
   assert.match(app, /Cash-reserved Admin Promotional/);
+  assert.match(app, /creatorMetric\("Gift Coins received"/);
+  assert.match(app, /Latest 50 · all funding sources/);
 });
 
 test('gift send confirmation explains why ordinary promotional Coins do not create creator cash earnings', () => {
