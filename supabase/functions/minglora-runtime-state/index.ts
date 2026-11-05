@@ -460,7 +460,6 @@ Deno.serve(async (req: Request) => {
       return {
         id: drop.id,
         broadcastId: drop.broadcast_id,
-        creatorId: drop.creator_id,
         kind: drop.kind,
         totalCoins: Number(drop.total_coins),
         winnerCount: Number(drop.winner_count),
@@ -479,7 +478,6 @@ Deno.serve(async (req: Request) => {
         winners: people.filter((entry: any) => Number(entry.claim_order || 0) > 0)
           .sort((a: any, b: any) => Number(a.claim_order) - Number(b.claim_order))
           .map((entry: any) => ({
-            userId: entry.user_id,
             claimOrder: Number(entry.claim_order),
             rewardCoins: Number(entry.reward_coins || 0)
           }))
