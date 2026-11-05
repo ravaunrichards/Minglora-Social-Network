@@ -61,7 +61,7 @@
     return "<div class='gp-selected-badge'>" + badgeMarkup(item.level, item.tier) +
       "<div><span class='gp-eyebrow'>" + (item.adminAwarded ? "ADMIN AWARDED BADGE" : item.unlocked ? "UNLOCKED BADGE" : "LOCKED BADGE") +
       "</span><h3>" + esc(item.badgeName) + "</h3><p>" + esc(item.reward) + "</p>" +
-      "<small>Lifetime requirement: " + number(item.coinsRequired ?? item.xpRequired) + " Coins sent</small></div></div>" +
+      "<small>" + (item.adminAwarded ? "Admin award · no Coin spending added" : "Lifetime requirement: " + number(item.coinsRequired ?? item.xpRequired) + " Coins sent") + "</small></div></div>" +
       (item.level === current.level
         ? "<p class='gp-selected-note'>This is your current badge.</p>"
         : item.unlocked
