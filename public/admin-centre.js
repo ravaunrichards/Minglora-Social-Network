@@ -72,6 +72,14 @@
             <strong>Member support inbox</strong><small>Review support tickets and respond to members.</small>
           </button>
         </div>
+        <section class="admin-marketing-budget" id="admin-campaign-coins-wallet" aria-labelledby="admin-campaign-coins-wallet-title">
+          <div class="admin-marketing-budget-heading">
+            <div><strong id="admin-campaign-coins-wallet-title">Admin Promotional Gift Wallet</strong>
+              <p>Independent campaign allocation and transaction ledger. This wallet is separate from Main Coins, Main Promotional Coins and cash-backed marketing funds.</p></div>
+            <button type="button" class="secondary" id="admin-campaign-coins-refresh">Refresh balance</button>
+          </div>
+          <div class="admin-marketing-budget-summary" id="admin-campaign-coins-summary" aria-live="polite">Loading verified campaign balance…</div>
+        </section>
         <form class="admin-owner-coin-issuance" id="admin-owner-coin-issuance-form">
           <div>
             <strong>Owner Coin issuance</strong>
@@ -104,7 +112,7 @@
             <select id="admin-member-promotion-recipient" name="memberUsername" required>
               <option value="">Loading members…</option>
             </select>
-            <p class="admin-member-promotion-funding-note">These admin promotional Coins use the non-cash promo balance. They can be spent on Minglora, but they do not create withdrawable creator earnings. Use the separate cash-backed marketing grant below for cash-eligible campaign Coins; that budget must contain confirmed funds first.</p>
+            <p class="admin-member-promotion-funding-note">These Coins are allocated from the separate Admin Campaign Coins wallet into each member’s Promotional Gift Wallet. They never deduct from the owner’s Main Coin balance or the member’s Main Coin balance.</p>
             <label for="admin-member-promotion-amount">Promotional Coin amount</label>
             <input id="admin-member-promotion-amount" name="amountCoins" type="number" min="1" max="9007199254740991" step="1" inputmode="numeric" placeholder="Enter the amount you choose" required>
             <label for="admin-member-promotion-note">Reason or promotion note</label>
@@ -447,6 +455,31 @@
       }
     });
 
+    const refreshAdminCampaignWallet = async () => {
+      const target = panel.querySelector('#admin-campaign-coins-summary');
+      if (!target) return;
+      target.textContent = 'Loading verified campaign balance…';
+      try {
+        const response = await fetch('/api/admin/coins/campaign-wallet', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Campaign wallet could not be loaded.');
+        const wallet = result.wallet || {};
+        const available = Number(wallet.available_coins || 0);
+        const funded = Number(wallet.lifetime_funded_coins || 0);
+        const allocated = Number(wallet.lifetime_allocated_coins || 0);
+        target.innerHTML = '<div class="admin-marketing-budget-metrics">' +
+          '<div><small>Available campaign Coins</small><strong>' + available.toLocaleString() + '</strong></div>' +
+          '<div><small>Total allocated</small><strong>' + allocated.toLocaleString() + '</strong></div>' +
+          '<div><small>Total funded</small><strong>' + funded.toLocaleString() + '</strong></div>' +
+          '<div><small>Wallet limit</small><strong>' + Number(wallet.max_balance_coins || 0).toLocaleString() + '</strong></div></div>';
+      } catch (error) {
+        target.textContent = error.message || 'Campaign wallet could not be loaded.';
+      }
+    };
+    panel.querySelector('#admin-campaign-coins-refresh')?.addEventListener('click', refreshAdminCampaignWallet);
+    refreshAdminCampaignWallet();
     panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
       event.preventDefault();
       const form = event.currentTarget;
