@@ -23,8 +23,8 @@ import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-b
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
-import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
-import { recordGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity } from '../backend/modules/gifter-progression/service.js';
+import { recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
+import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -42,6 +42,72 @@ const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (process.env.NODE_ENV 
 if (!['supabase', 'legacy'].includes(AUTH_PROVIDER)) throw new Error('AUTH_PROVIDER must be supabase or legacy.');
 if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase. When Minglora Supabase credentials are missing, authentication routes fail closed with HTTP 503 instead of writing accounts to local storage.');
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp', '.gltf':'model/gltf+json; charset=utf-8', '.webmanifest':'application/manifest+json; charset=utf-8' };
+
+let refundedGiftSyncAt = 0;
+let refundedGiftSyncPromise = null;
+
+/**
+ * Reconcile refunds recorded by the authoritative Coin ledger into the
+ * persisted application projections. The original transaction remains intact
+ * for audit, while every public-facing projection stops counting it.
+ */
+async function syncRefundedGiftActivity() {
+  if (!isSupabasePersistence()) return { updated: 0 };
+  if (refundedGiftSyncPromise) return refundedGiftSyncPromise;
+  if (Date.now() - refundedGiftSyncAt < 4000) return { updated: 0 };
+  refundedGiftSyncAt = Date.now();
+
+  refundedGiftSyncPromise = (async () => {
+    const payload = await requestSupabaseState("economy_refunded_gift_ids");
+    const giftIds = [...new Set((Array.isArray(payload?.giftIds) ? payload.giftIds : [])
+      .map(value => String(value || "").trim())
+      .filter(Boolean))];
+    if (!giftIds.length) return { updated: 0 };
+
+    let changed = 0;
+    const timestamp = new Date();
+    for (const giftId of giftIds) {
+      const galleryEvent = (db.giftGalleryEvents || []).find(item => item.giftId === giftId);
+      const leagueEvent = (db.creatorLeagueGiftLedger || []).find(item => item.giftId === giftId);
+      const progressionEvent = (db.gifterProgressionLedger || []).find(item => item.giftId === giftId);
+      const sourceEvent = progressionEvent || galleryEvent || leagueEvent;
+      const refundTime = sourceEvent?.createdAt ? new Date(sourceEvent.createdAt) : timestamp;
+
+      const leagueResult = refundCreatorLeagueGift(db, giftId, timestamp);
+      const gifterResult = refundGifterGift(db, giftId, timestamp);
+      let itemChanged = Boolean(leagueResult.reversed || gifterResult.reversed);
+
+      for (const item of db.giftGalleryEvents || []) {
+        if (item.giftId !== giftId || item.refundedAt || item.status === "refunded") continue;
+        item.refundedAt = timestamp.toISOString();
+        item.status = "refunded";
+        itemChanged = true;
+      }
+
+      const recipientId = galleryEvent?.creatorId || leagueEvent?.userId || progressionEvent?.recipientId;
+      const senderId = galleryEvent?.senderId || progressionEvent?.senderId;
+      if (recipientId && senderId && Number.isFinite(refundTime.getTime())) {
+        const before = (db.notifications || []).length;
+        db.notifications = (db.notifications || []).filter(item => {
+          if (item.type !== "gift" || item.userId !== recipientId || item.actorId !== senderId) return true;
+          const notificationTime = Date.parse(item.createdAt || "");
+          return !Number.isFinite(notificationTime) || Math.abs(notificationTime - refundTime.getTime()) > 15000;
+        });
+        if (db.notifications.length !== before) itemChanged = true;
+      }
+
+      if (itemChanged) changed += 1;
+    }
+    if (changed) await saveStore();
+    return { updated: changed };
+  })().catch(error => {
+    console.error("[Minglora refunds] Could not reconcile refunded gift projections:", String(error?.message || error).slice(0, 200));
+    return { updated: 0, error: true };
+  }).finally(() => {
+    refundedGiftSyncPromise = null;
+  });
+  return refundedGiftSyncPromise;
+}
 
 let paypalAccessTokenCache=null;
 function paypalConfig(){
@@ -824,6 +890,7 @@ async function route(req, res) {
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
+    if (user) await syncRefundedGiftActivity();
     try {
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
@@ -2537,7 +2604,7 @@ async function route(req, res) {
         const sinceMs=sinceValue?Date.parse(sinceValue):0;
         if(sinceValue&&!Number.isFinite(sinceMs))return json(res,400,{error:'Use a valid timestamp when checking LIVE gift activity.'});
         const events=(db.giftGalleryEvents||[])
-          .filter(event=>event.broadcastId===session.id&&event.creatorId===session.hostId&&
+          .filter(event=>!event.refundedAt&&event.status!=='refunded'&&event.broadcastId===session.id&&event.creatorId===session.hostId&&
             (!sinceValue||Date.parse(event.createdAt)>=sinceMs))
           .sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
           .slice(-60)
@@ -2764,13 +2831,15 @@ async function route(req, res) {
         });
       }
       if(method==='GET'&&p==='/api/gifter-progression/overview'){
+        await syncRefundedGiftActivity();
         return json(res,200,{viewerId:user.id,badge:getGifterBadgeSummary(db,user.id),...getGifterProgressionOverview(db,user.id)});
       }
       if(method==='GET'&&p==='/api/live/rankings/daily'){
+        await syncRefundedGiftActivity();
         const dayKey=new Date().toISOString().slice(0,10);
         const totals=new Map();
         for(const event of (db.gifterProgressionLedger||[])){
-          if(!event?.senderId||!String(event.createdAt||'').startsWith(dayKey))continue;
+          if(!event?.senderId||event.refundedAt||event.status==='refunded'||!String(event.createdAt||'').startsWith(dayKey))continue;
           const amount=Number(event.coinAmount);
           if(!Number.isSafeInteger(amount)||amount<=0)continue;
           const current=totals.get(event.senderId)||{points:0,giftsSent:0,lastGiftAt:event.createdAt};
@@ -2792,11 +2861,13 @@ async function route(req, res) {
         return json(res,200,{dayKey,leaderboard,scoring:'confirmed LIVE Coin gifts sent'});
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
+        await syncRefundedGiftActivity();
         const overview=getCreatorLeagueOverview(db,user);
         await saveStore();
         return json(res,200,{viewerId:user.id,...overview});
       }
       if(method==='GET'&&p==='/api/leagues/matches'){
+        await syncRefundedGiftActivity();
         const matches=listCreatorLeagueMatches(db,db.users,user.id);
         await saveStore();
         return json(res,200,{matches});
@@ -3079,6 +3150,7 @@ async function route(req, res) {
 
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
       if(method==='GET'&&m){
+        await syncRefundedGiftActivity();
         const target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         const relationshipType=m[2];
@@ -4241,6 +4313,7 @@ async function route(req, res) {
         return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
       }
       if(method==='GET'&&p==='/api/notifications'){
+        await syncRefundedGiftActivity();
         const prefs=getUserSettings(user).notifications;
         const activeCallIds=new Set((db.callParticipants||[]).filter(item=>item.userId===user.id&&item.status==='invited'&&['ringing','active'].includes((db.calls||[]).find(call=>call.id===item.callId)?.status)).map(item=>item.callId));
         const before=(db.notifications||[]).length;

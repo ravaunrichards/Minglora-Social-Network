@@ -89,7 +89,7 @@ function getDeduplicatedSenderTotals(db) {
 
   const seen = new Set();
   const uniqueEvents = ledger.filter(item => {
-    if (!item?.giftId || seen.has(item.giftId)) return false;
+    if (!item?.giftId || item.refundedAt || item.status === "refunded" || seen.has(item.giftId)) return false;
     seen.add(item.giftId);
     return true;
   });
@@ -110,7 +110,7 @@ function getDeduplicatedGiftEvents(db) {
   const ledger = Array.isArray(db.gifterProgressionLedger) ? db.gifterProgressionLedger : [];
   const seen = new Set();
   return ledger.filter(item => {
-    if (!item?.giftId || seen.has(item.giftId)) return false;
+    if (!item?.giftId || item.refundedAt || item.status === "refunded" || seen.has(item.giftId)) return false;
     seen.add(item.giftId);
     return true;
   });
@@ -227,6 +227,27 @@ export function recordGifterGift(db, details = {}) {
   };
   db.gifterProgressionLedger.push(event);
   return { recorded: true, event };
+}
+
+/**
+ * Mark a refunded Gift as reversed while preserving the audit history.
+ * Replacing the ledger array invalidates the sender-total WeakMap cache.
+ */
+export function refundGifterGift(db, giftId, now = new Date()) {
+  if (!db || typeof db !== "object") throw new TypeError("Gifter progression storage is required.");
+  const id = safeText(giftId, 180);
+  if (!id) return { reversed: false, reason: "invalid_gift_id" };
+  const ledger = Array.isArray(db.gifterProgressionLedger) ? db.gifterProgressionLedger : [];
+  const gift = ledger.find(item => item.giftId === id);
+  if (!gift) return { reversed: false, reason: "gift_not_found" };
+  if (gift.refundedAt || gift.status === "refunded") {
+    return { reversed: false, reason: "already_refunded", senderId: gift.senderId };
+  }
+  const timestamp = (now instanceof Date ? now : new Date(now)).toISOString();
+  gift.refundedAt = timestamp;
+  gift.status = "refunded";
+  db.gifterProgressionLedger = ledger.slice();
+  return { reversed: true, senderId: gift.senderId, coinAmount: Number(gift.coinAmount) || 0 };
 }
 
 export function getGifterProgressionOverview(db, userId) {

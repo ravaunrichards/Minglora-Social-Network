@@ -151,10 +151,17 @@ const ensureCollections = db => {
   const dailyGiftTotals = new Map();
   const lifetimeGiftTotals = new Map();
   const seasonGiftTotals = new Map();
+  const dailyGiftKeys = new Set();
+  const lifetimeGiftUsers = new Set();
+  const seasonGiftKeys = new Set();
   for (const gift of db.creatorLeagueGiftLedger) {
     const amount = asNumber(gift.coinAmount);
     if (!gift.userId || !gift.dayKey || amount <= 0) continue;
     const dailyKey = String(gift.userId) + "\u0000" + String(gift.dayKey);
+    dailyGiftKeys.add(dailyKey);
+    lifetimeGiftUsers.add(gift.userId);
+    if (gift.seasonKey) seasonGiftKeys.add(String(gift.userId) + "\u0000" + String(gift.seasonKey));
+    if (gift.refundedAt || gift.status === "refunded") continue;
     dailyGiftTotals.set(dailyKey, (dailyGiftTotals.get(dailyKey) || 0) + amount);
     lifetimeGiftTotals.set(gift.userId, (lifetimeGiftTotals.get(gift.userId) || 0) + amount);
     if (gift.seasonKey) {
@@ -173,7 +180,9 @@ const ensureCollections = db => {
   const existingDailyKeys = new Set();
   for (const daily of db.creatorLeagueDailyScores) {
     const key = String(daily.userId) + "\u0000" + String(daily.dayKey);
-    if (dailyGiftTotals.has(key)) daily.points = dailyGiftTotals.get(key);
+    // Reconcile days that had a gift event, even when every gift for the day
+    // has since been refunded. Leave independently-scored days untouched.
+    if (dailyGiftKeys.has(key)) daily.points = dailyGiftTotals.get(key) || 0;
     existingDailyKeys.add(key);
   }
   for (const [key, points] of dailyGiftTotals) {
@@ -182,13 +191,11 @@ const ensureCollections = db => {
     db.creatorLeagueDailyScores.push({ id: randomUUID(), userId, dayKey, points });
   }
   for (const profile of db.creatorLeagueProfiles) {
-    if (lifetimeGiftTotals.has(profile.userId)) {
-      profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId);
+    if (lifetimeGiftUsers.has(profile.userId)) {
+      profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId) || 0;
     }
     const seasonKey = String(profile.userId) + "\u0000" + String(profile.seasonKey || "");
-    if (seasonGiftTotals.has(seasonKey)) {
-      profile.seasonPoints = seasonGiftTotals.get(seasonKey);
-    }
+    if (seasonGiftKeys.has(seasonKey)) profile.seasonPoints = seasonGiftTotals.get(seasonKey) || 0;
   }
   db.creatorLeagueDailySettlements = uniqueRecords(db.creatorLeagueDailySettlements, item => item.dayKey);
   db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
@@ -214,6 +221,49 @@ function seasonEndsAt(value = new Date()) {
 }
 function event(db, userId, type, details, now = new Date()) {
   db.creatorLeagueEvents.push({ id: randomUUID(), userId, type, details, createdAt: now.toISOString() });
+}
+
+/**
+ * Reverse a refunded LIVE Gift without deleting its audit record. The entry
+ * remains visible to internal audits but never contributes to League scoring.
+ */
+export function refundCreatorLeagueGift(db, giftId, now = new Date()) {
+  ensureCollections(db);
+  const id = String(giftId || "");
+  if (!id) return { reversed: false, reason: "invalid_gift_id" };
+  const gift = db.creatorLeagueGiftLedger.find(item => item.giftId === id);
+  if (!gift) return { reversed: false, reason: "gift_not_found" };
+  if (gift.refundedAt || gift.status === "refunded") {
+    return { reversed: false, reason: "already_refunded", userId: gift.userId };
+  }
+
+  const timestamp = (now instanceof Date ? now : new Date(now)).toISOString();
+  gift.refundedAt = timestamp;
+  gift.status = "refunded";
+
+  for (const match of db.creatorLeagueMatches) {
+    const before = Array.isArray(match.events) ? match.events.length : 0;
+    match.events = (match.events || []).filter(item =>
+      !(item.giftId === id && ["gift_score", "shield_blocked_bonus"].includes(item.type))
+    );
+    if (match.events.length !== before) {
+      match.scores ||= { challenger: 0, opponent: 0 };
+      for (const side of ["challenger", "opponent"]) {
+        match.scores[side] = match.events
+          .filter(item => item.side === side && ["gift_score", "viewer_support"].includes(item.type))
+          .reduce((total, item) => total + (item.type === "viewer_support" && !Number.isFinite(Number(item.matchPoints))
+            ? 3 : asNumber(item.matchPoints)), 0);
+      }
+      match.updatedAt = timestamp;
+      normalizeMatch(match);
+    }
+  }
+
+  event(db, gift.userId, "gift_refunded", {
+    giftId: id, coinAmount: asNumber(gift.coinAmount), giftCode: String(gift.giftCode || "")
+  }, new Date(timestamp));
+  ensureCollections(db);
+  return { reversed: true, userId: gift.userId, coinAmount: asNumber(gift.coinAmount) };
 }
 export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = new Date()) {
   ensureCollections(db);
