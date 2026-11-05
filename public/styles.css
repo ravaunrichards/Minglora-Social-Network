@@ -4846,3 +4846,130 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
   #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-guest{grid-column:3}
   .live-room-permission-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Minglora LIVE viewer controls and Fan Club parity */
+.live-stage-topbar{pointer-events:none}
+.live-stage-top-left{gap:6px;max-width:calc(100% - 54px);flex-wrap:wrap;pointer-events:none}
+.live-host-profile-wrap{display:flex;align-items:center;gap:6px;min-width:0;max-width:min(62vw,330px);pointer-events:auto}
+button.live-host-profile{appearance:none;-webkit-appearance:none;text-align:left;font:inherit;cursor:pointer;pointer-events:auto;flex:1 1 auto;min-width:0}
+.live-host-profile:focus-visible,.live-follow-button:focus-visible,.live-heart-like:focus-visible,.live-fan-club-join:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.live-host-profile small{display:flex;align-items:center;gap:5px}
+.live-host-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff405b;box-shadow:0 0 0 3px rgba(255,64,91,.16)}
+.live-follow-button{
+  flex:none;min-height:31px;padding:0 11px;border:1px solid rgba(255,255,255,.8);border-radius:999px;
+  color:#fff;background:rgba(10,15,25,.84);font-size:10px;font-weight:850;cursor:pointer;pointer-events:auto;
+}
+.live-follow-button.is-following{border-color:rgba(255,255,255,.28);color:#d9e4f5;background:rgba(35,45,60,.82)}
+.live-like-control{
+  display:flex;align-items:center;gap:5px;min-height:42px;padding:4px 9px;border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;color:#fff;background:rgba(8,12,20,.78);box-shadow:0 5px 18px rgba(0,0,0,.25);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);pointer-events:auto;
+}
+.live-heart-like{
+  display:grid;place-items:center;width:31px;height:31px;padding:0;border:0;border-radius:50%;
+  color:#fff;background:transparent;font-size:23px;line-height:1;cursor:pointer;pointer-events:auto;
+  transition:color .16s ease,transform .16s ease,text-shadow .16s ease;
+}
+.live-heart-like.is-liked{color:#ff365c;text-shadow:0 0 10px rgba(255,54,92,.42);transform:scale(1.06)}
+.live-heart-like:active{transform:scale(.88)}
+.live-like-control>strong{font-size:11px;font-variant-numeric:tabular-nums;font-weight:900}
+.live-like-control>small{color:rgba(255,255,255,.72);font-size:9px}
+.live-fan-club-join{
+  min-height:38px;padding:0 11px;border:1px solid rgba(255,255,255,.25);border-radius:999px;
+  color:#fff;background:linear-gradient(135deg,#ff2854,#ca123f);box-shadow:0 5px 18px rgba(0,0,0,.28);
+  font-size:11px;font-weight:950;cursor:pointer;pointer-events:auto;white-space:nowrap;
+}
+.live-fan-club-join.is-member{background:linear-gradient(135deg,#a21e45,#751637)}
+.live-fan-club-join:disabled{opacity:.6;cursor:wait}
+.live-host-power-button{pointer-events:auto}
+.live-exit-button{
+  display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;padding:0;border:1px solid rgba(255,255,255,.34);
+  border-radius:50%;color:#fff;background:rgba(5,9,17,.72);font-size:27px;line-height:1;cursor:pointer;
+}
+.live-exit-button:hover{background:rgba(255,45,77,.25)}
+.live-exit-button:focus-visible{outline:2px solid white;outline-offset:3px}
+.live-player-header .live-exit-button{pointer-events:auto}
+.live-profile-preview{display:block;width:min(100% - 24px,680px);margin:10px auto 16px}
+.live-profile-preview.hidden{display:none!important}
+.live-profile-preview-card{
+  position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.16);border-radius:18px;
+  color:#f8faff;background:linear-gradient(160deg,#1b2638,#101723 68%,#121c2b);
+  box-shadow:0 16px 50px rgba(0,0,0,.25)
+}
+.live-profile-preview-cover{height:76px;background:linear-gradient(120deg,#354c73,#1c2d4a 60%,#542a55)}
+.live-profile-preview-main{padding:0 16px 16px}
+.live-profile-preview-avatar{width:68px;height:68px;object-fit:cover;border:3px solid #172237;border-radius:50%;margin-top:-34px;background:#28344a}
+.live-profile-preview-heading{display:grid;gap:2px;margin:5px 0 10px}
+.live-profile-preview-heading strong{font-size:17px}
+.live-profile-preview-heading small,.live-profile-preview-posts small{color:#aebbd0;font-size:11px}
+.live-profile-preview-stats{display:flex;flex-wrap:wrap;gap:18px;margin:10px 0}
+.live-profile-preview-stats span{display:grid;gap:1px}
+.live-profile-preview-stats b{font-size:13px}
+.live-profile-preview-stats small{color:#aebbd0;font-size:10px}
+.live-profile-preview-bio{color:#e2e8f2;line-height:1.45;overflow-wrap:anywhere}
+.live-profile-preview-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.live-profile-preview-posts article{min-width:0;padding:9px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.045)}
+.live-profile-preview-posts p{margin:6px 0 0;font-size:12px;overflow-wrap:anywhere}
+.live-profile-preview-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.live-profile-preview-close{position:absolute;z-index:2;top:9px;right:10px;width:34px;height:34px;border:1px solid rgba(255,255,255,.3);border-radius:50%;color:#fff;background:rgba(5,9,17,.6);font-size:23px;cursor:pointer}
+.live-chat-composer-wrap{position:relative}
+.live-chat-emoji-button{flex:none;min-width:39px!important;padding:0 8px!important;background:rgba(255,255,255,.12)!important;color:white!important}
+.live-chat-emoji-picker{position:absolute;z-index:44;left:8px;bottom:calc(100% + 6px);display:flex;flex-wrap:wrap;gap:5px;max-width:min(270px,90vw);padding:9px;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:#101827;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.live-chat-emoji-picker.hidden{display:none!important}
+.live-chat-emoji-picker button{width:34px;height:34px;padding:0;border:0;border-radius:9px;background:rgba(255,255,255,.07);font-size:19px;cursor:pointer}
+.live-fan-club-panel{display:grid;gap:12px}
+.live-fan-club-status{display:grid;gap:4px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.045)}
+.live-fan-club-status strong{color:#fff}
+.live-fan-club-status small,.live-fan-club-expiry-note{color:#aebbd0;line-height:1.4;font-size:11px}
+.live-fan-club-join-panel{justify-self:start;min-height:38px;padding:0 14px;border:1px solid rgba(255,255,255,.24);border-radius:999px;color:#fff;background:#dc1f4d;font-weight:900;cursor:pointer}
+.live-fan-club-member-total{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);color:#e5ebf4;font-size:12px}
+.live-fan-club-member-total strong{font-variant-numeric:tabular-nums}
+.live-fan-club-join-panel:disabled,.live-team-gifts-open:disabled{opacity:.55;cursor:not-allowed}
+.live-gift-scope-tabs{display:flex;gap:7px;margin:8px 0}
+.live-gift-scope-tabs button{padding:7px 12px;border:1px solid #3a4558;border-radius:999px;color:#dce5f3;background:#202b3c;font-size:11px;font-weight:800;cursor:pointer}
+.live-gift-scope-tabs button.active{border-color:#ff5878;background:rgba(221,31,77,.2);color:#fff}
+.live-gift-team-note{margin:0 0 9px;color:#aebbd0;font-size:10px;line-height:1.4}
+.live-gift-button.is-team-gift{border-color:rgba(255,83,124,.45)}
+.live-gift-button.is-locked{opacity:.52;cursor:not-allowed}
+.live-gift-button:disabled{cursor:not-allowed}
+.live-discovery-board{display:grid;gap:10px;margin:10px 0 16px;padding:12px}
+.live-discovery-tabs{display:flex;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--border,rgba(150,160,180,.2));padding-bottom:9px}
+.live-discovery-tabs button{padding:8px 13px;border:1px solid var(--border,rgba(150,160,180,.2));border-radius:999px;color:var(--muted,#9aa2b2);background:transparent;font-weight:800;cursor:pointer}
+.live-discovery-tabs button.active{color:var(--text,#fff);border-color:rgba(255,80,116,.55);background:rgba(255,80,116,.13)}
+.live-discovery-content{min-width:0}
+.live-ranking-heading{display:grid;gap:3px;padding:4px 2px 10px}
+.live-ranking-heading strong{font-size:13px}
+.live-ranking-heading small{color:var(--muted,#9aa2b2);font-size:11px}
+.live-ranking-row{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:8px 4px;border:0;border-bottom:1px solid var(--border,rgba(150,160,180,.15));color:var(--text,#fff);background:transparent;text-align:left}
+button.live-ranking-row{cursor:pointer}
+.live-ranking-row img{width:36px;height:36px;flex:none;border-radius:50%;object-fit:cover}
+.live-ranking-row>span:not(.live-ranking-position){display:grid;gap:2px;min-width:0;flex:1}
+.live-ranking-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.live-ranking-row small{color:var(--muted,#9aa2b2);font-size:10px}
+.live-ranking-row b{flex:none;font-size:11px;font-variant-numeric:tabular-nums}
+.live-ranking-position{width:24px;flex:none;color:#ffb35b;font-weight:950;text-align:center}
+.live-match-panel{min-width:0}
+.live-match-card{min-width:0}
+.live-player-layout{min-width:0}
+@media(max-width:640px){
+  .live-stage-topbar{top:max(7px,env(safe-area-inset-top));left:7px;right:7px;gap:5px}
+  .live-stage-top-left{gap:4px;max-width:calc(100% - 45px)}
+  .live-host-profile-wrap{gap:4px;max-width:100%}
+  button.live-host-profile{gap:5px;max-width: min(42vw,180px);padding:3px 7px 3px 3px}
+  .live-host-profile img{width:29px;height:29px;flex-basis:29px}
+  .live-host-profile strong{font-size:10px}
+  .live-host-profile small{font-size:7px}
+  .live-follow-button{min-height:28px;padding:0 8px;font-size:9px}
+  .live-like-control{min-height:34px;gap:3px;padding:2px 6px}
+  .live-heart-like{width:26px;height:28px;font-size:20px}
+  .live-like-control>strong{font-size:10px}
+  .live-like-control>small{font-size:8px}
+  .live-fan-club-join{min-height:33px;padding:0 8px;font-size:9px}
+  .live-profile-preview{width:calc(100% - 14px)}
+  .live-profile-preview-posts{grid-template-columns:1fr}
+  .live-exit-button{width:34px;height:34px;flex-basis:34px;font-size:24px}
+}
+@media(min-width:641px){
+  .live-profile-preview{max-width:450px;margin-left:auto;margin-right:16px}
+}
