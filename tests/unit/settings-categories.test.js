@@ -97,3 +97,11 @@ test('Wallet display currency uses an external reference rate without changing U
   assert.match(settings,/reference rate dated/);
   assert.match(server,/key==='displayCurrency'/);
 });
+
+test('Activity category reuses the existing private account activity log',()=>{
+  assert.match(settings,/api\('\/users\/\'+encodeURIComponent\(result\.account\.id\)\+'\/activity'\)/);
+  assert.match(settings,/Activity Center/);
+  assert.match(settings,/id="settings-refresh-activity"/);
+  assert.match(settings,/activityHistoryMarkup/);
+  assert.match(settings,/Watch, comment, search, advertising, mention and content-reuse histories are not yet tracked/);
+});
