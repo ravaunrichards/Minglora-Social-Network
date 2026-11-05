@@ -36,9 +36,11 @@
     if (target) target.textContent = message;
   };
 
-  const reloadIntoSession = () => {
+  const reloadIntoSession = (mfaEnrollmentRequired = false) => {
     // A fresh document read runs the normal /auth/me bootstrap with the new HttpOnly sid cookie.
-    window.location.replace(window.location.pathname + window.location.search);
+    const destination = new URL(window.location.href);
+    if (mfaEnrollmentRequired) destination.searchParams.set('mfa-setup', 'required');
+    window.location.replace(destination.pathname + destination.search);
   };
 
   const showRegistrationError = message => {
@@ -105,8 +107,8 @@
       if (!result.user || !result.user.id) {
         throw new Error('Minglora did not create a sign-in session. Please try again.');
       }
-      button.textContent = 'Opening Minglora…';
-      reloadIntoSession();
+      button.textContent = result.mfaEnrollmentRequired ? 'Opening security setup…' : 'Opening Minglora…';
+      reloadIntoSession(result.mfaEnrollmentRequired === true);
     } catch (cause) {
       showError(cause.message || 'Minglora could not sign you in. Please try again.');
     } finally {
