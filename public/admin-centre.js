@@ -152,8 +152,27 @@
           </div>
         </section>
         <div class="admin-control-centre-note" id="admin-main-wallet-protection">
-          CreatorHub Main Coin balance is protected. Member promotions are issued only from the separate Admin Promotional Gift Wallet shown above.
+          Main Coin member credits are issued directly to the selected member's Main Coin wallet. The separate Admin Promotional Gift Wallet remains isolated and is never synchronized with Main Coins.
         </div>
+        <section class="admin-member-promotions" aria-labelledby="admin-main-coin-credit-title">
+          <div class="admin-member-promotions-heading">
+            <div>
+              <strong id="admin-main-coin-credit-title">Main Coin member bonus credits</strong>
+              <p>Issue whole-number bonus Coins directly to a member's Main Coin wallet. They have the same gift value, creator earnings and payout treatment as purchased Coins.</p>
+            </div>
+          </div>
+          <form id="admin-main-coin-credit-form" class="admin-marketing-form">
+            <strong>Credit a member's Main Coin wallet</strong>
+            <label for="admin-main-coin-credit-member">Member username</label>
+            <input id="admin-main-coin-credit-member" name="memberUsername" type="text" maxlength="31" autocomplete="off" placeholder="@username" required>
+            <label for="admin-main-coin-credit-amount">Bonus Coin amount</label>
+            <input id="admin-main-coin-credit-amount" name="amountCoins" type="number" min="1" max="9007199254740991" step="1" inputmode="numeric" placeholder="Enter whole Coins" required>
+            <label for="admin-main-coin-credit-note">Reason or credit note</label>
+            <input id="admin-main-coin-credit-note" name="note" type="text" maxlength="240" value="Minglora Main Coin bonus credit">
+            <button type="submit" class="primary" id="admin-main-coin-credit-submit">Issue Main Coin bonus</button>
+            <p id="admin-main-coin-credit-status" aria-live="polite"></p>
+          </form>
+        </section>
         <section class="admin-member-promotions" aria-labelledby="admin-member-promotions-title">
           <div class="admin-member-promotions-heading">
             <div>
@@ -625,6 +644,51 @@
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
       window.setTimeout(refreshPromotionalGiftFund, 350);
     }
+
+    panel.querySelector('#admin-main-coin-credit-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = form.querySelector('#admin-main-coin-credit-member');
+      const amountInput = form.querySelector('#admin-main-coin-credit-amount');
+      const noteInput = form.querySelector('#admin-main-coin-credit-note');
+      const status = form.querySelector('#admin-main-coin-credit-status');
+      const submit = form.querySelector('#admin-main-coin-credit-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a valid @username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure credit reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Issue ' + amountCoins.toLocaleString() + ' Main Coins to @' + memberUsername + '? This increases that member’s Main Coin wallet and does not debit your Main Coin balance.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Issuing Main Coin bonus…';
+      try {
+        const response = await fetch('/api/admin/coins/member-credit', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername,amountCoins,requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Main Coin bonus could not be issued.');
+        const credit = result.credit?.credit || result.credit || {};
+        if (status) status.textContent = 'Issued ' + Number(credit.amountCoins || amountCoins).toLocaleString() +
+          ' Main Coins to @' + (credit.memberUsername || memberUsername) + '. New wallet balance: ' +
+          Number(credit.balanceAfter || 0).toLocaleString() + ' Coins.';
+        if (amountInput) amountInput.value = '';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Main Coin bonus could not be issued.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
 
     panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
       event.preventDefault();
