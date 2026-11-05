@@ -30,3 +30,9 @@ test('Shared screen keeps real host and guest seats visible in a compact stage s
   assert.match(styles,/\.live-screen-share-tile \.live-video-element/);
   assert.match(styles,/@media\(max-width:760px\)/);
 });
+
+test('Stopping screen capture clears the shared-screen tile and restores the normal guest grid',()=>{
+  assert.match(app,/LocalTrackUnpublished/);
+  assert.match(app,/live-screen-share-stage"\)\?\.replaceChildren\(\)/);
+  assert.match(app,/mediaTrack\?\.addEventListener\?\.\("ended"/);
+});
