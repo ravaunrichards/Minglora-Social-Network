@@ -66,3 +66,7 @@ Minglora only records a participant as connected after the client has connected 
 ### LIVE reactions and viewer data permissions
 
 Video+audio and audio-only LIVE rooms support shared lightweight reactions (hearts, applause, fire and laughter) over LiveKit data packets. Viewer tokens may publish data packets for these allow-listed in-room reactions while remaining unable to publish microphone or camera tracks. Reaction packets are ephemeral, client-validated and are not Coins, gifts, earnings or a persisted engagement ledger. Audio-only broadcasts continue to withhold camera publishing permissions from every role.
+
+### Host-pinned comments
+
+The LIVE host may pin one current chat comment to the stage. Pin and unpin actions are sent as reliable LiveKit room data packets and viewers accept them only when the sender identity matches the session host. Pin state is transient for the active room; it is not presented as a permanent chat record.
