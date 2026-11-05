@@ -10,7 +10,7 @@ const app = read('public/app.js');
 const styles = read('public/styles.css');
 
 test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settings drawer', () => {
-  assert.match(app, /const rewardTools="<section id='live-reward-panel' class='live-reward-panel'>/);
+  assert.match(app, /const rewardTools=!giftsEnabled\?"":.*live-reward-panel/s);
   assert.match(app, /const liveToolsDrawer=.*speakerTools\+rewardTools\+liveGiftTools/s);
   assert.match(app, /id='live-tools-backdrop' class='live-tools-backdrop hidden'/);
   const roomMarkup = app.slice(app.indexOf('setContent("<section class=\'live-player-shell'), app.indexOf('const room=new client.Room'));
@@ -64,9 +64,9 @@ test('Host can change the LIVE stage appearance from the settings drawer using t
 });
 
 test('Host and approved guests can use camera controls in video LIVE rooms', () => {
-  assert.match(app, /\(role==="host"\|\|role==="guest"\)&&broadcastType==="video_audio"\?liveControlButton\("live-camera-toggle"/);
-  assert.match(app, /role==="guest"&&broadcastType==="video_audio"/);
+  assert.match(app, /\(role==="host"\|\|role==="guest"\)&&canUseCamera\?liveControlButton\("live-camera-toggle"/);
+  assert.match(app, /if\(role==="guest"&&canUseCamera\)/);
   assert.match(app, /await room\.localParticipant\.setCameraEnabled\(true\)/);
-  assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&broadcastType==="video_audio"\)/);
+  assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&canUseCamera\)/);
   assert.match(app, /id='live-gift-panel'/);
 });
