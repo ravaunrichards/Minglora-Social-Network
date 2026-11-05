@@ -1,0 +1,288 @@
+/* Minglora final layout-safety contract.
+   All routine navigation, dialogs, chat panels, drawers, menus and content
+   panels stay in document flow. The user-triggered LIVE full-screen stage is
+   intentionally left to its dedicated immersive layout. */
+
+html,body{
+  max-width:100%;
+  overflow-x:clip!important;
+  scroll-padding-top:12px!important;
+  scroll-behavior:auto!important;
+}
+body{
+  min-width:320px;
+  overflow-y:auto!important;
+}
+
+/* No shared navigation or workspace toolbar may pin itself over page content. */
+.topbar,
+.left-rail,.right-rail,
+.settings-nav,.settings-save-bar,
+.creator-studio-nav,
+.creator-studio-nav-slot>.creator-studio-nav.live-format-picker,
+body:has(.creator-studio-shell) .creator-studio-nav.live-format-picker,
+.profile-tabs,.recharge-checkout-card,.mobile-nav{
+  position:static!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  z-index:auto!important;
+  max-height:none!important;
+  transform:none!important;
+}
+.topbar{
+  height:auto!important;
+  min-height:0;
+  flex-wrap:wrap!important;
+}
+.left-rail,.right-rail{
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  align-self:start;
+}
+.settings-nav,.settings-save-bar,.creator-studio-nav{
+  max-height:none!important;
+}
+.recharge-checkout-card{
+  align-self:start;
+  max-height:none!important;
+}
+
+/* These surfaces expand beneath their trigger instead of floating above content. */
+#message-window-dock,
+.call-overlay,.call-ringing-overlay,
+.palette-switcher-panel,
+.messenger-panel,
+.messenger-options-menu,
+.message-bubble-actions-menu,
+.profile-overflow-menu,
+.mobile-more-menu,
+.live-chat-emoji-picker,
+.live-tools-backdrop,
+.modal-backdrop,.about-section-editor-backdrop,
+.story-viewer-backdrop,.image-viewer-backdrop,.device-camera-backdrop,
+.mw-modal-backdrop,.toast{
+  position:static!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  z-index:auto!important;
+  transform:none!important;
+  max-width:100%!important;
+  max-height:none!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+#message-window-dock{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:stretch!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:12px 0!important;
+  overflow:visible!important;
+  pointer-events:auto!important;
+}
+.messenger-panel{
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:12px 0!important;
+  overflow:visible!important;
+}
+.call-overlay,.call-ringing-overlay,
+.modal-backdrop,.about-section-editor-backdrop,
+.story-viewer-backdrop,.image-viewer-backdrop,.device-camera-backdrop,
+.live-tools-backdrop,.mw-modal-backdrop{
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:12px 0!important;
+  padding:0!important;
+  overflow:visible!important;
+  background:transparent!important;
+}
+.toast{
+  display:block!important;
+  margin:10px auto!important;
+  transform:none!important;
+  pointer-events:auto!important;
+}
+.modal,.story-viewer,.profile-verification-modal,
+.profile-verification-modal .modal-body,
+.mw-create-dialog,.live-tools-drawer,
+.sound-library-modal,.sound-original-modal{
+  position:static!important;
+  inset:auto!important;
+  width:100%;
+  max-width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:12px 0!important;
+  overflow:visible!important;
+  box-shadow:none!important;
+}
+.modal-body,.modal-content,.live-tools-content{
+  max-height:none!important;
+  overflow:visible!important;
+}
+
+/* Menus and popovers join the page layout; their contents cannot be clipped. */
+.palette-switcher-panel,
+.messenger-options-menu,
+.message-bubble-actions-menu,
+.profile-overflow-menu,
+.mobile-more-menu,
+.live-chat-emoji-picker{
+  display:block;
+  width:100%!important;
+  max-width:100%!important;
+  max-height:none!important;
+  margin:8px 0!important;
+  overflow:visible!important;
+  white-space:normal!important;
+}
+body:has(#settings-form) #message-window-dock{
+  position:static!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:12px 0!important;
+}
+
+/* Long conversations and tools use the page scroll, not nested clipped windows. */
+.message-layout,
+.message-scroll,.message-window,.message-window-scroll,
+.messenger-panel-list,
+.settings-ticket-messages,
+.story-viewer,.story-viewer-stats ul,
+.profile-archive-media,.profile-story-archive-list,
+.message-window-attachment-drawer,
+.message-window-sticker-panel,.message-window-emoji-panel,
+.message-gif-results,
+.live-community-panel,.live-chat-list,.live-gift-grid,
+.live-tools-drawer,.live-tools-content,
+.live-tools-content #live-chat-overlay,
+.live-tools-content #live-chat-panel-body>#live-chat-overlay,
+.live-tools-content #live-chat-panel-body>#live-chat-overlay>.live-chat-list{
+  height:auto!important;
+  min-height:0;
+  max-height:none!important;
+  overflow:visible!important;
+  overscroll-behavior:auto!important;
+}
+.message-window,.message-layout{
+  min-width:0!important;
+  width:100%;
+}
+.message-window-scroll,.message-scroll,.messenger-panel-list,
+.live-chat-list,.live-gift-grid,
+.profile-archive-media,.profile-story-archive-list,
+.settings-ticket-messages{
+  scrollbar-width:auto;
+}
+.message-window-attachment-drawer .media-picker-items{
+  flex-wrap:wrap!important;
+  overflow:visible!important;
+}
+body.live-tools-open{
+  overflow-y:auto!important;
+}
+
+/* LIVE stage controls, host identity and chat are rows, not layers over the video. */
+.live-stage-topbar,
+.live-video-column>.live-stage-topbar,
+.live-video-stage>.live-stage-topbar,
+.live-chat-overlay{
+  position:static!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  z-index:auto!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  width:100%!important;
+  max-width:100%!important;
+  max-height:none!important;
+  height:auto!important;
+  margin:0 0 8px!important;
+  overflow:visible!important;
+  pointer-events:auto!important;
+}
+.live-video-stage{
+  max-height:none!important;
+  overflow:visible!important;
+}
+.live-community-panel,.live-tools-content,.live-tools-drawer{
+  max-height:none!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+.live-chat-overlay .live-chat-list{
+  max-height:none!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+
+/* Text and actions wrap instead of being cut off by ellipses or narrow cards. */
+.person-meta strong,.group-row strong,.conversation small,
+.live-player-header>div strong,.live-gift-button strong,
+.person-title-group h3,.person-title-group>span,
+.person-bio,.person-post-copy,
+.live-viewer-identity strong,
+.message-window-header strong,.message-window-header small,
+.inbox-person-row .person-meta strong,.inbox-person-row .person-meta small,
+.messenger-chat-copy strong,.messenger-chat-copy small,
+.messenger-compose-person strong,.messenger-compose-person small,
+.search-result-copy strong,.live-host-profile strong,
+.live-viewer-gifter-badge,.live-viewer-fan-points,
+.live-ranking-row strong,
+.profile-friend-card strong,.profile-friend-card small,
+.gift-gallery-leader strong,.story-sound-preview small,
+.creator-metric-card>strong,.creator-audience-row strong,
+.creator-page-post-row strong,.creator-media-item strong{
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+.profile-counts{
+  overflow:visible!important;
+}
+@media(max-width:760px){
+  .profile-counts{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    overflow:visible!important;
+  }
+  .profile-counts>*{
+    flex:1 1 88px;
+    min-width:0;
+    white-space:normal!important;
+    overflow:visible!important;
+  }
+  .message-window,.messenger-panel,.live-community-panel{
+    width:100%!important;
+    max-width:100%!important;
+  }
+}
