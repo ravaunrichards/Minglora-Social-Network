@@ -99,7 +99,7 @@ test('wallet and private admin settings show source balances and marketing-budge
 test('the PWA shell cache includes the wallet, admin controls and the updated UI versions', () => {
   assert.match(html, /styles\.css\?v=20261105-coin-funding-sources-1/);
   assert.match(html, /app\.js\?v=20261105-coin-funding-sources-1/);
-  assert.match(worker, /minglora-shell-v83-coin-funding-sources-1/);
+  assert.match(worker, /minglora-shell-v84-wallet-earnings-dashboard-1/);
   assert.match(worker, /admin-centre\.css\?v=20261105-marketing-budget-1/);
   assert.match(worker, /admin-centre\.js\?v=20261105-marketing-budget-1/);
 });
