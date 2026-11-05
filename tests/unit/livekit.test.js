@@ -127,3 +127,21 @@ test('LIVE viewers can send data-channel reactions without gaining audio or vide
     restoreEnv(original);
   }
 });
+
+test('host screen-share permission is included only in the video LIVE publisher source allow-list', async () => {
+  assert.equal(LIVEKIT_TRACK_SOURCE.SCREEN_SHARE, 3);
+  const original = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
+  process.env.LIVEKIT_URL = 'wss://minglora-test.livekit.cloud';
+  process.env.LIVEKIT_API_KEY = 'APIxxxxxxxxxxxx';
+  process.env.LIVEKIT_API_SECRET = 'test-secret-that-is-only-used-by-this-unit-test';
+  try {
+    const result = await createLiveKitToken({
+      identity: 'host-screen-test', name: 'Screen Host', roomName: 'minglora-screen-test',
+      canPublish: true, publishSources: [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE]
+    });
+    const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString('utf8'));
+    assert.deepEqual(payload.video.canPublishSources, ['microphone', 'camera', 'screen_share']);
+  } finally {
+    restoreEnv(original);
+  }
+});
