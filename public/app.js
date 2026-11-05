@@ -1257,12 +1257,15 @@ function openLiveToolsPanel(focusSelector){
   backdrop.classList.remove("hidden");backdrop.setAttribute("aria-hidden","false");
   $("#live-settings-toggle")?.setAttribute("aria-expanded","true");
   document.body.classList.add("live-tools-open");
-  if(focusSelector)focusLiveRoomPanel(focusSelector);
-  else $("#live-tools-close")?.focus();
+  const target=focusSelector?$(focusSelector):null;
+  const panel=target?.closest?.('[data-live-tools-panel]');
+  activateLiveToolsPanel(panel?.dataset.liveToolsPanel||(activeLiveRole==='host'?'layouts':'guests'));
+  if(!focusSelector)$('#live-tools-close')?.focus();
 }
 function closeLiveToolsPanel(){
   const backdrop=$("#live-tools-backdrop");
   if(!backdrop)return;
+  restoreLiveChatToStage();
   backdrop.classList.add("hidden");backdrop.setAttribute("aria-hidden","true");
   $("#live-settings-toggle")?.setAttribute("aria-expanded","false");
   document.body.classList.remove("live-tools-open");
@@ -1608,6 +1611,12 @@ activeLivePinnedComment=null;
     if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
+    if(topic==="minglora-live-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.layout"&&packet.version===1){
+      if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
+      const nextLayout=normalizeLiveScreenLayout(packet.layout);
+      session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);
+      return;
+    }
     if(topic==="minglora-live-reaction"){
       if(packet?.type!=="minglora.live.reaction"||packet.version!==1||!Object.hasOwn(liveReactionEmoji,packet.reaction))return;
       const identity=String(participant.identity),now=Date.now(),last=receivedLiveReactionAt.get(identity)||0;
@@ -1631,7 +1640,7 @@ activeLivePinnedComment=null;
       renderLivePinnedComment({id:messageId,body,author});
     }
   });
-  const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);};
+  const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);renderLiveViewerPanel(room,role,session);};
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false,publication);refreshSpeakerRoster();});
   room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>{element.closest?.(".live-video-tile,.live-screen-share-tile")?.remove();element.remove();});const stage=$("#live-video-stage");if(stage&&!$("#live-screen-share-stage")?.querySelector(".live-screen-share-tile"))stage.classList.remove("has-live-screen-share");refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantConnected,()=>{updatePresence();refreshSpeakerRoster();});
@@ -1852,7 +1861,27 @@ activeLivePinnedComment=null;
     $("#live-tools-close")?.addEventListener("click",closeLiveToolsPanel);
     $("#live-tools-backdrop")?.addEventListener("click",event=>{if(event.target?.id==="live-tools-backdrop")closeLiveToolsPanel();});
     $("#live-tools-drawer")?.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();closeLiveToolsPanel();}});
-    $("#live-tools-drawer")?.querySelectorAll("[data-live-tools-target]").forEach(button=>button.addEventListener("click",()=>focusLiveRoomPanel(button.dataset.liveToolsTarget)));
+    $("#live-tools-drawer")?.querySelectorAll("[data-live-tools-panel-target]").forEach(button=>button.addEventListener("click",()=>activateLiveToolsPanel(button.dataset.liveToolsPanelTarget)));
+    $("#live-layout-options")?.addEventListener("click",async event=>{
+      const button=event.target?.closest?.('[data-live-screen-layout]');
+      if(!button||role!=="host"||button.disabled)return;
+      const nextLayout=String(button.dataset.liveScreenLayout||'');
+      if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
+      $("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
+      const status=$("#live-layout-status");
+      try{
+        await api("/live/sessions/"+encodeURIComponent(session.id)+"/layout",{method:"PATCH",body:JSON.stringify({layout:nextLayout})});
+        session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.layout",version:1,layout:nextLayout}));
+        await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-layout"});
+        const label=LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Grid';
+        if(status)status.textContent=label+' layout is now live for everyone.';
+      }catch(error){
+        applyLiveScreenLayout(session.liveLayout||'grid');
+        if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
+        toast(error.message||'The LIVE layout could not be changed.');
+      }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
+    });
     $("#live-room-theme-select")?.addEventListener("change",async event=>{
       const control=event.currentTarget,nextTheme=String(control.value||"");
       if(role!=="host"||!LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===nextTheme)){control.value=activeLiveSession?.liveTheme||liveTheme;return;}
