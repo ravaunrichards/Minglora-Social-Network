@@ -35,7 +35,7 @@ test("Goody Bag draw is randomized and Treasure Box claims are serialized and li
   assert.match(migration, /FROM public\.live_reward_drops WHERE id=p_drop_id FOR UPDATE/);
   assert.match(migration, /claimant_count>=reward_drop\.winner_count/);
   assert.match(migration, /reward_drop\.opens_at>now\(\)/);
-  assert.match(migration, /ON CONFLICT\\s+\\(user_id\\)\\s+DO NOTHING/);
+  assert.match(migration, /ON CONFLICT\s+\(user_id\)\s+DO NOTHING/);
 });
 
 test("reward RPC functions are service-role only", () => {
