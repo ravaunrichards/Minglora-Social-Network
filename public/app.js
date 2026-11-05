@@ -1491,12 +1491,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel' data-live-tools-panel='moderators'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
     : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE panels'>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button>":"")+ 
-    "<button type='button' data-live-tools-panel-target='guests' aria-pressed='false'>Guests</button>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+ 
+    (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button>":"")+
+    "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
+    (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
-    (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' aria-pressed='false'>Rewards</button>":"")+ 
-    (role==="host"?"<button type='button' data-live-tools-panel-target='moderators' aria-pressed='false'>Moderators</button><button type='button' data-live-tools-panel-target='appearance' aria-pressed='false'>Appearance</button>":"")+
+    (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
+    (role==="host"?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button><button type='button' data-live-tools-panel-target='appearance' data-live-tools-target='.live-room-appearance' aria-pressed='false'>Appearance</button>":"")+
     "</nav>";
   const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
