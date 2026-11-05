@@ -151,10 +151,17 @@ const ensureCollections = db => {
   const dailyGiftTotals = new Map();
   const lifetimeGiftTotals = new Map();
   const seasonGiftTotals = new Map();
+  const dailyGiftKeys = new Set();
+  const lifetimeGiftUsers = new Set();
+  const seasonGiftKeys = new Set();
   for (const gift of db.creatorLeagueGiftLedger) {
     const amount = asNumber(gift.coinAmount);
-    if (gift.refundedAt || gift.status === "refunded" || !gift.userId || !gift.dayKey || amount <= 0) continue;
+    if (!gift.userId || !gift.dayKey || amount <= 0) continue;
     const dailyKey = String(gift.userId) + "\u0000" + String(gift.dayKey);
+    dailyGiftKeys.add(dailyKey);
+    lifetimeGiftUsers.add(gift.userId);
+    if (gift.seasonKey) seasonGiftKeys.add(String(gift.userId) + "\u0000" + String(gift.seasonKey));
+    if (gift.refundedAt || gift.status === "refunded") continue;
     dailyGiftTotals.set(dailyKey, (dailyGiftTotals.get(dailyKey) || 0) + amount);
     lifetimeGiftTotals.set(gift.userId, (lifetimeGiftTotals.get(gift.userId) || 0) + amount);
     if (gift.seasonKey) {
@@ -173,9 +180,9 @@ const ensureCollections = db => {
   const existingDailyKeys = new Set();
   for (const daily of db.creatorLeagueDailyScores) {
     const key = String(daily.userId) + "\u0000" + String(daily.dayKey);
-    // Reconcile every saved row, including days with no remaining valid gifts.
-    // Missing aggregates must not preserve stale points from a refunded gift.
-    daily.points = dailyGiftTotals.get(key) || 0;
+    // Reconcile days that had a gift event, even when every gift for the day
+    // has since been refunded. Leave independently-scored days untouched.
+    if (dailyGiftKeys.has(key)) daily.points = dailyGiftTotals.get(key) || 0;
     existingDailyKeys.add(key);
   }
   for (const [key, points] of dailyGiftTotals) {
@@ -184,9 +191,11 @@ const ensureCollections = db => {
     db.creatorLeagueDailyScores.push({ id: randomUUID(), userId, dayKey, points });
   }
   for (const profile of db.creatorLeagueProfiles) {
-    profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId) || 0;
+    if (lifetimeGiftUsers.has(profile.userId)) {
+      profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId) || 0;
+    }
     const seasonKey = String(profile.userId) + "\u0000" + String(profile.seasonKey || "");
-    profile.seasonPoints = seasonGiftTotals.get(seasonKey) || 0;
+    if (seasonGiftKeys.has(seasonKey)) profile.seasonPoints = seasonGiftTotals.get(seasonKey) || 0;
   }
   db.creatorLeagueDailySettlements = uniqueRecords(db.creatorLeagueDailySettlements, item => item.dayKey);
   db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
