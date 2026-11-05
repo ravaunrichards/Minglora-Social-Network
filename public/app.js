@@ -960,15 +960,22 @@ function isLiveScreenSharePublication(publication){
 function attachLiveTrack(track,participant,local,publication){
   if(!track)return;
   if(track.kind==="video"){
-    const identity=String(participant?.identity||"local");
+    const identity=String(participant?.identity||(local&&state.user?.id)||"local");
     const screenShare=isLiveScreenSharePublication(publication);
     const layout=$("#live-guest-layout");
-    const seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
-    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-guest-seat-media")||$("#live-video-stage"));
+    let seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
+    if(!screenShare&&!seat&&activeLiveRoom&&activeLiveSession&&(activeLiveRole==="host"||activeLiveRole==="guest")){
+      renderLiveGuestLayout(activeLiveRoom,activeLiveRole,activeLiveSession);
+      seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
+    }
+    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-guest-seat-media")||(local?null:$("#live-video-stage")));
     if(!target)return;
+    const trackSid=String(publication?.trackSid||publication?.sid||track.sid||"");
+    if(trackSid&&Array.from(target.querySelectorAll(".live-video-tile")).some(item=>item.dataset.trackSid===trackSid))return;
     const tile=document.createElement("div");
     tile.className=screenShare?"live-screen-share-tile":"live-video-tile"+(local?" local":"");
     tile.dataset.participant=identity;
+    if(trackSid)tile.dataset.trackSid=trackSid;
     const element=track.attach();element.autoplay=true;element.playsInline=true;element.className="live-video-element";if(local)element.muted=true;
     tile.append(element);
     if(!local||screenShare){const name=document.createElement("span");name.className=screenShare?"live-screen-share-name":"live-video-name";name.textContent=screenShare?"Screen shared by "+(participant?.name||participant?.identity||"Host"):(participant?.name||participant?.identity||"Guest");tile.append(name);}
@@ -1201,10 +1208,10 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const specs=[{
     key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
   }];
-  guests.slice(0,8).forEach((person,index)=>specs.push({
-    key:"guest:"+String(person.identity||index),identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
-    person,isHost:false
-  }));
+  guests.slice(0,8).forEach((person,index)=>{
+    const identity=String(person.identity||(person===local?(state.user?.id||"local"):index));
+    specs.push({key:"guest:"+identity,identity,name:person.name||person.identity||"Minglora guest",person,isHost:false});
+  });
   while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
   const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
   const header=document.createElement("div");
@@ -1228,11 +1235,14 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     const speaking=Boolean(identity&&activeSpeakerIds.has(identity));
     const name=String(spec.name||"Minglora member");
     const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||"").join("").toUpperCase()||"M";
-    const status=speaking?"Speaking":connected?(muted?"Microphone muted":"On stage"):spec.isHost?"Waiting for host":"Connecting";
     const hasVideo=Boolean(media.querySelector(".live-video-element"));
-    seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
+    const status=isLocal
+      ?connected?(muted?"You · microphone muted":liveCameraEnabled?"You · mic & camera on":"You · microphone on · camera off"):"You · connecting"
+      :speaking?"Speaking":connected?(muted?"Microphone muted":hasVideo?"Camera & microphone on":"On stage"):spec.isHost?"Waiting for host":"Connecting";
+    seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(isLocal?" is-local":"")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
     seat.dataset.seatKey=spec.key;seat.dataset.participant=identity;
-    seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?"HOST":"GUEST")+"</span>"+
+    seat.setAttribute("aria-label",(isLocal?"You are on stage as ":"On stage as ")+(spec.isHost?"host":"guest")+". "+name+". "+status);
+    seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?(isLocal?"YOU · HOST":"HOST"):(isLocal?"YOU · GUEST":"GUEST"))+"</span>"+
       "<span class='live-guest-seat-avatar' aria-hidden='true'>"+esc(initials)+"</span>"+
       "<span class='live-guest-seat-meta'><strong>"+esc(name)+"</strong><small>"+esc(status)+"</small></span>";
     media.className="live-guest-seat-media";seat.append(media);
@@ -1243,7 +1253,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
 
 function renderLiveViewerPanel(room,role,session){
   const panel=$('#live-viewer-panel'),list=$('#live-viewer-roster'),count=$('#live-viewer-total');
-  if(!panel||!list||role!=='host'||!room)return;
+  if(!panel||!list||role==='viewer'||!room)return;
   if(session?.liveSettings?.markViewers===false){if(count)count.textContent='Hidden by the LIVE viewer setting';list.innerHTML="<p class='muted'>Viewer marking is turned off for this broadcast.</p>";return;}
   const people=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
   if(count)count.textContent=people.length.toLocaleString()+' people in this LIVE';
@@ -1274,15 +1284,22 @@ function liveControlIcon(name){
   return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'>"+(paths[name]||"")+"</svg>";
 }
 function liveControlButton(id,icon,label,caption,options={}){
-  const pressed=options.pressed===undefined?"":" aria-pressed='"+String(Boolean(options.pressed))+"'";
-  return "<button type='button' class='live-control-button"+(options.danger?" is-danger":"")+"' id='"+id+"' aria-label='"+esc(label)+"' title='"+esc(label)+"'"+pressed+"><span class='live-control-icon'>"+liveControlIcon(icon)+"</span><span class='live-control-caption'>"+esc(caption)+"</span></button>";
+  const hasPressed=options.pressed!==undefined;
+  const pressed=hasPressed?" aria-pressed='"+String(Boolean(options.pressed))+"'":"";
+  const active=hasPressed&&Boolean(options.pressed)?" is-active":"";
+  const disabled=options.disabled?" disabled":"";
+  return "<button type='button' class='live-control-button"+(options.danger?" is-danger":"")+active+"' id='"+id+"' aria-label='"+esc(label)+"' title='"+esc(label)+"'"+pressed+disabled+"><span class='live-control-icon'>"+liveControlIcon(icon)+"</span><span class='live-control-caption'>"+esc(caption)+"</span></button>";
 }
 function updateLiveControlButton(button,icon,label,caption,pressed){
   if(!button)return;
   button.innerHTML="<span class='live-control-icon'>"+liveControlIcon(icon)+"</span><span class='live-control-caption'>"+esc(caption)+"</span>";
   button.setAttribute("aria-label",label);
   button.title=label;
-  if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
+  if(pressed!==undefined){
+    const active=Boolean(pressed);
+    button.setAttribute("aria-pressed",String(active));
+    button.classList.toggle("is-active",active);
+  }
 }
 function openLiveToolsPanel(focusSelector){
   const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer");
@@ -1470,7 +1487,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
   activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout);
-  const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
+  const cameraFeatureAvailable=broadcastType==='video_audio'&&liveMode!=='mobile_gaming';
+  let guestCameraAllowed=role!=='guest'||liveSettings.guestCamera!==false;
+  const canUseCamera=cameraFeatureAvailable&&guestCameraAllowed;
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
@@ -1502,8 +1521,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div id='live-reward-list' class='live-reward-list'><p class='muted'>Loading LIVE rewards…</p></div></section>";
   const liveControls=[
     (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
-    (role==="host"||role==="guest")&&canUseCamera?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
-    (role==="host"||role==="guest")&&canUseCamera?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
+    (role==="host"||role==="guest")&&cameraFeatureAvailable?liveControlButton("live-camera-toggle",canUseCamera?"camera":"camera-off",canUseCamera?"Turn camera off":"Guest cameras disabled by host",canUseCamera?"Camera":"Camera off",{pressed:canUseCamera,disabled:!canUseCamera}):"",
+    (role==="host"||role==="guest")&&cameraFeatureAvailable?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip",{disabled:!canUseCamera}):"",
     role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",{pressed:false}):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
@@ -1525,8 +1544,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE panels'>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
+    (role==="host"||role==="guest"?"<button type='button' data-live-tools-panel-target='devices' data-live-tools-target='#live-device-settings' aria-pressed='false'>My devices</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
+    (role==="host"||role==="guest"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
@@ -1550,13 +1570,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Viewers and guests follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
-  const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
+  const liveDeviceTools=(role==="host"||role==="guest")?"<section id='live-device-settings' class='live-tools-card live-device-settings' data-live-tools-panel='devices'><div class='live-panel-title'><strong>Your audio & video</strong><small>These controls change only your own microphone and camera.</small></div><p id='live-device-status'>Microphone: On · Camera: "+(canUseCamera?"On":"Off")+"</p><small>Use the Mic and Camera controls in the LIVE dock to turn your devices on or off.</small></section>":"";
+  const liveViewerTools=(role==="host"||role==="guest")?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveChatTools="<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Use the existing chat and moderation controls in this panel.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Chat will appear here when you select this panel.</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveDeviceTools+liveViewerTools+liveChatTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
