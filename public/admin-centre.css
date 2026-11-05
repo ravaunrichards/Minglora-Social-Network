@@ -583,3 +583,23 @@
 @media(max-width:560px){.admin-badge-control-card{padding:11px}.admin-badge-action-row{display:grid;grid-template-columns:1fr}.admin-badge-action-row button{width:100%}}
 
 
+
+
+/* Verified reserve-backed settlement for previously sent promotional gifts. */
+.admin-promotional-gift-cash-backings{display:grid;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line,rgba(127,127,127,.24))}
+.admin-promotional-gift-cash-backings .admin-marketing-budget-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.admin-promotional-gift-cash-backings .admin-marketing-budget-heading>div{min-width:0;flex:1 1 360px}
+.admin-promotional-gift-cash-backings .admin-marketing-budget-heading p{max-width:900px;margin:6px 0 0;color:var(--muted,#667085);font-size:.9rem;line-height:1.55}
+.admin-promotional-gift-cash-backings-list{display:grid;gap:10px}
+.admin-promotional-gift-cash-backing-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;padding:13px;border:1px solid var(--line,rgba(127,127,127,.24));border-radius:12px;background:var(--card,#fff)}
+.admin-promotional-gift-cash-backing-main,.admin-promotional-gift-cash-backing-values{display:grid;gap:5px;min-width:0}
+.admin-promotional-gift-cash-backing-main{flex:1 1 360px}
+.admin-promotional-gift-cash-backing-values{flex:0 1 220px;justify-items:start}
+.admin-promotional-gift-cash-backing-row small{color:var(--muted,#667085);line-height:1.45;overflow-wrap:anywhere}
+.admin-promotional-gift-cash-backing-row button{min-height:38px;max-width:100%;white-space:normal}
+#admin-promotional-gift-cash-backings-status{min-height:1.2em;margin:0;color:var(--muted,#667085);font-size:.9rem}
+@media(max-width:640px){
+  .admin-promotional-gift-cash-backing-row{align-items:stretch;flex-direction:column}
+  .admin-promotional-gift-cash-backing-values{width:100%;flex:1 1 auto}
+  .admin-promotional-gift-cash-backing-values button{width:100%}
+}
