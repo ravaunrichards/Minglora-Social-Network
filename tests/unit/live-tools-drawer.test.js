@@ -40,6 +40,8 @@ test('Guest tools, gifts and rewards share the drawer while TikTok-style chat ov
   assert.match(app, /id='live-chat-list'/);
   assert.match(app, /id='live-chat-form'/);
   assert.match(app, /live-chat-overlay/);
+  assert.match(app, /class='live-chat-avatar'/);
+  assert.match(app, /member\.avatar_url/);
   assert.ok(styles.includes(".live-chat-overlay"));
   assert.doesNotMatch(app, /live-reaction-bar/);
 });
