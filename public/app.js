@@ -1660,7 +1660,8 @@ function drawLiveRecordingFrame(canvas,ctx,session){
     const video=seat.querySelector('video.live-video-element,video');
     if(video&&video.readyState>=2&&video.videoWidth>0){
       const scale=Math.max(cellW/video.videoWidth,cellH/video.videoHeight),dw=video.videoWidth*scale,dh=video.videoHeight*scale;
-      try{ctx.drawImage(video,x+(cellW-dw)/2,y+(cellH-dh)/2,dw,dh);}catch{}
+      const effect=LIVE_CAMERA_EFFECTS.find(item=>item.value===activeLiveCameraEffect)?.filter||'none';
+      try{ctx.filter=effect;ctx.drawImage(video,x+(cellW-dw)/2,y+(cellH-dh)/2,dw,dh);ctx.filter='none';}catch{ctx.filter='none';}
     }else{
       const image=seat.querySelector('img.live-guest-seat-avatar, img.live-audio-host-avatar, img');
       if(image&&image.complete&&image.naturalWidth>0){
@@ -2025,7 +2026,14 @@ activeLivePinnedComment=null;
       if(activeLiveSession?.liveSettings?.effectsEnabled!==false)applyLiveStageCameraEffect(packet.effect);
       return;
     }
-    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
+    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='effectsEnabled'&&typeof packet.enabled==='boolean'){
+      activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),effectsEnabled:packet.enabled};
+      session.liveSettings={...(session.liveSettings||{}),effectsEnabled:packet.enabled};
+      const effectSelect=$('#live-camera-effect-select');if(effectSelect)effectSelect.disabled=!packet.enabled;
+      if(!packet.enabled)applyLiveStageCameraEffect('none');
+      return;
+    }
+        if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
       activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
       session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
       if(role==='guest'&&!packet.enabled){
@@ -2326,7 +2334,7 @@ activeLivePinnedComment=null;
           if(select)select.disabled=!input.checked;
           if(!input.checked){applyLiveStageCameraEffect('none');if(select)select.value='none';if(status)status.textContent='Stage effects are disabled by host settings.';}
           else if(status)status.textContent='Choose a visual look for the LIVE stage.';
-          if(room.localParticipant?.publishData){const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.effect',version:1,effect:'none'}));await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-effect'});}
+          if(room.localParticipant?.publishData){const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'effectsEnabled',enabled:input.checked}));await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});}
         }
         if(key==='guestCamera'&&room.localParticipant?.publishData){
           const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'guestCamera',enabled:input.checked}));
