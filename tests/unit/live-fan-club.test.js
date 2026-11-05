@@ -5,6 +5,9 @@ import {
   LIVE_FAN_CLUB_GIFT_CODES,
   LIVE_FAN_CLUB_JOIN_COIN_COST,
   LIVE_FAN_CLUB_JOIN_GIFT_CODE,
+  LIVE_FAN_CLUB_LEVEL_THRESHOLDS,
+  LIVE_FAN_CLUB_SUPER_FAN_LEVEL,
+  getLiveFanClubProgress,
   awardLiveFanClubPoints,
   countActiveLiveFanClubMembers,
   getLiveFanClubMembership,
@@ -85,4 +88,27 @@ test('Team Gift allowlist only exposes the selected verified Minglora catalogue 
     'flame-heart-yv4ovw',
     'fan-1avs41e'
   ]);
+});
+
+test('Fan Club points unlock visible levels and the Super Fan badge', () => {
+  assert.equal(LIVE_FAN_CLUB_SUPER_FAN_LEVEL, 5);
+  assert.deepEqual(LIVE_FAN_CLUB_LEVEL_THRESHOLDS, [0, 10, 25, 50, 100, 175, 275, 400, 550, 750]);
+  const newFan = getLiveFanClubProgress(1);
+  assert.equal(newFan.level, 1);
+  assert.equal(newFan.title, 'Fan');
+  assert.equal(newFan.isSuperFan, false);
+  assert.equal(newFan.pointsToNextLevel, 9);
+  const almostSuper = getLiveFanClubProgress(99);
+  assert.equal(almostSuper.level, 4);
+  assert.equal(almostSuper.isSuperFan, false);
+  assert.equal(almostSuper.pointsToNextLevel, 1);
+  const superFan = getLiveFanClubProgress(100);
+  assert.equal(superFan.level, 5);
+  assert.equal(superFan.title, 'Super Fan');
+  assert.equal(superFan.isSuperFan, true);
+  assert.equal(superFan.progressPercent, 0);
+  const highest = getLiveFanClubProgress(900);
+  assert.equal(highest.level, 10);
+  assert.equal(highest.pointsToNextLevel, 0);
+  assert.equal(highest.progressPercent, 100);
 });

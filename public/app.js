@@ -1288,7 +1288,7 @@ async function refreshLiveViewerRoster(session){
       const badge=item.gifterBadge,fan=item.fanClubMembership;
       const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
       const priority=item.isGifter?"<span class='live-viewer-gifter-badge'>"+esc(badge?.badgeName||('Gifter LV '+badge.level))+"</span>":"";
-      const fanBadge=fan?.status==='active'?"<span class='live-viewer-fan-points'>♥ "+Number(fan.points||0).toLocaleString()+" Fan Pts</span>":"";
+      const fanBadge=fan?.status==='active'?"<span class='live-viewer-fan-rank "+(fan.isSuperFan?'is-super-fan':'')+"'>♥ "+esc(fan.isSuperFan?'SUPER FAN':'FAN CLUB')+" · LV "+Number(fan.level||1)+"</span><span class='live-viewer-fan-points'>"+Number(fan.points||0).toLocaleString()+" Fan Pts</span>":"";
       const roleLabel=item.role==='guest'?'Guest speaker':'Viewer';
       return "<div class='live-viewer-row "+(item.isGifter?'is-priority-gifter':'')+"'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+roleLabel+"</small>"+priority+fanBadge+"</span><button type='button' class='text-button' data-live-viewer-profile='"+esc(member.id||'')+"'>Profile</button></div>";
     }).join('');
@@ -1403,10 +1403,10 @@ function renderLiveFanClubStatus(status){
   if(panel){
     const membership=status?.membership;
     panel.innerHTML=member
-      ?"<strong>♥ Fan Club member</strong><small>"+Number(membership.points||0).toLocaleString()+" fan points · active until "+(membership.expiresAt?new Date(membership.expiresAt).toLocaleDateString():'your next activity')+"</small>"
+      ?"<div class='live-fan-club-rank'><strong>♥ "+esc(membership.title||'Fan')+" · Level "+Number(membership.level||1)+"</strong>"+(membership.isSuperFan?"<span class='live-super-fan-badge'>SUPER FAN</span>":"")+"</div><small>"+Number(membership.points||0).toLocaleString()+" Fan Points · active until "+(membership.expiresAt?new Date(membership.expiresAt).toLocaleDateString():'your next activity')+"</small><div class='live-fan-level-progress' role='progressbar' aria-label='Fan Club level progress' aria-valuemin='0' aria-valuemax='100' aria-valuenow='"+Number(membership.progressPercent||0)+"'><span style='width:"+Number(membership.progressPercent||0)+"%'></span></div><small>"+(membership.nextLevel?Number(membership.pointsToNextLevel||0).toLocaleString()+" points to Level "+Number(membership.nextLevel)+".":"Highest Minglora Fan Club level reached.")+"</small>"
       :paused
         ?"<strong>Membership paused</strong><small>Earn fan points within seven days to keep membership active, or rejoin for 1 Coin.</small>"
-        :"<strong>Not a member yet</strong><small>Follow the host, then join with the 1-Coin Heart Me gift. Watch, chat and gift to earn Fan Points.</small>";
+        :"<strong>Not a member yet</strong><small>Follow the host, then join with the 1-Coin Heart Me gift. Watch, chat and gift to earn Fan Points and unlock the Super Fan badge.</small>";
   }
   const count=$('#live-fan-club-member-count');
   if(count&&Number.isFinite(Number(status?.fanClubMemberCount)))count.textContent=Number(status.fanClubMemberCount).toLocaleString();
