@@ -48,3 +48,13 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
   assert.match(styles, /\.live-chat-panel-body/);
   assert.match(styles, /\.live-tools-content \[data-live-tools-panel\]\[hidden\]/);
 });
+
+
+test('Full Screen is a host-only layout with no visible guest seats or guest speaker roster', () => {
+  assert.match(app, /const hostOnly=activeLiveScreenLayout==='full-screen'/);
+  assert.match(app, /Host-only full-screen LIVE stage/);
+  assert.ok(app.includes("root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly)"), 'layout changes must turn host-only audio mode on and off');
+  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing full-width host stage rules');
+  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){'), 'guest and empty seats must be hidden in Full Screen');
+  assert.ok(styles.includes('.live-audio-stage.live-host-only-layout #live-speaker-list'), 'audio-only speaker roster must be hidden');
+});
