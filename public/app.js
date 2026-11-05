@@ -1402,8 +1402,19 @@ async function openLiveRoom(session,role,issuedLiveKit){
       try{
         await room.localParticipant.setCameraEnabled(nextEnabled);
         liveCameraEnabled=nextEnabled;
+        if(nextEnabled){
+          for(const publication of room.localParticipant.videoTrackPublications.values()){
+            if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
+          }
+        }else{
+          for(const publication of room.localParticipant.videoTrackPublications.values()){
+            if(publication.track)publication.track.detach().forEach(element=>element.closest?.(".live-video-tile")?.remove());
+          }
+          document.querySelectorAll("#live-guest-layout .live-video-tile.local").forEach(tile=>tile.remove());
+        }
         updateLiveControlButton(cameraControl,nextEnabled?"camera":"camera-off",nextEnabled?"Turn camera off":"Turn camera on",nextEnabled?"Camera":"Camera off",nextEnabled);
         if(flipCameraControl)flipCameraControl.disabled=!nextEnabled;
+        refreshSpeakerRoster();
       }catch(error){toast(error.message);}
       finally{cameraControl.disabled=false;}
     });
