@@ -26,7 +26,10 @@ export const DEFAULT_LIVE_SETTINGS = Object.freeze({
   manageModerators: true,
   voiceRings: true,
   multiGuestExtraRewards: false,
-  shareRecordingsWithGuests: false
+  shareRecordingsWithGuests: false,
+  qaEnabled: true,
+  guardianMode: false,
+  effectsEnabled: true
 });
 
 export function broadcastTypeForLiveMode(liveMode) {
@@ -46,7 +49,7 @@ export function normalizeLiveSettings(value = {}) {
   const next = { ...DEFAULT_LIVE_SETTINGS, ...value };
   if (!LIVE_BOARDS.includes(next.board)) return { valid: false, error: 'Choose a supported LIVE board.' };
   if (!LIVE_QUALITIES.includes(next.liveQuality)) return { valid: false, error: 'Choose Auto, 720p or 1080p LIVE quality.' };
-  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled', 'allowGuestRequests', 'guestCamera', 'autoAcceptRequests', 'prioritizeGifters', 'allowCoHost', 'manageModerators', 'voiceRings', 'multiGuestExtraRewards', 'shareRecordingsWithGuests']) {
+  for (const key of ['practiceMode', 'noiseSuppression', 'optimizeForStability', 'markViewers', 'communitySafety', 'groupChatEnabled', 'liveGifts', 'audienceControl', 'clientAcquisitionEnabled', 'allowGuestRequests', 'guestCamera', 'autoAcceptRequests', 'prioritizeGifters', 'allowCoHost', 'manageModerators', 'voiceRings', 'multiGuestExtraRewards', 'shareRecordingsWithGuests', 'qaEnabled', 'guardianMode', 'effectsEnabled']) {
     if (typeof next[key] !== 'boolean') return { valid: false, error: key + ' must be true or false.' };
   }
   if (!['none', 'branded', 'sponsored'].includes(next.contentDisclosure)) {
