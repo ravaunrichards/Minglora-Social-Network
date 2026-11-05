@@ -23,6 +23,12 @@ test('LIVE chat continues to reuse one conversation node and its existing contro
   assert.ok(app.includes('[data-live-chat-delete]'), 'moderation remove controls must remain available');
 });
 
+test('LIVE chat auto-scrolls only while the viewer is already near the newest messages', () => {
+  assert.match(app, /const wasNearBottom=!list\.dataset\.liveChatInitialized\|\|list\.scrollHeight-list\.scrollTop-list\.clientHeight<=72/);
+  assert.match(app, /if\(wasNearBottom\)list\.scrollTop=list\.scrollHeight/);
+  assert.match(app, /list\.dataset\.liveChatInitialized='true'/);
+});
+
 test('LIVE chat panel gives the conversation its own flexible scroll region', () => {
   assert.match(styles, /#live-chat-panel-body>#live-chat-overlay\{[\s\S]*grid-template-rows:minmax\(0,1fr\) auto/);
   assert.match(styles, /#live-chat-panel-body>#live-chat-overlay>\.live-chat-list\{[\s\S]*min-height:0[\s\S]*overflow-y:auto/);
