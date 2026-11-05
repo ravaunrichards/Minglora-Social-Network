@@ -1919,16 +1919,16 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat"),
-    role!=="host"&&giftsEnabled?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
+    liveControlButton("live-gifts-toggle","gift",role==="host"?"Preview LIVE gift catalogue":giftsEnabled?"Open LIVE gifts":"View LIVE gift availability","Gift"),
     liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
-  const liveGiftTools=!giftsEnabled
-    ? "<section id='live-gift-panel' class='live-tools-card' data-live-tools-panel='gifts'><strong>Gifts are turned off</strong><p>The host has disabled paid gifts and reward drops for this LIVE.</p></section>"
-    : role==="host"
-      ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note' data-live-tools-panel='gifts'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
-      : "<section id='live-gift-panel' class='live-gift-panel' data-live-tools-panel='gifts'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note'>Team Gifts are unlocked when you join this host’s Fan Club.</p><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Original Minglora gifts · send with Coins")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div>"+
+    (!giftsEnabled?"<p class='live-gift-disabled-note' role='status'>"+(liveSettings.practiceMode?"Gifts are unavailable in Practice Mode.":"The host has turned off gifts for this LIVE.")+" The catalogue remains visible, but gifts cannot be sent.</p>":"")+
+    "<div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note'>Team Gifts are unlocked when you join this host’s Fan Club.</p><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'><p class='muted'>Loading original Minglora gifts…</p></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button>"+
+    (role==="host"?"<p class='live-gift-host-note'>This is a read-only preview. Viewers and approved guests can send gifts when LIVE gifts are enabled.</p>":"<button class='text-button' id='live-recharge'>Recharge Minglora Coins</button>")+
+    "</section>";
   const liveFanClubTools="<section id='live-fan-club-panel' class='live-tools-card live-fan-club-panel' data-live-tools-panel='fanclub'><div class='live-panel-title'><strong>♥ Fan Club & Team Gifts</strong><small>Join this creator’s Fan Club with the 1-Coin Heart Me gift. Earn Fan Points by watching, chatting and gifting.</small></div>"+
     (role==='host'?"<div id='live-fan-club-status' class='live-fan-club-status'><strong>Creator Fan Club</strong><small>Members can unlock Team Gifts and Fan badges.</small></div>":"<div id='live-fan-club-status' class='live-fan-club-status'><small>Checking your Fan Club membership…</small></div><button type='button' id='live-fan-club-join-panel' class='live-fan-club-join-panel'>♥ Join for 1 Coin</button><button type='button' id='live-team-gifts-open' class='secondary'>Open Team Gifts</button>")+
     "<div class='live-fan-club-member-total'><span>Fan Club members</span><strong id='live-fan-club-member-count'>"+Number(session.fanClubMemberCount||0).toLocaleString()+"</strong></div><small class='live-fan-club-expiry-note'>Membership pauses after 7 days without earning Fan Points.</small></section>";
@@ -1946,7 +1946,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     "<button type='button' data-live-tools-panel-target='fanclub' data-live-tools-target='#live-fan-club-panel' aria-pressed='false'>Fan Club</button>"+
     "<button type='button' data-live-tools-panel-target='matches' data-live-tools-target='#live-match-panel' aria-pressed='false'>Match</button>"+
-    (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
+    "<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button>"+
+    (giftsEnabled?"<button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
     (role==="host"?"<button type='button' data-live-tools-panel-target='appearance' data-live-tools-target='.live-room-appearance' aria-pressed='false'>Appearance</button>":"")+
     "</nav>";
@@ -1981,7 +1982,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
   const liveStageHud=
-    "<div class='live-stage-topbar'>"+
+    "<div class='live-stage-topbar "+(role==="host"?"is-host":"")+"'>"+
       "<div class='live-stage-top-left'>"+
         "<div class='live-host-profile-wrap'><button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
           "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
@@ -1992,7 +1993,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
         "<div class='live-like-control live-like-count'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
         (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
       "</div>"+
+      "<div class='live-stage-top-actions'><button type='button' id='live-stage-gift-open' class='live-stage-gift-open' aria-label='Open LIVE gift catalogue' title='Open LIVE gifts'>🎁 <span>Gifts</span></button>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
+      "</div>"+
     "</div>";
   const liveChatOverlay=liveSettings.groupChatEnabled!==false
     ? "<section id='live-chat-overlay' class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><div class='live-chat-composer-wrap'><div id='live-chat-emoji-picker' class='live-chat-emoji-picker hidden' aria-label='Quick emojis'>"+['❤️','😂','🔥','👏','😍','🎉','💖','🙌'].map(emoji=>"<button type='button' data-live-chat-emoji='"+emoji+"' aria-label='Insert "+emoji+"'>"+emoji+"</button>").join('')+"</div><form id='live-chat-form' class='live-chat-form'><button type='button' id='live-chat-emoji' class='live-chat-emoji-button' aria-label='Open emoji picker'>😊</button><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></div></section>"
@@ -2117,6 +2120,26 @@ activeLivePinnedComment=null;
         }
         return;
       }
+    }
+    if(topic==="minglora-live-gift"&&packet?.type==="minglora.live.gift"&&packet.version===1&&typeof packet.giftCode==="string"){
+      const senderId=String(participant.identity||"");
+      if(senderId===String(state.user?.id||""))return;
+      let gift=liveGiftCatalogue.find(item=>item.code===packet.giftCode);
+      if(!gift){
+        try{
+          const catalog=await api("/coins/catalog");
+          liveGiftCatalogue=Array.isArray(catalog.gifts)?catalog.gifts:[];
+          gift=liveGiftCatalogue.find(item=>item.code===packet.giftCode);
+          refreshLiveGiftGrid?.();
+        }catch(error){console.warn("[Minglora LIVE] Gift animation catalogue lookup failed.",error?.message||error);}
+      }
+      if(gift){
+        const stage=$("#live-video-stage");
+        if(stage)window.MingloraGiftFX?.mount(stage,gift);
+        const senderName=String(participant.name||participant.identity||"A viewer");
+        toast(senderName+" sent "+gift.name+" 🎁");
+      }
+      return;
     }
     if(topic==="minglora-live-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.layout"&&packet.version===1){
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
@@ -2415,6 +2438,7 @@ activeLivePinnedComment=null;
     });
     $("#live-fullscreen-tools-tab")?.addEventListener("click",()=>openLiveToolsPanel());
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
+    $("#live-stage-gift-open")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
     $("#live-gifts-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));
     $("#live-tools-close")?.addEventListener("click",closeLiveToolsPanel);
@@ -2528,45 +2552,73 @@ activeLivePinnedComment=null;
       try{await api("/live/sessions/"+encodeURIComponent(session.id)+"/chat",{method:"POST",body:JSON.stringify({body})});form.reset();await refreshLiveChat(session.id);}
       catch(error){toast(error.message);}finally{button.disabled=false;}
     });
-    if(role!=="host"){
-      const economyResults=await Promise.allSettled([api("/coins/catalog"),api("/coins/wallet")]);
-      const catalog=economyResults[0].status==="fulfilled"?economyResults[0].value:{gifts:[]};
-      const wallet=economyResults[1].status==="fulfilled"?economyResults[1].value:{wallet:null};
-      liveGiftCatalogue=Array.isArray(catalog.gifts)?catalog.gifts:[];
-      const walletBalance=$("#live-wallet-balance");
-      if(walletBalance)walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null
-        ?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+    {
       const giftGrid=$("#live-gift-grid");
       const liveGiftSearch=$("#live-gift-search");
       const liveGiftMore=$("#live-gift-more");
-      let liveGiftVisible=48,liveGiftQuery="",liveGiftSort="high";
       const liveGiftSortControl=$("#live-gift-sort");
+      let liveGiftVisible=48,liveGiftQuery="",liveGiftSort="high",liveGiftCatalogueError=null;
       const drawLiveGiftGrid=()=>{
         if(!giftGrid)return;
+        if(liveGiftCatalogueError){
+          giftGrid.innerHTML="<div class='live-gift-empty'><strong>Gifts could not be loaded</strong><p>"+esc(liveGiftCatalogueError)+"</p><button type='button' class='secondary' id='live-gift-retry'>Retry gift catalogue</button></div>";
+          liveGiftMore&&(liveGiftMore.hidden=true);
+          giftGrid.querySelector('#live-gift-retry')?.addEventListener('click',()=>void loadLiveGiftCatalogue());
+          return;
+        }
+        if(!liveGiftCatalogue.length){
+          giftGrid.innerHTML="<div class='live-gift-empty'><strong>No gifts are available right now</strong><p>Minglora could not find any published gifts in the live catalogue.</p><button type='button' class='secondary' id='live-gift-retry'>Refresh gift catalogue</button></div>";
+          liveGiftMore&&(liveGiftMore.hidden=true);
+          giftGrid.querySelector('#live-gift-retry')?.addEventListener('click',()=>void loadLiveGiftCatalogue());
+          return;
+        }
         const query=liveGiftQuery.trim().toLowerCase();
         const filtered=liveGiftCatalogue.filter(item=>{
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(item.code);
-          return (liveGiftScope==='all'||teamGift)&&(!query||(item.name+" "+item.category+" "+item.code+" "+String(item.coin_price)).toLowerCase().includes(query));
+          const terms=[item.name,item.category,item.code,item.coin_price].map(value=>String(value??'')).join(' ').toLowerCase();
+          return (liveGiftScope==='all'||teamGift)&&(!query||terms.includes(query));
         });
         filtered.sort((a,b)=>liveGiftSort==="name"
-          ?a.name.localeCompare(b.name)
+          ?String(a.name||'').localeCompare(String(b.name||''))
           :liveGiftSort==="low"
-            ?Number(a.coin_price)-Number(b.coin_price)||a.name.localeCompare(b.name)
-            :Number(b.asset_version==="2")-Number(a.asset_version==="2")||Number(b.coin_price)-Number(a.coin_price)||a.name.localeCompare(b.name));
+            ?Number(a.coin_price)-Number(b.coin_price)||String(a.name||'').localeCompare(String(b.name||''))
+            :Number(b.asset_version==="2")-Number(a.asset_version==="2")||Number(b.coin_price)-Number(a.coin_price)||String(a.name||'').localeCompare(String(b.name||'')));
         const shown=filtered.slice(0,liveGiftVisible);
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
-          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name)+"'>":esc(gift.emoji||"🎁");
+          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name||'Gift')+"'>":esc(gift.emoji||"🎁");
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
-          const locked=teamGift&&!liveFanClubState?.isMember;
-          return "<button type='button' class='live-gift-button "+(teamGift?'is-team-gift ':'')+(locked?'is-locked':'')+"' data-live-gift='"+esc(gift.code)+"' "+(locked?"disabled aria-disabled='true' title='Join this host’s Fan Club to unlock Team Gifts'":"")+"><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+(teamGift?" ♥":"")+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins"+(locked?" · Fan Club only 🔒":"")+"</small></button>";
-        }).join(""):"<p class='muted'>No gifts match your search.</p>";
+          const locked=role!=="host"&&teamGift&&!liveFanClubState?.isMember;
+          const previewOnly=role==="host";
+          const unavailable=!giftsEnabled;
+          const disabled=locked||previewOnly||unavailable;
+          const reason=previewOnly?"Viewer preview only — you cannot gift your own LIVE":unavailable?"Gifts are disabled for this broadcast":locked?"Join this host’s Fan Club to unlock Team Gifts":"";
+          return "<button type='button' class='live-gift-button "+(teamGift?'is-team-gift ':'')+(locked?'is-locked ':'')+(previewOnly?'is-preview ':'')+(unavailable?'is-unavailable':'')+"' data-live-gift='"+esc(gift.code)+"' "+(disabled?"disabled aria-disabled='true' title='"+esc(reason)+"'":"")+"><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name||'Gift')+(teamGift?" ♥":"")+"</strong><small>"+Number(gift.coin_price||0).toLocaleString()+" Coins"+(previewOnly?" · Viewer gift":"")+(unavailable?" · Unavailable":locked?" · Fan Club only 🔒":"")+"</small></button>";
+        }).join(""):"<div class='live-gift-empty'><strong>No gifts match your search</strong><p>Try another name, category, or coin amount.</p></div>";
         if(liveGiftMore){liveGiftMore.hidden=shown.length>=filtered.length;liveGiftMore.textContent="Show more gifts · "+Math.max(0,filtered.length-shown.length).toLocaleString()+" remaining";}
       };
+      const loadLiveGiftCatalogue=async()=>{
+        if(giftGrid)giftGrid.innerHTML="<p class='muted'>Loading original Minglora gifts…</p>";
+        liveGiftCatalogueError=null;
+        const results=await Promise.allSettled([
+          api("/coins/catalog"),
+          role!=="host"?api("/coins/wallet"):Promise.resolve({wallet:null})
+        ]);
+        if(results[0].status!=="fulfilled"){
+          liveGiftCatalogueError=results[0].reason?.message||"The gift catalogue is temporarily unavailable.";
+          liveGiftCatalogue=[];
+        }else{
+          liveGiftCatalogue=Array.isArray(results[0].value?.gifts)?results[0].value.gifts:[];
+        }
+        const wallet=results[1].status==="fulfilled"?results[1].value:{wallet:null};
+        const walletBalance=$("#live-wallet-balance");
+        if(walletBalance&&role!=="host")walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null
+          ?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+        drawLiveGiftGrid();
+      };
       refreshLiveGiftGrid=drawLiveGiftGrid;
-      drawLiveGiftGrid();
       const giftScopeTabs=document.querySelectorAll('[data-live-gift-scope]');
       giftScopeTabs.forEach(button=>button.addEventListener('click',()=>{
-        if(button.dataset.liveGiftScope==='team'&&!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
+        if(button.dataset.liveGiftScope==='team'&&role!=="host"&&!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
         liveGiftScope=button.dataset.liveGiftScope;
         giftScopeTabs.forEach(item=>{const active=item===button;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));});
         const note=$('#live-gift-team-note');if(note)note.textContent=liveGiftScope==='team'?'Fan Club Team Gifts · for active members of this host’s team.':'Team Gifts are unlocked when you join this host’s Fan Club.';
@@ -2575,19 +2627,23 @@ activeLivePinnedComment=null;
       liveGiftSearch?.addEventListener("input",()=>{liveGiftQuery=liveGiftSearch.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftSortControl?.addEventListener("change",()=>{liveGiftSort=liveGiftSortControl.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftMore?.addEventListener("click",()=>{liveGiftVisible+=48;drawLiveGiftGrid();});
-      if(giftGrid)giftGrid.addEventListener("click",async event=>{
-        const button=event.target.closest("[data-live-gift]");if(!button)return;
+      if(giftGrid&&role!=="host")giftGrid.addEventListener("click",async event=>{
+        const button=event.target.closest("[data-live-gift]");if(!button||button.disabled)return;
         const catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift);if(!catalogGift)return;
         window.MingloraGiftFX?.prime();button.disabled=true;
         try{
           const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})});
           const gift=sent.gift;toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
+          const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.gift",version:1,giftCode:button.dataset.liveGift}));
+          try{await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-gift"});}
+          catch(error){console.warn("[Minglora LIVE] Gift was confirmed but its room animation could not be broadcast.",error?.message||error);}
           const walletResult=await api("/coins/wallet").catch(()=>null),balanceElement=$("#live-wallet-balance");
           if(balanceElement)balanceElement.textContent=walletResult?.wallet&&walletResult.wallet.balance_coins!=null?Number(walletResult.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
           const stage=$("#live-video-stage");if(stage)window.MingloraGiftFX?.mount(stage,catalogGift);
         }catch(error){toast(error.message);}finally{button.disabled=false;}
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
+      await loadLiveGiftCatalogue();
     }
     if(liveSettings.groupChatEnabled!==false){await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);}
     startLiveSpeakerRefresh(session,role,room);
