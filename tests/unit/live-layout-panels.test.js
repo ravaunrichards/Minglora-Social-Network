@@ -123,15 +123,15 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
 });
 
 test('LIVE gift animations use server-confirmed gift ledger events, not client messages', () => {
-  assert.match(server, /if\\(method==='GET'&&liveAction\\)/);
-  assert.match(server, /event\\.broadcastId===session\\.id&&event\\.creatorId===session\\.hostId/);
-  assert.match(server, /giftId:String\\(event\\.giftId\\|\\|event\\.id\\|\\|''\\)/);
-  assert.match(app, /function startLiveGiftEvents\\(session\\)/);
-  assert.match(app, /function stopLiveGiftEvents\\(\\)/);
-  assert.match(app, /api\\('/live/sessions/'\\+encodeURIComponent\\(session\\.id\\)\\+'/gifts\\?since='/);
-  assert.match(app, /window\\.MingloraGiftFX\\?\\.mount\\(stage,gift\\)/);
-  assert.doesNotMatch(app, /publishData\\(packet,\\{reliable:true,topic:\\"minglora-live-gift\\"\\}\\)/);
-  assert.doesNotMatch(app, /topic===\\"minglora-live-gift\\"/);
+  assert.ok(server.includes("if(method==='GET'&&liveAction)"), 'missing authenticated LIVE gifts read route');
+  assert.ok(server.includes("event.broadcastId===session.id&&event.creatorId===session.hostId"), 'gift history must be scoped to this broadcast and host');
+  assert.ok(server.includes("giftId:String(event.giftId||event.id||'')"), 'events must expose their confirmed transaction id');
+  assert.ok(app.includes('function startLiveGiftEvents(session)'), 'missing room gift event polling');
+  assert.ok(app.includes('function stopLiveGiftEvents()'), 'missing LIVE gift polling cleanup');
+  assert.ok(app.includes("'/gifts?since='") && app.includes('refreshLiveGiftEvents(session)'), 'poller must fetch newer confirmed events');
+  assert.ok(app.includes('window.MingloraGiftFX?.mount(stage,gift)'), 'confirmed gifts must animate in the LIVE room');
+  assert.ok(!app.includes('topic==="minglora-live-gift"'), 'untrusted client gift broadcasts must not drive room animations');
+  assert.ok(!app.includes('topic:"minglora-live-gift"'), 'untrusted client gift publishers must be removed');
 });
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
   for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
