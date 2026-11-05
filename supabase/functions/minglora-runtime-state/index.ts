@@ -79,7 +79,8 @@ Deno.serve(async (req: Request) => {
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
-    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search",
+    "economy_admin_campaign_wallet", "economy_admin_campaign_fund", "economy_admin_campaign_allocate",
+    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_promotional_gift_allocation", "economy_admin_member_credit", "economy_admin_member_search",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
@@ -275,6 +276,90 @@ Deno.serve(async (req: Request) => {
     return json(200, { wallet: walletResult.data || { balance_coins: 0 }, ledger: ledgerResult.data || [] });
   }
 
+  if (["economy_admin_campaign_wallet","economy_admin_campaign_fund","economy_admin_campaign_allocate"].includes(String(action))) {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    if (adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(403, { error: "Only the designated Creator Hub administrator can manage Admin Campaign Coins." });
+    }
+    const [ownerResult, staffResult] = await Promise.all([
+      admin.from("profiles").select("verification_status,verification_badge")
+        .eq("id", adminUserId).maybeSingle(),
+      admin.from("minglora_platform_staff").select("user_id")
+        .eq("user_id", adminUserId).eq("role", "owner").eq("active", true)
+        .contains("permissions", ["platform:admin"]).limit(1).maybeSingle()
+    ]);
+    if (ownerResult.error || staffResult.error) {
+      return json(503, { error: "Admin Campaign Coins authorization could not be verified." });
+    }
+    if (ownerResult.data?.verification_status !== "verified" ||
+        ownerResult.data?.verification_badge !== "blue" || !staffResult.data?.user_id) {
+      return json(403, { error: "The verified Creator Hub owner permission is not active." });
+    }
+
+    if (action === "economy_admin_campaign_wallet") {
+      const { data: walletData, error: walletError } = await admin.rpc("admin_campaign_coins_get_wallet", {
+        p_admin_user_id: adminUserId, p_admin_email: adminEmail
+      });
+      if (walletError) return fail(walletError, "Admin Campaign Coins wallet could not be loaded.");
+      const { data: ledger, error: ledgerError } = await admin.from("admin_campaign_coins_ledger")
+        .select("id,request_id,event_type,delta_coins,balance_after,member_user_id,campaign_name,note,created_at")
+        .eq("admin_user_id", adminUserId).order("created_at", { ascending: false }).limit(50);
+      if (ledgerError) return json(503, { error: "Admin Campaign Coins history could not be loaded." });
+      const memberIds = [...new Set((ledger || []).map((item: any) => item.member_user_id).filter(Boolean))];
+      const { data: memberProfiles, error: profileError } = memberIds.length
+        ? await admin.from("profiles").select("id,username").in("id", memberIds)
+        : { data: [], error: null };
+      if (profileError) return json(503, { error: "Campaign recipient names could not be loaded." });
+      const usernames = new Map((memberProfiles || []).map((profile: any) => [profile.id, profile.username]));
+      const activity = (ledger || []).map((item: any) => ({
+        ...item,
+        member_username: item.member_user_id ? (usernames.get(item.member_user_id) || "") : ""
+      }));
+      return json(200, { ...(walletData || {}), ledger: activity });
+    }
+
+    if (action === "economy_admin_campaign_fund") {
+      const amountCoins = Number(input.amountCoins);
+      const requestId = String(input.requestId || "");
+      const note = String(input.note || "").trim().slice(0, 500);
+      if (!validUuid(requestId) || !Number.isSafeInteger(amountCoins) || amountCoins < 1 ||
+          amountCoins > 1000000000000) {
+        return json(400, { error: "Enter a whole-number amount from 1 to 1 trillion Coins and a valid request reference." });
+      }
+      const { data, error } = await admin.rpc("admin_campaign_coins_fund", {
+        p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+        p_amount_coins: amountCoins, p_request_id: requestId, p_note: note
+      });
+      if (error) return fail(error, "Admin Campaign Coins could not be added.");
+      return json(200, data || {});
+    }
+
+    const memberUsername = String(input.memberUsername || "").trim().replace(/^@/, "").toLowerCase();
+    const amountCoins = Number(input.amountCoins);
+    const requestId = String(input.requestId || "");
+    const campaignName = String(input.campaignName || "").trim().slice(0, 120);
+    const note = String(input.note || "").trim().slice(0, 500);
+    if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) || !validUuid(requestId) ||
+        !Number.isSafeInteger(amountCoins) || amountCoins < 1 || amountCoins > 1000000000000) {
+      return json(400, { error: "Enter a valid Minglora username, whole-number amount and request reference." });
+    }
+    const { data: member, error: memberError } = await admin.from("profiles")
+      .select("id,username").eq("username", memberUsername).maybeSingle();
+    if (memberError) return json(503, { error: "Minglora could not find that member account." });
+    if (!member?.id || !member.username) return json(404, { error: "Minglora member was not found." });
+    if (member.id === adminUserId) return json(400, { error: "Choose a member other than the administrator account." });
+
+    const { data, error } = await admin.rpc("admin_campaign_coins_allocate", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_member_user_id: member.id, p_amount_coins: amountCoins,
+      p_request_id: requestId, p_campaign_name: campaignName, p_note: note
+    });
+    if (error) return fail(error, "Admin Campaign Coins could not be allocated.");
+    return json(200, data || {});
+  }
+
   if (action === "economy_marketing_budget") {
     const { data, error } = await admin.rpc("minglora_get_marketing_budget");
     if (error) return fail(error, "Minglora marketing budget could not be loaded.");
@@ -339,6 +424,37 @@ Deno.serve(async (req: Request) => {
     });
     if (error) return fail(error, "Marketing Coins could not be granted from the funded budget.");
     return json(200, { grant: data });
+  }
+
+
+  if (action === "economy_admin_promotional_gift_allocation") {
+    // This narrowly scoped operation can only perform the explicitly approved
+    // one-time allocation for Larry's separate promotional wallet.
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const memberUserId = String(input.memberUserId || "");
+    const amountCoins = Number(input.amountCoins);
+    const requestId = String(input.requestId || "");
+    const note = String(input.note || "Approved promotional gift wallet allocation").trim().slice(0, 240);
+
+    if (adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        memberUserId !== "28e1df97-3fe1-488e-bb84-bdc353c58653" ||
+        amountCoins !== 1000000 ||
+        requestId !== "a8bb9a52-4d02-49f7-93ab-5e762d8b8e31") {
+      return json(400, { error: "This promotional allocation request does not match the approved recipient and amount." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_allocate_admin_promotional_gift_coins", {
+      p_admin_user_id: adminUserId,
+      p_admin_email: adminEmail,
+      p_member_user_id: memberUserId,
+      p_amount_coins: amountCoins,
+      p_request_id: requestId,
+      p_note: note
+    });
+    if (error) return fail(error, "Minglora could not allocate promotional gift Coins.");
+    return json(200, { promotionalAllocation: data });
   }
 
   if (action === "economy_admin_member_credit") {
