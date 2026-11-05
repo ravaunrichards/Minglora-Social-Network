@@ -184,3 +184,18 @@
 .gp-level-card-copy strong{flex:0 0 auto;white-space:nowrap}
 .gp-level-card-copy small{white-space:nowrap;text-align:right}
 @media(max-width:650px){.gp-level-grid{grid-template-columns:minmax(0,1fr);gap:8px}.gp-level-card{min-height:64px;padding:8px 10px;gap:10px}.gp-level-card-copy{gap:10px}.gp-level-card-copy strong{font-size:.84rem}.gp-level-card-copy small{font-size:.76rem}}
+
+
+/* Admin-issued level badges remain visually distinct from gift-earned progression. */
+.gp-admin-awarded-marker{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:max-content;max-width:100%;padding:3px 7px;margin:2px 0 0 4px;
+  border:1px solid rgba(190,157,82,.7);border-radius:999px;
+  background:linear-gradient(180deg,#fff7df 0%,#f9e7b7 100%);
+  color:#805a12;font-size:8px;font-weight:900;letter-spacing:.07em;line-height:1.15;
+  vertical-align:middle;white-space:nowrap;
+}
+.gp-level-card.is-admin-awarded{border-color:rgba(190,157,82,.65)}
+.gp-level-card.is-admin-awarded .gp-level-state{color:#8c6718}
+.gp-current-badge-row .gp-admin-awarded-marker{margin-left:4px}
+@media(max-width:560px){.gp-admin-awarded-marker{font-size:7px;padding:2px 6px}}
