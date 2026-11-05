@@ -27,8 +27,9 @@ test('the admin verification control explicitly describes one username check', (
 });
 
 test('the updated profile bundle is referenced by the app shell and service worker', () => {
-  const appUrl = '/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1&fix=single-username-verification-1';
+  const appUrl = '/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1';
   assert.ok(html.includes(appUrl));
   assert.ok(serviceWorker.includes(appUrl));
   assert.ok(serviceWorker.includes("cache:'no-cache'"));
+  assert.ok(serviceWorker.includes('minglora-shell-v93-flow-layout-safety-1-single-username-verification-1'));
 });
