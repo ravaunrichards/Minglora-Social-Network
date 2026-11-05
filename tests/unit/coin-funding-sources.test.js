@@ -93,7 +93,7 @@ test('wallet and private admin settings show source balances and marketing-budge
   assert.match(admin, /Do not record pending or expected funds/);
   assert.match(adminCss, /\.admin-marketing-budget/);
   assert.match(adminCss, /\.admin-marketing-budget-summary/);
-  assert.match(html, /admin-centre\.js\?v=20261105-marketing-budget-1/);
+  assert.match(html, /admin-centre\.js\?v=20261105-banned-account-visibility-1/);
 });
 
 test('the PWA shell cache includes the wallet, admin controls and the updated UI versions', () => {
@@ -101,5 +101,5 @@ test('the PWA shell cache includes the wallet, admin controls and the updated UI
   assert.match(html, /app\.js\?v=20261105-live-layout-expand-1/);
   assert.match(worker, /minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1/);
   assert.match(worker, /admin-centre\.css\?v=20261105-marketing-budget-1/);
-  assert.match(worker, /admin-centre\.js\?v=20261105-marketing-budget-1/);
+  assert.match(worker, /admin-centre\.js\?v=20261105-banned-account-visibility-1/);
 });

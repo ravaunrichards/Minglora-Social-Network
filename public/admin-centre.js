@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderation-banned-accounts">Banned accounts</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -166,6 +166,10 @@
           '<div class="admin-control-centre-section-heading"><div><h3 id="admin-moderation-title">Moderation reports</h3><p>Review member reports and apply available content or account actions.</p></div>' +
           '<button type="button" class="secondary" id="admin-centre-refresh-moderation">Refresh</button></div>' +
           '<div id="moderation-reports-list" aria-live="polite">Loading reports…</div></section>' +
+        '<section class="admin-control-centre-section" id="moderation-banned-accounts" aria-labelledby="admin-banned-accounts-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-banned-accounts-title">Banned accounts</h3><p>These member profiles stay hidden until an administrator explicitly unbans the account.</p></div>' +
+          '<button type="button" class="secondary" id="admin-centre-refresh-banned-users">Refresh</button></div>' +
+          '<div id="moderation-banned-accounts-list" aria-live="polite">Loading banned accounts…</div></section>' +
         '<section class="admin-control-centre-section" id="moderator-support-workspace" aria-labelledby="admin-support-title">' +
           '<div class="admin-control-centre-section-heading"><div><h3 id="admin-support-title">Member support inbox</h3><p>Respond to member tickets and update their status.</p></div>' +
           '<button type="button" class="secondary" id="admin-centre-refresh-support">Refresh</button></div>' +
@@ -512,6 +516,7 @@
     });
     panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => startAdminMfaEnrollment(panel));
     panel.querySelector('#admin-centre-refresh-moderation')?.addEventListener('click', () => loadAdminModerationQueue(panel));
+    panel.querySelector('#admin-centre-refresh-banned-users')?.addEventListener('click', () => loadAdminBannedAccounts(panel));
     panel.querySelector('#admin-centre-refresh-support')?.addEventListener('click', () => loadAdminSupportInbox(panel));
     panel.querySelector('#admin-centre-revoke-other-sessions')?.addEventListener('click', async event => {
       const button = event.currentTarget;
@@ -527,7 +532,7 @@
       } finally { button.disabled = false; }
     });
     loadAdminSecuritySettings(panel);
-    if (unlocked) { loadAdminModerationQueue(panel); loadAdminSupportInbox(panel); }
+    if (unlocked) { loadAdminModerationQueue(panel); loadAdminBannedAccounts(panel); loadAdminSupportInbox(panel); }
   }
 
   async function adminCentreApi(path, options = {}) {
@@ -546,9 +551,10 @@
     try {
       const result = await adminCentreApi('/moderation/reports?status=open');
       target.innerHTML = (result.reports || []).map(report => {
+        const targetIsBanned = ['banned','suspended','permanently_banned','permanently-banned','suspended_permanently'].includes(String(report.targetOwner?.status || report.targetAccountStatus || 'active').toLowerCase());
         const actions = report.targetType === 'post' ? '<option value="hide_post">Hide post</option><option value="remove_post">Remove post</option>' :
           report.targetType === 'story' ? '<option value="remove_story">Remove story</option>' :
-          report.targetType === 'user' ? '<option value="suspend_account">Suspend account</option>' : '';
+          report.targetType === 'user' ? (targetIsBanned ? '<option value="unban_account">Unban account</option>' : '<option value="ban_account">Ban account</option>') : '';
         return '<article class="moderation-report"><strong>' + escapeText(report.targetType) + ' · ' + escapeText(report.category) +
           '</strong><p>' + escapeText(report.details || 'No extra details') + '</p><small>Reporter: ' +
           escapeText(report.reporter?.username || 'member') + ' · Target owner: ' +
@@ -569,6 +575,37 @@
         } catch (error) { window.alert(error.message); button.disabled = false; }
       }));
     } catch (error) { target.textContent = error.message || 'Moderation reports could not be loaded.'; }
+  }
+
+  async function loadAdminBannedAccounts(panel) {
+    const target = panel.querySelector('#moderation-banned-accounts-list');
+    if (!target) return;
+    target.textContent = 'Loading banned accounts…';
+    try {
+      const result = await adminCentreApi('/moderation/banned-users');
+      const users = Array.isArray(result.users) ? result.users : [];
+      target.innerHTML = users.map(member =>
+        '<article class="moderation-report"><strong>' + escapeText(member.name || member.username || 'Minglora member') +
+        '</strong><p>@' + escapeText(member.username || 'unknown') + ' · ' + escapeText(member.status || 'banned') +
+        (member.bannedAt ? ' · Banned ' + escapeText(new Date(member.bannedAt).toLocaleString()) : '') +
+        '</p><button type="button" class="secondary" data-admin-unban-account="' + escapeText(member.id) + '">Unban account</button></article>'
+      ).join('') || '<p class="settings-empty">No banned accounts.</p>';
+      target.querySelectorAll('[data-admin-unban-account]').forEach(button => button.addEventListener('click', async () => {
+        if (!window.confirm('Unban this Minglora account? Its profile will become visible again.')) return;
+        button.disabled = true;
+        try {
+          await adminCentreApi('/moderation/users/' + encodeURIComponent(button.dataset.adminUnbanAccount) + '/unban', {
+            method:'POST', body:'{}'
+          });
+          await loadAdminBannedAccounts(panel);
+        } catch (error) {
+          window.alert(error.message || 'The account could not be unbanned.');
+          button.disabled = false;
+        }
+      }));
+    } catch (error) {
+      target.textContent = error.message || 'Banned accounts could not be loaded.';
+    }
   }
 
   async function loadAdminSupportInbox(panel) {
