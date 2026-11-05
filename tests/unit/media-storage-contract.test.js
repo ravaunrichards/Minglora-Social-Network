@@ -38,3 +38,18 @@ test('Minglora voice-note and Stories MIME restrictions match all layers', async
   assert.match(storyMigration, /ARRAY\['image\/avif'\]/);
   assert.match(edge, /\"minglora-stories\"[^\n]*\"image\/avif\"/);
 });
+
+test('Minglora call ringtone uploads complete through the shared media gateway', async () => {
+  const [server, edge, migration] = await Promise.all([
+    read('../../src/server.js'),
+    read('../../supabase/functions/minglora-runtime-state/index.ts'),
+    read('../../database/migrations/039_minglora_call_ringtones.sql')
+  ]);
+
+  assert.match(server, /ringtone:Object\.keys\(CALL_RINGTONE_MIME_TYPES\)/);
+  assert.match(server, /slot==='ringtone'/);
+  assert.match(edge, /slot===\"ringtone\"\?\"minglora-ringtones\"/);
+  assert.match(edge, /minglora-ringtones\":\[\"audio\/mpeg\",\"audio\/mp4\",\"audio\/ogg\",\"audio\/webm\",\"audio\/wav\",\"audio\/x-wav\",\"audio\/flac\",\"audio\/aac\"\]/);
+  assert.match(edge, /\[\"avatar\",\"cover\",\"post\",\"sound\",\"story\",\"group\",\"page\",\"message\",\"ringtone\"\]\.includes\(slot\)/);
+  assert.match(migration, /'minglora-ringtones','minglora-ringtones',false,20971520/);
+});
