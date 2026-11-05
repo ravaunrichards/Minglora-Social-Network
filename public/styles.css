@@ -5178,3 +5178,25 @@ button.live-ranking-row{cursor:pointer}
 .live-audio-stage.live-host-only-layout #live-speaker-list{
   display:none!important;
 }
+
+
+/* Default host-only Full Screen stage: portrait-shaped and comfortably sized
+   across phone, tablet and desktop without stretching across wide screens. */
+.live-video-stage.live-full-screen-layout:not(.live-audio-stage){
+  width:min(100%,62.4dvh,608px);
+  max-width:100%;
+  min-height:0;
+  max-height:min(78dvh,760px);
+  aspect-ratio:4 / 5;
+  margin-inline:auto;
+  border-radius:18px;
+}
+#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{
+  border-radius:16px;
+}
+@media(max-height:520px){
+  .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
+    width:min(100%,62.4dvh,608px);
+    max-height:78dvh;
+  }
+}

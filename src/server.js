@@ -1480,7 +1480,7 @@ async function route(req, res) {
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
         ensureLiveFanClubCollections(db);
         const session = {
-          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'fluid-grid',
+          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'full-screen',
           description: liveSettings.aboutMe, liveTheme, likeCount: 0, status: 'live', createdAt: now(), endedAt: null
         };
         await requestSupabaseState('live_broadcast_create',{
