@@ -227,6 +227,11 @@ function syncNavigationActive(){
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','live','messages'].includes(activeView));
 }
 function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();syncNavigationActive();renderView();}
+window.addEventListener('minglora:open-wallet',event=>{
+  const tab=['recharge','earnings','exchange'].includes(event.detail?.tab)?event.detail.tab:'recharge';
+  state.rechargeTab=tab;
+  activateNav('coins');
+});
 function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-wallet-3d-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
