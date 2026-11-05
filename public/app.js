@@ -758,7 +758,7 @@ let refreshLiveGiftGrid=null;
 let liveDirectoryFilter='all';
 const MINGLORA_FAN_CLUB_GIFT_CODES=Object.freeze(['heart-me-2mk7ob','community-heart-mg6zzi','blue-heart-19gp9xp','flame-heart-yv4ovw','fan-1avs41e']);
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
-  {value:'full-screen',label:'Full Screen',icon:'fullscreen'},
+  {value:'full-screen',label:'Full Screen',icon:'featured'},
   {value:'fluid-panel',label:'Fluid Panel',icon:'featured'},
   {value:'fluid-grid',label:'Fluid Grid',icon:'grid'},
   {value:'fixed-grid',label:'Fixed Grid',icon:'grid'},
@@ -770,113 +770,8 @@ const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
 ]);
 let activeLiveScreenLayout='full-screen';
 function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}
-function liveLayoutIcon(name){const paths={fullscreen:"<path d='M8 3H5a2 2 0 0 0-2 2v3 M16 3h3a2 2 0 0 1 2 2v3 M21 16v3a2 2 0 0 1-2 2h-3 M8 21H5a2 2 0 0 1-2-2v-3'/>",grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
-function applyLiveScreenLayout(value){
-  activeLiveScreenLayout=normalizeLiveScreenLayout(value);
-  const hostOnly=activeLiveScreenLayout==='full-screen';
-  document.querySelectorAll('.live-guest-layout').forEach(root=>{
-    root.dataset.liveLayout=activeLiveScreenLayout;
-    root.setAttribute('aria-label',hostOnly?'Host-only full-screen LIVE stage':'LIVE host and guest seats');
-    root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',hostOnly);
-    root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);
-  });
-  const shell=$('#live-player-shell');
-  shell?.classList.toggle('live-full-screen-active',hostOnly);
-  if(hostOnly){
-    moveLiveToolsToFullscreenSidebar();
-    const wideLayout=Boolean(window.matchMedia?.('(min-width:760px)').matches);
-    setLiveFullscreenPanel(wideLayout?'chat':'video');
-    setLiveChatControlState(wideLayout,'Hide LIVE chat',wideLayout?'Hide chat':'Chat');
-    setLiveSettingsControlState(false);
-  }else{
-    shell?.classList.remove('live-full-screen-chat-open','live-full-screen-chat-hidden','live-full-screen-tools-open');
-    const backdrop=$('#live-tools-backdrop');
-    if(backdrop){
-      backdrop.classList.add('hidden');
-      backdrop.setAttribute('aria-hidden','true');
-      backdrop.setAttribute('aria-modal','true');
-    }
-    document.body.classList.remove('live-tools-open');
-    setLiveChatControlState(false,'Open LIVE chat','Chat');
-    setLiveSettingsControlState(false);
-    moveLiveToolsToFullscreenSidebar();
-  }
-  document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{
-    const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;
-    button.classList.toggle('active',selected);
-    button.setAttribute('aria-pressed',String(selected));
-  });
-  restoreLiveChatToStage();
-}
-function moveLiveToolsToFullscreenSidebar(){
-  const backdrop=$('#live-tools-backdrop');
-  const shell=$('#live-player-shell');
-  const slot=$('#live-fullscreen-chat-slot');
-  if(!backdrop||!shell)return;
-  const target=shell.classList.contains('live-full-screen-active')&&slot?slot:shell;
-  if(backdrop.parentElement!==target)target.append(backdrop);
-}
-function setLiveFullscreenPanel(name){
-  const shell=$('#live-player-shell');
-  if(!shell?.classList.contains('live-full-screen-active'))return false;
-  const mode=name==='tools'?'tools':name==='chat'?'chat':'video';
-  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px)').matches);
-  shell.classList.toggle('live-full-screen-tools-open',mode==='tools');
-  shell.classList.toggle('live-full-screen-chat-open',mode==='chat'&&!wideLandscape);
-  shell.classList.remove('live-full-screen-chat-hidden');
-  document.querySelectorAll('[data-live-fullscreen-panel]').forEach(button=>{
-    const active=button.dataset.liveFullscreenPanel===mode||(button.dataset.liveFullscreenPanel==='chat'&&mode==='video');
-    button.classList.toggle('active',active);
-    button.setAttribute('aria-pressed',String(active));
-  });
-  return true;
-}
-function setLiveChatControlState(pressed,label,caption){
-  const button=$('#live-chat-toggle');
-  if(!button)return;
-  button.setAttribute('aria-pressed',String(Boolean(pressed)));
-  button.setAttribute('aria-label',label);
-  button.title=label;
-  const text=button.querySelector('.live-control-caption');
-  if(text)text.textContent=caption;
-}
-function setLiveSettingsControlState(open){
-  const button=$('#live-settings-toggle');
-  if(!button)return;
-  const label=open?'Close LIVE settings and tools':'Open LIVE settings and tools';
-  updateLiveControlButton(button,'settings',label,open?'Close':'Settings',open);
-  button.setAttribute('aria-expanded',String(Boolean(open)));
-}
-function showFullscreenChat(){
-  if(!setLiveFullscreenPanel('chat'))return false;
-  const wideLayout=Boolean(window.matchMedia?.('(min-width:760px)').matches);
-  setLiveChatControlState(true,wideLayout?'Hide LIVE chat':'Return to LIVE video',wideLayout?'Hide chat':'Video');
-  setLiveSettingsControlState(false);
-  return true;
-}
-function toggleLiveChatView(){
-  const shell=$('#live-player-shell');
-  if(!shell?.classList.contains('live-full-screen-active')){
-    openLiveToolsPanel('#live-chat-panel');
-    return;
-  }
-  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px)').matches);
-  const backdrop=$('#live-tools-backdrop');
-  if(backdrop&&!backdrop.classList.contains('hidden')){
-    closeLiveToolsPanel({returnTo:'chat'});
-    setLiveChatControlState(true,wideLandscape?'Hide LIVE chat':'Return to LIVE video',wideLandscape?'Hide chat':'Video');
-    return;
-  }
-  if(wideLandscape){
-    const hidden=shell.classList.toggle('live-full-screen-chat-hidden');
-    setLiveChatControlState(!hidden,hidden?'Show LIVE chat':'Hide LIVE chat',hidden?'Show chat':'Hide chat');
-    return;
-  }
-  if(shell.classList.contains('live-full-screen-chat-open')){
-    setLiveFullscreenPanel('video');
-    setLiveChatControlState(false,'Open LIVE chat','Chat');
-  }else showFullscreenChat();
-}
+function liveLayoutIcon(name){const paths={grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
+function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;const hostOnly=activeLiveScreenLayout==='full-screen';root.setAttribute('aria-label',hostOnly?'Host-only full-screen LIVE stage':'LIVE host and guest seats');root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',hostOnly);root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
 function restoreLiveChatToStage(){
   const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
   const stage=$('#live-video-stage');
