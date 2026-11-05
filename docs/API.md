@@ -203,6 +203,28 @@ The browser LiveKit client is responsible for connecting to the room and attachi
 | POST | `/api/notifications/read` | Mark all current account notifications as read |
 | GET | `/api/search?q=...` | Search accounts, posts, groups and active Pages; blocked accounts/Pages are filtered |
 
+## Minglora Coins, gifts and creator money
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/api/coins/catalog` | Signed-in member | Read Coin packages and gift catalogue |
+| GET | `/api/coins/wallet` | Signed-in member | Read the member's Main Coin balance and source breakdown |
+| POST | `/api/coins/purchase` | Signed-in member | Create a PayPal order for purchased Coins |
+| POST | `/api/coins/purchase/capture` | Signed-in member | Verify and settle a completed PayPal Coin purchase |
+| POST | `/api/coins/exchange` | Signed-in creator | Exchange eligible creator USD earnings into Main Coins |
+| POST | `/api/gifts/send` | Signed-in member | Send a social/profile gift from Main Coins |
+| GET | `/api/creator/earnings` | Signed-in creator | Read available, pending and paid creator USD earnings |
+| GET/PUT/DELETE | `/api/creator/payout-account` | Signed-in creator | Read, set or unlink the creator's PayPal payout account |
+| POST | `/api/creator/payouts` | Signed-in creator | Request a real USD payout through PayPal |
+| POST | `/api/admin/coins/owner-issuance` | MFA-verified Creator Hub owner | Issue Main Coin bonus Coins to the owner |
+| POST | `/api/admin/coins/member-credit` | MFA-verified Creator Hub owner | Issue Main Coin bonus Coins to a selected member |
+| POST | `/api/admin/marketing/funding/orders` | MFA-verified Creator Hub owner | Create a PayPal funding order for the optional cash-backed marketing reserve |
+| POST | `/api/admin/marketing/grants` | MFA-verified Creator Hub owner | Grant marketing-funded Coins against confirmed reserve cash |
+
+Purchased, admin-issued, credit and promotional Coins use the same visible Main Coin wallet value and gift prices. Funding source is retained only for accounting and audit. Gifts from every Main Coin source calculate the same 50/50 creator/platform USD share. Creator earnings post to the USD earnings ledger and use the existing exchange and PayPal payout services. The separate Admin Promotional Gift Wallet remains isolated and is not merged into Main Coins.
+
+The promotional/admin-issued Coin value represents a platform-funded reward: it creates a real creator USD payable when spent on a gift. The creator payout still depends on the platform's PayPal payout account having sufficient funds and the provider confirming the payment; a submitted payout is not marked paid until confirmation.
+
 ## General behavior
 
 - JSON API responses use `Cache-Control: no-store`.
