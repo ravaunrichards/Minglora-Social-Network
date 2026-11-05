@@ -439,7 +439,7 @@ Deno.serve(async (req: Request) => {
     } else {
       // Pass the search term as a bound filter value and escape SQL wildcard
       // characters so a typed "%" or "_" does not turn into a broad search.
-      const pattern = "%" + search.replace(/[\\%_]/g, "\\  if (action === "economy_owner_issuance") {") + "%";
+      const pattern = "%" + search.replace(/[\\%_]/g, (character: string) => "\\" + character) + "%";
       const [usernameResult, displayNameResult] = await Promise.all([
         newestMembers().ilike("username", pattern),
         newestMembers().ilike("display_name", pattern)
