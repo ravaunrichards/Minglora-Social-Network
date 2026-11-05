@@ -1491,10 +1491,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
         "<strong id='live-reaction-count' data-count='0'>0</strong><span>likes</span>"+
       "</div></div>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
-    "</div>"+
-    (liveSettings.groupChatEnabled!==false
-      ? "<section class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></section>"
-      : "<p class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>");
+    "</div>";
+  const liveChatOverlay=liveSettings.groupChatEnabled!==false
+    ? "<section class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></section>"
+    : "<p class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
@@ -1537,7 +1537,8 @@ activeLivePinnedComment=null;
   pinnedCommentLayer.setAttribute("aria-live","polite");
   const stage=$("#live-video-stage");
   stage?.append(reactionLayer,pinnedCommentLayer);
-  stage?.insertAdjacentHTML("beforeend",liveStageHud);
+  stage?.insertAdjacentHTML("beforebegin",liveStageHud);
+  stage?.insertAdjacentHTML("beforeend",liveChatOverlay);
   const stablePublishing=liveSettings.optimizeForStability!==false;
   const qualityKey=liveSettings.liveQuality==='1080p'?'h1080':liveSettings.liveQuality==='720p'?'h720':null;
   const qualityPreset=qualityKey?client.VideoPresets?.[qualityKey]:null;
