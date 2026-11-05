@@ -1,0 +1,23 @@
+
+/* Minglora Platform Admin identity and profile entry point. */
+.profile-info-main h1.profile-name-with-badges{display:flex;align-items:center;flex-wrap:wrap;column-gap:7px;row-gap:4px;line-height:1.18}
+.profile-info-main h1.profile-name-with-badges>span:first-child{min-width:0}
+.profile-name-with-badges .profile-blue-verification{margin:0}
+.platform-admin-profile-badge{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;margin:0;padding:3px 8px;border:1px solid #cbdcf7;border-radius:999px;background:#edf4ff;color:#2457a7;font-size:10px;font-weight:850;letter-spacing:.035em;line-height:1.2;text-transform:uppercase;white-space:nowrap}
+.platform-admin-profile-badge svg{display:block;width:13px;height:13px;flex:0 0 13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.admin-centre-profile-button{display:inline-flex;align-items:center;gap:8px;margin:9px 0 4px;padding:9px 13px;border:1px solid #c6d8f2;border-radius:10px;background:#f3f7ff;color:#174f99;font-size:13px;font-weight:800;cursor:pointer}
+.admin-centre-profile-button:hover{background:#e8f1ff;border-color:#8fb3e9}
+.admin-centre-profile-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.admin-control-centre{display:grid;gap:14px;padding:17px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.admin-control-centre-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.admin-control-centre-head h3{margin:0;font-size:18px}
+.admin-control-centre-head p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.admin-control-centre-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#edf4ff;color:#2457a7;font-size:10px;font-weight:850;text-transform:uppercase;white-space:nowrap}
+.admin-control-centre-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.admin-control-centre-tile{display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--surface,var(--card));color:var(--text);text-align:left}
+.admin-control-centre-tile strong{font-size:13px}
+.admin-control-centre-tile small{color:var(--muted);font-size:11px;line-height:1.4}
+.admin-control-centre-tile[disabled]{opacity:.65;cursor:not-allowed}
+.admin-control-centre-note{padding:11px 13px;border-radius:10px;background:var(--surface-soft,var(--soft));color:var(--muted);font-size:12px;line-height:1.5}
+.admin-control-centre .primary,.admin-control-centre .secondary{min-height:38px}
+@media(max-width:620px){.admin-control-centre-grid{grid-template-columns:1fr}.admin-control-centre-head{flex-direction:column}.platform-admin-profile-badge{padding:3px 7px;font-size:9px}}
