@@ -1440,7 +1440,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     role!=="host"&&giftsEnabled?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
     liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
-    liveControlButton("live-leave","end",role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE",role==="host"?"End":role==="guest"?"Leave":"Leave",{danger:true})
+    role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
   const liveGiftTools=!giftsEnabled
     ? "<section id='live-gift-panel' class='live-tools-card'><strong>Gifts are turned off</strong><p>The host has disabled paid gifts and reward drops for this LIVE.</p></section>"
@@ -1466,12 +1466,26 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
     liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+  const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
+  const liveStageHud=
+    "<div class='live-stage-topbar'>"+
+      "<div class='live-stage-top-left'><div class='live-host-profile' aria-label='LIVE host profile'>"+
+        "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+        "<span><strong>"+esc(liveHostName)+"</strong><small>LIVE</small></span>"+
+      "</div>"+
+      "<div class='live-like-cluster' role='group' aria-label='LIVE likes'>"+
+        "<button type='button' id='live-heart-like' class='live-heart-button live-reaction-button' data-live-reaction='heart' aria-label='Send a heart like' title='Send a heart like'>♥</button>"+
+        "<strong id='live-reaction-count' data-count='0'>0</strong>"+
+      "</div></div>"+
+      (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='End LIVE for everyone' title='End LIVE'><span aria-hidden='true'>⏻</span></button>":"")+
+    "</div>"+
+    "<section class='live-chat-overlay' aria-label='LIVE chat and comments'>"+
+      "<div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div>"+
+      "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form>"+
+    "</section>";
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-reaction-bar' role='group' aria-label='Send a LIVE reaction'><strong>LIVE likes <span id='live-reaction-count' data-count='0'>0</span></strong><div class='live-reaction-buttons'><button type='button' class='live-reaction-button' data-live-reaction='heart' aria-label='Send a heart' title='Send a heart'>❤️</button><button type='button' class='live-reaction-button' data-live-reaction='clap' aria-label='Send applause' title='Send applause'>👏</button><button type='button' class='live-reaction-button' data-live-reaction='fire' aria-label='Send fire' title='Send fire'>🔥</button><button type='button' class='live-reaction-button' data-live-reaction='laugh' aria-label='Send laughter' title='Send laughter'>😂</button></div></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
-    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>"+(liveSettings.communitySafety===false?"Use Report or Block when needed.":"Be kind. Keep it positive.")+"</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
-    "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside></div>"+liveToolsDrawer+"</section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
   activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
   reactionLayer.className="live-reaction-layer";
@@ -1482,6 +1496,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   pinnedCommentLayer.setAttribute("aria-live","polite");
   const stage=$("#live-video-stage");
   stage?.append(reactionLayer,pinnedCommentLayer);
+  stage?.insertAdjacentHTML("beforeend",liveStageHud);
   const stablePublishing=liveSettings.optimizeForStability!==false;
   const qualityKey=liveSettings.liveQuality==='1080p'?'h1080':liveSettings.liveQuality==='720p'?'h720':null;
   const qualityPreset=qualityKey?client.VideoPresets?.[qualityKey]:null;
@@ -1494,7 +1509,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const room=new client.Room(roomOptions);activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
-  const liveReactionEmoji=Object.freeze({heart:"❤️",clap:"👏",fire:"🔥",laugh:"😂"});
+  const liveReactionEmoji=Object.freeze({heart:"❤️"});
   const receivedLiveReactionAt=new Map();
   let lastLiveReactionSentAt=0;
   const showLiveReaction=(reaction)=>{
