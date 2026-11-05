@@ -99,7 +99,7 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, ringtoneResult, profileViewsResult] = await Promise.all([
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, ringtoneResult, profileViewsResult, walletResult, creatorEarningsResult] = await Promise.all([
         api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
         api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
         api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
