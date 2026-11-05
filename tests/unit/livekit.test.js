@@ -75,7 +75,24 @@ test('audio-only host tokens are restricted to microphone publishing', async () 
   }
 });
 
-test('approved guest speaker tokens can publish microphone but not camera', async () => {
+test('approved guest speakers can publish microphone and camera in video LIVE', async () => {
+  const original = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
+  process.env.LIVEKIT_URL = 'wss://minglora-test.livekit.cloud';
+  process.env.LIVEKIT_API_KEY = 'APIxxxxxxxxxxxx';
+  process.env.LIVEKIT_API_SECRET = 'test-secret-that-is-only-used-by-this-unit-test';
+  try {
+    const result = await createLiveKitToken({
+      identity: 'video-guest-test', name: 'Video Guest', roomName: 'minglora-video-guest-test',
+      canPublish: true, publishSources: [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA]
+    });
+    const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString('utf8'));
+    assert.deepEqual(payload.video.canPublishSources, ['microphone', 'camera']);
+  } finally {
+    restoreEnv(original);
+  }
+});
+
+test('approved guest speakers stay microphone-only in audio LIVE', async () => {
   const original = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
   process.env.LIVEKIT_URL = 'wss://minglora-test.livekit.cloud';
   process.env.LIVEKIT_API_KEY = 'APIxxxxxxxxxxxx';
