@@ -29,7 +29,7 @@ const gifterProfileBadge = member => {
   if(!badge?.level)return '';
   const level=Math.max(1,Math.min(50,Math.floor(Number(badge.level)||1)));
   const tier=Math.max(1,Math.min(10,Math.ceil(level/5)));
-  const title=esc(badge.badgeName||('Gifter Level '+level));
+  const title=esc(badge.badgeName||('Gifter LV '+level));
   return '<span class="gp-inline-badge gp-tier-'+tier+'" role="img" aria-label="'+title+'" title="'+title+'"><span aria-hidden="true">✦</span><strong>Lv '+level+'</strong><small>GIFTER</small></span>'+
     (badge.liveEntranceUnlocked?'<span class="gp-live-entry-badge" role="img" aria-label="Level 25 LIVE entrance unlocked" title="Level 25 LIVE entrance unlocked">LIVE ENTRY</span>':'');
 };
@@ -1039,7 +1039,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
     : "<div id='live-video-stage' class='live-video-stage'><div class='live-video-placeholder'>Connecting to LIVE…</div></div>";
   const liveEntryBanner=state.user?.gifterBadge?.liveEntranceUnlocked
-    ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>Level 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
+    ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
     ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host'><div class='live-speaker-panel-heading'><strong>Speaker stage</strong><small>Up to 8 guest speakers</small></div><div id='live-speaker-request-list'><p class='muted'>Loading speaker requests…</p></div></section>"
@@ -4647,7 +4647,7 @@ function renderMoreHub(){
       {label:'Creator Studio',detail:'Manage your creator activity',view:'creator',icon:messenger3dIcon('creator','mobile-hub-icon')},
       {label:'Leagues',detail:'Matches, rankings and rewards',view:'leagues',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏆</span>'},
       {label:'Gifts',detail:'Browse and send member gifts',view:'gifts',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🎁</span>'},
-      {label:'Gifter Levels & Badges',detail:'Track your level, XP and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
+      {label:'Gifter LV & Badges',detail:'Track your LV, Coins and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
       {label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins',icon:messenger3dIcon('recharge','mobile-hub-icon')}
     ]},
     {title:'Your account',items:[
