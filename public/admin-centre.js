@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-owner-coin-issuance-form">Owner Coins</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-owner-coin-issuance-form">Owner Coins</a><a href="#admin-campaign-coins">Admin Campaign Coins</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -84,6 +84,67 @@
           <button type="submit" class="primary" id="admin-owner-coin-issue-submit">Issue owner Coins to CreatorHub</button>
           <p id="admin-owner-coin-issuance-status" aria-live="polite"></p>
         </form>
+        <section class="admin-campaign-coins" id="admin-campaign-coins" aria-labelledby="admin-campaign-coins-title">
+          <div class="admin-campaign-coins-heading">
+            <div>
+              <span class="eyebrow">DEDICATED ADMIN WALLET</span>
+              <strong id="admin-campaign-coins-title">Admin Campaign Coins</strong>
+              <p>Owned by CreatorHubCreatorNetwork@gmail.com. Maximum capacity: 1,000,000,000,000 Coins.</p>
+            </div>
+            <button type="button" class="secondary" id="admin-campaign-coins-refresh">Refresh wallet</button>
+          </div>
+          <p class="admin-campaign-coins-separation">This is an independent Admin Centre balance. It is not your Main Coins or your existing Main Promotional Coins. Funding and member allocations here do not debit or change either of those balances.</p>
+          <div class="admin-campaign-coins-summary" id="admin-campaign-coins-summary" aria-live="polite">Loading Admin Campaign Coins…</div>
+          <div class="admin-campaign-coins-grid">
+            <form id="admin-campaign-coins-fund-form" class="admin-marketing-form">
+              <strong>Add Coins to the dedicated campaign wallet</strong>
+              <p>This action issues Coins only into Admin Campaign Coins. It does not move Coins from another wallet.</p>
+              <label for="admin-campaign-coins-fund-amount">Amount to add</label>
+              <input id="admin-campaign-coins-fund-amount" name="amountCoins" type="number" min="1" max="1000000000000" step="1" inputmode="numeric" placeholder="Enter whole-number Coins" required>
+              <label for="admin-campaign-coins-fund-note">Funding note</label>
+              <input id="admin-campaign-coins-fund-note" name="note" type="text" maxlength="500" value="Admin Campaign Coins wallet funding">
+              <button type="submit" class="primary" id="admin-campaign-coins-fund-submit">Add Campaign Coins</button>
+              <p id="admin-campaign-coins-fund-status" aria-live="polite"></p>
+            </form>
+            <form id="admin-campaign-coins-allocation-form" class="admin-marketing-form">
+              <strong>Manually promote a member</strong>
+              <p>Select a member, choose the exact amount and confirm the allocation. The recipient gets Coins in their separate Admin Promotional Gift Wallet.</p>
+              <label for="admin-campaign-coins-member-search">Find a member</label>
+              <div class="admin-member-search-row">
+                <input id="admin-campaign-coins-member-search" type="search" maxlength="80" autocomplete="off" placeholder="Search username or display name">
+                <button type="button" class="secondary" id="admin-campaign-coins-member-find">Search</button>
+              </div>
+              <p id="admin-campaign-coins-member-search-status" class="admin-member-search-status" aria-live="polite">Showing newest members first.</p>
+              <label for="admin-campaign-coins-member">Choose recipient</label>
+              <select id="admin-campaign-coins-member" name="memberUsername" required>
+                <option value="">Loading members…</option>
+              </select>
+              <label for="admin-campaign-coins-campaign">Campaign name</label>
+              <input id="admin-campaign-coins-campaign" name="campaignName" type="text" maxlength="120" placeholder="e.g. New Creator Launch">
+              <label for="admin-campaign-coins-amount">Promotional Coins</label>
+              <input id="admin-campaign-coins-amount" name="amountCoins" type="number" min="1" max="1000000000000" step="1" inputmode="numeric" placeholder="Enter amount" required>
+              <label for="admin-campaign-coins-note">Promotion note</label>
+              <input id="admin-campaign-coins-note" name="note" type="text" maxlength="500" value="Admin Campaign Coins member promotion">
+              <button type="submit" class="primary" id="admin-campaign-coins-allocate-submit">Allocate Campaign Coins</button>
+              <p id="admin-campaign-coins-allocate-status" aria-live="polite"></p>
+            </form>
+          </div>
+          <section class="admin-campaign-coins-history">
+            <div class="admin-member-promotion-history-heading">
+              <strong>Admin Campaign Coins activity</strong>
+              <span>Wallet funding and member allocations</span>
+            </div>
+            <div id="admin-campaign-coins-history-list" aria-live="polite">Loading activity…</div>
+          </section>
+          <section class="admin-campaign-coins-assistance" aria-labelledby="admin-campaign-coins-ai-title">
+            <strong id="admin-campaign-coins-ai-title">Optional AI promotion assistance</strong>
+            <p>Ask ChatGPT to plan campaign ideas, audiences, wording and a Coin budget. You approve every allocation yourself; AI assistance cannot fund the wallet or send Coins.</p>
+            <label for="admin-campaign-coins-ai-goal">What are you promoting?</label>
+            <input id="admin-campaign-coins-ai-goal" type="text" maxlength="240" placeholder="Describe your campaign goal">
+            <button type="button" class="secondary" id="admin-campaign-coins-ai-copy">Copy campaign brief for ChatGPT</button>
+            <p id="admin-campaign-coins-ai-status" aria-live="polite"></p>
+          </section>
+        </section>
         <section class="admin-member-promotions" aria-labelledby="admin-member-promotions-title">
           <div class="admin-member-promotions-heading">
             <div>
@@ -327,6 +388,208 @@
         if (status) status.textContent = error.message || 'Promotional Coins could not be sent.';
       } finally {
         if (submit) submit.disabled = false;
+      }
+    });
+
+    const campaignWalletSummary = panel.querySelector('#admin-campaign-coins-summary');
+    const campaignHistoryList = panel.querySelector('#admin-campaign-coins-history-list');
+    const campaignMemberSelect = panel.querySelector('#admin-campaign-coins-member');
+    const campaignMemberSearch = panel.querySelector('#admin-campaign-coins-member-search');
+    const campaignMemberSearchStatus = panel.querySelector('#admin-campaign-coins-member-search-status');
+    const campaignMaxCoins = 1000000000000;
+    const formatCampaignCoins = value => Number(value || 0).toLocaleString();
+    const refreshAdminCampaignCoins = async () => {
+      if (!campaignWalletSummary) return;
+      campaignWalletSummary.textContent = 'Loading Admin Campaign Coins…';
+      if (campaignHistoryList) campaignHistoryList.textContent = 'Loading activity…';
+      try {
+        const response = await fetch('/api/admin/campaign-coins', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Admin Campaign Coins could not be loaded.');
+        const wallet = result.wallet || {};
+        const available = Number(wallet.available_coins || 0);
+        const funded = Number(wallet.lifetime_funded_coins || 0);
+        const allocated = Number(wallet.lifetime_allocated_coins || 0);
+        const maximum = Number(wallet.max_balance_coins || campaignMaxCoins);
+        const percentage = maximum > 0 ? Math.min(100, Math.max(0, available / maximum * 100)) : 0;
+        campaignWalletSummary.innerHTML =
+          '<div class="admin-campaign-coins-stat"><small>AVAILABLE ADMIN CAMPAIGN COINS</small><strong>' + formatCampaignCoins(available) + '</strong><span>Current dedicated wallet balance</span></div>' +
+          '<div class="admin-campaign-coins-stats">' +
+            '<div><small>LIFETIME ADDED</small><strong>' + formatCampaignCoins(funded) + '</strong></div>' +
+            '<div><small>LIFETIME ALLOCATED</small><strong>' + formatCampaignCoins(allocated) + '</strong></div>' +
+            '<div><small>MAXIMUM CAPACITY</small><strong>' + formatCampaignCoins(maximum) + '</strong></div>' +
+          '</div>' +
+          '<div class="admin-campaign-coins-progress" role="img" aria-label="' + percentage.toFixed(2) + ' percent of maximum wallet capacity in use"><span style="width:' + percentage.toFixed(4) + '%"></span></div>' +
+          '<small class="admin-campaign-coins-progress-caption">' + percentage.toFixed(4) + '% of maximum wallet capacity currently held.</small>';
+        const items = Array.isArray(result.ledger) ? result.ledger : [];
+        if (campaignHistoryList) {
+          campaignHistoryList.innerHTML = items.length ? items.map(item => {
+            const event = String(item.event_type || '').replace(/_/g,' ');
+            const amount = Number(item.delta_coins || 0);
+            const signed = amount > 0 ? '+' : '';
+            const member = item.member_username ? ' · @' + escapeText(item.member_username) : '';
+            const campaign = item.campaign_name ? ' · ' + escapeText(item.campaign_name) : '';
+            const note = item.note ? '<small>' + escapeText(item.note) + '</small>' : '';
+            const date = item.created_at && !Number.isNaN(new Date(item.created_at).getTime())
+              ? new Date(item.created_at).toLocaleString() : '';
+            return '<article class="admin-campaign-coins-ledger-row"><div><strong>' + escapeText(event) + '</strong><span>' + escapeText(date) + member + campaign + '</span>' + note + '</div><div><strong>' + signed + formatCampaignCoins(amount) + '</strong><small>Balance: ' + formatCampaignCoins(item.balance_after) + '</small></div></article>';
+          }).join('') : '<p class="muted">No Admin Campaign Coins activity yet.</p>';
+        }
+      } catch (error) {
+        campaignWalletSummary.textContent = error.message || 'Admin Campaign Coins could not be loaded.';
+        if (campaignHistoryList) campaignHistoryList.textContent = 'Activity could not be loaded.';
+      }
+    };
+    const loadCampaignMembers = async (search = '') => {
+      if (!campaignMemberSelect) return;
+      campaignMemberSelect.innerHTML = '<option value="">Loading members…</option>';
+      if (campaignMemberSearchStatus) campaignMemberSearchStatus.textContent = search ? 'Searching members…' : 'Loading newest members…';
+      try {
+        const response = await fetch('/api/admin/coins/member-promotions/members?search=' + encodeURIComponent(search), {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Member list could not be loaded.');
+        const members = Array.isArray(result.members) ? result.members : [];
+        if (!members.length) {
+          campaignMemberSelect.innerHTML = '<option value="">No matching members found</option>';
+          if (campaignMemberSearchStatus) campaignMemberSearchStatus.textContent = search ? 'No members matched that search.' : 'No members are available yet.';
+          return;
+        }
+        campaignMemberSelect.innerHTML = '<option value="">Choose a recipient</option>' + members.map(member => {
+          const username = String(member.username || '');
+          const name = String(member.displayName || '').trim();
+          const joined = member.joinedAt && !Number.isNaN(new Date(member.joinedAt).getTime())
+            ? new Date(member.joinedAt).toLocaleDateString() : '';
+          const label = '@' + username + (name ? ' — ' + name : '') + (joined ? ' · Joined ' + joined : '');
+          return '<option value="' + escapeText(username) + '">' + escapeText(label) + '</option>';
+        }).join('');
+        if (campaignMemberSearchStatus) campaignMemberSearchStatus.textContent =
+          (search ? 'Search results' : 'Newest members first') + ' · ' + members.length + ' member' + (members.length === 1 ? '' : 's') + ' shown.';
+      } catch (error) {
+        campaignMemberSelect.innerHTML = '<option value="">Member list unavailable</option>';
+        if (campaignMemberSearchStatus) campaignMemberSearchStatus.textContent = error.message || 'Member list could not be loaded.';
+      }
+    };
+    panel.querySelector('#admin-campaign-coins-refresh')?.addEventListener('click', refreshAdminCampaignCoins);
+    panel.querySelector('#admin-campaign-coins-member-find')?.addEventListener('click', () =>
+      loadCampaignMembers(String(campaignMemberSearch?.value || '').trim()));
+    campaignMemberSearch?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadCampaignMembers(String(campaignMemberSearch.value || '').trim());
+      }
+    });
+    loadCampaignMembers();
+    refreshAdminCampaignCoins();
+
+    panel.querySelector('#admin-campaign-coins-fund-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-campaign-coins-fund-amount');
+      const noteInput = form.querySelector('#admin-campaign-coins-fund-note');
+      const status = form.querySelector('#admin-campaign-coins-fund-status');
+      const submit = form.querySelector('#admin-campaign-coins-fund-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1 || amountCoins > campaignMaxCoins) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 1 trillion Coins.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure transaction reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Add ' + formatCampaignCoins(amountCoins) + ' newly issued Coins to Admin Campaign Coins only? This will not use or change Main Coins or Main Promotional Coins.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Adding Coins to the dedicated wallet…';
+      try {
+        const response = await fetch('/api/admin/campaign-coins/fund', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            amountCoins, requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,500)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Admin Campaign Coins could not be added.');
+        if (status) status.textContent = (result.already_processed ? 'This funding request was already processed. ' : 'Added ') +
+          formatCampaignCoins(amountCoins) + ' Admin Campaign Coins.';
+        if (amountInput) amountInput.value = '';
+        await refreshAdminCampaignCoins();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Admin Campaign Coins could not be added.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-campaign-coins-allocation-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberUsername = String(form.querySelector('#admin-campaign-coins-member')?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(form.querySelector('#admin-campaign-coins-amount')?.value);
+      const campaignName = String(form.querySelector('#admin-campaign-coins-campaign')?.value || '').trim().slice(0,120);
+      const note = String(form.querySelector('#admin-campaign-coins-note')?.value || '').trim().slice(0,500);
+      const amountInput = form.querySelector('#admin-campaign-coins-amount');
+      const status = form.querySelector('#admin-campaign-coins-allocate-status');
+      const submit = form.querySelector('#admin-campaign-coins-allocate-submit');
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) || !Number.isSafeInteger(amountCoins) || amountCoins < 1 || amountCoins > campaignMaxCoins) {
+        if (status) status.textContent = 'Choose a member and enter a whole-number amount from 1 to 1 trillion Coins.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure allocation reference could not be generated on this device.';
+        return;
+      }
+      const displayName = campaignName || 'Manual member promotion';
+      if (!window.confirm('Allocate ' + formatCampaignCoins(amountCoins) + ' Admin Campaign Coins to @' + memberUsername + ' for "' + displayName + '"? Only the Admin Campaign Coins wallet and the member’s separate Admin Promotional Gift Wallet will change.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Allocating Campaign Coins…';
+      try {
+        const response = await fetch('/api/admin/campaign-coins/allocate', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername, amountCoins, campaignName, note,
+            requestId:window.crypto.randomUUID()
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Campaign Coins could not be allocated.');
+        const recipientWallet = result.member_promotional_wallet || {};
+        if (status) status.textContent = (result.already_processed ? 'This allocation was already processed. ' : 'Allocated ') +
+          formatCampaignCoins(amountCoins) + ' Coins to @' + memberUsername +
+          '. Recipient Admin Promotional Gift Wallet balance: ' + formatCampaignCoins(recipientWallet.available_coins) + '.';
+        if (amountInput) amountInput.value = '';
+        await refreshAdminCampaignCoins();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Campaign Coins could not be allocated.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-campaign-coins-ai-copy')?.addEventListener('click', async () => {
+      const goal = String(panel.querySelector('#admin-campaign-coins-ai-goal')?.value || '').trim();
+      const campaign = String(panel.querySelector('#admin-campaign-coins-campaign')?.value || '').trim();
+      const amount = String(panel.querySelector('#admin-campaign-coins-amount')?.value || '').trim();
+      const status = panel.querySelector('#admin-campaign-coins-ai-status');
+      const brief = [
+        'Help me plan a Minglora promotion. Suggest a campaign objective, target audience, ethical promotion ideas, message copy, success measures and a sensible Coin budget.',
+        'Campaign goal: ' + (goal || 'Please help me define one.'),
+        'Campaign name: ' + (campaign || 'Not decided yet.'),
+        'Possible Coin amount: ' + (amount || 'Not decided yet.'),
+        'Important: Admin Campaign Coins are a separate admin-only wallet, capped at 1 trillion Coins. Do not suggest using Main Coins or Main Promotional Coins. Do not allocate or spend Coins; I approve all actions manually.'
+      ].join('\n');
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable. You can ask ChatGPT directly and describe your campaign.');
+        await navigator.clipboard.writeText(brief);
+        if (status) status.textContent = 'Campaign brief copied. Paste it into ChatGPT to get promotion assistance.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Campaign brief could not be copied.';
       }
     });
 
