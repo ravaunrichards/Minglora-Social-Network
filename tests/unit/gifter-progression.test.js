@@ -136,7 +136,9 @@ test("NEW GIFTER starts at the first confirmed gift sent and expires after seven
     giftId: "new-gifter-second", senderId: "sender", recipientId: "recipient",
     giftCode: "crown", coinAmount: 5, contextType: "live", now: new Date("2026-11-10T12:00:00.000Z")
   });
-  assert.equal(getNewGifterIdentity(db, "sender", new Date("2026-11-11T12:00:00.000Z")), active && null);
+  const stillActive = getNewGifterIdentity(db, "sender", new Date("2026-11-11T12:00:00.000Z"));
+  assert.equal(stillActive.active, true);
+  assert.equal(stillActive.expiresAt, active.expiresAt);
 });
 
 test("new accounts have no gifter badge and all levels are locked until sent Coins reach thresholds", () => {
