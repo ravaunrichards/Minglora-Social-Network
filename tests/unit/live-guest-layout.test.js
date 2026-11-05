@@ -33,3 +33,12 @@ test('Guest seats are responsive and display host, guest, speaking and open-seat
   assert.match(styles, /@media\(max-width:760px\)/);
   assert.match(styles, /@media\(max-width:380px\)/);
 });
+
+
+test('Approved guests can publish camera in video LIVE and remain microphone-only in audio LIVE', () => {
+  assert.match(app, /if\(role==="guest"&&broadcastType==="video_audio"\)\{\s*await room\.localParticipant\.setCameraEnabled\(true\)/);
+  assert.match(app, /role==="guest"\)toast\(broadcastType==="audio_only"/);
+  assert.match(app, /Your microphone and camera are connected/);
+  assert.match(app, /audio-only LIVE does not use a camera/);
+  assert.doesNotMatch(app, /camera publishing is disabled/);
+});
