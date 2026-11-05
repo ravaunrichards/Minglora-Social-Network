@@ -45,7 +45,7 @@
     const unlocked = access.canAccess === true;
 
     const panel = document.createElement('div');
-    panel.className = 'admin-control-centre';
+    panel.className = 'admin-control-centre admin-control-centre-page';
     panel.id = 'admin-control-centre';
     panel.innerHTML = `
       <div class="admin-control-centre-head">
