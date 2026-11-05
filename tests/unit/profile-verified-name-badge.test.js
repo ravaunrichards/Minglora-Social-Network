@@ -17,6 +17,7 @@ test('Larry keeps the blue verification check beside the username, not the displ
   assert.match(app, /member\?\.id === PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID \? '' : verifiedProfileBadge\(member\)/);
   assert.match(app, /profile-name-with-badges"><span>'\+esc\(u\.name\)\+'<\/span>'\+profileNameVerificationBadge\(u\)\+platformAdminProfileBadge\(u\)/);
   assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
+  assert.match(app, /profile-preview-name">'\+esc\(u\.name\)\+profileNameVerificationBadge\(u\)\+platformAdminProfileBadge\(u\)/);
 });
 
 test('the profile bundle remains in the app shell and scripts are revalidated from the network', () => {
