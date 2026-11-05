@@ -5959,6 +5959,8 @@ button.live-ranking-row{cursor:pointer}
     transform:none!important;
   }
   .profile-counts{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
     flex:1 0 100%!important;
     width:100%!important;
     min-width:0!important;
