@@ -65,6 +65,7 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 test('Full Screen fills the viewport and adapts to phones, tablets, laptops and desktop screens', () => {
   assert.match(app, /live-player-shell[^\n]*live-full-screen-active|classList\.toggle\('live-full-screen-active',hostOnly\)/);
   assert.ok(app.includes("id='live-fullscreen-chat-slot'"), 'wide-screen chat must have its own destination outside the host video');
+  assert.ok(app.includes(`liveControls+"</div></div><aside id='live-fullscreen-chat-slot'`), 'desktop chat must be a sibling of the video column, not a child that shrinks the host stage');
   assert.ok(app.includes('liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat")'), 'small screens need an explicit Chat control');
   assert.match(app, /live-chat-toggle[\s\S]*?openLiveToolsPanel\("#live-chat-panel"\)/);
   assert.match(styles, /\.live-player-shell\.live-full-screen-active\{[\s\S]*?position:fixed!important[\s\S]*?width:100vw!important[\s\S]*?height:100dvh!important/);

@@ -5446,6 +5446,9 @@ button.live-ranking-row{cursor:pointer}
 }
 .live-full-screen-active .live-tools-content{min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important}
 
+/* Outside immersive Full Screen this slot must not consume room in existing layouts. */
+.live-fullscreen-chat-slot{display:none!important}
+
 /* Wide landscape tablets, laptops, desktops and ultrawide displays get a separate chat column. */
 @media(min-width:1024px) and (orientation:landscape){
   .live-player-shell.live-full-screen-active>.live-player-layout{
