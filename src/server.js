@@ -1811,6 +1811,10 @@ async function route(req, res) {
         const saved=await requestSupabaseState('economy_set_payout_account',{userId:user.id,paypalEmail});
         return json(res,200,saved);
       }
+      if(method==='DELETE'&&p==='/api/creator/payout-account'){
+        const unlinked=await requestSupabaseState('economy_unlink_payout_account',{userId:user.id});
+        return json(res,200,unlinked);
+      }
       if(method==='POST'&&p==='/api/creator/payouts'){
         const earnings=await requestSupabaseState('economy_creator_earnings',{creatorId:user.id});
         const payoutEmail=earnings.payoutAccount?.paypal_email;
