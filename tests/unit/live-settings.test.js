@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LIVE_MODES,
+  LIVE_LAYOUTS,
   broadcastTypeForLiveMode,
   getLivePublishSourceNames,
   normalizeLiveSettings
@@ -24,6 +25,12 @@ test('LIVE settings provide compact, safe defaults', () => {
   assert.equal(result.settings.communitySafety, true);
   assert.equal(result.settings.groupChatEnabled, true);
   assert.equal(result.settings.liveGifts, true);
+  assert.deepEqual(LIVE_LAYOUTS, ['full_screen', 'fluid_panel', 'fluid_grid', 'fixed_grid', 'fixed_panel', 'side_by_side', 'spotlight', 'roundtable_1', 'roundtable_2']);
+  assert.equal(result.settings.roomLayout, 'fluid_grid');
+  assert.equal(result.settings.allowGuestRequests, true);
+  assert.equal(result.settings.guestCamera, true);
+  assert.equal(result.settings.autoAcceptRequests, false);
+  assert.equal(result.settings.manageModerators, true);
 });
 
 test('practice mode automatically disables gifts', () => {
@@ -37,12 +44,16 @@ test('LIVE setup rejects unknown fields and malformed values', () => {
   assert.equal(normalizeLiveSettings({ guardian: true }).valid, false);
   assert.equal(normalizeLiveSettings({ noiseSuppression: 'yes' }).valid, false);
   assert.equal(normalizeLiveSettings({ groupChatEnabled: 'yes' }).valid, false);
+  assert.equal(normalizeLiveSettings({ roomLayout: 'not-a-layout' }).valid, false);
+  assert.equal(normalizeLiveSettings({ allowGuestRequests: 'yes' }).valid, false);
+  assert.equal(normalizeLiveSettings({ shareRecordingsWithGuests: 'yes' }).valid, false);
   assert.equal(normalizeLiveSettings({ liveQuality: '4k' }).valid, false);
 });
 
 test('LiveKit publisher tracks follow mode and role with least privilege', () => {
   assert.deepEqual(getLivePublishSourceNames('video_audio', 'host'), ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']);
   assert.deepEqual(getLivePublishSourceNames('video_audio', 'guest'), ['MICROPHONE', 'CAMERA']);
+  assert.deepEqual(getLivePublishSourceNames('video_audio', 'guest', 'video_audio', { guestCamera: false }), ['MICROPHONE']);
   assert.deepEqual(getLivePublishSourceNames('audio_only', 'host', 'audio_only'), ['MICROPHONE']);
   assert.deepEqual(getLivePublishSourceNames('mobile_gaming', 'host'), ['MICROPHONE', 'SCREEN_SHARE']);
   assert.deepEqual(getLivePublishSourceNames('mobile_gaming', 'guest'), ['MICROPHONE']);
