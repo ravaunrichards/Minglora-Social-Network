@@ -157,6 +157,7 @@ function safeUser(u,viewerId=null){
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
+const LIVE_SCREEN_LAYOUTS=['grid','side-by-side','stacked','featured-host','host-focus','guest-focus','match'];
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
@@ -1471,7 +1472,7 @@ async function route(req, res) {
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
         const session = {
-          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings,
+          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'grid',
           description: liveSettings.aboutMe, liveTheme, status: 'live', createdAt: now(), endedAt: null
         };
         await requestSupabaseState('live_broadcast_create',{
@@ -1486,6 +1487,18 @@ async function route(req, res) {
         }
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
+      }
+      const liveLayoutMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/layout$/);
+      if (liveLayoutMatch) {
+        if (method !== 'PATCH') return json(res, 405, { error: 'Use PATCH to update the LIVE screen layout.' });
+        const session = (db.liveSessions || []).find(item => item.id === liveLayoutMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the screen layout.' });
+        const layout = String(input.layout || '');
+        if (!LIVE_SCREEN_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose a supported LIVE screen layout.' });
+        session.liveLayout = layout;
+        await saveStore();
+        return json(res, 200, { ok: true, liveLayout: session.liveLayout });
       }
       const liveModeratorsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/moderators(?:\/([^/]+))?$/);
       if (liveModeratorsMatch) {
