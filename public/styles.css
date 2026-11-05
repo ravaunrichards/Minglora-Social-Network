@@ -3745,3 +3745,9 @@ body.auth-mode .auth-screen{
 .story-media-controls{display:flex;align-items:center;justify-content:center;gap:22px;padding:10px;color:var(--muted);font-size:12px;font-weight:800}
 .story-media-controls button{min-width:42px;min-height:36px;padding:5px 12px;font-size:22px;line-height:1}
 .story-media-count{position:absolute;top:48px;right:7px;padding:4px 7px;border-radius:8px;background:#182238c9;color:#fff;font-size:10px;font-weight:800}
+
+
+/* Public platform-admin identity badge. Separate from profile verification. */
+.platform-admin-profile-badge{display:inline-flex;align-items:center;gap:4px;min-height:19px;padding:2px 7px;border:1px solid rgba(210,166,74,.5);border-radius:999px;background:linear-gradient(135deg,#172d52,#0d1c36);color:#f8e7b7;font-size:9px;font-weight:900;letter-spacing:.075em;line-height:1;vertical-align:middle;white-space:nowrap;box-shadow:0 1px 4px rgba(12,31,61,.16)}
+.platform-admin-profile-badge svg{display:block;width:13px;height:13px;flex:0 0 13px;fill:none;stroke:#f2cf79;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.profile-username-line .platform-admin-profile-badge{min-height:21px;padding:3px 8px;font-size:10px}
