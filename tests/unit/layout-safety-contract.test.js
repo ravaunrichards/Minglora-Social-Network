@@ -10,10 +10,10 @@ test('the final layout stylesheet loads after every feature stylesheet', async (
     read('public/index.html'), read('public/sw.js'), read('public/layout-safety.css')
   ]);
   const mobileLink = html.indexOf('mobile-layout.css?v=20261105-flow-navigation-1');
-  const safetyLink = html.indexOf('layout-safety.css?v=20261105-page-flow-contract-1');
+  const safetyLink = html.indexOf('layout-safety.css?v=20261105-page-flow-contract-2');
   const lastFeatureLink = html.indexOf('gifter-badge-3d.css?v=20261105-gifter-badge-3d-1');
   assert.ok(lastFeatureLink >= 0 && mobileLink > lastFeatureLink && safetyLink > mobileLink);
-  assert.ok(sw.includes("layout-safety.css?v=20261105-page-flow-contract-1"));
+  assert.ok(sw.includes("layout-safety.css?v=20261105-page-flow-contract-2"));
   assert.ok(sw.includes("minglora-shell-v93-flow-layout-safety-1"));
   assert.doesNotMatch(safety, /position\s*:\s*(?:fixed|sticky)/i);
 });
@@ -56,4 +56,13 @@ test('long names and profile statistics wrap instead of disappearing at narrow w
   assert.match(css, /overflow-wrap:anywhere!important/);
   assert.match(css, /white-space:normal!important/);
   assert.match(css, /@media\(max-width:760px\)/);
+});
+
+test('hidden dialogs and closed menus stay hidden; inactive toasts take no space', async () => {
+  const css = await read('public/layout-safety.css');
+  assert.match(css, /\.hidden,\[hidden\][\s\S]*?display:none!important/);
+  assert.match(css, /\.modal-backdrop\.hidden/);
+  assert.match(css, /\.messenger-panel\.hidden/);
+  assert.match(css, /\.toast:not\(\.show\)\{[\s\S]*?display:none!important/);
+  assert.match(css, /\.toast\.show\{[\s\S]*?display:block!important/);
 });

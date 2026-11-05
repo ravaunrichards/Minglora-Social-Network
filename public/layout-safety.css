@@ -286,3 +286,32 @@ body.live-tools-open{
     max-width:100%!important;
   }
 }
+
+
+/* Keep programmatically hidden panels closed after the page-flow overrides. */
+.hidden,[hidden],
+#message-window-dock.hidden,
+.call-overlay.hidden,.call-ringing-overlay.hidden,
+.palette-switcher-panel.hidden,.messenger-panel.hidden,
+.messenger-options-menu.hidden,.message-bubble-actions-menu.hidden,
+.profile-overflow-menu.hidden,.mobile-more-menu.hidden,
+.live-chat-emoji-picker.hidden,.live-tools-backdrop.hidden,
+.modal-backdrop.hidden,.about-section-editor-backdrop.hidden,
+.story-viewer-backdrop.hidden,.image-viewer-backdrop.hidden,
+.device-camera-backdrop.hidden,.mw-modal-backdrop.hidden{
+  display:none!important;
+}
+.toast:not(.show){
+  display:none!important;
+  margin:0!important;
+  padding:0!important;
+  opacity:0!important;
+}
+.toast.show{
+  display:block!important;
+  margin:10px auto!important;
+  padding:12px 18px!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  transform:none!important;
+}
