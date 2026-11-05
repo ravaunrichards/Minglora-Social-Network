@@ -36,7 +36,8 @@ export function getGifterLevel(xp) {
 }
 
 export function getGifterLevelChart(xp = 0) {
-  const currentLevel = getGifterLevel(xp);
+  const total = Math.max(0, Number.isFinite(Number(xp)) ? Math.floor(Number(xp)) : 0);
+  const currentLevel = getGifterLevel(total);
   return Array.from({ length: LEVEL_CAP }, (_, index) => {
     const level = index + 1;
     const tier = TIERS[Math.floor(index / 5)];
