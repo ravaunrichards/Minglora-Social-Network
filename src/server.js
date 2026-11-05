@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
-import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, updateLiveKitGuestCameraPermission, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
@@ -1496,6 +1496,33 @@ async function route(req, res) {
         if (!patch) return json(res, 400, { error: 'Send LIVE settings as an object.' });
         const normalized = normalizeLiveSettings({ ...(session.liveSettings || {}), ...patch });
         if (!normalized.valid) return json(res, 400, { error: normalized.error });
+
+        const previousGuestCamera = session.liveSettings?.guestCamera !== false;
+        const nextGuestCamera = normalized.settings.guestCamera !== false;
+        const guestCameraChanged = Object.hasOwn(patch, 'guestCamera') && previousGuestCamera !== nextGuestCamera;
+        if (guestCameraChanged && isLiveKitConfigured()) {
+          const connectedGuests = [...new Set((db.liveSpeakerRequests || [])
+            .filter(request => request.sessionId === session.id && ['accepted', 'connected'].includes(request.status))
+            .map(request => String(request.userId || ''))
+            .filter(identity => identity && identity !== session.hostId))];
+          const changedGuests = [];
+          try {
+            const participants = await listLiveKitParticipants(session.roomName);
+            const connectedIdentities = new Set(participants.map(participant => String(participant.identity)));
+            for (const identity of connectedGuests) {
+              if (!connectedIdentities.has(identity)) continue;
+              const result = await updateLiveKitGuestCameraPermission(session.roomName, identity, nextGuestCamera);
+              if (result.updated) changedGuests.push(identity);
+            }
+          } catch (error) {
+            await Promise.allSettled(changedGuests.map(identity =>
+              updateLiveKitGuestCameraPermission(session.roomName, identity, previousGuestCamera)
+            ));
+            console.error('[Minglora LIVE] Guest camera permission update failed:', error?.message || error);
+            return json(res, 503, { error: 'Minglora could not apply the guest camera permission to every connected speaker. The room setting was not changed. Please try again.' });
+          }
+        }
+
         session.liveSettings = normalized.settings;
         if (normalized.settings.practiceMode) session.visibility = 'private';
         else if (normalized.settings.audienceControl === false) session.visibility = 'public';
