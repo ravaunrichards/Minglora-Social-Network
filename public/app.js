@@ -715,6 +715,7 @@ let liveDirectoryRefreshTimer=null;
 let liveCameraEnabled=true;
 let liveMicrophoneEnabled=true;
 let liveAudioMuted=false;
+let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
 let liveGiftCatalogue=[];
 let liveSpeakerRefreshTimer=null;
@@ -817,20 +818,29 @@ async function renderLive(){
   renderLiveDirectory(sessions,status,catalog,wallet);
   liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,12000);
 }
-function attachLiveTrack(track,participant,local){
+function isLiveScreenSharePublication(publication){
+  const source=publication?.source;
+  const sdkSource=window.LivekitClient?.Track?.Source?.ScreenShare;
+  return source===3||source===sdkSource||/screen.?share/i.test(String(source||""));
+}
+function attachLiveTrack(track,participant,local,publication){
   if(!track)return;
   if(track.kind==="video"){
     const identity=String(participant?.identity||"local");
+    const screenShare=isLiveScreenSharePublication(publication);
     const layout=$("#live-guest-layout");
     const seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
-    const target=seat?.querySelector(".live-guest-seat-media")||$("#live-video-stage");
+    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-guest-seat-media")||$("#live-video-stage"));
     if(!target)return;
-    const tile=document.createElement("div");tile.className="live-video-tile"+(local?" local":"");tile.dataset.participant=identity;
+    const tile=document.createElement("div");
+    tile.className=screenShare?"live-screen-share-tile":"live-video-tile"+(local?" local":"");
+    tile.dataset.participant=identity;
     const element=track.attach();element.autoplay=true;element.playsInline=true;element.className="live-video-element";if(local)element.muted=true;
     tile.append(element);
-    if(!local){const name=document.createElement("span");name.className="live-video-name";name.textContent=participant?.name||participant?.identity||"Guest";tile.append(name);}
+    if(!local||screenShare){const name=document.createElement("span");name.className=screenShare?"live-screen-share-name":"live-video-name";name.textContent=screenShare?"Screen shared by "+(participant?.name||participant?.identity||"Host"):(participant?.name||participant?.identity||"Guest");tile.append(name);}
     target.append(tile);
-    seat?.classList.add("has-video");
+    if(screenShare)$("#live-video-stage")?.classList.add("has-live-screen-share");
+    else seat?.classList.add("has-video");
   }else{
     const root=$("#live-audio-root");if(root){const element=track.attach();element.autoplay=true;element.muted=liveAudioMuted;root.append(element);}
   }
@@ -1093,6 +1103,7 @@ function liveControlIcon(name){
     "camera-off":"<path d='m3 3 18 18M10 6h4a2 2 0 0 1 2 2v2l5-3v10l-5-3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2'/>",
     flip:"<path d='M20 7v5h-5M4 17v-5h5'/><path d='M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3'/>",
     users:"<path d='M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/>",
+    screen:"<rect x='2.5' y='3.5' width='19' height='14' rx='2'/><path d='M8 21h8M12 17.5V21M9 10l2 2 4-4'/>",
     gift:"<rect x='3' y='8' width='18' height='13' rx='2'/><path d='M12 8v13M3 12h18M12 8H7.5a2.5 2.5 0 1 1 2.4-3.2L12 8Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 8Z'/>",
     volume:"<path d='M11 5 6 9H3v6h3l5 4z'/><path d='M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13'/>",
     "volume-off":"<path d='m3 3 18 18M11 5 6 9H3v6h3l2 1.6M11 19l-1.5-1.2M16 9.5a5 5 0 0 1 .2 5M19 6.5a9 9 0 0 1 .5 10'/>",
@@ -1295,10 +1306,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveCameraFacing='user';
+  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
-    : "<div id='live-video-stage' class='live-video-stage'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div></div>";
+    : "<div id='live-video-stage' class='live-video-stage'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
   const liveEntryBanner=state.user?.gifterBadge?.liveEntranceUnlocked
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
@@ -1324,6 +1335,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
     (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
     (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
+    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen","Share your screen","Screen",{pressed:false}):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     role!=="host"?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
@@ -1417,12 +1429,20 @@ async function openLiveRoom(session,role,issuedLiveKit){
     }
   });
   const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);};
-  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false);refreshSpeakerRoster();});
-  room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>{element.closest?.(".live-video-tile")?.remove();element.remove();});refreshSpeakerRoster();});
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false,publication);refreshSpeakerRoster();});
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>{element.closest?.(".live-video-tile,.live-screen-share-tile")?.remove();element.remove();});const stage=$("#live-video-stage");if(stage&&!$("#live-screen-share-stage")?.querySelector(".live-screen-share-tile"))stage.classList.remove("has-live-screen-share");refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantConnected,()=>{updatePresence();refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantDisconnected,()=>{updatePresence();refreshSpeakerRoster();});
   if(client.RoomEvent.TrackPublished)room.on(client.RoomEvent.TrackPublished,refreshSpeakerRoster);
   if(client.RoomEvent.TrackUnpublished)room.on(client.RoomEvent.TrackUnpublished,refreshSpeakerRoster);
+  if(client.RoomEvent.LocalTrackUnpublished)room.on(client.RoomEvent.LocalTrackUnpublished,publication=>{
+    if(isLiveScreenSharePublication(publication)){
+      liveScreenShareEnabled=false;
+      $("#live-video-stage")?.classList.remove("has-live-screen-share");
+      updateLiveControlButton($("#live-screen-share-toggle"),"screen","Share your screen","Screen",false);
+    }
+    refreshSpeakerRoster();
+  });
   if(client.RoomEvent.ActiveSpeakersChanged)room.on(client.RoomEvent.ActiveSpeakersChanged,speakers=>{
     activeLiveSpeakerIds.clear();
     (Array.isArray(speakers)?speakers:[]).forEach(person=>activeLiveSpeakerIds.add(person.identity));
@@ -1444,7 +1464,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     $(".live-video-placeholder")?.remove();
     if(role==="host"&&broadcastType==="video_audio"){
       await room.localParticipant.enableCameraAndMicrophone();
-      for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
+      for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
     }else if(role==="host"||role==="guest"){
       await room.localParticipant.setMicrophoneEnabled(true);
       let microphonePublished=participantHasLiveAudio(room.localParticipant);
@@ -1458,7 +1478,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       if(role==="guest"&&broadcastType==="video_audio"){
         await room.localParticipant.setCameraEnabled(true);
         for(const publication of room.localParticipant.videoTrackPublications.values()){
-          if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
+          if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
         }
       }
     }
@@ -1468,6 +1488,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     setupLiveRewardPanel(session,role);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
+    const screenShareControl=$("#live-screen-share-toggle");
+    liveScreenShareEnabled=false;
     liveAudioMuted=false;
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
     if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&broadcastType==="video_audio");
@@ -1494,7 +1516,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         liveCameraEnabled=nextEnabled;
         if(nextEnabled){
           for(const publication of room.localParticipant.videoTrackPublications.values()){
-            if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true);
+            if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
           }
         }else{
           for(const publication of room.localParticipant.videoTrackPublications.values()){
@@ -1522,6 +1544,35 @@ async function openLiveRoom(session,role,issuedLiveKit){
         toast(nextFacing==="environment"?"Back camera selected.":"Front camera selected.");
       }catch(error){toast(error.message||"Could not switch cameras.");}
       finally{flipCameraControl.disabled=!liveCameraEnabled;}
+    });
+    screenShareControl?.addEventListener("click",async()=>{
+      if(role!=="host"||broadcastType!=="video_audio"){toast("Screen sharing is available to the host in video LIVE rooms.");return;}
+      if(typeof room.localParticipant.setScreenShareEnabled!=="function"){toast("Screen sharing is not supported by this browser.");return;}
+      const nextEnabled=!liveScreenShareEnabled;
+      screenShareControl.disabled=true;
+      try{
+        await room.localParticipant.setScreenShareEnabled(nextEnabled,{audio:false,contentHint:"detail"});
+        liveScreenShareEnabled=nextEnabled;
+        if(nextEnabled){
+          const source=client.Track?.Source?.ScreenShare??3;
+          const publication=Array.from(room.localParticipant.trackPublications?.values?.()||[]).find(item=>item?.source===source||isLiveScreenSharePublication(item));
+          if(publication?.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
+          const mediaTrack=publication?.track?.mediaStreamTrack;
+          mediaTrack?.addEventListener?.("ended",()=>{
+            liveScreenShareEnabled=false;
+            $("#live-video-stage")?.classList.remove("has-live-screen-share");
+            updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
+          },{once:true});
+        }else{
+          $("#live-screen-share-stage")?.replaceChildren();
+          $("#live-video-stage")?.classList.remove("has-live-screen-share");
+        }
+        updateLiveControlButton(screenShareControl,"screen",nextEnabled?"Stop sharing your screen":"Share your screen",nextEnabled?"Stop share":"Screen",nextEnabled);
+      }catch(error){
+        liveScreenShareEnabled=false;
+        updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
+        if(error?.name!=="NotAllowedError"&&error?.name!=="AbortError")toast(error.message||"Could not share your screen.");
+      }finally{screenShareControl.disabled=false;}
     });
     $("#live-chat-list")?.addEventListener("click",async event=>{
       const button=event.target?.closest?.("[data-live-chat-pin]");
