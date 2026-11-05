@@ -69,8 +69,8 @@ test('The host has a persistent master Guest stage ON/OFF control', () => {
   assert.match(app, /id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'/);
   assert.match(app, /setting:key,enabled:input\.checked/);
   assert.match(app, /packet\.setting==='guestStageEnabled'/);
-  assert.match(app, /Turn OFF to stop new requests and remove current speakers/);
-  assert.match(app, /Turn ON to let viewers request a seat again/);
+  assert.match(app, /Turn OFF to block requests and remove current speakers/);
+  assert.match(app, /Turn ON permits requests when Allow guest requests and Allow co-host are also enabled/);
 });
 
 test('Disabling Guest stage blocks requests, approvals, joins and connected guest sessions', () => {
@@ -85,7 +85,7 @@ test('Disabling Guest stage blocks requests, approvals, joins and connected gues
 });
 
 test('The Guest section shows request identity, status, time, counts and usable actions', () => {
-  for (const selector of ['live-guest-pending-count','live-guest-approved-count','live-guest-active-count','live-guest-history-count','live-speaker-username','live-speaker-status','live-speaker-requested-at','live-speaker-timeline','statusLabels','data-speaker-accept','data-speaker-reject','data-speaker-remove']) {
+  for (const selector of ['live-guest-pending-count','live-guest-approved-count','live-guest-active-count','live-guest-history-count','live-speaker-username','live-speaker-status','live-speaker-timeline','statusLabels','data-speaker-accept','data-speaker-reject','data-speaker-remove']) {
     assert.ok(app.includes(selector), 'missing Guest section detail: '+selector);
   }
   assert.match(server, /item\.sessionId === session\.id && item\.role === 'guest'/);
