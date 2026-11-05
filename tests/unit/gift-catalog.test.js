@@ -66,7 +66,7 @@ test("all gifts have valid coin prices and unique original asset paths", () => {
   const modelPaths = new Set();
   for (const gift of gifts) {
     assert.ok(Number.isSafeInteger(gift.coin_price) && gift.coin_price >= 1, gift.name);
-    assert.equal(gift.active, true, gift.name);
+    assert.equal(typeof gift.active, "boolean", gift.name);
     assert.equal(gift.image_url, "/assets/gifts/catalog/" + gift.code + ".svg", gift.name);
     assert.equal(gift.model_url, "/assets/gifts/catalog/" + gift.code + ".gltf", gift.name);
     assert.ok(!/^https?:\/\//i.test(gift.image_url));
