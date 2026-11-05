@@ -21,3 +21,127 @@
 .admin-control-centre-note{padding:11px 13px;border-radius:10px;background:var(--surface-soft,var(--soft));color:var(--muted);font-size:12px;line-height:1.5}
 .admin-control-centre .primary,.admin-control-centre .secondary{min-height:38px}
 @media(max-width:620px){.admin-control-centre-grid{grid-template-columns:1fr}.admin-control-centre-head{flex-direction:column}.platform-admin-profile-badge{padding:3px 7px;font-size:9px}}
+
+
+/* Compact premium owner/admin marker: visible, polished, and subordinate to the profile name. */
+.profile-info-main h1.profile-name-with-badges{
+  align-items:center;
+  column-gap:6px;
+  row-gap:3px;
+}
+.platform-admin-profile-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  flex:0 0 auto;
+  height:18px;
+  min-height:18px;
+  margin:0 0 0 1px;
+  padding:0 6px 0 5px;
+  border:1px solid rgba(190,157,82,.68);
+  border-radius:999px;
+  background:linear-gradient(180deg,#34465e 0%,#1c2a3d 100%);
+  color:#f3d99b;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 1px 3px rgba(15,23,42,.16);
+  font-size:8.5px;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1;
+  text-transform:uppercase;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+.platform-admin-profile-badge svg{
+  display:block;
+  width:11px;
+  height:11px;
+  flex:0 0 11px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* Keep legacy profile markup just as compact, rather than allowing an old banner to dominate. */
+.platform-admin-profile-banner{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  width:max-content;
+  max-width:100%;
+  height:18px;
+  min-height:18px;
+  margin:0 0 0 6px;
+  padding:0 6px 0 5px;
+  border:1px solid rgba(190,157,82,.68);
+  border-left:1px solid rgba(190,157,82,.68);
+  border-radius:999px;
+  background:linear-gradient(180deg,#34465e 0%,#1c2a3d 100%);
+  color:#f3d99b;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 1px 3px rgba(15,23,42,.16);
+  vertical-align:middle;
+}
+.platform-admin-profile-banner-icon{
+  display:grid;
+  place-items:center;
+  width:11px;
+  height:11px;
+  flex:0 0 11px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.platform-admin-profile-banner-icon svg{
+  display:block;
+  width:11px;
+  height:11px;
+  fill:none;
+  stroke:#f3d99b;
+  stroke-width:2;
+}
+.platform-admin-profile-banner-copy{display:block;line-height:1}
+.platform-admin-profile-banner-copy strong{
+  font-size:8.5px;
+  font-weight:850;
+  letter-spacing:.08em;
+  color:#f3d99b;
+}
+.platform-admin-profile-banner-copy small{display:none}
+.profile-view-as-person .platform-admin-profile-banner{
+  height:16px;
+  min-height:16px;
+  margin:0 0 0 5px;
+  padding:0 5px;
+  gap:3px;
+}
+.profile-view-as-person .platform-admin-profile-banner-icon,
+.profile-view-as-person .platform-admin-profile-banner-icon svg{
+  width:10px;
+  height:10px;
+  flex-basis:10px;
+}
+.profile-view-as-person .platform-admin-profile-banner-copy strong{font-size:8px}
+.profile-view-as-person .platform-admin-profile-badge{
+  height:16px;
+  min-height:16px;
+  padding:0 5px;
+  font-size:8px;
+}
+.profile-view-as-person .platform-admin-profile-badge svg{
+  width:10px;
+  height:10px;
+  flex-basis:10px;
+}
+@media(max-width:620px){
+  .profile-info-main h1.profile-name-with-badges{column-gap:5px;row-gap:3px}
+  .platform-admin-profile-badge{
+    height:16px;
+    min-height:16px;
+    gap:3px;
+    padding:0 5px;
+    font-size:8px;
+  }
+  .platform-admin-profile-badge svg{width:10px;height:10px;flex-basis:10px}
+}
