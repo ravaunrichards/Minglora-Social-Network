@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
-    "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
+    "profile_verification_get", "profile_verification_submit", "profile_verification_admin_members", "profile_verification_admin_set", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -1518,6 +1518,182 @@ Deno.serve(async (req: Request) => {
       autoScreeningStatus:result.data.auto_screening_status,autoScreeningScore:result.data.auto_screening_score,
       autoScreeningFlags:result.data.auto_screening_flags||[],submittedAt:result.data.submitted_at
     },notice:"Application submitted. Automated checks only organize the review; they do not grant verification."});
+  }
+
+  if (action === "profile_verification_admin_members") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const search = String(input.search || "").trim().slice(0, 80).toLowerCase();
+    if (!validUuid(adminUserId) ||
+        adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(403, { error: "Only the Creator Hub administrator can search verification and badge accounts." });
+    }
+
+    const [ownerResult, staffResult, profilesResult, usersResult] = await Promise.all([
+      admin.from("profiles")
+        .select("verification_status,verification_badge")
+        .eq("id", adminUserId)
+        .maybeSingle(),
+      admin.from("minglora_platform_staff")
+        .select("user_id")
+        .eq("user_id", adminUserId)
+        .eq("role", "owner")
+        .eq("active", true)
+        .contains("permissions", ["platform:admin", "verification:review"])
+        .limit(1)
+        .maybeSingle(),
+      admin.from("profiles")
+        .select("id,username,display_name,avatar_url,created_at,verification_status,verification_badge")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    ]);
+    if (ownerResult.error || staffResult.error || profilesResult.error || usersResult.error) {
+      return json(503, { error: "Minglora administrator or member verification records could not be loaded." });
+    }
+    if (ownerResult.data?.verification_status !== "verified" ||
+        ownerResult.data?.verification_badge !== "blue" ||
+        !staffResult.data?.user_id) {
+      return json(403, { error: "The verified Creator Hub owner permission is not active." });
+    }
+
+    const authUsers = usersResult.data?.users || [];
+    const emailById = new Map(authUsers.map((authUser: any) => [
+      String(authUser.id), String(authUser.email || "").trim().toLowerCase()
+    ]));
+    const members = (profilesResult.data || []).map((profile: any) => ({
+      id: profile.id,
+      username: profile.username || "",
+      displayName: profile.display_name || "",
+      email: emailById.get(String(profile.id)) || "",
+      avatarUrl: profile.avatar_url || "",
+      joinedAt: profile.created_at || null,
+      verificationStatus: profile.verification_status || "not_submitted",
+      verificationBadge: profile.verification_badge || "none"
+    })).filter((member: any) => !search ||
+      String(member.username).toLowerCase().includes(search) ||
+      String(member.displayName).toLowerCase().includes(search) ||
+      String(member.email).toLowerCase().includes(search) ||
+      String(member.id).toLowerCase() === search
+    ).slice(0, 100);
+
+    return json(200, { members });
+  }
+
+  if (action === "profile_verification_admin_set") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const targetUserId = String(input.targetUserId || "");
+    const verificationStatus = String(input.verificationStatus || "");
+    const note = String(input.note || "").trim().slice(0, 1000);
+    const allowedStatuses = ["not_submitted", "pending", "needs_information", "verified", "rejected", "suspended"];
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(targetUserId) ||
+        !allowedStatuses.includes(verificationStatus) || note.length < 5) {
+      return json(400, { error: "Choose a valid member, profile verification status and a review note of at least five characters." });
+    }
+    if (targetUserId === adminUserId && verificationStatus !== "verified") {
+      return json(400, { error: "The designated administrator's own verified profile cannot be revoked from this workspace." });
+    }
+
+    const [ownerResult, staffResult, targetProfileResult, targetAuthResult] = await Promise.all([
+      admin.from("profiles")
+        .select("verification_status,verification_badge")
+        .eq("id", adminUserId)
+        .maybeSingle(),
+      admin.from("minglora_platform_staff")
+        .select("user_id")
+        .eq("user_id", adminUserId)
+        .eq("role", "owner")
+        .eq("active", true)
+        .contains("permissions", ["platform:admin", "verification:review"])
+        .limit(1)
+        .maybeSingle(),
+      admin.from("profiles")
+        .select("id,username,display_name,verification_status,verification_badge")
+        .eq("id", targetUserId)
+        .maybeSingle(),
+      admin.auth.admin.getUserById(targetUserId)
+    ]);
+    if (ownerResult.error || staffResult.error || targetProfileResult.error || targetAuthResult.error) {
+      return json(503, { error: "Minglora administrator or member profile verification could not be checked." });
+    }
+    if (ownerResult.data?.verification_status !== "verified" ||
+        ownerResult.data?.verification_badge !== "blue" ||
+        !staffResult.data?.user_id) {
+      return json(403, { error: "The verified Creator Hub owner permission is not active." });
+    }
+    const profile = targetProfileResult.data;
+    const targetUser = targetAuthResult.data?.user;
+    if (!profile || !targetUser) return json(404, { error: "Minglora member account was not found." });
+
+    const badge = verificationStatus === "verified" ? "blue" : "none";
+    const stamp = new Date().toISOString();
+    const previousStatus = String(profile.verification_status || "not_submitted");
+    const previousBadge = profile.verification_badge === "blue" ? "blue" : "none";
+    const previousAppMetadata = targetUser.app_metadata || {};
+    const nextAppMetadata = {
+      ...previousAppMetadata,
+      verification_status: verificationStatus,
+      verification_badge: badge
+    };
+    const { error: authUpdateError } = await admin.auth.admin.updateUserById(targetUserId, {
+      app_metadata: nextAppMetadata
+    });
+    if (authUpdateError) return fail(authUpdateError, "Profile verification metadata could not be updated.");
+
+    const { data: updatedProfile, error: profileUpdateError } = await admin.from("profiles")
+      .update({ verification_status: verificationStatus, verification_badge: badge, updated_at: stamp })
+      .eq("id", targetUserId)
+      .select("id,username,display_name,verification_status,verification_badge")
+      .single();
+    if (profileUpdateError) {
+      await admin.auth.admin.updateUserById(targetUserId, { app_metadata: previousAppMetadata });
+      return fail(profileUpdateError, "Profile verification status could not be saved.");
+    }
+
+    const { data: audit, error: auditError } = await admin.from("minglora_profile_verification_admin_audit")
+      .insert({
+        actor_user_id: adminUserId,
+        target_user_id: targetUserId,
+        previous_status: previousStatus,
+        new_status: verificationStatus,
+        previous_badge: previousBadge,
+        new_badge: badge,
+        note
+      })
+      .select("id,created_at")
+      .single();
+    if (auditError) {
+      await admin.from("profiles").update({
+        verification_status: previousStatus,
+        verification_badge: previousBadge
+      }).eq("id", targetUserId);
+      await admin.auth.admin.updateUserById(targetUserId, { app_metadata: previousAppMetadata });
+      return fail(auditError, "Profile verification update was rolled back because its audit record could not be written.");
+    }
+
+    await admin.from("audit_log").insert({
+      actor_id: adminUserId,
+      action: "profile_verification_admin_set",
+      target_type: "profile",
+      target_id: targetUserId,
+      metadata: { previousStatus, verificationStatus, previousBadge, badge, note, auditId: audit.id }
+    });
+
+    return json(200, {
+      ok: true,
+      member: {
+        id: updatedProfile.id,
+        username: updatedProfile.username,
+        displayName: updatedProfile.display_name || "",
+        email: String(targetUser.email || "").trim().toLowerCase(),
+        verificationStatus: updatedProfile.verification_status,
+        verificationBadge: updatedProfile.verification_badge
+      },
+      audit: { id: audit.id, createdAt: audit.created_at }
+    });
   }
 
   if (action === "profile_verification_admin_queue") {

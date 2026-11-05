@@ -93,7 +93,7 @@ test('private contact information is only supplied to its owner or viewers allow
 test('profile shell and service worker load the organised About UI without stale cached assets',()=>{
   assert.match(html,/app\.js\?v=20261105-live-layout-expand-1/);
   assert.match(html,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(worker,/minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1/);
+  assert.match(worker,/minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
   assert.match(worker,/app\.js\?v=20261105-live-layout-expand-1/);
   assert.match(worker,/styles\.css\?v=20261105-live-layout-expand-1/);
 });

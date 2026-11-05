@@ -2622,6 +2622,147 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{gift:result.gift});
       }
+      if(method==='GET'&&p==='/api/admin/badge-controls/members'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can manage profile verification and gifter badges.'});
+        }
+        const search=new URL(req.url,'http://localhost').searchParams.get('search')||'';
+        const result=await requestSupabaseState('profile_verification_admin_members',{
+          adminUserId:user.id,adminEmail,search:String(search).slice(0,80)
+        });
+        const members=Array.isArray(result.members)?result.members:[];
+        return json(res,200,{members});
+      }
+      if(method==='POST'&&p==='/api/admin/profile-verification/set'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can change profile verification.'});
+        }
+        const targetUserId=String(input.targetUserId||'').trim();
+        const verificationStatus=String(input.verificationStatus||'');
+        const note=String(input.note||'').trim().slice(0,1000);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const allowedStatuses=['not_submitted','pending','needs_information','verified','rejected','suspended'];
+        if(!uuidPattern.test(targetUserId)||!allowedStatuses.includes(verificationStatus)||note.length<5){
+          return json(res,400,{error:'Choose a member, a valid verification status and a note of at least five characters.'});
+        }
+        const result=await requestSupabaseState('profile_verification_admin_set',{
+          adminUserId:user.id,adminEmail,targetUserId,verificationStatus,note
+        });
+        const member=result.member||{};
+        const localMember=db.users.find(item=>item.id===targetUserId);
+        if(localMember){
+          localMember.verificationStatus=member.verificationStatus||verificationStatus;
+          localMember.verificationBadge=member.verificationBadge||'none';
+          await saveStore();
+        }
+        return json(res,200,{ok:true,member,audit:result.audit||null});
+      }
+      if(method==='GET'&&p==='/api/admin/gifter-badges/status'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can inspect gifter badge controls.'});
+        }
+        const targetUserId=String(new URL(req.url,'http://localhost').searchParams.get('userId')||'').trim();
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!uuidPattern.test(targetUserId))return json(res,400,{error:'Choose a valid Minglora member account.'});
+        const memberResult=await requestSupabaseState('profile_verification_admin_members',{
+          adminUserId:user.id,adminEmail,search:targetUserId
+        });
+        const member=(memberResult.members||[]).find(item=>item.id===targetUserId);
+        if(!member)return json(res,404,{error:'Minglora member account was not found.'});
+        const override=(db.gifterBadgeAdminOverrides||[]).find(item=>item.userId===targetUserId)||null;
+        return json(res,200,{
+          member,
+          badge:getGifterBadgeSummary(db,targetUserId),
+          current:getGifterProgressionOverview(db,targetUserId).current,
+          override:override?{
+            grantedLevel:Number(override.grantedLevel||0),
+            progressionResetAt:override.progressionResetAt||null,
+            grantedAt:override.grantedAt||null,
+            note:override.note||''
+          }:null
+        });
+      }
+      if(method==='POST'&&p==='/api/admin/gifter-badges/manage'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can grant or reset gifter badges.'});
+        }
+        const targetUserId=String(input.targetUserId||'').trim();
+        const mode=String(input.mode||'');
+        const level=Number(input.level);
+        const note=String(input.note||'').trim().slice(0,240);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!uuidPattern.test(targetUserId)||!['grant_level','unlock_all','reset'].includes(mode)||
+           (mode==='grant_level'&&(!Number.isSafeInteger(level)||level<1||level>50))||note.length<5){
+          return json(res,400,{error:'Choose a member, a level from 1–50 (when granting), an action and a note of at least five characters.'});
+        }
+        const memberResult=await requestSupabaseState('profile_verification_admin_members',{
+          adminUserId:user.id,adminEmail,search:targetUserId
+        });
+        const target=(memberResult.members||[]).find(item=>item.id===targetUserId);
+        if(!target)return json(res,404,{error:'Minglora member account was not found.'});
+
+        db.gifterBadgeAdminOverrides ||= [];
+        db.gifterBadgeAdminAudit ||= [];
+        let override=db.gifterBadgeAdminOverrides.find(item=>item.userId===targetUserId);
+        const previousGrantedLevel=Math.max(0,Math.min(50,Math.floor(Number(override?.grantedLevel)||0)));
+        const previousResetAt=override?.progressionResetAt||null;
+        if(!override){
+          override={id:uid(),userId:targetUserId,grantedLevel:0,progressionResetAt:null,createdAt:now()};
+          db.gifterBadgeAdminOverrides.push(override);
+        }
+        if(mode==='reset'){
+          override.grantedLevel=0;
+          override.grantedAt=null;
+          override.grantedBy=null;
+          override.progressionResetAt=now();
+          override.resetBy=user.id;
+          override.resetNote=note;
+          override.note=note;
+          override.updatedAt=now();
+        }else{
+          override.grantedLevel=mode==='unlock_all'?50:level;
+          override.grantedAt=now();
+          override.grantedBy=user.id;
+          override.note=note;
+          override.updatedAt=now();
+          override.resetNote='';
+        }
+        const newGrantedLevel=Math.max(0,Math.min(50,Math.floor(Number(override.grantedLevel)||0)));
+        const audit={
+          id:uid(),targetUserId,targetEmail:target.email||'',targetUsername:target.username||'',
+          actorUserId:user.id,actorEmail:adminEmail,action:mode,
+          previousGrantedLevel,newGrantedLevel,previousResetAt,
+          progressionResetAt:override.progressionResetAt||null,note,createdAt:now()
+        };
+        db.gifterBadgeAdminAudit.unshift(audit);
+        if(db.gifterBadgeAdminAudit.length>1000)db.gifterBadgeAdminAudit.length=1000;
+        await saveStore();
+        const progression=getGifterProgressionOverview(db,targetUserId);
+        return json(res,200,{
+          ok:true,action:mode,member:target,
+          badge:getGifterBadgeSummary(db,targetUserId),
+          current:progression.current,
+          override:{
+            grantedLevel:newGrantedLevel,
+            progressionResetAt:override.progressionResetAt||null,
+            grantedAt:override.grantedAt||null,
+            note:override.note||''
+          },
+          audit
+        });
+      }
       if(method==='GET'&&p==='/api/gifter-progression/overview'){
         return json(res,200,{viewerId:user.id,badge:getGifterBadgeSummary(db,user.id),...getGifterProgressionOverview(db,user.id)});
       }

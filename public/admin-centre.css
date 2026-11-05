@@ -553,3 +553,33 @@
 #admin-promotional-gift-fund-history{max-height:260px;overflow:auto;font-size:.9rem}
 #admin-promotional-gift-fund-history ul{display:grid;gap:6px;margin:8px 0;padding-left:20px}
 #admin-promotional-gift-fund-history li{overflow-wrap:anywhere}
+
+/* Private admin badge and profile verification workspace. */
+.admin-badge-controls{scroll-margin-top:18px}
+.admin-badge-member-search{display:grid;gap:7px;min-width:0}
+.admin-badge-member-search label,.admin-badge-control-card label{font-size:.86rem;font-weight:700}
+.admin-badge-member-search>p,.admin-badge-control-card>div>p{margin:4px 0 0;color:var(--muted-text,#777);font-size:.85rem;line-height:1.5}
+.admin-badge-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.admin-badge-control-card{display:grid;gap:9px;min-width:0;padding:14px;border:1px solid var(--border-color,rgba(127,127,127,.2));border-radius:12px;background:var(--surface,transparent)}
+.admin-badge-control-card>div:first-child{display:grid;gap:3px}
+.admin-badge-control-card>div:first-child>strong{font-size:1rem}
+.admin-badge-control-card input,.admin-badge-control-card select,.admin-badge-control-card textarea{
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:10px 11px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));border-radius:9px;
+  color:var(--text);background:var(--surface-soft,var(--card));font:inherit;
+}
+.admin-badge-control-card textarea{resize:vertical;min-height:64px}
+.admin-badge-action-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.admin-badge-action-row button{flex:1 1 145px;min-width:0}
+.admin-badge-control-card [aria-live]{margin:0;min-height:1.25em;color:var(--muted-text,#777);font-size:.85rem;line-height:1.4}
+.admin-gifter-badge-current-status{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid var(--border-color,rgba(127,127,127,.18));border-radius:10px;background:var(--surface-soft,transparent);overflow-wrap:anywhere}
+.admin-gifter-badge-current-status>strong{font-size:.95rem}
+.admin-gifter-badge-current-status>small,.admin-gifter-badge-current-status>p{margin:0;color:var(--muted-text,#777);font-size:.82rem;line-height:1.45}
+.admin-gifter-awarded-label{display:inline-flex;justify-self:start;padding:3px 7px;border:1px solid #d7bd79;border-radius:999px;color:#8c6718;background:#fff7df;font-size:10px;font-weight:850;letter-spacing:.05em}
+.admin-badge-safety-note{margin:0;color:var(--muted-text,#777);font-size:.83rem;line-height:1.5}
+.admin-badge-control-card button:disabled{opacity:.6;cursor:wait}
+.admin-centre-navigation{flex-wrap:wrap;row-gap:8px}
+@media(max-width:760px){.admin-badge-control-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.admin-badge-control-card{padding:11px}.admin-badge-action-row{display:grid;grid-template-columns:1fr}.admin-badge-action-row button{width:100%}}
+
+

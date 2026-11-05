@@ -22,7 +22,7 @@ Every account starts with **no gifting badge and all 50 Gifter Levels locked**. 
 ])
 ```
 
-The maximum level is 50. The client receives the server-calculated level, progress, chart, history, and leaderboard; it cannot submit or award XP. Once earned, levels and badges remain unlocked.
+The maximum level is 50. The client receives the server-calculated level, progress, chart, history, and leaderboard; it cannot submit or award XP. Earned levels remain unlocked. An authorized MFA-verified Creator Hub admin may separately grant a level (including all 50), with an admin-awarded marker and audit entry; this does not add Coin spend or change any wallet. An admin reset starts a new progression epoch without deleting the original gift ledger or lifetime history.
 
 ## NEW GIFTER identity
 

@@ -77,7 +77,7 @@ test('profile tabs include a right-aligned three-dot overflow menu with requeste
   assert.match(css, /\.profile-tabs-overflow\{[^}]*align-items:center/);
   assert.match(css, /\.profile-overflow-trigger\{[^}]*align-self:center/);
   assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(sw, /minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1/);
+  assert.match(sw, /minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
   assert.match(html, /mobile-layout\.css\?v=20261104-mobile-navigation-1/);
   assert.match(sw, /mobile-layout\.css\?v=20261104-mobile-navigation-1/);
 });

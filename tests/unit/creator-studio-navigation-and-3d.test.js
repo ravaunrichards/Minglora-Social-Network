@@ -89,7 +89,7 @@ test('global navigation destinations all resolve to an application view and Home
 test('the app shell and service worker cache the same final navigation and stage build', () => {
   assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(html, /app\.js\?v=20261105-live-layout-expand-1/);
-  assert.match(worker, /minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1/);
+  assert.match(worker, /minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
   assert.match(worker, /styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(worker, /app\.js\?v=20261105-live-layout-expand-1/);
 });

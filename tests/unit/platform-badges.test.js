@@ -68,7 +68,8 @@ test('the designated Creator Hub account receives a blue profile verification st
     id: CREATOR_HUB_ADMIN_ID,
     email: 'CreatorHubCreatorNetwork@Gmail.Com',
     role: 'platform_owner',
-    verificationBadge: null
+    verificationStatus: 'verified',
+    verificationBadge: 'blue'
   };
 
   assert.equal(getProfileVerificationBadge(creator), 'blue');
@@ -76,11 +77,19 @@ test('the designated Creator Hub account receives a blue profile verification st
   assert.equal(getPlatformAdminBadge(creator, 'another-viewer-id'), null);
 });
 
-test('the creator verification sticker matches the account email case-insensitively', () => {
+test('email identity alone does not grant a verification sticker', () => {
   assert.equal(getProfileVerificationBadge({
     email: '  CREATORHUBCREATORNETWORK@GMAIL.COM ',
     verificationBadge: null
-  }), 'blue');
+  }), null);
+});
+
+test('revoked verification status hides a stale blue badge value', () => {
+  assert.equal(getProfileVerificationBadge({
+    email: 'member@example.test',
+    verificationStatus: 'rejected',
+    verificationBadge: 'blue'
+  }), null);
 });
 
 test('other accounts keep their existing verification state', () => {
@@ -91,6 +100,7 @@ test('other accounts keep their existing verification state', () => {
 
   assert.equal(getProfileVerificationBadge({
     email: 'verified@example.test',
+    verificationStatus: 'verified',
     verificationBadge: 'blue'
   }), 'blue');
 });
