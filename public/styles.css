@@ -3756,3 +3756,8 @@ body.auth-mode .auth-screen{
 .recharge-owner-issuance-form small{color:var(--muted);font-size:.7rem;line-height:1.45}
 .recharge-owner-issuance-form button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:700px){.recharge-owner-issuance-head{flex-direction:column}.recharge-owner-presets{grid-template-columns:repeat(2,minmax(0,1fr))}.recharge-owner-presets button:last-child{grid-column:1/-1}.recharge-owner-issuance-form>.primary{width:100%}}
+
+
+/* Separate member credit form, visible only to the verified owner. */
+.recharge-member-credit{border-color:color-mix(in srgb,var(--blue) 22%,var(--line))}
+.recharge-member-credit .recharge-owner-issuance-form{max-width:720px}
