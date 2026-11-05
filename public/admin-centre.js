@@ -3,19 +3,39 @@
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[char]));
 
-  function addProfileEntry() {
+  let checkingAdminAccess = false;
+
+  async function addProfileEntry() {
     const profileInfo = document.querySelector('.profile-info-main');
     const ownProfileControls = document.querySelector('#profile-edit-avatar');
-    const ownAdminBadge = profileInfo?.querySelector('.platform-admin-profile-badge');
-    if (!profileInfo || !ownProfileControls || !ownAdminBadge ||
-        profileInfo.querySelector('[data-open-admin-centre]')) return;
+    if (!profileInfo || !ownProfileControls ||
+        profileInfo.querySelector('[data-open-admin-centre]') ||
+        checkingAdminAccess) return;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'admin-centre-profile-button';
-    button.dataset.openAdminCentre = 'true';
-    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3.5 5.5v6.1c0 5.2 3.4 8.8 8.5 10.4 5.1-1.6 8.5-5.2 8.5-10.4V5.5L12 2Z"></path><path d="M8 12h8M12 8v8"></path></svg><span>Admin Control Centre</span>';
-    profileInfo.append(button);
+    checkingAdminAccess = true;
+    try {
+      const response = await fetch('/api/admin/access', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) return;
+      const access = await response.json();
+      if (access?.canAccess !== true || !profileInfo.isConnected ||
+          !ownProfileControls.isConnected ||
+          profileInfo.querySelector('[data-open-admin-centre]')) return;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'admin-centre-profile-button';
+      button.dataset.openAdminCentre = 'true';
+      button.setAttribute('aria-label', 'Open private Admin Control Centre');
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3.5 5.5v6.1c0 5.2 3.4 8.8 8.5 10.4 5.1-1.6 8.5-5.2 8.5-10.4V5.5L12 2Z"></path><path d="M8 12h8M12 8v8"></path></svg><span>Private Admin Controls</span>';
+      profileInfo.append(button);
+    } catch (error) {
+      console.warn('[Minglora admin] Private admin controls could not be checked.', error);
+    } finally {
+      checkingAdminAccess = false;
+    }
   }
 
   function addControlCentrePanel() {
@@ -37,7 +57,7 @@
         <span class="admin-control-centre-status">${unlocked ? 'Secure session active' : 'MFA required'}</span>
       </div>
       <div class="admin-control-centre-note">
-        Your Admin badge is part of your public Minglora profile. Administrative actions remain protected and require an authenticator-verified session.
+        Your administrator status is private. These controls are only shown to your secured CreatorHub account and protected actions require an authenticator-verified session.
       </div>
       ${unlocked ? `
         <div class="admin-control-centre-grid">
