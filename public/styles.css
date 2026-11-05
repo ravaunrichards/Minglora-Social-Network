@@ -5180,14 +5180,15 @@ button.live-ranking-row{cursor:pointer}
 }
 
 
-/* Default host-only Full Screen stage: portrait-shaped and comfortably sized
-   across phone, tablet and desktop without stretching across wide screens. */
+/* Host-only Full Screen is slightly taller than the standard portrait card.
+   Its viewport cap reserves room for the room header, chat composer and control
+   row beneath the stage, so the host feed grows without pushing controls offscreen. */
 .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
-  width:min(100%,62.4dvh,608px);
+  width:min(100%,61.5dvh,570px);
   max-width:100%;
   min-height:0;
-  max-height:min(78dvh,760px);
-  aspect-ratio:4 / 5;
+  max-height:min(82dvh,760px,calc(100dvh - 164px));
+  aspect-ratio:3 / 4;
   margin-inline:auto;
   border-radius:18px;
 }
@@ -5196,7 +5197,7 @@ button.live-ranking-row{cursor:pointer}
 }
 @media(max-height:520px){
   .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
-    width:min(100%,62.4dvh,608px);
-    max-height:78dvh;
+    width:min(100%,57dvh,292px);
+    max-height:min(76dvh,390px,calc(100dvh - 142px));
   }
 }
