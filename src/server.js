@@ -1169,6 +1169,12 @@ async function route(req, res) {
         currentSession.pendingEmail=email;await saveStore();
         return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
       }
+      if(method==='GET'&&p==='/api/admin/access'){
+        const canAccess = user.id==='5b998c21-86b5-4621-ab37-e0808a2657b1' &&
+          normalizeEmail(user.email)==='creatorhubcreatornetwork@gmail.com' &&
+          user.role==='platform_owner' && isModerator(user,req) && hasActiveReviewerSession(user);
+        return json(res,200,{canAccess});
+      }
       if(method==='GET'&&p==='/api/moderation/access')return json(res,200,{canModerate:isModerator(user,req)});
       if(method==='GET'&&p==='/api/security/sessions'){
         const sessions=(db.sessions||[]).filter(item=>item.userId===user.id&&new Date(item.expiresAt)>new Date()).map(item=>({
