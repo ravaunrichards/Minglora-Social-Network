@@ -255,10 +255,27 @@ function appSessionCookie(sid) {
 function clearAppSessionCookie() {
   return `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
+function readDeviceId(req) {
+  if(!req)return null;
+  const raw=cookie(req,'did');
+  if(!raw)return null;
+  let decoded;
+  try{decoded=decodeURIComponent(raw);}catch{return null;}
+  const separator=decoded.lastIndexOf('.');
+  if(separator<1)return null;
+  const id=decoded.slice(0,separator),supplied=Buffer.from(decoded.slice(separator+1),'utf8');
+  if(!/^[0-9a-f-]{36}$/i.test(id))return null;
+  const expected=Buffer.from(sign('minglora-device:'+id),'utf8');
+  return supplied.length===expected.length&&crypto.timingSafeEqual(supplied,expected)?id:null;
+}
+function deviceCookie(deviceId) {
+  const value=deviceId+'.'+sign('minglora-device:'+deviceId);
+  return `did=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${process.env.NODE_ENV==='production'?'; Secure':''}`;
+}
 async function createAppSession(user,authTokens=null,req=null) {
-  const sid=uid();const createdAt=now();
-  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
-  await saveStore();return appSessionCookie(sid);
+  const sid=uid(),createdAt=now(),deviceId=readDeviceId(req)||crypto.randomUUID();
+  db.sessions.push({id:sid,userId:user.id,deviceId,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
+  await saveStore();return [appSessionCookie(sid),deviceCookie(deviceId)];
 }
 function ensureLocalUser(authUser, fallback = {}) {
   if (!authUser?.id || !authUser?.email) throw Object.assign(new Error('Supabase Auth returned an incomplete user record.'), { status:502 });
@@ -313,6 +330,19 @@ const sessionAuth=createSessionAuthManager({
   openSession:openSessionAuth,sealSession:sealSessionAuth,
   refreshSession:supabaseRefreshSession,save:saveStore
 });
+async function reconcileConfirmedEmail(session,account) {
+  const pendingEmail=normalizeEmail(session?.pendingEmail||'');
+  if(AUTH_PROVIDER!=='supabase'||!pendingEmail||!account)return false;
+  const auth=await sessionAuth(session);
+  if(!auth?.access_token)return false;
+  const verified=await supabaseGetUser(auth.access_token);
+  if(verified?.id!==account.id||normalizeEmail(verified.email)!==pendingEmail||!(verified.email_confirmed_at||verified.confirmed_at))return false;
+  if(db.users.some(item=>item.id!==account.id&&normalizeEmail(item.email)===pendingEmail))return false;
+  account.email=pendingEmail;
+  delete session.pendingEmail;
+  await saveStore();
+  return true;
+}
 async function body(req, maxBytes=1_000_000) {
   const chunks = [];
   let total = 0;
@@ -992,8 +1022,52 @@ async function route(req, res) {
         return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
-      if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
+      if (method==='GET' && p==='/api/auth/me') {
+        if(user&&AUTH_PROVIDER==='supabase'){
+          const activeSession=sessionFromRequest(req);
+          try{await reconcileConfirmedEmail(activeSession,user);}catch{}
+        }
+        return json(res,200,{user:user?safeUser(user,user.id):null});
+      }
       requireAuth(user);
+      if(method==='GET'&&p==='/api/auth/accounts'){
+        const activeSession=sessionFromRequest(req);
+        if(!activeSession)return json(res,401,{error:'Your sign-in session has expired. Log in again.'});
+        let deviceId=readDeviceId(req),setDeviceCookie=false;
+        if(!deviceId){deviceId=crypto.randomUUID();setDeviceCookie=true;}
+        if(activeSession.deviceId!==deviceId){activeSession.deviceId=deviceId;await saveStore();}
+        const deviceSessions=(db.sessions||[])
+          .filter(item=>item.deviceId===deviceId&&!item.authInvalidatedAt&&Date.parse(item.expiresAt)>Date.now())
+          .sort((a,b)=>Number(b.id===activeSession.id)-Number(a.id===activeSession.id)||Date.parse(b.lastSeenAt||b.createdAt||0)-Date.parse(a.lastSeenAt||a.createdAt||0));
+        const seenAccounts=new Set(),accounts=[];
+        for(const item of deviceSessions){
+          const savedAccount=db.users.find(candidate=>candidate.id===item.userId);
+          if(!savedAccount||['suspended','deactivated'].includes(savedAccount.status)||seenAccounts.has(savedAccount.id))continue;
+          seenAccounts.add(savedAccount.id);
+          accounts.push({sessionId:item.id,id:savedAccount.id,name:savedAccount.name,username:savedAccount.username,email:savedAccount.email||'',avatar:savedAccount.avatar||'',isCurrent:item.id===activeSession.id});
+          if(accounts.length>=10)break;
+        }
+        return json(res,200,{accounts},setDeviceCookie?{'Set-Cookie':deviceCookie(deviceId)}:{});
+      }
+      if(method==='POST'&&p==='/api/auth/switch'){
+        const sessionId=String(input.sessionId||'').trim(),deviceId=readDeviceId(req);
+        if(!sessionId||sessionId.length>128)return json(res,400,{error:'Choose a saved Minglora profile.'});
+        if(!deviceId)return json(res,403,{error:'This device could not be verified. Sign in to that account again to add it here.'});
+        const targetSession=(db.sessions||[]).find(item=>item.id===sessionId&&item.deviceId===deviceId&&!item.authInvalidatedAt&&Date.parse(item.expiresAt)>Date.now());
+        if(!targetSession)return json(res,404,{error:'That profile is no longer available on this device. Sign in again to add it.'});
+        const targetAccount=db.users.find(item=>item.id===targetSession.userId);
+        if(!targetAccount||['suspended','deactivated'].includes(targetAccount.status))return json(res,403,{error:'This Minglora account is not available.'});
+        if(AUTH_PROVIDER==='supabase'){
+          const auth=await sessionAuth(targetSession);
+          if(!auth?.access_token)return json(res,401,{error:'This saved sign-in has expired. Sign in to this account again.'});
+          const verified=await supabaseGetUser(auth.access_token);
+          if(verified?.id!==targetAccount.id)return json(res,401,{error:'Minglora could not verify this saved account session. Sign in again.'});
+          try{await reconcileConfirmedEmail(targetSession,targetAccount);}catch{}
+        }
+        targetSession.lastSeenAt=now();
+        await saveStore();
+        return json(res,200,{user:safeUser(targetAccount,targetAccount.id)},{'Set-Cookie':appSessionCookie(targetSession.id)});
+      }
       if(method==='POST'&&p==='/api/auth/phone/change'){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Verified phone authentication requires Supabase Auth.'});
         const phone=normalizeContactPhone(input.phone||'');
@@ -1142,7 +1216,11 @@ async function route(req, res) {
         };
         return json(res,200,exportData,{'Content-Disposition':'attachment; filename="minglora-account-export.json"','Cache-Control':'no-store'});
       }
-      if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{name:user.name,username:user.username,email:user.email||''}});
+      if(method==='GET'&&p==='/api/settings'){
+        const activeSession=sessionFromRequest(req);
+        if(activeSession?.pendingEmail){try{await reconcileConfirmedEmail(activeSession,user);}catch{}}
+        return json(res,200,{settings:getUserSettings(user),account:{name:user.name,username:user.username,email:user.email||'',pendingEmail:activeSession?.pendingEmail||''}});
+      }
       if(method==='PATCH'&&p==='/api/settings'){
         const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
         user.settings=validation.settings;await saveStore();return json(res,200,{settings:getUserSettings(user)});

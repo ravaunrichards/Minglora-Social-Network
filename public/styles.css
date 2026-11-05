@@ -3745,3 +3745,29 @@ body.auth-mode .auth-screen{
 .story-media-controls{display:flex;align-items:center;justify-content:center;gap:22px;padding:10px;color:var(--muted);font-size:12px;font-weight:800}
 .story-media-controls button{min-width:42px;min-height:36px;padding:5px 12px;font-size:22px;line-height:1}
 .story-media-count{position:absolute;top:48px;right:7px;padding:4px 7px;border-radius:8px;background:#182238c9;color:#fff;font-size:10px;font-weight:800}
+
+
+/* Device-local account and profile switcher */
+.account-switcher-modal{width:min(100%,520px)}
+.account-switcher-list{display:flex;flex-direction:column;gap:8px}
+.account-switch-entry{display:flex;align-items:center;gap:12px;width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);text-align:left}
+.account-switch-entry:not(:disabled):hover{border-color:var(--blue);background:var(--surface-soft)}
+.account-switch-entry:disabled{cursor:default;opacity:1}
+.account-switch-avatar{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#3185ed,#1456bd);color:#fff;font-weight:850;font-size:18px;box-shadow:0 3px 8px #1769e033}
+.account-switch-meta{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.account-switch-meta strong,.account-switch-meta small{display:block;min-width:0;overflow-wrap:anywhere}
+.account-switch-meta strong{font-size:13px}
+.account-switch-meta small{font-size:11px;color:var(--muted)}
+.account-switch-action{flex:0 0 auto;color:var(--blue);font-size:11px;font-weight:800}
+.account-switcher-divider{height:1px;background:var(--line);margin:18px 0}
+.account-switcher-login h3{font-size:14px;margin:0 0 10px}
+.account-switcher-login .field{display:block;margin:10px 0}
+.account-switcher-login .field>span{display:block;font-size:12px;font-weight:700;margin-bottom:5px}
+.account-switcher-login input{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+.account-switcher-privacy{font-size:11px;line-height:1.5;color:var(--muted);margin:12px 0 0}
+.switch-profile-action .nav-3d-icon{width:25px;height:25px;margin:auto}
+@media(max-width:760px){
+  .account-switcher-modal{width:100%}
+  .account-switch-entry{padding:10px}
+  .account-switcher-privacy{font-size:10px}
+}
