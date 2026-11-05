@@ -5596,7 +5596,7 @@ button.live-ranking-row{cursor:pointer}
   max-height:none!important;margin:0!important;padding:0!important;overflow:hidden!important;
 }
 .live-player-shell.live-full-screen-bottom-dock .live-video-column{
-  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  position:relative!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;
   grid-column:1!important;grid-row:1!important;width:100%!important;height:100%!important;
   min-width:0!important;min-height:0!important;margin:0!important;padding:8px 8px 76px!important;
   gap:8px!important;overflow:hidden!important;box-sizing:border-box!important;
