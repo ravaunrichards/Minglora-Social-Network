@@ -179,7 +179,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-admin-mfa-enrollment-2',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-gifter-horizontal-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     await registration.update().catch(()=>{});
     if(!state.user)return;
@@ -200,7 +200,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261105-admin-mfa-enrollment-2',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.register('/sw.js?v=20261105-gifter-horizontal-1',{scope:'/',updateViaCache:'none'})
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
