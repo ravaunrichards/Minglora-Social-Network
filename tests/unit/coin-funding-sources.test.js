@@ -100,6 +100,6 @@ test('the PWA shell cache includes the wallet, admin controls and the updated UI
   assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(html, /app\.js\?v=20261105-live-layout-expand-1/);
   assert.match(worker, /minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
-  assert.match(worker, /admin-centre\.css\?v=20261105-marketing-budget-1/);
+  assert.match(worker, /admin-centre\.css\?v=20261105-admin-badge-verification-1-promotional-cash-reserve-1/);
   assert.match(worker, /admin-centre\.js\?v=20261105-marketing-budget-1/);
 });
