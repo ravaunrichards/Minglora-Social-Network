@@ -858,6 +858,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
     "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button><button type='button' data-live-filter='mobile_gaming'>Gaming</button><button type='button' data-live-filter='live_studio'>Studio</button></div>"+
+    "<section class='live-discovery-board card'><nav class='live-discovery-tabs' aria-label='LIVE discovery rankings'><button type='button' data-live-discovery='daily'>Daily</button><button type='button' data-live-discovery='popular'>Popular LIVE</button><button type='button' data-live-discovery='league'>League</button></nav><div id='live-discovery-content'><p class='muted'>Loading Daily LIVE rankings…</p></div></section>"+
     "<div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
@@ -932,6 +933,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   $("#refresh-live")?.addEventListener("click",renderLive);
   $("#open-live-coins")?.addEventListener("click",()=>activateNav("coins"));
   bindLiveDirectoryCards(sessions);
+  bindLiveDiscoveryBoards(sessions);
 }
 async function refreshLiveDirectorySessions(){
   if(state.view!=='live'||activeLiveRoom){stopLiveDirectoryRefresh();return;}
@@ -1789,7 +1791,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<section id='live-gift-panel' class='live-tools-card' data-live-tools-panel='gifts'><strong>Gifts are turned off</strong><p>The host has disabled paid gifts and reward drops for this LIVE.</p></section>"
     : role==="host"
       ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note' data-live-tools-panel='gifts'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
-      : "<section id='live-gift-panel' class='live-gift-panel' data-live-tools-panel='gifts'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+      : "<section id='live-gift-panel' class='live-gift-panel' data-live-tools-panel='gifts'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note'>Team Gifts are unlocked when you join this host’s Fan Club.</p><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
   const liveFanClubTools="<section id='live-fan-club-panel' class='live-tools-card live-fan-club-panel' data-live-tools-panel='fanclub'><div class='live-panel-title'><strong>♥ Fan Club & Team Gifts</strong><small>Join this creator’s Fan Club with the 1-Coin Heart Me gift. Earn Fan Points by watching, chatting and gifting.</small></div>"+
     (role==='host'?"<div id='live-fan-club-status' class='live-fan-club-status'><strong>Creator Fan Club</strong><small>Members can unlock Team Gifts and Fan badges.</small></div>":"<div id='live-fan-club-status' class='live-fan-club-status'><small>Checking your Fan Club membership…</small></div><button type='button' id='live-fan-club-join-panel' class='live-fan-club-join-panel'>♥ Join for 1 Coin</button><button type='button' id='live-team-gifts-open' class='secondary'>Open Team Gifts</button>")+
     "<div class='live-fan-club-member-total'><span>Fan Club members</span><strong id='live-fan-club-member-count'>"+Number(session.fanClubMemberCount||0).toLocaleString()+"</strong></div><small class='live-fan-club-expiry-note'>Membership pauses after 7 days without earning Fan Points.</small></section>";
@@ -2356,7 +2358,10 @@ activeLivePinnedComment=null;
       const drawLiveGiftGrid=()=>{
         if(!giftGrid)return;
         const query=liveGiftQuery.trim().toLowerCase();
-        const filtered=liveGiftCatalogue.filter(item=>!query||(item.name+" "+item.category+" "+item.code+" "+String(item.coin_price)).toLowerCase().includes(query));
+        const filtered=liveGiftCatalogue.filter(item=>{
+          const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(item.code);
+          return (liveGiftScope==='all'||teamGift)&&(!query||(item.name+" "+item.category+" "+item.code+" "+String(item.coin_price)).toLowerCase().includes(query));
+        });
         filtered.sort((a,b)=>liveGiftSort==="name"
           ?a.name.localeCompare(b.name)
           :liveGiftSort==="low"
@@ -2365,11 +2370,22 @@ activeLivePinnedComment=null;
         const shown=filtered.slice(0,liveGiftVisible);
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
           const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name)+"'>":esc(gift.emoji||"🎁");
-          return "<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>";
+          const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
+          const locked=teamGift&&!liveFanClubState?.isMember;
+          return "<button type='button' class='live-gift-button "+(teamGift?'is-team-gift ':'')+(locked?'is-locked':'')+"' data-live-gift='"+esc(gift.code)+"' "+(locked?"disabled aria-disabled='true' title='Join this host’s Fan Club to unlock Team Gifts'":"")+"><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+(teamGift?" ♥":"")+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins"+(locked?" · Fan Club only 🔒":"")+"</small></button>";
         }).join(""):"<p class='muted'>No gifts match your search.</p>";
         if(liveGiftMore){liveGiftMore.hidden=shown.length>=filtered.length;liveGiftMore.textContent="Show more gifts · "+Math.max(0,filtered.length-shown.length).toLocaleString()+" remaining";}
       };
+      refreshLiveGiftGrid=drawLiveGiftGrid;
       drawLiveGiftGrid();
+      const giftScopeTabs=document.querySelectorAll('[data-live-gift-scope]');
+      giftScopeTabs.forEach(button=>button.addEventListener('click',()=>{
+        if(button.dataset.liveGiftScope==='team'&&!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
+        liveGiftScope=button.dataset.liveGiftScope;
+        giftScopeTabs.forEach(item=>{const active=item===button;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));});
+        const note=$('#live-gift-team-note');if(note)note.textContent=liveGiftScope==='team'?'Fan Club Team Gifts · for active members of this host’s team.':'Team Gifts are unlocked when you join this host’s Fan Club.';
+        liveGiftVisible=48;drawLiveGiftGrid();
+      }));
       liveGiftSearch?.addEventListener("input",()=>{liveGiftQuery=liveGiftSearch.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftSortControl?.addEventListener("change",()=>{liveGiftSort=liveGiftSortControl.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftMore?.addEventListener("click",()=>{liveGiftVisible+=48;drawLiveGiftGrid();});
