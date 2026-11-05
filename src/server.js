@@ -1475,6 +1475,7 @@ async function route(req, res) {
         };
         let visibility = String(input.visibility || 'public');
         const broadcastType = liveMode === 'audio_only' ? 'audio_only' : 'video_audio';
+        if (!liveSettings.audienceControl && !liveSettings.practiceMode) visibility = 'public';
         if (liveSettings.practiceMode) visibility = 'private';
         if (!title || title.length > 120 || !['public', 'followers', 'friends', 'private'].includes(visibility) || !liveMode) {
           return json(res, 400, { error: 'Enter a live title, choose an audience and select one of the available LIVE formats.' });
@@ -2179,8 +2180,8 @@ async function route(req, res) {
         const follower=(db.follows||[]).some(edge=>edge.followerId===user.id&&edge.followedId===session.hostId);
         const canView=session.hostId===user.id||(!session.liveSettings?.practiceMode&&session.visibility==='public')||(!session.liveSettings?.practiceMode&&session.visibility==='friends'&&friends)||(!session.liveSettings?.practiceMode&&session.visibility==='followers'&&follower);
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
-        if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
         if(session.liveSettings?.groupChats===false)return json(res,403,{error:'The host has disabled LIVE group chat for this broadcast.'});
+        if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
         return json(res,201,sent);
       }
