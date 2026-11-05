@@ -25,6 +25,6 @@ test("host, guest, viewer, and sender use the same deduplicated 3D gift presenta
 });
 
 test("LIVE entry primes browser audio and retains polling recovery", () => {
-  assert.match(app, /async function openLiveRoom\(session,role,issuedLiveKit\)\{\n  window\.MingloraGiftFX\?\.prime\(\);/);
+  assert.match(app, /async function openLiveRoom\(session,role,issuedLiveKit\)\{\n  stopLiveChatRefresh\(\);stopLiveSpeakerRefresh\(\);stopLiveParticipantSync\(\);\n  window\.MingloraGiftFX\?\.prime\(\);/);
   assert.match(app, /liveGiftEventsTimer=setInterval\(\(\)=>void refreshLiveGiftEvents\(session\),2200\)/);
 });
