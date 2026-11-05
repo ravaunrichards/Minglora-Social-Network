@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1769e0">
+<title>Confirm Minglora promotional gift funding</title>
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body{min-height:100vh;display:grid;place-items:center;padding:24px}
+  .fund-return{width:min(100%,520px);padding:28px}
+  .fund-return h1{margin-top:0}
+  .fund-return [role=status]{min-height:2.5em}
+</style>
+</head>
+<body>
+<main class="card fund-return">
+  <span class="eyebrow">Minglora · Promotional Gift Reserve</span>
+  <h1>Confirm your PayPal funding</h1>
+  <p id="fund-status" role="status" aria-live="polite">Verifying PayPal payment with Minglora…</p>
+  <a id="fund-return-home" class="primary" href="/" hidden>Return to Minglora</a>
+</main>
+<script type="module">
+const status=document.getElementById('fund-status');
+const home=document.getElementById('fund-return-home');
+const orderId=new URLSearchParams(location.search).get('token');
+try{
+  if(!orderId)throw new Error('PayPal did not return a funding order reference.');
+  const response=await fetch('/api/admin/promotional-gift-fund/capture?token='+encodeURIComponent(orderId),{
+    method:'GET',credentials:'same-origin',headers:{Accept:'application/json'}
+  });
+  if(response.redirected){location.replace(response.url);throw new Error('');}
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||'Minglora could not confirm the PayPal funding capture.');
+  status.textContent='Your PayPal funding was confirmed and added to the promotional gift cash reserve.';
+  home.hidden=false;
+}catch(error){
+  if(error.message)status.textContent=error.message;
+  home.hidden=false;
+}
+</script>
+</body>
+</html>

@@ -5903,3 +5903,7 @@ button.live-ranking-row{cursor:pointer}
   .live-stage-gift-open{min-height:34px;padding:0 8px;font-size:9px}
   .live-stage-gift-open span{font-size:9px}
 }
+
+.gift-funding-source-label,.live-gift-funding-source{display:grid;gap:6px;margin:12px 0;font-weight:650}
+.gift-funding-source-label select,.live-gift-funding-source select{width:100%;min-height:42px;padding:9px 12px;border:1px solid var(--line,rgba(127,127,127,.24));border-radius:10px;background:var(--card,#fff);color:var(--text,#182230);font:inherit}
+.gift-funding-source-note,.live-gift-promo-fund-note{display:block;margin:6px 0 12px;color:var(--muted,#667085);font-size:.88rem;line-height:1.45}
