@@ -71,3 +71,10 @@ test('Full Screen gives the host a taller portrait stage while reserving room fo
   assert.match(styles, /max-height:min\(76dvh,390px,calc\(100dvh - 142px\)\)/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
+
+
+test('Full Screen layout picker uses a dedicated expand-to-fullscreen icon', () => {
+  assert.match(app, /value:'full-screen',label:'Full Screen',icon:'fullscreen'/);
+  assert.ok(app.includes(`fullscreen:"<path d='M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5'/>"`));
+  assert.match(app, /LIVE_SCREEN_LAYOUT_OPTIONS\.map\(option=>[\s\S]*?liveLayoutIcon\(option\.icon\)/);
+});
