@@ -21,6 +21,9 @@ function thoughtAvatarMarkup(member,className='avatar',clickToProfile=false){
 const verifiedProfileBadge = member => member?.verificationBadge==='blue'
   ? '<span class="profile-blue-verification" role="img" aria-label="Verified on Minglora" title="Verified on Minglora">✓</span>'
   : '';
+const PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID = '28e1df97-3fe1-488e-bb84-bdc353c58653';
+const profileNameVerificationBadge = member =>
+  member?.id === PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID ? '' : verifiedProfileBadge(member);
 const platformAdminProfileBadge = member => member?.platformBadge==='admin'
   ? '<span class="platform-admin-profile-badge" role="img" aria-label="Minglora platform administrator" title="Minglora platform administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8 21 5.2v6.5c0 5.4-3.6 9.1-9 11.5-5.4-2.4-9-6.1-9-11.5V5.2L12 1.8Z"></path><path d="m8.3 12.2 2.3 2.3 5.2-5.3"></path></svg><span>Admin</span></span>'
   : '';
@@ -227,6 +230,16 @@ function syncNavigationActive(){
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','live','messages'].includes(activeView));
 }
 function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();syncNavigationActive();renderView();}
+window.addEventListener('minglora:open-wallet',event=>{
+  const tab=['recharge','earnings','exchange'].includes(event.detail?.tab)?event.detail.tab:'recharge';
+  state.rechargeTab=tab;
+  activateNav('coins');
+});
+window.addEventListener('minglora:open-creator-section',async event=>{
+  const section=['monetization','overview','audience','analytics','pages','settings'].includes(event.detail?.section)?event.detail.section:'monetization';
+  await renderCreator();
+  await renderCreatorSection(section);
+});
 function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-wallet-3d-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
@@ -731,15 +744,21 @@ function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function liveSessionCardMarkup(session){
   const audioOnly=session.broadcastType==='audio_only';
-  const type=audioOnly?'audio_only':'video_audio';
+  const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
+    ?session.liveMode:(audioOnly?'audio_only':'video_audio');
+  const modeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const theme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  const presence=session.viewerCountVerified?'◉ '+Number(session.viewerCount||0).toLocaleString()+' in room':'Live presence unavailable';
-  return "<article class='live-room-card' data-live-type='"+type+"'><div class='live-room-preview live-preview-theme-"+theme+(audioOnly?" live-room-preview-audio":"")+"'>"+
-    "<span class='live-indicator'>LIVE</span><span class='live-type-pill "+(audioOnly?'audio':'video')+"'>"+(audioOnly?'AUDIO ONLY':'VIDEO + AUDIO')+"</span>"+
-    "<span class='live-room-viewers'>"+presence+"</span>"+
-    (audioOnly?"<div class='live-directory-audio-orb'><span>♪</span></div>":"<div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div>")+
-    "</div><div class='live-room-details'><strong>"+esc(session.title)+"</strong><span>"+esc(session.host?.name||'Minglora creator')+"</span><small>@"+esc(session.host?.username||'member')+gifterProfileBadge(session.host)+
-    "</small><button class='primary' data-watch-live='"+esc(session.id)+"'>"+(audioOnly?'Listen LIVE':'Watch LIVE')+"</button></div></article>";
+  const showViewers=session.liveSettings?.markViewers!==false;
+  const presence=!showViewers?'':session.viewerCountVerified?'◉ '+Number(session.viewerCount||0).toLocaleString()+' in room':'Live presence unavailable';
+  const boardLabels={general:'General',gaming:'Gaming',music:'Music',talk:'Talk',education:'Education',beauty:'Beauty',sports:'Sports',business:'Business',lifestyle:'Lifestyle'};
+  return "<article class='live-room-card' data-live-type='"+liveMode+"'><div class='live-room-preview live-preview-theme-"+theme+(audioOnly?" live-room-preview-audio":"")+(liveMode==='mobile_gaming'?" live-room-preview-gaming":"")+"'>"+
+    "<span class='live-indicator'>LIVE</span><span class='live-type-pill "+(audioOnly?'audio':'video')+"'>"+modeLabels[liveMode]+"</span>"+
+    (presence?"<span class='live-room-viewers'>"+presence+"</span>":"")+
+    (audioOnly?"<div class='live-directory-audio-orb'><span>♪</span></div>":liveMode==='mobile_gaming'?"<div class='live-directory-audio-orb'><span>🎮</span></div>":"<div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div>")+
+    "</div><div class='live-room-details'><strong>"+esc(session.title)+"</strong><span>"+esc(session.host?.name||'Minglora creator')+"</span><small>@"+esc(session.host?.username||'member')+gifterProfileBadge(session.host)+"</small>"+
+    "<small class='live-room-board'>"+esc(boardLabels[session.liveSettings?.board]||'General')+"</small>"+
+    (session.description?"<p class='live-room-description'>"+esc(session.description)+"</p>":"")+
+    "<button class='primary' data-watch-live='"+esc(session.id)+"'>"+(audioOnly?'Listen LIVE':'Watch LIVE')+"</button></div></article>";
 }
 function applyLiveDirectoryFilter(filter=liveDirectoryFilter){
   liveDirectoryFilter=filter;
@@ -759,28 +778,106 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   const liveStatusText=!status.configured?"Live provider not configured":liveReady?"LiveKit ready":"Live provider connection failed";
   const cards=sessions.length?sessions.map(liveSessionCardMarkup).join(""):status.liveDirectoryError
     ?"<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE directory unavailable</h3><p>"+esc(status.liveDirectoryError)+"</p></section>"
-    :"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a video broadcast or an independent audio room and bring your community together.</p></section>";
+    :"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a video broadcast, mobile gaming stream or an independent audio room and bring your community together.</p></section>";
   const packages=Array.isArray(catalog?.packages)?catalog.packages.slice(0,4):[];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, independent audio rooms, creator chat and animated 3D gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
-    "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose how people experience your broadcast. Audio Only never requests camera access.</p></div>"+
-    "<form id='live-create-form' class='live-create-form'><fieldset class='live-format-picker'><legend>Broadcast format</legend>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='video_audio' "+(state.liveStartFormat==='video_audio'?'checked':'')+"><span class='live-format-icon'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg></span><span><strong>Video + Audio</strong><small>Camera and microphone</small></span></label>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='audio_only' "+(state.liveStartFormat==='audio_only'?'checked':'')+"><span class='live-format-icon audio'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg></span><span><strong>Audio Only</strong><small>Microphone, voice and audience</small></span></label></fieldset>"+
-      "<input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
+  const selectedMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(state.liveStartFormat)?state.liveStartFormat:'video_audio';
+  const modeOptions=[
+    {value:'video_audio',label:'Video + Audio',detail:'Camera and microphone',icon:'live'},
+    {value:'audio_only',label:'Audio Only',detail:'Microphone; no camera access',icon:'microphone'},
+    {value:'mobile_gaming',label:'Mobile Gaming',detail:'Mic + screen share; device support required',icon:'live'},
+    {value:'live_studio',label:'Live Studio',detail:'Camera, mic and screen share',icon:'creator'}
+  ];
+  const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#creator'></use></svg>")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
+  const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+    "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
+    "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
+    "<div class='live-preflight-fields'>"+
+      "<label class='live-preflight-field'><span>LIVE title</span><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'></label>"+
+      "<label class='live-preflight-field'><span>LIVE board</span><select name='board'>"+boardOptions.map(([value,label])=>"<option value='"+value+"'>"+label+"</option>").join("")+"</select></label>"+
+      "<label class='live-preflight-field' id='live-audience-field'><span>Who can watch?</span><select name='visibility' id='live-audience-select'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select></label>"+
+      "<label class='live-preflight-field' id='live-quality-field'><span>Live quality</span><select name='liveQuality'><option value='auto'>Auto · Recommended</option><option value='720p'>720p · Balanced</option><option value='1080p'>1080p · High bandwidth</option></select></label>"+
+      "<label class='live-preflight-field live-preflight-wide'><span>About me / live description</span><textarea name='aboutMe' rows='2' maxlength='500' placeholder='Tell viewers what this LIVE is about (optional)'></textarea></label>"+
+    "</div>"+
+    "<div class='live-preflight-section'><div class='live-preflight-section-title'><strong>Broadcast controls</strong><small>Compact controls · change any setting before you start</small></div><div class='live-preflight-switches'>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='practiceMode'><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#lock'></use></svg></span><span><strong>Practice mode</strong><small>Private test room; no public alert or paid gifts</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='noiseSuppression' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#sound'></use></svg></span><span><strong>Noise suppression</strong><small>Reduce background noise in your microphone</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='optimizeForStability' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore'></use></svg></span><span><strong>Optimize for stability</strong><small>Adaptive video and bandwidth-saving publishing</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='markViewers' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile'></use></svg></span><span><strong>Show viewer count</strong><small>Display the verified LIVE audience count</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='communitySafety' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#privacy'></use></svg></span><span><strong>Community safety</strong><small>Keep LIVE safety and reporting guidance visible</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='liveGifts' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#coins'></use></svg></span><span><strong>LIVE gifts</strong><small>Allow Coins gifts and reward drops in this LIVE</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='audienceControl' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends'></use></svg></span><span><strong>Audience control</strong><small>Use the audience selector above</small></span></label>"+
+    "</div></div>"+
+    "<details class='live-preflight-advanced'><summary>Disclosure & client acquisition <span>More settings</span></summary><div class='live-preflight-fields'>"+
+      "<label class='live-preflight-field'><span>Content disclosure</span><select name='contentDisclosure'><option value='none'>No disclosure</option><option value='branded'>Branded content / partnership</option><option value='sponsored'>Sponsored content</option></select></label>"+
+      "<label class='live-preflight-toggle live-preflight-cta-toggle'><input type='checkbox' name='clientAcquisitionEnabled'><span class='live-preflight-switch'></span><span><strong>Show client call-to-action</strong><small>Add a business, booking or service link to your LIVE</small></span></label>"+
+      "<label class='live-preflight-field'><span>Button label</span><input name='clientCtaLabel' maxlength='48' placeholder='Book a consultation'></label>"+
+      "<label class='live-preflight-field'><span>HTTPS link</span><input name='clientCtaUrl' type='url' inputmode='url' placeholder='https://example.com'></label>"+
+    "</div></details>"+
+    "<div class='live-preflight-unavailable' aria-label='LIVE features planned for a later phase'><strong>Being added in the next LIVE phase</strong><span>Moderator assignment · Group LIVE chats · Guardian controls · LIVE recording · Effects · Services · Fan Club</span><small>These are not active yet, so Minglora will not show switches that pretend they are working.</small></div>"+
+    "<div class='live-preflight-submit'><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button><p class='form-hint'>Mobile Gaming uses screen sharing. Screen-capture availability depends on the device and browser; native Android game capture still needs platform integration.</p></div></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
-    "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button></div>"+
+    "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button><button type='button' data-live-filter='mobile_gaming'>Gaming</button><button type='button' data-live-filter='live_studio'>Studio</button></div>"+
     "<div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
     (packages.length?"<div class='live-package-preview'>"+packages.map(p=>"<span>"+Number(p.coin_amount).toLocaleString()+" Coins · "+liveMoney(p.price_minor)+"</span>").join("")+"</div>":"")+"</section>");
-  $("#live-create-form")?.querySelectorAll("input[name='broadcastType']").forEach(input=>input.addEventListener("change",()=>{state.liveStartFormat=input.value;}));
-  $("#live-create-form")?.addEventListener("submit",async event=>{
-    event.preventDefault();const form=event.currentTarget,button=form.querySelector("button[type='submit']");button.disabled=true;
+  const form=$("#live-create-form");
+  form?.querySelectorAll("input[name='liveMode']").forEach(input=>input.addEventListener("change",()=>{state.liveStartFormat=input.value;}));
+  const audienceSelect=$("#live-audience-select");
+  const audienceControl=form?.querySelector("[name='audienceControl']");
+  const practiceControl=form?.querySelector("[name='practiceMode']");
+  const syncAudienceControls=()=>{
+    if(!audienceSelect)return;
+    const forcedPrivate=Boolean(practiceControl?.checked);
+    const disabled=forcedPrivate||!audienceControl?.checked;
+    if(forcedPrivate)audienceSelect.value='private';
+    else if(!audienceControl?.checked)audienceSelect.value='public';
+    audienceSelect.disabled=disabled;
+    $("#live-audience-field")?.classList.toggle("is-disabled",disabled);
+  };
+  practiceControl?.addEventListener("change",syncAudienceControls);
+  audienceControl?.addEventListener("change",syncAudienceControls);
+  syncAudienceControls();
+  const clientAcquisition=form?.querySelector("[name='clientAcquisitionEnabled']");
+  const ctaLabel=form?.querySelector("[name='clientCtaLabel']");
+  const ctaUrl=form?.querySelector("[name='clientCtaUrl']");
+  const syncCtaControls=()=>{
+    const enabled=Boolean(clientAcquisition?.checked);
+    if(ctaLabel)ctaLabel.required=enabled;
+    if(ctaUrl)ctaUrl.required=enabled;
+    form?.querySelectorAll("[name='clientCtaLabel'],[name='clientCtaUrl']").forEach(input=>input.closest(".live-preflight-field")?.classList.toggle("is-required",enabled));
+  };
+  clientAcquisition?.addEventListener("change",syncCtaControls);
+  syncCtaControls();
+  form?.addEventListener("submit",async event=>{
+    event.preventDefault();const button=form.querySelector("button[type='submit']");button.disabled=true;
     try{
       const values=new FormData(form);
+      const liveMode=String(values.get("liveMode")||"video_audio");
+      const liveSettings={
+        board:String(values.get("board")||"general"),
+        aboutMe:String(values.get("aboutMe")||"").trim(),
+        practiceMode:values.has("practiceMode"),
+        liveQuality:String(values.get("liveQuality")||"auto"),
+        noiseSuppression:values.has("noiseSuppression"),
+        optimizeForStability:values.has("optimizeForStability"),
+        markViewers:values.has("markViewers"),
+        communitySafety:values.has("communitySafety"),
+        liveGifts:values.has("liveGifts"),
+        audienceControl:values.has("audienceControl"),
+        contentDisclosure:String(values.get("contentDisclosure")||"none"),
+        clientAcquisitionEnabled:values.has("clientAcquisitionEnabled"),
+        clientCtaLabel:String(values.get("clientCtaLabel")||"").trim(),
+        clientCtaUrl:String(values.get("clientCtaUrl")||"").trim()
+      };
       const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({
-        title:String(values.get("title")||"").trim(),visibility:values.get("visibility"),broadcastType:values.get("broadcastType")||"video_audio"
+        title:String(values.get("title")||"").trim(),
+        visibility:values.get("visibility")||"public",
+        liveMode,
+        broadcastType:liveMode==="audio_only"?"audio_only":"video_audio",
+        liveSettings
       })});
       await openLiveRoom(result.session,"host",result.liveKit);
     }catch(error){toast(error.message);button.disabled=false;}
@@ -963,12 +1060,16 @@ async function refreshLiveChat(broadcastId){
   try{
     const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
     list.innerHTML=(data.messages||[]).map(message=>{
-      const author=message.user?.name||"Member";
+      const member=message.user||message.member||{};
+      const author=member.name||message.user_name||"Member";
+      const handle=member.username||message.username||"";
+      const chatAvatar=member.avatar||member.avatar_url||member.avatarUrl||message.avatar||message.avatar_url||"";
+      const authorAvatar=avatar({name:author,avatar:chatAvatar});
       const isPinned=activeLivePinnedComment?.id===String(message.id);
       const controls=activeLiveRole==="host"
         ?"<span class='live-chat-actions'><button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button><button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
-      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><strong>"+esc(author)+"</strong><span>"+esc(message.body)+"</span><small>"+timeAgo(message.created_at)+"</small>"+controls+"</div>";
+      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
     list.scrollTop=list.scrollHeight;
   }catch(error){if($("#live-chat-list"))toast(error.message);}
@@ -1303,13 +1404,18 @@ async function openLiveRoom(session,role,issuedLiveKit){
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
   role=liveKit?.role==="host"?"host":liveKit?.role==="guest"?"guest":"viewer";
   const broadcastType=session.broadcastType==="audio_only"?"audio_only":"video_audio";
+  const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
+    ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
+  const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
+  const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming';
+  const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
+  activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;liveCameraEnabled=canUseCamera;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
-    : "<div id='live-video-stage' class='live-video-stage'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
+    : "<div id='live-video-stage' class='live-video-stage live-mode-"+liveMode+"'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
   const liveEntryBanner=state.user?.gifterBadge?.liveEntranceUnlocked
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
@@ -1318,7 +1424,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     : role==="viewer"
       ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>"
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
-  const rewardTools="<section id='live-reward-panel' class='live-reward-panel'>"+
+  const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
     (role==="host"
       ?"<form id='live-reward-create-form' class='live-reward-create-form'>"+
@@ -1333,38 +1439,60 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div id='live-reward-list' class='live-reward-list'><p class='muted'>Loading LIVE rewards…</p></div></section>";
   const liveControls=[
     (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
-    (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
-    (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
-    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen","Share your screen","Screen",{pressed:false}):"",
+    (role==="host"||role==="guest")&&canUseCamera?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
+    (role==="host"||role==="guest")&&canUseCamera?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
+    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",{pressed:false}):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
-    role!=="host"?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
+    role!=="host"&&giftsEnabled?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
     liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
-    liveControlButton("live-leave","end",role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE",role==="host"?"End":role==="guest"?"Leave":"Leave",{danger:true})
+    role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
-  const liveGiftTools=role==="host"
-    ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
-    : "<section id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+  const liveGiftTools=!giftsEnabled
+    ? "<section id='live-gift-panel' class='live-tools-card'><strong>Gifts are turned off</strong><p>The host has disabled paid gifts and reward drops for this LIVE.</p></section>"
+    : role==="host"
+      ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
+      : "<section id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE tools sections'>"+
     "<button type='button' data-live-tools-target='.live-room-appearance'>Appearance</button>"+
     "<button type='button' data-live-tools-target='#live-speaker-request-panel'>Guest seats</button>"+
-    "<button type='button' data-live-tools-target='#live-reward-panel'>Goody Bag & Treasure Box</button>"+
-    "<button type='button' data-live-tools-target='#live-gift-panel'>Gifts</button></nav>";
+    (giftsEnabled?"<button type='button' data-live-tools-target='#live-reward-panel'>Goody Bag & Treasure Box</button><button type='button' data-live-tools-target='#live-gift-panel'>Gifts</button>":"")+"</nav>";
+  const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
+  const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
+  const livePreflightBanner="<div class='live-session-meta'><span class='live-mode-badge'>"+liveModeLabels[liveMode]+"</span>"+
+    (liveSettings.contentDisclosure&&liveSettings.contentDisclosure!=='none'?"<span class='live-disclosure-badge'>"+esc(disclosureLabels[liveSettings.contentDisclosure]||'Disclosed content')+"</span>":"")+
+    (liveSettings.board?"<span class='live-board-badge'>"+esc(String(liveSettings.board).replace(/^./,x=>x.toUpperCase()))+"</span>":"")+
+    (session.description?"<p class='live-session-about'>"+esc(session.description)+"</p>":"")+
+    (liveSettings.clientAcquisitionEnabled&&liveSettings.clientCtaUrl&&liveSettings.clientCtaLabel?"<a class='live-client-cta' href='"+esc(liveSettings.clientCtaUrl)+"' target='_blank' rel='noopener noreferrer'>"+esc(liveSettings.clientCtaLabel)+"</a>":"")+"</div>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
     liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
-  setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+(broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO")+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+liveEntryBanner+
+  const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
+  const liveStageHud=
+    "<div class='live-stage-topbar'>"+
+      "<div class='live-stage-top-left'><div class='live-host-profile' aria-label='LIVE host profile'>"+
+        "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+        "<span><strong>"+esc(liveHostName)+"</strong><small>LIVE</small></span>"+
+      "</div>"+
+      "<div class='live-like-cluster' role='group' aria-label='LIVE likes'>"+
+        "<button type='button' id='live-heart-like' class='live-heart-button live-reaction-button' data-live-reaction='heart' aria-label='Send a heart like' title='Send a heart like'>♥</button>"+
+        "<strong id='live-reaction-count' data-count='0'>0</strong>"+
+      "</div></div>"+
+      (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='End LIVE for everyone' title='End LIVE'><span aria-hidden='true'>⏻</span></button>":"")+
+    "</div>"+
+    "<section class='live-chat-overlay' aria-label='LIVE chat and comments'>"+
+      "<div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div>"+
+      "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form>"+
+    "</section>";
+  setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-reaction-bar' role='group' aria-label='Send a LIVE reaction'><strong>LIVE likes <span id='live-reaction-count' data-count='0'>0</span></strong><div class='live-reaction-buttons'><button type='button' class='live-reaction-button' data-live-reaction='heart' aria-label='Send a heart' title='Send a heart'>❤️</button><button type='button' class='live-reaction-button' data-live-reaction='clap' aria-label='Send applause' title='Send applause'>👏</button><button type='button' class='live-reaction-button' data-live-reaction='fire' aria-label='Send fire' title='Send fire'>🔥</button><button type='button' class='live-reaction-button' data-live-reaction='laugh' aria-label='Send laughter' title='Send laughter'>😂</button></div></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
-    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
-    "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside></div>"+liveToolsDrawer+"</section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
   activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
   reactionLayer.className="live-reaction-layer";
@@ -1375,10 +1503,20 @@ async function openLiveRoom(session,role,issuedLiveKit){
   pinnedCommentLayer.setAttribute("aria-live","polite");
   const stage=$("#live-video-stage");
   stage?.append(reactionLayer,pinnedCommentLayer);
-  const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
+  stage?.insertAdjacentHTML("beforeend",liveStageHud);
+  const stablePublishing=liveSettings.optimizeForStability!==false;
+  const qualityKey=liveSettings.liveQuality==='1080p'?'h1080':liveSettings.liveQuality==='720p'?'h720':null;
+  const qualityPreset=qualityKey?client.VideoPresets?.[qualityKey]:null;
+  const roomOptions={
+    adaptiveStream:stablePublishing,
+    dynacast:stablePublishing,
+    audioCaptureDefaults:{echoCancellation:true,noiseSuppression:liveSettings.noiseSuppression!==false,autoGainControl:true},
+    ...(qualityPreset?.resolution?{videoCaptureDefaults:{resolution:qualityPreset.resolution}}:{})
+  };
+  const room=new client.Room(roomOptions);activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
-  const liveReactionEmoji=Object.freeze({heart:"❤️",clap:"👏",fire:"🔥",laugh:"😂"});
+  const liveReactionEmoji=Object.freeze({heart:"❤️"});
   const receivedLiveReactionAt=new Map();
   let lastLiveReactionSentAt=0;
   const showLiveReaction=(reaction)=>{
@@ -1440,7 +1578,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       liveScreenShareEnabled=false;
       $("#live-screen-share-stage")?.replaceChildren();
       $("#live-video-stage")?.classList.remove("has-live-screen-share");
-      updateLiveControlButton($("#live-screen-share-toggle"),"screen","Share your screen","Screen",false);
+      updateLiveControlButton($("#live-screen-share-toggle"),"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
     }
     refreshSpeakerRoster();
   });
@@ -1463,7 +1601,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       ]);
     }finally{if(connectTimeout)clearTimeout(connectTimeout);}
     $(".live-video-placeholder")?.remove();
-    if(role==="host"&&broadcastType==="video_audio"){
+    if(role==="host"&&canUseCamera){
       await room.localParticipant.enableCameraAndMicrophone();
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
     }else if(role==="host"||role==="guest"){
@@ -1476,7 +1614,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       if(!microphonePublished){
         throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check browser microphone permission and try again.");
       }
-      if(role==="guest"&&broadcastType==="video_audio"){
+      if(role==="guest"&&canUseCamera){
         await room.localParticipant.setCameraEnabled(true);
         for(const publication of room.localParticipant.videoTrackPublications.values()){
           if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
@@ -1486,15 +1624,20 @@ async function openLiveRoom(session,role,issuedLiveKit){
     updatePresence();
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
-    setupLiveRewardPanel(session,role);
+    if(giftsEnabled)setupLiveRewardPanel(session,role);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
     const screenShareControl=$("#live-screen-share-toggle");
     liveScreenShareEnabled=false;
     liveAudioMuted=false;
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
-    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&broadcastType==="video_audio");
+    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&canUseCamera);
     if(flipCameraControl)flipCameraControl.disabled=!liveCameraEnabled;
+    if(screenShareControl&&typeof navigator.mediaDevices?.getDisplayMedia!=="function"){
+      screenShareControl.disabled=true;
+      screenShareControl.title="Screen capture is not supported by this browser or device.";
+      screenShareControl.setAttribute("aria-label","Screen capture is not supported on this device");
+    }
     roomAudioControl?.addEventListener("click",()=>{
       liveAudioMuted=!liveAudioMuted;
       $("#live-audio-root")?.querySelectorAll("audio,video").forEach(element=>{element.muted=liveAudioMuted;});
@@ -1547,12 +1690,16 @@ async function openLiveRoom(session,role,issuedLiveKit){
       finally{flipCameraControl.disabled=!liveCameraEnabled;}
     });
     screenShareControl?.addEventListener("click",async()=>{
-      if(role!=="host"||broadcastType!=="video_audio"){toast("Screen sharing is available to the host in video LIVE rooms.");return;}
+      if(role!=="host"||broadcastType!=="video_audio"){toast("Screen sharing is available to the host in video-based LIVE rooms.");return;}
       if(typeof room.localParticipant.setScreenShareEnabled!=="function"){toast("Screen sharing is not supported by this browser.");return;}
       const nextEnabled=!liveScreenShareEnabled;
       screenShareControl.disabled=true;
       try{
-        await room.localParticipant.setScreenShareEnabled(nextEnabled,{audio:false,contentHint:"detail"});
+        await room.localParticipant.setScreenShareEnabled(nextEnabled,{
+          audio:false,
+          contentHint:liveMode==="mobile_gaming"?"motion":"detail",
+          ...(qualityPreset?.resolution?{resolution:qualityPreset.resolution}:{})
+        });
         liveScreenShareEnabled=nextEnabled;
         if(nextEnabled){
           const source=client.Track?.Source?.ScreenShare??3;
@@ -1563,16 +1710,16 @@ async function openLiveRoom(session,role,issuedLiveKit){
             liveScreenShareEnabled=false;
             $("#live-screen-share-stage")?.replaceChildren();
             $("#live-video-stage")?.classList.remove("has-live-screen-share");
-            updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
+            updateLiveControlButton(screenShareControl,"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
           },{once:true});
         }else{
           $("#live-screen-share-stage")?.replaceChildren();
           $("#live-video-stage")?.classList.remove("has-live-screen-share");
         }
-        updateLiveControlButton(screenShareControl,"screen",nextEnabled?"Stop sharing your screen":"Share your screen",nextEnabled?"Stop share":"Screen",nextEnabled);
+        updateLiveControlButton(screenShareControl,"screen",nextEnabled?"Stop sharing":"Share "+(liveMode==="mobile_gaming"?"game screen":"screen"),nextEnabled?"Stop share":liveMode==="mobile_gaming"?"Game screen":"Screen",nextEnabled);
       }catch(error){
         liveScreenShareEnabled=false;
-        updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
+        updateLiveControlButton(screenShareControl,"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
         if(error?.name!=="NotAllowedError"&&error?.name!=="AbortError")toast(error.message||"Could not share your screen.");
       }finally{screenShareControl.disabled=false;}
     });
@@ -3278,7 +3425,7 @@ function openProfileViewAsPreview(u,data){
   const cover=u.cover?'<img src="'+esc(u.cover)+'" alt="" class="profile-view-as-cover-image">':'';
   const bio=bioVisible&&u.bio?'<p class="profile-view-as-bio">'+esc(u.bio)+'</p>':'';
   const modal=document.createElement('div');modal.className='modal-backdrop profile-menu-modal-backdrop';
-  modal.innerHTML='<section class="modal profile-view-as-modal" role="dialog" aria-modal="true" aria-label="Public profile preview"><div class="modal-head"><div><h2>View as</h2><small class="muted">Public profile preview</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="profile-view-as-card"><div class="profile-view-as-cover">'+cover+'</div><div class="profile-view-as-person"><img src="'+esc(avatar(u))+'" alt="" class="avatar"><div><strong class="profile-preview-name">'+esc(u.name)+verifiedProfileBadge(u)+platformAdminProfileBadge(u)+'</strong><small>@'+esc(u.username)+'</small></div></div>'+bio+'<div class="profile-view-as-counts"><span><strong>'+Number(data.followersCount||0).toLocaleString()+'</strong> followers</span><span><strong>'+Number(data.followingCount||0).toLocaleString()+'</strong> following</span><span><strong>'+(data.posts||[]).length+'</strong> posts</span></div></div><p class="profile-view-as-note">This is a read-only preview of your profile header. It does not simulate every audience or privacy rule.</p><div class="modal-actions"><button type="button" class="primary" data-profile-menu-close>Done</button></div></div></section>';
+  modal.innerHTML='<section class="modal profile-view-as-modal" role="dialog" aria-modal="true" aria-label="Public profile preview"><div class="modal-head"><div><h2>View as</h2><small class="muted">Public profile preview</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div class="profile-view-as-card"><div class="profile-view-as-cover">'+cover+'</div><div class="profile-view-as-person"><img src="'+esc(avatar(u))+'" alt="" class="avatar"><div><strong class="profile-preview-name">'+esc(u.name)+profileNameVerificationBadge(u)+platformAdminProfileBadge(u)+'</strong><small>@'+esc(u.username)+'</small></div></div>'+bio+'<div class="profile-view-as-counts"><span><strong>'+Number(data.followersCount||0).toLocaleString()+'</strong> followers</span><span><strong>'+Number(data.followingCount||0).toLocaleString()+'</strong> following</span><span><strong>'+(data.posts||[]).length+'</strong> posts</span></div></div><p class="profile-view-as-note">This is a read-only preview of your profile header. It does not simulate every audience or privacy rule.</p><div class="modal-actions"><button type="button" class="primary" data-profile-menu-close>Done</button></div></div></section>';
   document.body.append(modal);const close=()=>modal.remove();
   modal.querySelector('.modal-close')?.addEventListener('click',close);
   modal.querySelector('[data-profile-menu-close]')?.addEventListener('click',close);
@@ -3526,7 +3673,7 @@ function renderProfile(data){
   const aboutHtml=profileAboutMarkup(u,isMe);
   const profileThought=data.profileStatus||u.profileThought||null;
   const tab=state.profileTab||'posts';
-  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div>'+(isMe?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">'+(profileThought?'<button type="button" class="ml-profile-thought-bubble" data-view-profile-thought-user="'+esc(u.id)+'" aria-label="Read '+esc(u.name)+'’s thought"><span>'+(profileThought.mood?esc(profileThought.mood)+' · ':'')+'</span>'+esc(String(profileThought.text||'').slice(0,76))+(String(profileThought.text||'').length>76?'…':'')+'</button>':(isMe?'<button type="button" class="ml-profile-thought-add" data-edit-profile-thought>Share a thought</button>':''))+(isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+verifiedProfileBadge(u)+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+gifterProfileBadge(u)+'</p>'+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+relationshipActions+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status" aria-label="Share a thought (Profile status)"><span aria-hidden="true">✎</span><span>Share a thought</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
+  setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div>'+(isMe?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">'+(profileThought?'<button type="button" class="ml-profile-thought-bubble" data-view-profile-thought-user="'+esc(u.id)+'" aria-label="Read '+esc(u.name)+'’s thought"><span>'+(profileThought.mood?esc(profileThought.mood)+' · ':'')+'</span>'+esc(String(profileThought.text||'').slice(0,76))+(String(profileThought.text||'').length>76?'…':'')+'</button>':(isMe?'<button type="button" class="ml-profile-thought-add" data-edit-profile-thought>Share a thought</button>':''))+(isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+profileNameVerificationBadge(u)+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+gifterProfileBadge(u)+'</p>'+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+relationshipActions+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status" aria-label="Share a thought (Profile status)"><span aria-hidden="true">✎</span><span>Share a thought</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&nextTab==='gift-gallery');button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});

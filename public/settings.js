@@ -2,7 +2,7 @@
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false },
-    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
   const APP_THEMES = [
@@ -72,6 +72,7 @@
     document.body.classList.toggle('theme-dark', mode === 'dark');
     document.body.classList.toggle('theme-system', mode === 'system');
     document.body.classList.toggle('reduce-motion', preferences.reducedMotion === true);
+    document.body.classList.toggle('lite-mode', preferences.liteMode === true);
     document.body.dataset.colorTheme = colorTheme;
     document.body.style.colorScheme = mode === 'system' ? 'light dark' : mode;
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -80,6 +81,16 @@
 
   function sectionHeading(title) {
     return `<h2 class="settings-section-title">${title}</h2>`;
+  }
+
+  function activityHistoryMarkup(items) {
+    const history=Array.isArray(items)?items.slice(0,20):[];
+    if(!history.length)return '<p class="settings-empty">No recent account activity is available yet.</p>';
+    return '<div class="settings-activity-list">'+history.map(item=>{
+      const date=item.createdAt?new Date(item.createdAt):null;
+      const time=date&&!Number.isNaN(date.getTime())?date.toLocaleString():'Time unavailable';
+      return '<article class="settings-activity-row"><span class="settings-activity-dot" aria-hidden="true"></span><div><strong>'+escapeHtml(String(item.summary||item.action||'Account activity').replace(/_/g,' '))+'</strong><small>'+escapeHtml(time)+'</small></div></article>';
+    }).join('')+'</div>';
   }
 
   function profileViewersMarkup(result) {
@@ -98,7 +109,7 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, ringtoneResult, profileViewsResult] = await Promise.all([
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, ringtoneResult, profileViewsResult, walletResult, creatorEarningsResult] = await Promise.all([
         api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
         api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
         api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
@@ -106,11 +117,25 @@
         api('/moderation/access').catch(()=>({canModerate:false})),
         api('/admin/access').catch(()=>({canAccess:false,setupRequired:false})),
         api('/calls/ringtone').catch(error=>({error:error.message,ringtone:null})),
-        api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message}))
+        api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message})),
+        api('/coins/wallet').catch(error=>({error:error.message,wallet:null})),
+        api('/creator/earnings').catch(error=>({error:error.message,availableMinor:null,earnedMinor:null}))
       ]);
       const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],
         isPrivateAdmin=adminWorkspaceAccess.canAccess===true||adminWorkspaceAccess.setupRequired===true,
         canModerate=moderationAccess.canModerate===true&&!isPrivateAdmin;
+      const formatSettingsUSD=minor=>{
+        const value=Number(minor);
+        if(minor===null||minor===undefined||!Number.isFinite(value))return 'Unavailable';
+        return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(value/100);
+      };
+      const settingsMoneyAvailable=formatSettingsUSD(creatorEarningsResult.availableMinor);
+      const settingsLifetimeEarned=formatSettingsUSD(creatorEarningsResult.earnedMinor);
+      const settingsCoinBalance=walletResult.wallet?.balance_coins;
+      const activityResult=result.account?.id
+        ?await api('/users/'+encodeURIComponent(result.account.id)+'/activity').catch(error=>({error:error.message,activity:[]}))
+        :{activity:[]};
+      const activityItems=Array.isArray(activityResult.activity)?activityResult.activity:[];
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
@@ -121,17 +146,48 @@
       main.innerHTML = `
         <div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
         <form id="settings-form" class="settings-panels">
-            <section class="settings-card" id="settings-account">
+            <div class="settings-category-intro">
+              <p>Choose a category to find its settings. Existing Minglora controls are kept in their original sections and saved together.</p>
+              <div class="settings-category-grid" role="group" aria-label="Settings &amp; privacy categories">
+                <button type="button" class="settings-category-tab active" aria-pressed="true" data-settings-category-button="activity" data-category-description="Notifications and profile-view activity."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#activity"></use></svg><span>Activity</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="account" data-category-description="Your account information, personal data and account actions."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile"></use></svg><span>Account</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="visibility" data-category-description="Profile privacy and audience choices."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#privacy"></use></svg><span>Visibility</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Blocking and voice/video call preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="content-display" data-category-description="Appearance, themes, feed order and display preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg><span>Content &amp; Display</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="cache-cellular" data-category-description="Lite mode, browser storage and temporary cached images."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore"></use></svg><span>Cache &amp; Cellular</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="support-about" data-category-description="Support requests, help and platform information."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#external-link"></use></svg><span>Support &amp; About</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="logon" data-category-description="Password, sign-in security, active sessions and logout."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#lock"></use></svg><span>Logon</span></button>
+              </div>
+              <p class="settings-category-description" id="settings-category-description">Notifications and profile-view activity.</p>
+            </div>
+            <section class="settings-card" id="settings-account" data-settings-category="account">
               ${sectionHeading('Account information')}
               <div class="settings-readonly-grid">
                 <div><small>Display name</small><strong>${escapeHtml(result.account?.name || 'Not available')}</strong></div>
                 <div><small>Username</small><strong>@${escapeHtml(result.account?.username || '')}</strong></div>
                 <div><small>Email address</small><strong>${escapeHtml(result.account?.email || 'Not available')}</strong></div>
               </div>
+              <div class="settings-wallet-summary">
+                <div><small>AVAILABLE MONEY · <span id="settings-money-currency">USD</span></small><strong id="settings-money-available">${escapeHtml(settingsMoneyAvailable)}</strong></div>
+                <div><small>LIFETIME EARNED · <span id="settings-earned-currency">USD</span></small><strong id="settings-money-earned">${escapeHtml(settingsLifetimeEarned)}</strong></div>
+                <div><small>COIN BALANCE</small><strong>${settingsCoinBalance==null?'Unavailable':Number(settingsCoinBalance).toLocaleString()+' Coins'}</strong></div>
+              </div>
+              <label class="settings-field"><span><strong>Display currency</strong><small>Changes estimated display amounts only. Wallet accounting, PayPal checkout and payouts remain in USD.</small></span>
+                <select id="settings-display-currency" name="displayCurrency">${[['USD','US Dollar'],['JMD','Jamaican Dollar'],['CAD','Canadian Dollar'],['GBP','British Pound'],['EUR','Euro'],['TTD','Trinidad & Tobago Dollar'],['BBD','Barbadian Dollar'],['XCD','East Caribbean Dollar'],['GYD','Guyanese Dollar'],['AUD','Australian Dollar'],['JPY','Japanese Yen'],['INR','Indian Rupee'],['NGN','Nigerian Naira'],['ZAR','South African Rand'],['KES','Kenyan Shilling']].map(([code,label])=>`<option value="${code}" ${(settings.preferences.displayCurrency||'USD')===code?'selected':''}>${label} (${code})</option>`).join('')}</select>
+              </label>
+              <p class="settings-note" id="settings-currency-rate-status" role="status" aria-live="polite">Amounts are shown in USD.</p>
+              <div class="settings-wallet-actions">
+                <button type="button" class="secondary" data-settings-wallet-tab="recharge">Coins &amp; Get Coins</button>
+                <button type="button" class="secondary" data-settings-wallet-tab="earnings">Live gift rewards &amp; monetization</button>
+                <button type="button" class="secondary" data-settings-wallet-tab="exchange">Exchange</button>
+                <button type="button" class="secondary" data-settings-creator-section="monetization">Creator Studio · Monetization</button>
+              </div>
+              <p class="settings-note">Balances above come from the existing Minglora Wallet &amp; earnings service. Wallet settlement is currently in USD; a selectable display-currency conversion is not yet connected.</p>
+              <p class="settings-note">Campaign and subscription management will be added to their dedicated tools when those workflows are available. This page links to the existing wallet rather than creating duplicate transaction controls.</p>
               <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
               <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
             </section>
-            <section class="settings-card" id="settings-privacy">
+            <section class="settings-card" id="settings-privacy" data-settings-category="visibility">
               ${sectionHeading('Privacy &amp; audience')}
               <label class="settings-field"><span><strong>Profile visibility</strong><small>Friends-only and private profiles are filtered by the server in profile discovery, search and feed results.</small></span>
                 <select name="profileVisibility"><option value="public" ${settings.privacy.profileVisibility === 'public' ? 'selected' : ''}>Public</option><option value="friends" ${settings.privacy.profileVisibility === 'friends' ? 'selected' : ''}>Friends only</option><option value="private" ${settings.privacy.profileVisibility === 'private' ? 'selected' : ''}>Private</option></select>
@@ -143,14 +199,23 @@
               <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
                 <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
               </label>
+              <div class="settings-subsection-heading"><strong>Who can view your lists?</strong><small>These choices apply to the corresponding profile relationship lists.</small></div>
+              ${[['friendsListAudience','Friends list'],['followersListAudience','Followers list'],['followingListAudience','Following list'],['subscribersListAudience','Subscribers list']].map(([name,label])=>`<label class="settings-field"><span><strong>${label}</strong></span><select name="${name}">${[['public','Everyone'],['friends','Friends'],['followers','Followers'],['private','Only you']].map(([value,text])=>`<option value="${value}" ${(settings.privacy[name]||'public')===value?'selected':''}>${text}</option>`).join('')}</select></label>`).join('')}
             </section>
-            <section class="settings-card" id="settings-blocking">
+            <section class="settings-card" id="settings-interaction-preferences" data-settings-category="interactions">
+              ${sectionHeading('Comments &amp; interactions')}
+              <label class="settings-field"><span><strong>Who can comment on your posts?</strong><small>This is checked by the server when someone submits a comment.</small></span>
+                <select name="commentAudience"><option value="everyone" ${(settings.privacy.commentAudience||'everyone')==='everyone'?'selected':''}>Everyone</option><option value="friends" ${settings.privacy.commentAudience==='friends'?'selected':''}>Friends only</option><option value="nobody" ${settings.privacy.commentAudience==='nobody'?'selected':''}>Nobody else</option></select>
+              </label>
+              <p class="settings-note">Mention controls, content reuse permissions and viewer download permissions will be connected when those specific publishing workflows expose enforceable audience checks. No inactive switches are shown here.</p>
+            </section>
+            <section class="settings-card" id="settings-blocking" data-settings-category="interactions">
               ${sectionHeading('Blocking')}
               <div class="settings-blocked-list">
                 ${blockedUsers.length ? blockedUsers.map(member => `<div class="settings-blocked-person"><img src="${escapeHtml(member.avatar || '')}" alt=""><div><strong>${escapeHtml(member.name || 'Minglora member')}</strong><small>@${escapeHtml(member.username || '')}</small></div><button class="secondary" type="button" data-unblock-user="${escapeHtml(member.id)}">Unblock</button></div>`).join('') : '<p class="settings-empty">You have not blocked anyone.</p>'}
               </div>
             </section>
-            <section class="settings-card" id="settings-notifications">
+            <section class="settings-card" id="settings-notifications" data-settings-category="activity">
               ${sectionHeading('Notifications')}
               <label class="settings-toggle"><span><strong>In-app notifications</strong><small>Master switch for notifications inside Minglora.</small></span><input type="checkbox" name="notificationInApp" ${settings.notifications.inApp ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
@@ -159,8 +224,13 @@
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
               <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
+              <div class="settings-activity-centre">
+                <div class="settings-inline-heading"><div><h3>Activity Center</h3><p class="muted">Recent profile and account actions recorded by Minglora.</p></div><button type="button" class="secondary" id="settings-refresh-activity">Refresh</button></div>
+                <div id="settings-activity-list">${activityHistoryMarkup(activityItems)}</div>
+                <p class="settings-note">Watch, comment, search, advertising, mention and content-reuse histories are not yet tracked in this activity feed. They will be added when their event records are available.</p>
+              </div>
             </section>
-            <section class="settings-card" id="settings-calls">
+            <section class="settings-card" id="settings-calls" data-settings-category="interactions">
               ${sectionHeading('Voice &amp; video calls')}
               <div class="settings-security-form">
                 <h3>Your incoming-call ringtone</h3>
@@ -181,7 +251,7 @@
                 <p class="settings-form-status" id="call-ringtone-status" role="status" aria-live="polite">${escapeHtml(ringtoneResult.error||'')}</p>
               </div>
             </section>
-            <section class="settings-card theme-centre-card" id="settings-preferences">
+            <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
               ${sectionHeading('Theme Centre')}
               <div class="theme-centre-section">
                 <div class="theme-centre-heading"><div><h3>App appearance</h3><p>Choose the overall colour identity used across your feed, profile, messages and navigation.</p></div></div>
@@ -203,7 +273,17 @@
                 <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
               </div>
             </section>
-            <section class="settings-card" id="settings-data">
+            <section class="settings-card" id="settings-cache" data-settings-category="cache-cellular">
+              ${sectionHeading('Cache &amp; Cellular')}
+              <label class="settings-toggle"><span><strong>Lite mode</strong><small>Reduce decorative motion and heavy visual effects for a simpler, more responsive interface. LIVE and video streaming data use is controlled separately.</small></span><input type="checkbox" name="liteMode" ${settings.preferences.liteMode ? 'checked' : ''}></label>
+              <div class="settings-storage-summary">
+                <div><small>Browser storage used</small><strong id="settings-storage-used">Checking…</strong></div>
+                <div><small>Temporary cached images</small><strong id="settings-cached-images">Checking…</strong></div>
+              </div>
+              <div class="settings-cache-actions"><button type="button" class="secondary" id="settings-clear-image-cache">Clear cached images</button><span class="settings-note" id="settings-cache-status" role="status" aria-live="polite">This removes temporary browser-cached images only. It does not delete your Minglora posts, account data or files saved to your device.</span></div>
+              <p class="settings-note">Downloaded files saved by your phone or computer are managed by that device. Minglora will not delete personal device downloads from this browser setting.</p>
+            </section>
+            <section class="settings-card" id="settings-data" data-settings-category="account">
               ${sectionHeading('Your information')}
               <div class="settings-data-export"><div><strong>Download your information</strong><p>Creates a JSON file with your profile, settings, posts, comments, relationships, groups, Pages, Stories, messages and in-app notifications. Passwords, authentication tokens and active session secrets are not included.</p></div><button class="primary" type="button" id="download-account-data">Download information</button></div>
               <div class="settings-account-actions">
@@ -219,7 +299,7 @@
               </div>
               <p class="settings-data-status" id="account-export-status" role="status"></p>
             </section>
-            <section class="settings-card" id="settings-security">
+            <section class="settings-card" id="settings-security" data-settings-category="logon">
               ${sectionHeading('Security and login')}
               <form id="security-email-form" class="settings-security-form">
                 <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
@@ -244,7 +324,7 @@
                 <div id="active-sessions-list">${sessions.map(session=>'<div class="settings-session-row"><div><strong>'+escapeHtml(session.userAgent||'Unknown device')+(session.current?' · This device':'')+'</strong><small>Last active '+escapeHtml(session.lastSeenAt||'')+' · Expires '+escapeHtml(session.expiresAt||'')+'</small></div>'+(session.current?'<span class="settings-current-session">Current</span>':'<button type="button" class="secondary" data-revoke-session="'+escapeHtml(session.id)+'">Revoke</button>')+'</div>').join('')||'<p class="settings-empty">'+escapeHtml(sessionResult.error||'No active sessions found.')+'</p>'}</div>
               </div>
             </section>
-            <section class="settings-card" id="settings-help">
+            <section class="settings-card" id="settings-help" data-settings-category="support-about">
               ${sectionHeading('Help &amp; support')}
               <form id="support-ticket-form" class="settings-security-form">
                 <h3>Contact support</h3>
@@ -259,7 +339,7 @@
               ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
               ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
-            <section class="settings-card settings-signout-card" id="settings-signout">
+            <section class="settings-card settings-signout-card" id="settings-signout" data-settings-category="logon">
               ${sectionHeading('Log out')}
               <div class="settings-session-actions">
                 <div><strong>Finished using Minglora?</strong><p>Log out securely when you are done on this phone, tablet or computer.</p></div>
@@ -465,11 +545,126 @@
         finally{ringtoneRemove.disabled=false;}
       });
 
+      let displayCurrency=settings.preferences.displayCurrency||'USD';
+      let displayRate=displayCurrency==='USD'?1:null;
+      let displayRateDate=null;
+      const formatSettingsMoney=(minor)=>{
+        if(minor===null||minor===undefined||!Number.isFinite(Number(minor)))return 'Unavailable';
+        if(!displayRate)return 'Unavailable';
+        try{return new Intl.NumberFormat(undefined,{style:'currency',currency:displayCurrency}).format((Number(minor)/100)*displayRate);}
+        catch{return formatSettingsUSD(minor);}
+      };
+      async function refreshSettingsCurrency(){
+        const status=document.querySelector('#settings-currency-rate-status');
+        if(displayCurrency==='USD'){displayRate=1;displayRateDate='';}
+        else{
+          if(status)status.textContent='Loading the latest available reference rate…';
+          try{
+            const response=await fetch('https://api.frankfurter.dev/v2/rate/usd/'+encodeURIComponent(displayCurrency.toLowerCase()),{headers:{Accept:'application/json'},cache:'no-cache'});
+            if(!response.ok)throw new Error('Reference rate unavailable for '+displayCurrency+'.');
+            const rate=await response.json();
+            if(rate.base!=='USD'||rate.quote!==displayCurrency||!Number.isFinite(Number(rate.rate))||Number(rate.rate)<=0)throw new Error('The currency provider returned an invalid rate.');
+            displayRate=Number(rate.rate);displayRateDate=String(rate.date||'');
+          }catch(error){
+            displayRate=null;displayRateDate=null;
+            if(status)status.textContent='Could not load a current reference rate. Amounts remain in USD until the rate is available.';
+          }
+        }
+        if(displayRate!==null){
+          const available=document.querySelector('#settings-money-available');
+          const earned=document.querySelector('#settings-money-earned');
+          const moneyCurrency=document.querySelector('#settings-money-currency');
+          const earnedCurrency=document.querySelector('#settings-earned-currency');
+          if(available)available.textContent=formatSettingsMoney(creatorEarningsResult.availableMinor);
+          if(earned)earned.textContent=formatSettingsMoney(creatorEarningsResult.earnedMinor);
+          if(moneyCurrency)moneyCurrency.textContent=displayCurrency;
+          if(earnedCurrency)earnedCurrency.textContent=displayCurrency;
+          if(status)status.textContent=displayCurrency==='USD'?'Balances shown in USD.':('Estimated display conversion · '+displayCurrency+' · reference rate dated '+(displayRateDate||'date not supplied')+'. This does not change wallet settlement.');
+        }
+      }
       const settingsForm = document.querySelector('#settings-form');
+      document.querySelector('#settings-display-currency')?.addEventListener('change',event=>{
+        displayCurrency=event.currentTarget.value||'USD';
+        void refreshSettingsCurrency();
+      });
+      void refreshSettingsCurrency();
+      document.querySelectorAll('[data-settings-wallet-tab]').forEach(button=>button.addEventListener('click',()=>{
+        const tab=button.dataset.settingsWalletTab;
+        window.dispatchEvent(new CustomEvent('minglora:open-wallet',{detail:{tab}}));
+      }));
+      document.querySelectorAll('[data-settings-creator-section]').forEach(button=>button.addEventListener('click',()=>{
+        window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:button.dataset.settingsCreatorSection}}));
+      }));
+      const categoryTabs=[...document.querySelectorAll('[data-settings-category-button]')];
+      const categorizedSections=[...settingsForm.querySelectorAll('[data-settings-category]')];
+      function activateSettingsCategory(category) {
+        const selected=categoryTabs.find(tab=>tab.dataset.settingsCategoryButton===category);
+        if(!selected)return;
+        for(const tab of categoryTabs){
+          const active=tab===selected;
+          tab.classList.toggle('active',active);
+          tab.setAttribute('aria-pressed',active?'true':'false');
+        }
+        for(const section of categorizedSections)section.hidden=section.dataset.settingsCategory!==category;
+        const description=document.querySelector('#settings-category-description');
+        if(description)description.textContent=selected.dataset.categoryDescription||'';
+      }
+      categoryTabs.forEach(tab=>tab.addEventListener('click',()=>activateSettingsCategory(tab.dataset.settingsCategoryButton)));
+      activateSettingsCategory('activity');
+
+      async function refreshStorageSummary(){
+        const usedLabel=document.querySelector('#settings-storage-used');
+        const imageLabel=document.querySelector('#settings-cached-images');
+        const formatBytes=value=>{const bytes=Math.max(0,Number(value)||0);if(bytes<1024)return bytes+' B';if(bytes<1024*1024)return (bytes/1024).toFixed(1)+' KB';return (bytes/(1024*1024)).toFixed(1)+' MB';};
+        try{
+          const estimate=await navigator.storage?.estimate?.();
+          if(usedLabel)usedLabel.textContent=estimate?.usage!=null?formatBytes(estimate.usage)+' used':'Unavailable';
+        }catch{if(usedLabel)usedLabel.textContent='Unavailable';}
+        try{
+          if(!('caches' in window)){if(imageLabel)imageLabel.textContent='Unavailable';return;}
+          let count=0;
+          for(const cacheName of await caches.keys()){
+            if(!cacheName.startsWith('minglora-shell-'))continue;
+            const cache=await caches.open(cacheName);
+            count+=(await cache.keys()).filter(request=>request.destination==='image').length;
+          }
+          if(imageLabel)imageLabel.textContent=count.toLocaleString()+' cached images';
+        }catch{if(imageLabel)imageLabel.textContent='Unavailable';}
+      }
+      document.querySelector('#settings-clear-image-cache')?.addEventListener('click',async event=>{
+        const button=event.currentTarget,status=document.querySelector('#settings-cache-status');
+        button.disabled=true;
+        if(status)status.textContent='Clearing temporary cached images…';
+        try{
+          if(!('caches' in window))throw new Error('This browser does not provide the Cache Storage API.');
+          let removed=0;
+          for(const cacheName of await caches.keys()){
+            if(!cacheName.startsWith('minglora-shell-'))continue;
+            const cache=await caches.open(cacheName);
+            for(const request of await cache.keys()){
+              if(request.destination==='image'&&await cache.delete(request))removed++;
+            }
+          }
+          if(status)status.textContent=removed.toLocaleString()+' temporary cached images cleared. Your account data and device downloads were not changed.';
+          await refreshStorageSummary();
+        }catch(error){if(status)status.textContent='Cache could not be cleared. '+error.message;}
+        finally{button.disabled=false;}
+      });
+      refreshStorageSummary();
       document.querySelector('#settings-profile-view-history')?.addEventListener('click',event=>{
         const button=event.target.closest('[data-profile-viewer]');
         const userId=button?.dataset.profileViewer;
         if(userId)window.dispatchEvent(new CustomEvent('minglora:open-profile',{detail:{userId}}));
+      });
+
+      document.querySelector('#settings-refresh-activity')?.addEventListener('click',async event=>{
+        const button=event.currentTarget,list=document.querySelector('#settings-activity-list');
+        button.disabled=true;
+        try{
+          const refreshed=await api('/users/'+encodeURIComponent(result.account.id)+'/activity');
+          if(list)list.innerHTML=activityHistoryMarkup(refreshed.activity);
+        }catch(error){if(list)list.textContent='Activity could not be refreshed. '+error.message;}
+        finally{button.disabled=false;}
       });
 
       const settingsSaveStatus = document.querySelector('#settings-save-status');
@@ -483,7 +678,12 @@
             profileVisibility: formData.get('profileVisibility'),
             allowFriendRequests: formData.has('allowFriendRequests'),
             messageAudience: formData.get('messageAudience'),
-            meetWaveAudience: formData.get('meetWaveAudience')
+            meetWaveAudience: formData.get('meetWaveAudience'),
+            friendsListAudience: formData.get('friendsListAudience'),
+            followersListAudience: formData.get('followersListAudience'),
+            followingListAudience: formData.get('followingListAudience'),
+            subscribersListAudience: formData.get('subscribersListAudience'),
+            commentAudience: formData.get('commentAudience')
           },
           notifications: {
             inApp: formData.has('notificationInApp'),
@@ -498,7 +698,9 @@
             colorTheme: formData.get('colorTheme') || 'minglora',
             liveRoomTheme: formData.get('liveRoomTheme') || 'studio',
             feedSort: formData.get('feedSort'),
-            reducedMotion: formData.has('reducedMotion')
+            reducedMotion: formData.has('reducedMotion'),
+            liteMode: formData.has('liteMode'),
+            displayCurrency: formData.get('displayCurrency') || 'USD'
           }
         };
       }

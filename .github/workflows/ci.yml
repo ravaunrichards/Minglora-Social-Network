@@ -95,6 +95,8 @@ jobs:
           node --check src/store.js
           node --check tests/unit/supabase-persistence-retry.test.js
           node --check backend/modules/live/livekit.js
+          node --check backend/modules/live/settings.js
+          node --check tests/unit/live-settings.test.js
           node --check backend/modules/calls/service.js
           node --check tests/calls.test.js
           node --check tests/unit/profile-image-crop.test.js

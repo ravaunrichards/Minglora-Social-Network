@@ -10,12 +10,14 @@ const app = read('public/app.js');
 const server = read('src/server.js');
 const styles = read('public/styles.css');
 
-test('LIVE offers a compact reaction bar with likes, hearts, applause, fire and laughter', () => {
-  assert.match(app, /live-reaction-bar/);
+test('LIVE uses a single heart-like control beside the host profile instead of a reaction bar', () => {
+  assert.match(app, /class='live-stage-topbar'/);
+  assert.match(app, /class='live-host-profile'/);
+  assert.match(app, /id='live-heart-like'.*data-live-reaction='heart'/);
   assert.match(app, /id='live-reaction-count'/);
-  for (const reaction of ['heart', 'clap', 'fire', 'laugh']) {
-    assert.match(app, new RegExp("data-live-reaction='" + reaction + "'"));
-  }
+  assert.match(app, /Object\.freeze\(\{heart:"❤️"\}\)/);
+  assert.doesNotMatch(app, /live-reaction-bar|data-live-reaction='clap'|data-live-reaction='fire'|data-live-reaction='laugh'/);
+  assert.match(styles, /\.live-heart-button/);
 });
 
 test('LIVE reactions travel over the room data channel and are validated before display', () => {

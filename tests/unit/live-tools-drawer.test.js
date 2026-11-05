@@ -10,12 +10,17 @@ const app = read('public/app.js');
 const styles = read('public/styles.css');
 
 test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settings drawer', () => {
-  assert.match(app, /const rewardTools="<section id='live-reward-panel' class='live-reward-panel'>/);
+  assert.match(app, /const rewardTools=!giftsEnabled\?"":.*live-reward-panel/s);
   assert.match(app, /const liveToolsDrawer=.*speakerTools\+rewardTools\+liveGiftTools/s);
   assert.match(app, /id='live-tools-backdrop' class='live-tools-backdrop hidden'/);
   const roomMarkup = app.slice(app.indexOf('setContent("<section class=\'live-player-shell'), app.indexOf('const room=new client.Room'));
-  const community = roomMarkup.slice(roomMarkup.indexOf("<aside class='live-community-panel'"), roomMarkup.indexOf("</aside>"));
-  assert.doesNotMatch(community, /speakerTools|rewardTools|liveGiftTools|live-reward-panel/);
+  assert.doesNotMatch(roomMarkup, /live-reaction-bar|live-reaction-buttons|live-community-panel/);
+  assert.match(app, /const liveStageHud=/);
+  assert.match(app, /class='live-host-profile'/);
+  assert.match(app, /id='live-heart-like'.*data-live-reaction='heart'/);
+  assert.match(app, /id='live-leave' class='live-host-power-button'/);
+  assert.match(app, /class='live-chat-overlay'/);
+  assert.ok(app.includes('stage?.insertAdjacentHTML("beforeend",liveStageHud)'));
   assert.match(roomMarkup, /liveToolsDrawer/);
 });
 
@@ -29,11 +34,16 @@ test('LIVE settings, guest and gift controls open one accessible drawer and rewa
   assert.doesNotMatch(app, /live-rewards-toggle/);
 });
 
-test('Guest tools, gift catalogue and reward setup share the drawer while chat remains in the main room column', () => {
+test('Guest tools, gifts and rewards share the drawer while TikTok-style chat overlays the video stage', () => {
   assert.match(app, /liveToolsNavigation/);
   assert.match(app, /speakerTools\+rewardTools\+liveGiftTools/);
   assert.match(app, /id='live-chat-list'/);
   assert.match(app, /id='live-chat-form'/);
+  assert.match(app, /live-chat-overlay/);
+  assert.match(app, /class='live-chat-avatar'/);
+  assert.match(app, /member\.avatar_url/);
+  assert.ok(styles.includes(".live-chat-overlay"));
+  assert.doesNotMatch(app, /live-reaction-bar/);
 });
 
 test('Room audio has a working mute/unmute control separate from microphone publishing', () => {
@@ -64,9 +74,9 @@ test('Host can change the LIVE stage appearance from the settings drawer using t
 });
 
 test('Host and approved guests can use camera controls in video LIVE rooms', () => {
-  assert.match(app, /\(role==="host"\|\|role==="guest"\)&&broadcastType==="video_audio"\?liveControlButton\("live-camera-toggle"/);
-  assert.match(app, /role==="guest"&&broadcastType==="video_audio"/);
+  assert.match(app, /\(role==="host"\|\|role==="guest"\)&&canUseCamera\?liveControlButton\("live-camera-toggle"/);
+  assert.match(app, /if\(role==="guest"&&canUseCamera\)/);
   assert.match(app, /await room\.localParticipant\.setCameraEnabled\(true\)/);
-  assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&broadcastType==="video_audio"\)/);
+  assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&canUseCamera\)/);
   assert.match(app, /id='live-gift-panel'/);
 });
