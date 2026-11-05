@@ -1262,7 +1262,7 @@ function renderLiveViewerPanel(room,role,session){
     const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
     return "<div class='live-viewer-row'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+(participantHasLiveAudio(person)?'Guest speaker':'Viewer')+"</small></span><button type='button' class='text-button' data-live-viewer-profile='"+esc(person.identity||'')+"'>Profile</button></div>";
   }).join(''):"<p class='muted'>No other viewers are connected yet.</p>";
-  list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openProfile(userId);}));
+  list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openLiveProfilePreview(userId,session);}));
 }
 
 function stopLiveMatchRefresh(){if(liveMatchRefreshTimer){clearInterval(liveMatchRefreshTimer);liveMatchRefreshTimer=null;}liveMatchRefreshBusy=false;}
@@ -1378,6 +1378,8 @@ function renderLiveFanClubStatus(status){
     follow.classList.toggle('is-following',following);
     follow.setAttribute('aria-pressed',following?'true':'false');
   }
+  refreshLiveGiftGrid?.();
+  const teamButton=$('#live-team-gifts-open');if(teamButton)teamButton.disabled=!member;
   return member;
 }
 async function loadLiveFanClubStatus(session){
@@ -1417,7 +1419,7 @@ async function joinLiveHostFanClub(session){
   if(liveFanClubState?.isMember){
     const panel=$('#live-fan-club-panel');
     if(panel){panel.scrollIntoView?.({behavior:'smooth',block:'nearest'});}
-    openLiveToolsPanel?.('fanclub');
+    openLiveToolsPanel('#live-fan-club-panel');
     return;
   }
   const hostName=String(session.host?.name||session.host?.username||'this creator');
@@ -1731,7 +1733,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();closeLiveProfilePreview();liveFanClubState=null;refreshLiveGiftGrid=null;
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1913,14 +1915,14 @@ activeLivePinnedComment=null;
   const liveReactionEmoji=Object.freeze({heart:"❤️"});
   const receivedLiveReactionAt=new Map();
   let lastLiveReactionSentAt=0;
-  const showLiveReaction=(reaction)=>{
+  const showLiveReaction=(reaction,options={})=>{
     const emoji=liveReactionEmoji[reaction];
     if(!emoji)return;
     const counter=$("#live-reaction-count");
-    if(counter){
+    if(counter&&options.count!==false){
       const count=Math.max(0,Number(counter.dataset.count||0))+1;
       counter.dataset.count=String(count);
-      counter.textContent=count.toLocaleString();
+      counter.textContent=liveCompactCount(count);
     }
     const layer=$("#live-video-stage .live-reaction-layer");
     if(!layer)return;
@@ -1965,7 +1967,9 @@ activeLivePinnedComment=null;
       if(receivedLiveReactionAt.size>250){
         for(const [key,at] of receivedLiveReactionAt)if(now-at>10000)receivedLiveReactionAt.delete(key);
       }
-      showLiveReaction(packet.reaction);
+      const counter=$("#live-reaction-count");
+      if(counter&&Number.isFinite(Number(packet.likeCount))){counter.dataset.count=String(Math.max(0,Number(packet.likeCount)));counter.textContent=liveCompactCount(packet.likeCount);}
+      showLiveReaction(packet.reaction,{count:false});
       return;
     }
     if(topic==="minglora-live-pin"&&participant.identity===session.hostId&&packet?.type==="minglora.live.pin"&&packet.version===1){
@@ -2002,7 +2006,7 @@ activeLivePinnedComment=null;
     $("#live-audio-waveform")?.classList.toggle("is-active",activeLiveSpeakerIds.size>0);
     refreshSpeakerRoster();
   });
-  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();toast("Your LIVE connection was disconnected.");}});
+  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();toast("Your LIVE connection was disconnected.");}});
   // Render the host/speaker seat immediately; the connection label upgrades when
   // the microphone publication is confirmed, so the stage never waits for speech.
   refreshSpeakerRoster();
@@ -2038,6 +2042,11 @@ activeLivePinnedComment=null;
     updatePresence();
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
+    if(role==='viewer'){
+      const fanStatus=await loadLiveFanClubStatus(session);
+      if(fanStatus?.isMember)startLiveFanClubHeartbeat(session);
+    }
+    setupLiveMatchPanel(session,role);
     if(giftsEnabled)setupLiveRewardPanel(session,role);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
@@ -2179,16 +2188,49 @@ activeLivePinnedComment=null;
     });
     const sendLiveLike=async()=>{
       const now=Date.now();
-      if(now-lastLiveReactionSentAt<65)return;
+      if(now-lastLiveReactionSentAt<120)return;
       lastLiveReactionSentAt=now;
       try{
-        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction:"heart"}));
+        const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/likes',{method:'POST',body:'{}'});
+        const counter=$("#live-reaction-count");
+        if(counter&&Number.isFinite(Number(result.likeCount))){counter.dataset.count=String(Math.max(0,Number(result.likeCount)));counter.textContent=liveCompactCount(result.likeCount);}
+        if(result.accepted===false)return;
+        const likeButton=$('#live-heart-like');
+        if(likeButton){likeButton.classList.add('is-liked');likeButton.setAttribute('aria-pressed','true');}
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction:"heart",likeCount:result.likeCount}));
         await room.localParticipant.publishData(packet,{reliable:false,topic:"minglora-live-reaction"});
-        showLiveReaction("heart");
-      }catch(error){
-        toast(error.message||"LIVE likes could not be sent right now.");
-      }
+        showLiveReaction("heart",{count:false});
+      }catch(error){toast(error.message||"LIVE likes could not be sent right now.");}
     };
+    $('#live-heart-like')?.addEventListener('click',()=>void sendLiveLike());
+    $('[data-live-profile-preview]')?.addEventListener('click',event=>openLiveProfilePreview(event.currentTarget.dataset.liveProfilePreview,session));
+    $('#live-follow-host')?.addEventListener('click',async event=>{
+      const button=event.currentTarget,following=button.getAttribute('aria-pressed')==='true';
+      button.disabled=true;
+      try{
+        const result=await api('/users/'+encodeURIComponent(session.hostId)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
+        session.host=session.host||{};session.host.following=!following;
+        const status=liveFanClubState||{};status.following=!following;renderLiveFanClubStatus(status);
+        button.setAttribute('aria-pressed',String(!following));button.textContent=!following?(result.friends?'Friends':'Following'):'Follow';
+        toast(!following?'Now following '+(session.host.name||'the host')+'.':'Unfollowed the LIVE host.');
+      }catch(error){toast(error.message||'The follow could not be updated.');}
+      finally{button.disabled=false;}
+    });
+    $('#live-fan-club-join')?.addEventListener('click',()=>void joinLiveHostFanClub(session));
+    $('#live-fan-club-join-panel')?.addEventListener('click',()=>void joinLiveHostFanClub(session));
+    $('#live-team-gifts-open')?.addEventListener('click',()=>{
+      if(!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
+      openLiveToolsPanel('#live-gift-panel');$('#live-gift-scope-team')?.click();
+    });
+    $('#live-chat-emoji')?.addEventListener('click',()=>$('#live-chat-emoji-picker')?.classList.toggle('hidden'));
+    $('#live-chat-emoji-picker')?.addEventListener('click',event=>{
+      const button=event.target?.closest?.('[data-live-chat-emoji]');if(!button)return;
+      const input=$('#live-chat-form input[name="body"]');if(!input)return;
+      const start=input.selectionStart??input.value.length,end=input.selectionEnd??input.value.length;
+      input.value=input.value.slice(0,start)+button.dataset.liveChatEmoji+input.value.slice(end);
+      input.focus();input.setSelectionRange(start+button.dataset.liveChatEmoji.length,start+button.dataset.liveChatEmoji.length);
+      $('#live-chat-emoji-picker')?.classList.add('hidden');
+    });
     stage?.addEventListener("click",event=>{
       const interactiveTarget=event.target?.closest?.("button,a,input,textarea,select,[contenteditable='true'],[role='button'],.live-stage-topbar,.live-chat-form,.live-tools-drawer");
       if(interactiveTarget)return;
@@ -2285,12 +2327,12 @@ activeLivePinnedComment=null;
         if(button)button.disabled=false;
         return;
       }
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
