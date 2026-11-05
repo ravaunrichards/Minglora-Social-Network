@@ -4674,6 +4674,7 @@ function bindNavigation(){
   $('#home-brand').onclick=()=>activateNav('feed');
   $('#rail-profile').onclick=()=>openProfile(state.user.id);
   $('#profile-menu').onclick=()=>openProfile(state.user.id);
+  $('#switch-profile-btn').onclick=()=>openAccountSwitcher();
   $('#rail-notifications').onclick=()=>renderNotifications();
   $('#notifications-btn').onclick=()=>renderNotifications();
   $('#messenger-btn')?.addEventListener('click',toggleMessengerPanel);
@@ -4714,13 +4715,62 @@ async function enterMingloraApp(user,showWelcome=false){
   else activateNav('feed');
   if(showWelcome)toast('Welcome to Minglora!');
 }
-function openMfaLogin(challengeId){
+async function activateSwitchedAccount(user){
+  if(!user?.id)throw new Error('Minglora did not return the selected profile.');
+  activeMessageRecordings.forEach((recording,userId)=>cancelMessageVoiceRecording(userId));
+  messageRefreshKnownIncomingIds=new Set();messageRefreshKnownIncomingPrimed=false;
+  closeMessengerPanel();state.messageWindows=[];
+  messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();
+  state.user=user;
+  showApp();
+  await renderSidebar();
+  await updateNotificationDot();
+  await updateMessengerBadge();
+  activateNav('feed');
+  toast('Profile switched.');
+}
+async function openAccountSwitcher(){
+  const previous=document.querySelector('#account-switcher-modal');previous?.remove();
+  const modal=document.createElement('div');
+  modal.id='account-switcher-modal';modal.className='modal-backdrop profile-menu-modal-backdrop';
+  modal.innerHTML='<section class="modal profile-menu-modal account-switcher-modal" role="dialog" aria-modal="true" aria-labelledby="account-switcher-title"><div class="modal-head"><div><h2 id="account-switcher-title">Switch profile</h2><small class="muted">Choose a saved Minglora account on this device</small></div><button type="button" class="modal-close" aria-label="Close">×</button></div><div class="modal-body"><div id="account-switcher-list" class="account-switcher-list" aria-live="polite">Loading saved profiles…</div><div class="account-switcher-divider"></div><form id="account-switcher-login-form" class="account-switcher-login"><h3>Add another account</h3><label class="field"><span>Email address</span><input type="email" name="email" autocomplete="username" maxlength="254" required placeholder="name@example.com"></label><label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" maxlength="1024" required></label><p class="settings-form-status" id="account-switcher-status" role="status"></p><button type="submit" class="primary full">Add and switch account</button></form><p class="account-switcher-privacy">Passwords are used only to sign in. Minglora keeps separate account sessions and does not save your password in this browser.</p></div></section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close')?.addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  const list=modal.querySelector('#account-switcher-list'),status=modal.querySelector('#account-switcher-status');
+  try{
+    const result=await api('/auth/accounts');
+    const accounts=Array.isArray(result.accounts)?result.accounts:[];
+    list.innerHTML=accounts.map(account=>'<button type="button" class="account-switch-entry" data-switch-session="'+esc(account.sessionId)+'" '+(account.isCurrent?'disabled aria-current="true"':'')+'><span class="account-switch-avatar">'+esc(String(account.name||'M').trim().charAt(0).toUpperCase()||'M')+'</span><span class="account-switch-meta"><strong>'+esc(account.name||'Minglora member')+(account.isCurrent?' · Active':'')+'</strong><small>@'+esc(account.username||'')+'</small><small>'+esc(account.email||'')+'</small></span><span class="account-switch-action">'+(account.isCurrent?'Current':'Switch')+'</span></button>').join('')||'<p class="settings-empty">No other saved profiles on this device yet. Add an account below to switch between profiles.</p>';
+    list.querySelectorAll('[data-switch-session]').forEach(button=>button.addEventListener('click',async()=>{
+      button.disabled=true;status.textContent='';
+      try{
+        const switched=await api('/auth/switch',{method:'POST',body:JSON.stringify({sessionId:button.dataset.switchSession})});
+        close();await activateSwitchedAccount(switched.user);
+      }catch(error){status.textContent=error.message;button.disabled=false;}
+    }));
+  }catch(error){list.textContent=error.message;}
+  modal.querySelector('#account-switcher-login-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),values=new FormData(form);
+    button.disabled=true;status.textContent='';
+    try{
+      const result=await api('/auth/login',{method:'POST',body:JSON.stringify({email:values.get('email'),password:values.get('password')})});
+      form.reset();
+      if(result.mfaRequired){close();openMfaLogin(result.challengeId,activateSwitchedAccount);return;}
+      if(!result.user)throw new Error('Minglora did not return the new account profile.');
+      close();await activateSwitchedAccount(result.user);
+    }catch(error){status.textContent=error.message;button.disabled=false;}
+  });
+}
+function openMfaLogin(challengeId,onAuthenticated){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="mfa-login-title"><div class="modal-head"><h2 id="mfa-login-title">Verify it is you</h2><button class="modal-close" aria-label="Close">×</button></div><form id="mfa-login-form" class="modal-body"><p>Enter the current code from your authenticator app to finish signing in.</p><div class="field"><label for="mfa-login-code">Authenticator code</label><input id="mfa-login-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required></div><p class="auth-error" id="mfa-login-error"></p><button type="submit" class="primary full">Verify and sign in</button></form></section>';
   document.body.append(modal);modal.querySelector('.modal-close').onclick=()=>modal.remove();
   modal.querySelector('form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.currentTarget.querySelector('button[type="submit"]'),error=modal.querySelector('#mfa-login-error');button.disabled=true;error.textContent='';
-    try{const values=new FormData(event.currentTarget),result=await api('/auth/mfa/login',{method:'POST',body:JSON.stringify({challengeId,code:values.get('code')})});modal.remove();await enterMingloraApp(result.user);}
+    try{const values=new FormData(event.currentTarget),result=await api('/auth/mfa/login',{method:'POST',body:JSON.stringify({challengeId,code:values.get('code')})});modal.remove();await (typeof onAuthenticated==='function'?onAuthenticated(result.user):enterMingloraApp(result.user));}
     catch(err){error.textContent=err.message;button.disabled=false;}
   });
 }

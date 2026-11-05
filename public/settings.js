@@ -114,7 +114,8 @@
                 <div><small>Username</small><strong>@${escapeHtml(result.account?.username || '')}</strong></div>
                 <div><small>Email address</small><strong>${escapeHtml(result.account?.email || 'Not available')}</strong></div>
               </div>
-              <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
+              <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Your login email is changed only after the new address is confirmed.</p>
+              ${result.account?.pendingEmail?'<p class="settings-note" role="status">Email change awaiting confirmation: <strong>'+escapeHtml(result.account.pendingEmail)+'</strong>. Your current email remains active until confirmation is completed.</p>':''}
               <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
             </section>
             <section class="settings-card" id="settings-privacy">
@@ -208,8 +209,10 @@
             <section class="settings-card" id="settings-security">
               ${sectionHeading('Security and login')}
               <form id="security-email-form" class="settings-security-form">
-                <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
-                <button class="secondary" type="submit">Request email change</button><p class="settings-form-status" id="security-email-status" role="status"></p>
+                <h3>Replace login email address</h3>
+                <p class="settings-note">Current email: <strong>${escapeHtml(result.account?.email||'Not available')}</strong>. Enter the replacement address and your current password, then save. A secure confirmation message must be completed before the new address becomes your login email.</p>
+                <label class="field"><span>Replacement email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
+                <button class="primary" type="submit">Save new email address</button><p class="settings-form-status" id="security-email-status" role="status"></p>
               </form>
               <form id="security-password-form" class="settings-security-form">
                 <h3>Change password</h3><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" required minlength="10"></label>
@@ -320,7 +323,7 @@
 
       document.querySelector('#security-email-form')?.addEventListener('submit',async event=>{
         event.preventDefault();const form=event.currentTarget,status=document.querySelector('#security-email-status'),button=form.querySelector('button[type="submit"]');button.disabled=true;
-        try{const values=new FormData(form);const result=await api('/security/email',{method:'POST',body:JSON.stringify({email:values.get('email'),currentPassword:values.get('currentPassword')})});status.textContent=result.message||'Check your new email for a verification link.';form.reset();}
+        try{const values=new FormData(form);const result=await api('/security/email',{method:'POST',body:JSON.stringify({email:values.get('email'),currentPassword:values.get('currentPassword')})});status.textContent=result.message||'A secure confirmation message has been sent to verify the replacement email address.';form.reset();}
         catch(error){status.textContent=error.message;}
         finally{button.disabled=false;}
       });
