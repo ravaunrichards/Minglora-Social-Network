@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CREATOR_LEAGUE_CLASSES, MATCH_RANKS, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
-  recordLiveGiftForLeagues, settleCreatorLeagueDay, createCreatorLeagueMatch,
+  recordLiveGiftForLeagues, refundCreatorLeagueGift, settleCreatorLeagueDay, createCreatorLeagueMatch,
   acceptCreatorLeagueMatch, useCreatorLeaguePowerup, supportCreatorLeagueMatch,
   settleExpiredLeagueMatches, getCreatorLeagueOverview, listCreatorLeagueMatches
 } from "../../backend/modules/leagues/service.js";
@@ -395,4 +395,29 @@ test("duplicate match score events count each confirmed Gift and viewer support 
   assert.equal(refreshed.scores.challenger, 28);
   assert.equal(refreshed.events.filter(item => item.type === "gift_score").length, 2);
   assert.equal(refreshed.events.filter(item => item.type === "viewer_support").length, 1);
+});
+
+
+test("refunded LIVE Gifts remain auditable but are removed from Creator League totals", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-05T20:37:31.000Z");
+  recordLiveGiftForLeagues(db, {
+    giftId: "gift-refund-1", recipientId: "creator-refund", broadcastId: "live-refund",
+    giftCode: "rose", coinAmount: 30000, now
+  });
+  const profile = ensureCreatorLeagueProfile(db, "creator-refund", "GLOBAL", now);
+  assert.equal(profile.lifetimeGiftPoints, 30000);
+  assert.equal(profile.seasonPoints, 30000);
+  assert.equal(db.creatorLeagueDailyScores[0].points, 30000);
+
+  const result = refundCreatorLeagueGift(db, "gift-refund-1", new Date("2026-11-05T21:08:14.000Z"));
+  assert.equal(result.reversed, true);
+  assert.equal(result.coinAmount, 30000);
+  assert.equal(db.creatorLeagueGiftLedger.length, 1);
+  assert.ok(db.creatorLeagueGiftLedger[0].refundedAt);
+  assert.equal(db.creatorLeagueGiftLedger[0].status, "refunded");
+  assert.equal(profile.lifetimeGiftPoints, 0);
+  assert.equal(profile.seasonPoints, 0);
+  assert.equal(db.creatorLeagueDailyScores[0].points, 0);
+  assert.equal(refundCreatorLeagueGift(db, "gift-refund-1").reason, "already_refunded");
 });
