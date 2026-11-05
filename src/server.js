@@ -890,6 +890,7 @@ async function route(req, res) {
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
+    if (user) await syncRefundedGiftActivity();
     try {
       if (method==='POST' && p==='/api/auth/register') {
         const name=String(input.name||'').trim(), username=normalizeUsername(input.username), email=normalizeEmail(input.email), password=String(input.password||''), phoneNumber=normalizeContactPhone(input.phoneNumber||input.contactPhone||'');
@@ -2603,7 +2604,7 @@ async function route(req, res) {
         const sinceMs=sinceValue?Date.parse(sinceValue):0;
         if(sinceValue&&!Number.isFinite(sinceMs))return json(res,400,{error:'Use a valid timestamp when checking LIVE gift activity.'});
         const events=(db.giftGalleryEvents||[])
-          .filter(event=>event.broadcastId===session.id&&event.creatorId===session.hostId&&
+          .filter(event=>!event.refundedAt&&event.status!=='refunded'&&event.broadcastId===session.id&&event.creatorId===session.hostId&&
             (!sinceValue||Date.parse(event.createdAt)>=sinceMs))
           .sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
           .slice(-60)
