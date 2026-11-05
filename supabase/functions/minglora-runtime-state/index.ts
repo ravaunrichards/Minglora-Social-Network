@@ -76,7 +76,9 @@ Deno.serve(async (req: Request) => {
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
-    "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
+    "economy_purchase_settle", "economy_send_gift", "economy_live_reward_create",
+    "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
+    "economy_creator_earnings",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
@@ -373,6 +375,136 @@ Deno.serve(async (req: Request) => {
     });
     if (error) return fail(error, "Minglora could not settle the PayPal coin purchase.");
     return json(200, { settlement: data });
+  }
+
+  if (action === "economy_live_reward_settle") {
+    const broadcastId = input.broadcastId ? String(input.broadcastId) : null;
+    if (broadcastId && !validUuid(broadcastId)) return json(400, { error: "Invalid LIVE broadcast reference." });
+    const { data, error } = await admin.rpc("minglora_settle_live_reward_drops", { p_broadcast_id: broadcastId });
+    if (error) return fail(error, "Minglora could not settle LIVE reward drops.");
+    return json(200, { settlement: data || { settledCount: 0, refundedCoins: 0 } });
+  }
+
+  if (action === "economy_live_reward_create") {
+    const creatorId = String(input.creatorId || "");
+    const broadcastId = String(input.broadcastId || "");
+    const requestId = String(input.requestId || "");
+    const kind = String(input.kind || "");
+    const totalCoins = Number(input.totalCoins);
+    const winnerCount = Number(input.winnerCount);
+    const countdownSeconds = Number(input.countdownSeconds);
+    const participationMethod = String(input.participationMethod || "tap");
+    const keyword = String(input.keyword || "").trim().toLowerCase();
+    if (!validUuid(creatorId) || !validUuid(broadcastId) || !validUuid(requestId) ||
+        !["goody_bag", "treasure_box"].includes(kind) ||
+        !Number.isSafeInteger(totalCoins) || totalCoins < 1 || totalCoins > 1000000 ||
+        !Number.isSafeInteger(winnerCount) || winnerCount < 1 || winnerCount > 100 ||
+        winnerCount > totalCoins ||
+        !Number.isSafeInteger(countdownSeconds) || countdownSeconds < 30 || countdownSeconds > 600 ||
+        !["tap", "comment"].includes(participationMethod) ||
+        (participationMethod === "comment" && (keyword.length < 1 || keyword.length > 40)) ||
+        keyword.length > 40) {
+      return json(400, { error: "Check the reward type, coin pool, winners, countdown and entry condition." });
+    }
+    const { data, error } = await admin.rpc("minglora_create_live_reward_drop", {
+      p_creator_id: creatorId,
+      p_broadcast_id: broadcastId,
+      p_request_id: requestId,
+      p_kind: kind,
+      p_total_coins: totalCoins,
+      p_winner_count: winnerCount,
+      p_countdown_seconds: countdownSeconds,
+      p_participation_method: participationMethod,
+      p_keyword: keyword
+    });
+    if (error) return fail(error, "Minglora could not create this LIVE reward drop.");
+    return json(201, { result: data });
+  }
+
+  if (action === "economy_live_reward_list") {
+    const userId = String(input.userId || "");
+    const broadcastId = String(input.broadcastId || "");
+    if (!validUuid(userId) || !validUuid(broadcastId)) return json(400, { error: "Invalid LIVE reward list request." });
+    const { data: broadcast, error: broadcastError } = await admin
+      .from("live_broadcasts").select("id,status").eq("id", broadcastId).maybeSingle();
+    if (broadcastError) return json(503, { error: "Minglora could not verify this LIVE reward room." });
+    if (!broadcast) return json(404, { error: "LIVE reward room was not found." });
+
+    const { data: settlement, error: settlementError } = await admin.rpc(
+      "minglora_settle_live_reward_drops", { p_broadcast_id: broadcastId }
+    );
+    if (settlementError) return fail(settlementError, "Minglora could not update LIVE reward timers.");
+
+    const { data: drops, error: dropsError } = await admin
+      .from("live_reward_drops")
+      .select("id,broadcast_id,creator_id,kind,total_coins,winner_count,countdown_seconds,participation_method,keyword,status,opens_at,closes_at,settled_at,created_at")
+      .eq("broadcast_id", broadcastId)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    if (dropsError) return json(503, { error: "Minglora could not load this LIVE reward list." });
+
+    const dropIds = (drops || []).map((drop: any) => drop.id);
+    let entries: any[] = [];
+    if (dropIds.length) {
+      const { data, error } = await admin
+        .from("live_reward_participants")
+        .select("drop_id,user_id,joined_at,claim_order,reward_coins")
+        .in("drop_id", dropIds);
+      if (error) return json(503, { error: "Minglora could not load LIVE reward entries." });
+      entries = data || [];
+    }
+
+    const formatted = (drops || []).map((drop: any) => {
+      const people = entries.filter((entry: any) => entry.drop_id === drop.id);
+      const own = people.find((entry: any) => entry.user_id === userId) || null;
+      return {
+        id: drop.id,
+        broadcastId: drop.broadcast_id,
+        creatorId: drop.creator_id,
+        kind: drop.kind,
+        totalCoins: Number(drop.total_coins),
+        winnerCount: Number(drop.winner_count),
+        countdownSeconds: Number(drop.countdown_seconds),
+        participationMethod: drop.participation_method,
+        keyword: drop.keyword,
+        status: drop.status,
+        opensAt: drop.opens_at,
+        closesAt: drop.closes_at,
+        createdAt: drop.created_at,
+        settledAt: drop.settled_at,
+        participantCount: people.length,
+        viewerJoined: Boolean(own),
+        viewerClaimOrder: own?.claim_order == null ? null : Number(own.claim_order),
+        viewerRewardCoins: Number(own?.reward_coins || 0),
+        winners: people.filter((entry: any) => Number(entry.claim_order || 0) > 0)
+          .sort((a: any, b: any) => Number(a.claim_order) - Number(b.claim_order))
+          .map((entry: any) => ({
+            userId: entry.user_id,
+            claimOrder: Number(entry.claim_order),
+            rewardCoins: Number(entry.reward_coins || 0)
+          }))
+      };
+    });
+    return json(200, { drops: formatted, settlement: settlement || null });
+  }
+
+  if (action === "economy_live_reward_join" || action === "economy_live_reward_claim") {
+    const userId = String(input.userId || "");
+    const dropId = String(input.dropId || "");
+    const keyword = String(input.keyword || "").trim().toLowerCase();
+    if (!validUuid(userId) || !validUuid(dropId) || keyword.length > 40) {
+      return json(400, { error: "Invalid LIVE reward entry." });
+    }
+    const functionName = action === "economy_live_reward_join"
+      ? "minglora_join_live_goody_bag"
+      : "minglora_claim_live_treasure_box";
+    const { data, error } = await admin.rpc(functionName, {
+      p_user_id: userId,
+      p_drop_id: dropId,
+      p_keyword: keyword
+    });
+    if (error) return fail(error, "Minglora could not confirm your LIVE reward entry.");
+    return json(200, { result: data });
   }
 
   if (action === "economy_send_gift") {
