@@ -1861,6 +1861,59 @@ async function route(req, res) {
         });
         return json(res,200,{members:Array.isArray(result.members)?result.members:[]});
       }
+      if(method==='GET'&&p==='/api/admin/campaign-coins'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can view Admin Campaign Coins.'});
+        }
+        const result=await requestSupabaseState('economy_admin_campaign_wallet',{
+          adminUserId:user.id,adminEmail
+        });
+        return json(res,200,result);
+      }
+      if(method==='POST'&&p==='/api/admin/campaign-coins/fund'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can add Admin Campaign Coins.'});
+        }
+        const amountCoins=Number(input.amountCoins);
+        const requestId=String(input.requestId||'').trim();
+        const note=String(input.note||'').trim().slice(0,500);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Number.isSafeInteger(amountCoins)||amountCoins<1||amountCoins>1000000000000||!uuidPattern.test(requestId)){
+          return json(res,400,{error:'Enter a whole-number amount from 1 to 1 trillion Coins and a secure request reference.'});
+        }
+        const result=await requestSupabaseState('economy_admin_campaign_fund',{
+          adminUserId:user.id,adminEmail,amountCoins,requestId,note
+        });
+        return json(res,200,result);
+      }
+      if(method==='POST'&&p==='/api/admin/campaign-coins/allocate'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can allocate Admin Campaign Coins.'});
+        }
+        const memberUsername=normalizeUsername(input.memberUsername||input.memberLookup);
+        const amountCoins=Number(input.amountCoins);
+        const requestId=String(input.requestId||'').trim();
+        const campaignName=String(input.campaignName||'').trim().slice(0,120);
+        const note=String(input.note||'').trim().slice(0,500);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!validateUsername(memberUsername).valid||!Number.isSafeInteger(amountCoins)||amountCoins<1||
+           amountCoins>1000000000000||!uuidPattern.test(requestId)){
+          return json(res,400,{error:'Enter a valid member username, positive whole-number amount and secure request reference.'});
+        }
+        const result=await requestSupabaseState('economy_admin_campaign_allocate',{
+          adminUserId:user.id,adminEmail,memberUsername,amountCoins,requestId,campaignName,note
+        });
+        return json(res,200,result);
+      }
       if(method==='GET'&&p==='/api/admin/marketing/budget'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
