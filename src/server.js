@@ -1911,6 +1911,34 @@ async function route(req, res) {
           adminUserId:user.id,adminEmail
         }));
       }
+      if(method==='GET'&&p==='/api/admin/promotional-gift-cash-backings'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can review historical gift cash backing.'});
+        }
+        return json(res,200,await requestSupabaseState('economy_admin_promotional_gift_backings_list',{
+          adminUserId:user.id,adminEmail
+        }));
+      }
+      if(method==='POST'&&p==='/api/admin/promotional-gift-cash-backings'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can back historical promotional gifts.'});
+        }
+        const giftTransactionId=String(input.giftTransactionId||'').trim();
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!uuidPattern.test(giftTransactionId)){
+          return json(res,400,{error:'Select a valid historical promotional gift.'});
+        }
+        const result=await requestSupabaseState('economy_admin_promotional_gift_backing_create',{
+          adminUserId:user.id,adminEmail,giftTransactionId,requestId:uid()
+        });
+        return json(res,200,{ok:true,backing:result.backing||{}});
+      }
       if(method==='POST'&&p==='/api/admin/promotional-gift-fund/orders'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
