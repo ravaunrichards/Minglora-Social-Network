@@ -90,6 +90,7 @@ jobs:
           node --check public/auth-login.js
           node --check public/sw.js
           node --check public/settings.js
+          node --check public/admin-centre.js
           node --check src/server.js
           node --check src/store.js
           node --check tests/unit/supabase-persistence-retry.test.js
