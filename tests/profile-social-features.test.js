@@ -42,7 +42,7 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   const alice=await register('Minglora Profile Owner','profileowner','profile-owner@example.test');
   const bob=await register('Minglora Profile Viewer','profileviewer','profile-viewer@example.test');
   const creator=await register('Creator Hub Creator Network','creatorhubcreatornetwork','CreatorHubCreatorNetwork@Gmail.Com');
-  assert.equal(creator.user.verificationBadge,'blue','the designated Creator Hub profile receives its verification sticker');
+  assert.equal(creator.user.verificationBadge,null,'a legacy test registration without a persisted verification decision must not receive a blue check from email alone');
   assert.equal(creator.user.platformBadge,null,'verification must not grant a platform Admin badge');
 
   const sections=await request(alice.cookie,'/api/profile-sections',{method:'PATCH',body:JSON.stringify({sections:{about:false,checkIns:false,events:true,highlights:true}})});
