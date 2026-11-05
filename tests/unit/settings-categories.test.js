@@ -80,3 +80,20 @@ test('Lite mode is stored as an account preference and applied to the interface'
   assert.match(server,/\['reducedMotion','liteMode','messengerIncomingCallSounds'/);
   assert.match(styles,/body\.lite-mode/);
 });
+
+test('Relationship-list visibility and comment audience are stored and enforced by the server',()=>{
+  for(const field of ['friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience']){
+    assert.ok(server.includes(field),'server supports '+field);
+    assert.ok(settings.includes('name="'+field+'"')||settings.includes(field),'settings expose '+field);
+  }
+  assert.match(server,/canViewProfileAudience\(user\.id,target\.id,listAudience\)/);
+  assert.match(server,/commentAudience==='nobody'/);
+  assert.match(server,/commentAudience==='friends'&&!isFriend\(user\.id,post\.userId\)/);
+});
+test('Wallet display currency uses an external reference rate without changing USD settlement',()=>{
+  assert.match(settings,/name="displayCurrency"/);
+  assert.match(settings,/api\.frankfurter\.dev\/v2\/rate\/usd\//);
+  assert.match(settings,/Wallet accounting, PayPal checkout and payouts remain in USD/);
+  assert.match(settings,/reference rate dated/);
+  assert.match(server,/key==='displayCurrency'/);
+});
