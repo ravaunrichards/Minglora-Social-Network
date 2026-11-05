@@ -1472,8 +1472,147 @@ function setupLiveRewardPanel(session,role){
   void refreshLiveRewardPanel(session,role);
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
+function stopLiveQaRefresh(){if(liveQaRefreshTimer){clearInterval(liveQaRefreshTimer);liveQaRefreshTimer=null;}liveQaRefreshBusy=false;}
+function stopLiveMatchRefresh(){if(liveMatchRefreshTimer){clearInterval(liveMatchRefreshTimer);liveMatchRefreshTimer=null;}liveMatchRefreshBusy=false;}
+async function refreshLiveQaPanel(session,role){
+  if(liveQaRefreshBusy||!session?.id||!$('#live-qa-list'))return;
+  liveQaRefreshBusy=true;
+  try{
+    const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions');
+    if(activeLiveSession?.id!==session.id)return;
+    const list=$('#live-qa-list');
+    if(!list)return;
+    const questions=Array.isArray(data.questions)?data.questions:[];
+    list.innerHTML=questions.length?questions.map(item=>{
+      const status=item.status==='answered'?'Answered':item.status==='closed'?'Closed':'Open';
+      const mine=item.userId===state.user?.id;
+      const controls=role==='host'
+        ?"<div class='live-qa-actions'>"+
+          "<button type='button' data-live-qa-action='pin' data-live-qa-id='"+esc(item.id)+"'>"+(item.pinnedAt?'Unpin':'Pin')+"</button>"+
+          "<button type='button' data-live-qa-action='answer' data-live-qa-id='"+esc(item.id)+"'>Answer</button>"+
+          "<button type='button' data-live-qa-action='"+(item.status==='closed'?'reopen':'close')+"' data-live-qa-id='"+esc(item.id)+"'>"+(item.status==='closed'?'Reopen':'Close')+"</button>"+
+          "<button type='button' data-live-qa-action='delete' data-live-qa-id='"+esc(item.id)+"'>Delete</button></div>"
+        :"<button type='button' class='live-qa-vote' data-live-qa-vote='"+esc(item.id)+"' "+(item.myVote?'aria-pressed="true"':'aria-pressed="false"')+">"+(item.myVote?'Voted · ':'Vote · ')+Number(item.voteCount||0).toLocaleString()+"</button>";
+      return "<article class='live-qa-question "+(item.pinnedAt?'is-pinned':'')+"'><div class='live-qa-question-head'><strong>"+esc(item.asker?.name||'Minglora member')+"</strong><span>"+status+"</span></div><p>"+esc(item.body)+"</p>"+(item.answer?"<div class='live-qa-answer'><strong>Host answer</strong><p>"+esc(item.answer)+"</p></div>":"")+"<div class='live-qa-question-foot'><small>"+(item.pinnedAt?'Pinned · ':'')+Number(item.voteCount||0).toLocaleString()+" votes"+(mine?' · Your question':'')+"</small>"+controls+"</div></article>";
+    }).join(""):"<div class='live-qa-empty'><strong>No questions yet</strong><small>Be the first to ask the host something.</small></div>";
+  }catch(error){
+    const list=$('#live-qa-list');if(list&&!list.children.length)list.innerHTML="<p class='muted'>Q&A could not be refreshed: "+esc(error.message)+"</p>";
+  }finally{liveQaRefreshBusy=false;}
+}
+function setupLiveQaPanel(session,role){
+  stopLiveQaRefresh();
+  const panel=$('#live-qa-panel');if(!panel)return;
+  const form=$('#live-qa-form'),list=$('#live-qa-list');
+  form?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const field=form.elements.question,question=String(field?.value||'').trim();
+    if(question.length<4||question.length>300){toast('Enter a question between 4 and 300 characters.');return;}
+    const button=form.querySelector("button[type='submit']");if(button)button.disabled=true;
+    try{await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions',{method:'POST',body:JSON.stringify({question})});form.reset();toast('Your LIVE question was submitted.');await refreshLiveQaPanel(session,role);}
+    catch(error){toast(error.message||'Your question could not be submitted.');}
+    finally{if(button)button.disabled=false;}
+  });
+  list?.addEventListener('click',async event=>{
+    const vote=event.target?.closest?.('[data-live-qa-vote]');
+    if(vote){
+      vote.disabled=true;
+      try{await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions/'+encodeURIComponent(vote.dataset.liveQaVote)+'/vote',{method:'POST',body:'{}'});await refreshLiveQaPanel(session,role);}
+      catch(error){toast(error.message);}
+      finally{vote.disabled=false;}
+      return;
+    }
+    const action=event.target?.closest?.('[data-live-qa-action]');
+    if(!action||role!=='host')return;
+    const questionId=String(action.dataset.liveQaId||''),decision=String(action.dataset.liveQaAction||'');
+    let answer='';
+    if(decision==='answer'){answer=String(window.prompt('Write your answer for everyone in LIVE Q&A:')||'').trim();if(!answer)return;}
+    if(decision==='delete'&&!window.confirm('Delete this LIVE question?'))return;
+    action.disabled=true;
+    try{
+      if(decision==='delete')await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions/'+encodeURIComponent(questionId),{method:'DELETE'});
+      else await api('/live/sessions/'+encodeURIComponent(session.id)+'/questions/'+encodeURIComponent(questionId),{method:'PATCH',body:JSON.stringify({action:decision,...(answer?{answer}:{})})});
+      await refreshLiveQaPanel(session,role);
+    }catch(error){toast(error.message||'The Q&A change could not be saved.');}
+    finally{action.disabled=false;}
+  });
+  void refreshLiveQaPanel(session,role);
+  liveQaRefreshTimer=setInterval(()=>void refreshLiveQaPanel(session,role),5000);
+}
+function liveMatchStatusLabel(match){
+  if(match.status==='live')return 'LIVE MATCH';
+  if(match.status==='pending')return 'Invitation pending';
+  return String(match.status||'Match').replace(/_/g,' ');
+}
+function renderLiveMatches(matches){
+  const root=$('#live-match-list');if(!root)return;
+  const items=Array.isArray(matches)?matches:[];
+  if(!items.length){root.innerHTML="<div class='live-match-empty'><strong>No League Matches yet</strong><small>Challenge another creator who is currently broadcasting.</small></div>";return;}
+  root.innerHTML=items.map(match=>{
+    const challenger=match.challenger?.name||'Challenger',opponent=match.opponent?.name||'Opponent';
+    const active=match.status==='live',pending=match.status==='pending';
+    const score=match.scores||{challenger:0,opponent:0};
+    const challengerPoints=Number(score.challenger||0),opponentPoints=Number(score.opponent||0);
+    const total=Math.max(1,challengerPoints+opponentPoints);
+    const mine=[match.challengerId,match.opponentId].includes(state.user?.id);
+    const acceptedByMe=match.opponentId===state.user?.id&&pending;
+    const alreadySupported=(match.supporters||[]).some(item=>item.userId===state.user?.id);
+    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+challengerPoints.toLocaleString()+"</b><small>Challenger</small></div>";
+    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+opponentPoints.toLocaleString()+"</b><small>Opponent</small></div>";
+    const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
+    const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
+    const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
+    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='double_score' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
+    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+  }).join('');
+}
+async function refreshLiveMatchPanel(session,role){
+  if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
+  liveMatchRefreshBusy=true;
+  try{const data=await api('/leagues/matches');if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[]);}
+  catch(error){const root=$('#live-match-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Creator League could not be loaded: "+esc(error.message)+"</p>";}
+  finally{liveMatchRefreshBusy=false;}
+}
+async function setupLiveMatchPanel(session,role){
+  stopLiveMatchRefresh();
+  const panel=$('#live-match-panel');if(!panel)return;
+  const form=$('#live-match-create-form'),opponentSelect=$('#live-match-opponent'),giftMode=$('#live-match-gift-mode'),giftCode=$('#live-match-gift-code');
+  if(form&&role==='host'){
+    try{
+      const directory=await api('/live/sessions');
+      const sessions=(directory.sessions||[]).filter(item=>item.status==='live'&&item.id!==session.id&&item.hostId!==state.user?.id);
+      opponentSelect.innerHTML=sessions.length?"<option value=''>Select a creator currently LIVE</option>"+sessions.map(item=>"<option value='"+esc(item.id)+"'>"+esc(item.host?.name||item.host?.username||'Minglora creator')+" · "+esc(item.title||'LIVE')+"</option>").join(''):"<option value=''>No other eligible creators are live</option>";
+    }catch(error){opponentSelect.innerHTML="<option value=''>Live creator list unavailable</option>";}
+    giftMode?.addEventListener('change',()=>{if(giftCode){giftCode.disabled=giftMode.value!=='specific';giftCode.required=giftMode.value==='specific';if(giftMode.value!=='specific')giftCode.value='';}});
+    giftMode?.dispatchEvent(new Event('change'));
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const button=form.querySelector("button[type='submit']");
+      const opponentSessionId=String(opponentSelect?.value||'');
+      if(!opponentSessionId){toast('Choose a creator who is currently live.');return;}
+      button.disabled=true;
+      try{
+        const data=await api('/leagues/matches',{method:'POST',body:JSON.stringify({ownSessionId:session.id,opponentSessionId,giftMode:giftMode?.value||'all',selectedGiftCode:String(giftCode?.value||'').trim()})});
+        toast('League Match challenge sent to '+(data.match?.opponent?.name||'the other creator')+'.');
+        await refreshLiveMatchPanel(session,role);
+      }catch(error){toast(error.message||'The League Match challenge could not be sent.');}
+      finally{button.disabled=false;}
+    });
+  }
+  $('#live-match-list')?.addEventListener('click',async event=>{
+    const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
+    const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
+    const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
+    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId}:{};
+    button.disabled=true;
+    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'League Match power-up activated.');await refreshLiveMatchPanel(session,role);}
+    catch(error){toast(error.message||'The League Match action could not be completed.');}
+    finally{button.disabled=false;}
+  });
+  await refreshLiveMatchPanel(session,role);
+  liveMatchRefreshTimer=setInterval(()=>void refreshLiveMatchPanel(session,role),5000);
+}
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveQaRefresh();stopLiveMatchRefresh();
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1777,6 +1916,7 @@ activeLivePinnedComment=null;
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
     if(giftsEnabled)setupLiveRewardPanel(session,role);
+    setupLiveQaPanel(session,role);void setupLiveMatchPanel(session,role);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
     const screenShareControl=$("#live-screen-share-toggle");
