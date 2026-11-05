@@ -33,7 +33,7 @@ test('mobile navigation and MeetWave dialogs cannot cover page content', async (
   const meetwave = await readFile(new URL('../../public/meetwave.css', import.meta.url), 'utf8');
   assert.match(mobile, /\.mobile-nav\{position:static!important/);
   assert.doesNotMatch(mobile, /\.mobile-nav\{position:fixed/);
-  assert.match(mobile, /body\{padding-bottom:0!important\}/);
+  assert.match(mobile, /body\{padding-bottom:env\(safe-area-inset-bottom\)!important\}/);
   assert.match(meetwave, /\.mw-modal-backdrop\{position:static!important/);
   assert.match(meetwave, /\.mw-create-dialog\{[^}]*max-height:none!important;overflow:visible!important/);
 });
