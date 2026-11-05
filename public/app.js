@@ -1459,9 +1459,13 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
+  const liveModeratorTools=role==="host"
+    ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
+    : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE tools sections'>"+
     "<button type='button' data-live-tools-target='.live-room-appearance'>Appearance</button>"+
     "<button type='button' data-live-tools-target='#live-speaker-request-panel'>Guest seats</button>"+
+    (role==="host"?"<button type='button' data-live-tools-target='#live-moderator-panel'>Moderators</button>":"")+
     (giftsEnabled?"<button type='button' data-live-tools-target='#live-reward-panel'>Goody Bag & Treasure Box</button><button type='button' data-live-tools-target='#live-gift-panel'>Gifts</button>":"")+"</nav>";
   const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
@@ -1474,7 +1478,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
