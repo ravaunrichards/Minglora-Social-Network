@@ -1654,7 +1654,7 @@ async function route(req, res) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerRequestsMatch[1] && item.status === 'live');
         if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
         const requests = (db.liveSpeakerRequests || [])
-          .filter(item => item.sessionId === session.id && ['requested', 'accepted', 'connected'].includes(item.status))
+          .filter(item => item.sessionId === session.id && item.role === 'guest')
           .map(item => ({ ...item, user: safeUser(db.users.find(member => member.id === item.userId), user.id) }));
         if (session.liveSettings?.prioritizeGifters === true) requests.sort((a, b) =>
           Number(b.user?.gifterBadge?.level || 0) - Number(a.user?.gifterBadge?.level || 0) ||
