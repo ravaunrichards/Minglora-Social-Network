@@ -743,6 +743,8 @@ let liveRewardRefreshBusy=false;
 let liveRewardWalletFetchedAt=0;
 let liveMatchRefreshTimer=null;
 let liveMatchRefreshBusy=false;
+let liveViewerRefreshTimer=null;
+let liveViewerRefreshBusy=false;
 let liveFanClubState=null;
 let liveFanClubHeartbeatTimer=null;
 let liveGiftScope='all';
@@ -1268,6 +1270,38 @@ function renderLiveViewerPanel(room,role,session){
 }
 
 function stopLiveMatchRefresh(){if(liveMatchRefreshTimer){clearInterval(liveMatchRefreshTimer);liveMatchRefreshTimer=null;}liveMatchRefreshBusy=false;}
+function stopLiveViewerRefresh(){if(liveViewerRefreshTimer){clearInterval(liveViewerRefreshTimer);liveViewerRefreshTimer=null;}liveViewerRefreshBusy=false;}
+async function refreshLiveViewerRoster(session){
+  if(liveViewerRefreshBusy||!session?.id||activeLiveRole!=='host'||activeLiveSession?.id!==session.id)return;
+  const panel=$('#live-viewer-panel'),list=$('#live-viewer-roster'),count=$('#live-viewer-total');
+  if(!panel||!list||session.liveSettings?.markViewers===false)return;
+  liveViewerRefreshBusy=true;
+  try{
+    const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/viewers');
+    if(activeLiveSession?.id!==session.id)return;
+    const viewers=Array.isArray(data.viewers)?data.viewers:[];
+    if(count)count.textContent=Number(data.viewerCount||0).toLocaleString()+' people in this LIVE';
+    if(!viewers.length){list.innerHTML="<p class='muted'>No other viewers are connected yet.</p>";return;}
+    list.innerHTML=viewers.map(item=>{
+      const member=item.user||{},name=String(member.name||member.username||'Minglora member');
+      const badge=item.gifterBadge,fan=item.fanClubMembership;
+      const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
+      const priority=item.isGifter?"<span class='live-viewer-gifter-badge'>"+esc(badge?.badgeName||('Gifter LV '+badge.level))+"</span>":"";
+      const fanBadge=fan?.status==='active'?"<span class='live-viewer-fan-points'>♥ "+Number(fan.points||0).toLocaleString()+" Fan Pts</span>":"";
+      const roleLabel=item.role==='guest'?'Guest speaker':'Viewer';
+      return "<div class='live-viewer-row "+(item.isGifter?'is-priority-gifter':'')+"'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+roleLabel+"</small>"+priority+fanBadge+"</span><button type='button' class='text-button' data-live-viewer-profile='"+esc(member.id||'')+"'>Profile</button></div>";
+    }).join('');
+    list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openLiveProfilePreview(userId,session);}));
+    panel.classList.toggle('has-prioritized-gifters',data.prioritized===true);
+  }catch(error){
+    if(list&&!list.children.length)list.innerHTML="<p class='muted'>Viewer details are temporarily unavailable.</p>";
+  }finally{liveViewerRefreshBusy=false;}
+}
+function startLiveViewerRefresh(session){
+  stopLiveViewerRefresh();
+  void refreshLiveViewerRoster(session);
+  liveViewerRefreshTimer=setInterval(()=>void refreshLiveViewerRoster(session),5000);
+}
 function liveMatchStatusLabel(match){
   if(match.status==='live')return 'LIVE MATCH';
   if(match.status==='pending')return 'Invitation pending';
@@ -1735,7 +1769,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();closeLiveProfilePreview();liveFanClubState=null;refreshLiveGiftGrid=null;
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();liveFanClubState=null;refreshLiveGiftGrid=null;
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1912,7 +1946,7 @@ activeLivePinnedComment=null;
     ...(qualityPreset?.resolution?{videoCaptureDefaults:{resolution:qualityPreset.resolution}}:{})
   };
   const room=new client.Room(roomOptions);activeLiveRoom=room;
-  const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent='◉ '+count.toLocaleString();};
+  const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+1;const counter=$("#live-viewer-count");if(counter)counter.textContent='◉ '+count.toLocaleString();};
   const activeLiveSpeakerIds=new Set();
   const liveReactionEmoji=Object.freeze({heart:"❤️"});
   const receivedLiveReactionAt=new Map();
@@ -2008,7 +2042,7 @@ activeLivePinnedComment=null;
     $("#live-audio-waveform")?.classList.toggle("is-active",activeLiveSpeakerIds.size>0);
     refreshSpeakerRoster();
   });
-  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();toast("Your LIVE connection was disconnected.");}});
+  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();toast("Your LIVE connection was disconnected.");}});
   // Render the host/speaker seat immediately; the connection label upgrades when
   // the microphone publication is confirmed, so the stage never waits for speech.
   refreshSpeakerRoster();
@@ -2044,6 +2078,7 @@ activeLivePinnedComment=null;
     updatePresence();
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
+    if(role==='host')startLiveViewerRefresh(session);
     if(role==='viewer'){
       const fanStatus=await loadLiveFanClubStatus(session);
       if(fanStatus?.isMember)startLiveFanClubHeartbeat(session);
@@ -2329,12 +2364,12 @@ activeLivePinnedComment=null;
         if(button)button.disabled=false;
         return;
       }
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
