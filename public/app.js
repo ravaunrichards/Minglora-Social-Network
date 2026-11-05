@@ -944,6 +944,7 @@ async function refreshLiveDirectorySessions(){
     if(!container)return;
     container.innerHTML=sessions.length?sessions.map(liveSessionCardMarkup).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     bindLiveDirectoryCards(sessions);
+    bindLiveDiscoveryBoards(sessions);
   }catch{}
 }
 async function renderLive(){
@@ -1396,6 +1397,8 @@ function renderLiveFanClubStatus(status){
     button.textContent=member?'♥ Joined':paused?'♥ Rejoin':'♥ Join';
     button.title=member?'Open your Fan Club status and Team Gifts':paused?'Rejoin this Fan Club for 1 Coin':'Follow the host, then join for 1 Coin';
   }
+  const panelJoinButton=$('#live-fan-club-join-panel');
+  if(panelJoinButton){panelJoinButton.textContent=member?'♥ Joined Fan Club':paused?'♥ Rejoin for 1 Coin':'♥ Join for 1 Coin';panelJoinButton.disabled=member;}
   const panel=$('#live-fan-club-status');
   if(panel){
     const membership=status?.membership;
@@ -1546,7 +1549,7 @@ async function loadLiveDiscoveryBoard(tab,sessions){
     }else if(tab==='daily'){
       const data=await api('/live/rankings/daily');
       const items=Array.isArray(data.leaderboard)?data.leaderboard:[];
-      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE supporters</strong><small>Ranked by confirmed LIVE gift points · "+esc(data.dayKey||'today')+"</small></div>"+
+      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Ranked by confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
         (items.length?items.slice(0,10).map(item=>"<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(item.user?.id||'')+"'><span class='live-ranking-position'>#"+Number(item.position||0)+"</span><img src='"+avatar(item.user||{})+"' alt=''><span><strong>"+esc(item.user?.name||item.user?.username||'Minglora member')+"</strong><small>@"+esc(item.user?.username||'member')+"</small></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>").join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
       root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
     }else{
@@ -1561,7 +1564,9 @@ async function loadLiveDiscoveryBoard(tab,sessions){
   }catch(error){root.innerHTML="<p class='muted'>"+esc(error.message||'LIVE rankings are temporarily unavailable.')+"</p>";}
 }
 function bindLiveDiscoveryBoards(sessions){
-  document.querySelectorAll('[data-live-discovery]').forEach(button=>button.addEventListener('click',()=>loadLiveDiscoveryBoard(button.dataset.liveDiscovery,sessions)));
+  document.querySelectorAll('[data-live-discovery]').forEach(button=>{
+    button.onclick=()=>void loadLiveDiscoveryBoard(button.dataset.liveDiscovery,sessions);
+  });
   void loadLiveDiscoveryBoard('daily',sessions);
 }
 function liveControlIcon(name){
