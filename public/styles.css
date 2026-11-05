@@ -4444,3 +4444,16 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
   .settings-category-tab svg{width:24px;height:24px;flex-basis:24px}
   .settings-storage-summary{grid-template-columns:minmax(0,1fr)}
 }
+
+
+.settings-wallet-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 9px}
+.settings-wallet-summary>div{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+.settings-wallet-summary small{font-size:9px;letter-spacing:.04em;color:var(--muted);font-weight:800}
+.settings-wallet-summary strong{font-size:14px;overflow-wrap:anywhere}
+.settings-wallet-actions{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 8px}
+.settings-wallet-actions button{min-height:36px;padding:8px 11px;font-size:10px}
+@media(max-width:460px){
+  .settings-wallet-summary{grid-template-columns:minmax(0,1fr)}
+  .settings-wallet-actions{display:grid;grid-template-columns:minmax(0,1fr)}
+  .settings-wallet-actions button{width:100%}
+}
