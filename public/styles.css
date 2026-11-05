@@ -3747,7 +3747,17 @@ body.auth-mode .auth-screen{
 .story-media-count{position:absolute;top:48px;right:7px;padding:4px 7px;border-radius:8px;background:#182238c9;color:#fff;font-size:10px;font-weight:800}
 
 
-/* Public platform-admin identity badge. Separate from profile verification. */
-.platform-admin-profile-badge{display:inline-flex;align-items:center;gap:4px;min-height:19px;padding:2px 7px;border:1px solid rgba(210,166,74,.5);border-radius:999px;background:linear-gradient(135deg,#172d52,#0d1c36);color:#f8e7b7;font-size:9px;font-weight:900;letter-spacing:.075em;line-height:1;vertical-align:middle;white-space:nowrap;box-shadow:0 1px 4px rgba(12,31,61,.16)}
-.platform-admin-profile-badge svg{display:block;width:13px;height:13px;flex:0 0 13px;fill:none;stroke:#f2cf79;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.profile-username-line .platform-admin-profile-badge{min-height:21px;padding:3px 8px;font-size:10px}
+
+/* Prominent public platform-administrator banner in the profile header. */
+.platform-admin-profile-banner{display:inline-flex;align-items:center;gap:11px;width:max-content;max-width:100%;margin:9px 0 7px;padding:10px 16px;border:1px solid rgba(215,177,91,.78);border-left:5px solid #e7c36e;border-radius:12px;background:linear-gradient(115deg,#142a4b 0%,#0b1930 100%);color:#fff2ce;box-shadow:0 5px 16px rgba(9,25,48,.2);vertical-align:middle}
+.platform-admin-profile-banner-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border:1px solid rgba(240,207,132,.55);border-radius:10px;background:rgba(255,255,255,.08)}
+.platform-admin-profile-banner-icon svg{display:block;width:25px;height:25px;fill:none;stroke:#f3d48a;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.platform-admin-profile-banner-copy{display:grid;gap:3px;line-height:1.05}
+.platform-admin-profile-banner-copy strong{font-size:14px;font-weight:950;letter-spacing:.1em;color:#fff0c3}
+.platform-admin-profile-banner-copy small{font-size:9px;font-weight:850;letter-spacing:.16em;color:#d9c28e}
+.profile-view-as-person .platform-admin-profile-banner{margin:6px 0;padding:7px 11px;gap:8px}
+.profile-view-as-person .platform-admin-profile-banner-icon{width:28px;height:28px;flex-basis:28px}
+.profile-view-as-person .platform-admin-profile-banner-icon svg{width:21px;height:21px}
+.profile-view-as-person .platform-admin-profile-banner-copy strong{font-size:11px}
+.profile-view-as-person .platform-admin-profile-banner-copy small{font-size:8px}
+@media(max-width:600px){.platform-admin-profile-banner{padding:9px 12px;gap:9px}.platform-admin-profile-banner-icon{width:31px;height:31px;flex-basis:31px}.platform-admin-profile-banner-copy strong{font-size:13px}}
