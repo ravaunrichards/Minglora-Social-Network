@@ -16,7 +16,7 @@ test('LIVE has nine host-selectable screen layouts with a safe default', () => {
     assert.ok(styles.includes('data-live-layout="' + layout + '"'), 'missing responsive layout rules for ' + layout);
   }
   assert.ok(app.includes('normalizeLiveScreenLayout(session.liveLayout)'), 'session must restore the saved host layout');
-  assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in Full Screen');
+  assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in host-only Full Screen');
   assert.ok(app.includes("let activeLiveScreenLayout='full-screen'"), 'client must default to Full Screen');
   assert.ok(app.includes("String(value||'full-screen')"), 'missing saved layout must fall back to Full Screen');
 });
@@ -52,15 +52,13 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
 });
 
 
-test('Full Screen restores the visible host and guest-seat windows', () => {
-  assert.match(app, /const fullScreen=activeLiveScreenLayout==='full-screen'/);
-  assert.match(app, /root\.setAttribute\('aria-label','LIVE host and guest seats'\)/);
-  assert.match(app, /classList\.toggle\('live-full-screen-active',fullScreen\)/);
-  assert.match(app, /function moveLiveToolsToFullscreenSidebar\(/);
-  assert.match(styles, /\.live-full-screen-active #live-guest-layout\[data-live-layout="full-screen"\][\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(styles, /\.live-full-screen-active #live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat:not\(\.is-host\)\{display:flex!important/);
-  assert.match(styles, /\.live-full-screen-active #live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?grid-row:2/);
-  assert.match(app, /guests\.slice\(0,8\)/, 'the layout must keep up to eight guest windows beside the host');
+test('Full Screen is a host-only layout with no visible guest seats or guest speaker roster', () => {
+  assert.match(app, /const hostOnly=activeLiveScreenLayout==='full-screen'/);
+  assert.match(app, /Host-only full-screen LIVE stage/);
+  assert.ok(app.includes("root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly)"), 'layout changes must turn host-only audio mode on and off');
+  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing full-width host stage rules');
+  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){'), 'guest and empty seats must be hidden in Full Screen');
+  assert.ok(styles.includes('.live-audio-stage.live-host-only-layout #live-speaker-list'), 'audio-only speaker roster must be hidden');
 });
 
 
@@ -74,15 +72,13 @@ test('Every Full Screen LIVE control icon has its expected working event handler
   assert.match(app, /typeof navigator\.mediaDevices\?\.getDisplayMedia!=="function"/);
 });;
 
-test('Full Screen uses device-specific presentation and a non-overlapping control dock', () => {
-  assert.match(app, /function setLiveFullscreenPanel\(/);
-  assert.match(app, /function toggleLiveChatView\(/);
-  assert.match(app, /live-fullscreen-chat-tab/);
-  assert.doesNotMatch(app, /shell\?\.requestFullscreen|shell\.requestFullscreen/);
-  assert.match(styles, /\.live-full-screen-active \.live-player-controls\{[\s\S]*?grid-row:3/);
-  assert.match(styles, /overflow:visible!important;overscroll-behavior:unset!important/);
-  assert.match(styles, /@media\(max-width:759px\)[\s\S]*?position:fixed!important/);
-  assert.match(styles, /@media\(min-width:760px\)[\s\S]*?position:relative!important/);
-  assert.match(styles, /@media\(min-width:760px\) and \(max-width:1023px\)/);
-  assert.match(styles, /@media\(min-width:1024px\)/);
+test('Full Screen uses the compact centered host-only portrait stage from PR #102', () => {
+  assert.match(app, /value:'full-screen',label:'Full Screen',icon:'featured'/);
+  assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
+  assert.doesNotMatch(app, /classList\.toggle\('live-full-screen-active',hostOnly\)/);
+  assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
+  assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
+  assert.match(styles, /max-height:min\(78dvh,760px\)/);
+  assert.match(styles, /aspect-ratio:4 \/ 5/);
+  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
