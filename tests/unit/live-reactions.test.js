@@ -16,7 +16,7 @@ test('LIVE likes have a white-to-red heart button and also respond to stage taps
   assert.match(app, /class='live-like-count'/);
   assert.match(app, /id='live-reaction-count'/);
   assert.match(app, /id='live-heart-like'/);
-  assert.match(app, /api\('\/live\/sessions\/\+encodeURIComponent\(session\.id\)\+'\/likes'/);
+  assert.match(app, /api\('\/live\/sessions\/'\+encodeURIComponent\(session\.id\)\+'\/likes'/);
   assert.match(app, /classList\.add\('is-liked'\)/);
   assert.match(styles, /\.live-heart-like\.is-liked\{color:#ff365c/);
   assert.match(app, /stage\?\.addEventListener\("click",event=>/);
