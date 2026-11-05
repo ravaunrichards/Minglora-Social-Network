@@ -2,6 +2,58 @@
   "use strict";
 
   const state = { overview: null, selectedLevel: 1 };
+  let refreshTimer = null;
+  let refreshInFlight = false;
+  let viewGeneration = 0;
+
+  function isGifterViewActive() {
+    return Boolean(document.querySelector("[data-view='gifter-progression'].active"));
+  }
+
+  function onNavigateAway() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = null;
+    viewGeneration += 1;
+  }
+
+  function publishBadge(overview) {
+    window.dispatchEvent(new CustomEvent("minglora:gifter-badge-updated", { detail: {
+      badge: overview.badge || null,
+      newGifterIdentity: overview.newGifterIdentity || null
+    }}));
+  }
+
+  async function refreshOverview() {
+    if (refreshInFlight || !isGifterViewActive() || document.visibilityState !== "visible") return;
+    refreshInFlight = true;
+    const generation = viewGeneration;
+    try {
+      const overview = await requestOverview();
+      if (generation !== viewGeneration || !isGifterViewActive()) return;
+      state.overview = overview;
+      state.selectedLevel = Math.max(1, Math.min(50, Number(state.selectedLevel) || Number(overview.current.level) || 1));
+      const main = document.getElementById("main-content");
+      if (!main) return;
+      main.innerHTML = renderMarkup(overview);
+      bindPage(overview);
+      publishBadge(overview);
+    } catch (error) {
+      console.warn("[Minglora Gifter Progression] Live refresh failed:", error?.message || error);
+    } finally {
+      refreshInFlight = false;
+    }
+  }
+
+  function startRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      if (!isGifterViewActive()) {
+        onNavigateAway();
+        return;
+      }
+      void refreshOverview();
+    }, 5000);
+  }
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[char]));
@@ -13,6 +65,7 @@
 
   async function requestOverview() {
     const response = await fetch("/api/gifter-progression/overview", {
+      cache: "no-store",
       credentials: "same-origin",
       headers: { "Accept": "application/json" }
     });
@@ -169,18 +222,29 @@
   }
 
   async function render() {
+    onNavigateAway();
+    const generation = ++viewGeneration;
     const main = document.getElementById("main-content");
     if (!main) return;
     main.innerHTML = "<section class='card gp-loading'><strong>Loading your gifter progression…</strong><p>Checking confirmed Minglora gifts.</p></section>";
-    state.overview = await requestOverview();
-    window.dispatchEvent(new CustomEvent('minglora:gifter-badge-updated',{detail:{
-      badge:state.overview.badge||null,
-      newGifterIdentity:state.overview.newGifterIdentity||null
-    }}));
-    state.selectedLevel = Math.max(1, state.overview.current.level);
-    main.innerHTML = renderMarkup(state.overview);
-    bindPage(state.overview);
+    const overview = await requestOverview();
+    if (generation !== viewGeneration || !isGifterViewActive()) return;
+    state.overview = overview;
+    state.selectedLevel = Math.max(1, Math.min(50, Number(overview.current.level) || 1));
+    main.innerHTML = renderMarkup(overview);
+    bindPage(overview);
+    publishBadge(overview);
+    startRefresh();
   }
 
-  window.MingloraGifterProgression = { render };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && isGifterViewActive()) void refreshOverview();
+  });
+  window.addEventListener("online", () => {
+    if (isGifterViewActive()) void refreshOverview();
+  });
+  window.addEventListener("pageshow", () => {
+    if (isGifterViewActive()) void refreshOverview();
+  });
+  window.MingloraGifterProgression = { render, onNavigateAway };
 })();
