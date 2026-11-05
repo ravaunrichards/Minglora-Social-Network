@@ -133,6 +133,23 @@
             <button type="button" class="secondary" id="admin-campaign-coins-refresh">Refresh balance</button>
           </div>
           <div class="admin-marketing-budget-summary" id="admin-campaign-coins-summary" aria-live="polite">Loading verified campaign balance…</div>
+          <div class="admin-promotional-gift-fund" id="admin-promotional-gift-fund">
+            <div class="admin-marketing-budget-heading">
+              <div><strong>Real USD backing for promotional gifts</strong>
+                <p>This is a separate PayPal-funded cash reserve. Campaign Coin allocations do not count as USD funding. Promotional gifts are enabled only up to captured reserve funds.</p></div>
+              <button type="button" class="secondary" id="admin-promotional-gift-fund-refresh">Refresh cash reserve</button>
+            </div>
+            <div id="admin-paypal-readiness" class="admin-control-centre-note" aria-live="polite">Checking PayPal configuration…</div>
+            <div id="admin-promotional-gift-fund-summary" class="admin-marketing-budget-summary" aria-live="polite">Loading verified USD reserve…</div>
+            <form id="admin-promotional-gift-fund-form" class="admin-marketing-form">
+              <strong>Fund the promotional gift reserve through PayPal</strong>
+              <label for="admin-promotional-gift-fund-amount">USD amount</label>
+              <input id="admin-promotional-gift-fund-amount" name="amount" type="number" min="1" max="500000" step="0.01" inputmode="decimal" value="25.00" required>
+              <button type="submit" class="primary" id="admin-promotional-gift-fund-submit">Continue to PayPal</button>
+              <p id="admin-promotional-gift-fund-status" role="status" aria-live="polite"></p>
+            </form>
+            <div id="admin-promotional-gift-fund-history" aria-live="polite">Loading verified funding history…</div>
+          </div>
         </section>
         <div class="admin-control-centre-note" id="admin-main-wallet-protection">
           CreatorHub Main Coin balance is protected. Member promotions are issued only from the separate Admin Promotional Gift Wallet shown above.
@@ -526,6 +543,104 @@
     };
     panel.querySelector('#admin-campaign-coins-refresh')?.addEventListener('click', refreshAdminCampaignWallet);
     refreshAdminCampaignWallet();
+
+    const refreshPromotionalGiftFund = async () => {
+      const summary = panel.querySelector('#admin-promotional-gift-fund-summary');
+      const history = panel.querySelector('#admin-promotional-gift-fund-history');
+      if (!summary) return;
+      summary.textContent = 'Loading verified USD reserve…';
+      try {
+        const response = await fetch('/api/admin/promotional-gift-fund', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Promotional gift cash reserve could not be loaded.');
+        const fund = result.fund || {};
+        const dollars = value => 'USD ' + (Number(value || 0) / 100).toFixed(2);
+        summary.innerHTML = '<div class="admin-marketing-budget-metrics">' +
+          '<div><small>USD funded</small><strong>' + dollars(fund.fundedMinor) + '</strong></div>' +
+          '<div><small>USD spent</small><strong>' + dollars(fund.spentMinor) + '</strong></div>' +
+          '<div><small>USD available</small><strong>' + dollars(fund.availableMinor) + '</strong></div></div>' +
+          '<p class="muted">One promotional Coin represents USD 0.01 of this reserve. Only a successful PayPal capture increases the funded total.</p>';
+        const items = Array.isArray(result.ledger) ? result.ledger : [];
+        if (history) history.innerHTML = items.length
+          ? '<strong>Recent verified funding and spend events</strong><ul>' + items.slice(0,12).map(item =>
+              '<li>' + escapeText(String(item.event_type || 'event').replace(/_/g,' ')) + ' - ' +
+              (Number(item.funded_delta_minor || 0) ? dollars(item.funded_delta_minor) + ' funded' : dollars(item.spent_delta_minor) + ' spent') +
+              ' - ' + escapeText(item.created_at || '') + '</li>'
+            ).join('') + '</ul>'
+          : 'No promotional gift cash funding or spending recorded yet.';
+      } catch (error) {
+        summary.textContent = error.message || 'Promotional gift cash reserve could not be loaded.';
+        if (history) history.textContent = 'Funding history unavailable.';
+      }
+    };
+
+    const refreshPayPalReadiness = async () => {
+      const target = panel.querySelector('#admin-paypal-readiness');
+      if (!target) return;
+      target.textContent = 'Checking server-side PayPal configuration…';
+      try {
+        const response = await fetch('/api/admin/paypal-readiness', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'PayPal readiness could not be checked.');
+        const checks = [
+          'Mode: ' + String(result.mode || 'not set').toUpperCase(),
+          'Server credentials: ' + (result.credentialsConfigured ? 'present' : 'missing'),
+          'PayPal OAuth: ' + (result.oauthAuthenticated ? 'authenticated' : 'not authenticated'),
+          'Webhook ID: ' + (result.webhookConfigured ? 'configured' : 'missing'),
+          'PayPal Payouts entitlement: not confirmed; verify in PayPal Business'
+        ];
+        target.textContent = (result.productionBlocked ? 'BLOCKED: production requires PayPal Live mode and the official live API endpoint. ' : '') +
+          checks.join(' - ') + (result.oauthError ? ' - ' + result.oauthError : '');
+      } catch (error) {
+        target.textContent = error.message || 'PayPal readiness could not be checked.';
+      }
+    };
+    panel.querySelector('#admin-promotional-gift-fund-refresh')?.addEventListener('click', () => {
+      refreshPromotionalGiftFund();
+      refreshPayPalReadiness();
+    });
+    panel.querySelector('#admin-promotional-gift-fund-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-promotional-gift-fund-amount');
+      const status = form.querySelector('#admin-promotional-gift-fund-status');
+      const submit = form.querySelector('#admin-promotional-gift-fund-submit');
+      const amount = Number(amountInput?.value);
+      const amountMinor = Math.round(amount * 100);
+      if (!Number.isFinite(amount) || !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+        if (status) status.textContent = 'Enter a USD amount from 1.00 to 500000.00.';
+        return;
+      }
+      if (!window.confirm('Continue to PayPal to fund the promotional gift reserve with USD ' + (amountMinor / 100).toFixed(2) + '? Coins will not be issued as USD until PayPal confirms the payment.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Creating a real PayPal funding order…';
+      try {
+        const response = await fetch('/api/admin/promotional-gift-fund/orders', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json',Accept:'application/json'},
+          body:JSON.stringify({amountMinor})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'PayPal funding order could not be created.');
+        if (!result.approveUrl || !result.orderId) throw new Error('PayPal did not return a valid approval destination.');
+        if (status) status.textContent = 'PayPal order created. Redirecting to PayPal for payment approval…';
+        window.location.assign(result.approveUrl);
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Promotional reserve funding could not be started.';
+        if (submit) submit.disabled = false;
+      }
+    });
+    refreshPromotionalGiftFund();
+    refreshPayPalReadiness();
+    if (new URLSearchParams(window.location.search).get('promoGiftFunding') === 'success') {
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      window.setTimeout(refreshPromotionalGiftFund, 350);
+    }
+
     panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
       event.preventDefault();
       const form = event.currentTarget;
