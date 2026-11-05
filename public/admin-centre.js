@@ -149,6 +149,15 @@
               <p id="admin-promotional-gift-fund-status" role="status" aria-live="polite"></p>
             </form>
             <div id="admin-promotional-gift-fund-history" aria-live="polite">Loading verified funding history…</div>
+            <section class="admin-promotional-gift-cash-backings" aria-labelledby="admin-promotional-gift-cash-backings-title">
+              <div class="admin-marketing-budget-heading">
+                <div><strong id="admin-promotional-gift-cash-backings-title">Back a past promotional gift with real cash</strong>
+                  <p>After PayPal funding is captured, choose a specific past ordinary promotional gift to back. The reserve is charged once; 50% becomes the recipient’s creator earnings and 50% remains Minglora’s platform share. The original Main Coin and promotional Coin records are not rewritten.</p></div>
+                <button type="button" class="secondary" id="admin-promotional-gift-cash-backings-refresh">Refresh eligible gifts</button>
+              </div>
+              <div id="admin-promotional-gift-cash-backings-list" aria-live="polite">Loading eligible past gifts…</div>
+              <p id="admin-promotional-gift-cash-backings-status" role="status" aria-live="polite"></p>
+            </section>
           </div>
         </section>
         <div class="admin-control-centre-note" id="admin-main-wallet-protection">
@@ -544,6 +553,78 @@
     panel.querySelector('#admin-campaign-coins-refresh')?.addEventListener('click', refreshAdminCampaignWallet);
     refreshAdminCampaignWallet();
 
+    let promotionalGiftReserveAvailableMinor = 0;
+    const promotionalGiftBackingsList = panel.querySelector('#admin-promotional-gift-cash-backings-list');
+    const promotionalGiftBackingsStatus = panel.querySelector('#admin-promotional-gift-cash-backings-status');
+    const refreshPromotionalGiftCashBackings = async () => {
+      if (!promotionalGiftBackingsList) return;
+      promotionalGiftBackingsList.textContent = 'Loading eligible past promotional gifts…';
+      try {
+        const response = await fetch('/api/admin/promotional-gift-cash-backings', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Eligible past gifts could not be loaded.');
+        const items = Array.isArray(result.items) ? result.items : [];
+        if (!items.length) {
+          promotionalGiftBackingsList.innerHTML = '<p>No unbacked ordinary promotional gifts are waiting for cash backing.</p>';
+          return;
+        }
+        promotionalGiftBackingsList.innerHTML = '<div class="admin-promotional-gift-cash-backings-list">' + items.map(item => {
+          const requiredMinor = Math.max(0, Number(item.required_minor || item.coin_amount || 0));
+          const creatorShareMinor = Number(item.creator_share_minor || 0);
+          const platformShareMinor = Number(item.platform_share_minor || 0);
+          const canBack = requiredMinor > 0 && promotionalGiftReserveAvailableMinor >= requiredMinor;
+          const date = item.created_at ? new Date(item.created_at).toLocaleString() : 'Date unavailable';
+          const sender = item.sender_username ? '@' + item.sender_username : 'Minglora member';
+          const creator = item.creator_username ? '@' + item.creator_username : 'Gift recipient';
+          const giftName = item.gift_name || item.gift_code || 'Promotional gift';
+          return '<article class="admin-promotional-gift-cash-backing-row">' +
+            '<div class="admin-promotional-gift-cash-backing-main"><strong>' + escapeText((item.gift_emoji || '🎁') + ' ' + giftName) + '</strong>' +
+            '<small>From ' + escapeText(sender) + ' to ' + escapeText(creator) + ' · ' + escapeText(date) + '</small>' +
+            '<small>' + Number(item.coin_amount || 0).toLocaleString() + ' original promotional Coins · reserve required USD ' + (requiredMinor / 100).toFixed(2) + '</small></div>' +
+            '<div class="admin-promotional-gift-cash-backing-values"><strong>Creator: USD ' + (creatorShareMinor / 100).toFixed(2) + '</strong>' +
+            '<small>Platform: USD ' + (platformShareMinor / 100).toFixed(2) + '</small>' +
+            '<button type="button" class="secondary" data-cash-back-gift="' + escapeText(String(item.gift_transaction_id || '')) + '" data-required-minor="' + requiredMinor + '"' +
+            (canBack ? '' : ' disabled') + '>' + (canBack ? 'Back with reserve' : 'Fund reserve first') + '</button></div></article>';
+        }).join('') + '</div>';
+      } catch (error) {
+        promotionalGiftBackingsList.textContent = error.message || 'Eligible past gifts could not be loaded.';
+      }
+    };
+    panel.querySelector('#admin-promotional-gift-cash-backings-refresh')?.addEventListener('click', refreshPromotionalGiftCashBackings);
+    promotionalGiftBackingsList?.addEventListener('click', async event => {
+      const button = event.target.closest('[data-cash-back-gift]');
+      if (!button || button.disabled) return;
+      const giftTransactionId = String(button.dataset.cashBackGift || '');
+      const requiredMinor = Number(button.dataset.requiredMinor || 0);
+      if (!giftTransactionId || !Number.isSafeInteger(requiredMinor) || requiredMinor < 100 ||
+          promotionalGiftReserveAvailableMinor < requiredMinor) return;
+      const amount = 'USD ' + (requiredMinor / 100).toFixed(2);
+      if (!window.confirm('Use ' + amount + ' of already captured promotional gift reserve to cash-back this past gift? The creator receives a 50% share as withdrawable earnings; this cannot be reversed after backing.')) return;
+      button.disabled = true;
+      if (promotionalGiftBackingsStatus) promotionalGiftBackingsStatus.textContent = 'Applying verified reserve backing and recording the creator share…';
+      try {
+        const response = await fetch('/api/admin/promotional-gift-cash-backings', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json',Accept:'application/json'},
+          body:JSON.stringify({giftTransactionId})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'The past gift could not be backed.');
+        const backing = result.backing || {};
+        if (promotionalGiftBackingsStatus) promotionalGiftBackingsStatus.textContent =
+          (backing.alreadyBacked ? 'This gift was already backed. ' : 'Cash backing recorded. ') +
+          'Creator earnings added: USD ' + (Number(backing.creatorShareMinor || 0) / 100).toFixed(2) +
+          '. The recipient can now see the eligible amount in Wallet & Earnings and Creator Studio.';
+        await refreshPromotionalGiftFund();
+        await refreshPromotionalGiftCashBackings();
+      } catch (error) {
+        if (promotionalGiftBackingsStatus) promotionalGiftBackingsStatus.textContent = error.message || 'The past gift could not be backed.';
+        button.disabled = false;
+      }
+    });
+
     const refreshPromotionalGiftFund = async () => {
       const summary = panel.querySelector('#admin-promotional-gift-fund-summary');
       const history = panel.querySelector('#admin-promotional-gift-fund-history');
@@ -556,6 +637,7 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || 'Promotional gift cash reserve could not be loaded.');
         const fund = result.fund || {};
+        promotionalGiftReserveAvailableMinor = Math.max(0, Number(fund.availableMinor || 0));
         const dollars = value => 'USD ' + (Number(value || 0) / 100).toFixed(2);
         summary.innerHTML = '<div class="admin-marketing-budget-metrics">' +
           '<div><small>USD funded</small><strong>' + dollars(fund.fundedMinor) + '</strong></div>' +
@@ -570,9 +652,12 @@
               ' - ' + escapeText(item.created_at || '') + '</li>'
             ).join('') + '</ul>'
           : 'No promotional gift cash funding or spending recorded yet.';
+        await refreshPromotionalGiftCashBackings();
       } catch (error) {
+        promotionalGiftReserveAvailableMinor = 0;
         summary.textContent = error.message || 'Promotional gift cash reserve could not be loaded.';
         if (history) history.textContent = 'Funding history unavailable.';
+        await refreshPromotionalGiftCashBackings();
       }
     };
 
