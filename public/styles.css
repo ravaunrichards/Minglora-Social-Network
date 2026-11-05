@@ -4588,3 +4588,43 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 
 /* Interactive heart stays clickable inside the otherwise passive stage HUD. */
 .live-like-cluster,.live-heart-button{pointer-events:auto}
+
+
+/* Minglora accessibility/layout contract: nothing stays pinned or floats over
+   page content. All navigation, dialogs, drawers, chat and LIVE controls flow
+   with the document so scrolling never hides another section or control. */
+.topbar,.left-rail,.right-rail,.settings-nav,.settings-save-bar,
+.creator-studio-nav,.creator-studio-nav-slot>.creator-studio-nav.live-format-picker,
+.profile-tabs,.recharge-checkout-card{
+  position:static!important;inset:auto!important;top:auto!important;bottom:auto!important;
+  z-index:auto!important;max-height:none!important;overflow:visible!important;
+}
+.mobile-nav,#message-window-dock,.call-overlay,.palette-switcher-panel,
+.messenger-panel,.minglora-gift-fx,.live-tools-backdrop,.modal-backdrop,.toast{
+  position:static!important;inset:auto!important;top:auto!important;right:auto!important;
+  bottom:auto!important;left:auto!important;z-index:auto!important;transform:none!important;
+  max-height:none!important;max-width:100%!important;overflow:visible!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.topbar{height:auto;min-height:66px;flex-wrap:wrap}
+.layout{align-items:start}
+.left-rail,.right-rail{align-self:start}
+.mobile-nav{height:auto;min-height:56px;flex-wrap:wrap;padding:8px 4px}
+#message-window-dock{display:flex!important;flex-wrap:wrap!important;align-items:stretch!important;
+  width:100%!important;max-width:100%!important;gap:10px!important;pointer-events:auto!important}
+.messenger-panel{width:100%!important;height:auto!important;min-height:0!important;display:flex!important}
+.call-overlay,.modal-backdrop{display:block!important;background:transparent!important;padding:0!important}
+.modal{width:100%;max-height:none;overflow:visible;box-shadow:none}
+.toast{display:block;opacity:1;pointer-events:auto;margin:10px auto;transform:none!important}
+.palette-switcher-panel{width:100%!important}
+.live-tools-backdrop{display:block!important;background:transparent!important}
+.live-tools-drawer{width:100%!important;height:auto!important;max-height:none!important;min-height:0!important;
+  overflow:visible!important;box-shadow:none!important;animation:none!important}
+.live-tools-content{overflow:visible!important;max-height:none!important;min-height:0!important}
+.live-stage-topbar,.live-chat-overlay{position:static!important;inset:auto!important;z-index:auto!important;
+  width:100%!important;max-width:100%!important;max-height:none!important;pointer-events:auto!important;
+  display:flex!important;flex-wrap:wrap!important}
+.live-video-stage{display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  aspect-ratio:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}
+.live-video-tile,.live-video-element{min-height:260px}
+.live-chat-overlay .live-chat-list{max-height:none!important;overflow:visible!important}
