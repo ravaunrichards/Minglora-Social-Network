@@ -4173,3 +4173,53 @@ body.live-tools-open{overflow:hidden}
   .wallet-money-unavailable{align-items:stretch;flex-direction:column}
   .wallet-earnings-metrics{grid-template-columns:1fr}
 }
+
+/* Shared LIVE reactions and an in-room like count */
+.live-video-stage{position:relative}
+.live-reaction-layer{
+  position:absolute;inset:0;z-index:30;overflow:hidden;pointer-events:none;
+}
+.live-reaction-float{
+  position:absolute;bottom:10%;display:block;font-size:clamp(30px,6vw,62px);
+  line-height:1;filter:drop-shadow(0 7px 14px rgba(0,0,0,.34));
+  animation:minglora-live-reaction-rise 1.85s cubic-bezier(.18,.72,.2,1) forwards;
+  will-change:transform,opacity;
+}
+@keyframes minglora-live-reaction-rise{
+  0%{opacity:0;transform:translate3d(0,18px,0) scale(.58)}
+  16%{opacity:1;transform:translate3d(var(--reaction-drift,0),0,0) scale(1.08)}
+  70%{opacity:1;transform:translate3d(calc(var(--reaction-drift,0)*-.45),-150px,0) scale(1)}
+  100%{opacity:0;transform:translate3d(var(--reaction-drift,0),-245px,0) scale(.78)}
+}
+.live-reaction-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;
+  padding:7px 10px;border:1px solid rgba(155,178,220,.16);border-radius:13px;
+  color:#f3f6fb;background:linear-gradient(115deg,rgba(28,40,59,.96),rgba(16,23,36,.96));
+}
+.live-reaction-bar>strong{
+  display:flex;align-items:center;gap:7px;white-space:nowrap;
+  color:#d7e2f3;font-size:10px;font-weight:850;letter-spacing:.02em;
+}
+.live-reaction-bar>strong span{
+  color:#fff;font-variant-numeric:tabular-nums;font-size:13px;font-weight:950;
+}
+.live-reaction-buttons{display:flex;align-items:center;gap:6px}
+.live-reaction-button{
+  display:grid;place-items:center;width:36px;height:34px;padding:0;
+  border:1px solid rgba(255,255,255,.1);border-radius:10px;
+  color:#fff;background:rgba(255,255,255,.055);font-size:18px;cursor:pointer;
+  transition:transform .14s ease,background .14s ease,border-color .14s ease;
+}
+.live-reaction-button:hover,.live-reaction-button:focus-visible{
+  transform:translateY(-2px) scale(1.04);border-color:rgba(128,233,211,.58);
+  background:rgba(77,148,139,.2);outline:none;
+}
+.live-reaction-button.is-sent{transform:scale(.88);background:rgba(104,220,192,.22)}
+@media(max-width:520px){
+  .live-reaction-bar{padding:6px 8px;gap:6px}
+  .live-reaction-button{width:33px;height:32px;font-size:17px}
+}
+@media(prefers-reduced-motion:reduce){
+  .live-reaction-float{animation-duration:.01ms;animation-iteration-count:1}
+  .live-reaction-button{transition:none}
+}
