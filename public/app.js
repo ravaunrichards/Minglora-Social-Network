@@ -741,6 +741,10 @@ let liveParticipantSyncBusy=false;
 let liveRewardRefreshTimer=null;
 let liveRewardRefreshBusy=false;
 let liveRewardWalletFetchedAt=0;
+let liveQaRefreshTimer=null;
+let liveQaRefreshBusy=false;
+let liveMatchRefreshTimer=null;
+let liveMatchRefreshBusy=false;
 let liveDirectoryFilter='all';
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'full-screen',label:'Full Screen',icon:'featured'},
@@ -839,6 +843,9 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
       "<label class='live-preflight-toggle'><input type='checkbox' name='allowCoHost' checked><span class='live-preflight-switch'></span><span><strong>Allow co-host</strong><small>Allow other members to join your LIVE stage</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='manageModerators' checked><span class='live-preflight-switch'></span><span><strong>Manage moderators</strong><small>Allow the host to assign and remove LIVE moderators</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='voiceRings' checked><span class='live-preflight-switch'></span><span><strong>Voice rings</strong><small>Play an audio alert for new guest stage requests</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='qaEnabled' checked><span class='live-preflight-switch'></span><span><strong>LIVE Q&A</strong><small>Let connected viewers ask and vote on questions</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='guardianMode'><span class='live-preflight-switch'></span><span><strong>Guardian safety mode</strong><small>Block off-platform links, email addresses and phone numbers in LIVE chat and questions</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='effectsEnabled' checked><span class='live-preflight-switch'></span><span><strong>LIVE camera effects</strong><small>Allow camera effect choices where supported by this device</small></span></label>"+
     "</div></div>"+
     "<details class='live-preflight-advanced'><summary>Disclosure & client acquisition <span>More settings</span></summary><div class='live-preflight-fields'>"+
       "<label class='live-preflight-field'><span>Content disclosure</span><select name='contentDisclosure'><option value='none'>No disclosure</option><option value='branded'>Branded content / partnership</option><option value='sponsored'>Sponsored content</option></select></label>"+
@@ -908,6 +915,9 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
         allowCoHost:values.has("allowCoHost"),
         manageModerators:values.has("manageModerators"),
         voiceRings:values.has("voiceRings"),
+        qaEnabled:values.has("qaEnabled"),
+        guardianMode:values.has("guardianMode"),
+        effectsEnabled:values.has("effectsEnabled"),
         clientAcquisitionEnabled:values.has("clientAcquisitionEnabled"),
         clientCtaLabel:String(values.get("clientCtaLabel")||"").trim(),
         clientCtaUrl:String(values.get("clientCtaUrl")||"").trim()
@@ -1530,6 +1540,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
+    (liveSettings.qaEnabled!==false?"<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>":"")+
+    "<button type='button' data-live-tools-panel-target='matches' aria-pressed='false'>Match</button>"+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
@@ -1549,17 +1561,22 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['prioritizeGifters','Prioritize gifters',false,'Sort pending requests by verified gifter level'],
     ['allowCoHost','Allow co-host',true,'Allow other members to join the LIVE stage'],
     ['manageModerators','Manage moderators',true,'Allow moderator assignment and removal'],
-    ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
+    ['voiceRings','Voice rings',true,'Play a short tone for new guest requests'],
+    ['qaEnabled','LIVE Q&A',true,'Allow connected viewers to ask and vote on questions'],
+    ['guardianMode','Guardian safety mode',false,'Block off-platform contact details and links in LIVE chat and questions'],
+    ['effectsEnabled','LIVE camera effects',true,'Allow camera effect choices on supported devices']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Viewers and guests follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveChatTools="<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Use the existing chat and moderation controls in this panel.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Chat will appear here when you select this panel.</p></div></section>";
+  const liveQaTools=liveSettings.qaEnabled===false?"<section id='live-qa-panel' class='live-tools-card live-qa-panel' data-live-tools-panel='qa'><strong>LIVE Q&A is turned off</strong><p>The host has disabled audience questions for this broadcast.</p></section>":"<section id='live-qa-panel' class='live-tools-card live-qa-panel' data-live-tools-panel='qa'><div class='live-panel-title'><strong>LIVE Q&A</strong><small>Ask a question, vote for the ones you want answered, and follow the host's replies.</small></div><form id='live-qa-form' class='live-qa-form'><label for='live-qa-question'>Your question</label><textarea id='live-qa-question' name='question' maxlength='300' rows='2' placeholder='Ask the host a question…' required></textarea><button type='submit' class='secondary'>Submit question</button></form><div id='live-qa-list' class='live-qa-list'><p class='muted'>Loading LIVE questions…</p></div></section>";
+  const liveMatchTools="<section id='live-match-panel' class='live-tools-card live-match-panel' data-live-tools-panel='matches'><div class='live-panel-title'><strong>Creator League Match</strong><small>Challenge another live creator, accept an invitation, or support a side.</small></div>"+(role==='host'?"<form id='live-match-create-form' class='live-match-create-form'><label for='live-match-opponent'>Challenge a creator who is live</label><select id='live-match-opponent' name='opponentSessionId' required><option value=''>Finding live creators…</option></select><label for='live-match-gift-mode'>Scoring gifts</label><select id='live-match-gift-mode' name='giftMode'><option value='all'>All eligible gifts</option><option value='specific'>One selected gift</option></select><label for='live-match-gift-code'>Selected gift code</label><input id='live-match-gift-code' name='selectedGiftCode' maxlength='60' placeholder='Required only for specific gift mode'><button type='submit' class='secondary'>Send League Match challenge</button></form>":"")+"<div id='live-match-list' class='live-match-list'><p class='muted'>Loading Creator League matches…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveQaTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
