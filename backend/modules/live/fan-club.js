@@ -11,6 +11,31 @@ export const LIVE_FAN_CLUB_GIFT_CODES = Object.freeze([
   "fan-1avs41e"
 ]);
 
+export const LIVE_FAN_CLUB_LEVEL_THRESHOLDS = Object.freeze([0, 10, 25, 50, 100, 175, 275, 400, 550, 750]);
+export const LIVE_FAN_CLUB_SUPER_FAN_LEVEL = 5;
+
+export function getLiveFanClubProgress(value) {
+  const points = Math.max(0, Math.floor(Number(value) || 0));
+  let index = 0;
+  for (let i = 0; i < LIVE_FAN_CLUB_LEVEL_THRESHOLDS.length; i++) {
+    if (points >= LIVE_FAN_CLUB_LEVEL_THRESHOLDS[i]) index = i;
+    else break;
+  }
+  const level = index + 1;
+  const currentThreshold = LIVE_FAN_CLUB_LEVEL_THRESHOLDS[index];
+  const nextThreshold = LIVE_FAN_CLUB_LEVEL_THRESHOLDS[index + 1] ?? null;
+  return {
+    level,
+    title: level >= LIVE_FAN_CLUB_SUPER_FAN_LEVEL ? "Super Fan" : "Fan",
+    isSuperFan: level >= LIVE_FAN_CLUB_SUPER_FAN_LEVEL,
+    nextLevel: nextThreshold === null ? null : level + 1,
+    pointsToNextLevel: nextThreshold === null ? 0 : Math.max(0, nextThreshold - points),
+    progressPercent: nextThreshold === null
+      ? 100
+      : Math.max(0, Math.min(100, Math.round(((points - currentThreshold) / (nextThreshold - currentThreshold)) * 100)))
+  };
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const asDate = value => value instanceof Date ? value : new Date(value || Date.now());
 const iso = value => asDate(value).toISOString();
@@ -146,9 +171,11 @@ export function awardLiveFanClubPoints(db, {
 export function publicLiveFanClubMembership(db, hostId, fanId, now = new Date()) {
   const membership = getLiveFanClubMembership(db, hostId, fanId, now);
   if (!membership) return null;
+  const points = Math.max(0, Number(membership.points) || 0);
   return {
     status: membership.status,
-    points: Math.max(0, Number(membership.points) || 0),
+    points,
+    ...getLiveFanClubProgress(points),
     joinedAt: membership.joinedAt || null,
     expiresAt: membership.expiresAt || null,
     lastActivityAt: membership.lastActivityAt || null,
