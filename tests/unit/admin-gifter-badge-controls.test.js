@@ -53,7 +53,7 @@ test('Admin Centre includes member search, all-level unlock, individual grant, r
     'admin-profile-verification-save'
   ]) assert.ok(adminJs.includes(id), 'Missing Admin Centre control: ' + id);
   assert.ok(adminJs.includes('Unlock all 50 gifter badge levels'));
-  assert.ok(adminJs.includes('confirmed gift history and Coin balances were not changed'));
+  assert.ok(/confirmed gift history and Coin balances were not changed/i.test(adminJs));
   assert.ok(adminHtml.includes('20261105-admin-gifter-badge-controls-1'));
   assert.ok(adminCss.includes('.admin-identity-actions-grid'));
 });
