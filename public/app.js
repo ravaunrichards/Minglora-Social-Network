@@ -738,6 +738,14 @@ let liveRewardRefreshTimer=null;
 let liveRewardRefreshBusy=false;
 let liveRewardWalletFetchedAt=0;
 let liveDirectoryFilter='all';
+const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([{value:'grid',label:'Grid',icon:'grid'},{value:'side-by-side',label:'Side by side',icon:'columns'},{value:'stacked',label:'Stacked',icon:'stack'},{value:'featured-host',label:'Featured host',icon:'featured'},{value:'host-focus',label:'Host focus',icon:'host'},{value:'guest-focus',label:'Guest focus',icon:'guest'},{value:'match',label:'Match',icon:'match'}]);
+let activeLiveScreenLayout='grid';
+function normalizeLiveScreenLayout(value){const candidate=String(value||'grid');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'grid';}
+function liveLayoutIcon(name){const paths={grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
+function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
+function restoreLiveChatToStage(){const chat=$('#live-chat-overlay'),stage=$('#live-video-stage');if(chat&&stage&&chat.parentElement!==stage)stage.append(chat);}
+function activateLiveToolsPanel(name){const drawer=$('#live-tools-drawer');if(!drawer)return;const sections=[...drawer.querySelectorAll('[data-live-tools-panel]')];if(!sections.some(section=>section.dataset.liveToolsPanel===name))return;sections.forEach(section=>{section.hidden=section.dataset.liveToolsPanel!==name;});drawer.querySelectorAll('[data-live-tools-panel-target]').forEach(button=>{const active=button.dataset.liveToolsPanelTarget===name;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});if(name==='chat')$('#live-chat-panel-body')?.append($('#live-chat-overlay'));else restoreLiveChatToStage();}
+
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
@@ -1145,6 +1153,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
 
 function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-guest-layout");if(!root||!room)return;
+  root.dataset.liveLayout=activeLiveScreenLayout;
   const local=room.localParticipant;
   const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
@@ -1197,6 +1206,20 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     return seat;
   });
   root.replaceChildren(header,...nodes);
+}
+
+function renderLiveViewerPanel(room,role,session){
+  const panel=$('#live-viewer-panel'),list=$('#live-viewer-roster'),count=$('#live-viewer-total');
+  if(!panel||!list||role!=='host'||!room)return;
+  if(session?.liveSettings?.markViewers===false){if(count)count.textContent='Hidden by the LIVE viewer setting';list.innerHTML="<p class='muted'>Viewer marking is turned off for this broadcast.</p>";return;}
+  const people=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
+  if(count)count.textContent=people.length.toLocaleString()+' people in this LIVE';
+  list.innerHTML=people.length?people.map(person=>{
+    const name=String(person.name||person.identity||'Minglora member');
+    const initials=name.trim().split(/\\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
+    return "<div class='live-viewer-row'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+(participantHasLiveAudio(person)?'Guest speaker':'Viewer')+"</small></span><button type='button' class='text-button' data-live-viewer-profile='"+esc(person.identity||'')+"'>Profile</button></div>";
+  }).join(''):"<p class='muted'>No other viewers are connected yet.</p>";
+  list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openProfile(userId);}));
 }
 
 function liveControlIcon(name){
@@ -1410,6 +1433,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
+  activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout);
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming';
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
