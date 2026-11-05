@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_creator_earnings",
-    "economy_exchange_creator_earnings",
+    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
@@ -271,6 +271,69 @@ Deno.serve(async (req: Request) => {
     ]);
     if (walletResult.error || ledgerResult.error) return json(503, { error: "Minglora wallet could not be loaded." });
     return json(200, { wallet: walletResult.data || { balance_coins: 0 }, ledger: ledgerResult.data || [] });
+  }
+
+  if (action === "economy_admin_member_credit") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const memberLookup = String(input.memberLookup || "").trim().replace(/^@/, "").toLowerCase();
+    const amountCoins = Number(input.amountCoins);
+    const requestId = String(input.requestId || "");
+    const note = String(input.note || "").trim().slice(0, 240);
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" || adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        !memberLookup || memberLookup.length > 80 || !validUuid(requestId) ||
+        !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+      return json(400, { error: "Invalid admin member-credit details." });
+    }
+
+    const { data: ownerProfile, error: ownerLookupError } = await admin
+      .from("profiles")
+      .select("verification_status,verification_badge")
+      .eq("id", adminUserId)
+      .maybeSingle();
+    if (ownerLookupError) return json(503, { error: "Owner verification could not be checked." });
+    if (!ownerProfile || ownerProfile.verification_status !== "verified" ||
+        ownerProfile.verification_badge !== "blue") {
+      return json(403, { error: "Only the verified Creator Hub owner may credit member wallets." });
+    }
+
+    let memberQuery = admin.from("profiles").select("id,username");
+    if (validUuid(memberLookup)) memberQuery = memberQuery.eq("id", memberLookup);
+    else if (/^[a-z0-9_]{3,30}$/.test(memberLookup)) memberQuery = memberQuery.eq("username", memberLookup);
+    else return json(400, { error: "Enter a valid Minglora username or account ID." });
+    const { data: member, error: memberLookupError } = await memberQuery.maybeSingle();
+    if (memberLookupError) return json(503, { error: "Minglora could not look up that member." });
+    if (!member?.id || !member.username) return json(404, { error: "No Minglora member was found for that username or account ID." });
+    if (member.id === adminUserId) return json(400, { error: "Use owner issuance for your own Coin wallet." });
+
+    const { data, error } = await admin.rpc("minglora_admin_credit_member_coins", {
+      p_admin_user_id: adminUserId,
+      p_admin_email: adminEmail,
+      p_member_user_id: member.id,
+      p_amount_coins: amountCoins,
+      p_request_id: requestId,
+      p_note: note
+    });
+    if (error) return fail(error, "Minglora could not credit the member wallet.");
+    return json(200, { credit: data });
+  }
+
+  if (action === "economy_owner_issuance") {
+    const ownerId = String(input.ownerId || "");
+    const ownerEmail = String(input.ownerEmail || "").trim().toLowerCase();
+    const amountCoins = Number(input.amountCoins);
+    const requestId = String(input.requestId || "");
+    const note = String(input.note || "").trim().slice(0, 240);
+    if (!validUuid(ownerId) || ownerId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" || ownerEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        !validUuid(requestId) || !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+      return json(400, { error: "Invalid verified owner Coin issuance details." });
+    }
+    const { data, error } = await admin.rpc("minglora_issue_verified_owner_coins", {
+      p_owner_user_id: ownerId, p_owner_email: ownerEmail,
+      p_amount_coins: amountCoins, p_request_id: requestId, p_note: note
+    });
+    if (error) return fail(error, "Minglora could not issue Coins to the verified owner wallet.");
+    return json(200, { issuance: data });
   }
 
   if (action === "economy_purchase_create") {
