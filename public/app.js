@@ -264,18 +264,31 @@ function renderPostSoundtrack(post){
 }
 function bindSoundtrackPlayback(root=document){
   root.querySelectorAll('[data-minglora-soundtrack]').forEach(player=>{
-    if(player.dataset.soundtrackBound==='true')return;
-    player.dataset.soundtrackBound='true';
     const start=Math.max(0,Number(player.dataset.startMs||0))/1000;
     const end=Math.max(0,Number(player.dataset.endMs||0))/1000;
     const baseVolume=Math.max(0,Math.min(1,Number(player.dataset.volume??1)));
     const fadeIn=Math.max(0,Number(player.dataset.fadeInMs||0))/1000;
     const fadeOut=Math.max(0,Number(player.dataset.fadeOutMs||0))/1000;
-    player.volume=baseVolume;
     const seekTo=seconds=>{
       if(!Number.isFinite(player.duration)||!player.duration)return;
       player.currentTime=Math.max(0,Math.min(player.duration-.05,seconds));
     };
+    const post=player.closest('[data-post]');
+    const videos=post?[...post.querySelectorAll('video.post-media-video')]:[...root.querySelectorAll('video.story-viewer-image')];
+    videos.forEach(video=>{
+      if(video.dataset.soundtrackBound==='true')return;
+      video.dataset.soundtrackBound='true';
+      video.addEventListener('play',()=>{
+        const offset=Math.max(0,Number(video.currentTime||0));
+        seekTo(start+offset);player.play().catch(()=>{});
+      });
+      video.addEventListener('pause',()=>player.pause());
+      video.addEventListener('seeking',()=>{if(!player.paused)seekTo(start+Number(video.currentTime||0));});
+      video.addEventListener('ended',()=>player.pause());
+    });
+    if(player.dataset.soundtrackBound==='true')return;
+    player.dataset.soundtrackBound='true';
+    player.volume=baseVolume;
     player.addEventListener('loadedmetadata',()=>seekTo(start));
     player.addEventListener('timeupdate',()=>{
       const clipEnd=end||player.duration;
@@ -285,17 +298,6 @@ function bindSoundtrackPlayback(root=document){
       if(fadeIn>0&&elapsed<fadeIn)gain*=elapsed/fadeIn;
       if(fadeOut>0&&clipEnd&&player.currentTime>clipEnd-fadeOut)gain*=Math.max(0,(clipEnd-player.currentTime)/fadeOut);
       player.volume=Math.max(0,Math.min(1,gain));
-    });
-    const post=player.closest('[data-post]');
-    const videos=post?[...post.querySelectorAll('video.post-media-video')]:[...root.querySelectorAll('video.story-viewer-image')];
-    videos.forEach(video=>{
-      video.addEventListener('play',()=>{
-        const offset=Math.max(0,Number(video.currentTime||0));
-        seekTo(start+offset);player.play().catch(()=>{});
-      });
-      video.addEventListener('pause',()=>player.pause());
-      video.addEventListener('seeking',()=>{if(!player.paused)seekTo(start+Number(video.currentTime||0));});
-      video.addEventListener('ended',()=>player.pause());
     });
   });
 }
@@ -430,7 +432,7 @@ function openPostOptions(post){
 }
 async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;state.feed=(await api(`/feed?scope=${encodeURIComponent(state.feedScope)}`)).posts;}
 async function loadStories(){state.stories=(await api('/stories')).stories;}
-function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
+function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(Array.isArray(story.mediaItems)&&story.mediaItems.length>1?'<span class="story-media-count">'+story.mediaItems.length+' items</span>':'')+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 
 function measureAudioDurationMs(file){
@@ -2645,16 +2647,16 @@ function openProfileAlbumEditor(profileId,album=null){
 }
 function openProfilePhotoComposer(profileId){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-photo-title"><div class="modal-head"><h2 id="profile-photo-title">Upload a photo</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write something about this photo"></textarea></label></div><div class="field"><label>Select one photo · zoom and rotate before upload</label><div data-profile-photo-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Upload photo</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-photo-title"><div class="modal-head"><h2 id="profile-photo-title">Upload a photo</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write something about this photo"></textarea></label></div><div class="field"><label>Select multiple photos · zoom and rotate before upload (up to 10)</label><div data-profile-photo-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Upload photo</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('[data-profile-photo-picker]'),{slot:'post',maxFiles:1,accept:'image/jpeg,image/png,image/webp,image/avif'});
+  const picker=createMediaPicker(modal.querySelector('[data-profile-photo-picker]'),{slot:'post',maxFiles:10,accept:'image/jpeg,image/png,image/webp,image/avif'});
   const close=()=>{picker.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelector('form').addEventListener('submit',async event=>{
     event.preventDefault();const submit=modal.querySelector('button[type="submit"]');submit.disabled=true;
     try{
-      if(!picker.hasSelection())throw new Error('Choose a photo to upload.');
+      if(!picker.hasSelection())throw new Error('Choose at least one photo to upload.');
       const mediaIds=await picker.upload(),values=new FormData(event.currentTarget);
       await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
       close();await openProfile(profileId);toast('Your photo has been uploaded.');
@@ -2663,9 +2665,9 @@ function openProfilePhotoComposer(profileId){
 }
 function openProfileReelComposer(profileId){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-reel-title"><div class="modal-head"><h2 id="profile-reel-title">Create a reel</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write a caption for your reel"></textarea></label></div><div class="field"><label>Choose a video</label><div data-profile-reel-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish reel</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-reel-title"><div class="modal-head"><h2 id="profile-reel-title">Create a reel</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write a caption for your reel"></textarea></label></div><div class="field"><label>Choose one or more video clips (up to 10)</label><div data-profile-reel-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish reel</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:1,accept:'video/mp4,video/webm,video/quicktime'});
+  const picker=createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:10,accept:'video/mp4,video/webm,video/quicktime'});
   const close=()=>{picker.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
@@ -3315,8 +3317,9 @@ function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[];
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
   initialMedia.forEach(item=>entries.push({existing:true,id:item.id,url:item.url,mimeType:item.mimeType||'image/jpeg',mediaType:item.mediaType||'image',name:'Attached media',zoom:1,rotation:0}));
-  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
-  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress');
+  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'"'+(maxFiles>1?' multiple="multiple"':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select multiple files at once, or drag and drop files here. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
+  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress'),dropZone=root.querySelector('.media-picker');
+  gallery.multiple=maxFiles>1;
   function mediaCard(entry,index){
     let preview='';
     if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
@@ -3350,8 +3353,12 @@ function createMediaPicker(root,options={}){
     }
     render();
   }
-  gallery.addEventListener('change',()=>{addFiles(gallery.files);gallery.value='';});
-  camera.addEventListener('change',()=>{addFiles(camera.files);camera.value='';});
+  gallery.addEventListener('change',()=>{const selected=[...gallery.files];addFiles(selected);gallery.value='';});
+  camera.addEventListener('change',()=>{const selected=[...camera.files];addFiles(selected);camera.value='';});
+  dropZone.addEventListener('dragenter',event=>{if(!Array.from(event.dataTransfer?.types||[]).includes('Files'))return;event.preventDefault();dropZone.classList.add('is-dragging');});
+  dropZone.addEventListener('dragover',event=>{if(!Array.from(event.dataTransfer?.types||[]).includes('Files'))return;event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='copy';dropZone.classList.add('is-dragging');});
+  dropZone.addEventListener('dragleave',event=>{if(!dropZone.contains(event.relatedTarget))dropZone.classList.remove('is-dragging');});
+  dropZone.addEventListener('drop',event=>{const files=event.dataTransfer?.files;if(!files?.length)return;event.preventDefault();dropZone.classList.remove('is-dragging');const before=entries.length;addFiles(files);const added=entries.length-before;if(added)status.textContent='Added '+added+' file'+(added===1?'':'s')+'. You can add more before publishing.';});
   root.querySelector('[data-media-gallery]').addEventListener('click',()=>gallery.click());
   root.querySelector('[data-media-camera]').addEventListener('click',()=>slot==='sound'?openDeviceAudioCapture({onCapture:file=>addFiles([file])}):openDeviceCapture({mode:'both',onCapture:file=>addFiles([file])}));
   render();
@@ -3715,9 +3722,9 @@ function openEditProfile(u,mediaOnly=null){
 }
 function openStoryComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose a photo or video</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
+  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose photos or videos (up to 10)</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:1});
+  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:10});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
   const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
@@ -3727,7 +3734,7 @@ function openStoryComposer(){
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload(),track=soundtrack.value();
       if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track){toast('Write a Story, choose a photo/video or add a sound.');button.disabled=false;return;}
-      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaId:mediaIds[0]||null,audience:values.get('audience'),soundtrack:track})});
+      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:track})});
       close();await loadStories();if(state.view==='feed')await renderFeed();toast('Story published for 24 hours.');
     }catch(error){toast(error.message);button.disabled=false;}
   };
@@ -3737,9 +3744,31 @@ async function openStory(id){
   try{
     const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
     const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
+    const storyMedia=Array.isArray(s.mediaItems)&&s.mediaItems.length?s.mediaItems:(s.media?[s.media]:[]);
+    let activeMediaIndex=0;
+    const storyMediaMarkup=()=>{
+      if(!storyMedia.length)return '';
+      const current=storyMedia[activeMediaIndex];
+      const controls=storyMedia.length>1?'<div class="story-media-controls"><button type="button" class="secondary" data-story-prev aria-label="Previous story item">‹</button><span>'+Number(activeMediaIndex+1)+' / '+storyMedia.length+'</span><button type="button" class="secondary" data-story-next aria-label="Next story item">›</button></div>':'';
+      return '<div class="story-media-stage">'+renderSingleMedia(current,'story-viewer-image')+'</div>'+controls;
+    };
     const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';
-    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div>'+(s.media?renderSingleMedia(s.media,'story-viewer-image'):'')+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
-    document.body.append(modal);bindSoundtrackPlayback(modal);modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
+    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div><div data-story-media-container>'+storyMediaMarkup()+'</div>'+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
+    document.body.append(modal);
+    const moveStoryMedia=step=>{
+      if(storyMedia.length<2)return;
+      activeMediaIndex=(activeMediaIndex+step+storyMedia.length)%storyMedia.length;
+      const container=modal.querySelector('[data-story-media-container]');
+      container.innerHTML=storyMediaMarkup();
+      bindSoundtrackPlayback(modal);
+      container.querySelector('[data-story-prev]')?.addEventListener('click',()=>moveStoryMedia(-1));
+      container.querySelector('[data-story-next]')?.addEventListener('click',()=>moveStoryMedia(1));
+    };
+    bindSoundtrackPlayback(modal);
+    modal.querySelector('[data-story-prev]')?.addEventListener('click',()=>moveStoryMedia(-1));
+    modal.querySelector('[data-story-next]')?.addEventListener('click',()=>moveStoryMedia(1));
+    modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};
+    modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
     modal.querySelector('#report-story')?.addEventListener('click',()=>{modal.remove();openReportComposer('story',s.id);});
     modal.querySelector('#delete-story')?.addEventListener('click',async()=>{if(!window.confirm('Delete this story?'))return;try{await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');}catch(err){toast(err.message);}});
   }catch(err){toast(err.message);}
