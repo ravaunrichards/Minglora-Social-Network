@@ -1859,6 +1859,17 @@ async function route(req, res) {
         const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
         return json(res,200,{ok:true,recipientEmail:adminEmail,issuance,wallet});
       }
+      if(method==='GET'&&p==='/api/admin/coins/campaign-wallet'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can view the campaign wallet.'});
+        }
+        return json(res,200,await requestSupabaseState('economy_admin_campaign_wallet',{
+          adminUserId:user.id,adminEmail
+        }));
+      }
       if(method==='POST'&&p==='/api/admin/coins/member-promotions'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
@@ -1875,11 +1886,17 @@ async function route(req, res) {
            amountCoins>Number.MAX_SAFE_INTEGER||!uuidPattern.test(requestId)){
           return json(res,400,{error:'Enter a valid Minglora username, a positive whole-number Coin amount and a secure request reference.'});
         }
-        const result=await requestSupabaseState('economy_admin_member_credit',{
-          adminUserId:user.id,adminEmail,memberLookup:memberUsername,amountCoins,requestId,note
+        const result=await requestSupabaseState('economy_admin_campaign_allocate',{
+          adminUserId:user.id,adminEmail,memberLookup:memberUsername,amountCoins,requestId,
+          campaignName:'Minglora Admin Promotional Gift Campaign',note
         });
-        const credit=result.credit?.credit||result.credit||result;
-        return json(res,200,{ok:true,credit});
+        const allocation=result.allocation?.allocation||result.allocation||result;
+        const memberWallet=allocation.member_promotional_wallet||{};
+        return json(res,200,{ok:true,credit:{
+          alreadyCredited:Boolean(allocation.already_processed),
+          amountCoins,memberUsername,
+          balanceAfter:Number(memberWallet.available_coins||0)
+        },allocation});
       }
       if(method==='GET'&&p==='/api/admin/coins/member-promotions/history'){
         const adminEmail=normalizeEmail(user.email);
@@ -1888,7 +1905,7 @@ async function route(req, res) {
            user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can view member promotional Coin history.'});
         }
-        const result=await requestSupabaseState('economy_admin_member_credit_history',{
+        const result=await requestSupabaseState('economy_admin_campaign_history',{
           adminUserId:user.id,adminEmail
         });
         return json(res,200,{items:Array.isArray(result.items)?result.items:[]});
