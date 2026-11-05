@@ -2267,7 +2267,8 @@ async function route(req, res) {
         try{participants=await listLiveKitParticipants(session.roomName);}
         catch{return json(res,503,{error:'Minglora could not verify the connected LIVE room participants.'});}
         if(!participants.some(participant=>participant.identity===user.id))return json(res,409,{error:'Join your LIVE room before starting a recording.'});
-        const approvedGuestIds=new Set((db.liveSpeakerRequests||[]).filter(item=>item.sessionId===session.id&&['accepted','connected'].includes(item.status)).map(item=>String(item.userId)));\n        const allowedGuestIds=participants.map(participant=>String(participant.identity)).filter(id=>id!==session.hostId&&approvedGuestIds.has(id));
+        const approvedGuestIds=new Set((db.liveSpeakerRequests||[]).filter(item=>item.sessionId===session.id&&['accepted','connected'].includes(item.status)).map(item=>String(item.userId)));
+        const allowedGuestIds=participants.map(participant=>String(participant.identity)).filter(id=>id!==session.hostId&&approvedGuestIds.has(id));
         const recording={id:uid(),sessionId:session.id,hostId:user.id,title:String(input.title||session.title||'Minglora LIVE recording').trim().slice(0,120),
           status:'recording',sharedWithGuests:Boolean(input.shareWithGuests),allowedGuestIds,startedAt:now(),createdAt:now(),assetId:null,bucket:null,path:null};
         db.liveRecordings.unshift(recording);await saveStore();
