@@ -5,11 +5,12 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [html, css, sprite, serviceWorker] = await Promise.all([
+const [html, css, sprite, serviceWorker, app] = await Promise.all([
   read('public/index.html'),
   read('public/styles.css'),
   read('public/assets/icons/navigation-3d.svg'),
-  read('public/sw.js')
+  read('public/sw.js'),
+  read('public/app.js')
 ]);
 
 const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#${id}"></use>`;
@@ -52,9 +53,11 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   assert.ok(html.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
 });
 test('utility rail and header actions use the matching rendered icon assets', () => {
-  for (const icon of ['live', 'coins', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
+  for (const icon of ['live', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
     assert.ok(html.includes(useIcon(icon)), `utility icon ${icon} is wired into the interface`);
   }
+  assert.ok(app.includes("messenger3dIcon('recharge','mobile-hub-icon')"), 'Recharge uses its dedicated dimensional icon');
+  assert.match(sprite, /<symbol id="recharge" viewBox="0 0 64 64">/);
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
   assert.ok(html.includes('id="settings-btn"') && html.includes(useIcon('settings')));
   assert.ok(html.includes('nav-search-icon') && html.includes(useIcon('search')));
@@ -81,7 +84,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v79-money-to-coins-1/);
-  assert.match(serviceWorker, /styles\.css\?v=20261104-money-to-coins-1/);
+  assert.match(serviceWorker, /minglora-shell-v81-owner-coin-admin-credit-1/);
+  assert.match(serviceWorker, /styles\.css\?v=20261104-owner-coin-admin-credit-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
