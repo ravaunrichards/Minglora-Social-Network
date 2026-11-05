@@ -82,3 +82,12 @@ test('Full Screen uses the compact centered host-only portrait stage from PR #10
   assert.match(styles, /aspect-ratio:4 \/ 5/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
+
+
+test('Full Screen LIVE moves the existing action controls into a single bottom dock', () => {
+  assert.match(app, /classList\.toggle\('live-full-screen-bottom-dock',hostOnly\)/);
+  assert.match(app, /liveControlButton\("live-settings-toggle","settings","Open LIVE settings and tools","Tools"\)/);
+  assert.match(app, /applyLiveScreenLayout\(activeLiveScreenLayout\);/);
+  assert.match(styles, /\.live-player-shell\.live-full-screen-bottom-dock \.live-player-controls\{[\s\S]*position:fixed!important[\s\S]*bottom:0!important[\s\S]*flex-wrap:nowrap!important/);
+  assert.match(styles, /\.live-player-shell\.live-full-screen-bottom-dock \.live-video-column\{[\s\S]*padding:8px 8px 76px/);
+});
