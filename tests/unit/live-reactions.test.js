@@ -20,7 +20,7 @@ test('LIVE offers a compact reaction bar with likes, hearts, applause, fire and 
 
 test('LIVE reactions travel over the room data channel and are validated before display', () => {
   assert.match(app, /RoomEvent\.DataReceived/);
-  assert.match(app, /topic!=="minglora-live-reaction"/);
+  assert.match(app, /topic==="minglora-live-reaction"/);
   assert.match(app, /packet\?\.type!=="minglora\.live\.reaction"/);
   assert.match(app, /Object\.hasOwn\(liveReactionEmoji,packet\.reaction\)/);
   assert.match(app, /publishData\(packet,\{reliable:false,topic:"minglora-live-reaction"\}\)/);
