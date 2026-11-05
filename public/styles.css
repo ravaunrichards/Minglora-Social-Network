@@ -5380,7 +5380,7 @@ button.live-ranking-row{cursor:pointer}
 /* Controls wrap into rows instead of getting clipped off phones and tablets. */
 .live-full-screen-active .live-player-controls{
   position:static!important;grid-row:3!important;display:grid!important;
-  grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-rows:42px!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-rows:50px!important;
   flex:none!important;align-items:center!important;justify-content:center!important;align-content:center!important;
   width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;
   margin:0!important;padding:5px 8px calc(5px + env(safe-area-inset-bottom))!important;gap:4px!important;
@@ -5519,7 +5519,7 @@ button.live-ranking-row{cursor:pointer}
   .live-full-screen-active .live-host-profile img{width:27px!important;height:27px!important;flex-basis:27px!important}
   .live-full-screen-active .live-host-profile strong{font-size:10px!important}
   .live-full-screen-active .live-host-profile small{font-size:7px!important}
-  .live-full-screen-active .live-player-controls{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-rows:40px!important}
+  .live-full-screen-active .live-player-controls{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-rows:50px!important}
 }
 @media(max-height:520px) and (orientation:landscape){
   .live-full-screen-active>.live-player-header{flex-basis:32px!important;height:32px!important;min-height:32px!important;max-height:32px!important;padding:2px 8px!important}
