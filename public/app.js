@@ -1864,7 +1864,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
-    (liveSettings.qaEnabled!==false?"<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>":"")+\n    "<button type='button' data-live-tools-panel-target='recordings' aria-pressed='false'>Recordings</button>"+
+    (liveSettings.qaEnabled!==false?"<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>":"")+
+    "<button type='button' data-live-tools-panel-target='recordings' aria-pressed='false'>Recordings</button>"+
     "<button type='button' data-live-tools-panel-target='matches' aria-pressed='false'>Match</button>"+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
