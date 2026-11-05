@@ -1,7 +1,7 @@
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 
 // LiveKit protocol TrackSource enum: CAMERA=1, MICROPHONE=2.
-export const LIVEKIT_TRACK_SOURCE = Object.freeze({ CAMERA: 1, MICROPHONE: 2 });
+export const LIVEKIT_TRACK_SOURCE = Object.freeze({ CAMERA: 1, MICROPHONE: 2, SCREEN_SHARE: 3 });
 
 function config() {
   const rawUrl=String(process.env.LIVEKIT_URL||'').trim();
