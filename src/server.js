@@ -1633,6 +1633,25 @@ async function route(req, res) {
         const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
         return json(res,200,{ok:true,issuance:result.issuance||result,wallet});
       }
+      if(method==='POST'&&p==='/api/coins/admin-credit'){
+        const creatorHubOwnerId='28e1df97-3fe1-488e-bb84-bdc353c58653';
+        const ownerEmail=String(user.email||'').trim().toLowerCase();
+        if(user.id!==creatorHubOwnerId||ownerEmail!=='larryjones2019ersky@gmail.com'){
+          return json(res,403,{error:'Member Coin credits are restricted to the verified Creator Hub owner account.'});
+        }
+        const amountCoins=Number(input.amountCoins);
+        const memberLookup=String(input.memberLookup||'').trim().slice(0,80);
+        const requestId=String(input.requestId||'').trim();
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Number.isSafeInteger(amountCoins)||amountCoins<1)return json(res,400,{error:'Enter a positive whole-number Coin amount.'});
+        if(!memberLookup)return json(res,400,{error:'Enter the member username or account ID.'});
+        if(!uuidPattern.test(requestId))return json(res,400,{error:'A valid credit request reference is required.'});
+        const result=await requestSupabaseState('economy_admin_member_credit',{
+          adminUserId:user.id,adminEmail:ownerEmail,memberLookup,amountCoins,requestId,
+          note:String(input.note||'').trim().slice(0,240)
+        });
+        return json(res,200,{ok:true,credit:result.credit||result});
+      }
       if(method==='POST'&&p==='/api/coins/exchange'){
         const amountMinor=Number(input.amountMinor);
         const requestId=String(input.requestId||'').trim();
