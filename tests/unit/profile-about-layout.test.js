@@ -91,9 +91,9 @@ test('private contact information is only supplied to its owner or viewers allow
 });
 
 test('profile shell and service worker load the organised About UI without stale cached assets',()=>{
-  assert.match(html,/app\.js\?v=20261104-money-to-coins-1/);
-  assert.match(html,/styles\.css\?v=20261104-money-to-coins-1/);
-  assert.match(worker,/minglora-shell-v79-money-to-coins-1/);
-  assert.match(worker,/app\.js\?v=20261104-money-to-coins-1/);
-  assert.match(worker,/styles\.css\?v=20261104-money-to-coins-1/);
+  assert.match(html,/app\.js\?v=20261104-owner-coin-admin-credit-1/);
+  assert.match(html,/styles\.css\?v=20261104-owner-coin-admin-credit-1/);
+  assert.match(worker,/minglora-shell-v81-owner-coin-admin-credit-1/);
+  assert.match(worker,/app\.js\?v=20261104-owner-coin-admin-credit-1/);
+  assert.match(worker,/styles\.css\?v=20261104-owner-coin-admin-credit-1/);
 });
