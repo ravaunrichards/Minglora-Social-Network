@@ -1,6 +1,18 @@
 const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, rechargeTab:'recharge' };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
+const LIVE_ROOM_LAYOUT_OPTIONS=[
+  {value:'full_screen',label:'Full Screen'},
+  {value:'fluid_panel',label:'Fluid Panel'},
+  {value:'fluid_grid',label:'Fluid Grid'},
+  {value:'fixed_grid',label:'Fixed Grid'},
+  {value:'fixed_panel',label:'Fixed Panel'},
+  {value:'side_by_side',label:'Side by Side'},
+  {value:'spotlight',label:'Spotlight'},
+  {value:'roundtable_1',label:'Roundtable 1'},
+  {value:'roundtable_2',label:'Roundtable 2'}
+];
+
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
 const fallbackAvatar = name => {
   const initials = String(name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2)
@@ -815,6 +827,15 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
       "<label class='live-preflight-field'><span>Button label</span><input name='clientCtaLabel' maxlength='48' placeholder='Book a consultation'></label>"+
       "<label class='live-preflight-field'><span>HTTPS link</span><input name='clientCtaUrl' type='url' inputmode='url' placeholder='https://example.com'></label>"+
     "</div></details>"+
+    "<div class='live-preflight-section live-stage-layout-section'><div class='live-preflight-section-title'><strong>Stage layout</strong><small>Choose a layout now; hosts can switch it while LIVE</small></div><div class='live-preflight-fields'><label class='live-preflight-field'><span>Screen layout</span><select name='roomLayout'>"+LIVE_ROOM_LAYOUT_OPTIONS.map(option=>"<option value='"+option.value+"'>"+esc(option.label)+"</option>").join("")+"</select></label></div></div>"+
+    "<div class='live-preflight-section'><div class='live-preflight-section-title'><strong>Guest & co-host controls</strong><small>Each switch is saved with this LIVE session</small></div><div class='live-preflight-switches'>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='allowGuestRequests' checked><span class='live-preflight-switch'></span><span><strong>Allow guest requests</strong><small>Let viewers request a microphone or camera seat</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='guestCamera' checked><span class='live-preflight-switch'></span><span><strong>Guest camera</strong><small>Allow approved guests to publish video</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='autoAcceptRequests'><span class='live-preflight-switch'></span><span><strong>Auto accept</strong><small>Automatically approve requests while stage seats are available</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='prioritizeGifters'><span class='live-preflight-switch'></span><span><strong>Prioritize gifters</strong><small>Sort guest requests by verified gifter level</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='allowCoHost' checked><span class='live-preflight-switch'></span><span><strong>Allow co-host / guest stage</strong><small>Allow another member to join your stage</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='manageModerators' checked><span class='live-preflight-switch'></span><span><strong>Manage moderators</strong><small>Allow host moderator assignment and removal</small></span></label>"+
+    "</div></div>"+
     "<div class='live-preflight-unavailable' aria-label='Additional LIVE production integrations'><strong>Additional LIVE integrations</strong><span>Guardian/family controls · Cloud recording/egress · Advanced effects · LIVE Services · Fan Club</span><small>These need verified provider, storage, creator and safety workflows before they can be enabled.</small></div>"+
     "<div class='live-preflight-submit'><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button><p class='form-hint'>Mobile Gaming uses screen sharing. Screen-capture availability depends on the device and browser; native Android game capture still needs platform integration.</p></div></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
@@ -860,6 +881,13 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
       const liveSettings={
         board:String(values.get("board")||"general"),
         aboutMe:String(values.get("aboutMe")||"").trim(),
+        roomLayout:String(values.get("roomLayout")||"fluid_grid"),
+        allowGuestRequests:values.has("allowGuestRequests"),
+        guestCamera:values.has("guestCamera"),
+        autoAcceptRequests:values.has("autoAcceptRequests"),
+        prioritizeGifters:values.has("prioritizeGifters"),
+        allowCoHost:values.has("allowCoHost"),
+        manageModerators:values.has("manageModerators"),
         practiceMode:values.has("practiceMode"),
         liveQuality:String(values.get("liveQuality")||"auto"),
         noiseSuppression:values.has("noiseSuppression"),
@@ -1143,6 +1171,17 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
   ).join("");
 }
 
+function applyLiveRoomLayout(layout='fluid_grid',root=$('#live-guest-layout')){
+  const supported=LIVE_ROOM_LAYOUT_OPTIONS.some(option=>option.value===layout)?layout:'fluid_grid';
+  if(!root)return supported;
+  for(const option of LIVE_ROOM_LAYOUT_OPTIONS)root.classList.remove('live-layout-'+option.value);
+  root.classList.add('live-layout-'+supported);
+  root.dataset.layout=supported;
+  const stage=root.closest('#live-video-stage');
+  if(stage)stage.dataset.liveLayout=supported;
+  return supported;
+}
+
 function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-guest-layout");if(!root||!room)return;
   const local=room.localParticipant;
@@ -1164,6 +1203,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     person,isHost:false
   }));
   while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
+  applyLiveRoomLayout(session?.liveSettings?.roomLayout||'fluid_grid',root);
   const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
   const header=document.createElement("div");
   header.className="live-guest-layout-heading";
@@ -1475,11 +1515,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (liveSettings.board?"<span class='live-board-badge'>"+esc(String(liveSettings.board).replace(/^./,x=>x.toUpperCase()))+"</span>":"")+
     (session.description?"<p class='live-session-about'>"+esc(session.description)+"</p>":"")+
     (liveSettings.clientAcquisitionEnabled&&liveSettings.clientCtaUrl&&liveSettings.clientCtaLabel?"<a class='live-client-cta' href='"+esc(liveSettings.clientCtaUrl)+"' target='_blank' rel='noopener noreferrer'>"+esc(liveSettings.clientCtaLabel)+"</a>":"")+"</div>";
+  const liveRoomLayoutControl=role==='host'?"<section class='live-room-layout-control'><label for='live-room-layout-select'><strong>Stage layout</strong><small>Switch the room layout without ending LIVE</small><select id='live-room-layout-select'>"+LIVE_ROOM_LAYOUT_OPTIONS.map(option=>"<option value='"+option.value+"'"+(option.value===(liveSettings.roomLayout||'fluid_grid')?' selected':'')+">"+esc(option.label)+"</option>").join('')+"</select></label></section>":'';
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+liveRoomLayoutControl+"<div class='live-tools-content'>"+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
@@ -1499,6 +1540,19 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
     if(role==="host"){
+    const layoutSelect=$("#live-room-layout-select");
+    layoutSelect?.addEventListener('change',async()=>{
+      const previous=activeLiveSession?.liveSettings?.roomLayout||'fluid_grid';
+      const selected=layoutSelect.value;
+      layoutSelect.disabled=true;
+      try{
+        const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/settings',{method:'PATCH',body:JSON.stringify({settings:{roomLayout:selected}})});
+        activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),...(saved.liveSettings||{}),roomLayout:selected};
+        applyLiveRoomLayout(selected);
+        toast('LIVE layout changed to '+(LIVE_ROOM_LAYOUT_OPTIONS.find(option=>option.value===selected)?.label||selected)+'.');
+      }catch(error){layoutSelect.value=previous;toast(error.message||'The LIVE layout could not be changed.');}
+      finally{layoutSelect.disabled=false;}
+    });
     const moderatorList=$("#live-moderator-list");
     const refreshLiveModerators=async()=>{
       if(!moderatorList)return;
