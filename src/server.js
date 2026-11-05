@@ -2258,6 +2258,9 @@ async function route(req, res) {
         if(session.liveSettings?.qaEnabled===false)return json(res,403,{error:'The host has disabled LIVE Q&A.'});
         const question=String(input.question||input.body||'').trim();
         if(question.length<4||question.length>300)return json(res,400,{error:'Enter a question between 4 and 300 characters.'});
+        if(session.liveSettings?.guardianMode===true&&/(https?:\\/\\/|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}|\\+?[0-9][0-9\\s().-]{7,}[0-9])/i.test(question)){
+          return json(res,400,{error:'Guardian safety mode blocks external links, email addresses and phone numbers in LIVE questions.'});
+        }
         let participants;
         try{participants=await listLiveKitParticipants(session.roomName);}
         catch{return json(res,503,{error:'Minglora could not verify that you are connected to this LIVE room.'});}
@@ -2320,7 +2323,11 @@ async function route(req, res) {
         const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
         if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
-        const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
+        const chatBody=String(input.body||'').trim();
+        if(session.liveSettings?.guardianMode===true&&/(https?:\\/\\/|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}|\\+?[0-9][0-9\\s().-]{7,}[0-9])/i.test(chatBody)){
+          return json(res,400,{error:'Guardian safety mode blocks external links, email addresses and phone numbers in LIVE chat.'});
+        }
+        const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:chatBody});
         return json(res,201,sent);
       }
       const liveChatDelete=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat\/([^/]+)$/);
