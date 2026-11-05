@@ -166,3 +166,12 @@
 @keyframes gp-gem-spark{0%,100%{opacity:.15;scale:.7}50%{opacity:1;scale:1.25}}
 @media(max-width:650px){.gp-badge{width:96px;height:106px}.gp-gem-stage{transform:translateX(-50%) scale(.92);transform-origin:top center}.gp-badge--small{width:46px;height:46px;min-width:46px}.gp-badge--small .gp-gem-stage{transform:translateX(-50%) scale(.92)}.gp-inline-badge{height:22px;gap:2px;padding-right:5px}}
 @media(prefers-reduced-motion:reduce){.gp-badge::before,.gp-gem-orbit,.gp-gem-svg,.gp-gem-flash,.gp-gem-sparkle,.gp-inline-gem-svg{animation:none!important}.gp-gem-svg{transform:none}}
+
+.gp-new-gifter-identity{display:inline-flex;align-items:center;gap:4px;margin:0 0 0 5px;padding:3px 8px;border:1px solid rgba(255,205,103,.9);border-radius:999px;background:linear-gradient(135deg,#fff4ce,#f5c45d 52%,#b87522);color:#4a2b08;font-size:.62rem;font-weight:950;letter-spacing:.06em;line-height:1.2;white-space:nowrap;box-shadow:0 2px 8px rgba(155,101,24,.22),inset 0 1px 0 rgba(255,255,255,.8);vertical-align:middle}
+.gp-new-gifter-identity::before{content:"✦";font-size:.78rem}
+.gp-no-earned-badge{display:flex;min-width:150px;min-height:112px;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:12px;border:1px dashed var(--border,#b8c0cc);border-radius:16px;background:rgba(120,130,145,.06);text-align:center}
+.gp-no-earned-badge>span{font-size:1.5rem}
+.gp-no-earned-badge strong{font-size:.86rem}
+.gp-no-earned-badge small{font-size:.72rem;color:var(--muted,#697586)}
+.gp-new-gifter-notice{margin:.75rem 0 0;padding:8px 11px;border-radius:10px;background:rgba(245,196,93,.14);color:var(--text,#273244);font-size:.82rem}
+.gp-new-gifter-notice strong{color:#a36b18;letter-spacing:.04em}

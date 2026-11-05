@@ -21,14 +21,14 @@ export const GIFTER_LEVEL_COIN_THRESHOLDS = Object.freeze([
 
 export function gifterXpRequired(level) {
   const value = Math.max(1, Math.min(LEVEL_CAP, Math.floor(Number(level) || 1)));
-  // Level 1 is the starting level; the first confirmed Coin unlocks its badge.
-  return value === 1 ? 0 : GIFTER_LEVEL_COIN_THRESHOLDS[value - 1];
+  // All levels are locked until cumulative Coins are spent sending confirmed gifts.
+  return GIFTER_LEVEL_COIN_THRESHOLDS[value - 1];
 }
 
 export function getGifterLevel(xp) {
   const total = Math.max(0, Number.isFinite(Number(xp)) ? Math.floor(Number(xp)) : 0);
-  let level = 1;
-  for (let candidate = 2; candidate <= LEVEL_CAP; candidate += 1) {
+  let level = 0;
+  for (let candidate = 1; candidate <= LEVEL_CAP; candidate += 1) {
     if (total < gifterXpRequired(candidate)) break;
     level = candidate;
   }
@@ -36,7 +36,8 @@ export function getGifterLevel(xp) {
 }
 
 export function getGifterLevelChart(xp = 0) {
-  const currentLevel = getGifterLevel(xp);
+  const total = Math.max(0, Number.isFinite(Number(xp)) ? Math.floor(Number(xp)) : 0);
+  const currentLevel = getGifterLevel(total);
   return Array.from({ length: LEVEL_CAP }, (_, index) => {
     const level = index + 1;
     const tier = TIERS[Math.floor(index / 5)];
@@ -48,8 +49,8 @@ export function getGifterLevelChart(xp = 0) {
       tier,
       badgeName: tier + " Gifter · LV " + level,
       reward: level === 25 ? "Special LIVE entrance badge" : milestone ? "Milestone badge finish" : "Level badge",
-      unlocked: level <= currentLevel,
-      current: level === currentLevel
+      unlocked: total >= gifterXpRequired(level),
+      current: currentLevel > 0 && level === currentLevel
     };
   });
 }
@@ -59,14 +60,17 @@ function aggregateBySender(events) {
   for (const event of events) {
     if (!event?.senderId) continue;
     const item = totals.get(event.senderId) || {
-      xp: 0, giftsSent: 0, recipients: new Set(), lastGiftAt: ""
+      xp: 0, giftsSent: 0, recipients: new Set(), firstGiftAt: "", lastGiftAt: ""
     };
     const amount = Number(event.coinAmount);
     if (!Number.isSafeInteger(amount) || amount <= 0) continue;
     item.xp += amount;
     item.giftsSent += 1;
     if (event.recipientId) item.recipients.add(event.recipientId);
-    if (event.createdAt && event.createdAt > item.lastGiftAt) item.lastGiftAt = event.createdAt;
+    if (event.createdAt) {
+      if (!item.firstGiftAt || event.createdAt < item.firstGiftAt) item.firstGiftAt = event.createdAt;
+      if (event.createdAt > item.lastGiftAt) item.lastGiftAt = event.createdAt;
+    }
     totals.set(event.senderId, item);
   }
   return totals;
@@ -109,6 +113,29 @@ export function getGifterBadgeSummary(db, userId) {
     tier: badge.tier,
     badgeName: badge.badgeName,
     liveEntranceUnlocked: level >= 25
+  };
+}
+
+export const NEW_GIFTER_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * NEW GIFTER starts at a member's first confirmed gift sent and expires after
+ * exactly seven days. Additional gifts never restart the timer.
+ */
+export function getNewGifterIdentity(db, userId, now = Date.now()) {
+  if (!db || typeof db !== "object" || !userId) return null;
+  const own = getDeduplicatedSenderTotals(db).get(userId);
+  if (!own?.firstGiftAt) return null;
+  const startedAtMs = Date.parse(own.firstGiftAt);
+  const currentTimeMs = now instanceof Date ? now.getTime() : Number(now);
+  if (!Number.isFinite(startedAtMs) || !Number.isFinite(currentTimeMs)) return null;
+  const expiresAtMs = startedAtMs + NEW_GIFTER_DURATION_MS;
+  if (currentTimeMs < startedAtMs || currentTimeMs >= expiresAtMs) return null;
+  return {
+    label: "NEW GIFTER",
+    active: true,
+    startedAt: new Date(startedAtMs).toISOString(),
+    expiresAt: new Date(expiresAtMs).toISOString()
   };
 }
 
@@ -164,10 +191,10 @@ export function getGifterProgressionOverview(db, userId) {
     return true;
   });
   const totals = aggregateBySender(events);
-  const own = totals.get(userId) || { xp: 0, giftsSent: 0, recipients: new Set(), lastGiftAt: "" };
+  const own = totals.get(userId) || { xp: 0, giftsSent: 0, recipients: new Set(), firstGiftAt: "", lastGiftAt: "" };
   const level = getGifterLevel(own.xp);
   const nextLevel = level < LEVEL_CAP ? level + 1 : null;
-  const currentThreshold = gifterXpRequired(level);
+  const currentThreshold = level > 0 ? gifterXpRequired(level) : 0;
   const nextThreshold = nextLevel ? gifterXpRequired(nextLevel) : null;
   const xpIntoLevel = Math.max(0, own.xp - currentThreshold);
   const xpForLevel = nextThreshold === null ? 0 : nextThreshold - currentThreshold;
@@ -176,7 +203,8 @@ export function getGifterProgressionOverview(db, userId) {
     ? Math.max(0, Math.min(100, Math.round((xpIntoLevel / xpForLevel) * 100)))
     : 100;
   const chart = getGifterLevelChart(own.xp);
-  const currentBadge = chart[level - 1];
+  const currentBadge = level > 0 ? chart[level - 1] : null;
+  const newGifterIdentity = getNewGifterIdentity(db, userId);
 
   const members = new Map((db.users || []).map(member => [member.id, member]));
   const leaderboard = [...totals.entries()]
@@ -222,8 +250,9 @@ export function getGifterProgressionOverview(db, userId) {
       giftsSent: own.giftsSent,
       uniqueRecipients: own.recipients.size,
       rankPosition,
-      tier: currentBadge.tier,
-      badgeName: currentBadge.badgeName,
+      tier: currentBadge?.tier || null,
+      badgeName: currentBadge?.badgeName || null,
+      hasUnlockedBadge: level > 0,
       nextLevel,
       nextLevelXp: nextThreshold,
       xpRemaining,
@@ -233,6 +262,7 @@ export function getGifterProgressionOverview(db, userId) {
       maxLevel: level === LEVEL_CAP
     },
     levels: chart,
+    newGifterIdentity,
     leaderboard: leaderboard.slice(0, 20),
     history,
     rules: {
@@ -240,7 +270,9 @@ export function getGifterProgressionOverview(db, userId) {
       coinsPerProgressPoint: 1,
       source: "Confirmed member-to-member and LIVE gifts sent",
       excluded: ["Coin purchases", "Gifts received", "Unconfirmed or duplicate transactions"],
-      maximumLevel: LEVEL_CAP
+      maximumLevel: LEVEL_CAP,
+      firstLevelRequiresCoinsSent: 1,
+      newGifterIdentityDays: 7
     }
   };
 }
