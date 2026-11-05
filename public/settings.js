@@ -83,6 +83,16 @@
     return `<h2 class="settings-section-title">${title}</h2>`;
   }
 
+  function activityHistoryMarkup(items) {
+    const history=Array.isArray(items)?items.slice(0,20):[];
+    if(!history.length)return '<p class="settings-empty">No recent account activity is available yet.</p>';
+    return '<div class="settings-activity-list">'+history.map(item=>{
+      const date=item.createdAt?new Date(item.createdAt):null;
+      const time=date&&!Number.isNaN(date.getTime())?date.toLocaleString():'Time unavailable';
+      return '<article class="settings-activity-row"><span class="settings-activity-dot" aria-hidden="true"></span><div><strong>'+escapeHtml(String(item.summary||item.action||'Account activity').replace(/_/g,' '))+'</strong><small>'+escapeHtml(time)+'</small></div></article>';
+    }).join('')+'</div>';
+  }
+
   function profileViewersMarkup(result) {
     if(!result?.enabled)return '<p class="settings-note">Turn on Profile view history to see signed-in members who also have this setting enabled. Your visits will be visible to them too.</p>';
     const viewers=Array.isArray(result.viewers)?result.viewers:[];
@@ -122,6 +132,10 @@
       const settingsMoneyAvailable=formatSettingsUSD(creatorEarningsResult.availableMinor);
       const settingsLifetimeEarned=formatSettingsUSD(creatorEarningsResult.earnedMinor);
       const settingsCoinBalance=walletResult.wallet?.balance_coins;
+      const activityResult=result.account?.id
+        ?await api('/users/'+encodeURIComponent(result.account.id)+'/activity').catch(error=>({error:error.message,activity:[]}))
+        :{activity:[]};
+      const activityItems=Array.isArray(activityResult.activity)?activityResult.activity:[];
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
@@ -209,6 +223,11 @@
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
               <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
+              <div class="settings-activity-centre">
+                <div class="settings-inline-heading"><div><h3>Activity Center</h3><p class="muted">Recent profile and account actions recorded by Minglora.</p></div><button type="button" class="secondary" id="settings-refresh-activity">Refresh</button></div>
+                <div id="settings-activity-list">${activityHistoryMarkup(activityItems)}</div>
+                <p class="settings-note">Watch, comment, search, advertising, mention and content-reuse histories are not yet tracked in this activity feed. They will be added when their event records are available.</p>
+              </div>
             </section>
             <section class="settings-card" id="settings-calls" data-settings-category="interactions">
               ${sectionHeading('Voice &amp; video calls')}
@@ -632,6 +651,16 @@
         const button=event.target.closest('[data-profile-viewer]');
         const userId=button?.dataset.profileViewer;
         if(userId)window.dispatchEvent(new CustomEvent('minglora:open-profile',{detail:{userId}}));
+      });
+
+      document.querySelector('#settings-refresh-activity')?.addEventListener('click',async event=>{
+        const button=event.currentTarget,list=document.querySelector('#settings-activity-list');
+        button.disabled=true;
+        try{
+          const refreshed=await api('/users/'+encodeURIComponent(result.account.id)+'/activity');
+          if(list)list.innerHTML=activityHistoryMarkup(refreshed.activity);
+        }catch(error){if(list)list.textContent='Activity could not be refreshed. '+error.message;}
+        finally{button.disabled=false;}
       });
 
       const settingsSaveStatus = document.querySelector('#settings-save-status');
