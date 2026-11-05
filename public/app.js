@@ -2459,8 +2459,11 @@ activeLivePinnedComment=null;
         if(key==='guestStageEnabled'){
           const stateLabel=$('#live-guest-stage-state');if(stateLabel)stateLabel.textContent=input.checked?'ON':'OFF';
           await refreshLiveSpeakerPanel(session,role,room);
-          if(saved.guestStage?.removalFailures)toast('Guest stage is OFF, but '+saved.guestStage.removalFailures+' speaker(s) could not be removed. Use Remove in the Guest section to retry.');
-          else toast(input.checked?'Guest stage enabled. Viewers can request to join.':'Guest stage disabled. Current guests were removed where connected.');
+          if(saved.guestStage?.removalFailures)toast('Guest stage is OFF. '+saved.guestStage.removalFailures+' connected guest(s) could not be removed immediately; guest reconnects are blocked.');
+          else if(input.checked){
+            const requestsAllowed=activeLiveSession.liveSettings?.allowGuestRequests!==false&&activeLiveSession.liveSettings?.allowCoHost!==false;
+            toast(requestsAllowed?'Guest stage enabled. Viewers can request to join.':'Guest stage enabled, but requests remain disabled by the guest-request or co-host permission.');
+          }else toast('Guest stage disabled. Pending requests and approvals were cleared; connected guests were disconnected where possible.');
           return;
         }
         if(key==='manageModerators')$('#live-moderator-panel')?.classList.toggle('hidden',!input.checked);
