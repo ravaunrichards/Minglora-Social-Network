@@ -20,7 +20,7 @@
       });
       if (!response.ok) return;
       const access = await response.json();
-      if (access?.canAccess !== true || !profileInfo.isConnected ||
+      if ((access?.canAccess !== true && access?.setupRequired !== true) || !profileInfo.isConnected ||
           !ownProfileControls.isConnected ||
           profileInfo.querySelector('[data-open-admin-centre]')) return;
 
