@@ -2142,6 +2142,15 @@ async function route(req, res) {
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
         return json(res,201,sent);
       }
+      const liveChatDelete=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat\/([^/]+)$/);
+      if(method==='DELETE'&&liveChatDelete){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveChatDelete[1]&&item.status==='live');
+        if(!session||session.hostId!==user.id)return json(res,403,{error:'Only the LIVE host can remove comments.'});
+        const result=await requestSupabaseState('live_chat_delete',{
+          broadcastId:session.id,hostId:user.id,messageId:liveChatDelete[2]
+        });
+        return json(res,200,result);
+      }
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
         if(!['all','following','friends','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, or for-you.'});
