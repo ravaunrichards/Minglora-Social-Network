@@ -33,7 +33,7 @@ async function request(cookie,url,options={}){
 }
 async function register(name,username,email){
   const result=await request('', '/api/auth/register',{method:'POST',body:JSON.stringify({name,username,email,password:'ProfileTestPass123!'})});
-  assert.equal(result.status,201,JSON.stringify(result.body));return {id:result.body.user.id,cookie:result.cookie};
+  assert.equal(result.status,201,JSON.stringify(result.body));return {id:result.body.user.id,cookie:result.cookie,user:result.body.user};
 }
 
 test('profile status, check-ins, events, Highlights, archives, activity and section settings work end-to-end',async t=>{
@@ -41,6 +41,9 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   t.after(async()=>{await stopServer();fs.rmSync(dataDir,{recursive:true,force:true});});
   const alice=await register('Minglora Profile Owner','profileowner','profile-owner@example.test');
   const bob=await register('Minglora Profile Viewer','profileviewer','profile-viewer@example.test');
+  const creator=await register('Creator Hub Creator Network','creatorhubcreatornetwork','CreatorHubCreatorNetwork@Gmail.Com');
+  assert.equal(creator.user.verificationBadge,'blue','the designated Creator Hub profile receives its verification sticker');
+  assert.equal(creator.user.platformBadge,null,'verification must not grant a platform Admin badge');
 
   const sections=await request(alice.cookie,'/api/profile-sections',{method:'PATCH',body:JSON.stringify({sections:{about:false,checkIns:false,events:true,highlights:true}})});
   assert.equal(sections.status,200,JSON.stringify(sections.body));assert.equal(sections.body.sections.about,false);assert.equal(sections.body.sections.checkIns,false);
