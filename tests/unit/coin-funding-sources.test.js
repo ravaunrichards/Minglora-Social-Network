@@ -97,9 +97,9 @@ test('wallet and private admin settings show source balances and marketing-budge
 });
 
 test('the PWA shell cache includes the wallet, admin controls and the updated UI versions', () => {
-  assert.match(html, /styles\.css\?v=20261105-live-chat-workspace-1/);
-  assert.match(html, /app\.js\?v=20261105-live-chat-workspace-1/);
-  assert.match(worker, /minglora-shell-v88-live-chat-workspace-1/);
+  assert.match(html, /styles\.css\?v=20261105-live-full-screen-default-2/);
+  assert.match(html, /app\.js\?v=20261105-live-full-screen-default-2/);
+  assert.match(worker, /minglora-shell-v89-live-full-screen-default-2/);
   assert.match(worker, /admin-centre\.css\?v=20261105-marketing-budget-1/);
   assert.match(worker, /admin-centre\.js\?v=20261105-marketing-budget-1/);
 });
