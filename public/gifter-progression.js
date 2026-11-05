@@ -39,18 +39,19 @@
     const classes = [
       "gp-level-card",
       item.unlocked ? "is-unlocked" : "is-locked",
-      item.current ? "is-current" : ""
+      item.current ? "is-current" : "",
+      item.adminAwarded ? "is-admin-awarded" : ""
     ].filter(Boolean).join(" ");
     const levelLabel = "LV " + item.level;
     const coinsLabel = "Coins " + number(item.coinsRequired ?? item.xpRequired);
-    const stateLabel = item.unlocked ? "Unlocked" : "Locked";
+    const stateLabel = item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
     return "<button type='button' class='" + classes + "' data-gp-level='" + item.level +
       "' aria-label='" + esc(levelLabel + ", " + coinsLabel + ", " + stateLabel) +
       "' title='" + esc(levelLabel + " · " + coinsLabel) + "' aria-pressed='" +
       (item.current ? "true" : "false") + "'>" +
       badgeMarkup(item.level, item.tier, true) +
       "<span class='gp-level-card-copy'><strong>" + levelLabel + "</strong><small>" +
-      coinsLabel + "</small></span>" +
+      (item.adminAwarded ? "Admin award" : coinsLabel) + "</small></span>" +
       (item.unlocked ? "<span class='gp-level-state' aria-label='Unlocked'>✓</span>" : "<span class='gp-level-state' aria-label='Locked'>🔒</span>") +
       "</button>";
   }
@@ -58,7 +59,7 @@
   function detailMarkup(item, current) {
     if (!item) return "";
     return "<div class='gp-selected-badge'>" + badgeMarkup(item.level, item.tier) +
-      "<div><span class='gp-eyebrow'>" + (item.unlocked ? "UNLOCKED BADGE" : "LOCKED BADGE") +
+      "<div><span class='gp-eyebrow'>" + (item.adminAwarded ? "ADMIN AWARDED BADGE" : item.unlocked ? "UNLOCKED BADGE" : "LOCKED BADGE") +
       "</span><h3>" + esc(item.badgeName) + "</h3><p>" + esc(item.reward) + "</p>" +
       "<small>Lifetime requirement: " + number(item.coinsRequired ?? item.xpRequired) + " Coins sent</small></div></div>" +
       (item.level === current.level
@@ -108,7 +109,7 @@
     const chart = (data.levels || []).map(levelCard).join("");
     const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
     const currentBadgeMarkup = current.hasUnlockedBadge
-      ? badgeMarkup(current.level, current.tier)
+      ? badgeMarkup(current.level, current.tier) + (current.adminAwarded ? "<span class='gp-admin-awarded-marker'>ADMIN AWARDED</span>" : "")
       : "<div class='gp-no-earned-badge' role='status'><span aria-hidden='true'>🔒</span><strong>No gifter badge earned yet</strong><small>Send your first gift to unlock LV 1</small></div>";
     const newGifterNotice = data.newGifterIdentity?.active
       ? "<p class='gp-new-gifter-notice'><strong>✦ NEW GIFTER</strong> identity active until " + esc(date(data.newGifterIdentity.expiresAt)) + "</p>"
@@ -134,10 +135,10 @@
       "<article class='gp-stat-card'><span>Gifts sent</span><strong>" + number(current.giftsSent) + "</strong><small>Unique confirmed transactions</small></article>" +
       "<article class='gp-stat-card'><span>Members supported</span><strong>" + number(current.uniqueRecipients) + "</strong><small>Different recipients</small></article></section>" +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>LV 1–50</h2>" +
-      "<p>Every level begins locked 🔒. Spend Coins sending confirmed gifts to unlock each badge.</p></div><span class='gp-level-count'>LV " + current.level + " / 50</span></div>" +
+      "<p>Earn levels with confirmed gifts, or receive an admin-awarded badge. Admin awards do not count as Coins spent.</p></div><span class='gp-level-count'>LV " + current.level + " / 50</span></div>" +
       "<div class='gp-selected-level' id='gp-selected-level'>" + detailMarkup(selected, current) + "</div>" +
       "<div class='gp-level-grid' id='gp-level-grid'>" + chart + "</div></section>" +
-      "<section class='gp-level25 card'><div class='gp-level25-emblem'>" + badgeMarkup(25, level25?.tier || "Platinum", true) + "</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>Reach LV 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
+      "<section class='gp-level25 card'><div class='gp-level25-emblem'>" + badgeMarkup(25, level25?.tier || "Platinum", true) + "</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>LV 25 unlocks special Minglora LIVE entrance recognition.</p><strong>" + (level25?.adminAwarded ? "✓ Unlocked by admin award" : level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
       "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +
       "<p>Only successful, server-confirmed gifts are shown.</p></div></div>" + renderHistory(data.history || []) + "</section>" +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>COMMUNITY STANDINGS</span><h2>Top gifters</h2>" +
@@ -145,8 +146,8 @@
       "<section class='gp-rules card'><div><span class='gp-eyebrow'>HOW IT WORKS</span><h2>How gifter LV is earned</h2></div>" +
       "<div class='gp-rule-grid'><article><strong>01 · Send a gift</strong><p>Member gifts and LIVE gifts count after Minglora confirms the transaction.</p></article>" +
       "<article><strong>02 · Earn Coins</strong><p>Each Minglora Coin spent on a confirmed gift adds one point to your lifetime gifter progress.</p></article>" +
-      "<article><strong>03 · Unlock badges</strong><p>All levels start locked 🔒. Your first 1 Coin sent unlocks LV 1; later cumulative Coin thresholds unlock the next levels. Earned badges stay unlocked.</p></article></div>" +
-      "<p class='gp-rule-note'>NEW GIFTER appears after your first confirmed gift and remains active for 7 days from that first gift. The timer does not restart when you send more gifts. Coin purchases, gifts you receive, failed sends and duplicate transactions do not increase gifter progression. This gifter track is separate from Creator Leagues.</p></section>" +
+      "<article><strong>03 · Unlock badges</strong><p>Gift spending unlocks levels through the published Coin thresholds. An authorized admin may separately grant a level or unlock all 50 badges; these awards are clearly marked and never add Coin spend.</p></article></div>" +
+      "<p class='gp-rule-note'>NEW GIFTER appears after your first confirmed gift and remains active for 7 days from that first gift. The timer does not restart when you send more gifts. Coin purchases, gifts you receive, failed sends and duplicate transactions do not increase gifter progression. Admin-awarded badges do not add Coin spend. A badge reset starts a new progression period but retains lifetime gift history. This gifter track is separate from Creator Leagues.</p></section>" +
       "</div>";
   }
 
