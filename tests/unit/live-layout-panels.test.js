@@ -118,3 +118,30 @@ test('Full Screen is inset and constrained on phones, desktops and larger displa
   assert.match(styles, /width:min\(calc\(100vw - 28px\),420px,calc\(\(100dvh - 28px\) \* 9 \/ 16\)\)!important/);
   assert.match(styles, /height:min\(calc\(100dvh - 28px\),746px\)!important/);
 });
+
+
+test('Full Screen uses one compact dock with separated controls and engagement row', () => {
+  assert.match(app, /function ensureLiveFullscreenDock\(/);
+  assert.match(app, /live-fullscreen-tools-row/);
+  assert.match(app, /live-fullscreen-engagement-row/);
+  assert.match(app, /live-fullscreen-engagement-actions/);
+  assert.match(app, /moveLiveFullscreenElement\(composer,dock\.engagement\)/);
+  assert.match(app, /\[\$\('\.live-like-control'\),\$\('#live-fan-club-join'\),\$\('#live-gifts-toggle'\)\]/);
+  assert.match(styles, /\.live-fullscreen-dock\{[\s\S]*?grid-template-rows:34px 42px!important/);
+  assert.match(styles, /\.live-fullscreen-tools-row \.live-player-controls\{[\s\S]*?justify-content:center!important[\s\S]*?gap:4px!important/);
+  assert.match(styles, /\.live-fullscreen-engagement-row\{[\s\S]*?justify-content:space-between!important/);
+  assert.match(styles, /\.live-fullscreen-engagement-actions\{[\s\S]*?display:flex!important/);
+});
+
+test('Full Screen chat stays lower-left, above the dock, and uses compact readable comment bubbles', () => {
+  assert.match(styles, /\.live-video-stage>\.live-chat-overlay\{[\s\S]*?calc\(102px \+ env\(safe-area-inset-bottom\)\) 9px!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-line\{[\s\S]*?width:max-content!important[\s\S]*?max-width:min\(100%,350px\)!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-copy>span\{[\s\S]*?font-size:12px!important/);
+});
+
+test('LIVE chat refresh preserves existing comment nodes and appends only new messages', () => {
+  assert.match(app, /const existing=new Map\(\[\.\.\.list\.querySelectorAll\(':scope > \.live-chat-line\[data-live-chat-id\]'\)\]/);
+  assert.match(app, /if\(isNew\)\{[\s\S]*?list\.append\(line\)/);
+  assert.match(app, /existing\.forEach\(\(line,id\)=>\{if\(!seen\.has\(id\)\)line\.remove\(\)\}\)/);
+  assert.doesNotMatch(app, /list\.innerHTML=\(data\.messages\|\|\[\]\)\.map/);
+});
