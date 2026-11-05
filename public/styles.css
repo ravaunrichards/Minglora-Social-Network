@@ -5552,8 +5552,7 @@ button.live-ranking-row{cursor:pointer}
   .live-full-screen-active .live-player-controls .live-control-button{height:42px!important;min-height:42px!important}
 }
 
-/* Default host-only Full Screen stage: portrait-shaped and comfortably sized
-   across phone, tablet and desktop without stretching across wide screens. */
+/* Full Screen stage keeps the host and all guest seats readable on every device. */
 .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
   width:min(100%,62.4dvh,608px);
   max-width:100%;
@@ -5807,5 +5806,18 @@ button.live-ranking-row{cursor:pointer}
   .live-video-stage.live-full-screen-layout:not(.live-audio-stage),
   .live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage){
     min-height:460px!important;
+  }
+}
+
+@media(max-width:640px){
+  .live-video-stage.live-full-screen-layout:not(.live-audio-stage),
+  .live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage){
+    min-height:520px!important;
+  }
+}
+@media(max-width:380px){
+  .live-video-stage.live-full-screen-layout:not(.live-audio-stage),
+  .live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage){
+    min-height:500px!important;
   }
 }
