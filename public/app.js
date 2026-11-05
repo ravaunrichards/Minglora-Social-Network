@@ -179,7 +179,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-responsive-1-chat-slot-sibling-fix-2-mobile-chat-view-2',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     await registration.update().catch(()=>{});
     if(!state.user)return;
@@ -200,7 +200,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-responsive-1-chat-slot-sibling-fix-2-mobile-chat-view-2',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-1',{scope:'/',updateViaCache:'none'})
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
@@ -780,11 +780,25 @@ function applyLiveScreenLayout(value){
     root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',hostOnly);
     root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);
   });
-  const shell=document.querySelector('.live-player-shell');
+  const shell=$('#live-player-shell');
   shell?.classList.toggle('live-full-screen-active',hostOnly);
-  if(!hostOnly){
-    shell?.classList.remove('live-full-screen-chat-open','live-full-screen-chat-hidden');
+  if(hostOnly){
+    moveLiveToolsToFullscreenSidebar();
+    setLiveFullscreenPanel('chat');
     setLiveChatControlState(false,'Open LIVE chat','Chat');
+    setLiveSettingsControlState(false);
+  }else{
+    shell?.classList.remove('live-full-screen-chat-open','live-full-screen-chat-hidden','live-full-screen-tools-open');
+    const backdrop=$('#live-tools-backdrop');
+    if(backdrop){
+      backdrop.classList.add('hidden');
+      backdrop.setAttribute('aria-hidden','true');
+      backdrop.setAttribute('aria-modal','true');
+    }
+    document.body.classList.remove('live-tools-open');
+    setLiveChatControlState(false,'Open LIVE chat','Chat');
+    setLiveSettingsControlState(false);
+    moveLiveToolsToFullscreenSidebar();
   }
   document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{
     const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;
@@ -792,6 +806,29 @@ function applyLiveScreenLayout(value){
     button.setAttribute('aria-pressed',String(selected));
   });
   restoreLiveChatToStage();
+}
+function moveLiveToolsToFullscreenSidebar(){
+  const backdrop=$('#live-tools-backdrop');
+  const shell=$('#live-player-shell');
+  const slot=$('#live-fullscreen-chat-slot');
+  if(!backdrop||!shell)return;
+  const target=shell.classList.contains('live-full-screen-active')&&slot?slot:shell;
+  if(backdrop.parentElement!==target)target.append(backdrop);
+}
+function setLiveFullscreenPanel(name){
+  const shell=$('#live-player-shell');
+  if(!shell?.classList.contains('live-full-screen-active'))return false;
+  const mode=name==='tools'?'tools':name==='chat'?'chat':'video';
+  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px) and (orientation:landscape)').matches);
+  shell.classList.toggle('live-full-screen-tools-open',mode==='tools');
+  shell.classList.toggle('live-full-screen-chat-open',mode==='chat'&&!wideLandscape);
+  shell.classList.remove('live-full-screen-chat-hidden');
+  document.querySelectorAll('[data-live-fullscreen-panel]').forEach(button=>{
+    const active=button.dataset.liveFullscreenPanel===mode||(button.dataset.liveFullscreenPanel==='chat'&&mode==='video');
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
+  return true;
 }
 function setLiveChatControlState(pressed,label,caption){
   const button=$('#live-chat-toggle');
@@ -802,21 +839,41 @@ function setLiveChatControlState(pressed,label,caption){
   const text=button.querySelector('.live-control-caption');
   if(text)text.textContent=caption;
 }
+function setLiveSettingsControlState(open){
+  const button=$('#live-settings-toggle');
+  if(!button)return;
+  const label=open?'Close LIVE settings and tools':'Open LIVE settings and tools';
+  updateLiveControlButton(button,'settings',label,open?'Close':'Settings',open);
+  button.setAttribute('aria-expanded',String(Boolean(open)));
+}
+function showFullscreenChat(){
+  if(!setLiveFullscreenPanel('chat'))return false;
+  setLiveChatControlState(true,'Return to LIVE video','Video');
+  setLiveSettingsControlState(false);
+  return true;
+}
 function toggleLiveChatView(){
   const shell=$('#live-player-shell');
   if(!shell?.classList.contains('live-full-screen-active')){
     openLiveToolsPanel('#live-chat-panel');
     return;
   }
-  const wideLandscape=Boolean(window.matchMedia?.('(min-width:1024px) and (orientation:landscape)').matches);
+  const wideLandscape=Boolean(window.matchMedia?.('(min-width:760px) and (orientation:landscape)').matches);
+  const backdrop=$('#live-tools-backdrop');
+  if(backdrop&&!backdrop.classList.contains('hidden')){
+    closeLiveToolsPanel({returnTo:'chat'});
+    setLiveChatControlState(wideLandscape,'Hide LIVE chat','Hide chat');
+    return;
+  }
   if(wideLandscape){
     const hidden=shell.classList.toggle('live-full-screen-chat-hidden');
     setLiveChatControlState(!hidden,hidden?'Show LIVE chat':'Hide LIVE chat',hidden?'Show chat':'Hide chat');
     return;
   }
-  const open=shell.classList.toggle('live-full-screen-chat-open');
-  shell.classList.remove('live-full-screen-chat-hidden');
-  setLiveChatControlState(open,open?'Return to LIVE video':'Open LIVE chat',open?'Video':'Chat');
+  if(shell.classList.contains('live-full-screen-chat-open')){
+    setLiveFullscreenPanel('video');
+    setLiveChatControlState(false,'Open LIVE chat','Chat');
+  }else showFullscreenChat();
 }
 function restoreLiveChatToStage(){
   const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
@@ -827,6 +884,11 @@ function restoreLiveChatToStage(){
   if(chat.parentElement!==target)target.append(chat);
 }
 function activateLiveToolsPanel(name){
+  const shell=$('#live-player-shell');
+  if(name==='chat'&&shell?.classList.contains('live-full-screen-active')){
+    closeLiveToolsPanel({returnTo:'chat'});
+    return;
+  }
   const drawer=$('#live-tools-drawer');
   if(!drawer)return;
   const sections=[...drawer.querySelectorAll('[data-live-tools-panel]')];
@@ -1677,23 +1739,51 @@ function updateLiveControlButton(button,icon,label,caption,pressed){
   if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
 }
 function openLiveToolsPanel(focusSelector){
-  const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer");
+  const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer"),shell=$("#live-player-shell");
   if(!backdrop||!drawer){toast("LIVE settings are not available in this room.");return;}
-  backdrop.classList.remove("hidden");backdrop.setAttribute("aria-hidden","false");
-  $("#live-settings-toggle")?.setAttribute("aria-expanded","true");
-  document.body.classList.add("live-tools-open");
+  const fullScreen=Boolean(shell?.classList.contains('live-full-screen-active'));
+  if(fullScreen){
+    moveLiveToolsToFullscreenSidebar();
+    setLiveFullscreenPanel('tools');
+    backdrop.setAttribute("aria-modal","false");
+    setLiveSettingsControlState(true);
+    setLiveChatControlState(false,'Open LIVE chat','Chat');
+  }else{
+    backdrop.setAttribute("aria-modal","true");
+    backdrop.classList.remove("hidden");
+    backdrop.setAttribute("aria-hidden","false");
+    $("#live-settings-toggle")?.setAttribute("aria-expanded","true");
+    document.body.classList.add("live-tools-open");
+  }
+  backdrop.classList.remove("hidden");
+  backdrop.setAttribute("aria-hidden","false");
   const target=focusSelector?$(focusSelector):null;
   const panel=target?.closest?.('[data-live-tools-panel]');
   activateLiveToolsPanel(panel?.dataset.liveToolsPanel||(activeLiveRole==='host'?'layouts':'guests'));
   if(!focusSelector)$('#live-tools-close')?.focus();
 }
-function closeLiveToolsPanel(){
-  const backdrop=$("#live-tools-backdrop");
+function closeLiveToolsPanel(options={}){
+  const backdrop=$("#live-tools-backdrop"),shell=$("#live-player-shell");
   if(!backdrop)return;
-  restoreLiveChatToStage();
-  backdrop.classList.add("hidden");backdrop.setAttribute("aria-hidden","true");
-  $("#live-settings-toggle")?.setAttribute("aria-expanded","false");
-  document.body.classList.remove("live-tools-open");
+  backdrop.classList.add("hidden");
+  backdrop.setAttribute("aria-hidden","true");
+  const fullScreen=Boolean(shell?.classList.contains('live-full-screen-active'));
+  if(fullScreen){
+    backdrop.setAttribute("aria-modal","false");
+    setLiveSettingsControlState(false);
+    if(options.returnTo==='chat'){
+      setLiveFullscreenPanel('chat');
+      setLiveChatControlState(true,'Return to LIVE video','Video');
+    }else{
+      setLiveFullscreenPanel('video');
+      setLiveChatControlState(false,'Open LIVE chat','Chat');
+    }
+  }else{
+    backdrop.setAttribute("aria-modal","true");
+    restoreLiveChatToStage();
+    $("#live-settings-toggle")?.setAttribute("aria-expanded","false");
+    document.body.classList.remove("live-tools-open");
+  }
   $("#live-settings-toggle")?.focus();
 }
 function focusLiveRoomPanel(selector){
@@ -1984,7 +2074,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     : "<p id='live-chat-disabled-note' class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
   setContent("<section id='live-player-shell' class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'>"+(role==='viewer'?"<button class='live-exit-button' id='live-back' aria-label='Exit LIVE' title='Exit LIVE'>×</button>":"<button class='text-button' id='live-back'>← Live now</button>")+"<div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">◉ Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE chat'></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE side panel'><div class='live-fullscreen-side-head'><strong>LIVE PANEL</strong><nav class='live-fullscreen-side-tabs' aria-label='Switch LIVE side panel'><button id='live-fullscreen-chat-tab' type='button' data-live-fullscreen-panel='chat' class='active' aria-pressed='true'>Chat</button><button id='live-fullscreen-tools-tab' type='button' data-live-fullscreen-panel='tools' aria-pressed='false'>Tools</button></nav></div></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
     if(role==="host"){
     const moderatorList=$("#live-moderator-list");
     const refreshLiveModerators=async()=>{
@@ -2363,8 +2453,18 @@ activeLivePinnedComment=null;
       if(interactiveTarget)return;
       void sendLiveLike();
     });
-    $("#live-settings-toggle")?.addEventListener("click",()=>openLiveToolsPanel());
+    $("#live-settings-toggle")?.addEventListener("click",()=>{
+      const backdrop=$("#live-tools-backdrop");
+      if(backdrop&&!backdrop.classList.contains("hidden"))closeLiveToolsPanel();
+      else openLiveToolsPanel();
+    });
     $("#live-chat-toggle")?.addEventListener("click",()=>toggleLiveChatView());
+    $("#live-fullscreen-chat-tab")?.addEventListener("click",()=>{
+      const backdrop=$("#live-tools-backdrop");
+      if(backdrop&&!backdrop.classList.contains("hidden"))closeLiveToolsPanel({returnTo:"chat"});
+      else showFullscreenChat();
+    });
+    $("#live-fullscreen-tools-tab")?.addEventListener("click",()=>openLiveToolsPanel());
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
     $("#live-gifts-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));
