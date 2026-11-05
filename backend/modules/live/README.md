@@ -50,6 +50,16 @@ Co-host roles beyond the eight approved guest seats, stream recording/egress, an
 LiveKit's Build plan currently starts at US$0/month with no credit card required. See [LiveKit pricing](https://livekit.com/pricing).
 
 
+## Pre-LIVE setup and broadcast modes
+
+The browser preflight presents one compact, expandable settings panel before a host starts. It offers Video + Audio, Audio Only, Mobile Gaming and LIVE Studio modes; topic/board, audience, about-me text, preferred video quality, browser noise suppression, adaptive stability, viewer-count visibility, community-safety and guardian preferences, moderator-name entry, group chat, LIVE gifts, recording preference, client-acquisition intent and content disclosure.
+
+Practice mode forces a private session and excludes it from the public LIVE directory. Audience choices include Public, Followers, Friends and Private. The LIVE API checks those audiences on directory, join, chat and gift access. When audience control is disabled, the session is made public unless practice mode is enabled. The Group Chat and LIVE Gifts switches are enforced by the corresponding chat and gift APIs.
+
+The browser applies noise suppression / echo cancellation capture constraints and the selected camera resolution preset when the installed LiveKit client exposes that preset. Stability preference controls adaptive video streaming. Viewer-count hiding and disclosure labels are applied in the room UI.
+
+**Not yet complete:** moderator names are stored as broadcast metadata but do not grant moderator permissions; guardian and community-safety switches store preferences but do not yet apply dedicated policy engines; recording preference does not start a recording because recording/egress is not implemented. Mobile Gaming currently uses browser screen sharing, not native Android capture of another running game. LIVE Studio currently combines camera/microphone with supported screen sharing; multi-scene mixing and external OBS/NDI sources are not implemented. Effects, services and fan-club tools are reserved for a later phase.
+
 ## Independent audio LIVE and speaker stage
 
 Each broadcast stores `broadcast_type` as `video_audio` or `audio_only`. Audio-only hosts receive a LiveKit token limited to the microphone track source and the stage uses Minglora's original embedded golden-microphone glTF model; camera permissions are not granted. Video+audio hosts receive microphone and camera publishing permissions. Viewers remain subscribe-only.
