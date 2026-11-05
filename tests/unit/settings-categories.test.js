@@ -51,7 +51,7 @@ test('Account settings reuse the existing server-backed Wallet and earnings view
   assert.match(settings,/api\('\/coins\/wallet'\)/);
   assert.match(settings,/api\('\/creator\/earnings'\)/);
   assert.match(settings,/settings-wallet-summary/);
-  assert.match(settings,/AVAILABLE MONEY · USD/);
+  assert.match(settings,/AVAILABLE MONEY · <span id="settings-money-currency">USD<\/span>/);
   assert.match(settings,/COIN BALANCE/);
   assert.match(settings,/data-settings-wallet-tab="recharge"/);
   assert.match(settings,/data-settings-wallet-tab="earnings"/);
@@ -99,7 +99,7 @@ test('Wallet display currency uses an external reference rate without changing U
 });
 
 test('Activity category reuses the existing private account activity log',()=>{
-  assert.match(settings,/api\('\/users\/\'+encodeURIComponent\(result\.account\.id\)\+'\/activity'\)/);
+  assert.match(settings,/api\('\/users\/\'\+encodeURIComponent\(result\.account\.id\)\+\'\/activity'\)/);
   assert.match(settings,/Activity Center/);
   assert.match(settings,/id="settings-refresh-activity"/);
   assert.match(settings,/activityHistoryMarkup/);
