@@ -2674,7 +2674,9 @@ activeLivePinnedComment=null;
           const sent=fundingSource==="cash"
             ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})})
             :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift,fundingSource})});
-          const gift=sent.gift;toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
+          const gift=sent.gift;
+          const giftFundingNotice=gift.fundingSource==="promo"?" · ordinary promotional Coins (no cash earnings)":gift.fundingSource==="admin_promotional"?" · cash-reserved Admin Promotional gift":"";
+          toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins"+giftFundingNotice);
           const [walletResult,promoResult]=await Promise.allSettled([api("/coins/wallet"),api("/coins/promotional-gift-wallet")]);
           const balanceElement=$("#live-wallet-balance");
           if(balanceElement)balanceElement.textContent=walletResult.status==="fulfilled"&&walletResult.value.wallet?.balance_coins!=null?Number(walletResult.value.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
