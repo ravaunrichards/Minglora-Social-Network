@@ -5966,3 +5966,26 @@ button.live-ranking-row{cursor:pointer}
     min-width:0!important;
   }
 }
+
+.live-pro-open-button{margin-left:auto;white-space:nowrap}
+.live-pro-page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.live-pro-access-pill{display:inline-flex;align-items:center;justify-content:center;max-width:100%;padding:8px 12px;border:1px solid rgba(84,190,150,.42);border-radius:999px;color:#167b57;background:rgba(84,190,150,.12);font-size:.8rem;font-weight:850}
+.live-pro-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.live-pro-stat-grid .card{display:grid;gap:7px;min-width:0}
+.live-pro-stat-grid small{color:var(--muted,#8b93a5);font-size:.8rem}
+.live-pro-stat-grid strong{font-size:clamp(1.35rem,3vw,2rem);overflow-wrap:anywhere}
+.live-pro-tools-card,.live-pro-history-card{margin-top:14px}
+.live-pro-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.live-pro-card-heading h2{margin:0 0 5px}
+.live-pro-card-heading p{margin:0}
+.live-pro-capabilities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.live-pro-capabilities article{padding:13px;border:1px solid var(--border-color,rgba(127,127,127,.18));border-radius:12px;min-width:0}
+.live-pro-capabilities strong{display:block}
+.live-pro-capabilities p{margin:6px 0 0;color:var(--muted,#8b93a5);font-size:.84rem;line-height:1.45}
+.live-pro-history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-color,rgba(127,127,127,.15))}
+.live-pro-history-item>div{display:grid;gap:4px;min-width:0}
+.live-pro-history-item strong{overflow-wrap:anywhere}
+.live-pro-history-item small{color:var(--muted,#8b93a5);font-size:.82rem;line-height:1.4}
+.live-pro-history-item>span{white-space:nowrap;font-weight:800}
+@media(max-width:760px){.live-pro-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.live-pro-capabilities{grid-template-columns:repeat(2,minmax(0,1fr))}.live-pro-page-heading{align-items:flex-start;flex-direction:column}.live-pro-open-button{margin-left:0}}
+@media(max-width:480px){.live-pro-capabilities{grid-template-columns:1fr}.live-pro-card-heading{align-items:flex-start;flex-direction:column}.live-pro-card-heading button{width:100%}.live-pro-history-item{align-items:flex-start;flex-direction:column}}
