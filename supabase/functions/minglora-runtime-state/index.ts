@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
-    "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
+    "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding_order_create", "economy_marketing_funding_order_get", "economy_marketing_funding_order_settle", "economy_marketing_grant",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_campaign_history",
     "economy_admin_promotional_fund_status", "economy_admin_promotional_fund_order_create", "economy_admin_promotional_fund_order_get", "economy_admin_promotional_fund_order_settle",
     "economy_promotional_gift_wallet", "economy_send_admin_promotional_gift",
@@ -271,7 +271,7 @@ Deno.serve(async (req: Request) => {
     if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
     const [walletResult, ledgerResult] = await Promise.all([
       admin.from("coin_wallets").select("balance_coins,cash_balance_coins,marketing_balance_coins,promo_balance_coins,updated_at").eq("user_id", userId).maybeSingle(),
-      admin.from("coin_ledger").select("id,delta_coins,balance_after,entry_type,description,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100)
+      admin.from("coin_ledger").select("id,delta_coins,balance_after,entry_type,description,cash_delta_coins,marketing_delta_coins,promo_delta_coins,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100)
     ]);
     if (walletResult.error || ledgerResult.error) return json(503, { error: "Minglora wallet could not be loaded." });
     return json(200, { wallet: walletResult.data || { balance_coins: 0 }, ledger: ledgerResult.data || [] });
@@ -283,30 +283,65 @@ Deno.serve(async (req: Request) => {
     return json(200, { budget: data || {} });
   }
 
-  if (action === "economy_marketing_funding") {
+  if (action === "economy_marketing_funding_order_create") {
     const adminUserId = String(input.adminUserId || "");
     const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
     const amountMinor = Number(input.amountMinor);
     const requestId = String(input.requestId || "");
-    const fundingReference = String(input.fundingReference || "").trim();
     const note = String(input.note || "").trim().slice(0, 240);
-    if (!validUuid(adminUserId) || !validUuid(requestId) ||
-        !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
-        fundingReference.length < 6 || fundingReference.length > 160 ||
-        adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
-        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
-      return json(400, { error: "Enter a valid verified funding amount and external transaction reference." });
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160 ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+      return json(400, { error: "Invalid Minglora marketing funding order." });
     }
-    const { data, error } = await admin.rpc("minglora_record_marketing_funding", {
-      p_admin_user_id: adminUserId,
-      p_admin_email: adminEmail,
-      p_amount_minor: amountMinor,
-      p_request_id: requestId,
-      p_funding_reference: fundingReference,
-      p_note: note
+    const { data, error } = await admin.rpc("minglora_create_marketing_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_paypal_order_id: paypalOrderId, p_amount_minor: amountMinor,
+      p_request_id: requestId, p_note: note
     });
-    if (error) return fail(error, "Minglora could not record marketing funding.");
-    return json(200, { funding: data });
+    if (error) return fail(error, "Minglora marketing funding order could not be recorded.");
+    return json(201, { order: data || null });
+  }
+
+  if (action === "economy_marketing_funding_order_get") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160) {
+      return json(400, { error: "Invalid marketing funding order lookup." });
+    }
+    const { data, error } = await admin.rpc("minglora_get_marketing_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_paypal_order_id: paypalOrderId
+    });
+    if (error) return fail(error, "Minglora marketing funding order could not be verified.");
+    return json(200, { order: data || null });
+  }
+
+  if (action === "economy_marketing_funding_order_settle") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    const paypalCaptureId = String(input.paypalCaptureId || "");
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160 ||
+        paypalCaptureId.length < 5 || paypalCaptureId.length > 160 ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+      return json(400, { error: "Invalid confirmed PayPal marketing funding capture." });
+    }
+    const { data, error } = await admin.rpc("minglora_settle_marketing_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_paypal_order_id: paypalOrderId, p_paypal_capture_id: paypalCaptureId,
+      p_amount_minor: amountMinor, p_request_id: requestId
+    });
+    if (error) return fail(error, "Confirmed marketing funding could not be settled.");
+    return json(200, { settlement: data || null });
   }
 
   if (action === "economy_marketing_grant") {
