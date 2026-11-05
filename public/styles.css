@@ -4251,3 +4251,12 @@ body.live-tools-open{overflow:hidden}
   .live-pinned-tag{font-size:7px}
   .live-chat-pin{padding:4px 6px;font-size:8px}
 }
+
+
+/* PayPal payout actions stay in normal document flow and wrap instead of
+   overlapping or covering other controls on narrow screens. */
+.creator-payout-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.creator-payout-actions button{max-width:100%;white-space:normal}
+.creator-unlink-paypal{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+.creator-unlink-paypal:disabled{opacity:.6;cursor:wait}
+@media(max-width:640px){.creator-payout-actions{align-items:stretch;flex-direction:column}.creator-payout-actions button{width:100%;justify-self:stretch}}
