@@ -69,7 +69,7 @@ Video+audio and audio-only LIVE rooms support shared lightweight reactions (hear
 
 ### Host-pinned comments
 
-The LIVE host may pin one current chat comment to the stage. Pin and unpin actions are sent as reliable LiveKit room data packets and viewers accept them only when the sender identity matches the session host. Pin state is transient for the active room; it is not presented as a permanent chat record.
+The LIVE host may pin one current chat comment to the stage. Pin and unpin actions are sent as reliable LiveKit room data packets and viewers accept them only when the sender identity matches the session host. The host may also remove a comment from the active chat; the trusted runtime verifies host ownership before deleting that room-scoped comment. Pin state is transient for the active room; it is not presented as a permanent chat record.
 
 ### In-room controls and host moderation
 
