@@ -491,9 +491,21 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_live_reward_join" || action === "economy_live_reward_claim") {
     const userId = String(input.userId || "");
     const dropId = String(input.dropId || "");
+    const broadcastId = String(input.broadcastId || "");
     const keyword = String(input.keyword || "").trim().toLowerCase();
-    if (!validUuid(userId) || !validUuid(dropId) || keyword.length > 40) {
+    if (!validUuid(userId) || !validUuid(dropId) || !validUuid(broadcastId) || keyword.length > 40) {
       return json(400, { error: "Invalid LIVE reward entry." });
+    }
+    const { data: rewardDrop, error: lookupError } = await admin
+      .from("live_reward_drops")
+      .select("id,broadcast_id,kind")
+      .eq("id", dropId)
+      .maybeSingle();
+    if (lookupError) return json(503, { error: "Minglora could not verify this reward drop." });
+    if (!rewardDrop || rewardDrop.broadcast_id !== broadcastId ||
+        (action === "economy_live_reward_join" && rewardDrop.kind !== "goody_bag") ||
+        (action === "economy_live_reward_claim" && rewardDrop.kind !== "treasure_box")) {
+      return json(404, { error: "This reward drop does not belong to the current LIVE room." });
     }
     const functionName = action === "economy_live_reward_join"
       ? "minglora_join_live_goody_bag"
