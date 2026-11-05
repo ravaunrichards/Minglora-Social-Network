@@ -1161,7 +1161,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1182,11 +1182,25 @@ async function openLiveRoom(session,role,issuedLiveKit){
     : role==="viewer"
       ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>"
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>Your microphone is live. Your camera stays off.</small></section>";
+  const rewardTools="<section id='live-reward-panel' class='live-reward-panel'>"+
+    "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
+    (role==="host"
+      ?"<form id='live-reward-create-form' class='live-reward-create-form'>"+
+        "<label>Reward type<select id='live-reward-kind' name='kind'><option value='goody_bag'>Goody Bag · random draw</option><option value='treasure_box'>Treasure Box · first to claim</option></select></label>"+
+        "<div class='live-reward-fields'><label>Coin pool<input name='totalCoins' type='number' min='1' max='1000000' step='1' value='500' required></label><label>Winners<input name='winnerCount' type='number' min='1' max='100' step='1' value='5' required></label></div>"+
+        "<label>Countdown<select name='countdownSeconds'><option value='60'>1 minute</option><option value='180'>3 minutes</option><option value='300' selected>5 minutes</option><option value='600'>10 minutes</option></select></label>"+
+        "<label>Entry condition<select id='live-reward-method' name='participationMethod'><option value='tap'>Tap to enter / claim</option><option value='comment'>Comment a keyword in chat</option></select></label>"+
+        "<label id='live-reward-keyword-row' hidden>Chat keyword<input name='keyword' maxlength='40' placeholder='Example: MINGLORA'></label>"+
+        "<button id='live-reward-launch' type='submit' class='live-reward-launch'>Launch Goody Bag</button>"+
+        "<small class='live-reward-note'>Coins move from your Minglora balance into this reward pool. Unclaimed Coins are returned to you when it closes.</small></form>"
+      :"<p class='live-reward-note'>Join a Goody Bag before its draw closes, or claim a Treasure Box when it opens. You must be connected to this LIVE room.</p>")+
+    "<div id='live-reward-list' class='live-reward-list'><p class='muted'>Loading LIVE rewards…</p></div></section>";
   const liveControls=[
     (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
     role==="host"&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
     role==="host"&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
+    liveControlButton("live-rewards-toggle","gift","Open Goody Bags and Treasure Boxes","Rewards"),
     role!=="host"?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     liveControlButton("live-leave","end",role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE",role==="host"?"End":role==="guest"?"Leave":"Leave",{danger:true})
@@ -1194,7 +1208,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+(broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO")+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+liveEntryBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
-    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div>"+speakerTools+"<div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
+    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div>"+speakerTools+rewardTools+"<div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
     "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form>"+
     (role==="host"
       ? "<div class='live-gift-host-note'><strong>Your LIVE is ready for gifts</strong><p>Viewers can send you gifts while you are broadcasting.</p></div>"
@@ -1246,6 +1260,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     updatePresence();
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
+    setupLiveRewardPanel(session,role);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
     if(cameraControl)cameraControl.disabled=role!=="host";
@@ -1287,6 +1302,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     });
     $("#live-guests-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-speaker-request-panel"));
     $("#live-gifts-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-gift-panel"));
+    $("#live-rewards-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-reward-panel"));
     $("#live-share-toggle")?.addEventListener("click",async()=>{
       const shareUrl=new URL(window.location.pathname,window.location.origin);
       shareUrl.searchParams.set("minglora-push","live");
@@ -1314,7 +1330,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         if(button)button.disabled=false;
         return;
       }
-      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
