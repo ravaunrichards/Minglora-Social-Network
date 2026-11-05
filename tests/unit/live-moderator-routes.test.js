@@ -22,25 +22,27 @@ test('LIVE host can list, assign and remove room moderators through authenticate
 });
 
 test('assigned LIVE moderators can remove chat comments but cannot use host-only controls', () => {
-  assert.match(server, /session\.hostId===user\.id\|\|\(session\.liveModerators\|\|\[\]\)\.includes\(user\.id\)/);
-  assert.match(app, /activeLiveSession\?\.liveModerators\?\.includes\(state\.user\?\.id\)/);
-  assert.match(app, /activeLiveRole==="host"\?"<button type='button' class='live-chat-pin/);
-  assert.match(app, /data-live-chat-delete=/);
+  assert.ok(server.includes('session.hostId===user.id||(session.liveModerators||[]).includes(user.id)'));
+  assert.ok(app.includes('activeLiveSession?.liveModerators?.includes(state.user?.id)'));
+  assert.ok(app.includes('if(deleteButton&&(role==="host"||Boolean(session.liveModerators?.includes(state.user?.id))))'));
+  assert.ok(app.includes('if(!button||role!=="host")return'));
+  assert.ok(app.includes('data-live-chat-delete='));
 });
 
 test('Group LIVE chat is saved at setup, displayed conditionally and enforced by the API', () => {
-  assert.match(app, /name='groupChatEnabled' checked/);
-  assert.match(app, /groupChatEnabled:values\.has\("groupChatEnabled"\)/);
-  assert.match(app, /liveSettings\.groupChatEnabled!==false/);
-  assert.match(server, /session\.liveSettings\?\.groupChatEnabled===false/);
-  assert.match(server, /The host has disabled group LIVE chat/);
+  assert.ok(app.includes("name='groupChatEnabled' checked"));
+  assert.ok(app.includes('groupChatEnabled:values.has("groupChatEnabled")'));
+  assert.ok(app.includes('liveSettings.groupChatEnabled!==false'));
+  assert.ok(server.includes('session.liveSettings?.groupChatEnabled===false'));
+  assert.ok(server.includes('The host has disabled group LIVE chat'));
 });
 
 test('host moderator manager is connected to list, add and remove API routes', () => {
-  assert.match(app, /id='live-moderator-panel'/);
-  assert.match(app, /id='live-moderator-form'/);
-  assert.match(app, /\/moderators["']?,?\{/);
-  assert.match(app, /\/moderators\/\+encodeURIComponent\(memberId\)/);
-  assert.match(app, /data-live-tools-target='#live-moderator-panel'/);
-  assert.match(styles, /\.live-moderator-panel/);
+  assert.ok(app.includes("id='live-moderator-panel'"));
+  assert.ok(app.includes("id='live-moderator-form'"));
+  assert.ok(app.includes('"/moderators"'));
+  assert.ok(app.includes('"/moderators",{method:"POST"')));
+  assert.ok(app.includes('"/moderators/"+encodeURIComponent(memberId)')));
+  assert.ok(app.includes("data-live-tools-target='#live-moderator-panel'"));
+  assert.ok(styles.includes('.live-moderator-panel'));
 });
