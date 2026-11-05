@@ -725,6 +725,7 @@ let liveRewardRefreshTimer=null;
 let liveRewardRefreshBusy=false;
 let liveRewardWalletFetchedAt=0;
 let liveDirectoryFilter='all';
+let activeLiveModerator=false;
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
@@ -763,10 +764,45 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   const packages=Array.isArray(catalog?.packages)?catalog.packages.slice(0,4):[];
   setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, independent audio rooms, creator chat and animated 3D gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose how people experience your broadcast. Audio Only never requests camera access.</p></div>"+
-    "<form id='live-create-form' class='live-create-form'><fieldset class='live-format-picker'><legend>Broadcast format</legend>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='video_audio' "+(state.liveStartFormat==='video_audio'?'checked':'')+"><span class='live-format-icon'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg></span><span><strong>Video + Audio</strong><small>Camera and microphone</small></span></label>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='audio_only' "+(state.liveStartFormat==='audio_only'?'checked':'')+"><span class='live-format-icon audio'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg></span><span><strong>Audio Only</strong><small>Microphone, voice and audience</small></span></label></fieldset>"+
-      "<input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
+
+  const currentLiveMode=['video_audio','mobile_gaming','audio_only','live_studio'].includes(state.liveStartFormat)?state.liveStartFormat:'video_audio';
+  const liveModeCard=(value,title,description,icon)=>"<label class='live-format-card live-mode-option'><input type='radio' name='broadcastType' value='"+value+"' "+(currentLiveMode===value?'checked':'')+"><span class='live-format-icon'>"+icon+"</span><span><strong>"+title+"</strong><small>"+description+"</small></span></label>";
+  const liveSetupToggle=(name,label,icon,checked,help='')=>"<label class='live-preflight-toggle'><span class='live-preflight-toggle-icon' aria-hidden='true'>"+icon+"</span><span class='live-preflight-toggle-copy'><strong>"+label+"</strong>"+(help?"<small>"+help+"</small>":"")+"</span><input type='checkbox' name='"+name+"' "+(checked?'checked':'')+"><span class='live-preflight-switch' aria-hidden='true'></span></label>";
+
+    "<form id='live-create-form' class='live-create-form live-preflight-form'>"+
+      "<label class='live-title-field'><span>LIVE title</span><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'></label>"+
+      "<fieldset class='live-format-picker live-mode-picker'><legend>Choose your LIVE format</legend>"+
+        liveModeCard('video_audio','Video + Audio','Camera and microphone','📹')+
+        liveModeCard('mobile_gaming','Mobile Gaming LIVE','Share mobile gameplay and microphone','🎮')+
+        liveModeCard('audio_only','Audio Only LIVE','Microphone and voice-first audience','🎙️')+
+        liveModeCard('live_studio','LIVE Studio','Camera, microphone and screen sharing','🖥️')+
+      "</fieldset>"+
+      "<div class='live-preflight-settings'><div class='live-preflight-heading'><div><strong>Before you go LIVE</strong><small>Compact settings for this broadcast. You can change supported controls while LIVE.</small></div><span class='live-preflight-heading-icon' aria-hidden='true'>⚙️</span></div>"+
+        "<details class='live-preflight-group' open><summary><span aria-hidden='true'>🎯</span> Topic, audience & profile</summary><div class='live-preflight-grid'>"+
+          "<label class='live-preflight-field'><span>Board / topic</span><select name='board'><option value='chat'>Chat & community</option><option value='gaming'>Gaming</option><option value='music'>Music</option><option value='education'>Education</option><option value='lifestyle'>Lifestyle</option><option value='business'>Business</option><option value='other'>Other</option></select></label>"+
+          "<label class='live-preflight-field'><span>Who can watch this LIVE?</span><select name='visibility'><option value='public'>Everyone · Public</option><option value='followers'>Followers</option><option value='friends'>Friends</option><option value='private'>Only me · Private room</option></select></label>"+
+          "<label class='live-preflight-field live-preflight-field-wide'><span>About me</span><input name='aboutMe' maxlength='180' placeholder='Tell viewers a little about you (optional)'></label>"+
+          "<label class='live-preflight-field'><span>LIVE quality</span><select name='quality'><option value='auto'>Auto · Recommended</option><option value='720p'>720p · Balanced</option><option value='1080p'>1080p · High quality</option><option value='480p'>480p · Low bandwidth</option></select></label>"+
+          "<label class='live-preflight-field'><span>Content disclosure</span><select name='contentDisclosure'><option value='none'>No disclosure</option><option value='promotional'>Promotional content</option><option value='branded'>Branded content / partnership</option></select></label>"+
+        "</div></details>"+
+        "<details class='live-preflight-group'><summary><span aria-hidden='true'>🛡️</span> Safety, audience & moderation</summary><div class='live-preflight-toggle-grid'>"+
+          liveSetupToggle('practiceMode','Practice mode','🧪',false,'Private rehearsal; excluded from LIVE discovery.')+
+          liveSetupToggle('audienceControl','Audience control','👥',true,'Apply the audience choice selected above.')+
+          liveSetupToggle('communitySafety','Community safety','🛡️',true,'Keep the community safety preference enabled.')+
+          liveSetupToggle('markViewers','Show viewer count','👀',true,'Turn off to hide the live viewer count.')+
+          liveSetupToggle('guardian','Guardian mode','🔒',false,'Save a safer-room preference for this broadcast.')+
+        "</div><label class='live-preflight-field live-moderator-field'><span>Moderators (optional)</span><input name='moderators' maxlength='240' placeholder='Usernames separated by commas'><small>Moderator names are saved with this LIVE. Extra moderator permissions are not enabled yet.</small></label></details>"+
+        "<details class='live-preflight-group'><summary><span aria-hidden='true'>🎛️</span> Stream quality & interaction</summary><div class='live-preflight-toggle-grid'>"+
+          liveSetupToggle('noiseSuppression','Noise suppression','🎙️',true,'Reduce background noise where the device supports it.')+
+          liveSetupToggle('optimizeForStability','Optimize for stability','📶',true,'Prefer adaptive streaming for changing connections.')+
+          liveSetupToggle('groupChats','LIVE group chat','💬',true,'Allow audience chat during the broadcast.')+
+          liveSetupToggle('liveGifts','LIVE gifts','🎁',true,'Allow viewers to send gifts and Coins.')+
+          liveSetupToggle('liveRecordings','Live recordings','⏺️',false,'Recording is saved as a preference; recording service setup is still required.')+
+          liveSetupToggle('clientAcquisition','Client acquisition setup','🤝',false,'Mark this LIVE as intended to connect with potential clients.')+
+        "</div></details>"+
+      "</div>"+
+      "<button class='primary live-start-submit' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
     "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button></div>"+
@@ -779,8 +815,33 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     event.preventDefault();const form=event.currentTarget,button=form.querySelector("button[type='submit']");button.disabled=true;
     try{
       const values=new FormData(form);
+      const liveMode=String(values.get("broadcastType")||"video_audio");
+      const liveSettings={
+        board:String(values.get("board")||"chat"),
+        aboutMe:String(values.get("aboutMe")||"").trim().slice(0,180),
+        quality:String(values.get("quality")||"auto"),
+        noiseSuppression:values.get("noiseSuppression")==="on",
+        optimizeForStability:values.get("optimizeForStability")==="on",
+        markViewers:values.get("markViewers")==="on",
+        communitySafety:values.get("communitySafety")==="on",
+        moderators:String(values.get("moderators")||"").split(",").map(value=>value.trim().replace(/^@/,"")).filter(Boolean).slice(0,10),
+        groupChats:values.get("groupChats")==="on",
+        liveGifts:values.get("liveGifts")==="on",
+        guardian:values.get("guardian")==="on",
+        liveRecordings:values.get("liveRecordings")==="on",
+        clientAcquisition:values.get("clientAcquisition")==="on",
+        audienceControl:values.get("audienceControl")==="on",
+        contentDisclosure:String(values.get("contentDisclosure")||"none"),
+        practiceMode:values.get("practiceMode")==="on"
+      };
+      state.liveStartFormat=liveMode;
+      const visibility=liveSettings.practiceMode?"private":String(values.get("visibility")||"public");
       const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({
-        title:String(values.get("title")||"").trim(),visibility:values.get("visibility"),broadcastType:values.get("broadcastType")||"video_audio"
+        title:String(values.get("title")||"").trim(),
+        visibility,
+        liveMode,
+        broadcastType:liveMode==="audio_only"?"audio_only":"video_audio",
+        liveSettings
       })});
       await openLiveRoom(result.session,"host",result.liveKit);
     }catch(error){toast(error.message);button.disabled=false;}
@@ -1297,16 +1358,20 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();activeLiveModerator=false;
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
   role=liveKit?.role==="host"?"host":liveKit?.role==="guest"?"guest":"viewer";
   const broadcastType=session.broadcastType==="audio_only"?"audio_only":"video_audio";
+  const liveMode=['video_audio','mobile_gaming','audio_only','live_studio'].includes(session.liveMode)?session.liveMode:(broadcastType==="audio_only"?"audio_only":"video_audio");
+  const cameraMode=liveMode==="video_audio"||liveMode==="live_studio";
+  const screenShareMode=liveMode==="mobile_gaming"||liveMode==="live_studio";
+  const liveSettings=session.liveSettings&&typeof session.liveSettings==="object"?session.liveSettings:{};
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
+  activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;activeLiveModerator=Boolean(issuedLiveKit?.isModerator);liveCameraEnabled=cameraMode;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
     : "<div id='live-video-stage' class='live-video-stage'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
@@ -1333,9 +1398,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div id='live-reward-list' class='live-reward-list'><p class='muted'>Loading LIVE rewards…</p></div></section>";
   const liveControls=[
     (role==="host"||role==="guest")?liveControlButton("live-mic-toggle","mic","Mute microphone","Mute",{pressed:true}):"",
-    (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
-    (role==="host"||role==="guest")&&broadcastType==="video_audio"?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
-    role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen","Share your screen","Screen",{pressed:false}):"",
+    (role==="host"||role==="guest")&&cameraMode?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
+    (role==="host"||role==="guest")&&cameraMode?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
+    role==="host"&&(screenShareMode||liveMode==="video_audio")?liveControlButton("live-screen-share-toggle","screen","Share your screen","Screen",{pressed:false}):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     role!=="host"?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
@@ -1343,9 +1408,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     liveControlButton("live-leave","end",role==="host"?"End LIVE":role==="guest"?"Leave stage":"Leave LIVE",role==="host"?"End":role==="guest"?"Leave":"Leave",{danger:true})
   ].filter(Boolean).join("");
-  const liveGiftTools=role==="host"
-    ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
-    : "<section id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+  const liveGiftTools=liveSettings.liveGifts===false
+    ? "<section id='live-gift-panel' class='live-tools-card'><strong>LIVE gifts are turned off</strong><p>The host has disabled gifts for this broadcast.</p></section>"
+    : role==="host"
+      ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
+      : "<section id='live-gift-panel' class='live-gift-panel'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
@@ -1359,7 +1426,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
     liveToolsNavigation+"<div class='live-tools-content'>"+liveThemeAppearance+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
-  setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+(broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO")+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'>Connecting…</span></div>"+liveEntryBanner+
+  const liveDisclosure=liveSettings.contentDisclosure&&liveSettings.contentDisclosure!=="none"?"<span class='live-content-disclosure'>"+(liveSettings.contentDisclosure==="branded"?"BRANDED CONTENT":"PROMOTIONAL CONTENT")+"</span>":"";
+  const liveAboutMe=liveSettings.aboutMe?"<small class='live-about-me'>"+esc(liveSettings.aboutMe)+"</small>":"";
+  const liveModeLabel=liveMode==="mobile_gaming"?"MOBILE GAMING LIVE":liveMode==="live_studio"?"LIVE STUDIO":broadcastType==="audio_only"?"AUDIO ONLY":"VIDEO + AUDIO";
+  setContent("<section class='live-player-shell live-theme-"+liveTheme+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabel+"</span>"+liveDisclosure+"<strong>"+esc(session.title)+"</strong>"+liveAboutMe+"</div>"+(liveSettings.markViewers===false&&role!=="host"?"":"<span id='live-viewer-count' class='live-viewer-count'>Connecting…</span>")+"</div>"+liveEntryBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-reaction-bar' role='group' aria-label='Send a LIVE reaction'><strong>LIVE likes <span id='live-reaction-count' data-count='0'>0</span></strong><div class='live-reaction-buttons'><button type='button' class='live-reaction-button' data-live-reaction='heart' aria-label='Send a heart' title='Send a heart'>❤️</button><button type='button' class='live-reaction-button' data-live-reaction='clap' aria-label='Send applause' title='Send applause'>👏</button><button type='button' class='live-reaction-button' data-live-reaction='fire' aria-label='Send fire' title='Send fire'>🔥</button><button type='button' class='live-reaction-button' data-live-reaction='laugh' aria-label='Send laughter' title='Send laughter'>😂</button></div></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
@@ -1375,7 +1445,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   pinnedCommentLayer.setAttribute("aria-live","polite");
   const stage=$("#live-video-stage");
   stage?.append(reactionLayer,pinnedCommentLayer);
-  const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
+  const room=new client.Room({adaptiveStream:liveSettings.optimizeForStability!==false,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
   const liveReactionEmoji=Object.freeze({heart:"❤️",clap:"👏",fire:"🔥",laugh:"😂"});
@@ -1463,7 +1533,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       ]);
     }finally{if(connectTimeout)clearTimeout(connectTimeout);}
     $(".live-video-placeholder")?.remove();
-    if(role==="host"&&broadcastType==="video_audio"){
+    if(role==="host"&&cameraMode){
       await room.localParticipant.enableCameraAndMicrophone();
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
     }else if(role==="host"||role==="guest"){
@@ -1493,7 +1563,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveScreenShareEnabled=false;
     liveAudioMuted=false;
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
-    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&broadcastType==="video_audio");
+    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&cameraMode);
     if(flipCameraControl)flipCameraControl.disabled=!liveCameraEnabled;
     roomAudioControl?.addEventListener("click",()=>{
       liveAudioMuted=!liveAudioMuted;
@@ -1547,7 +1617,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       finally{flipCameraControl.disabled=!liveCameraEnabled;}
     });
     screenShareControl?.addEventListener("click",async()=>{
-      if(role!=="host"||broadcastType!=="video_audio"){toast("Screen sharing is available to the host in video LIVE rooms.");return;}
+      if(role!=="host"||!(screenShareMode||liveMode==="video_audio")){toast("Screen sharing is available to the host in video, gaming and LIVE Studio rooms.");return;}
       if(typeof room.localParticipant.setScreenShareEnabled!=="function"){toast("Screen sharing is not supported by this browser.");return;}
       const nextEnabled=!liveScreenShareEnabled;
       screenShareControl.disabled=true;
