@@ -82,7 +82,7 @@ test('Full Screen starts on video for phones and keeps Chat on the right for tab
   assert.match(app, /function toggleLiveChatView\(\)[\s\S]*?setLiveFullscreenPanel\('video'\)/);
   assert.match(styles, /@media\(max-width:759px\)\{/);
   assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open #live-fullscreen-chat-slot,[\s\S]*?\.live-full-screen-tools-open #live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open \.live-video-column>\.live-video-stage\{display:none!important/);
+  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open \.live-video-column>\.live-video-stage,[\s\S]*?\.live-full-screen-tools-open \.live-video-column>\.live-video-stage/);
   assert.match(styles, /\.live-full-screen-active\.live-full-screen-tools-open #live-chat-overlay,[\s\S]*?display:none!important/);
 });
 
