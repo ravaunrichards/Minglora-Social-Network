@@ -94,7 +94,7 @@
     const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
 
     return "<div class='gp-page'>" +
-      "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter LV &amp; Badges</h1>" +
+      "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       "<button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></header>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
