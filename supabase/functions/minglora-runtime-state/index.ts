@@ -80,6 +80,8 @@ Deno.serve(async (req: Request) => {
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_campaign_history",
+    "economy_admin_promotional_fund_status", "economy_admin_promotional_fund_order_create", "economy_admin_promotional_fund_order_get", "economy_admin_promotional_fund_order_settle",
+    "economy_promotional_gift_wallet", "economy_send_admin_promotional_gift",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
@@ -409,6 +411,82 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.rpc("admin_campaign_coins_allocate", { p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_member_user_id: member.id, p_amount_coins: amountCoins, p_request_id: requestId, p_campaign_name: "Minglora Admin Promotional Gift Campaign", p_note: note });
     if (error) return fail(error, "Admin Campaign Coins could not be allocated.");
     return json(200, { allocation: data, member: { id: member.id, username: member.username, displayName: member.display_name || "" } });
+  }
+
+  if (action === "economy_admin_promotional_fund_status") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(403, { error: "Only the Creator Hub administrator can view the promotional gift reserve." });
+    }
+    const { data, error } = await admin.rpc("minglora_get_admin_promotional_gift_fund", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail
+    });
+    if (error) return fail(error, "Promotional gift cash reserve could not be loaded.");
+    const { data: ledger, error: ledgerError } = await admin.from("minglora_promotional_gift_fund_ledger")
+      .select("id,event_type,reference_id,paypal_order_id,paypal_capture_id,funded_delta_minor,spent_delta_minor,note,created_at")
+      .order("created_at", { ascending: false }).limit(100);
+    if (ledgerError) return json(503, { error: "Promotional gift funding history could not be loaded." });
+    return json(200, { fund: data || {}, ledger: ledger || [] });
+  }
+
+  if (action === "economy_admin_promotional_fund_order_create") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160 ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+      return json(400, { error: "Invalid promotional gift PayPal funding order." });
+    }
+    const { data, error } = await admin.rpc("minglora_create_promotional_gift_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_paypal_order_id: paypalOrderId, p_amount_minor: amountMinor, p_request_id: requestId
+    });
+    if (error) return fail(error, "Promotional gift funding order could not be recorded.");
+    return json(201, { result: data });
+  }
+
+  if (action === "economy_admin_promotional_fund_order_get") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || paypalOrderId.length < 5 || paypalOrderId.length > 160) {
+      return json(400, { error: "Invalid promotional gift funding order lookup." });
+    }
+    const { data, error } = await admin.rpc("minglora_get_promotional_gift_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_paypal_order_id: paypalOrderId
+    });
+    if (error) return fail(error, "Promotional gift funding order could not be verified.");
+    return json(200, { order: data || null });
+  }
+
+  if (action === "economy_admin_promotional_fund_order_settle") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    const paypalCaptureId = String(input.paypalCaptureId || "");
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160 ||
+        paypalCaptureId.length < 5 || paypalCaptureId.length > 160 ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100) {
+      return json(400, { error: "Invalid confirmed PayPal promotional gift funding capture." });
+    }
+    const { data, error } = await admin.rpc("minglora_settle_promotional_gift_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_paypal_order_id: paypalOrderId, p_paypal_capture_id: paypalCaptureId,
+      p_amount_minor: amountMinor, p_request_id: requestId
+    });
+    if (error) return fail(error, "Verified promotional gift funding could not be settled.");
+    return json(200, { settlement: data });
   }
 
   if (action === "economy_admin_campaign_history") {
@@ -788,11 +866,49 @@ Deno.serve(async (req: Request) => {
     return json(200, { gift });
   }
 
+  if (action === "economy_promotional_gift_wallet") {
+    const userId = String(input.userId || "");
+    if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
+    const { data, error } = await admin.rpc("minglora_get_promotional_gift_fund", { p_user_id: userId });
+    if (error) return json(503, { error: "Promotional gift wallet could not be loaded." });
+    return json(200, { wallet: data || {} });
+  }
+
+  if (action === "economy_send_admin_promotional_gift") {
+    const senderId = String(input.senderId || "");
+    const giftCode = String(input.giftCode || "");
+    const broadcastId = input.broadcastId == null ? null : String(input.broadcastId);
+    const recipientUsername = input.recipientUsername == null
+      ? null
+      : String(input.recipientUsername || "").trim().replace(/^@/, "").toLowerCase();
+    if (!validUuid(senderId) || !/^[a-z0-9_-]{1,60}$/.test(giftCode) ||
+        (broadcastId !== null && !validUuid(broadcastId)) ||
+        (broadcastId === null && !/^[a-z0-9_]{3,30}$/.test(String(recipientUsername || "")))) {
+      return json(400, { error: "Invalid Admin Promotional Gift request." });
+    }
+    const { data, error } = await admin.rpc("minglora_send_admin_promotional_gift", {
+      p_sender_id: senderId, p_gift_code: giftCode,
+      p_broadcast_id: broadcastId, p_recipient_username: recipientUsername
+    });
+    if (error) return fail(error, "Promotional gift could not be sent or the USD reserve is insufficient.");
+    const gift = data && typeof data === "object" && !Array.isArray(data) ? { ...data } : { gift: data };
+    const { data: artwork, error: artworkError } = await admin.from("live_gift_catalog")
+      .select("name,emoji,image_url,model_url,coin_price").eq("code", giftCode).maybeSingle();
+    if (!artworkError && artwork) {
+      gift.giftName = gift.giftName || artwork.name;
+      gift.emoji = gift.emoji || artwork.emoji;
+      gift.imageUrl = gift.imageUrl || artwork.image_url || "";
+      gift.modelUrl = gift.modelUrl || artwork.model_url || "";
+      gift.coinPrice = Number(gift.coinPrice || artwork.coin_price || 0);
+    }
+    return json(200, { gift });
+  }
+
   if (action === "economy_creator_earnings") {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
     const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult] = await Promise.all([
-      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
+      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id,funding_source").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle(),
       admin.from("creator_coin_exchanges").select("id,amount_minor,coin_amount,currency,created_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),

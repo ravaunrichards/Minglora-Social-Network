@@ -546,3 +546,10 @@
 }
 
 .admin-centre-profile-button{text-decoration:none}
+
+.admin-promotional-gift-fund{display:grid;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line,rgba(127,127,127,.24))}
+.admin-promotional-gift-fund .admin-marketing-form{display:grid;gap:10px;max-width:560px}
+.admin-promotional-gift-fund input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--line,rgba(127,127,127,.24));border-radius:10px;background:var(--card,#fff);color:var(--text,#182230);font:inherit}
+#admin-promotional-gift-fund-history{max-height:260px;overflow:auto;font-size:.9rem}
+#admin-promotional-gift-fund-history ul{display:grid;gap:6px;margin:8px 0;padding-left:20px}
+#admin-promotional-gift-fund-history li{overflow-wrap:anywhere}

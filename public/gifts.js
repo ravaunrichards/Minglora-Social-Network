@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state={gifts:[],balance:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
+  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -56,10 +56,10 @@
   async function render(){
     const main=document.getElementById("main-content");if(!main)return;
     main.innerHTML="<section class='card empty-state'><h3>Loading Minglora Gifts</h3><p>Connecting to the complete gift collection…</p></section>";
-    const results=await Promise.allSettled([request("/coins/catalog"),request("/coins/wallet")]);
+    const results=await Promise.allSettled([request("/coins/catalog"),request("/coins/wallet"),request("/coins/promotional-gift-wallet")]);
     if(results[0].status!=="fulfilled")throw results[0].reason;
     state.gifts=Array.isArray(results[0].value.gifts)?results[0].value.gifts:[];
-    state.balance=results[1].status==="fulfilled"?Number(results[1].value.wallet?.balance_coins??0):null;
+    state.balance=results[1].status==="fulfilled"?Number(results[1].value.wallet?.balance_coins??0):null;state.promoWallet=results[2].status==="fulfilled"?(results[2].value.wallet||null):null;
     if(!state.selectedCode&&state.gifts.length)state.selectedCode=state.gifts[0].code;
     const balance=state.balance===null?"Balance unavailable":state.balance.toLocaleString()+" Coins available";
     main.innerHTML=
@@ -70,6 +70,8 @@
       "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Gift preview</span><h2 id='minglora-gift-selected'>Choose a gift above</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage'><img id='minglora-gift-selected-image' alt='' hidden><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' hidden></model-viewer></div></section>"+
       "<section class='card gift-send-panel'><div class='gift-send-panel-heading'><div><span class='eyebrow'>Send a gift</span><h2>Choose who receives it</h2></div></div><form id='minglora-gift-form' class='gift-send-form'>"+
       "<label>Recipient username<input id='minglora-gift-recipient' name='username' maxlength='31' autocomplete='off' placeholder='@Username' value='"+esc(state.recipient)+"' required></label>"+
+      "<label class='gift-funding-source-label'>Pay with<select id='minglora-gift-funding-source' name='fundingSource'><option value='cash'>Main Coin Wallet · "+esc(balance)+"</option><option value='admin_promotional'>Promotional Gift Wallet · "+Number(state.promoWallet?.promotionalCoins||0).toLocaleString()+" Coins</option></select></label>"+
+      "<p class='muted gift-funding-source-note'>Promotional gift cash reserve available: USD "+(Number(state.promoWallet?.availableMinor||0)/100).toFixed(2)+". Promotional gifts create creator USD earnings only while the separate PayPal-funded reserve has enough real funds.</p>"+
       "<div class='gift-send-form-footer'><span class='muted'>The selected gift's exact coin price is deducted after the recipient is verified.</span><button type='submit' class='primary' id='minglora-gift-send' disabled>Send gift</button></div><p id='minglora-gift-status' class='gift-send-status' role='status'></p></form></section>";
     const sort=document.getElementById("minglora-gift-sort");if(sort)sort.value=state.sort;
     document.getElementById("minglora-gift-search")?.addEventListener("input",e=>{state.search=e.target.value;state.page=0;drawGrid();});
@@ -93,10 +95,23 @@
     if(!/^[a-z0-9_]{3,30}$/.test(username)){if(status)status.textContent="Enter a valid @username (3–30 letters, numbers or underscores).";return;}
     window.MingloraGiftFX?.prime();if(button)button.disabled=true;if(status)status.textContent="Verifying recipient and sending gift…";
     try{
-      const result=await request("/gifts/send",{method:"POST",body:JSON.stringify({username,giftCode:gift.code})});
-      const sent=result.gift||{};state.recipient="@"+(sent.recipientUsername||username);state.balance=Number(sent.remainingCoins);
-      if(status)status.textContent=(sent.giftName||gift.name)+" sent to @"+(sent.recipientUsername||username)+". "+state.balance.toLocaleString()+" Coins remaining.";
-      const balance=document.querySelector(".gift-balance-pill strong");if(balance&&Number.isFinite(state.balance))balance.textContent=state.balance.toLocaleString()+" Coins available";
+      const fundingSource=String(document.getElementById("minglora-gift-funding-source")?.value||"cash");
+      const result=fundingSource==="cash"
+        ?await request("/gifts/send",{method:"POST",body:JSON.stringify({username,giftCode:gift.code})})
+        :await request("/gifts/send",{method:"POST",body:JSON.stringify({username,giftCode:gift.code,fundingSource})});
+      const sent=result.gift||{};state.recipient="@"+(sent.recipientUsername||username);
+      let balanceAfterLabel="";
+      if(fundingSource==="admin_promotional"){
+        state.promoWallet=state.promoWallet||{};
+        state.promoWallet.promotionalCoins=Number(sent.remainingPromotionalCoins??sent.remaining_promotional_coins??0);
+        state.promoWallet.availableMinor=Math.max(0,Number(state.promoWallet.availableMinor||0)-Number(sent.grossMinor||0));
+        balanceAfterLabel=state.promoWallet.promotionalCoins.toLocaleString()+" Promotional Coins remaining.";
+      }else{
+        state.balance=Number(sent.remainingCoins);
+        balanceAfterLabel=state.balance.toLocaleString()+" Main Coins remaining.";
+      }
+      if(status)status.textContent=(sent.giftName||gift.name)+" sent to @"+(sent.recipientUsername||username)+". "+balanceAfterLabel;
+      const balance=document.querySelector(".gift-balance-pill strong");if(balance&&fundingSource==="cash"&&Number.isFinite(state.balance))balance.textContent=state.balance.toLocaleString()+" Coins available";
       window.MingloraGiftFX?.show(gift);window.toast?.("Gift sent successfully.");
     }catch(error){if(status)status.textContent=error.message;window.toast?.(error.message);}
     finally{if(button)button.disabled=!selected();}

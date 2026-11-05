@@ -1979,7 +1979,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
-  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Original Minglora gifts · send with Coins")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div>"+
+  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Original Minglora gifts · send with Coins")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
     (!giftsEnabled?"<p class='live-gift-disabled-note' role='status'>"+(liveSettings.practiceMode?"Gifts are unavailable in Practice Mode.":"The host has turned off gifts for this LIVE.")+" The catalogue remains visible, but gifts cannot be sent.</p>":"")+
     "<div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note'>Team Gifts are unlocked when you join this host’s Fan Club.</p><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'><p class='muted'>Loading original Minglora gifts…</p></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button>"+
     (role==="host"?"<p class='live-gift-host-note'>This is a read-only preview. Viewers and approved guests can send gifts when LIVE gifts are enabled.</p>":"<button class='text-button' id='live-recharge'>Recharge Minglora Coins</button>")+
@@ -2036,6 +2036,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
+  // Stable layout contract: class='live-stage-topbar' remains present for the stage HUD.
   const liveStageHud=
     "<div class='live-stage-topbar "+(role==="host"?"is-host":"")+"'>"+
       "<div class='live-stage-top-left'>"+
@@ -2636,7 +2637,8 @@ activeLivePinnedComment=null;
         liveGiftCatalogueError=null;
         const results=await Promise.allSettled([
           api("/coins/catalog"),
-          role!=="host"?api("/coins/wallet"):Promise.resolve({wallet:null})
+          role!=="host"?api("/coins/wallet"):Promise.resolve({wallet:null}),
+          role!=="host"?api("/coins/promotional-gift-wallet"):Promise.resolve({wallet:null})
         ]);
         if(results[0].status!=="fulfilled"){
           liveGiftCatalogueError=results[0].reason?.message||"The gift catalogue is temporarily unavailable.";
@@ -2645,6 +2647,9 @@ activeLivePinnedComment=null;
           liveGiftCatalogue=Array.isArray(results[0].value?.gifts)?results[0].value.gifts:[];
         }
         const wallet=results[1].status==="fulfilled"?results[1].value:{wallet:null};
+        const promotionalWallet=results[2].status==="fulfilled"?(results[2].value.wallet||{}):{};
+        const promotionalNote=$("#live-promo-fund-availability");
+        if(promotionalNote)promotionalNote.textContent="Promotional wallet: "+Number(promotionalWallet.promotionalCoins||0).toLocaleString()+" Coins · cash reserve available: USD "+(Number(promotionalWallet.availableMinor||0)/100).toFixed(2)+". Gifts are rejected when the reserve is insufficient.";
         const walletBalance=$("#live-wallet-balance");
         if(walletBalance&&role!=="host")walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null
           ?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
@@ -2667,10 +2672,18 @@ activeLivePinnedComment=null;
         const catalogGift=liveGiftCatalogue.find(item=>item.code===button.dataset.liveGift);if(!catalogGift)return;
         window.MingloraGiftFX?.prime();button.disabled=true;
         try{
-          const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})});
+          const fundingSource=String($("#live-gift-funding-source")?.value||"cash");
+          const sent=fundingSource==="cash"
+            ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})})
+            :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift,fundingSource})});
           const gift=sent.gift;toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
-          const walletResult=await api("/coins/wallet").catch(()=>null),balanceElement=$("#live-wallet-balance");
-          if(balanceElement)balanceElement.textContent=walletResult?.wallet&&walletResult.wallet.balance_coins!=null?Number(walletResult.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+          const [walletResult,promoResult]=await Promise.allSettled([api("/coins/wallet"),api("/coins/promotional-gift-wallet")]);
+          const balanceElement=$("#live-wallet-balance");
+          if(balanceElement)balanceElement.textContent=walletResult.status==="fulfilled"&&walletResult.value.wallet?.balance_coins!=null?Number(walletResult.value.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+          if(promoResult.status==="fulfilled"&&$("#live-promo-fund-availability")){
+            const promo=promoResult.value.wallet||{};
+            $("#live-promo-fund-availability").textContent="Promotional wallet: "+Number(promo.promotionalCoins||0).toLocaleString()+" Coins · cash reserve available: USD "+(Number(promo.availableMinor||0)/100).toFixed(2)+".";
+          }
           const stage=$("#live-video-stage");if(stage)window.MingloraGiftFX?.mount(stage,catalogGift);
         }catch(error){toast(error.message);}finally{button.disabled=false;}
       });
@@ -2747,7 +2760,8 @@ async function renderCoins(){
     const earningsRows=ledger.length?ledger.slice(0,100).map(item=>{
       const status=String(item.status||"available").replace(/_/g," ");
       const date=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
-      return "<article class='recharge-history-row'><div><strong>Gift earnings · "+esc(status)+"</strong><small>"+esc(date)+" · 50% creator share</small></div><span>Gift value "+creatorMoney(item.gross_minor||0)+"</span><b class='positive'>+"+creatorMoney(item.creator_share_minor||0)+"</b></article>";
+      const source=String(item.funding_source||"cash")==="admin_promotional"?"Promotional gift":"Gift";
+      return "<article class='recharge-history-row'><div><strong>"+source+" earnings · "+esc(status)+"</strong><small>"+esc(date)+" · 50% creator share</small></div><span>Gift value "+creatorMoney(item.gross_minor||0)+"</span><b class='positive'>+"+creatorMoney(item.creator_share_minor||0)+"</b></article>";
     }).join(""):"<div class='recharge-empty'><strong>No eligible gift earnings yet</strong><p>Money earned from qualifying Minglora gifts will appear here after the gift transaction is recorded.</p></div>";
     const payoutRows=payouts.length?payouts.map(item=>{
       const status=String(item.status||"unknown").replace(/_/g," ").toUpperCase();
@@ -3217,7 +3231,7 @@ function creatorMonetizationMarkup(){
   if(s.earningsError||!data)return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CREATOR BUSINESS</span><h2>Monetization</h2><p>Creator earnings and PayPal withdrawals.</p></div></div><div class='creator-studio-panel'>"+creatorEmpty("Earnings unavailable",s.earningsError||"Minglora could not load creator earnings.","coins")+"</div>";
   const account=data.payoutAccount||null,ledger=Array.isArray(data.ledger)?data.ledger:[],payouts=Array.isArray(data.payouts)?data.payouts:[];
   const platformTotal=ledger.reduce((sum,row)=>sum+Number(row.platform_share_minor||0),0);
-  const history=ledger.length?ledger.map(item=>"<article class='creator-ledger-row'><div><strong>LIVE gift earnings</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span class='creator-ledger-share'>Creator share "+creatorMoney(item.creator_share_minor)+"</span><strong>"+creatorMoney(item.creator_share_minor)+"</strong></article>").join(""):creatorEmpty("No creator earnings yet","Eligible gift earnings will appear here after real LIVE gift transactions are settled.","coins");
+  const history=ledger.length?ledger.map(item=>{const source=String(item.funding_source||"cash")==="admin_promotional"?"Promotional gift":"Gift";return "<article class='creator-ledger-row'><div><strong>"+source+" earnings</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span class='creator-ledger-share'>Creator share "+creatorMoney(item.creator_share_minor)+"</span><strong>"+creatorMoney(item.creator_share_minor)+"</strong></article>";}).join(""):creatorEmpty("No creator earnings yet","Eligible gift earnings will appear here after real gift transactions are settled.","coins");
   const payoutHistory=payouts.length?payouts.map(item=>"<article class='creator-ledger-row'><div><strong>"+esc(String(item.status||"unknown").replace(/_/g," ").toUpperCase())+"</strong><small>"+esc(item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable")+"</small></div><span class='creator-ledger-share'>PayPal payout</span><strong>"+creatorMoney(item.amount_minor)+"</strong></article>").join(""):creatorEmpty("No withdrawals yet","Confirmed payout requests will appear in this history.","coins");
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CREATOR BUSINESS</span><h2>Monetization</h2><p>Manage actual creator gift earnings and PayPal withdrawal details.</p></div><span class='creator-finance-lock'>"+creatorIcon("settings")+" Server-authoritative amounts</span></div>"+
     "<div class='creator-earning-metrics'>"+creatorMetric("Your eligible share",creatorMoney(data.earnedMinor),"50% creator share from eligible LIVE gifts","coins")+creatorMetric("Available to withdraw",creatorMoney(data.availableMinor),"Current server-calculated amount","saved")+creatorMetric("Minglora platform share",creatorMoney(platformTotal),"Recorded platform share from the ledger","profile")+"</div>"+
