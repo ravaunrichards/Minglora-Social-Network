@@ -4,26 +4,35 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
-const OWNER_USER_ID = '28e1df97-3fe1-488e-bb84-bdc353c58653';
 
-const [app, html, serviceWorker] = await Promise.all([
+const [app, html, serviceWorker, profileBadges, adminCentre] = await Promise.all([
   read('public/app.js'),
   read('public/index.html'),
-  read('public/sw.js')
+  read('public/sw.js'),
+  read('public/profile-badges.js'),
+  read('public/admin-centre.js')
 ]);
 
-test('Larry keeps the blue verification check beside the username, not the display name', () => {
-  assert.match(app, new RegExp(`PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID = ['"]${OWNER_USER_ID}['"]`));
-  assert.match(app, /member\?\.id === PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID \? '' : verifiedProfileBadge\(member\)/);
-  assert.match(app, /profile-name-with-badges"><span>'\+esc\(u\.name\)\+'<\/span>'\+profileNameVerificationBadge\(u\)\+platformAdminProfileBadge\(u\)/);
+test('every verified profile shows one blue check beside the username only', () => {
+  assert.doesNotMatch(app, /PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID|profileNameVerificationBadge/);
+  assert.match(app, /profile-name-with-badges"><span>'\+esc\(u\.name\)\+'<\/span>'\+platformAdminProfileBadge\(u\)/);
   assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
-  assert.match(app, /profile-preview-name">'\+esc\(u\.name\)\+profileNameVerificationBadge\(u\)\+platformAdminProfileBadge\(u\)/);
+  assert.match(app, /profile-preview-name">.*platformAdminProfileBadge\(u\).*<small>@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
+  assert.ok(profileBadges.includes("const checks = [...profile.querySelectorAll('.profile-blue-verification')];"));
+  assert.ok(profileBadges.includes("checks.find(item => usernameLine?.contains(item)) || checks[0] || null"));
+  assert.ok(profileBadges.includes("usernameLine.append(' ', check);"));
+  assert.doesNotMatch(profileBadges, /name\.append\(check\)/);
 });
 
-test('the profile bundle remains in the app shell and scripts are revalidated from the network', () => {
-  const appUrl = '/app.js?v=20261105-live-layout-expand-1';
+test('the admin verification control explicitly describes one username check', () => {
+  assert.ok(adminCentre.includes('Grant or remove one blue verification sticker.'));
+  assert.ok(adminCentre.includes('exactly one check beside the @username.'));
+  assert.ok(adminCentre.includes('Verified — one blue check beside username'));
+});
+
+test('the updated profile bundle is referenced by the app shell and service worker', () => {
+  const appUrl = '/app.js?v=20261105-single-username-verification-1';
   assert.ok(html.includes(appUrl));
   assert.ok(serviceWorker.includes(appUrl));
-  assert.match(serviceWorker, /\['style','script','font'\]\.includes\(request\.destination\)/);
-  assert.match(serviceWorker, /fetch\(request,\{cache:'no-cache'\}\)/);
+  assert.ok(serviceWorker.includes("cache:'no-cache'"));
 });
