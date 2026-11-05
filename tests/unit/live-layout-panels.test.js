@@ -105,6 +105,31 @@ test('The Guest section shows request identity, status, time, counts and usable 
   assert.match(styles, /position:relative!important;inset:auto!important;z-index:4!important/);
 });
 
+test('LIVE gift catalogue is visible from the room for viewers, guests and host previews', () => {
+  assert.match(app, /id='live-stage-gift-open' class='live-stage-gift-open/);
+  assert.match(app, /id='live-gifts-toggle'/);
+  assert.match(app, /id='live-gift-panel' class='live-gift-panel/);
+  assert.match(app, /data-live-tools-panel-target='gifts'/);
+  assert.match(app, /role===\"host\"\?\"LIVE gift catalogue\"/);
+  assert.match(app, /role===\"host\"\?\"Viewer preview · sending to your own LIVE is disabled\"/);
+  assert.match(app, /const loadLiveGiftCatalogue=async\(\)=>/);
+  assert.match(app, /api\(\"\/coins\/catalog\"\)/);
+  assert.match(app, /giftGrid\.innerHTML=shown\.length\?/);
+  assert.match(app, /Retry gift catalogue/);
+  assert.match(app, /Gifts off/);
+  assert.match(styles, /\.live-stage-gift-open\{/);
+  assert.match(styles, /\.live-gift-empty\{/);
+});
+
+test('Confirmed LIVE gifts are broadcast to the room and animated for other participants', () => {
+  assert.match(app, /topic:\"minglora-live-gift\"/);
+  assert.match(app, /type:\"minglora\.live\.gift\"/);
+  assert.match(app, /topic===\"minglora-live-gift\"/);
+  assert.match(app, /window\.MingloraGiftFX\?\.mount\(stage,gift\)/);
+  assert.match(app, /publishData\(packet,\{reliable:true,topic:\"minglora-live-gift\"\}\)/);
+  assert.match(server, /session\.hostId===user\.id/);
+});
+
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
   for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
     assert.ok(app.includes('liveControlButton("'+id+'"'), 'missing control '+id);
