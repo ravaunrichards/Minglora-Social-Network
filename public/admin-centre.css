@@ -145,3 +145,22 @@
   }
   .platform-admin-profile-badge svg{width:10px;height:10px;flex-basis:10px}
 }
+
+
+/* Keep the Admin marker consistently to the right of the profile name and verification sticker. */
+.profile-info-main h1.profile-name-with-badges{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.profile-info-main h1.profile-name-with-badges>span:first-child{order:0}
+.profile-info-main h1.profile-name-with-badges>.profile-blue-verification{order:1}
+.profile-info-main h1.profile-name-with-badges>.platform-admin-profile-badge{order:2;margin-left:4px;margin-right:0}
+.profile-view-as-person .profile-preview-name{
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.profile-view-as-person .profile-preview-name>.profile-blue-verification{order:1}
+.profile-view-as-person .profile-preview-name>.platform-admin-profile-badge{order:2;margin-left:3px}
