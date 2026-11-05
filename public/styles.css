@@ -4585,3 +4585,6 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 @media(prefers-reduced-motion:reduce){
   .live-heart-button,.live-host-power-button{transition:none}
 }
+
+/* Interactive heart stays clickable inside the otherwise passive stage HUD. */
+.live-like-cluster,.live-heart-button{pointer-events:auto}
