@@ -1867,7 +1867,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();liveFanClubState=null;refreshLiveGiftGrid=null;
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
   try{
     const progression=await api('/gifter-progression/overview');
     state.user.gifterBadge=progression.badge||null;
