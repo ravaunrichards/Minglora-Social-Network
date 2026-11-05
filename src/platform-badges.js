@@ -16,3 +16,20 @@ export function getPlatformAdminBadge(user) {
     ? 'admin'
     : null;
 }
+
+const VERIFIED_PROFILE_EMAILS = new Set([
+  'creatorhubcreatornetwork@gmail.com'
+]);
+
+/**
+ * Returns the public profile verification sticker. The explicit creator
+ * account gets the blue sticker without changing its administrative role.
+ */
+export function getProfileVerificationBadge(user) {
+  if (!user) return null;
+
+  const email = String(user.email || '').trim().toLowerCase();
+  if (VERIFIED_PROFILE_EMAILS.has(email)) return 'blue';
+
+  return user.verificationBadge === 'blue' ? 'blue' : null;
+}
