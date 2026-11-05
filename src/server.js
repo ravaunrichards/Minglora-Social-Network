@@ -2629,8 +2629,10 @@ async function route(req, res) {
         if(!text&&!mediaIds.length&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
-        const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded'));
+        const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded'&&['image','video'].includes(item.mediaType)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected story files are unavailable. Select them again.'});
+        const totalBytes=assets.reduce((total,asset)=>total+Math.max(0,Number(asset.byteSize)||0),0);
+        if(totalBytes>500*1024*1024)return json(res,400,{error:'This combined story upload is larger than 500 MB. Remove some files and try again.'});
         const createdAt=now();
         const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
