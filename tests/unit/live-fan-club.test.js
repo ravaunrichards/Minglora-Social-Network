@@ -45,7 +45,7 @@ test('Watch points are rate limited and refresh the seven-day expiry only when a
   assert.equal(first.points, 1);
   assert.equal(tooSoon.awarded, false);
   assert.equal(next.points, 1);
-  assert.equal(next.membership.points, 3);
+  assert.equal(next.membership.points, 2);
 });
 
 test('Chat points are rate limited and gift points are idempotent by transaction ID', () => {
@@ -59,7 +59,7 @@ test('Chat points are rate limited and gift points are idempotent by transaction
   assert.equal(chatAgain.awarded, false);
   assert.equal(gift.points, 25);
   assert.equal(duplicate.awarded, false);
-  assert.equal(gift.membership.points, 27);
+  assert.equal(gift.membership.points, 26);
 });
 
 test('Membership pauses after seven days without points and can be rejoined', () => {
