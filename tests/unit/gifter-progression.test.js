@@ -116,6 +116,70 @@ test("duplicate ledger entries never increase a member's public gifter level", (
   assert.equal(getGifterBadgeSummary(db, "sender").level, 6);
 });
 
+test("admin can unlock all 50 levels without fabricating gifts or Coin spend", () => {
+  const db = {
+    users: [{ id: "owner", username: "creatorhub", name: "Creator Hub" }],
+    gifterProgressionLedger: [],
+    gifterBadgeAdminOverrides: [{
+      id: "admin-award-1", userId: "owner", grantedLevel: 50,
+      grantedBy: "admin", grantedAt: "2026-11-05T12:00:00.000Z"
+    }]
+  };
+  const overview = getGifterProgressionOverview(db, "owner");
+  const badge = getGifterBadgeSummary(db, "owner");
+  assert.equal(overview.current.level, 50);
+  assert.equal(overview.current.xp, 0);
+  assert.equal(overview.current.totalCoinsSent, 0);
+  assert.equal(overview.current.giftsSent, 0);
+  assert.equal(overview.current.badgeSource, "admin_awarded");
+  assert.equal(overview.levels.length, 50);
+  assert.equal(overview.levels.every(level => level.unlocked), true);
+  assert.equal(overview.levels[49].current, true);
+  assert.equal(overview.levels.every(level => level.adminAwarded), true);
+  assert.equal(badge.level, 50);
+  assert.equal(badge.adminAwarded, true);
+  assert.equal(db.gifterProgressionLedger.length, 0);
+  assert.equal(overview.leaderboard.length, 0);
+});
+
+test("admin badge reset preserves lifetime ledger and starts a new progression epoch", () => {
+  const resetAt = "2026-11-05T15:00:00.000Z";
+  const db = {
+    users: [{ id: "owner", username: "creatorhub", name: "Creator Hub" }],
+    gifterProgressionLedger: [],
+    gifterBadgeAdminOverrides: [{
+      id: "admin-award-2", userId: "owner", grantedLevel: 50,
+      progressionResetAt: resetAt, grantedBy: "admin"
+    }]
+  };
+  recordGifterGift(db, {
+    giftId: "before-reset", senderId: "owner", recipientId: "friend",
+    giftCode: "rose", coinAmount: 8, contextType: "member",
+    now: new Date("2026-11-05T14:00:00.000Z")
+  });
+  const afterReset = getGifterProgressionOverview(db, "owner");
+  assert.equal(afterReset.current.level, 0);
+  assert.equal(afterReset.current.xp, 0);
+  assert.equal(afterReset.current.totalCoinsSent, 8);
+  assert.equal(afterReset.current.giftsSent, 1);
+  assert.equal(afterReset.history.length, 1);
+  assert.equal(afterReset.levels.every(level => !level.unlocked), true);
+  assert.equal(getGifterBadgeSummary(db, "owner"), null);
+
+  recordGifterGift(db, {
+    giftId: "after-reset", senderId: "owner", recipientId: "friend",
+    giftCode: "rose", coinAmount: 1, contextType: "member",
+    now: new Date("2026-11-05T15:01:00.000Z")
+  });
+  const afterNewGift = getGifterProgressionOverview(db, "owner");
+  assert.equal(afterNewGift.current.level, 1);
+  assert.equal(afterNewGift.current.xp, 1);
+  assert.equal(afterNewGift.current.totalCoinsSent, 9);
+  assert.equal(afterNewGift.history.length, 2);
+  assert.equal(afterNewGift.current.progressionResetAt, resetAt);
+  assert.equal(afterNewGift.current.badgeSource, "earned");
+});
+
 test("NEW GIFTER starts at the first confirmed gift sent and expires after seven days", () => {
   const db = { gifterProgressionLedger: [] };
   const firstGiftAt = new Date("2026-11-05T12:00:00.000Z");
