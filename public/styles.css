@@ -4318,3 +4318,11 @@ body.live-tools-open{overflow:hidden}
   }
   .live-screen-share-name{top:6px;left:6px;font-size:9px}
 }
+
+/* LIVE host chat moderation actions */
+.live-chat-actions{grid-column:2;display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px}
+.live-chat-actions button{min-height:24px;padding:3px 7px;border:1px solid rgba(170,190,222,.22);border-radius:7px;background:rgba(255,255,255,.06);color:#dbe5f7;font-size:9px;font-weight:800;cursor:pointer}
+.live-chat-actions .live-chat-delete{border-color:rgba(242,128,141,.36);background:rgba(195,52,72,.1);color:#ffc1c8}
+.live-chat-actions button:disabled{opacity:.5;cursor:wait}
+.live-chat-actions button:focus-visible{outline:2px solid #9fc4ff;outline-offset:2px}
+@media(max-width:520px){.live-chat-actions{gap:4px}.live-chat-actions button{min-height:28px;padding:4px 8px}}
