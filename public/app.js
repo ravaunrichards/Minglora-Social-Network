@@ -1060,12 +1060,16 @@ async function refreshLiveChat(broadcastId){
   try{
     const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
     list.innerHTML=(data.messages||[]).map(message=>{
-      const author=message.user?.name||"Member";
+      const member=message.user||message.member||{};
+      const author=member.name||message.user_name||"Member";
+      const handle=member.username||message.username||"";
+      const chatAvatar=member.avatar||member.avatar_url||member.avatarUrl||message.avatar||message.avatar_url||"";
+      const authorAvatar=avatar({name:author,avatar:chatAvatar});
       const isPinned=activeLivePinnedComment?.id===String(message.id);
       const controls=activeLiveRole==="host"
         ?"<span class='live-chat-actions'><button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button><button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
-      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><strong>"+esc(author)+"</strong><span>"+esc(message.body)+"</span><small>"+timeAgo(message.created_at)+"</small>"+controls+"</div>";
+      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
     list.scrollTop=list.scrollHeight;
   }catch(error){if($("#live-chat-list"))toast(error.message);}
