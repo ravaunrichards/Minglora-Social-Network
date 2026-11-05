@@ -47,14 +47,17 @@ let paypalAccessTokenCache=null;
 function paypalConfig(){
   const clientId=String(process.env.PAYPAL_CLIENT_ID||'').trim();
   const clientSecret=String(process.env.PAYPAL_CLIENT_SECRET||'').trim();
-  const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||(process.env.NODE_ENV==='production'?'live':'sandbox')).trim().toLowerCase();
+  const production=process.env.NODE_ENV==='production';
+  const mode=String(process.env.PAYPAL_MODE||process.env.PAYPAL_ENVIRONMENT||(production?'live':'sandbox')).trim().toLowerCase();
   let base=String(process.env.PAYPAL_API_BASE_URL||'').trim();
   while(base.endsWith('/'))base=base.slice(0,-1);
   if(!base)base=mode==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com';
-  return {clientId,clientSecret,webhookId:String(process.env.PAYPAL_WEBHOOK_ID||'').trim(),base,configured:Boolean(clientId&&clientSecret)};
+  const productionBlocked=production&&(mode!=='live'||base!=='https://api-m.paypal.com');
+  return {clientId,clientSecret,webhookId:String(process.env.PAYPAL_WEBHOOK_ID||'').trim(),base,mode,productionBlocked,configured:Boolean(clientId&&clientSecret)&&!productionBlocked};
 }
 async function paypalToken(){
   const cfg=paypalConfig();
+  if(cfg.productionBlocked)throw Object.assign(new Error('Production Minglora payments require PAYPAL_MODE=live and the official PayPal live API endpoint. Sandbox mode is blocked in production.'),{status:503});
   if(!cfg.configured)throw Object.assign(new Error('PayPal is not configured for Minglora yet. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to the Minglora server environment.'),{status:503});
   if(paypalAccessTokenCache&&paypalAccessTokenCache.expiresAt>Date.now()+60000)return paypalAccessTokenCache.value;
   let response;
@@ -1847,6 +1850,9 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/coins/catalog'){
         return json(res,200,await requestSupabaseState('economy_catalog'));
       }
+      if(method==='GET'&&p==='/api/coins/promotional-gift-wallet'){
+        return json(res,200,await requestSupabaseState('economy_promotional_gift_wallet',{userId:user.id}));
+      }
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
       }
@@ -1872,6 +1878,110 @@ async function route(req, res) {
         });
         const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
         return json(res,200,{ok:true,recipientEmail:adminEmail,issuance,wallet});
+      }
+      if(method==='GET'&&p==='/api/admin/paypal-readiness'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can view PayPal readiness.'});
+        }
+        const cfg=paypalConfig();
+        let oauthAuthenticated=false,oauthError=null;
+        if(cfg.configured){
+          try{await paypalToken();oauthAuthenticated=true;}
+          catch(error){oauthError=String(error?.message||'PayPal authentication failed.').slice(0,180);}
+        }
+        return json(res,200,{
+          mode:cfg.mode,production:process.env.NODE_ENV==='production',
+          productionBlocked:cfg.productionBlocked,
+          credentialsConfigured:Boolean(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET),
+          oauthAuthenticated,webhookConfigured:Boolean(cfg.webhookId),
+          payoutsEntitlement:'not_verified',oauthError
+        });
+      }
+      if(method==='GET'&&p==='/api/admin/promotional-gift-fund'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can view the promotional gift cash reserve.'});
+        }
+        return json(res,200,await requestSupabaseState('economy_admin_promotional_fund_status',{
+          adminUserId:user.id,adminEmail
+        }));
+      }
+      if(method==='POST'&&p==='/api/admin/promotional-gift-fund/orders'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can fund the promotional gift cash reserve.'});
+        }
+        const amountMinor=Number(input.amountMinor);
+        if(!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>50000000){
+          return json(res,400,{error:'Fund at least USD 1.00 and no more than USD 500000.00.'});
+        }
+        const requestId=uid(),origin=appOrigin(req);
+        const order=await paypalRequest('/v2/checkout/orders','POST',{
+          intent:'CAPTURE',
+          purchase_units:[{
+            reference_id:requestId,custom_id:user.id,
+            description:'Minglora Promotional Gift USD Reserve',
+            amount:{currency_code:'USD',value:(amountMinor/100).toFixed(2)}
+          }],
+          application_context:{
+            brand_name:'Minglora',landing_page:'NO_PREFERENCE',user_action:'PAY_NOW',
+            shipping_preference:'NO_SHIPPING',
+            return_url:origin+'/promotional-fund-return.html',
+            cancel_url:origin+'/?paypal=cancel'
+          }
+        },'minglora-promo-fund-order-'+requestId);
+        const approveUrl=(order.links||[]).find(link=>link.rel==='approve')?.href;
+        if(!order.id||!approveUrl)return json(res,502,{error:'PayPal did not return a promotional funding approval link.'});
+        await requestSupabaseState('economy_admin_promotional_fund_order_create',{
+          adminUserId:user.id,adminEmail,paypalOrderId:order.id,amountMinor,requestId
+        });
+        return json(res,201,{ok:true,orderId:order.id,approveUrl,amountMinor,currency:'USD'});
+      }
+      if(method==='GET'&&p==='/api/admin/promotional-gift-fund/capture'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can confirm promotional gift funding.'});
+        }
+        const orderId=String(url.searchParams.get('token')||'').trim();
+        if(orderId.length<5||orderId.length>160)return json(res,400,{error:'PayPal funding order reference is missing.'});
+        const stored=await requestSupabaseState('economy_admin_promotional_fund_order_get',{
+          adminUserId:user.id,adminEmail,paypalOrderId:orderId
+        });
+        const fundingOrder=stored.order||{};
+        if(fundingOrder.status==='captured'){
+          res.writeHead(303,{Location:appOrigin(req)+'/?promoGiftFunding=success'});res.end();return;
+        }
+        const details=await paypalRequest('/v2/checkout/orders/'+encodeURIComponent(orderId),'GET',undefined);
+        const units=details.purchase_units||[];
+        const ownerUnit=units.find(unit=>unit.custom_id===user.id);
+        const expectedMinor=Number(fundingOrder.amount_minor);
+        if(!ownerUnit||details.id!==orderId||details.intent!=='CAPTURE'||
+           !Number.isSafeInteger(expectedMinor)||expectedMinor<100){
+          return json(res,409,{error:'PayPal order does not match the recorded Minglora funding request.'});
+        }
+        let capture=units.flatMap(unit=>unit.payments?.captures||[]).find(item=>item.status==='COMPLETED');
+        if(!capture&&details.status==='APPROVED'){
+          const captured=await paypalRequest('/v2/checkout/orders/'+encodeURIComponent(orderId)+'/capture','POST',{},'minglora-promo-fund-capture-'+orderId);
+          capture=(captured.purchase_units||[]).flatMap(unit=>unit.payments?.captures||[]).find(item=>item.status==='COMPLETED');
+        }
+        const paidMinor=Math.round(Number(capture?.amount?.value||0)*100);
+        if(!capture?.id||capture.amount?.currency_code!=='USD'||paidMinor!==expectedMinor){
+          return json(res,409,{error:'PayPal has not confirmed the exact USD funding amount. No promotional gift reserve was credited.'});
+        }
+        await requestSupabaseState('economy_admin_promotional_fund_order_settle',{
+          adminUserId:user.id,adminEmail,paypalOrderId:orderId,paypalCaptureId:capture.id,
+          amountMinor:paidMinor,requestId:uid()
+        });
+        res.writeHead(303,{Location:appOrigin(req)+'/?promoGiftFunding=success'});res.end();return;
       }
       if(method==='GET'&&p==='/api/admin/coins/campaign-wallet'){
         const adminEmail=normalizeEmail(user.email);
@@ -2116,9 +2226,17 @@ async function route(req, res) {
            !/^[a-z0-9_-]{1,60}$/.test(giftCode)){
           return json(res,400,{error:'Enter a valid @username and gift.'});
         }
-        const result=await requestSupabaseState('economy_send_social_gift',{
-          senderId:user.id,recipientUsername,giftCode,contextType,contextId
-        });
+        const fundingSource=String(input.fundingSource||'cash');
+        if(!['cash','admin_promotional'].includes(fundingSource)){
+          return json(res,400,{error:'Choose a supported Minglora gift wallet.'});
+        }
+        const result=fundingSource==='admin_promotional'
+          ?await requestSupabaseState('economy_send_admin_promotional_gift',{
+            senderId:user.id,recipientUsername,giftCode,broadcastId:null
+          })
+          :await requestSupabaseState('economy_send_social_gift',{
+            senderId:user.id,recipientUsername,giftCode,contextType,contextId
+          });
         const gift=result.gift;
         if(!gift?.receiverId)return json(res,502,{error:'Minglora could not confirm the gift transaction.'});
         const directGiftId=gift.giftTransactionId||gift.transactionId||gift.transaction_id||gift.id;
@@ -2129,7 +2247,7 @@ async function route(req, res) {
         }
         notify(gift.receiverId,user.id,'gift',user.name+' sent you a gift.');
         await saveStore();
-        return json(res,201,{gift});
+        return json(res,201,{gift,fundingSource});
       }
       const rewardDropCollection=p.match(/^\/api\/live\/sessions\/([^/]+)\/reward-drops$/);
       const rewardDropEntry=p.match(/^\/api\/live\/sessions\/([^/]+)\/reward-drops\/([^/]+)\/(join|claim)$/);
@@ -2459,7 +2577,11 @@ async function route(req, res) {
           return json(res,503,{error:'Minglora could not verify that the host is currently LIVE. Try again shortly.'});
         }
         if(!hostIsPresent)return json(res,409,{error:'This host is no longer LIVE. Refresh the LIVE directory.'});
-        const result=await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
+        const fundingSource=String(input.fundingSource||'cash');
+        if(!['cash','admin_promotional'].includes(fundingSource))return json(res,400,{error:'Choose a supported Minglora gift wallet.'});
+        const result=fundingSource==='admin_promotional'
+          ?await requestSupabaseState('economy_send_admin_promotional_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||''),recipientUsername:null})
+          :await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
         const confirmedGift=result.gift||{};
         const confirmedGiftId=confirmedGift.giftTransactionId||confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
         const confirmedCoinAmount=Number(confirmedGift.coinAmount??confirmedGift.coin_amount??confirmedGift.coins??0);
