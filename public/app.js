@@ -1503,11 +1503,15 @@ async function refreshLiveQaPanel(session,role){
     if(activeLiveSession?.id!==session.id)return;
     const list=$('#live-qa-list');
     if(!list)return;
+    const qaEnabled=data.qaEnabled!==false;
+    const status=$('#live-qa-status');if(status&&role!=='host')status.textContent=qaEnabled?"Ask a question, vote for the ones you want answered, and follow the host's replies.":'The host has disabled audience questions.';
+    const form=$('#live-qa-form');form?.querySelectorAll('textarea,button').forEach(control=>{control.disabled=!qaEnabled;});
     const questions=Array.isArray(data.questions)?data.questions:[];
     list.innerHTML=questions.length?questions.map(item=>{
       const status=item.status==='answered'?'Answered':item.status==='closed'?'Closed':'Open';
       const mine=item.userId===state.user?.id;
-      const controls=role==='host'
+      const canManage=role==='host'||(session.liveModerators||[]).includes(state.user?.id);
+      const controls=canManage
         ?"<div class='live-qa-actions'>"+
           "<button type='button' data-live-qa-action='pin' data-live-qa-id='"+esc(item.id)+"'>"+(item.pinnedAt?'Unpin':'Pin')+"</button>"+
           "<button type='button' data-live-qa-action='answer' data-live-qa-id='"+esc(item.id)+"'>Answer</button>"+
@@ -1543,7 +1547,7 @@ function setupLiveQaPanel(session,role){
       return;
     }
     const action=event.target?.closest?.('[data-live-qa-action]');
-    if(!action||role!=='host')return;
+    if(!action||!(role==='host'||(session.liveModerators||[]).includes(state.user?.id)))return;
     const questionId=String(action.dataset.liveQaId||''),decision=String(action.dataset.liveQaAction||'');
     let answer='';
     if(decision==='answer'){answer=String(window.prompt('Write your answer for everyone in LIVE Q&A:')||'').trim();if(!answer)return;}
@@ -1582,7 +1586,7 @@ function renderLiveMatches(matches){
     const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
     const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
     const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
-    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
+    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='momentum_boost' data-match-id='"+esc(match.id)+"'>Momentum</button><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
     return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
   }).join('');
 }
