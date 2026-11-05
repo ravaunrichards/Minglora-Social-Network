@@ -20,7 +20,7 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.match(app, /id='live-heart-like'.*data-live-reaction='heart'/);
   assert.match(app, /id='live-leave' class='live-host-power-button'/);
   assert.match(app, /class='live-chat-overlay'/);
-  assert.match(app, /stage\\?\\.insertAdjacentHTML\\("beforeend",liveStageHud\\)/);
+  assert.ok(app.includes('stage?.insertAdjacentHTML("beforeend",liveStageHud)'));
   assert.match(roomMarkup, /liveToolsDrawer/);
 });
 
@@ -40,7 +40,7 @@ test('Guest tools, gifts and rewards share the drawer while TikTok-style chat ov
   assert.match(app, /id='live-chat-list'/);
   assert.match(app, /id='live-chat-form'/);
   assert.match(app, /live-chat-overlay/);
-  assert.match(styles, /\\.live-chat-overlay/);
+  assert.ok(styles.includes(".live-chat-overlay"));
   assert.doesNotMatch(app, /live-reaction-bar/);
 });
 
