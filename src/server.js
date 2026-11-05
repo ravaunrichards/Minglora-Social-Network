@@ -1399,11 +1399,13 @@ async function route(req, res) {
         if (!liveHealth.connected) return json(res, 200, { sessions: [] });
         const canView = session => {
           if (session.hostId === user.id || session.visibility === 'public') return true;
-          if (session.visibility !== 'friends') return false;
-          return isFriend(user.id, session.hostId);
+          if (session.liveSettings?.practiceMode) return false;
+          if (session.visibility === 'friends') return isFriend(user.id, session.hostId);
+          if (session.visibility === 'followers') return (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
+          return false;
         };
         const activeSessions = (db.liveSessions || [])
-          .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
+          .filter(session => session.status === 'live' && !session.liveSettings?.practiceMode && !blockedBetween(user.id, session.hostId) && canView(session))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const sessions = [];
         for (const session of activeSessions) {
@@ -1441,15 +1443,49 @@ async function route(req, res) {
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const title = String(input.title || '').trim();
-        const visibility = String(input.visibility || 'public');
-        const broadcastType = String(input.broadcastType || 'video_audio');
-        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(visibility) ||
-            !['video_audio', 'audio_only'].includes(broadcastType)) {
-          return json(res, 400, { error: 'Enter a live title, choose an audience and select Video + Audio or Audio Only.' });
+        const rawMode = String(input.liveMode || input.broadcastType || 'video_audio');
+        const liveMode = ['video_audio', 'mobile_gaming', 'audio_only', 'live_studio'].includes(rawMode) ? rawMode : '';
+        const rawSettings = input.liveSettings && typeof input.liveSettings === 'object' && !Array.isArray(input.liveSettings) ? input.liveSettings : {};
+        const allowedBoards = ['chat', 'gaming', 'music', 'education', 'lifestyle', 'business', 'other'];
+        const allowedQualities = ['auto', '480p', '720p', '1080p'];
+        const allowedDisclosures = ['none', 'promotional', 'branded'];
+        const moderatorNames = Array.isArray(rawSettings.moderators)
+          ? rawSettings.moderators.map(value => String(value || '').trim().replace(/^@/, '').toLowerCase()).filter(Boolean).slice(0, 10)
+          : [];
+        if (moderatorNames.some(value => !/^[a-z0-9_]{3,30}$/.test(value))) {
+          return json(res, 400, { error: 'Moderator usernames must be 3–30 letters, numbers or underscores.' });
+        }
+        const liveSettings = {
+          board: allowedBoards.includes(String(rawSettings.board || 'chat')) ? String(rawSettings.board || 'chat') : 'chat',
+          aboutMe: String(rawSettings.aboutMe || '').trim().slice(0, 180),
+          quality: allowedQualities.includes(String(rawSettings.quality || 'auto')) ? String(rawSettings.quality || 'auto') : 'auto',
+          noiseSuppression: rawSettings.noiseSuppression !== false,
+          optimizeForStability: rawSettings.optimizeForStability !== false,
+          markViewers: rawSettings.markViewers !== false,
+          communitySafety: rawSettings.communitySafety !== false,
+          moderators: moderatorNames,
+          groupChats: rawSettings.groupChats !== false,
+          liveGifts: rawSettings.liveGifts !== false,
+          guardian: rawSettings.guardian === true,
+          liveRecordings: rawSettings.liveRecordings === true,
+          clientAcquisition: rawSettings.clientAcquisition === true,
+          audienceControl: rawSettings.audienceControl !== false,
+          contentDisclosure: allowedDisclosures.includes(String(rawSettings.contentDisclosure || 'none')) ? String(rawSettings.contentDisclosure || 'none') : 'none',
+          practiceMode: rawSettings.practiceMode === true
+        };
+        let visibility = String(input.visibility || 'public');
+        const broadcastType = liveMode === 'audio_only' ? 'audio_only' : 'video_audio';
+        if (liveSettings.practiceMode) visibility = 'private';
+        if (!title || title.length > 120 || !['public', 'followers', 'friends', 'private'].includes(visibility) || !liveMode) {
+          return json(res, 400, { error: 'Enter a live title, choose an audience and select one of the available LIVE formats.' });
         }
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
-        const publishSources = broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA];
+        const publishSources = liveMode === 'audio_only'
+          ? [LIVEKIT_TRACK_SOURCE.MICROPHONE]
+          : liveMode === 'mobile_gaming'
+            ? [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE]
+            : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, ...(liveMode === 'live_studio' ? [LIVEKIT_TRACK_SOURCE.SCREEN_SHARE] : [])];
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
@@ -1459,8 +1495,8 @@ async function route(req, res) {
         });
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
-        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, liveTheme, status: 'live', createdAt: now(), endedAt: null };
-        await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
+        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveTheme, status: 'live', createdAt: now(), endedAt: null };
+        await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,broadcastType,liveMode,roomRef:roomName,description:liveSettings.aboutMe});
         db.liveSessions = db.liveSessions || [];
         db.liveSessions.unshift(session);
         if(visibility==='public'){
@@ -1570,16 +1606,18 @@ async function route(req, res) {
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
         const friendAccess = isFriend(user.id, session.hostId);
+        const followerAccess = (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
         const allowed = session.hostId === user.id ||
-          session.visibility === 'public' ||
-          (session.visibility === 'friends' && friendAccess);
+          (!session.liveSettings?.practiceMode && session.visibility === 'public') ||
+          (!session.liveSettings?.practiceMode && session.visibility === 'friends' && friendAccess) ||
+          (!session.liveSettings?.practiceMode && session.visibility === 'followers' && followerAccess);
         if (!allowed) return json(res, 404, { error: 'Live session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
         const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
         const publishSources = role === 'host'
-          ? (session.broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE])
+          ? (session.liveMode === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : session.liveMode === 'mobile_gaming' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE])
           : role === 'guest'
             ? (session.broadcastType === 'audio_only'
               ? [LIVEKIT_TRACK_SOURCE.MICROPHONE]
@@ -1593,7 +1631,7 @@ async function route(req, res) {
           canPublishData: true,
           publishSources
         });
-        return json(res, 200, { session, liveKit: { ...liveKit, role } });
+        return json(res, 200, { session, liveKit: { ...liveKit, role, isModerator: false } });
       }
       const liveConnectedMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/connected$/);
       if (method === 'POST' && liveConnectedMatch) {
@@ -2010,9 +2048,11 @@ async function route(req, res) {
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
         if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available for gifting.'});
+        if(session.liveSettings?.liveGifts===false)return json(res,403,{error:'The host has disabled LIVE gifts for this broadcast.'});
         const friends=isFriend(user.id,session.hostId);
-        const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
-        if(!canView)return json(res,404,{error:'LIVE session is not available for gifting.'});
+        const follower=(db.follows||[]).some(edge=>edge.followerId===user.id&&edge.followedId===session.hostId);
+        const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||(session.visibility==='followers'&&follower);
+        if(!canView||session.liveSettings?.practiceMode)return json(res,404,{error:'LIVE session is not available for gifting.'});
         let hostIsPresent=false;
         try {
           const participants=await listLiveKitParticipants(session.roomName);
@@ -2136,9 +2176,11 @@ async function route(req, res) {
         const session=(db.liveSessions||[]).find(item=>item.id===liveChat[1]);
         if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
         const friends=isFriend(user.id,session.hostId);
-        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
+        const follower=(db.follows||[]).some(edge=>edge.followerId===user.id&&edge.followedId===session.hostId);
+        const canView=session.hostId===user.id||(!session.liveSettings?.practiceMode&&session.visibility==='public')||(!session.liveSettings?.practiceMode&&session.visibility==='friends'&&friends)||(!session.liveSettings?.practiceMode&&session.visibility==='followers'&&follower);
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
         if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
+        if(session.liveSettings?.groupChats===false)return json(res,403,{error:'The host has disabled LIVE group chat for this broadcast.'});
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
         return json(res,201,sent);
       }
