@@ -4002,7 +4002,7 @@ body.auth-mode .auth-screen{
 }
 .live-tools-close:hover{background:rgba(255,255,255,.16)}
 .live-tools-shortcuts{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;flex:none;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;flex:none;
   padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);
 }
 .live-tools-shortcuts button{
@@ -4065,10 +4065,21 @@ body.live-tools-open{overflow:hidden}
   @keyframes live-tools-up{from{transform:translateY(28px);opacity:.6}to{transform:translateY(0);opacity:1}}
   .live-tools-header{padding:15px 15px 12px}
   .live-tools-header h2{font-size:17px}
-  .live-tools-shortcuts{padding:9px 10px;gap:5px}
+  .live-tools-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr));padding:9px 10px;gap:5px}
   .live-tools-shortcuts button{font-size:9px;padding:8px 3px}
   .live-tools-content{padding:10px 10px calc(22px + env(safe-area-inset-bottom))}
 }
 @media(prefers-reduced-motion:reduce){
   .live-tools-drawer{animation:none}
 }
+
+.live-room-appearance{display:grid;gap:10px}
+.live-room-appearance>div{display:grid;gap:4px}
+.live-room-appearance strong{color:#fff;font-size:13px}
+.live-room-appearance small,.live-room-appearance p{margin:0;color:#aeb9ca;font-size:11px}
+.live-room-appearance label{display:grid;gap:6px;color:#e7edf7;font-size:11px;font-weight:800}
+.live-room-appearance select{
+  width:100%;min-height:40px;padding:8px 10px;border:1px solid rgba(175,194,226,.22);
+  border-radius:10px;color:#f5f7fc;background:#121b2b;font:inherit;
+}
+.live-room-appearance option{color:#111;background:#fff}
