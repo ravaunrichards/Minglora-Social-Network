@@ -4846,3 +4846,28 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
   #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-guest{grid-column:3}
   .live-room-permission-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Minglora LIVE controls: make ON states unmistakably blue and permission switches real. */
+.live-control-button.is-active .live-control-icon{
+  background:linear-gradient(155deg,#348cff,#1769e0);
+  border-color:rgba(150,199,255,.98);
+  box-shadow:0 0 0 2px rgba(23,105,224,.2),0 5px 16px rgba(23,105,224,.32);
+  color:#fff;
+}
+.live-control-button[aria-pressed="true"] .live-control-icon{
+  background:linear-gradient(155deg,#348cff,#1769e0);
+  border-color:rgba(150,199,255,.98);
+  color:#fff;
+}
+.live-room-permission-toggle input:checked+.live-preflight-switch{
+  background:#1769e0;
+  box-shadow:0 0 0 2px rgba(23,105,224,.18);
+}
+.live-room-permission-toggle input:checked+.live-preflight-switch::after{
+  transform:translateX(12px);
+}
+.live-room-permission-toggle input:disabled+.live-preflight-switch{opacity:.55;cursor:wait}
+.live-room-permission-toggle input:checked:disabled+.live-preflight-switch{background:#1769e0}
+.live-guest-seat.is-local{outline:2px solid rgba(52,140,255,.8);outline-offset:-4px}
+.live-guest-seat.is-local .live-guest-seat-tag{background:rgba(52,140,255,.96);color:#fff}
