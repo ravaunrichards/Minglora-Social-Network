@@ -771,27 +771,6 @@ const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
 let activeLiveScreenLayout='full-screen';
 function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}
 function liveLayoutIcon(name){const paths={fullscreen:"<rect x='3' y='3' width='18' height='18' rx='2'/>",grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
-function moveLiveFullscreenElement(element,target){
-  if(!element||!target||element.parentElement===target)return;
-  if(!element.__liveFullscreenOriginMarker&&element.parentNode){
-    const marker=document.createComment('Minglora LIVE Full Screen return point');
-    element.parentNode.insertBefore(marker,element);
-    Object.defineProperty(element,'__liveFullscreenOriginMarker',{value:marker,writable:true,configurable:true});
-  }
-  target.append(element);
-}
-function restoreLiveFullscreenElement(element){
-  const marker=element?.__liveFullscreenOriginMarker;
-  if(marker?.parentNode)marker.parentNode.replaceChild(element,marker);
-  if(element&&Object.prototype.hasOwnProperty.call(element,'__liveFullscreenOriginMarker'))delete element.__liveFullscreenOriginMarker;
-}
-function restoreLiveChatFullscreenElements(){
-  const composer=$('.live-chat-composer-wrap');
-  const items=[$('.live-like-control'),$('#live-fan-club-join'),$('#live-gifts-toggle'),$('#live-share-toggle')];
-  items.forEach(restoreLiveFullscreenElement);
-  restoreLiveFullscreenElement(composer);
-  composer?.querySelector('.live-chat-quick-actions')?.remove();
-}
 function syncLiveFullscreenComposition(hostOnly){
   const shell=$('.live-player-shell'),stage=$('#live-video-stage'),videoColumn=stage?.closest('.live-video-column');
   if(!shell||!stage||!videoColumn)return;
@@ -799,7 +778,6 @@ function syncLiveFullscreenComposition(hostOnly){
   const controls=shell.querySelector('.live-player-controls');
   const header=shell.querySelector('.live-player-header');
   const back=header?.querySelector('#live-back')||shell.querySelector('#live-back');
-  const chat=$('#live-chat-overlay');
   if(hostOnly){
     if(topbar&&topbar.parentElement!==stage)stage.prepend(topbar);
     if(controls&&controls.parentElement!==stage)stage.append(controls);
@@ -808,29 +786,11 @@ function syncLiveFullscreenComposition(hostOnly){
       const power=topbar.querySelector('.live-host-power-button');
       topbar.insertBefore(back,power||null);
     }
-    const chatIsInTools=Boolean(chat?.closest('#live-tools-drawer'));
-    const composer=$('.live-chat-composer-wrap');
-    if(composer&&controls&&!chatIsInTools){
-      let quick=composer.querySelector('.live-chat-quick-actions');
-      if(!quick){
-        quick=document.createElement('div');
-        quick.className='live-chat-quick-actions';
-        quick.setAttribute('role','group');
-        quick.setAttribute('aria-label','LIVE quick actions');
-        composer.append(quick);
-      }
-      moveLiveFullscreenElement(composer,controls);
-      [$('.live-like-control'),$('#live-fan-club-join'),$('#live-gifts-toggle'),$('#live-share-toggle')]
-        .filter(Boolean).forEach(element=>moveLiveFullscreenElement(element,quick));
-    }
-    shell.classList.toggle('live-full-screen-two-row-dock',Boolean(controls&&controls.querySelectorAll('.live-control-button').length>4));
   }else{
-    restoreLiveChatFullscreenElements();
     if(topbar&&topbar.parentElement!==videoColumn)stage.before(topbar);
     if(controls&&controls.parentElement!==videoColumn)videoColumn.append(controls);
     if(back&&header&&back.parentElement!==header)header.prepend(back);
     back?.classList.remove('live-stage-exit');
-    shell.classList.remove('live-full-screen-two-row-dock');
   }
   shell.classList.toggle('live-full-screen-mode',Boolean(hostOnly));
 }
@@ -850,13 +810,8 @@ function applyLiveScreenLayout(value){
     button.setAttribute('aria-pressed',String(selected));
   });
 }
-function restoreLiveChatToStage(){
-  const chat=$('#live-chat-overlay'),stage=$('#live-video-stage');
-  if(chat&&stage&&chat.parentElement!==stage)stage.append(chat);
-  if(activeLiveScreenLayout==='full-screen')syncLiveFullscreenComposition(true);
-  else restoreLiveChatFullscreenElements();
-}
-function activateLiveToolsPanel(name){const drawer=$('#live-tools-drawer');if(!drawer)return;const sections=[...drawer.querySelectorAll('[data-live-tools-panel]')];if(!sections.some(section=>section.dataset.liveToolsPanel===name))return;sections.forEach(section=>{section.hidden=section.dataset.liveToolsPanel!==name;});drawer.querySelectorAll('[data-live-tools-panel-target]').forEach(button=>{const active=button.dataset.liveToolsPanelTarget===name;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});if(name==='chat'){restoreLiveChatFullscreenElements();const chat=$('#live-chat-overlay'),body=$('#live-chat-panel-body');if(chat&&body)body.append(chat);}else restoreLiveChatToStage();}
+function restoreLiveChatToStage(){const chat=$('#live-chat-overlay'),stage=$('#live-video-stage');if(chat&&stage&&chat.parentElement!==stage)stage.append(chat);}
+function activateLiveToolsPanel(name){const drawer=$('#live-tools-drawer');if(!drawer)return;const sections=[...drawer.querySelectorAll('[data-live-tools-panel]')];if(!sections.some(section=>section.dataset.liveToolsPanel===name))return;sections.forEach(section=>{section.hidden=section.dataset.liveToolsPanel!==name;});drawer.querySelectorAll('[data-live-tools-panel-target]').forEach(button=>{const active=button.dataset.liveToolsPanelTarget===name;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});if(name==='chat'){const chat=$('#live-chat-overlay'),body=$('#live-chat-panel-body');if(chat&&body)body.append(chat);}else restoreLiveChatToStage();}
 
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
@@ -2389,7 +2344,15 @@ activeLivePinnedComment=null;
       const nextLayout=String(button.dataset.liveScreenLayout||'');
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
       const previousLayout=activeLiveScreenLayout;
-      if(nextLayout!==previousLayout)applyLiveScreenLayout(nextLayout);
+      if(nextLayout!==previousLayout){
+        applyLiveScreenLayout(nextLayout);
+        const shell=$('.live-player-shell');
+        if(nextLayout==='full-screen'&&typeof shell?.requestFullscreen==='function'&&!document.fullscreenElement){
+          try{const request=shell.requestFullscreen({navigationUI:'hide'});request?.catch?.(()=>{});}catch{}
+        }else if(nextLayout!=='full-screen'&&document.fullscreenElement===shell&&typeof document.exitFullscreen==='function'){
+          try{const request=document.exitFullscreen();request?.catch?.(()=>{});}catch{}
+        }
+      }
       $("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
       const status=$("#live-layout-status");
       try{
@@ -2402,6 +2365,9 @@ activeLivePinnedComment=null;
         if(nextLayout==='full-screen')closeLiveToolsPanel();
       }catch(error){
         const restoreLayout=session.liveLayout||previousLayout||'full-screen';
+        if(nextLayout==='full-screen'&&previousLayout!=='full-screen'&&document.fullscreenElement===$('.live-player-shell')&&typeof document.exitFullscreen==='function'){
+          try{const request=document.exitFullscreen();request?.catch?.(()=>{});}catch{}
+        }
         applyLiveScreenLayout(restoreLayout);
         if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE layout could not be changed.');
