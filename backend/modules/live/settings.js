@@ -29,8 +29,7 @@ export const DEFAULT_LIVE_SETTINGS = Object.freeze({
   shareRecordingsWithGuests: false,
   qaEnabled: true,
   guardianMode: false,
-  effectsEnabled: true,
-  multiGuestExtraRewards: false
+  effectsEnabled: true
 });
 
 export function broadcastTypeForLiveMode(liveMode) {
