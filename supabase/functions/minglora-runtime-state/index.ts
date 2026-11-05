@@ -907,20 +907,30 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_creator_earnings") {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
-    const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult] = await Promise.all([
+    const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult, giftBalanceResult] = await Promise.all([
       admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id,funding_source").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle(),
       admin.from("creator_coin_exchanges").select("id,amount_minor,coin_amount,currency,created_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
-      admin.rpc("minglora_get_creator_money_balance", { p_creator_id: creatorId })
+      admin.rpc("minglora_get_creator_money_balance", { p_creator_id: creatorId }),
+      admin.rpc("minglora_get_creator_gift_balance", { p_creator_id: creatorId })
     ]);
-    if (ledgerResult.error || payoutsResult.error || accountResult.error || exchangesResult.error || balanceResult.error) {
+    if (ledgerResult.error || payoutsResult.error || accountResult.error || exchangesResult.error || balanceResult.error || giftBalanceResult.error) {
+      console.error("[Minglora creator wallet] Could not load the complete creator balance.", {
+        ledgerError: ledgerResult.error?.message || null,
+        payoutsError: payoutsResult.error?.message || null,
+        accountError: accountResult.error?.message || null,
+        exchangesError: exchangesResult.error?.message || null,
+        balanceError: balanceResult.error?.message || null,
+        giftBalanceError: giftBalanceResult.error?.message || null
+      });
       return json(503, { error: "Creator money balance is temporarily unavailable." });
     }
     const ledger = ledgerResult.data || [], payouts = payoutsResult.data || [];
     const moneyBalance = balanceResult.data || {};
     return json(200, {
       ledger,
+      giftBalance: giftBalanceResult.data || {},
       payouts,
       exchanges: exchangesResult.data || [],
       payoutAccount: accountResult.data || null,
