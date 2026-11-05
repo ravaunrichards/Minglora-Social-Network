@@ -194,26 +194,24 @@
           <div class="admin-marketing-budget-heading">
             <div>
               <strong id="admin-marketing-budget-title">Creator marketing budget</strong>
-              <p>Cash-backed promotional Coins for member campaigns. Creator earnings from these gifts are paid only from this reserved, funded budget.</p>
+              <p>Cash-backed bonus Coins for member campaigns and admin credits. Gifts spent with these Coins follow the same 50/50 creator earnings and payout rules as purchased Coins.</p>
             </div>
             <button type="button" class="secondary" id="admin-marketing-budget-refresh">Refresh budget</button>
           </div>
           <div class="admin-marketing-budget-summary" id="admin-marketing-budget-summary" aria-live="polite">Loading verified budget…</div>
           <form id="admin-marketing-funding-form" class="admin-marketing-form">
-            <strong>Record verified marketing funding</strong>
-            <p>Only record money already received and independently matched to the external transfer or settlement reference.</p>
-            <label for="admin-marketing-funding-amount">Amount received (USD)</label>
-            <input id="admin-marketing-funding-amount" name="amount" type="number" min="1.00" step="0.01" inputmode="decimal" placeholder="100.00" required>
-            <label for="admin-marketing-funding-reference">External transfer / settlement reference</label>
-            <input id="admin-marketing-funding-reference" name="reference" type="text" minlength="6" maxlength="160" autocomplete="off" placeholder="Bank or PayPal transaction reference" required>
+            <strong>Fund the cash-backed bonus Coin reserve through PayPal</strong>
+            <p>Coins issued from this reserve enter the same Main Coin wallet and have the same gifting power. Creator earnings are generated only after the PayPal capture is confirmed.</p>
+            <label for="admin-marketing-funding-amount">USD amount</label>
+            <input id="admin-marketing-funding-amount" name="amount" type="number" min="1.00" max="500000.00" step="0.01" inputmode="decimal" placeholder="100.00" required>
             <label for="admin-marketing-funding-note">Funding note</label>
-            <input id="admin-marketing-funding-note" name="note" type="text" maxlength="240" value="Verified Minglora creator marketing funding">
-            <button type="submit" class="primary" id="admin-marketing-funding-submit">Record received funds</button>
+            <input id="admin-marketing-funding-note" name="note" type="text" maxlength="240" value="Minglora cash-backed bonus Coin reserve">
+            <button type="submit" class="primary" id="admin-marketing-funding-submit">Continue to PayPal</button>
             <p id="admin-marketing-funding-status" aria-live="polite"></p>
           </form>
           <form id="admin-marketing-grant-form" class="admin-marketing-form">
             <strong>Grant marketing-funded Coins</strong>
-            <p>Grants reserve the equivalent USD cents from the funded budget. These are different from ordinary non-cash owner/admin promotional credits.</p>
+            <p>These bonus Coins enter the member's Main Coin wallet. The reserve backs them at 1 Coin = USD 1 cent, and gifts spent with them earn the same 50/50 creator share as purchased Coins.</p>
             <label for="admin-marketing-member">Member username</label>
             <input id="admin-marketing-member" name="memberUsername" type="text" maxlength="31" placeholder="@username" required>
             <label for="admin-marketing-grant-amount">Coin amount</label>
@@ -429,47 +427,34 @@
       event.preventDefault();
       const form = event.currentTarget;
       const amountInput = form.querySelector('#admin-marketing-funding-amount');
-      const referenceInput = form.querySelector('#admin-marketing-funding-reference');
       const noteInput = form.querySelector('#admin-marketing-funding-note');
       const status = form.querySelector('#admin-marketing-funding-status');
       const submit = form.querySelector('#admin-marketing-funding-submit');
       const rawAmount = String(amountInput?.value || '').trim();
       const amount = Number(rawAmount);
       const amountMinor = Math.round(amount * 100);
-      const reference = String(referenceInput?.value || '').trim();
       if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(rawAmount) ||
-          !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
-          reference.length < 6 || reference.length > 160) {
-        if (status) status.textContent = 'Enter at least USD $1.00 and a valid external funding reference.';
+          !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+        if (status) status.textContent = 'Enter an amount from USD $1.00 to USD $500,000.00.';
         return;
       }
-      if (!window.crypto?.randomUUID) {
-        if (status) status.textContent = 'A secure funding reference could not be generated on this device.';
-        return;
-      }
-      if (!window.confirm('Confirm that USD ' + money(amountMinor) + ' has already been received and matched to external reference ' + reference + '? Do not record pending or expected funds.')) return;
       if (submit) submit.disabled = true;
-      if (status) status.textContent = 'Recording verified funding…';
+      if (status) status.textContent = 'Preparing a secure PayPal funding checkout…';
       try {
-        const response = await fetch('/api/admin/marketing/funding', {
+        const response = await fetch('/api/admin/marketing/funding/orders', {
           method:'POST', credentials:'same-origin',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
             amountMinor,
-            requestId:window.crypto.randomUUID(),
-            fundingReference:reference,
             note:String(noteInput?.value || '').slice(0,240)
           })
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || 'Marketing funding could not be recorded.');
-        if (status) status.textContent = 'Funding recorded. Available marketing balance: ' + money(result.availableMinor) + '.';
-        if (amountInput) amountInput.value = '';
-        if (referenceInput) referenceInput.value = '';
-        await refreshMarketingBudget();
+        if (!response.ok || !result.approveUrl) throw new Error(result.error || 'PayPal funding checkout could not be created.');
+        if (status) status.textContent = 'Opening PayPal to confirm the reserve funding…';
+        window.location.assign(result.approveUrl);
       } catch (error) {
-        if (status) status.textContent = error.message || 'Marketing funding could not be recorded.';
-      } finally {
+        if (status) status.textContent = error.message || 'Minglora could not prepare PayPal funding.';
         if (submit) submit.disabled = false;
       }
     });
