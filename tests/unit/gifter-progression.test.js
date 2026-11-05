@@ -6,7 +6,8 @@ import {
   gifterXpRequired,
   recordGifterGift,
   getGifterProgressionOverview,
-  getGifterBadgeSummary
+  getGifterBadgeSummary,
+  getNewGifterIdentity
 } from "../../backend/modules/gifter-progression/service.js";
 
 test("gifter levels use the fixed cumulative coin thresholds from the reference chart", () => {
@@ -17,10 +18,11 @@ test("gifter levels use the fixed cumulative coin thresholds from the reference 
     845000, 1120000, 1470000, 1920000, 2500000, 3230000, 4180000, 5180000, 6890000, 8780000,
     11200000, 14100000, 17800000, 22300000, 30000000, 37500000, 47500000, 60000000, 75000000, 97500000
   ];
-  assert.equal(gifterXpRequired(1), 0);
+  assert.equal(gifterXpRequired(1), 1);
   assert.equal(gifterXpRequired(2), 8);
   assert.equal(gifterXpRequired(50), 97500000);
-  assert.equal(getGifterLevel(0), 1);
+  assert.equal(getGifterLevel(0), 0);
+  assert.equal(getGifterLevel(1), 1);
   assert.equal(getGifterLevel(7), 1);
   assert.equal(getGifterLevel(8), 2);
   assert.equal(getGifterLevel(17), 2);
@@ -29,6 +31,7 @@ test("gifter levels use the fixed cumulative coin thresholds from the reference 
   assert.equal(getGifterLevel(144000), 25);
   assert.equal(getGifterLevel(97500000), 50);
   assert.equal(getGifterLevelChart(0).length, 50);
+  assert.equal(getGifterLevelChart(0).every(item => item.unlocked === false && item.current === false), true);
   assert.deepEqual(getGifterLevelChart(0).map(item => item.coinsRequired), thresholds);
 });
 
@@ -111,4 +114,48 @@ test("duplicate ledger entries never increase a member's public gifter level", (
   recordGifterGift(db, gift);
   db.gifterProgressionLedger.push({ ...db.gifterProgressionLedger[0] });
   assert.equal(getGifterBadgeSummary(db, "sender").level, 6);
+});
+
+test("NEW GIFTER starts at the first confirmed gift sent and expires after seven days", () => {
+  const db = { gifterProgressionLedger: [] };
+  const firstGiftAt = new Date("2026-11-05T12:00:00.000Z");
+  assert.equal(getNewGifterIdentity(db, "sender", firstGiftAt), null);
+
+  recordGifterGift(db, {
+    giftId: "new-gifter-first", senderId: "sender", recipientId: "recipient",
+    giftCode: "rose", coinAmount: 1, contextType: "member", now: firstGiftAt
+  });
+  const active = getNewGifterIdentity(db, "sender", new Date("2026-11-08T12:00:00.000Z"));
+  assert.equal(active.label, "NEW GIFTER");
+  assert.equal(active.active, true);
+  assert.equal(active.startedAt, firstGiftAt.toISOString());
+  assert.equal(active.expiresAt, "2026-11-12T12:00:00.000Z");
+  assert.equal(getNewGifterIdentity(db, "sender", new Date("2026-11-12T12:00:00.000Z")), null);
+
+  recordGifterGift(db, {
+    giftId: "new-gifter-second", senderId: "sender", recipientId: "recipient",
+    giftCode: "crown", coinAmount: 5, contextType: "live", now: new Date("2026-11-10T12:00:00.000Z")
+  });
+  assert.equal(getNewGifterIdentity(db, "sender", new Date("2026-11-11T12:00:00.000Z")), active && null);
+});
+
+test("new accounts have no gifter badge and all levels are locked until sent Coins reach thresholds", () => {
+  const db = { users: [{ id: "sender", username: "sender", name: "Sender" }], gifterProgressionLedger: [] };
+  const overview = getGifterProgressionOverview(db, "sender");
+  assert.equal(overview.current.level, 0);
+  assert.equal(overview.current.hasUnlockedBadge, false);
+  assert.equal(overview.current.nextLevel, 1);
+  assert.equal(overview.current.xpRemaining, 1);
+  assert.equal(overview.levels.every(level => !level.unlocked), true);
+  assert.equal(getGifterBadgeSummary(db, "sender"), null);
+
+  recordGifterGift(db, {
+    giftId: "first-coin", senderId: "sender", recipientId: "recipient",
+    giftCode: "rose", coinAmount: 1, contextType: "member", now: new Date("2026-11-05T12:00:00.000Z")
+  });
+  const afterFirstCoin = getGifterProgressionOverview(db, "sender");
+  assert.equal(afterFirstCoin.current.level, 1);
+  assert.equal(afterFirstCoin.current.hasUnlockedBadge, true);
+  assert.equal(afterFirstCoin.levels[0].unlocked, true);
+  assert.equal(afterFirstCoin.levels[1].unlocked, false);
 });
