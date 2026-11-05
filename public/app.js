@@ -33,7 +33,10 @@ const gifterProfileBadge = member => {
   const level=Math.max(1,Math.min(50,Math.floor(Number(badge.level)||1)));
   const tier=Math.max(1,Math.min(10,Math.ceil(level/5)));
   const title=esc(badge.badgeName||('Gifter LV '+level));
-  return '<span class="gp-inline-badge gp-tier-'+tier+'" role="img" aria-label="'+title+'" title="'+title+'"><span aria-hidden="true">✦</span><strong>LV '+level+'</strong><small>GIFTER</small></span>'+
+  const artwork=window.MingloraGifterBadgeArt?.render
+    ? window.MingloraGifterBadgeArt.render({level,tier,badgeName:title,inline:true})
+    : '<span class="gp-inline-badge gp-tier-'+tier+'" role="img" aria-label="'+title+'" title="'+title+'"><strong>'+level+'</strong></span>';
+  return artwork+
     (badge.liveEntranceUnlocked?'<span class="gp-live-entry-badge" role="img" aria-label="LV 25 LIVE entrance unlocked" title="LV 25 LIVE entrance unlocked">LIVE ENTRY</span>':'');
 };
 window.addEventListener('minglora:gifter-badge-updated',event=>{
