@@ -65,8 +65,9 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 test('Full Screen gives the host a taller portrait stage while reserving room for controls', () => {
   assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
   assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
-  assert.match(styles, /width:min\(100%,61\.5dvh,570px\)/);
-  assert.match(styles, /max-height:min\(82dvh,760px,calc\(100dvh - 164px\)\)/);
+  assert.match(styles, /width:min\(100%,64dvh,600px\)/);
+  assert.match(styles, /max-height:min\(84dvh,780px,calc\(100dvh - 150px\)\)/);
+  assert.match(styles, /width:min\(100%,60dvh,310px\)/);
   assert.match(styles, /aspect-ratio:3 \/ 4/);
   assert.match(styles, /max-height:min\(76dvh,390px,calc\(100dvh - 142px\)\)/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
@@ -75,6 +76,7 @@ test('Full Screen gives the host a taller portrait stage while reserving room fo
 
 test('Full Screen layout picker uses a dedicated expand-to-fullscreen icon', () => {
   assert.match(app, /value:'full-screen',label:'Full Screen',icon:'fullscreen'/);
-  assert.ok(app.includes(`fullscreen:"<path d='M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5'/>"`));
+  assert.ok(app.includes(`fullscreen:"<path d='M8 3H5a2 2 0 0 0-2 2v3`));
+  assert.ok(styles.includes('.live-layout-option[data-live-screen-layout="full-screen"] svg{'));
   assert.match(app, /LIVE_SCREEN_LAYOUT_OPTIONS\.map\(option=>[\s\S]*?liveLayoutIcon\(option\.icon\)/);
 });
