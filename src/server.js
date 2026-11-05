@@ -2334,6 +2334,12 @@ async function route(req, res) {
         if(recent.length)return json(res,429,{error:'Please wait before submitting another LIVE question.'});
         const record={id:uid(),sessionId:session.id,userId:user.id,body:question,status:'open',
           voters:[],answer:'',answeredBy:null,pinnedAt:null,createdAt:now(),updatedAt:now()};
+        const sessionQuestions=db.liveQuestions.filter(item=>item.sessionId===session.id);
+        if(sessionQuestions.length>=100){
+          const oldestOpen=[...sessionQuestions].reverse().find(item=>item.status==='closed'||item.status==='answered');
+          if(oldestOpen)db.liveQuestions=db.liveQuestions.filter(item=>item.id!==oldestOpen.id);
+          else return json(res,429,{error:'This LIVE Q&A queue is full. The host must close or remove a question before adding another.'});
+        }
         db.liveQuestions.unshift(record);
         await saveStore();
         return json(res,201,{question:{...record,asker:safeUser(user,user.id),voteCount:0,myVote:false}});
@@ -2347,6 +2353,7 @@ async function route(req, res) {
         const voteAction=liveQuestionAction[3]==='vote'&&method==='POST';
         if(voteAction){
           if(session.liveSettings?.qaEnabled===false)return json(res,403,{error:'The host has disabled LIVE Q&A.'});
+          if(question.status==='closed')return json(res,409,{error:'This LIVE question is closed to voting.'});
           let participants;
           try{participants=await listLiveKitParticipants(session.roomName);}
           catch{return json(res,503,{error:'Minglora could not verify that you are connected to this LIVE room.'});}
