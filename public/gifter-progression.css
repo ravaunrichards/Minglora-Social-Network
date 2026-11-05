@@ -175,3 +175,12 @@
 .gp-no-earned-badge small{font-size:.72rem;color:var(--muted,#697586)}
 .gp-new-gifter-notice{margin:.75rem 0 0;padding:8px 11px;border-radius:10px;background:rgba(245,196,93,.14);color:var(--text,#273244);font-size:.82rem}
 .gp-new-gifter-notice strong{color:#a36b18;letter-spacing:.04em}
+
+
+/* Horizontal LV + Coins presentation for all 50 Gifter Levels. */
+.gp-level-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}
+.gp-level-card{min-height:68px;gap:9px}
+.gp-level-card-copy{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex:1 1 auto;min-width:0}
+.gp-level-card-copy strong{flex:0 0 auto;white-space:nowrap}
+.gp-level-card-copy small{white-space:nowrap;text-align:right}
+@media(max-width:650px){.gp-level-grid{grid-template-columns:minmax(0,1fr);gap:8px}.gp-level-card{min-height:64px;padding:8px 10px;gap:10px}.gp-level-card-copy{gap:10px}.gp-level-card-copy strong{font-size:.84rem}.gp-level-card-copy small{font-size:.76rem}}
