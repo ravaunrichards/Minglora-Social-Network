@@ -1760,7 +1760,7 @@ activeLivePinnedComment=null;
     });
     $("#live-chat-list")?.addEventListener("click",async event=>{
       const deleteButton=event.target?.closest?.("[data-live-chat-delete]");
-      if(deleteButton&&role==="host"){
+      if(deleteButton&&(role==="host"||Boolean(session.liveModerators?.includes(state.user?.id)))){
         const messageId=String(deleteButton.dataset.liveChatDelete||"");
         if(!messageId)return;
         if(!window.confirm("Remove this comment from the LIVE chat?"))return;
