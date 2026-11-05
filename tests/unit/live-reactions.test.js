@@ -57,11 +57,11 @@ test('Reaction effects are transient overlays and respect reduced-motion setting
 });
 
 test('Audio Only LIVE removes the oversized microphone and keeps the room compact', () => {
-  assert.doesNotMatch(app, /live-audio-mic-model|minglora_golden_microphone\\.gltf/);
-  assert.doesNotMatch(styles, /\\.live-audio-mic-model/);
+  assert.doesNotMatch(app, /live-audio-mic-model|minglora_golden_microphone\.gltf/);
+  assert.doesNotMatch(styles, /\.live-audio-mic-model/);
   assert.match(app, /class='live-audio-orb'/);
   assert.match(app, /class='live-audio-host-avatar'/);
-  assert.match(styles, /\\.live-player-audio-only \\.live-audio-stage\\{[\\s\\S]*?min-height:0/);
-  assert.match(styles, /\\.live-audio-scene\\{[\\s\\S]*?min-height:0/);
-  assert.match(styles, /\\.live-audio-stage \\.audio-guest-layout\\{[\\s\\S]*?height:142px/);
+  assert.match(styles, /\.live-player-audio-only \.live-audio-stage\{[\s\S]*?min-height:0/);
+  assert.match(styles, /\.live-audio-scene\{[\s\S]*?min-height:0/);
+  assert.match(styles, /\.live-audio-stage \.audio-guest-layout\{[\s\S]*?height:142px/);
 });
