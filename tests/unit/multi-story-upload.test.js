@@ -15,15 +15,15 @@ test('story uploader accepts multiple photos and videos with per-file and total 
 });
 
 test('shared media picker supports desktop multi-select and drag-and-drop', () => {
-  assert.match(app, /gallery\.multiple=maxFiles>1/);
-  assert.match(app, /const selected=\[\.\.\.gallery\.files\]/);
-  assert.match(app, /dropZone\.addEventListener\('drop'/);
-  assert.match(app, /Select multiple files at once, or drag and drop files here/);
+  assert.ok(app.includes('gallery.multiple=maxFiles>1'));
+  assert.ok(app.includes('const selected=[...gallery.files]'));
+  assert.ok(app.includes("dropZone.addEventListener('drop'"));
+  assert.ok(app.includes('Select multiple files at once, or drag and drop files here'));
 });
 
 test('profile photo and reel composers accept multiple selected files', () => {
-  assert.match(app, /createMediaPicker\(modal\.querySelector\('\[data-profile-photo-picker\]'\),\{slot:'post',maxFiles:10/);
-  assert.match(app, /createMediaPicker\(modal\.querySelector\('\[data-profile-reel-picker\]'\),\{slot:'post',maxFiles:10/);
+  assert.ok(app.includes("createMediaPicker(modal.querySelector('[data-profile-photo-picker]'),{slot:'post',maxFiles:10"));
+  assert.ok(app.includes("createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:10"));
 });
 
 test('story publishing sends all uploaded media IDs in one idempotent batch request', () => {
