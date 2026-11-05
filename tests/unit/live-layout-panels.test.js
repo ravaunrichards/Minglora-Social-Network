@@ -69,7 +69,7 @@ test('Full Screen gives the host a taller portrait stage while reserving room fo
   assert.match(styles, /max-height:min\(84dvh,780px,calc\(100dvh - 150px\)\)/);
   assert.match(styles, /width:min\(100%,60dvh,310px\)/);
   assert.match(styles, /aspect-ratio:3 \/ 4/);
-  assert.match(styles, /max-height:min\(76dvh,390px,calc\(100dvh - 142px\)\)/);
+  assert.match(styles, /max-height:min\(80dvh,410px,calc\(100dvh - 130px\)\)/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
 
