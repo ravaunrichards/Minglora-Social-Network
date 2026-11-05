@@ -66,6 +66,44 @@ test('the database exchange is atomic, idempotent, ledger-backed and deducted fr
   assert.match(balanceMigration, /available_creator_earnings_minor/);
 });
 
+test('the member wallet displays real earned and available money separately from Coins', () => {
+  assert.match(app, /api\("\/creator\/earnings"\)/);
+  assert.match(app, /REAL MONEY EARNINGS/);
+  assert.match(app, /LIFETIME EARNED/);
+  assert.match(app, /AVAILABLE MONEY/);
+  assert.match(app, /Your Minglora money balance/);
+  assert.match(app, /Minglora Coins/);
+  assert.match(app, /data-recharge-tab='earnings'/);
+  assert.match(app, /Money balance unavailable/);
+  assert.match(css, /\.wallet-money-overview/);
+  assert.match(css, /\.wallet-money-stat/);
+  assert.match(css, /@media\(max-width:650px\)[\s\S]*?\.wallet-money-overview/);
+});
+
+test('the Earnings tab shows server-backed lifetime, available, pending, paid and exchanged money', () => {
+  const earningsStart = app.indexOf('if(activeTab==="earnings"){');
+  const exchangeStart = app.indexOf('if(activeTab==="exchange"){', earningsStart);
+  assert.ok(earningsStart >= 0 && exchangeStart > earningsStart);
+  const earningsUi = app.slice(earningsStart, exchangeStart);
+  for (const label of [
+    'Lifetime earned',
+    'Available money',
+    'Payouts in progress',
+    'Already paid out',
+    'Exchanged for Coins',
+    'EARNINGS LEDGER',
+    'PAYOUT HISTORY',
+    'MONEY CONVERSIONS',
+    'No eligible gift earnings yet',
+    'No withdrawals yet',
+    'No money exchanges yet'
+  ]) assert.ok(earningsUi.includes(label), 'missing Earnings UI: ' + label);
+  assert.match(earningsUi, /creatorMoney\(earnings\.earnedMinor\|\|0\)/);
+  assert.match(earningsUi, /creatorMoney\(earnings\.availableMinor\|\|0\)/);
+  assert.match(earningsUi, /payouts\.filter\(item=>String\(item\.status\|\|""\)\.toLowerCase\(\)==="paid"\)/);
+  assert.match(earningsUi, /item\.status\|\|"available"/);
+});
+
 test('the Recharge app and service worker use matching updated cache versions', () => {
   assert.match(html, /styles\.css\?v=20261105-coin-funding-sources-1/);
   assert.match(html, /app\.js\?v=20261105-coin-funding-sources-1/);
