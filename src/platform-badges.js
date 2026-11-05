@@ -3,18 +3,22 @@ const CREATOR_HUB_ADMIN_EMAIL = 'creatorhubcreatornetwork@gmail.com';
 const SECONDARY_CREATOR_HUB_EMAIL = 'larryjones2019ersky@gmail.com';
 
 /**
- * Public role marker for the one designated Minglora platform-admin account.
- * It is presentation only; server authorization continues to use trusted
- * app_metadata and the MFA-backed session checks in server.js.
+ * Public profile role marker.
+ * The two separate Creator Hub accounts never expose administrator status on
+ * public profiles; other platform administrators retain their existing marker.
+ * Authorization is enforced separately by server-side role and MFA checks.
  */
 export function getPlatformAdminBadge(user) {
   if (!user) return null;
   const email = String(user.email || '').trim().toLowerCase();
-  const isPrimaryCreatorHubAccount =
+  const privateCreatorHubAdmin =
     String(user.id || '') === CREATOR_HUB_ADMIN_USER_ID ||
-    email === CREATOR_HUB_ADMIN_EMAIL;
-  if (!isPrimaryCreatorHubAccount || email === SECONDARY_CREATOR_HUB_EMAIL) return null;
-  return 'admin';
+    email === CREATOR_HUB_ADMIN_EMAIL ||
+    email === SECONDARY_CREATOR_HUB_EMAIL;
+  if (privateCreatorHubAdmin) return null;
+  return ['admin', 'platform_owner'].includes(String(user.role || '').toLowerCase())
+    ? 'admin'
+    : null;
 }
 
 const VERIFIED_PROFILE_EMAILS = new Set([
