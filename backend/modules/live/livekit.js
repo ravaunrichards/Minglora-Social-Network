@@ -176,3 +176,25 @@ export async function deleteLiveKitRoom(roomName) {
   const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
   await service.deleteRoom(roomName);
 }
+
+export async function removeLiveKitParticipant(roomName, identity) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName) ||
+      !identity || String(identity).length > 128) {
+    const error = new Error('A valid LIVE room and participant are required.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  const participants = await service.listParticipants(roomName);
+  if (!participants.some(participant => participant.identity === String(identity))) {
+    return { removed: false, wasConnected: false };
+  }
+  await service.removeParticipant(roomName, String(identity));
+  return { removed: true, wasConnected: true };
+}
