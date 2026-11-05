@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
-import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
+import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
@@ -2619,7 +2619,9 @@ async function route(req, res) {
               imageUrl:String(event.imageUrl||''),
               modelUrl:String(event.modelUrl||''),
               createdAt:String(event.createdAt||''),
-              sender:sender?safeUser(sender,user.id):{id:String(event.senderId||''),name:'Minglora member',username:'member'}
+              broadcastId:String(event.broadcastId||session.id),
+              sender:sender?safeUser(sender,user.id):{id:String(event.senderId||''),name:'Minglora member',username:'member'},
+              recipient:(()=>{const host=db.users.find(member=>member.id===session.hostId);return host?{id:host.id,name:host.name||'LIVE host',username:host.username||''}:{id:session.hostId,name:'LIVE host',username:''};})()
             };
           });
         return json(res,200,{events});
@@ -2652,10 +2654,11 @@ async function route(req, res) {
         const confirmedGift=result.gift||{};
         const confirmedGiftId=confirmedGift.giftTransactionId||confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
         const confirmedCoinAmount=Number(confirmedGift.coinAmount??confirmedGift.coin_amount??confirmedGift.coins??0);
+        const confirmedAt=new Date();
         if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
           try{
             const recipient=db.users.find(member=>member.id===session.hostId);
-            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId:session.hostId,recipientUsername:recipient?.username||'',giftCode:String(input.giftCode||''),giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',now:new Date()});
+            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId:session.hostId,recipientUsername:recipient?.username||'',giftCode:String(input.giftCode||''),giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',now:confirmedAt});
           }catch(error){console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
           try{
             recordLiveGiftForLeagues(db,{
@@ -2676,18 +2679,43 @@ async function route(req, res) {
               giftName:confirmedGift.giftName||confirmedGift.name||'',emoji:confirmedGift.emoji||'🎁',
               imageUrl:confirmedGift.imageUrl||confirmedGift.image_url||'',
               modelUrl:confirmedGift.modelUrl||confirmedGift.model_url||'',
-              timeZone:giftGalleryTimeZone(creator),now:new Date()
+              timeZone:giftGalleryTimeZone(creator),now:confirmedAt
             });
           }catch(error){
             console.error('[Minglora Gift Gallery] A confirmed LIVE Gift could not be added to the weekly gallery.',{giftId:String(confirmedGiftId),message:String(error?.message||'gallery update failed').slice(0,160)});
           }
         }
         if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
-          awardLiveFanClubPoints(db,{hostId:session.hostId,fanId:user.id,source:'gift',points:confirmedCoinAmount,sourceId:String(confirmedGiftId),now:new Date()});
+          awardLiveFanClubPoints(db,{hostId:session.hostId,fanId:user.id,source:'gift',points:confirmedCoinAmount,sourceId:String(confirmedGiftId),now:confirmedAt});
         }
         notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
         await saveStore();
-        return json(res,200,{gift:result.gift});
+        const liveGiftEvent=confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0?(()=>{
+          const creator=db.users.find(member=>member.id===session.hostId);
+          return {
+            id:String(confirmedGiftId),
+            broadcastId:String(session.id),
+            giftCode:String(confirmedGift.giftCode||input.giftCode||''),
+            giftName:String(confirmedGift.giftName||confirmedGift.name||input.giftCode||'Minglora Gift'),
+            coinAmount:confirmedCoinAmount,
+            emoji:String(confirmedGift.emoji||'🎁'),
+            imageUrl:String(confirmedGift.imageUrl||confirmedGift.image_url||''),
+            modelUrl:String(confirmedGift.modelUrl||confirmedGift.model_url||''),
+            createdAt:confirmedAt.toISOString(),
+            sender:{id:String(user.id),name:String(user.name||user.username||'Minglora member'),username:String(user.username||'')},
+            recipient:{id:String(session.hostId),name:String(creator?.name||'LIVE host'),username:String(creator?.username||'')}
+          };
+        })():null;
+        if(liveGiftEvent){
+          try{
+            await broadcastLiveKitData(session.roomName,{type:'minglora.live.gift',version:1,event:liveGiftEvent},'minglora-live-gift');
+          }catch(error){
+            console.warn('[Minglora LIVE gifts] Room-wide gift broadcast failed; polling remains the recovery path.',{
+              broadcastId:session.id,giftId:String(confirmedGiftId),message:String(error?.message||'broadcast failed').slice(0,180)
+            });
+          }
+        }
+        return json(res,200,{gift:result.gift,event:liveGiftEvent,giftEventId:liveGiftEvent?.id||null});
       }
       if(method==='GET'&&p==='/api/admin/badge-controls/members'){
         const adminEmail=normalizeEmail(user.email);

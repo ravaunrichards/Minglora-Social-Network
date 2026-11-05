@@ -53,6 +53,6 @@ test('gift send confirmation explains why ordinary promotional Coins do not crea
 });
 
 test('the app bundle and service-worker cache are refreshed for the gift balance interface', () => {
-  assert.match(html, /app\.js\?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1-creator-gift-balance-1/);
+  assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
   assert.match(worker, /minglora-shell-v93-flow-layout-safety-1-single-username-verification-1-creator-gift-balance-1/);
 });

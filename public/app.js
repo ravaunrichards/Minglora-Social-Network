@@ -1079,6 +1079,47 @@ function stopLiveGiftEvents(){
   liveGiftEventsLastSeenAt='';
   liveGiftSeenEventIds.clear();
 }
+function rememberLiveGiftEvent(eventId){
+  const id=String(eventId||'').trim();
+  if(!id||liveGiftSeenEventIds.has(id))return false;
+  liveGiftSeenEventIds.add(id);
+  if(liveGiftSeenEventIds.size>500){
+    const previous=Array.from(liveGiftSeenEventIds);
+    previous.slice(0,previous.length-300).forEach(item=>liveGiftSeenEventIds.delete(item));
+  }
+  return true;
+}
+function presentLiveGiftEvent(event){
+  if(!event||typeof event!=='object')return false;
+  if(event.broadcastId&&String(event.broadcastId)!==String(activeLiveSession?.id||''))return false;
+  const eventId=String(event.id||event.giftTransactionId||event.gift_transaction_id||'');
+  if(!rememberLiveGiftEvent(eventId))return false;
+  const catalogueGift=liveGiftCatalogue.find(item=>item.code===String(event.giftCode||''));
+  const gift=catalogueGift?{
+    ...catalogueGift,
+    code:catalogueGift.code||event.giftCode,
+    name:catalogueGift.name||event.giftName||'Minglora Gift',
+    image_url:catalogueGift.image_url||event.imageUrl||event.image_url||'',
+    model_url:catalogueGift.model_url||event.modelUrl||event.model_url||'',
+    emoji:catalogueGift.emoji||event.emoji||'🎁'
+  }:{
+    code:String(event.giftCode||''),
+    name:String(event.giftName||'Minglora Gift'),
+    image_url:String(event.imageUrl||event.image_url||''),
+    model_url:String(event.modelUrl||event.model_url||''),
+    emoji:String(event.emoji||'🎁'),
+    animation_preset:String(event.animationPreset||'gift-reveal'),
+    animation_duration_ms:Number(event.animationDurationMs)||2600
+  };
+  const stage=$('#live-video-stage');
+  if(stage)window.MingloraGiftFX?.mount(stage,gift);
+  const sender=String(event.sender?.name||event.sender?.username||'A Minglora member');
+  const recipient=String(event.recipient?.name||activeLiveSession?.host?.name||'');
+  if(String(event.sender?.id||'')!==String(state.user?.id||''))toast(sender+' sent '+gift.name+(recipient?' to '+recipient:'')+' 🎁');
+  const createdAt=String(event.createdAt||'');
+  if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
+  return true;
+}
 async function refreshLiveGiftEvents(session){
   if(liveGiftEventsBusy||!session?.id||activeLiveSession?.id!==session.id)return;
   liveGiftEventsBusy=true;
@@ -1086,35 +1127,7 @@ async function refreshLiveGiftEvents(session){
     const since=liveGiftEventsLastSeenAt||new Date(Date.now()-10000).toISOString();
     const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/gifts?since='+encodeURIComponent(since));
     const events=Array.isArray(result.events)?result.events:[];
-    for(const event of events){
-      const eventId=String(event.id||'');
-      if(!eventId||liveGiftSeenEventIds.has(eventId))continue;
-      liveGiftSeenEventIds.add(eventId);
-      const createdAt=String(event.createdAt||'');
-      if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
-      if(String(event.sender?.id||'')===String(state.user?.id||''))continue;
-      const catalogueGift=liveGiftCatalogue.find(item=>item.code===event.giftCode);
-      const gift=catalogueGift?{
-        ...catalogueGift,
-        name:catalogueGift.name||event.giftName||'Gift',
-        image_url:catalogueGift.image_url||event.imageUrl||'',
-        model_url:catalogueGift.model_url||event.modelUrl||'',
-        emoji:catalogueGift.emoji||event.emoji||'🎁'
-      }:{
-        code:event.giftCode,
-        name:event.giftName||'Gift',
-        image_url:event.imageUrl||'',
-        model_url:event.modelUrl||'',
-        emoji:event.emoji||'🎁'
-      };
-      const stage=$('#live-video-stage');
-      if(stage)window.MingloraGiftFX?.mount(stage,gift);
-      toast(String(event.sender?.name||event.sender?.username||'A viewer')+' sent '+gift.name+' 🎁');
-    }
-    if(liveGiftSeenEventIds.size>500){
-      const previous=Array.from(liveGiftSeenEventIds);
-      previous.slice(0,previous.length-300).forEach(id=>liveGiftSeenEventIds.delete(id));
-    }
+    for(const event of events)presentLiveGiftEvent(event);
   }catch(error){
     console.warn('[Minglora LIVE] Confirmed gift activity could not be refreshed.',error?.message||error);
   }finally{liveGiftEventsBusy=false;}
@@ -1920,7 +1933,9 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();stopLiveGiftEvents();liveGiftEventsLastSeenAt=new Date(Date.now()-10000).toISOString();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();stopLiveGiftEvents();
+  window.MingloraGiftFX?.prime();
+  liveGiftEventsLastSeenAt=new Date(Date.now()-10000).toISOString();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
   try{
     const progression=await api('/gifter-progression/overview');
     state.user.gifterBadge=progression.badge||null;
@@ -2134,9 +2149,15 @@ activeLivePinnedComment=null;
     bubble.addEventListener("animationend",()=>bubble.remove(),{once:true});
   };
   if(client.RoomEvent.DataReceived)room.on(client.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
-    if(!payload||!participant?.identity)return;
+    if(!payload)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
+    if(topic==="minglora-live-gift"&&!participant?.identity&&packet?.type==="minglora.live.gift"&&packet.version===1){
+      const event=packet.event;
+      if(event&&String(event.broadcastId||"")===String(session.id))presentLiveGiftEvent(event);
+      return;
+    }
+    if(!participant?.identity)return;
     if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&typeof packet.enabled==='boolean'){
       if(packet.setting==='guestCamera'){
         activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
@@ -2675,6 +2696,20 @@ activeLivePinnedComment=null;
             ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})})
             :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift,fundingSource})});
           const gift=sent.gift;
+          const transactionId=sent.event?.id||sent.giftEventId||gift?.giftTransactionId||gift?.transactionId||gift?.transaction_id||gift?.id;
+          presentLiveGiftEvent(sent.event||{
+            id:String(transactionId||""),
+            broadcastId:session.id,
+            giftCode:String(gift?.giftCode||button.dataset.liveGift),
+            giftName:String(gift?.giftName||gift?.name||catalogGift.name||"Minglora Gift"),
+            coinAmount:Number(gift?.coinAmount||gift?.coin_amount||catalogGift.coin_price||0),
+            emoji:String(gift?.emoji||catalogGift.emoji||"🎁"),
+            imageUrl:String(gift?.imageUrl||gift?.image_url||catalogGift.image_url||""),
+            modelUrl:String(gift?.modelUrl||gift?.model_url||catalogGift.model_url||""),
+            createdAt:new Date().toISOString(),
+            sender:{id:state.user?.id,name:state.user?.name,username:state.user?.username},
+            recipient:{id:session.hostId,name:session.host?.name||"LIVE host",username:session.host?.username||""}
+          });
           const giftFundingNotice=gift.fundingSource==="promo"?" · ordinary promotional Coins (no cash earnings)":gift.fundingSource==="admin_promotional"?" · cash-reserved Admin Promotional gift":"";
           toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins"+giftFundingNotice);
           const [walletResult,promoResult]=await Promise.allSettled([api("/coins/wallet"),api("/coins/promotional-gift-wallet")]);
@@ -2684,7 +2719,7 @@ activeLivePinnedComment=null;
             const promo=promoResult.value.wallet||{};
             $("#live-promo-fund-availability").textContent="Promotional wallet: "+Number(promo.promotionalCoins||0).toLocaleString()+" Coins · cash reserve available: USD "+(Number(promo.availableMinor||0)/100).toFixed(2)+".";
           }
-          const stage=$("#live-video-stage");if(stage)window.MingloraGiftFX?.mount(stage,catalogGift);
+
         }catch(error){toast(error.message);}finally{button.disabled=false;}
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));

@@ -26,8 +26,8 @@ test('the admin verification control explicitly describes one username check', (
 });
 
 test('the app keeps its established asset URL and refreshes the service worker cache', () => {
-  assert.ok(html.includes('/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1'));
-  assert.ok(serviceWorker.includes('/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1'));
+  assert.ok(html.includes('/app.js?v=20261105-roomwide-live-gifts-1'));
+  assert.ok(serviceWorker.includes('/app.js?v=20261105-roomwide-live-gifts-1'));
   assert.ok(serviceWorker.includes("cache:'no-cache'"));
   assert.ok(serviceWorker.includes('minglora-shell-v93-flow-layout-safety-1-single-username-verification-1'));
 });

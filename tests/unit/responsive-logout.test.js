@@ -14,7 +14,7 @@ const mobileCss = fs.readFileSync(path.join(root, 'public/mobile-layout.css'), '
 
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
   assert.ok(html.includes('href="/styles.css?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1"'));
-  assert.ok(html.includes('src="/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1-creator-gift-balance-1"'));
+  assert.ok(html.includes('src="/app.js?v=20261105-roomwide-live-gifts-1"'));
   assert.ok(html.includes('src="/settings.js?v=20261105-admin-mfa-qr-fix-2"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
 
@@ -56,7 +56,7 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.match(css, /\.settings-logout-button/);
   assert.match(serviceWorker, /minglora-shell-v93-flow-layout-safety-1/);
   assert.ok(serviceWorker.includes('styles.css?v=20261105-live-layout-expand-1'));
-  assert.ok(serviceWorker.includes('app.js?v=20261105-live-layout-expand-1'));
+  assert.ok(serviceWorker.includes('app.js?v=20261105-roomwide-live-gifts-1'));
   assert.ok(serviceWorker.includes('settings.js?v=20261105-admin-mfa-qr-fix-2'));
   assert.ok(serviceWorker.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(mobileCss.includes('.top-actions #settings-btn{display:none!important}'));

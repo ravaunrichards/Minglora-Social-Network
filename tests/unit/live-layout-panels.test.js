@@ -132,8 +132,8 @@ test('LIVE gift animations use server-confirmed gift ledger events, not client m
   assert.ok(app.includes('function stopLiveGiftEvents()'), 'missing LIVE gift polling cleanup');
   assert.ok(app.includes("'/gifts?since='") && app.includes('refreshLiveGiftEvents(session)'), 'poller must fetch newer confirmed events');
   assert.ok(app.includes('window.MingloraGiftFX?.mount(stage,gift)'), 'confirmed gifts must animate in the LIVE room');
-  assert.ok(!app.includes('topic==="minglora-live-gift"'), 'untrusted client gift broadcasts must not drive room animations');
-  assert.ok(!app.includes('topic:"minglora-live-gift"'), 'untrusted client gift publishers must be removed');
+  assert.ok(app.includes('topic==="minglora-live-gift"&&!participant?.identity'), 'only server-originated room gift packets animate immediately');
+  assert.ok(server.includes("broadcastLiveKitData(session.roomName,{type:'minglora.live.gift',version:1,event:liveGiftEvent},'minglora-live-gift')"), 'server must broadcast only its confirmed gift ledger event');
 });
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
   for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {

@@ -1,4 +1,4 @@
-import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient, DataPacket_Kind } from 'livekit-server-sdk';
 
 // LiveKit protocol TrackSource enum: CAMERA=1, MICROPHONE=2.
 export const LIVEKIT_TRACK_SOURCE = Object.freeze({ CAMERA: 1, MICROPHONE: 2, SCREEN_SHARE: 3 });
@@ -27,6 +27,38 @@ function config() {
 export function isLiveKitConfigured() {
   const settings = config();
   return Boolean(settings.serverUrl && settings.clientUrl && settings.apiKey && settings.apiSecret);
+}
+
+export async function broadcastLiveKitData(roomName, packet, topic = 'minglora-live-gift') {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName) ||
+      !topic || String(topic).length > 128 ||
+      !packet || typeof packet !== 'object' || Array.isArray(packet)) {
+    const error = new Error('A valid LIVE room, data packet and topic are required.');
+    error.status = 400;
+    throw error;
+  }
+  let payload;
+  try {
+    payload = new TextEncoder().encode(JSON.stringify(packet));
+  } catch {
+    const error = new Error('The LIVE data packet could not be serialized.');
+    error.status = 400;
+    throw error;
+  }
+  if (payload.byteLength > 12 * 1024) {
+    const error = new Error('The LIVE data packet is too large to broadcast.');
+    error.status = 413;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  await service.sendData(roomName, payload, DataPacket_Kind.RELIABLE, { topic: String(topic) });
+  return { sent: true, byteLength: payload.byteLength, topic: String(topic) };
 }
 
 
