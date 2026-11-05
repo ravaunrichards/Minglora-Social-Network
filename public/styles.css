@@ -3972,3 +3972,103 @@ body.auth-mode .auth-screen{
   .live-guest-seat-meta small{font-size:7px}
   .live-audio-stage .audio-guest-layout{height:180px}
 }
+
+/* LIVE settings drawer — optional tools no longer consume the room's chat column */
+.live-tools-backdrop{
+  position:fixed;inset:0;z-index:4200;display:flex;justify-content:flex-end;align-items:stretch;
+  background:rgba(3,7,16,.66);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+}
+.live-tools-drawer{
+  display:flex;flex-direction:column;width:min(100%,450px);height:100dvh;max-height:100dvh;min-height:0;
+  overflow:hidden;border-left:1px solid rgba(255,255,255,.13);
+  color:#f5f7fc;background:linear-gradient(160deg,#151e2c 0%,#0c111b 58%,#101a2b 100%);
+  box-shadow:-22px 0 70px rgba(0,0,0,.42);outline:none;
+  animation:live-tools-in .22s ease-out;
+}
+@keyframes live-tools-in{from{transform:translateX(24px);opacity:.5}to{transform:translateX(0);opacity:1}}
+.live-tools-header{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex:none;
+  padding:19px 18px 15px;border-bottom:1px solid rgba(255,255,255,.11);
+  background:linear-gradient(120deg,rgba(75,110,171,.21),rgba(21,31,49,.1));
+}
+.live-tools-header>div{display:grid;gap:4px;min-width:0}
+.live-tools-eyebrow{color:#7be8d0;font-size:9px;font-weight:950;letter-spacing:.18em}
+.live-tools-header h2{margin:0;color:#fff;font-size:19px;line-height:1.2}
+.live-tools-header small{color:#aeb9ca;font-size:11px}
+.live-tools-close{
+  display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;padding:0;
+  border:1px solid rgba(255,255,255,.16);border-radius:50%;color:#fff;
+  background:rgba(255,255,255,.08);font-size:27px;line-height:1;cursor:pointer;
+}
+.live-tools-close:hover{background:rgba(255,255,255,.16)}
+.live-tools-shortcuts{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;flex:none;
+  padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);
+}
+.live-tools-shortcuts button{
+  min-width:0;padding:9px 5px;border:1px solid rgba(160,185,226,.22);border-radius:10px;
+  color:#dfe8f7;background:rgba(255,255,255,.055);font-size:10px;font-weight:850;line-height:1.25;
+  cursor:pointer;
+}
+.live-tools-shortcuts button:hover,.live-tools-shortcuts button:focus-visible{
+  border-color:rgba(108,232,204,.75);background:rgba(64,171,157,.13);outline:none;
+}
+.live-tools-content{
+  flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;
+  padding:12px 14px calc(24px + env(safe-area-inset-bottom));
+}
+.live-tools-content .live-speaker-request-panel,
+.live-tools-content .live-reward-panel,
+.live-tools-content .live-gift-panel,
+.live-tools-content .live-tools-card{
+  margin:0 0 13px;padding:13px;border:1px solid rgba(161,180,214,.17);
+  border-radius:15px;background:rgba(255,255,255,.045);
+}
+.live-tools-content .live-speaker-request-panel:last-child,
+.live-tools-content .live-reward-panel:last-child,
+.live-tools-content .live-gift-panel:last-child,
+.live-tools-content .live-tools-card:last-child{margin-bottom:0}
+.live-tools-content .live-speaker-request-panel{color:#f3f6fc}
+.live-tools-content .live-speaker-panel-heading{align-items:flex-start}
+.live-tools-content .live-speaker-panel-heading small{color:#aeb9ca}
+.live-tools-content .live-reward-heading strong,
+.live-tools-content .live-gift-heading strong{color:#fff}
+.live-tools-content .live-reward-heading small,
+.live-tools-content .live-reward-note,
+.live-tools-content .live-gift-heading span,
+.live-tools-content .live-gift-sort-label{color:#aeb9ca}
+.live-tools-content .live-reward-create-form{border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.035)}
+.live-tools-content .live-reward-create-form label{color:#e8edf7}
+.live-tools-content .live-reward-create-form input,
+.live-tools-content .live-reward-create-form select,
+.live-tools-content .live-gift-search,
+.live-tools-content .live-gift-sort-label select{
+  border:1px solid rgba(175,194,226,.22);color:#f5f7fc;background:#121b2b;
+}
+.live-tools-content .live-reward-create-form option,
+.live-tools-content .live-gift-sort-label option{color:#111;background:#fff}
+.live-tools-content .live-gift-button{background:linear-gradient(145deg,#202b3d,#131b28)}
+.live-tools-content .live-gift-host-note{color:#f5f7fc}
+.live-tools-content .live-gift-host-note p{color:#b4bfd0}
+.live-tools-backdrop.hidden{display:none!important}
+body.live-tools-open{overflow:hidden}
+.live-tools-content .is-focused{outline-offset:2px}
+.live-control-button#live-settings-toggle .live-control-icon{
+  border-color:rgba(119,226,205,.5);background:linear-gradient(155deg,#316a68,#203a4c);color:#dffff8;
+}
+@media(max-width:760px){
+  .live-tools-backdrop{align-items:flex-end;justify-content:stretch}
+  .live-tools-drawer{
+    width:100%;height:min(91dvh,900px);max-height:91dvh;border:1px solid rgba(255,255,255,.13);
+    border-bottom:0;border-radius:20px 20px 0 0;animation:live-tools-up .2s ease-out;
+  }
+  @keyframes live-tools-up{from{transform:translateY(28px);opacity:.6}to{transform:translateY(0);opacity:1}}
+  .live-tools-header{padding:15px 15px 12px}
+  .live-tools-header h2{font-size:17px}
+  .live-tools-shortcuts{padding:9px 10px;gap:5px}
+  .live-tools-shortcuts button{font-size:9px;padding:8px 3px}
+  .live-tools-content{padding:10px 10px calc(22px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){
+  .live-tools-drawer{animation:none}
+}
