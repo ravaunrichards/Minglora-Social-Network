@@ -5,11 +5,10 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [app, html, serviceWorker, profileBadges, adminCentre] = await Promise.all([
+const [app, html, serviceWorker, adminCentre] = await Promise.all([
   read('public/app.js'),
   read('public/index.html'),
   read('public/sw.js'),
-  read('public/profile-badges.js'),
   read('public/admin-centre.js')
 ]);
 
