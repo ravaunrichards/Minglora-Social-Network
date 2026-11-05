@@ -13,7 +13,7 @@ const styles = read('public/styles.css');
 test('LIVE likes have a white-to-red heart button and also respond to stage taps', () => {
   assert.match(app, /class='live-stage-topbar'/);
   assert.match(app, /class='live-host-profile'/);
-  assert.match(app, /class='live-like-count'/);
+  assert.match(app, /class='live-like-control live-like-count'/);
   assert.match(app, /id='live-reaction-count'/);
   assert.match(app, /id='live-heart-like'/);
   assert.match(app, /api\('\/live\/sessions\/'\+encodeURIComponent\(session\.id\)\+'\/likes'/);
