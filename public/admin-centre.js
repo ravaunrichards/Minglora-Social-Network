@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -72,6 +72,60 @@
             <strong>Member support inbox</strong><small>Review support tickets and respond to members.</small>
           </button>
         </div>
+        <section class="admin-marketing-budget admin-badge-controls" id="admin-badge-controls" aria-labelledby="admin-badge-controls-title">
+          <div class="admin-marketing-budget-heading">
+            <div>
+              <strong id="admin-badge-controls-title">Profile verification &amp; gifter badge controls</strong>
+              <p>Search a Minglora account once, then manage its blue profile check and 50-level gifter badges independently.</p>
+            </div>
+            <button type="button" class="secondary" id="admin-badge-members-refresh">Refresh accounts</button>
+          </div>
+          <div class="admin-badge-member-search">
+            <label for="admin-badge-member-search-input">Find an account by email, username or display name</label>
+            <div class="admin-member-search-row">
+              <input id="admin-badge-member-search-input" type="search" maxlength="80" autocomplete="off" placeholder="Search email or @username">
+              <button type="button" class="secondary" id="admin-badge-member-find">Search</button>
+            </div>
+            <p id="admin-badge-member-search-status" aria-live="polite">Loading Minglora member accounts…</p>
+          </div>
+          <div class="admin-badge-control-grid">
+            <form id="admin-profile-verification-form" class="admin-badge-control-card">
+              <div><strong>Profile verification</strong><p>Set the blue verified check or update the member’s verification status.</p></div>
+              <label for="admin-profile-verification-member">Member account</label>
+              <select id="admin-profile-verification-member" name="targetUserId" required><option value="">Loading accounts…</option></select>
+              <label for="admin-profile-verification-status">Verification status</label>
+              <select id="admin-profile-verification-status" name="verificationStatus" required>
+                <option value="verified">Verified — blue check ✔️</option>
+                <option value="not_submitted">Remove verification — not submitted</option>
+                <option value="needs_information">Needs more information</option>
+                <option value="pending">Pending review</option>
+                <option value="rejected">Rejected</option>
+                <option value="suspended">Suspend verification</option>
+              </select>
+              <label for="admin-profile-verification-note">Admin review note</label>
+              <textarea id="admin-profile-verification-note" name="note" rows="2" maxlength="1000" required placeholder="Record the reason for this verification decision"></textarea>
+              <button type="submit" class="primary" id="admin-profile-verification-submit">Save verification status</button>
+              <p id="admin-profile-verification-status-message" aria-live="polite"></p>
+            </form>
+            <div class="admin-badge-control-card">
+              <div><strong>Gifter badge management</strong><p>Grant any level from 1–50, unlock all 50, or reset the progression badge state.</p></div>
+              <label for="admin-gifter-badge-member">Member account</label>
+              <select id="admin-gifter-badge-member" name="targetUserId" required><option value="">Loading accounts…</option></select>
+              <label for="admin-gifter-badge-level">Grant a specific level</label>
+              <input id="admin-gifter-badge-level" type="number" min="1" max="50" step="1" inputmode="numeric" value="50">
+              <label for="admin-gifter-badge-note">Admin award / reset note</label>
+              <textarea id="admin-gifter-badge-note" rows="2" maxlength="240" placeholder="Reason for the admin badge action"></textarea>
+              <div class="admin-badge-action-row">
+                <button type="button" class="secondary" id="admin-gifter-badge-grant">Grant selected level</button>
+                <button type="button" class="primary" id="admin-gifter-badge-unlock-all">Unlock all 50 levels</button>
+                <button type="button" class="secondary" id="admin-gifter-badge-reset">Reset badge progress</button>
+              </div>
+              <p id="admin-gifter-badge-status-message" aria-live="polite"></p>
+              <div id="admin-gifter-badge-current-status" class="admin-gifter-badge-current-status" aria-live="polite">Select an account to inspect its badge status.</div>
+            </div>
+          </div>
+          <p class="admin-badge-safety-note">Admin-awarded badges do not create gift transactions, count as Coin spending, or change Main Coins, promotional wallets, or any financial balance. Reset starts a new gifter progression period while retaining the original gift ledger and lifetime gift history.</p>
+        </section>
         <section class="admin-marketing-budget" id="admin-campaign-coins-wallet" aria-labelledby="admin-campaign-coins-wallet-title">
           <div class="admin-marketing-budget-heading">
             <div><strong id="admin-campaign-coins-wallet-title">Admin Promotional Gift Wallet</strong>
@@ -510,6 +564,55 @@
         if (submit) submit.disabled = false;
       }
     });
+    const badgeMemberSearch = panel.querySelector('#admin-badge-member-search-input');
+    panel.querySelector('#admin-badge-member-find')?.addEventListener('click', () => {
+      loadAdminBadgeMembers(panel, String(badgeMemberSearch?.value || '').trim());
+    });
+    panel.querySelector('#admin-badge-members-refresh')?.addEventListener('click', () => {
+      if (badgeMemberSearch) badgeMemberSearch.value = '';
+      loadAdminBadgeMembers(panel, '');
+    });
+    badgeMemberSearch?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadAdminBadgeMembers(panel, String(badgeMemberSearch.value || '').trim());
+      }
+    });
+    panel.querySelector('#admin-profile-verification-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberId = String(form.querySelector('#admin-profile-verification-member')?.value || '');
+      const verificationStatus = String(form.querySelector('#admin-profile-verification-status')?.value || '');
+      const note = String(form.querySelector('#admin-profile-verification-note')?.value || '').trim().slice(0,1000);
+      const status = panel.querySelector('#admin-profile-verification-status-message');
+      const button = panel.querySelector('#admin-profile-verification-submit');
+      if (!memberId || note.length < 5) {
+        if (status) status.textContent = 'Choose a member and enter a review note of at least five characters.';
+        return;
+      }
+      const memberOption = form.querySelector('#admin-profile-verification-member option:checked');
+      const memberLabel = memberOption?.textContent || 'the selected member';
+      if (!window.confirm('Set ' + memberLabel + ' to "' + verificationStatus + '"? This action will be recorded in the verification audit.')) return;
+      if (button) button.disabled = true;
+      if (status) status.textContent = 'Saving profile verification…';
+      try {
+        const result = await adminCentreApi('/admin/profile-verification/set', {
+          method:'POST',
+          body:JSON.stringify({targetUserId:memberId,verificationStatus,note})
+        });
+        if (status) status.textContent = 'Saved: @' + escapeText(result.member?.username || 'member') +
+          ' is now ' + escapeText(result.member?.verificationStatus || verificationStatus) +
+          (result.member?.verificationBadge === 'blue' ? ' with the blue verified check ✔️.' : '.');
+        await loadAdminBadgeMembers(panel, String(badgeMemberSearch?.value || '').trim());
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Profile verification could not be updated.';
+      } finally { if (button) button.disabled = false; }
+    });
+    panel.querySelector('#admin-gifter-badge-member')?.addEventListener('change', () => loadAdminGifterBadgeStatus(panel));
+    panel.querySelector('#admin-gifter-badge-grant')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'grant_level'));
+    panel.querySelector('#admin-gifter-badge-unlock-all')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'unlock_all'));
+    panel.querySelector('#admin-gifter-badge-reset')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'reset'));
+    if (unlocked) loadAdminBadgeMembers(panel, '');
     panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => startAdminMfaEnrollment(panel));
     panel.querySelector('#admin-centre-refresh-moderation')?.addEventListener('click', () => loadAdminModerationQueue(panel));
     panel.querySelector('#admin-centre-refresh-support')?.addEventListener('click', () => loadAdminSupportInbox(panel));
@@ -604,6 +707,109 @@
         } catch (error) { window.alert(error.message); button.disabled = false; }
       }));
     } catch (error) { target.textContent = error.message || 'Support inbox could not be loaded.'; }
+  }
+
+  async function loadAdminBadgeMembers(panel, search = '') {
+    const status = panel.querySelector('#admin-badge-member-search-status');
+    const verificationSelect = panel.querySelector('#admin-profile-verification-member');
+    const gifterSelect = panel.querySelector('#admin-gifter-badge-member');
+    if (!verificationSelect || !gifterSelect) return;
+    if (status) status.textContent = search ? 'Searching Minglora accounts…' : 'Loading Minglora member accounts…';
+    verificationSelect.innerHTML = '<option value="">Loading accounts…</option>';
+    gifterSelect.innerHTML = '<option value="">Loading accounts…</option>';
+    try {
+      const result = await adminCentreApi('/admin/badge-controls/members?search=' + encodeURIComponent(search));
+      const members = Array.isArray(result.members) ? result.members : [];
+      const options = '<option value="">Choose a member account</option>' + members.map(member => {
+        const name = member.displayName || member.username || 'Minglora member';
+        const username = member.username ? ' · @' + member.username : '';
+        const email = member.email ? ' · ' + member.email : '';
+        const label = name + username + email + ' · ' + (member.verificationStatus || 'not_submitted');
+        return '<option value="' + escapeText(member.id) + '">' + escapeText(label) + '</option>';
+      }).join('');
+      verificationSelect.innerHTML = options;
+      gifterSelect.innerHTML = options;
+      const preferred = members.find(member => String(member.email || '').toLowerCase() === 'creatorhubcreatornetwork@gmail.com');
+      if (preferred) {
+        verificationSelect.value = preferred.id;
+        gifterSelect.value = preferred.id;
+      }
+      if (status) status.textContent = (search ? 'Search results' : 'Available accounts') + ' · ' +
+        members.length + ' member' + (members.length === 1 ? '' : 's') + ' shown.';
+      await loadAdminGifterBadgeStatus(panel);
+    } catch (error) {
+      verificationSelect.innerHTML = '<option value="">Account list unavailable</option>';
+      gifterSelect.innerHTML = '<option value="">Account list unavailable</option>';
+      if (status) status.textContent = error.message || 'Minglora member accounts could not be loaded.';
+    }
+  }
+
+  async function loadAdminGifterBadgeStatus(panel) {
+    const targetUserId = String(panel.querySelector('#admin-gifter-badge-member')?.value || '');
+    const target = panel.querySelector('#admin-gifter-badge-current-status');
+    if (!target) return;
+    if (!targetUserId) {
+      target.textContent = 'Select an account to inspect its badge status.';
+      return;
+    }
+    target.textContent = 'Loading current gifter badge status…';
+    try {
+      const result = await adminCentreApi('/admin/gifter-badges/status?userId=' + encodeURIComponent(targetUserId));
+      const member = result.member || {};
+      const badge = result.badge || null;
+      const current = result.current || {};
+      const override = result.override || {};
+      target.innerHTML =
+        '<strong>' + escapeText(member.displayName || member.username || 'Minglora member') + '</strong>' +
+        '<small>@' + escapeText(member.username || 'member') + ' · ' + escapeText(member.email || '') + '</small>' +
+        '<p>Current gifter level: <b>' + Number(current.level || 0) + ' / 50</b> · Lifetime Coins sent: <b>' +
+        Number(current.totalCoinsSent || 0).toLocaleString() + '</b></p>' +
+        '<p>Badge source: <b>' + escapeText(current.badgeSource || 'none') + '</b> · Admin granted level: <b>' +
+        Number(override.grantedLevel || 0) + '</b></p>' +
+        (override.progressionResetAt ? '<small>Last progression reset: ' + escapeText(override.progressionResetAt) + '</small>' : '') +
+        (badge?.adminAwarded ? '<span class="admin-gifter-awarded-label">ADMIN AWARDED</span>' : '');
+    } catch (error) {
+      target.textContent = error.message || 'Gifter badge status could not be loaded.';
+    }
+  }
+
+  async function submitAdminGifterBadgeAction(panel, mode) {
+    const targetUserId = String(panel.querySelector('#admin-gifter-badge-member')?.value || '');
+    const level = Number(panel.querySelector('#admin-gifter-badge-level')?.value);
+    const noteInput = panel.querySelector('#admin-gifter-badge-note');
+    const note = String(noteInput?.value || '').trim().slice(0,240);
+    const status = panel.querySelector('#admin-gifter-badge-status-message');
+    const button = panel.querySelector(mode === 'unlock_all' ? '#admin-gifter-badge-unlock-all' :
+      mode === 'reset' ? '#admin-gifter-badge-reset' : '#admin-gifter-badge-grant');
+    const memberOption = panel.querySelector('#admin-gifter-badge-member option:checked');
+    const memberLabel = memberOption?.textContent || 'the selected member';
+    if (!targetUserId || (mode === 'grant_level' && (!Number.isSafeInteger(level) || level < 1 || level > 50)) || note.length < 5) {
+      if (status) status.textContent = 'Choose a member, provide a valid level when granting, and write an admin note of at least five characters.';
+      return;
+    }
+    const prompt = mode === 'unlock_all'
+      ? 'Unlock all 50 gifter badge levels for ' + memberLabel + '? This does not add gift spend or change any Coin balance.'
+      : mode === 'reset'
+        ? 'Reset badge progress for ' + memberLabel + '? Admin awards will be cleared and new progression will start from zero. Existing gift history and lifetime Coins sent are preserved.'
+        : 'Grant gifter Level ' + level + ' to ' + memberLabel + '? This is an admin award, not a gift-spend reward.';
+    if (!window.confirm(prompt)) return;
+    if (button) button.disabled = true;
+    if (status) status.textContent = mode === 'reset' ? 'Resetting gifter badge progress…' : 'Saving admin gifter badge award…';
+    try {
+      const result = await adminCentreApi('/admin/gifter-badges/manage', {
+        method:'POST',
+        body:JSON.stringify({targetUserId,mode,level:mode === 'grant_level' ? level : null,note})
+      });
+      const current = result.current || {};
+      if (status) status.textContent = mode === 'reset'
+        ? 'Badge progress reset. Original gift records and lifetime history remain intact.'
+        : mode === 'unlock_all'
+          ? 'All 50 gifter badge levels are unlocked for ' + (result.member?.email || memberLabel) + '.'
+          : 'Level ' + Number(current.level || level) + ' admin-awarded to ' + (result.member?.email || memberLabel) + '.';
+      await loadAdminGifterBadgeStatus(panel);
+    } catch (error) {
+      if (status) status.textContent = error.message || 'The gifter badge action could not be completed.';
+    } finally { if (button) button.disabled = false; }
   }
 
   function adminTotpQrSource(value) {
