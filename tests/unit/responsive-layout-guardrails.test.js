@@ -30,12 +30,12 @@ test('shared content containers can shrink without pushing the page out of align
   assert.ok(ruleFor(css, '.profile-tabs-list').includes('overflow-x:auto'));
 });
 
-test('phone overlays stay clear of the fixed bottom navigation and device safe areas', async () => {
-  const css = await read('public/styles.css');
-  assert.ok(css.includes('body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}'));
-  assert.ok(css.includes('#message-window-dock{bottom:calc(60px + env(safe-area-inset-bottom))!important'));
-  assert.ok(css.includes('.toast{bottom:calc(72px + env(safe-area-inset-bottom))}'));
-  assert.ok(css.includes('@media(max-width:760px){.mobile-nav{height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}}'));
+test('phone navigation remains in page flow and respects device safe areas', async () => {
+  const mobile = await read('public/mobile-layout.css');
+  assert.ok(mobile.includes('body{padding-bottom:env(safe-area-inset-bottom)!important}'));
+  assert.ok(mobile.includes('.mobile-nav{position:static!important'));
+  assert.ok(mobile.includes('calc(8px + env(safe-area-inset-bottom))'));
+  assert.doesNotMatch(mobile,/\.mobile-nav\{position:fixed/);
 });
 
 test('desktop navigation is centred in the available lane between search and notifications', async () => {
@@ -93,7 +93,7 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   assert.ok(worker.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(worker.includes('/app.js?v=20261105-live-layout-expand-1'));
   assert.ok(worker.includes('/meetwave.css?v=20261105-flow-dialogs-1'));
-  assert.ok(mobile.includes('.mobile-nav>button{display:flex;flex:1 1 20%;max-width:20%'));
+  assert.ok(mobile.includes('.mobile-nav>button{display:flex;flex:none;width:100%;max-width:100%'));
   assert.ok(mobile.includes('.mobile-hub-grid'));
   assert.ok(mobile.includes('env(safe-area-inset-bottom)'));
 });

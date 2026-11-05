@@ -49,7 +49,7 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   assert.ok(nav.includes('data-view="more"'), 'More is the fifth primary destination');
   assert.ok(nav.includes('id="mobile-more-nav"'), 'More is a proper navigation item');
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
-  assert.ok(html.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
+  assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
 });
 test('utility rail and header actions use the matching rendered icon assets', () => {
   for (const icon of ['live', 'recharge', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
@@ -81,7 +81,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
+  assert.match(serviceWorker, /minglora-shell-v93-flow-layout-safety-1/);
   assert.match(serviceWorker, /styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });

@@ -58,7 +58,7 @@ test('static shell cache is versioned for the upgraded discovery cards', async (
   const worker = await read('public/sw.js');
   assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
   assert.match(html, /app\.js\?v=20261105-live-layout-expand-1/);
-  assert.match(worker, /minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
+  assert.match(worker, /minglora-shell-v93-flow-layout-safety-1/);
 });
 
 test('outside profile cards preserve the full 3:1 saved cover and uncropped avatar',async()=>{

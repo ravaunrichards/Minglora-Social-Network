@@ -48,15 +48,16 @@ test('Settings sign-out invokes the existing shared sign-out and cleanup action'
 test('responsive Settings entry remains available after removing navigation logout tabs', () => {
   assert.ok(css.includes('.logout-btn{display:none}'), 'desktop top logout remains hidden below tablet width');
   assert.ok(css.includes('.left-rail{display:none}'), 'tablet side rail is hidden on phones');
-  assert.ok(css.includes('.mobile-nav{position:fixed'), 'phone bottom navigation remains available');
+  assert.ok(mobileCss.includes('.mobile-nav{position:static!important'), 'phone navigation stays in normal document flow');
+  assert.doesNotMatch(mobileCss,/\.mobile-nav\{position:fixed/);
   assert.ok(!css.includes('.logout-rail-link{'), 'no detached tablet logout styling remains');
   assert.ok(!css.includes('.mobile-nav [data-logout]'), 'no detached phone logout styling remains');
   assert.match(css, /\.settings-signout-card/);
   assert.match(css, /\.settings-logout-button/);
-  assert.match(serviceWorker, /minglora-shell-v92-admin-badge-verification-promotional-gift-1/);
+  assert.match(serviceWorker, /minglora-shell-v93-flow-layout-safety-1/);
   assert.ok(serviceWorker.includes('styles.css?v=20261105-live-layout-expand-1'));
   assert.ok(serviceWorker.includes('app.js?v=20261105-live-layout-expand-1'));
   assert.ok(serviceWorker.includes('settings.js?v=20261105-admin-mfa-qr-fix-2'));
-  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
+  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(mobileCss.includes('.top-actions #settings-btn{display:none!important}'));
 });

@@ -53,6 +53,6 @@ test('profile navigation keeps the primary row to six sections and leaves second
 });
 
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
-  assert.ok(html.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
+  assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(html.includes('/app.js?v=20261105-live-layout-expand-1'));
 });

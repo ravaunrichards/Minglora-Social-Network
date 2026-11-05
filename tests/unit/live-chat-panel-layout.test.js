@@ -15,7 +15,7 @@ test('PWA cache keys advance with the LIVE chat app and styles', () => {
   const version = '20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2';
   assert.ok(html.includes('/styles.css?v=' + version), 'HTML must request the updated LIVE chat styles');
   assert.ok(html.includes('/app.js?v=' + version), 'HTML must request the updated LIVE chat client');
-  assert.ok(worker.includes("minglora-shell-v92-admin-badge-verification-promotional-gift-1"), 'service worker must activate a new cache');
+  assert.ok(worker.includes("minglora-shell-v93-flow-layout-safety-1"), 'service worker must activate a new cache');
   assert.ok(worker.includes('/styles.css?v=' + version), 'precache must include the updated styles');
   assert.ok(worker.includes('/app.js?v=' + version), 'precache must include the updated client');
 });
@@ -67,5 +67,5 @@ test('LIVE Chat tab stays compact instead of expanding into a tall chat screen',
   assert.match(styles, /#live-chat-panel-body>#live-chat-overlay\{[\s\S]*height:min\(38dvh,340px\)!important[\s\S]*max-height:min\(42dvh,360px\)!important/);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*height:min\(36dvh,300px\)!important/);
   assert.match(styles, /@media\(max-height:620px\)[\s\S]*height:min\(42dvh,230px\)!important/);
-  assert.ok(fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8').includes('minglora-shell-v92-admin-badge-verification-promotional-gift-1'));
+  assert.ok(fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8').includes('minglora-shell-v93-flow-layout-safety-1'));
 });
