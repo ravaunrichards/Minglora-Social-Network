@@ -62,3 +62,11 @@ test('Host can change the LIVE stage appearance from the settings drawer using t
   assert.match(app, /classList\.add\("live-theme-"\+nextTheme\)/);
   assert.match(styles, /\.live-room-appearance/);
 });
+
+test('Host and approved guests can use camera controls in video LIVE rooms', () => {
+  assert.match(app, /\(role==="host"\|\|role==="guest"\)&&broadcastType==="video_audio"\?liveControlButton\("live-camera-toggle"/);
+  assert.match(app, /role==="guest"&&broadcastType==="video_audio"/);
+  assert.match(app, /await room\.localParticipant\.setCameraEnabled\(true\)/);
+  assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&broadcastType==="video_audio"\)/);
+  assert.match(app, /id='live-gift-panel'/);
+});
