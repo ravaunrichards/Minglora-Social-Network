@@ -3761,3 +3761,75 @@ body.auth-mode .auth-screen{
 .profile-view-as-person .platform-admin-profile-banner-copy strong{font-size:11px}
 .profile-view-as-person .platform-admin-profile-banner-copy small{font-size:8px}
 @media(max-width:600px){.platform-admin-profile-banner{padding:9px 12px;gap:9px}.platform-admin-profile-banner-icon{width:31px;height:31px;flex-basis:31px}.platform-admin-profile-banner-copy strong{font-size:13px}}
+
+
+/* Keep profile thoughts in normal flow below the avatar; never float over the name or controls. */
+.profile-info:has(.ml-profile-thought-bubble),
+.profile-info:has(.ml-profile-thought-add){
+  align-items:flex-start;
+}
+.profile-avatar-edit-wrap:has(.ml-profile-thought-bubble),
+.profile-avatar-edit-wrap:has(.ml-profile-thought-add){
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+  height:auto;
+  min-height:0;
+  overflow:visible;
+  gap:7px;
+}
+.profile-avatar-edit-wrap>.ml-profile-thought-bubble,
+.profile-avatar-edit-wrap>.ml-profile-thought-add{
+  position:static;
+  inset:auto;
+  display:block;
+  align-self:flex-start;
+  flex:0 1 auto;
+  width:min(190px,calc(100vw - 36px));
+  max-width:190px;
+  min-width:0;
+  max-height:64px;
+  margin:0;
+  padding:7px 10px;
+  overflow:hidden;
+  border-radius:12px;
+  box-sizing:border-box;
+  font-size:.7rem;
+  line-height:1.3;
+  box-shadow:0 2px 8px rgba(15,23,42,.12);
+}
+.profile-avatar-edit-wrap>.ml-profile-thought-add{
+  width:max-content;
+  max-width:min(170px,calc(100vw - 36px));
+  max-height:none;
+  white-space:normal;
+}
+.profile-avatar-edit-wrap>.profile-avatar-inline-edit{
+  position:static;
+  margin:0;
+}
+@media(max-width:720px){
+  .profile-avatar-edit-wrap:has(.ml-profile-thought-bubble),
+  .profile-avatar-edit-wrap:has(.ml-profile-thought-add){
+    flex-basis:82px;
+    width:82px;
+    margin-top:-38px;
+  }
+  .profile-avatar-edit-wrap>.ml-profile-thought-bubble,
+  .profile-avatar-edit-wrap>.ml-profile-thought-add{
+    width:min(175px,calc(100vw - 28px));
+    max-width:min(175px,calc(100vw - 28px));
+    max-height:58px;
+    padding:7px 9px;
+    font-size:.66rem;
+  }
+}
+@media(max-width:380px){
+  .profile-avatar-edit-wrap>.ml-profile-thought-bubble,
+  .profile-avatar-edit-wrap>.ml-profile-thought-add{
+    width:min(155px,calc(100vw - 24px));
+    max-width:min(155px,calc(100vw - 24px));
+    font-size:.63rem;
+  }
+}
