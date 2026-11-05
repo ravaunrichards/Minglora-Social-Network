@@ -14,6 +14,7 @@
     let response;
     try {
       response = await fetch("/api" + path, {
+        cache: "no-store",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         ...options
@@ -60,8 +61,8 @@
       status.textContent = state.refreshError
         ? "Refresh failed. Tap Refresh to retry."
         : state.lastUpdatedAt
-          ? "Updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + " · Auto-refresh every 15s"
-          : "Auto-refresh every 15 seconds";
+          ? "Updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + " · Auto-refresh every 5s"
+          : "Auto-refresh every 5 seconds";
     }
     if (button) {
       button.disabled = state.refreshing;
@@ -162,7 +163,7 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Daily standings are based on confirmed LIVE Gift coin value within your region and current class.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>How to move up</strong><p>Top 20% of an active class group earns one fragment. Four fragments promote you one class and award a League Shield.</p></div><div><strong>How protection works</strong><p>Bottom 20% loses one fragment. If no fragment remains, a League Shield protects one demotion; otherwise the class can drop one level.</p></div><div><strong>Daily activity</strong><p>At least two active creators are needed for a class placement. Creators without a confirmed Gift score are not ranked for that day.</p></div></div></section>" +
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
-      "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 15 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
+      "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 5 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings.</p></div></div>" + (leaderboard.length ? "<div class='league-leaderboard'>" + leaderboard.map(item=>"<div class='league-leader-row'><b class='league-position'>#" + item.position + "</b>" + image(item) + "<div class='league-leader-name'><strong>" + esc(item.name) + "</strong><small>@" + esc(item.username) + "</small></div><strong class='league-leader-points'>" + Number(item.seasonPoints).toLocaleString() + " pts</strong></div>").join("") + "</div>" : "<div class='league-empty-inline'>Your class leaderboard will appear when creators earn confirmed LIVE Gift points in your region.</div>") + "</section>" +
       "<section class='card league-events-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
       "<section class='league-powerup-info'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2>Match Power-Ups</h2><p>These temporary effects never multiply Creator League points or official class standings.</p></div></div><div class='league-powerup-info-grid'>" + overview.powerups.map(power=>"<article class='league-powerup-info-card'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p><small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small></article>").join("") + "</div></section>" +
@@ -221,6 +222,7 @@
   async function refreshScores({force = false} = {}) {
     const main = $("#main-content");
     if (!main || !isLeagueViewActive()) { onNavigateAway(); return; }
+    if (document.visibilityState !== "visible") return;
     if (refreshInFlight) return;
     const focused = document.activeElement;
     if (!force && focused && ["INPUT","SELECT","TEXTAREA"].includes(focused.tagName)) return;
@@ -281,7 +283,18 @@
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
     updateRefreshStatus();
-    if (isLeagueViewActive()) refreshTimer = setInterval(() => { void refreshScores(); }, 15000);
+    if (isLeagueViewActive()) refreshTimer = setInterval(() => {
+      if (document.visibilityState === "visible") void refreshScores();
+    }, 5000);
   }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && isLeagueViewActive()) void refreshScores();
+  });
+  window.addEventListener("online", () => {
+    if (isLeagueViewActive()) void refreshScores();
+  });
+  window.addEventListener("pageshow", () => {
+    if (isLeagueViewActive()) void refreshScores();
+  });
   window.MingloraLeagues = { render, onNavigateAway };
 })();
