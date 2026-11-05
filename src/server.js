@@ -2434,6 +2434,36 @@ async function route(req, res) {
         return json(res, 200, { accepted: true, likeCount: session.likeCount });
       }
       let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
+      if(method==='GET'&&liveAction){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
+        if(!session||isAccountHiddenFromPublic(db.users.find(member=>member.id===session.hostId))||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available.'});
+        const canView=session.hostId===user.id||session.visibility==='public'||
+          (session.visibility==='friends'&&isFriend(user.id,session.hostId));
+        if(!canView)return json(res,404,{error:'LIVE session is not available.'});
+        const sinceValue=String(url.searchParams.get('since')||'').trim();
+        const sinceMs=sinceValue?Date.parse(sinceValue):0;
+        if(sinceValue&&!Number.isFinite(sinceMs))return json(res,400,{error:'Use a valid timestamp when checking LIVE gift activity.'});
+        const events=(db.giftGalleryEvents||[])
+          .filter(event=>event.broadcastId===session.id&&event.creatorId===session.hostId&&
+            (!sinceValue||Date.parse(event.createdAt)>=sinceMs))
+          .sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
+          .slice(-60)
+          .map(event=>{
+            const sender=db.users.find(member=>member.id===event.senderId);
+            return {
+              id:String(event.giftId||event.id||''),
+              giftCode:String(event.giftCode||''),
+              giftName:String(event.giftName||'Gift'),
+              coinAmount:Number(event.coinAmount||0),
+              emoji:String(event.emoji||'🎁'),
+              imageUrl:String(event.imageUrl||''),
+              modelUrl:String(event.modelUrl||''),
+              createdAt:String(event.createdAt||''),
+              sender:sender?safeUser(sender,user.id):{id:String(event.senderId||''),name:'Minglora member',username:'member'}
+            };
+          });
+        return json(res,200,{events});
+      }
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
         if(session&&(session.liveSettings?.practiceMode||session.liveSettings?.liveGifts===false))return json(res,403,{error:'LIVE gifts are disabled for this broadcast.'});
