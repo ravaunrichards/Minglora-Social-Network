@@ -4499,29 +4499,23 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 .live-host-profile>span{display:grid;gap:1px;min-width:0}
 .live-host-profile strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:850}
 .live-host-profile small{color:#ff7b91;font-size:8px;font-weight:950;letter-spacing:.12em}
-.live-like-cluster{
-  display:flex;align-items:center;gap:6px;flex:none;padding:3px 9px 3px 4px;
+.live-like-count{
+  display:flex;align-items:center;gap:5px;flex:none;padding:8px 11px;
   border:1px solid rgba(255,255,255,.2);border-radius:999px;color:#fff;
   background:rgba(8,12,20,.72);box-shadow:0 5px 18px rgba(0,0,0,.25);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
 }
-.live-like-cluster>strong{min-width:1ch;color:#fff;font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
-.live-heart-button{
-  display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:0;
-  border:0;border-radius:50%;color:#ff476f;background:rgba(255,255,255,.12);
-  font-size:25px;line-height:1;cursor:pointer;text-shadow:0 2px 7px rgba(0,0,0,.38);
-  transition:transform .14s ease,background .14s ease;
-}
-.live-heart-button:hover,.live-heart-button:focus-visible{background:rgba(255,255,255,.2);transform:scale(1.08);outline:2px solid rgba(255,255,255,.6);outline-offset:2px}
-.live-heart-button.is-sent{transform:scale(.86);background:rgba(255,71,111,.24)}
+.live-like-count>strong{min-width:1ch;color:#fff;font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
+.live-like-count>span{color:rgba(255,255,255,.78);font-size:10px;font-weight:750}
 .live-host-power-button{
-  display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;padding:0;
-  border:1px solid rgba(255,255,255,.32);border-radius:50%;color:#fff;
-  background:linear-gradient(145deg,#ee5268,#a7193a);box-shadow:0 6px 20px rgba(0,0,0,.38);
-  font-size:27px;line-height:1;cursor:pointer;pointer-events:auto;
-  transition:filter .14s ease,transform .14s ease;
+  display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;padding:0;
+  border:1px solid rgba(255,255,255,.58);border-radius:50%;color:#fff;
+  background:rgba(8,12,20,.88);box-shadow:0 5px 18px rgba(0,0,0,.4);
+  cursor:pointer;pointer-events:auto;transition:border-color .14s ease,background .14s ease,transform .14s ease;
 }
-.live-host-power-button:hover{filter:brightness(1.12);transform:scale(1.04)}
+.live-host-power-button svg{display:block;width:25px;height:25px}
+.live-host-power-button:hover{border-color:#ff6177;background:rgba(26,12,19,.96);transform:scale(1.05)}
+.live-host-power-button:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .live-host-power-button:disabled{opacity:.55;cursor:wait;transform:none}
 .live-chat-overlay{
   position:absolute;z-index:41;left:10px;bottom:10px;display:flex;flex-direction:column;
@@ -4572,22 +4566,32 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
   .live-host-profile img{width:31px;height:31px;flex-basis:31px}
   .live-stage-topbar{top:max(8px,env(safe-area-inset-top));right:8px;left:8px}
   .live-host-power-button{width:39px;height:39px;flex-basis:39px;font-size:25px}
-  .live-like-cluster{gap:4px;padding-right:7px}
-  .live-heart-button{width:32px;height:32px;flex-basis:32px}
+  .live-like-count{gap:4px;padding:7px 9px}
+  .live-host-power-button{width:40px;height:40px;flex-basis:40px}
 }
 @media(max-width:360px){
   .live-stage-top-left{gap:5px}
   .live-host-profile{gap:5px;max-width:38vw}
   .live-host-profile strong{font-size:9px}
-  .live-like-cluster{padding-left:3px}
-  .live-heart-button{width:30px;height:30px;flex-basis:30px;font-size:22px}
+  .live-like-count{padding:6px 8px}
+  .live-host-power-button{width:38px;height:38px;flex-basis:38px}
 }
 @media(prefers-reduced-motion:reduce){
-  .live-heart-button,.live-host-power-button{transition:none}
+  .live-host-power-button{transition:none}
 }
 
-/* Interactive heart stays clickable inside the otherwise passive stage HUD. */
-.live-like-cluster,.live-heart-button{pointer-events:auto}
+/* Keep the host power control at the upper-right corner of the stream only.
+   It stays contained by the video stage and never pins over page content. */
+.live-video-stage>.live-stage-topbar{
+  position:absolute!important;top:max(8px,env(safe-area-inset-top))!important;
+  right:8px!important;bottom:auto!important;left:8px!important;inset:auto 8px auto 8px!important;
+  display:flex!important;flex-wrap:nowrap!important;align-items:flex-start!important;
+  justify-content:space-between!important;width:auto!important;max-width:none!important;
+  z-index:42!important;pointer-events:none!important;
+}
+.live-video-stage>.live-stage-topbar .live-stage-top-left{pointer-events:none!important}
+.live-video-stage>.live-stage-topbar .live-host-power-button{pointer-events:auto!important}
+.live-video-stage>.live-stage-topbar .live-like-count{pointer-events:none!important}
 
 
 /* Minglora accessibility/layout contract: nothing stays pinned or floats over
