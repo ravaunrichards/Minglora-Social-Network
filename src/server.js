@@ -1170,10 +1170,15 @@ async function route(req, res) {
         return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
       }
       if(method==='GET'&&p==='/api/admin/access'){
-        const canAccess = user.id==='5b998c21-86b5-4621-ab37-e0808a2657b1' &&
+        const designatedCreatorHubAdmin = user.id==='5b998c21-86b5-4621-ab37-e0808a2657b1' &&
           normalizeEmail(user.email)==='creatorhubcreatornetwork@gmail.com' &&
-          user.role==='platform_owner' && isModerator(user,req) && hasActiveReviewerSession(user);
-        return json(res,200,{canAccess});
+          user.role==='platform_owner';
+        const canAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
+        return json(res,200,{
+          canAccess,
+          setupRequired: designatedCreatorHubAdmin && !canAccess,
+          mfaVerified: canAccess
+        });
       }
       if(method==='GET'&&p==='/api/moderation/access')return json(res,200,{canModerate:isModerator(user,req)});
       if(method==='GET'&&p==='/api/security/sessions'){
