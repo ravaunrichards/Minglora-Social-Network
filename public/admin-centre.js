@@ -24,11 +24,11 @@
           !ownProfileControls.isConnected ||
           profileInfo.querySelector('[data-open-admin-centre]')) return;
 
-      const button = document.createElement('button');
-      button.type = 'button';
+      const button = document.createElement('a');
+      button.href = '/admin-centre.html';
       button.className = 'admin-centre-profile-button';
       button.dataset.openAdminCentre = 'true';
-      button.setAttribute('aria-label', 'Open private Admin Control Centre');
+      button.setAttribute('aria-label', 'Open the separate private Admin Control Centre');
       button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3.5 5.5v6.1c0 5.2 3.4 8.8 8.5 10.4 5.1-1.6 8.5-5.2 8.5-10.4V5.5L12 2Z"></path><path d="M8 12h8M12 8v8"></path></svg><span>Private Admin Controls</span>';
       profileInfo.append(button);
     } catch (error) {
@@ -39,11 +39,10 @@
   }
 
   function addControlCentrePanel() {
-    const security = document.querySelector('#settings-security');
-    if (!security || security.querySelector('#admin-control-centre')) return;
-    const moderation = security.querySelector('#moderation-workspace');
-    const support = security.querySelector('#moderator-support-workspace');
-    const unlocked = Boolean(moderation && support);
+    const root = document.querySelector('#admin-centre-root');
+    if (!root || root.querySelector('#admin-control-centre')) return;
+    const access = window.__mingloraAdminAccess || {};
+    const unlocked = access.canAccess === true;
 
     const panel = document.createElement('div');
     panel.className = 'admin-control-centre';
@@ -57,8 +56,13 @@
         <span class="admin-control-centre-status">${unlocked ? 'Secure session active' : 'MFA required'}</span>
       </div>
       <div class="admin-control-centre-note">
-        Your administrator status is private. These controls are only shown to your secured CreatorHub account and protected actions require an authenticator-verified session.
+        This is Minglora’s separate private administrator workspace, not member Settings. Protected actions require the designated Creator Hub account and an authenticator-verified session.
       </div>
+      <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
+        <a href="#admin-control-centre">Overview</a>
+        ${unlocked ? `<a href="#admin-owner-coin-issuance-form">Owner Coins</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        <a href="#admin-centre-settings">Admin settings</a>
+      </nav>
       ${unlocked ? `
         <div class="admin-control-centre-grid">
           <button type="button" class="admin-control-centre-tile" data-admin-jump="moderation-workspace">
@@ -157,9 +161,8 @@
         <div><button type="button" class="primary" id="admin-centre-enable-mfa">Set up authenticator</button></div>
       `}
     `;
-    const firstForm = security.querySelector('.settings-security-form');
-    if (firstForm) security.insertBefore(panel, firstForm);
-    else security.append(panel);
+    root.replaceChildren(panel);
+    root.dataset.adminCentreReady = 'true';
 
     panel.querySelectorAll('[data-admin-jump]').forEach(button => {
       button.addEventListener('click', () => {
