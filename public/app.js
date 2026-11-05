@@ -745,6 +745,9 @@ let liveQaRefreshTimer=null;
 let liveQaRefreshBusy=false;
 let liveMatchRefreshTimer=null;
 let liveMatchRefreshBusy=false;
+let activeLiveRecording=null;
+let liveRecordingFrame=null;
+let liveRecordingClock=null;
 let liveDirectoryFilter='all';
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'full-screen',label:'Full Screen',icon:'featured'},
@@ -1679,7 +1682,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
-    (liveSettings.qaEnabled!==false?"<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>":"")+
+    (liveSettings.qaEnabled!==false?"<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>":"")+\n    "<button type='button' data-live-tools-panel-target='recordings' aria-pressed='false'>Recordings</button>"+
     "<button type='button' data-live-tools-panel-target='matches' aria-pressed='false'>Match</button>"+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
@@ -1711,11 +1714,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveChatTools="<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Use the existing chat and moderation controls in this panel.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Chat will appear here when you select this panel.</p></div></section>";
   const liveQaTools=liveSettings.qaEnabled===false?"<section id='live-qa-panel' class='live-tools-card live-qa-panel' data-live-tools-panel='qa'><strong>LIVE Q&A is turned off</strong><p>The host has disabled audience questions for this broadcast.</p></section>":"<section id='live-qa-panel' class='live-tools-card live-qa-panel' data-live-tools-panel='qa'><div class='live-panel-title'><strong>LIVE Q&A</strong><small>Ask a question, vote for the ones you want answered, and follow the host's replies.</small></div><form id='live-qa-form' class='live-qa-form'><label for='live-qa-question'>Your question</label><textarea id='live-qa-question' name='question' maxlength='300' rows='2' placeholder='Ask the host a question…' required></textarea><button type='submit' class='secondary'>Submit question</button></form><div id='live-qa-list' class='live-qa-list'><p class='muted'>Loading LIVE questions…</p></div></section>";
   const liveMatchTools="<section id='live-match-panel' class='live-tools-card live-match-panel' data-live-tools-panel='matches'><div class='live-panel-title'><strong>Creator League Match</strong><small>Challenge another live creator, accept an invitation, or support a side.</small></div>"+(role==='host'?"<form id='live-match-create-form' class='live-match-create-form'><label for='live-match-opponent'>Challenge a creator who is live</label><select id='live-match-opponent' name='opponentSessionId' required><option value=''>Finding live creators…</option></select><label for='live-match-gift-mode'>Scoring gifts</label><select id='live-match-gift-mode' name='giftMode'><option value='all'>All eligible gifts</option><option value='specific'>One selected gift</option></select><label for='live-match-gift-code'>Selected gift code</label><input id='live-match-gift-code' name='selectedGiftCode' maxlength='60' placeholder='Required only for specific gift mode'><button type='submit' class='secondary'>Send League Match challenge</button></form>":"")+"<div id='live-match-list' class='live-match-list'><p class='muted'>Loading Creator League matches…</p></div></section>";
+  const liveRecordingTools="<section id='live-recording-panel' class='live-tools-card live-recording-panel' data-live-tools-panel='recordings'><div class='live-panel-title'><strong>LIVE recordings</strong><small>Browser-composited recording of the host and guest stage. Keep Minglora open while recording.</small></div>"+(role==='host'?"<form id='live-recording-form' class='live-recording-form'><label for='live-recording-title'>Recording title</label><input id='live-recording-title' name='title' maxlength='120' value='"+esc(session.title||'Minglora LIVE recording')+"'><label class='live-recording-share'><input type='checkbox' name='shareWithGuests' "+(liveSettings.shareRecordingsWithGuests===true?'checked':'')+"><span>Share with guest speakers who are on stage when recording starts</span></label><div class='live-recording-actions'><button type='button' id='live-recording-start' class='secondary'>Start recording</button><button type='button' id='live-recording-stop' class='live-recording-stop' disabled>Stop & save</button></div><div id='live-recording-progress' class='live-recording-progress' role='status'>Not recording</div><progress id='live-recording-upload-progress' max='100' value='0' hidden></progress></form>":"<p class='live-recording-note'>Only recordings the host shared with guest speakers who were on stage when recording started appear here.</p>")+"<div id='live-recording-list' class='live-recording-list'><p class='muted'>Loading shared recordings…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveQaTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveQaTools+liveMatchTools+liveRecordingTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
@@ -4158,10 +4162,10 @@ function bindProfileTabActions(panel){
   }));
 }
 function mediaMaxBytes(slot){
-  return slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='sound'?50*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
+  return slot==='live_recording'?1024*1024*1024:slot==='avatar'?10*1024*1024:slot==='cover'?20*1024*1024:slot==='sound'?50*1024*1024:slot==='story'?200*1024*1024:slot==='group'||slot==='page'?250*1024*1024:slot==='message'?100*1024*1024:slot==='ringtone'?20*1024*1024:500*1024*1024;
 }
 function mediaMaxLabel(slot){
-  return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='sound'?'50 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
+  return slot==='live_recording'?'1 GB':slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='sound'?'50 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
 }
 async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
