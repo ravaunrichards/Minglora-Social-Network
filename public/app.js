@@ -1083,13 +1083,27 @@ async function refreshLiveSpeakerPanel(session,role,room){
         primeCallAudio();window.setTimeout(()=>playCallTone([620,820],520),160);
       }
       liveSpeakerSeenRequestsBySession.set(session.id,currentPendingIds);
+      const pendingCount=requests.filter(request=>request.status==="requested").length;
+      const activeCount=requests.filter(request=>request.status==="connected").length;
+      const approvedCount=requests.filter(request=>request.status==="accepted").length;
+      const pendingNode=$("#live-guest-pending-count"),activeNode=$("#live-guest-active-count"),approvedNode=$("#live-guest-approved-count");
+      if(pendingNode)pendingNode.textContent=pendingCount.toLocaleString();
+      if(activeNode)activeNode.textContent=activeCount.toLocaleString();
+      if(approvedNode)approvedNode.textContent=approvedCount.toLocaleString();
+      const guestStageEnabled=session.liveSettings?.guestStageEnabled!==false;
+      const stageState=$("#live-guest-stage-state");
+      if(stageState)stageState.textContent=guestStageEnabled?"ON":"OFF";
       list.innerHTML=requests.length?requests.map(request=>{
-        const label=request.status==="requested"?"Pending":request.status==="connected"?"On stage":"Approved";
+        const status=request.status==="requested"?"Pending review":request.status==="connected"?"On stage":"Approved · waiting to join";
         const actions=request.status==="requested"
-          ?"<span class='live-speaker-actions'><button type='button' data-speaker-accept='"+esc(request.userId)+"'>Accept</button><button type='button' data-speaker-reject='"+esc(request.userId)+"'>Decline</button></span>"
-          :"<span class='live-speaker-approved'>"+(request.status==="connected"?"On stage":"Approved · waiting to join")+"</span><button type='button' class='live-speaker-remove' data-speaker-remove='"+esc(request.userId)+"'>Remove</button>";
-        return "<div class='live-speaker-request-row'><span class='live-speaker-avatar'>"+esc((request.user?.name||"M").slice(0,1).toUpperCase())+"</span><span class='live-speaker-meta'><strong>"+esc(request.user?.name||"Member")+gifterProfileBadge(request.user)+"</strong><small>@"+esc(request.user?.username||"member")+" · "+label+"</small></span>"+actions+"</div>";
-      }).join(""):"<p class='muted'>No speaker requests yet. Your audience can raise a hand to join the stage.</p>";
+          ?"<div class='live-speaker-actions'><button type='button' data-speaker-accept='"+esc(request.userId)+"'>Accept</button><button type='button' data-speaker-reject='"+esc(request.userId)+"'>Decline</button></div>"
+          :"<div class='live-speaker-actions'><span class='live-speaker-approved'>"+(request.status==="connected"?"Connected on stage":"Approved · waiting to join")+"</span><button type='button' class='live-speaker-remove' data-speaker-remove='"+esc(request.userId)+"'>Remove</button></div>";
+        const memberName=String(request.user?.name||"Minglora member");
+        const requestedAt=request.requestedAt?new Date(request.requestedAt).toLocaleString():"Time unavailable";
+        return "<article class='live-speaker-request-row status-"+esc(request.status)+"'><span class='live-speaker-avatar' aria-hidden='true'>"+esc(memberName.trim().slice(0,1).toUpperCase()||"M")+"</span><div class='live-speaker-meta'><strong>"+esc(memberName)+gifterProfileBadge(request.user)+"</strong><span class='live-speaker-username'>@"+esc(request.user?.username||"member")+"</span><small class='live-speaker-status'>"+esc(status)+"</small><small class='live-speaker-requested-at'>Requested · "+esc(requestedAt)+"</small></div>"+actions+"</article>";
+      }).join(""):guestStageEnabled
+        ?"<div class='live-speaker-empty'><strong>No guest requests yet</strong><p>Your audience can request a guest seat while Guest stage is ON. Approved and connected speakers will appear here.</p></div>"
+        :"<div class='live-speaker-empty is-disabled'><strong>Guest stage is OFF</strong><p>Turn Guest stage ON to accept requests and add speakers. No guests can join while it is disabled.</p></div>";
       list.querySelectorAll("[data-speaker-accept],[data-speaker-reject],[data-speaker-remove]").forEach(button=>button.addEventListener("click",async()=>{
         const speakerId=button.dataset.speakerAccept||button.dataset.speakerReject||button.dataset.speakerRemove;
         const decision=button.dataset.speakerAccept?"accept":button.dataset.speakerReject?"reject":"remove";
@@ -1279,10 +1293,11 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     const speaking=Boolean(identity&&activeSpeakerIds.has(identity));
     const name=String(spec.name||"Minglora member");
     const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||"").join("").toUpperCase()||"M";
-    const status=speaking?"Speaking":connected?(muted?"Microphone muted":"On stage"):spec.isHost?"Waiting for host":"Connecting";
+    const status=speaking?"Speaking":connected?(muted?"Microphone muted":"Microphone connected"):spec.isHost?"Waiting for host":"Connecting to stage";
     const hasVideo=Boolean(media.querySelector(".live-video-element"));
     seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
     seat.dataset.seatKey=spec.key;seat.dataset.participant=identity;
+    seat.setAttribute("aria-label",name+" · "+(spec.isHost?"Host":"Guest speaker")+" · "+status);
     seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?"HOST":"GUEST")+"</span>"+
       "<span class='live-guest-seat-avatar' aria-hidden='true'>"+esc(initials)+"</span>"+
       "<span class='live-guest-seat-meta'><strong>"+esc(name)+"</strong><small>"+esc(status)+"</small></span>";
@@ -1867,9 +1882,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
-    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Speaker stage</strong><small>Up to 8 guest speakers</small></div><div id='live-speaker-request-list'><p class='muted'>Loading speaker requests…</p></div></section>"
+    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Guest stage</strong><small>Manage up to 8 active guest speakers and review every request.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to stop new requests and remove current speakers. Turn ON to let viewers request a seat again.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
     : role==="viewer"
-      ? (liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest requests are disabled</strong><p class='muted'>The host is not accepting guest or co-host stage requests for this LIVE.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
+      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel' data-live-tools-panel='rewards'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
@@ -2053,19 +2068,43 @@ activeLivePinnedComment=null;
     if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
-    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
-      activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
-      session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
-      if(role==='guest'&&!packet.enabled){
-        void room.localParticipant.setCameraEnabled(false).then(()=>{
-          liveCameraEnabled=false;
-          const cameraButton=$('#live-camera-toggle');
-          if(cameraButton){cameraButton.disabled=true;updateLiveControlButton(cameraButton,'camera-off','Guest cameras disabled by host','Camera off',false);}
-          $('#live-camera-flip')?.setAttribute('disabled','disabled');
-          toast('The host has turned off guest cameras.');
-        }).catch(error=>toast(error.message||'Minglora could not turn off your camera.'));
-      }else if(role==='guest'&&packet.enabled){toast('The host enabled guest cameras. Rejoin the speaker stage to refresh your camera permission.');}
-      return;
+    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&typeof packet.enabled==='boolean'){
+      if(packet.setting==='guestCamera'){
+        activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
+        session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
+        if(role==='guest'&&!packet.enabled){
+          void room.localParticipant.setCameraEnabled(false).then(()=>{
+            liveCameraEnabled=false;
+            const cameraButton=$('#live-camera-toggle');
+            if(cameraButton){cameraButton.disabled=true;updateLiveControlButton(cameraButton,'camera-off','Guest cameras disabled by host','Camera off',false);}
+            $('#live-camera-flip')?.setAttribute('disabled','disabled');
+            toast('The host has turned off guest cameras.');
+          }).catch(error=>toast(error.message||'Minglora could not turn off your camera.'));
+        }else if(role==='guest'&&packet.enabled){toast('The host enabled guest cameras. Rejoin the speaker stage to refresh your camera permission.');}
+        return;
+      }
+      if(packet.setting==='guestStageEnabled'){
+        activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestStageEnabled:packet.enabled};
+        session.liveSettings={...(session.liveSettings||{}),guestStageEnabled:packet.enabled};
+        const switchInput=$('#live-guest-stage-toggle'),stateLabel=$('#live-guest-stage-state');
+        if(switchInput)switchInput.checked=packet.enabled;
+        if(stateLabel)stateLabel.textContent=packet.enabled?'ON':'OFF';
+        if(role==='viewer'){
+          const panel=$('#live-speaker-request-panel');
+          const canRequest=packet.enabled&&session.liveSettings?.allowGuestRequests!==false&&session.liveSettings?.allowCoHost!==false;
+          if(panel){
+            panel.innerHTML=canRequest
+              ?"<div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p>"
+              :"<strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p>";
+          }
+          if(canRequest)void refreshLiveSpeakerPanel(session,role,room);
+        }else if(role==='guest'&&!packet.enabled){
+          toast('The host disabled the guest stage. You are being returned to the audience.');
+          stopLiveSpeakerRefresh();stopLiveChatRefresh();
+          void (async()=>{try{await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,'viewer');}catch(error){toast(error.message||'Could not return to the LIVE audience.');}})();
+        }
+        return;
+      }
     }
     if(topic==="minglora-live-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.layout"&&packet.version===1){
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
@@ -2390,7 +2429,7 @@ activeLivePinnedComment=null;
         toast(error.message||'The LIVE layout could not be changed.');
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
     });
-    $("#live-room-permission-controls")?.addEventListener('change',async event=>{
+    $("#live-tools-drawer")?.addEventListener('change',async event=>{
       const input=event.target?.closest?.('[data-live-room-setting]');if(!input||role!=='host')return;
       const key=input.dataset.liveRoomSetting;
       const fallbackDefault=['autoAcceptRequests','prioritizeGifters'].includes(key)?false:true;
@@ -2400,9 +2439,17 @@ activeLivePinnedComment=null;
         const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/settings',{method:'PATCH',body:JSON.stringify({settings:{[key]:input.checked}})});
         activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),...(saved.liveSettings||{})};
         session.liveSettings={...(session.liveSettings||{}),...(saved.liveSettings||{})};
-        if(key==='guestCamera'&&room.localParticipant?.publishData){
-          const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'guestCamera',enabled:input.checked}));
-          await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});
+        if((key==='guestCamera'||key==='guestStageEnabled')&&room.localParticipant?.publishData){
+          const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:key,enabled:input.checked}));
+          try{await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});}
+          catch(error){console.warn('[Minglora LIVE] Saved room setting but could not notify connected viewers.',error?.message||error);}
+        }
+        if(key==='guestStageEnabled'){
+          const stateLabel=$('#live-guest-stage-state');if(stateLabel)stateLabel.textContent=input.checked?'ON':'OFF';
+          await refreshLiveSpeakerPanel(session,role,room);
+          if(saved.guestStage?.removalFailures)toast('Guest stage is OFF, but '+saved.guestStage.removalFailures+' speaker(s) could not be removed. Use Remove in the Guest section to retry.');
+          else toast(input.checked?'Guest stage enabled. Viewers can request to join.':'Guest stage disabled. Current guests were removed where connected.');
+          return;
         }
         if(key==='manageModerators')$('#live-moderator-panel')?.classList.toggle('hidden',!input.checked);
         if(key==='prioritizeGifters')await refreshLiveSpeakerPanel(session,role,room);
