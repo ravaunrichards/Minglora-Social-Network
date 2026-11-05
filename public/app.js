@@ -179,7 +179,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-fullscreen-responsive-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     await registration.update().catch(()=>{});
     if(!state.user)return;
@@ -200,7 +200,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.register('/sw.js?v=20261105-live-fullscreen-responsive-1',{scope:'/',updateViaCache:'none'})
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
@@ -771,9 +771,48 @@ const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
 let activeLiveScreenLayout='full-screen';
 function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}
 function liveLayoutIcon(name){const paths={fullscreen:"<path d='M8 3H5a2 2 0 0 0-2 2v3 M16 3h3a2 2 0 0 1 2 2v3 M21 16v3a2 2 0 0 1-2 2h-3 M8 21H5a2 2 0 0 1-2-2v-3'/>",grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
-function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;const hostOnly=activeLiveScreenLayout==='full-screen';root.setAttribute('aria-label',hostOnly?'Host-only full-screen LIVE stage':'LIVE host and guest seats');root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',hostOnly);root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
-function restoreLiveChatToStage(){const chat=$('#live-chat-overlay'),stage=$('#live-video-stage');if(chat&&stage&&chat.parentElement!==stage)stage.append(chat);}
-function activateLiveToolsPanel(name){const drawer=$('#live-tools-drawer');if(!drawer)return;const sections=[...drawer.querySelectorAll('[data-live-tools-panel]')];if(!sections.some(section=>section.dataset.liveToolsPanel===name))return;sections.forEach(section=>{section.hidden=section.dataset.liveToolsPanel!==name;});drawer.querySelectorAll('[data-live-tools-panel-target]').forEach(button=>{const active=button.dataset.liveToolsPanelTarget===name;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});if(name==='chat'){const chat=$('#live-chat-overlay'),body=$('#live-chat-panel-body');if(chat&&body)body.append(chat);}else restoreLiveChatToStage();}
+function applyLiveScreenLayout(value){
+  activeLiveScreenLayout=normalizeLiveScreenLayout(value);
+  const hostOnly=activeLiveScreenLayout==='full-screen';
+  document.querySelectorAll('.live-guest-layout').forEach(root=>{
+    root.dataset.liveLayout=activeLiveScreenLayout;
+    root.setAttribute('aria-label',hostOnly?'Host-only full-screen LIVE stage':'LIVE host and guest seats');
+    root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',hostOnly);
+    root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);
+  });
+  document.querySelector('.live-player-shell')?.classList.toggle('live-full-screen-active',hostOnly);
+  document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{
+    const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;
+    button.classList.toggle('active',selected);
+    button.setAttribute('aria-pressed',String(selected));
+  });
+  restoreLiveChatToStage();
+}
+function restoreLiveChatToStage(){
+  const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
+  const stage=$('#live-video-stage');
+  const slot=$('#live-fullscreen-chat-slot');
+  if(!chat||!stage)return;
+  const target=activeLiveScreenLayout==='full-screen'&&slot?slot:stage;
+  if(chat.parentElement!==target)target.append(chat);
+}
+function activateLiveToolsPanel(name){
+  const drawer=$('#live-tools-drawer');
+  if(!drawer)return;
+  const sections=[...drawer.querySelectorAll('[data-live-tools-panel]')];
+  if(!sections.some(section=>section.dataset.liveToolsPanel===name))return;
+  sections.forEach(section=>{section.hidden=section.dataset.liveToolsPanel!==name;});
+  drawer.querySelectorAll('[data-live-tools-panel-target]').forEach(button=>{
+    const active=button.dataset.liveToolsPanelTarget===name;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
+  if(name==='chat'){
+    const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
+    const body=$('#live-chat-panel-body');
+    if(chat&&body)body.append(chat);
+  }else restoreLiveChatToStage();
+}
 
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
@@ -1585,6 +1624,7 @@ function liveControlIcon(name){
     "camera-off":"<path d='m3 3 18 18M10 6h4a2 2 0 0 1 2 2v2l5-3v10l-5-3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2'/>",
     flip:"<path d='M20 7v5h-5M4 17v-5h5'/><path d='M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3'/>",
     users:"<path d='M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/>",
+    message:"<path d='M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.7 8.7 0 0 1 4 11.5 8.5 8.5 0 1 1 21 11.5Z'/>",
     screen:"<rect x='2.5' y='3.5' width='19' height='14' rx='2'/><path d='M8 21h8M12 17.5V21M9 10l2 2 4-4'/>",
     gift:"<rect x='3' y='8' width='18' height='13' rx='2'/><path d='M12 8v13M3 12h18M12 8H7.5a2.5 2.5 0 1 1 2.4-3.2L12 8Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 8Z'/>",
     volume:"<path d='M11 5 6 9H3v6h3l5 4z'/><path d='M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13'/>",
@@ -1833,6 +1873,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",{pressed:false}):"",
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
+    liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat"),
     role!=="host"&&giftsEnabled?liveControlButton("live-gifts-toggle","gift","Open LIVE gifts","Gift"):"",
     liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
@@ -1881,7 +1922,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
-  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Viewers and guests follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
+  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Full Screen expands the host stage across each device; viewers follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveChatTools=liveSettings.groupChatEnabled!==false
     ? "<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Live comments, emoji and host moderation.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Open the Chat tab to view the live conversation.</p></div></section>"
@@ -1910,10 +1951,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "</div>";
   const liveChatOverlay=liveSettings.groupChatEnabled!==false
     ? "<section id='live-chat-overlay' class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><div class='live-chat-composer-wrap'><div id='live-chat-emoji-picker' class='live-chat-emoji-picker hidden' aria-label='Quick emojis'>"+['❤️','😂','🔥','👏','😍','🎉','💖','🙌'].map(emoji=>"<button type='button' data-live-chat-emoji='"+emoji+"' aria-label='Insert "+emoji+"'>"+emoji+"</button>").join('')+"</div><form id='live-chat-form' class='live-chat-form'><button type='button' id='live-chat-emoji' class='live-chat-emoji-button' aria-label='Open emoji picker'>😊</button><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></div></section>"
-    : "<p class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
-  setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'>"+(role==='viewer'?"<button class='live-exit-button' id='live-back' aria-label='Exit LIVE' title='Exit LIVE'>×</button>":"<button class='text-button' id='live-back'>← Live now</button>")+"<div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">◉ Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
+    : "<p id='live-chat-disabled-note' class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
+  setContent("<section id='live-player-shell' class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'>"+(role==='viewer'?"<button class='live-exit-button' id='live-back' aria-label='Exit LIVE' title='Exit LIVE'>×</button>":"<button class='text-button' id='live-back'>← Live now</button>")+"<div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">◉ Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE chat'></aside></div></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
     if(role==="host"){
     const moderatorList=$("#live-moderator-list");
     const refreshLiveModerators=async()=>{
@@ -2293,6 +2334,7 @@ activeLivePinnedComment=null;
       void sendLiveLike();
     });
     $("#live-settings-toggle")?.addEventListener("click",()=>openLiveToolsPanel());
+    $("#live-chat-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-chat-panel"));
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
     $("#live-gifts-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));

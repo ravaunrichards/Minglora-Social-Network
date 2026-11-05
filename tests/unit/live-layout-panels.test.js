@@ -62,15 +62,26 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 });
 
 
-test('Full Screen gives the host a taller portrait stage while reserving room for controls', () => {
-  assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
-  assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
-  assert.match(styles, /width:min\(100%,64dvh,600px\)/);
-  assert.match(styles, /max-height:min\(84dvh,780px,calc\(100dvh - 150px\)\)/);
-  assert.match(styles, /width:min\(100%,60dvh,310px\)/);
-  assert.match(styles, /aspect-ratio:3 \/ 4/);
-  assert.match(styles, /max-height:min\(80dvh,410px,calc\(100dvh - 130px\)\)/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
+test('Full Screen fills the viewport and adapts to phones, tablets, laptops and desktop screens', () => {
+  assert.match(app, /live-player-shell[^\n]*live-full-screen-active|classList\.toggle\('live-full-screen-active',hostOnly\)/);
+  assert.ok(app.includes("id='live-fullscreen-chat-slot'"), 'wide-screen chat must have its own destination outside the host video');
+  assert.ok(app.includes('liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat")'), 'small screens need an explicit Chat control');
+  assert.match(app, /live-chat-toggle[\s\S]*?openLiveToolsPanel\("#live-chat-panel"\)/);
+  assert.match(styles, /\.live-player-shell\.live-full-screen-active\{[\s\S]*?position:fixed!important[\s\S]*?width:100vw!important[\s\S]*?height:100dvh!important/);
+  assert.match(styles, /\.live-full-screen-active \.live-video-column\{[\s\S]*?grid-template-rows:auto minmax\(0,1fr\) auto/);
+  assert.match(styles, /\.live-full-screen-active \.live-video-column>\.live-video-stage:not\(\.live-audio-stage\)\{[\s\S]*?height:100%[\s\S]*?max-height:none!important[\s\S]*?aspect-ratio:auto!important/);
+  assert.match(styles, /object-fit:contain!important/);
+  assert.match(styles, /@media\(min-width:1024px\) and \(orientation:landscape\)/);
+  assert.match(styles, /\.live-full-screen-active \.live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
+  assert.match(styles, /\.live-full-screen-active #live-chat-overlay,[\s\S]*?display:none!important/);
+  assert.match(styles, /\.live-full-screen-active \.live-player-controls\{[\s\S]*?overflow-x:auto!important/);
+});
+
+test('Full Screen moves chat out of the host video and restores it according to the selected layout', () => {
+  assert.match(app, /function restoreLiveChatToStage\(\)[\s\S]*?const slot=\$\('#live-fullscreen-chat-slot'\)/);
+  assert.match(app, /activeLiveScreenLayout==='full-screen'&&slot\?slot:stage/);
+  assert.match(app, /const chat=\$\('#live-chat-overlay'\)\|\|\$\('#live-chat-disabled-note'\)/);
+  assert.match(app, /if\(name==='chat'\)[\s\S]*?body\.append\(chat\)/);
 });
 
 

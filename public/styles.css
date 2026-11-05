@@ -5181,29 +5181,6 @@ button.live-ranking-row{cursor:pointer}
 }
 
 
-/* Host-only Full Screen is slightly taller than the standard portrait card.
-   Its viewport cap reserves room for the room header, chat composer and control
-   row beneath the stage, so the host feed grows without pushing controls offscreen. */
-.live-video-stage.live-full-screen-layout:not(.live-audio-stage){
-  width:min(100%,64dvh,600px);
-  max-width:100%;
-  min-height:0;
-  max-height:min(84dvh,780px,calc(100dvh - 150px));
-  aspect-ratio:3 / 4;
-  margin-inline:auto;
-  border-radius:18px;
-}
-#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{
-  border-radius:16px;
-}
-@media(max-height:520px){
-  .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
-    width:min(100%,60dvh,310px);
-    max-height:min(80dvh,410px,calc(100dvh - 130px));
-  }
-}
-
-
 /* Minglora LIVE chat: wide paragraph flow with natural line wrapping.
    Names, message text and time read as one horizontal sentence; long messages
    wrap down only when they reach the available width instead of stacking fields. */
@@ -5328,4 +5305,207 @@ button.live-ranking-row{cursor:pointer}
     min-height:150px!important;
     max-height:245px!important;
   }
+}
+
+
+/* Minglora LIVE true Full Screen: responsive, immersive and host-first on every device.
+   The host video owns the available stage; identity and controls occupy reserved rows.
+   Chat is a side panel on wide landscape screens and opens as a separate tool on smaller screens. */
+.live-player-shell.live-full-screen-active{
+  position:fixed!important;inset:0!important;z-index:3200!important;
+  box-sizing:border-box!important;width:100vw!important;height:100dvh!important;
+  min-width:0!important;min-height:100dvh!important;max-height:100dvh!important;
+  max-width:none!important;margin:0!important;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)!important;
+  border:0!important;border-radius:0!important;overflow:hidden!important;
+  display:flex!important;flex-direction:column!important;
+  color:#fff!important;background:#05070b!important;
+}
+.live-full-screen-active>.live-player-header{
+  display:flex!important;flex:0 0 42px!important;align-items:center!important;
+  min-height:42px!important;height:42px!important;max-height:42px!important;
+  gap:8px!important;padding:4px 10px!important;
+  border:0!important;border-bottom:1px solid rgba(255,255,255,.1)!important;
+  border-radius:0!important;background:#090d15!important;
+}
+.live-full-screen-active>.live-player-header>div{gap:5px!important;min-width:0!important;flex:1 1 auto!important}
+.live-full-screen-active>.live-player-header>div strong{max-width:40vw!important;font-size:11px!important}
+.live-full-screen-active .live-viewer-count{flex:none!important;font-size:10px!important}
+.live-full-screen-active>.gp-live-entry-banner{display:none!important}
+.live-full-screen-active>.live-player-layout{
+  display:block!important;position:relative!important;flex:1 1 auto!important;
+  width:100%!important;height:0!important;min-height:0!important;max-height:none!important;
+  overflow:hidden!important;margin:0!important;padding:0!important;
+}
+.live-full-screen-active .live-video-column{
+  box-sizing:border-box!important;display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  max-height:none!important;margin:0!important;padding:0!important;gap:0!important;
+  overflow:hidden!important;background:#05070b!important;
+}
+.live-full-screen-active .live-video-column>.live-stage-topbar{
+  position:static!important;inset:auto!important;z-index:2!important;
+  display:flex!important;flex:0 0 42px!important;flex-wrap:nowrap!important;
+  align-items:center!important;justify-content:space-between!important;
+  width:100%!important;height:42px!important;min-height:42px!important;max-height:42px!important;
+  margin:0!important;padding:4px 9px!important;gap:7px!important;overflow:hidden!important;
+  border:0!important;border-bottom:1px solid rgba(255,255,255,.08)!important;
+  border-radius:0!important;background:#090d15!important;pointer-events:auto!important;
+}
+.live-full-screen-active .live-stage-top-left{
+  display:flex!important;flex:1 1 auto!important;flex-wrap:nowrap!important;align-items:center!important;
+  min-width:0!important;max-width:calc(100% - 50px)!important;gap:6px!important;overflow:hidden!important;
+}
+.live-full-screen-active .live-host-profile-wrap{max-width:min(58vw,340px)!important;flex:0 1 auto!important}
+.live-full-screen-active button.live-host-profile{max-width:min(46vw,280px)!important}
+.live-full-screen-active .live-host-profile img{width:30px!important;height:30px!important;flex-basis:30px!important}
+.live-full-screen-active .live-host-profile strong{font-size:11px!important}
+.live-full-screen-active .live-like-count{flex:none!important;padding:5px 8px!important;gap:4px!important}
+.live-full-screen-active .live-fan-club-join{flex:none!important;min-height:29px!important;padding:0 8px!important;font-size:9px!important}
+.live-full-screen-active .live-host-power-button{flex:0 0 36px!important;width:36px!important;height:36px!important;margin:0!important}
+.live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage){
+  position:relative!important;grid-row:2!important;align-self:stretch!important;justify-self:stretch!important;
+  display:block!important;box-sizing:border-box!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  max-width:none!important;max-height:none!important;aspect-ratio:auto!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  overflow:hidden!important;background:#05070b!important;isolation:isolate!important;
+}
+.live-full-screen-active #live-guest-layout[data-live-layout="full-screen"]{
+  position:absolute!important;inset:0!important;display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;
+  grid-auto-rows:minmax(0,1fr)!important;align-content:stretch!important;
+  width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
+  margin:0!important;padding:0!important;gap:0!important;overflow:hidden!important;
+}
+.live-full-screen-active #live-guest-layout[data-live-layout="full-screen"]>.live-guest-layout-heading,
+.live-full-screen-active #live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){display:none!important}
+.live-full-screen-active #live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{
+  position:relative!important;display:flex!important;grid-column:1/-1!important;grid-row:1!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;
+  overflow:hidden!important;border:0!important;border-radius:0!important;
+  background:#05070b!important;box-shadow:none!important;
+}
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-guest-seat-media,
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-video-tile{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;
+  border:0!important;border-radius:0!important;overflow:hidden!important;background:#05070b!important;
+}
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-video-element{
+  display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  max-width:none!important;max-height:none!important;object-fit:contain!important;background:#05070b!important;
+}
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-guest-seat-avatar{
+  width:clamp(76px,12vw,144px)!important;height:clamp(76px,12vw,144px)!important;
+}
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-guest-seat-tag,
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-guest-seat-meta{display:none!important}
+.live-full-screen-active .live-video-column>.live-audio-stage{
+  position:relative!important;grid-row:2!important;display:grid!important;
+  width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
+  aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  overflow:hidden!important;
+}
+.live-full-screen-active .live-audio-stage .live-audio-scene{min-height:0!important;height:100%!important;justify-content:center!important}
+.live-full-screen-active .live-audio-stage.live-host-only-layout #live-guest-layout,
+.live-full-screen-active .live-audio-stage.live-host-only-layout #live-speaker-list{display:none!important}
+.live-full-screen-active #live-chat-overlay,
+.live-full-screen-active #live-chat-disabled-note{display:none!important}
+.live-full-screen-active .live-player-controls{
+  position:static!important;grid-row:3!important;display:flex!important;flex:0 0 auto!important;
+  flex-wrap:nowrap!important;align-items:center!important;justify-content:center!important;
+  width:100%!important;min-width:0!important;min-height:62px!important;max-height:76px!important;
+  margin:0!important;padding:7px 10px!important;gap:7px!important;overflow-x:auto!important;overflow-y:hidden!important;
+  border:0!important;border-top:1px solid rgba(255,255,255,.1)!important;border-radius:0!important;
+  background:#090d15!important;overscroll-behavior-x:contain!important;
+  -webkit-overflow-scrolling:touch!important;scrollbar-width:thin!important;
+}
+.live-full-screen-active .live-player-controls .live-control-button{
+  display:flex!important;flex:0 0 auto!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;
+  width:64px!important;min-width:58px!important;max-width:78px!important;
+  min-height:48px!important;height:48px!important;padding:4px 5px!important;gap:3px!important;
+}
+.live-full-screen-active .live-player-controls .live-control-caption{font-size:9px!important;line-height:1.1!important}
+.live-full-screen-active .live-player-controls .live-control-icon{width:20px!important;height:20px!important}
+.live-full-screen-active .live-audio-root{display:none!important}
+.live-full-screen-active #live-fullscreen-chat-slot{display:none!important}
+.live-full-screen-active .live-tools-backdrop:not(.hidden){
+  position:fixed!important;inset:0!important;z-index:4500!important;
+  display:flex!important;align-items:stretch!important;justify-content:flex-end!important;
+  width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;
+  padding:0!important;background:rgba(3,7,16,.68)!important;
+}
+.live-full-screen-active .live-tools-drawer{
+  display:flex!important;flex:0 1 450px!important;width:min(100%,450px)!important;
+  height:100dvh!important;max-height:100dvh!important;min-height:0!important;
+  overflow:hidden!important;border-left:1px solid rgba(255,255,255,.13)!important;
+  box-shadow:-22px 0 70px rgba(0,0,0,.42)!important;
+}
+.live-full-screen-active .live-tools-content{min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important}
+
+/* Wide landscape tablets, laptops, desktops and ultrawide displays get a separate chat column. */
+@media(min-width:1024px) and (orientation:landscape){
+  .live-player-shell.live-full-screen-active>.live-player-layout{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(290px,clamp(300px,28vw,410px))!important;
+    grid-template-rows:minmax(0,1fr)!important;
+  }
+  .live-full-screen-active .live-fullscreen-chat-slot{
+    display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;
+    width:100%!important;height:100%!important;padding:12px!important;gap:8px!important;
+    overflow:hidden!important;border-left:1px solid rgba(255,255,255,.1)!important;background:#0b1019!important;
+  }
+  .live-full-screen-active .live-fullscreen-chat-slot #live-chat-overlay{
+    position:static!important;inset:auto!important;display:flex!important;flex:1 1 auto!important;
+    flex-direction:column!important;width:100%!important;height:100%!important;
+    min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;
+    margin:0!important;gap:9px!important;pointer-events:auto!important;
+  }
+  .live-full-screen-active .live-fullscreen-chat-slot #live-chat-list{
+    flex:1 1 auto!important;min-height:0!important;max-height:none!important;width:100%!important;
+    padding:8px!important;overflow-x:hidden!important;overflow-y:auto!important;
+    align-items:stretch!important;background:transparent!important;
+  }
+  .live-full-screen-active .live-fullscreen-chat-slot #live-chat-overlay .live-chat-line{width:100%!important;max-width:none!important}
+  .live-full-screen-active .live-fullscreen-chat-slot #live-chat-overlay .live-chat-form{flex:none!important}
+  .live-full-screen-active .live-fullscreen-chat-slot #live-chat-disabled-note{
+    display:block!important;align-self:flex-start!important;margin:8px!important;padding:12px!important;
+    color:#edf3fb!important;line-height:1.5!important;
+  }
+}
+
+/* Smaller screens keep chat off the video; the Chat control opens its separate panel. */
+@media(max-width:1023px), (orientation:portrait){
+  .live-full-screen-active .live-fullscreen-chat-slot{display:none!important}
+}
+@media(max-width:700px){
+  .live-full-screen-active>.live-player-header{
+    flex-basis:38px!important;height:38px!important;min-height:38px!important;max-height:38px!important;
+    padding:3px 7px!important;
+  }
+  .live-full-screen-active .live-video-column>.live-stage-topbar{
+    flex-basis:39px!important;height:39px!important;min-height:39px!important;max-height:39px!important;
+    padding:3px 6px!important;gap:5px!important;
+  }
+  .live-full-screen-active .live-player-controls{min-height:58px!important;padding:5px 6px!important;gap:5px!important}
+  .live-full-screen-active .live-player-controls .live-control-button{width:58px!important;min-width:54px!important;height:46px!important;min-height:46px!important}
+  .live-full-screen-active .live-host-profile-wrap{max-width:52vw!important;gap:3px!important}
+  .live-full-screen-active button.live-host-profile{max-width:42vw!important;padding:2px 5px 2px 2px!important}
+  .live-full-screen-active .live-host-profile img{width:27px!important;height:27px!important;flex-basis:27px!important}
+  .live-full-screen-active .live-host-profile strong{font-size:10px!important}
+  .live-full-screen-active .live-host-profile small{font-size:7px!important}
+}
+@media(max-height:520px) and (orientation:landscape){
+  .live-full-screen-active>.live-player-header{
+    flex-basis:32px!important;height:32px!important;min-height:32px!important;max-height:32px!important;
+    padding:2px 8px!important;
+  }
+  .live-full-screen-active .live-video-column>.live-stage-topbar{
+    flex-basis:34px!important;height:34px!important;min-height:34px!important;max-height:34px!important;
+    padding:2px 7px!important;
+  }
+  .live-full-screen-active .live-player-controls{min-height:50px!important;max-height:55px!important;padding:3px 7px!important}
+  .live-full-screen-active .live-player-controls .live-control-button{height:42px!important;min-height:42px!important}
 }
