@@ -1371,7 +1371,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;activeLiveModerator=Boolean(issuedLiveKit?.isModerator);liveCameraEnabled=cameraMode;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
+  activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;activeLiveModerator=Boolean(liveKit?.isModerator);liveCameraEnabled=cameraMode;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
     ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
     : "<div id='live-video-stage' class='live-video-stage'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
@@ -1433,8 +1433,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-reaction-bar' role='group' aria-label='Send a LIVE reaction'><strong>LIVE likes <span id='live-reaction-count' data-count='0'>0</span></strong><div class='live-reaction-buttons'><button type='button' class='live-reaction-button' data-live-reaction='heart' aria-label='Send a heart' title='Send a heart'>❤️</button><button type='button' class='live-reaction-button' data-live-reaction='clap' aria-label='Send applause' title='Send applause'>👏</button><button type='button' class='live-reaction-button' data-live-reaction='fire' aria-label='Send fire' title='Send fire'>🔥</button><button type='button' class='live-reaction-button' data-live-reaction='laugh' aria-label='Send laughter' title='Send laughter'>😂</button></div></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
-    "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
-    "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside></div>"+liveToolsDrawer+"</section>");
+    (liveSettings.groupChats===false?"<aside class='live-community-panel live-chat-disabled'><div class='live-community-title'><div><strong>LIVE chat is off</strong><small>The host disabled group chat for this broadcast.</small></div></div></aside>":"<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
+    "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside>")+"</div>"+liveToolsDrawer+"</section>");
   activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
   reactionLayer.className="live-reaction-layer";
@@ -1546,7 +1546,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       if(!microphonePublished){
         throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check browser microphone permission and try again.");
       }
-      if(role==="guest"&&broadcastType==="video_audio"){
+      if(role==="guest"&&cameraMode){
         await room.localParticipant.setCameraEnabled(true);
         for(const publication of room.localParticipant.videoTrackPublications.values()){
           if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
