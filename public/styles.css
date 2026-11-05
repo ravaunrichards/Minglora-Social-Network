@@ -4223,3 +4223,31 @@ body.live-tools-open{overflow:hidden}
   .live-reaction-float{animation-duration:.01ms;animation-iteration-count:1}
   .live-reaction-button{transition:none}
 }
+
+/* Host-pinned LIVE comment overlay */
+.live-pinned-comment{
+  position:absolute;z-index:28;top:12px;left:50%;display:flex;align-items:center;gap:7px;
+  width:max-content;max-width:min(88%,560px);padding:8px 11px;
+  border:1px solid rgba(255,220,136,.56);border-radius:11px;
+  color:#fff8e7;background:linear-gradient(110deg,rgba(47,37,20,.94),rgba(24,25,31,.94));
+  box-shadow:0 7px 24px rgba(0,0,0,.3);transform:translateX(-50%);
+  font-size:11px;line-height:1.35;pointer-events:none;
+}
+.live-pinned-comment.hidden{display:none!important}
+.live-pinned-tag{
+  flex:none;padding:3px 6px;border-radius:999px;color:#1d170b;
+  background:linear-gradient(145deg,#ffe19a,#e7b854);font-size:8px;font-weight:950;letter-spacing:.08em;
+}
+.live-pinned-comment strong{flex:none;color:#ffe3a6;font-size:10px;font-weight:900}
+.live-pinned-body{min-width:0;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
+.live-chat-pin{
+  justify-self:end;padding:4px 8px;border:1px solid rgba(255,255,255,.15);border-radius:7px;
+  color:#dce5f3;background:rgba(255,255,255,.05);font-size:9px;font-weight:850;cursor:pointer;
+}
+.live-chat-pin:hover,.live-chat-pin.is-pinned{color:#ffe5aa;border-color:rgba(255,211,127,.5);background:rgba(174,128,47,.16)}
+.live-chat-pin:disabled{opacity:.5;cursor:wait}
+@media(max-width:520px){
+  .live-pinned-comment{top:8px;max-width:90%;padding:7px 8px;gap:5px;font-size:10px}
+  .live-pinned-tag{font-size:7px}
+  .live-chat-pin{padding:4px 6px;font-size:8px}
+}
