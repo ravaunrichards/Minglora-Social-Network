@@ -1042,7 +1042,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
         const actions=request.status==="requested"
           ?"<span class='live-speaker-actions'><button type='button' data-speaker-accept='"+esc(request.userId)+"'>Accept</button><button type='button' data-speaker-reject='"+esc(request.userId)+"'>Decline</button></span>"
           :"<span class='live-speaker-approved'>"+(request.status==="connected"?"On stage":"Approved · waiting to join")+"</span><button type='button' class='live-speaker-remove' data-speaker-remove='"+esc(request.userId)+"'>Remove</button>";
-        return "<div class='live-speaker-request-row'><span class='live-speaker-avatar'>"+esc((request.user?.name||"M").slice(0,1).toUpperCase())+"</span><span class='live-speaker-meta'><strong>"+esc(request.user?.name||"Member")+"</strong><small>@"+esc(request.user?.username||"member")+" · "+label+"</small></span>"+actions+"</div>";
+        return "<div class='live-speaker-request-row'><span class='live-speaker-avatar'>"+esc((request.user?.name||"M").slice(0,1).toUpperCase())+"</span><span class='live-speaker-meta'><strong>"+esc(request.user?.name||"Member")+gifterProfileBadge(request.user)+"</strong><small>@"+esc(request.user?.username||"member")+" · "+label+"</small></span>"+actions+"</div>";
       }).join(""):"<p class='muted'>No speaker requests yet. Your audience can raise a hand to join the stage.</p>";
       list.querySelectorAll("[data-speaker-accept],[data-speaker-reject],[data-speaker-remove]").forEach(button=>button.addEventListener("click",async()=>{
         const speakerId=button.dataset.speakerAccept||button.dataset.speakerReject||button.dataset.speakerRemove;
