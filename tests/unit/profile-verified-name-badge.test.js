@@ -19,9 +19,10 @@ test('Larry keeps the blue verification check beside the username, not the displ
   assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
 });
 
-test('other verified members still use the normal display-name badge and app cache points to the updated bundle', () => {
-  assert.match(app, /member\?\.id === PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID \? '' : verifiedProfileBadge\(member\)/);
-  assert.ok(html.includes('/app.js?v=20261105-profile-name-checkmark-1'));
-  assert.ok(serviceWorker.includes('/app.js?v=20261105-profile-name-checkmark-1'));
-  assert.match(serviceWorker, /CACHE_NAME='minglora-shell-v85-profile-name-checkmark-1'/);
+test('the profile bundle remains in the app shell and scripts are revalidated from the network', () => {
+  const appUrl = '/app.js?v=20261105-coin-funding-sources-1';
+  assert.ok(html.includes(appUrl));
+  assert.ok(serviceWorker.includes(appUrl));
+  assert.match(serviceWorker, /\['style','script','font'\]\.includes\(request\.destination\)/);
+  assert.match(serviceWorker, /fetch\(request,\{cache:'no-cache'\}\)/);
 });
