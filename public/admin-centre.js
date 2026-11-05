@@ -354,7 +354,7 @@
           button.disabled = false;
         }
       });
-      await Promise.all([loadLiveProMembers(''),loadLiveProGrants()]);
+      void Promise.all([loadLiveProMembers(''),loadLiveProGrants()]);
     }
 
     const adminSettings = document.createElement('section');
