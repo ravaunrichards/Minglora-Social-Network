@@ -2148,7 +2148,7 @@ async function route(req, res) {
           return json(res, 405, { error: 'Use GET for Fan Club status or POST for join/watch activity.' });
         }
         if (session.hostId === user.id) return json(res, 403, { error: 'The host cannot join their own Fan Club.' });
-        if (session.liveSettings?.practiceMode || session.liveSettings?.liveGifts === false) {
+        if (action === 'join' && (session.liveSettings?.practiceMode || session.liveSettings?.liveGifts === false)) {
           return json(res, 403, { error: 'Fan Club purchases are unavailable in this LIVE room.' });
         }
         let participants;
@@ -2209,26 +2209,38 @@ async function route(req, res) {
           }
           const timestamp = new Date();
           const host = db.users.find(member => member.id === session.hostId);
-          recordGifterGift(db, {
-            giftId: String(transactionId), senderId: user.id, recipientId: session.hostId,
-            recipientUsername: host?.username || '', giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
-            giftName: gift.giftName || joinGift.name || 'Heart Me', coinAmount,
-            contextType: 'live', now: timestamp
-          });
-          recordLiveGiftForLeagues(db, {
-            giftId: transactionId, recipientId: session.hostId, broadcastId: session.id,
-            giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE, coinAmount,
-            region: host?.country || 'GLOBAL'
-          });
-          recordGiftGalleryEvent(db, {
-            giftId: String(transactionId), creatorId: session.hostId, senderId: user.id,
-            broadcastId: session.id, giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
-            coinAmount, giftName: gift.giftName || joinGift.name || 'Heart Me',
-            emoji: gift.emoji || joinGift.emoji || '💖',
-            imageUrl: gift.imageUrl || joinGift.image_url || '',
-            modelUrl: gift.modelUrl || joinGift.model_url || '',
-            timeZone: giftGalleryTimeZone(host), now: timestamp
-          });
+          try {
+            recordGifterGift(db, {
+              giftId: String(transactionId), senderId: user.id, recipientId: session.hostId,
+              recipientUsername: host?.username || '', giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
+              giftName: gift.giftName || joinGift.name || 'Heart Me', coinAmount,
+              contextType: 'live', now: timestamp
+            });
+          } catch (error) {
+            console.error('[Minglora Fan Club] Confirmed Heart Me gift could not update gifter progression.', String(error?.message || error).slice(0, 160));
+          }
+          try {
+            recordLiveGiftForLeagues(db, {
+              giftId: transactionId, recipientId: session.hostId, broadcastId: session.id,
+              giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE, coinAmount,
+              region: host?.country || 'GLOBAL'
+            });
+          } catch (error) {
+            console.error('[Minglora Fan Club] Confirmed Heart Me gift could not update Creator League points.', String(error?.message || error).slice(0, 160));
+          }
+          try {
+            recordGiftGalleryEvent(db, {
+              giftId: String(transactionId), creatorId: session.hostId, senderId: user.id,
+              broadcastId: session.id, giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
+              coinAmount, giftName: gift.giftName || joinGift.name || 'Heart Me',
+              emoji: gift.emoji || joinGift.emoji || '💖',
+              imageUrl: gift.imageUrl || joinGift.image_url || '',
+              modelUrl: gift.modelUrl || joinGift.model_url || '',
+              timeZone: giftGalleryTimeZone(host), now: timestamp
+            });
+          } catch (error) {
+            console.error('[Minglora Fan Club] Confirmed Heart Me gift could not update the gift gallery.', String(error?.message || error).slice(0, 160));
+          }
           const joined = joinLiveFanClub(db, {
             hostId: session.hostId, fanId: user.id, giftTransactionId: String(transactionId), now: timestamp
           });
