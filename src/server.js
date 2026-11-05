@@ -1793,6 +1793,67 @@ async function route(req, res) {
         await saveStore();
         return json(res,201,{gift});
       }
+      const rewardDropCollection=p.match(/^\/api\/live\/sessions\/([^/]+)\/reward-drops$/);
+      const rewardDropEntry=p.match(/^\/api\/live\/sessions\/([^/]+)\/reward-drops\/([^/]+)\/(join|claim)$/);
+      if((method==='GET'||method==='POST')&&rewardDropCollection){
+        const session=(db.liveSessions||[]).find(item=>item.id===rewardDropCollection[1]&&item.status==='live');
+        if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE reward room is not available.'});
+        const canViewRewardRoom=session.hostId===user.id||session.visibility==='public'||
+          (session.visibility==='friends'&&isFriend(user.id,session.hostId));
+        if(!canViewRewardRoom)return json(res,404,{error:'LIVE reward room is not available.'});
+        if(method==='GET'){
+          const result=await requestSupabaseState('economy_live_reward_list',{userId:user.id,broadcastId:session.id});
+          return json(res,200,result);
+        }
+        if(session.hostId!==user.id)return json(res,403,{error:'Only the LIVE host can launch a Goody Bag or Treasure Box.'});
+        const kind=String(input.kind||'');
+        const totalCoins=Number(input.totalCoins);
+        const winnerCount=Number(input.winnerCount);
+        const countdownSeconds=Number(input.countdownSeconds);
+        const participationMethod=String(input.participationMethod||'tap');
+        const keyword=String(input.keyword||'').trim().toLowerCase();
+        if(!['goody_bag','treasure_box'].includes(kind)||
+           !Number.isSafeInteger(totalCoins)||totalCoins<1||totalCoins>1000000||
+           !Number.isSafeInteger(winnerCount)||winnerCount<1||winnerCount>100||winnerCount>totalCoins||
+           !Number.isSafeInteger(countdownSeconds)||countdownSeconds<30||countdownSeconds>600||
+           !['tap','comment'].includes(participationMethod)||
+           (participationMethod==='comment'&&(keyword.length<1||keyword.length>40))||keyword.length>40){
+          return json(res,400,{error:'Check the reward type, coin pool, winners, countdown and entry condition.'});
+        }
+        try{
+          const participants=await listLiveKitParticipants(session.roomName);
+          if(!participants.some(participant=>participant.identity===session.hostId)){
+            return json(res,409,{error:'Your LIVE room must be connected before launching a reward drop.'});
+          }
+        }catch{
+          return json(res,503,{error:'Minglora could not verify your LIVE room. Try again shortly.'});
+        }
+        const result=await requestSupabaseState('economy_live_reward_create',{
+          creatorId:user.id,broadcastId:session.id,requestId:uid(),kind,totalCoins,winnerCount,
+          countdownSeconds,participationMethod,keyword
+        });
+        return json(res,201,result);
+      }
+      if(method==='POST'&&rewardDropEntry){
+        const session=(db.liveSessions||[]).find(item=>item.id===rewardDropEntry[1]&&item.status==='live');
+        if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE reward room is not available.'});
+        const canViewRewardRoom=session.visibility==='public'||
+          (session.visibility==='friends'&&isFriend(user.id,session.hostId));
+        if(!canViewRewardRoom)return json(res,404,{error:'LIVE reward room is not available.'});
+        try{
+          const participants=await listLiveKitParticipants(session.roomName);
+          if(!participants.some(participant=>participant.identity===user.id)){
+            return json(res,403,{error:'Join this LIVE room before entering or claiming its rewards.'});
+          }
+        }catch{
+          return json(res,503,{error:'Minglora could not verify your LIVE presence. Try again shortly.'});
+        }
+        const dropId=String(rewardDropEntry[2]||'');
+        if(!/^[0-9a-f-]{36}$/i.test(dropId))return json(res,400,{error:'Invalid reward drop reference.'});
+        const action=rewardDropEntry[3]==='join'?'economy_live_reward_join':'economy_live_reward_claim';
+        const result=await requestSupabaseState(action,{userId:user.id,dropId,broadcastId:session.id,keyword:String(input.keyword||'')});
+        return json(res,200,result);
+      }
       let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
@@ -3343,6 +3404,21 @@ const leagueSettlementTimer=setInterval(async()=>{
   }
 },10000);
 leagueSettlementTimer.unref?.();
+
+let liveRewardSettlementLastWarning=0;
+const liveRewardSettlementTimer=setInterval(async()=>{
+  if(!isSupabasePersistence())return;
+  try{
+    await requestSupabaseState('economy_live_reward_settle',{});
+  }catch(error){
+    const at=Date.now();
+    if(at-liveRewardSettlementLastWarning>60000){
+      liveRewardSettlementLastWarning=at;
+      console.warn('[Minglora LIVE reward settlement] Retry pending.',{message:String(error?.message||'settlement unavailable').slice(0,180)});
+    }
+  }
+},15000);
+liveRewardSettlementTimer.unref?.();
 
 server.listen(PORT,'0.0.0.0',async()=>{
   try {
