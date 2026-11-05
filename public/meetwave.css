@@ -1,7 +1,7 @@
 .mw-page{display:grid;gap:18px;color:var(--text)}
 .mw-room-meta span:last-child{font-weight:800;color:var(--text)}
-.mw-modal-backdrop{position:fixed;inset:0;z-index:1200;background:#080f20b8;backdrop-filter:blur(8px);display:grid;place-items:center;padding:18px}
-.mw-create-dialog{width:min(100%,520px);max-height:min(90vh,760px);overflow:auto;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 28px 90px #06102b55}
+.mw-modal-backdrop{position:static!important;inset:auto!important;z-index:auto!important;width:100%;max-width:100%;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;display:grid;place-items:stretch;padding:0;margin:14px 0;overflow:visible!important}
+.mw-create-dialog{width:min(100%,520px);max-height:none!important;overflow:visible!important;margin:0 auto;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 12px 32px #06102b18}
 .mw-create-dialog>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
 .mw-create-dialog h2{font-size:22px;margin:5px 0 0}
 .mw-modal-close{width:34px;height:34px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:22px;cursor:pointer}

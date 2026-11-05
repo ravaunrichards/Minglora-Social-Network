@@ -73,10 +73,13 @@ test('Settings is flattened without decorative category rails or nested card lay
   assert.match(settings, /id="settings-help"/);
 });
  
-test('dialogs can scroll on short screens instead of being cut off', async () => {
+test('dialogs expand in document flow and use the page scroll on short screens', async () => {
   const css = await read('public/styles.css');
+  const mobile = await read('public/mobile-layout.css');
   assert.ok(ruleFor(css, '.modal-backdrop').includes('overflow-y:auto'));
-  assert.ok(ruleFor(css, '.modal').includes('100dvh'));
+  assert.ok(ruleFor(mobile, '.modal-backdrop').includes('overflow:visible!important'));
+  assert.ok(ruleFor(mobile, '.modal').includes('max-height:none!important'));
+  assert.ok(ruleFor(mobile, '.modal').includes('overflow:visible!important'));
 });
 
 test('the responsive shell caches the dedicated phone layout and current navigation code', async () => {
@@ -84,11 +87,12 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   const worker = await read('public/sw.js');
   const mobile = await read('public/mobile-layout.css');
   assert.ok(html.includes('styles.css?v=20261105-live-layout-expand-1'));
-  assert.ok(html.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
-  assert.ok(worker.includes('minglora-shell-v92-admin-badge-verification-promotional-gift-1'));
+  assert.ok(html.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
+  assert.ok(worker.includes('minglora-shell-v93-flow-layout-safety-1'));
   assert.ok(worker.includes('/styles.css?v=20261105-live-layout-expand-1'));
-  assert.ok(worker.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
+  assert.ok(worker.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(worker.includes('/app.js?v=20261105-live-layout-expand-1'));
+  assert.ok(worker.includes('/meetwave.css?v=20261105-flow-dialogs-1'));
   assert.ok(mobile.includes('.mobile-nav>button{display:flex;flex:1 1 20%;max-width:20%'));
   assert.ok(mobile.includes('.mobile-hub-grid'));
   assert.ok(mobile.includes('env(safe-area-inset-bottom)'));
