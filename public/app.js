@@ -718,6 +718,8 @@ let liveGiftCatalogue=[];
 let liveSpeakerRefreshTimer=null;
 let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
+let liveRewardRefreshTimer=null;
+let liveRewardRefreshBusy=false;
 let liveDirectoryFilter='all';
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
@@ -1024,6 +1026,140 @@ function focusLiveRoomPanel(selector){
   window.setTimeout(()=>target.classList.remove("is-focused"),1500);
 }
 
+function stopLiveRewardRefresh(){
+  if(liveRewardRefreshTimer){clearInterval(liveRewardRefreshTimer);liveRewardRefreshTimer=null;}
+  liveRewardRefreshBusy=false;
+}
+function liveRewardCountdown(target){
+  const seconds=Math.max(0,Math.ceil((Date.parse(target||'')-Date.now())/1000));
+  if(!Number.isFinite(seconds)||seconds<=0)return 'Now';
+  const minutes=Math.floor(seconds/60),remaining=seconds%60;
+  return minutes>0?minutes+'m '+String(remaining).padStart(2,'0')+'s':remaining+'s';
+}
+function renderLiveRewardDrops(drops,role){
+  const root=$('#live-reward-list');if(!root)return;
+  const items=Array.isArray(drops)?drops:[];
+  if(!items.length){
+    root.innerHTML="<div class='live-reward-empty'><span aria-hidden='true'>🎁</span><strong>No reward drops yet</strong><small>The host can launch a Goody Bag or Treasure Box during this LIVE.</small></div>";
+    return;
+  }
+  root.innerHTML=items.map(drop=>{
+    const host=drop.creatorId===state.user?.id||role==='host';
+    const goody=drop.kind==='goody_bag';
+    const active=drop.status==='active';
+    const opensAt=Date.parse(drop.opensAt||'');
+    const closesAt=Date.parse(drop.closesAt||'');
+    const now=Date.now();
+    const isOpen=!goody&&Number.isFinite(opensAt)&&now>=opensAt&&now<closesAt;
+    const joined=Boolean(drop.viewerJoined);
+    const claimed=Number(drop.viewerClaimOrder||0)>0;
+    const full=Number(drop.participantCount||0)>=Number(drop.winnerCount||0);
+    let timerText='';
+    if(active){
+      timerText=goody?'Draw closes in '+liveRewardCountdown(drop.closesAt)
+        :now<opensAt?'Treasure opens in '+liveRewardCountdown(drop.opensAt)
+        :'Claims close in '+liveRewardCountdown(drop.closesAt);
+    }else if(drop.status==='refunded'){
+      timerText='No rewards were claimed · coins returned to host';
+    }else{
+      timerText=Number(drop.winners?.length||0)+' winner'+(Number(drop.winners?.length||0)===1?'':'s')+' selected';
+    }
+    let button='';
+    if(!host&&active&&goody){
+      button=joined?"<button type='button' class='live-reward-action is-done' disabled>You're entered</button>"
+        :"<button type='button' class='live-reward-action' data-live-reward-action='join' data-live-reward-id='"+esc(drop.id)+"'>Join Goody Bag</button>";
+    }else if(!host&&active&&!goody){
+      button=claimed?"<button type='button' class='live-reward-action is-done' disabled>Claimed · "+Number(drop.viewerRewardCoins||0).toLocaleString()+" Coins</button>"
+        :!isOpen?"<button type='button' class='live-reward-action' disabled>"+(now<opensAt?'Waiting to open':'Closed')+"</button>"
+        :full?"<button type='button' class='live-reward-action' disabled>Fully claimed</button>"
+        :"<button type='button' class='live-reward-action' data-live-reward-action='claim' data-live-reward-id='"+esc(drop.id)+"'>Open & claim</button>";
+    }else if(drop.viewerRewardCoins>0){
+      button="<span class='live-reward-earned'>You received "+Number(drop.viewerRewardCoins).toLocaleString()+" Coins</span>";
+    }
+    const requirement=drop.participationMethod==='comment'
+      ?"<small class='live-reward-condition'>Comment <strong>"+esc(drop.keyword||'the keyword')+"</strong> in LIVE chat to participate.</small>"
+      :"<small class='live-reward-condition'>"+(goody?'Tap to enter the random draw.':'First eligible viewers to claim receive Coins.')+"</small>";
+    return "<article class='live-reward-card "+(goody?'goody':'treasure')+"' data-live-reward-card='"+esc(drop.id)+"'>"+
+      "<div class='live-reward-art' aria-hidden='true'><span>"+(goody?'🎁':'💎')+"</span></div>"+
+      "<div class='live-reward-main'><div class='live-reward-title-row'><strong>"+(goody?'Goody Bag':'Treasure Box')+"</strong><span class='live-reward-state "+(active?'active':drop.status==='refunded'?'refunded':'complete')+"'>"+(active?'LIVE':drop.status==='refunded'?'REFUNDED':'COMPLETE')+"</span></div>"+
+      "<div class='live-reward-pot'>"+Number(drop.totalCoins||0).toLocaleString()+" <span>Coins</span></div>"+
+      "<small class='live-reward-meta'>"+Number(drop.participantCount||0).toLocaleString()+" joined · "+Number(drop.winnerCount||0).toLocaleString()+" winner"+(Number(drop.winnerCount||0)===1?'':'s')+"</small>"+
+      requirement+"<small class='live-reward-countdown'>"+esc(timerText)+"</small>"+button+"</div></article>";
+  }).join('');
+  root.querySelectorAll('[data-live-reward-action]').forEach(button=>button.addEventListener('click',async()=>{
+    const action=button.dataset.liveRewardAction,dropId=button.dataset.liveRewardId;
+    if(!activeLiveSession?.id||!dropId||button.disabled)return;
+    button.disabled=true;
+    try{
+      const path='/live/sessions/'+encodeURIComponent(activeLiveSession.id)+'/reward-drops/'+encodeURIComponent(dropId)+'/'+(action==='join'?'join':'claim');
+      const result=await api(path,{method:'POST',body:JSON.stringify({})});
+      const reward=Number(result.result?.rewardCoins||0);
+      toast(action==='join'?'You joined the Goody Bag. Good luck!':reward>0?'Treasure Box claimed: '+reward.toLocaleString()+' Coins added to your wallet.':'Your Treasure Box claim was recorded.');
+      await refreshLiveRewardPanel(activeLiveSession,role);
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+}
+async function refreshLiveRewardPanel(session,role){
+  if(liveRewardRefreshBusy||!session?.id||!$('#live-reward-list'))return;
+  liveRewardRefreshBusy=true;
+  try{
+    const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/reward-drops');
+    renderLiveRewardDrops(data.drops||[],role);
+    const balance=$('#live-reward-balance');
+    if(balance&&role==='host'){
+      try{
+        const wallet=await api('/coins/wallet');
+        balance.textContent=Number(wallet.wallet?.balance_coins??0).toLocaleString()+' Coins available';
+      }catch{balance.textContent='Wallet unavailable';}
+    }
+  }catch(error){
+    const root=$('#live-reward-list');
+    if(root&&!root.children.length)root.innerHTML="<p class='muted'>Reward drops could not be loaded: "+esc(error.message)+"</p>";
+  }finally{liveRewardRefreshBusy=false;}
+}
+function setupLiveRewardPanel(session,role){
+  stopLiveRewardRefresh();
+  const panel=$('#live-reward-panel');if(!panel)return;
+  const form=$('#live-reward-create-form');
+  const method=$('#live-reward-method');
+  const keywordRow=$('#live-reward-keyword-row');
+  const kind=$('#live-reward-kind');
+  const launch=$('#live-reward-launch');
+  const syncForm=()=>{
+    if(keywordRow)keywordRow.hidden=method?.value!=='comment';
+    if(kind&&launch)launch.textContent=kind.value==='goody_bag'?'Launch Goody Bag':'Launch Treasure Box';
+  };
+  method?.addEventListener('change',syncForm);
+  kind?.addEventListener('change',syncForm);
+  syncForm();
+  form?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(role!=='host'){toast('Only the LIVE host can create a reward drop.');return;}
+    const values=new FormData(form);
+    const payload={
+      kind:String(values.get('kind')||'goody_bag'),
+      totalCoins:Number(values.get('totalCoins')),
+      winnerCount:Number(values.get('winnerCount')),
+      countdownSeconds:Number(values.get('countdownSeconds')),
+      participationMethod:String(values.get('participationMethod')||'tap'),
+      keyword:String(values.get('keyword')||'').trim().toLowerCase()
+    };
+    if(payload.participationMethod==='comment'&&!payload.keyword){toast('Enter the chat keyword viewers must comment.');return;}
+    if(!Number.isSafeInteger(payload.totalCoins)||payload.totalCoins<1||payload.totalCoins>1000000||
+       !Number.isSafeInteger(payload.winnerCount)||payload.winnerCount<1||payload.winnerCount>100||
+       payload.winnerCount>payload.totalCoins){toast('Check the coin pool and number of winners.');return;}
+    launch.disabled=true;
+    try{
+      await api('/live/sessions/'+encodeURIComponent(session.id)+'/reward-drops',{method:'POST',body:JSON.stringify(payload)});
+      toast(payload.kind==='goody_bag'?'Goody Bag launched.':'Treasure Box scheduled.');
+      form.reset();syncForm();
+      await refreshLiveRewardPanel(session,role);
+    }catch(error){toast(error.message);}
+    finally{launch.disabled=false;}
+  });
+  void refreshLiveRewardPanel(session,role);
+  liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
+}
 async function openLiveRoom(session,role,issuedLiveKit){
   stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
