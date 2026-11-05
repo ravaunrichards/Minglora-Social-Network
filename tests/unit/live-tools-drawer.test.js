@@ -81,6 +81,6 @@ test('Host and approved guests can use camera controls in video LIVE rooms', () 
   assert.ok(app.includes('(role==="host"||role==="guest")&&cameraFeatureAvailable?liveControlButton("live-camera-toggle"'));
   assert.match(app, /if\(role==="guest"&&canUseCamera\)/);
   assert.match(app, /await room\.localParticipant\.setCameraEnabled\(true\)/);
-  assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&canUseCamera\)/);
+  assert.ok(app.includes('cameraControl.disabled=!((role==="host"||role==="guest")&&cameraAllowedNow())'));
   assert.match(app, /id='live-gift-panel'/);
 });
