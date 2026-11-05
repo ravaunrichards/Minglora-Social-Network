@@ -4728,6 +4728,7 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 .live-layout-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .live-layout-option{display:flex;align-items:center;gap:8px;min-width:0;min-height:42px;padding:8px 9px;border:1px solid rgba(160,185,226,.22);border-radius:10px;color:#dfe8f7;background:rgba(255,255,255,.055);font:inherit;font-size:10px;font-weight:800;text-align:left;cursor:pointer}
 .live-layout-option svg{flex:0 0 21px;width:21px;height:21px}
+.live-layout-option[data-live-screen-layout="full-screen"] svg{flex-basis:24px;width:24px;height:24px;stroke-width:2.2}
 .live-layout-option.active{border-color:#75e8d1;background:rgba(64,171,157,.18);color:#fff;box-shadow:inset 0 0 0 1px rgba(108,232,204,.22)}
 .live-layout-option:disabled{opacity:.55;cursor:wait}
 .live-layout-status{margin:0;color:#aeb9ca;font-size:10px;line-height:1.4}
@@ -5183,10 +5184,10 @@ button.live-ranking-row{cursor:pointer}
 /* Default host-only Full Screen stage: portrait-shaped and comfortably sized
    across phone, tablet and desktop without stretching across wide screens. */
 .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
-  width:min(100%,62.4dvh,608px);
+  width:min(100%,66dvh,640px);
   max-width:100%;
   min-height:0;
-  max-height:min(78dvh,760px);
+  max-height:min(84dvh,800px);
   aspect-ratio:4 / 5;
   margin-inline:auto;
   border-radius:18px;
@@ -5196,7 +5197,7 @@ button.live-ranking-row{cursor:pointer}
 }
 @media(max-height:520px){
   .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
-    width:min(100%,62.4dvh,608px);
-    max-height:78dvh;
+    width:min(100%,64dvh,620px);
+    max-height:82dvh;
   }
 }
