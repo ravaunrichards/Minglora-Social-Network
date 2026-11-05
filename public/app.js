@@ -740,6 +740,10 @@ let liveAudioMuted=false;
 let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
 let liveGiftCatalogue=[];
+let liveGiftEventsTimer=null;
+let liveGiftEventsBusy=false;
+let liveGiftEventsLastSeenAt='';
+const liveGiftSeenEventIds=new Set();
 let liveSpeakerRefreshTimer=null;
 const liveSpeakerSeenRequestsBySession=new Map();
 let liveParticipantSyncTimer=null;
@@ -1071,6 +1075,57 @@ async function syncLiveParticipantPresence(session){
   return false;
 }
 function stopLiveSpeakerRefresh(){if(liveSpeakerRefreshTimer){clearInterval(liveSpeakerRefreshTimer);liveSpeakerRefreshTimer=null;}}
+function stopLiveGiftEvents(){
+  if(liveGiftEventsTimer){clearInterval(liveGiftEventsTimer);liveGiftEventsTimer=null;}
+  liveGiftEventsBusy=false;
+  liveGiftEventsLastSeenAt='';
+  liveGiftSeenEventIds.clear();
+}
+async function refreshLiveGiftEvents(session){
+  if(liveGiftEventsBusy||!session?.id||activeLiveSession?.id!==session.id)return;
+  liveGiftEventsBusy=true;
+  try{
+    const since=liveGiftEventsLastSeenAt||new Date(Date.now()-10000).toISOString();
+    const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/gifts?since='+encodeURIComponent(since));
+    const events=Array.isArray(result.events)?result.events:[];
+    for(const event of events){
+      const eventId=String(event.id||'');
+      if(!eventId||liveGiftSeenEventIds.has(eventId))continue;
+      liveGiftSeenEventIds.add(eventId);
+      const createdAt=String(event.createdAt||'');
+      if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
+      if(String(event.sender?.id||'')===String(state.user?.id||''))continue;
+      const catalogueGift=liveGiftCatalogue.find(item=>item.code===event.giftCode);
+      const gift=catalogueGift?{
+        ...catalogueGift,
+        name:catalogueGift.name||event.giftName||'Gift',
+        image_url:catalogueGift.image_url||event.imageUrl||'',
+        model_url:catalogueGift.model_url||event.modelUrl||'',
+        emoji:catalogueGift.emoji||event.emoji||'🎁'
+      }:{
+        code:event.giftCode,
+        name:event.giftName||'Gift',
+        image_url:event.imageUrl||'',
+        model_url:event.modelUrl||'',
+        emoji:event.emoji||'🎁'
+      };
+      const stage=$('#live-video-stage');
+      if(stage)window.MingloraGiftFX?.mount(stage,gift);
+      toast(String(event.sender?.name||event.sender?.username||'A viewer')+' sent '+gift.name+' 🎁');
+    }
+    if(liveGiftSeenEventIds.size>500){
+      const previous=Array.from(liveGiftSeenEventIds);
+      previous.slice(0,previous.length-300).forEach(id=>liveGiftSeenEventIds.delete(id));
+    }
+  }catch(error){
+    console.warn('[Minglora LIVE] Confirmed gift activity could not be refreshed.',error?.message||error);
+  }finally{liveGiftEventsBusy=false;}
+}
+function startLiveGiftEvents(session){
+  if(liveGiftEventsTimer)clearInterval(liveGiftEventsTimer);
+  void refreshLiveGiftEvents(session);
+  liveGiftEventsTimer=setInterval(()=>void refreshLiveGiftEvents(session),2200);
+}
 async function refreshLiveSpeakerPanel(session,role,room){
   const root="/live/sessions/"+encodeURIComponent(session.id);
   if(role==="host"){
@@ -1867,7 +1922,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();stopLiveGiftEvents();liveGiftEventsLastSeenAt=new Date(Date.now()-10000).toISOString();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
   try{
     const progression=await api('/gifter-progression/overview');
     state.user.gifterBadge=progression.badge||null;
@@ -2079,7 +2134,7 @@ activeLivePinnedComment=null;
     while(layer.childElementCount>18)layer.firstElementChild?.remove();
     bubble.addEventListener("animationend",()=>bubble.remove(),{once:true});
   };
-  if(client.RoomEvent.DataReceived)room.on(client.RoomEvent.DataReceived,async(payload,participant,kind,topic)=>{
+  if(client.RoomEvent.DataReceived)room.on(client.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
     if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
@@ -2120,26 +2175,6 @@ activeLivePinnedComment=null;
         }
         return;
       }
-    }
-    if(topic==="minglora-live-gift"&&packet?.type==="minglora.live.gift"&&packet.version===1&&typeof packet.giftCode==="string"){
-      const senderId=String(participant.identity||"");
-      if(senderId===String(state.user?.id||""))return;
-      let gift=liveGiftCatalogue.find(item=>item.code===packet.giftCode);
-      if(!gift){
-        try{
-          const catalog=await api("/coins/catalog");
-          liveGiftCatalogue=Array.isArray(catalog.gifts)?catalog.gifts:[];
-          gift=liveGiftCatalogue.find(item=>item.code===packet.giftCode);
-          refreshLiveGiftGrid?.();
-        }catch(error){console.warn("[Minglora LIVE] Gift animation catalogue lookup failed.",error?.message||error);}
-      }
-      if(gift){
-        const stage=$("#live-video-stage");
-        if(stage)window.MingloraGiftFX?.mount(stage,gift);
-        const senderName=String(participant.name||participant.identity||"A viewer");
-        toast(senderName+" sent "+gift.name+" 🎁");
-      }
-      return;
     }
     if(topic==="minglora-live-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.layout"&&packet.version===1){
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
@@ -2539,7 +2574,7 @@ activeLivePinnedComment=null;
         if(button)button.disabled=false;
         return;
       }
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
@@ -2634,9 +2669,6 @@ activeLivePinnedComment=null;
         try{
           const sent=await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:button.dataset.liveGift})});
           const gift=sent.gift;toast((gift.emoji||"🎁")+" "+gift.giftName+" sent · "+Number(gift.coinAmount||0).toLocaleString()+" Minglora Coins");
-          const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.gift",version:1,giftCode:button.dataset.liveGift}));
-          try{await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-gift"});}
-          catch(error){console.warn("[Minglora LIVE] Gift was confirmed but its room animation could not be broadcast.",error?.message||error);}
           const walletResult=await api("/coins/wallet").catch(()=>null),balanceElement=$("#live-wallet-balance");
           if(balanceElement)balanceElement.textContent=walletResult?.wallet&&walletResult.wallet.balance_coins!=null?Number(walletResult.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
           const stage=$("#live-video-stage");if(stage)window.MingloraGiftFX?.mount(stage,catalogGift);
@@ -2644,13 +2676,14 @@ activeLivePinnedComment=null;
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
       await loadLiveGiftCatalogue();
+      startLiveGiftEvents(session);
     }
     if(liveSettings.groupChatEnabled!==false){await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);}
     startLiveSpeakerRefresh(session,role,room);
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");
   }catch(error){
-    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
+    stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
     if(state.view==='live'){
