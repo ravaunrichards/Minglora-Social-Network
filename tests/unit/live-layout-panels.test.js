@@ -65,10 +65,20 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 test('Full Screen occupies the complete viewport and keeps one uninterrupted host feed', () => {
   assert.match(app, /icon:'fullscreen'/);
   assert.match(app, /function syncLiveFullscreenComposition\(hostOnly\)/);
-  assert.match(app, /shell\.requestFullscreen\(\{navigationUI:'hide'\}\)/);
+  assert.doesNotMatch(app, /requestFullscreen|exitFullscreen/, 'Full Screen must not force a second browser-level fullscreen layer');
   assert.match(app, /Host only · no guest tiles/);
   assert.match(app, /fullscreen:"<rect x='3' y='3' width='18' height='18'/);
   assert.match(styles, /\.live-player-shell\.live-full-screen-mode\{[\s\S]*?position:fixed!important[\s\S]*?width:100vw!important[\s\S]*?height:100dvh!important/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>\.live-guest-seat:not\(\.is-host\)\{display:none!important\}/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>\.live-guest-seat\.is-host\{[\s\S]*?inset:0!important[\s\S]*?width:100%!important[\s\S]*?height:100%!important/);
+});
+
+
+test('Full Screen keeps every primary LIVE control on-screen without scrolling on phones', () => {
+  assert.match(styles, /\.live-player-shell\.live-full-screen-mode \.live-video-stage>\.live-player-controls\{[\s\S]*?overflow-x:hidden!important/);
+  assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
+  assert.match(styles, /grid-auto-flow:row!important/);
+  assert.match(styles, /max-width:72px!important/);
+  assert.match(styles, /bottom:calc\(118px \+ env\(safe-area-inset-bottom\)\)!important/);
+  assert.match(styles, /height:auto!important;min-height:0!important;max-height:none!important/);
 });
