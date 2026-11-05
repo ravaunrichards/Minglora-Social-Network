@@ -1579,7 +1579,7 @@ async function route(req, res) {
         );
         const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
         const publishSources = role === 'host'
-          ? (session.broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA])
+          ? (session.broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE])
           : role === 'guest'
             ? (session.broadcastType === 'audio_only'
               ? [LIVEKIT_TRACK_SOURCE.MICROPHONE]
