@@ -66,7 +66,7 @@ test('A host can revoke and restore camera permissions for connected guests with
   assert.match(app, /guestCameraAllowed=packet\.enabled/);
   assert.match(app, /if\(packet\.enabled\)toast\("Guest camera access is enabled/);
   assert.match(app, /Guest cameras disabled by host/);
-  assert.match(app, /data-live-room-setting='guestCamera'/);
+  assert.match(app, /\\['guestCamera','Guest camera',true/);
 });
 
 test('Hosts and guests have reciprocal live participant visibility and their own device tools', () => {
