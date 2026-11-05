@@ -7,7 +7,10 @@ import {
   recordGifterGift,
   getGifterProgressionOverview,
   getGifterBadgeSummary,
-  getNewGifterIdentity
+  getNewGifterIdentity,
+  getGifterAdminGrant,
+  grantGifterBadgeLevel,
+  resetGifterBadgeAdminGrant
 } from "../../backend/modules/gifter-progression/service.js";
 
 test("gifter levels use the fixed cumulative coin thresholds from the reference chart", () => {
@@ -160,4 +163,50 @@ test("new accounts have no gifter badge and all levels are locked until sent Coi
   assert.equal(afterFirstCoin.current.hasUnlockedBadge, true);
   assert.equal(afterFirstCoin.levels[0].unlocked, true);
   assert.equal(afterFirstCoin.levels[1].unlocked, false);
+});
+
+
+test("admin can grant all 50 levels without changing Coin totals or confirmed gift history", () => {
+  const db = { users: [{ id: "owner", username: "owner", name: "Owner" }], gifterProgressionLedger: [] };
+  const result = grantGifterBadgeLevel(db, {
+    userId: "owner", actorId: "admin", level: 50, auditId: "admin-grant-1",
+    note: "Creator Hub owner badge entitlement", now: new Date("2026-11-05T12:00:00.000Z")
+  });
+  const overview = getGifterProgressionOverview(db, "owner");
+  assert.equal(result.grant.level, 50);
+  assert.equal(overview.current.level, 50);
+  assert.equal(overview.current.earnedLevel, 0);
+  assert.equal(overview.current.adminGrantedLevel, 50);
+  assert.equal(overview.current.adminGranted, true);
+  assert.equal(overview.current.xp, 0);
+  assert.equal(overview.current.totalCoinsSent, 0);
+  assert.equal(overview.levels.length, 50);
+  assert.equal(overview.levels.every(item => item.unlocked && item.adminGranted), true);
+  assert.equal(db.gifterProgressionLedger.length, 0);
+  assert.equal(getGifterAdminGrant(db, "owner").level, 50);
+  assert.equal(db.gifterBadgeAdminAudit.length, 1);
+});
+
+test("resetting an admin badge grant preserves actual earned levels and spending history", () => {
+  const db = { gifterProgressionLedger: [] };
+  recordGifterGift(db, {
+    giftId: "real-gift", senderId: "owner", recipientId: "friend",
+    giftCode: "rose", coinAmount: 18, contextType: "member",
+    now: new Date("2026-11-04T12:00:00.000Z")
+  });
+  grantGifterBadgeLevel(db, {
+    userId: "owner", actorId: "admin", level: 50, auditId: "admin-grant-2"
+  });
+  const reset = resetGifterBadgeAdminGrant(db, {
+    userId: "owner", actorId: "admin", auditId: "admin-reset-1",
+    note: "Return to earned progression"
+  });
+  const overview = getGifterProgressionOverview(db, "owner");
+  assert.equal(reset.grant, null);
+  assert.equal(overview.current.level, 3);
+  assert.equal(overview.current.earnedLevel, 3);
+  assert.equal(overview.current.adminGrantedLevel, 0);
+  assert.equal(overview.current.xp, 18);
+  assert.equal(db.gifterProgressionLedger.length, 1);
+  assert.equal(db.gifterBadgeAdminAudit.length, 2);
 });
