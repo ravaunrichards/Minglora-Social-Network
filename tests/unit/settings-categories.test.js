@@ -37,9 +37,11 @@ test('Existing settings sections are retained and assigned to one category witho
       assert.ok(settings.includes('id="'+id+'" data-settings-category="'+category+'"'),'assign '+id+' to '+category);
     }
   }
-  for(const control of ['profileVisibility','messageAudience','notificationInApp','notificationFriendRequests','notificationMessages','notificationInteractions','theme','colorTheme','liveRoomTheme','download-account-data','security-email-form','support-ticket-form','settings-logout-btn']){
+  for(const control of ['profileVisibility','messageAudience','notificationInApp','notificationFriendRequests','notificationMessages','notificationInteractions','theme','download-account-data','security-email-form','support-ticket-form','settings-logout-btn']){
     assert.ok(settings.includes('name="'+control+'"')||settings.includes('id="'+control+'"'),'preserve existing '+control);
   }
+  assert.match(settings,/renderThemeChoices\('colorTheme', APP_THEMES/);
+  assert.match(settings,/renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings,/settings-category-intro/);
   assert.match(settings,/section\.hidden=section\.dataset\.settingsCategory!==category/);
   assert.match(settings,/FormData\(settingsForm\)/);
