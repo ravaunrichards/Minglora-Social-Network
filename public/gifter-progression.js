@@ -78,7 +78,7 @@
       "<span class='gp-rank-number'>" + item.rank + "</span>" +
       "<span class='gp-leader-avatar'>" + esc((item.name || item.username || "M").slice(0, 1).toUpperCase()) + "</span>" +
       "<span class='gp-leader-copy'><strong>" + esc(item.name) + "</strong><small>@" + esc(item.username) +
-      " · Level " + item.level + "</small></span><strong class='gp-leader-xp'>" + number(item.xp) + " XP</strong></article>"
+      " · Level " + item.level + "</small></span><strong class='gp-leader-xp'>" + number(item.xp) + " Coins sent</strong></article>"
     ).join("") + "</div>";
   }
 
@@ -88,8 +88,8 @@
       (data.levels || []).find(item => item.current);
     const progressText = current.maxLevel
       ? "You have reached the maximum gifter level."
-      : number(current.xpRemaining) + " XP to Level " + current.nextLevel;
-    const image = "<img class='gp-reference-art' src='/assets/gifters-level-up.png' alt='Minglora gifter level progression artwork' loading='eager' decoding='async'>";
+      : number(current.xpRemaining) + " Coins to Level " + current.nextLevel;
+    const image = "";
     const level25 = (data.levels || []).find(item => item.level === 25);
     const chart = (data.levels || []).map(levelCard).join("");
     const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
@@ -98,7 +98,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Levels &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       "<button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></header>" +
-      "<section class='gp-hero card'><div class='gp-hero-art'>" + image + "</div><div class='gp-hero-summary'>" +
+      "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR CURRENT BADGE</span><div class='gp-current-badge-row'>" +
       badgeMarkup(current.level, current.tier) +
       "<div><h2>Level " + current.level + " · " + esc(current.tier) + "</h2><p>" + esc(current.badgeName) + "</p>" +
@@ -116,7 +116,7 @@
       "<p>Tap any level to inspect its badge and unlock requirement.</p></div><span class='gp-level-count'>" + current.level + " / 50</span></div>" +
       "<div class='gp-selected-level' id='gp-selected-level'>" + detailMarkup(selected, current) + "</div>" +
       "<div class='gp-level-grid' id='gp-level-grid'>" + chart + "</div></section>" +
-      "<section class='gp-level25 card'><div class='gp-level25-emblem'>25</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>Level 25 · LIVE Entrance Badge</h2><p>Reach Level 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.xpRequired || 0) - current.xp)) + " XP remaining") + "</strong></div></section>" +
+      "<section class='gp-level25 card'><div class='gp-level25-emblem'>25</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>Level 25 · LIVE Entrance Badge</h2><p>Reach Level 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
       "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +
       "<p>Only successful, server-confirmed gifts are shown.</p></div></div>" + renderHistory(data.history || []) + "</section>" +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>COMMUNITY STANDINGS</span><h2>Top gifters</h2>" +
