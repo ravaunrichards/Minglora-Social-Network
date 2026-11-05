@@ -23,6 +23,17 @@ test('profile owner has individual profile-picture and cover-picture edit contro
   assert.match(coverButton,/aria-label="Edit cover picture"/);
 });
 
+
+
+test('phone profile header hides the overlapping avatar and keeps Edit Profile actions visible on the right',()=>{
+  assert.match(css,/@media\\(max-width:760px\\)\\{[\\s\\S]*?\\.profile-avatar-edit-wrap\\{\\s*display:none!important;\\s*\\}/);
+  assert.match(css,/\\.profile-info-main\\{[^}]*flex:1 1 100%/);
+  assert.match(css,/\\.profile-owner-actions,[\\s\\S]*?justify-content:flex-end!important/);
+  assert.match(css,/\\.profile-owner-actions \\.profile-edit\\{[^}]*min-height:44px!important/);
+  assert.match(app,/class=\\"profile-actions profile-owner-actions\\"/);
+  assert.match(app,/id=\\"edit-profile\\" type=\\"button\\" aria-label=\\"Edit profile\\"/);
+});
+
 test('single-image edit mode hides the unrelated picture editor and uploads only its selected target',()=>{
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
   assert.match(app,/data-profile-media-section="avatar"/);
