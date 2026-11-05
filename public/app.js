@@ -1465,7 +1465,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const speakerTools=role==="host"
     ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host'><div class='live-speaker-panel-heading'><strong>Speaker stage</strong><small>Up to 8 guest speakers</small></div><div id='live-speaker-request-list'><p class='muted'>Loading speaker requests…</p></div></section>"
     : role==="viewer"
-      ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>"
+      ? (liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel'><strong>Guest requests are disabled</strong><p class='muted'>The host is not accepting co-host or guest stage requests for this LIVE.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
@@ -1500,7 +1500,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
-  const liveModeratorTools=role==="host"
+  const liveModeratorTools=role==="host"&&liveSettings.manageModerators!==false
     ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
     : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE tools sections'>"+
@@ -1515,12 +1515,21 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (liveSettings.board?"<span class='live-board-badge'>"+esc(String(liveSettings.board).replace(/^./,x=>x.toUpperCase()))+"</span>":"")+
     (session.description?"<p class='live-session-about'>"+esc(session.description)+"</p>":"")+
     (liveSettings.clientAcquisitionEnabled&&liveSettings.clientCtaUrl&&liveSettings.clientCtaLabel?"<a class='live-client-cta' href='"+esc(liveSettings.clientCtaUrl)+"' target='_blank' rel='noopener noreferrer'>"+esc(liveSettings.clientCtaLabel)+"</a>":"")+"</div>";
+  const liveRoomPermissionSettings=[
+    ['allowGuestRequests','Allow guest requests',true,'Let viewers request a stage seat'],
+    ['guestCamera','Guest camera',true,'Allow approved guests to publish video'],
+    ['autoAcceptRequests','Auto accept',false,'Approve requests automatically while seats are open'],
+    ['prioritizeGifters','Prioritize gifters',false,'Sort requests by verified gifter level'],
+    ['allowCoHost','Allow co-host / guest stage',true,'Allow other members to join the stage'],
+    ['manageModerators','Manage moderators',true,'Allow moderator assignments and removal']
+  ];
+  const liveRoomPermissionControls=role==='host'?"<section id='live-room-permission-controls' class='live-room-permission-controls'><div class='live-tools-card-heading'><strong>Guest & host permissions</strong><small>Enable or disable each room control</small></div><div class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveRoomLayoutControl=role==='host'?"<section class='live-room-layout-control'><label for='live-room-layout-select'><strong>Stage layout</strong><small>Switch the room layout without ending LIVE</small><select id='live-room-layout-select'>"+LIVE_ROOM_LAYOUT_OPTIONS.map(option=>"<option value='"+option.value+"'"+(option.value===(liveSettings.roomLayout||'fluid_grid')?' selected':'')+">"+esc(option.label)+"</option>").join('')+"</select></label></section>":'';
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+liveRoomLayoutControl+"<div class='live-tools-content'>"+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+liveRoomLayoutControl+liveRoomPermissionControls+"<div class='live-tools-content'>"+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
@@ -1552,6 +1561,22 @@ async function openLiveRoom(session,role,issuedLiveKit){
         toast('LIVE layout changed to '+(LIVE_ROOM_LAYOUT_OPTIONS.find(option=>option.value===selected)?.label||selected)+'.');
       }catch(error){layoutSelect.value=previous;toast(error.message||'The LIVE layout could not be changed.');}
       finally{layoutSelect.disabled=false;}
+    });
+    const permissionPanel=$("#live-room-permission-controls");
+    permissionPanel?.addEventListener('change',async event=>{
+      const input=event.target?.closest?.('[data-live-room-setting]');if(!input)return;
+      const key=input.dataset.liveRoomSetting,previous=Boolean(activeLiveSession?.liveSettings?.[key]??!['autoAcceptRequests','prioritizeGifters'].includes(key));
+      input.disabled=true;
+      try{
+        const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/settings',{method:'PATCH',body:JSON.stringify({settings:{[key]:input.checked}})});
+        activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),...(saved.liveSettings||{})};
+        session.liveSettings={...(session.liveSettings||{}),...(saved.liveSettings||{})};
+        toast((input.checked?'Enabled ':'Disabled ')+input.closest('label')?.querySelector('strong')?.textContent+'.');
+        if(key==='manageModerators'&&input.checked===false)$('#live-moderator-panel')?.classList.add('hidden');
+        if(key==='manageModerators'&&input.checked===true)$('#live-moderator-panel')?.classList.remove('hidden');
+        if(key==='prioritizeGifters')await refreshLiveSpeakerPanel(session,role,activeLiveRoom);
+      }catch(error){input.checked=previous;toast(error.message||'The LIVE setting could not be updated.');}
+      finally{input.disabled=false;}
     });
     const moderatorList=$("#live-moderator-list");
     const refreshLiveModerators=async()=>{
