@@ -237,7 +237,731 @@
       }
     });
 
-    const money = minor => 'USD     const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
+    const money = minor => 'USD 
+    const refreshMarketingBudget = async () => {
+      if (!budgetSummary) return;
+      budgetSummary.textContent = 'Loading verified budget…';
+      try {
+        const response = await fetch('/api/admin/marketing/budget', {
+          credentials: 'same-origin',
+          headers: {Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing budget could not be loaded.');
+        budgetSummary.textContent =
+          'Funded: ' + money(result.fundedMinor) +
+          ' · Reserved in member wallets/reward pools: ' + money(result.reservedMinor) +
+          ' · Spent on eligible gifts: ' + money(result.spentMinor) +
+          ' · Available to grant: ' + money(result.availableMinor);
+      } catch (error) {
+        budgetSummary.textContent = error.message || 'Marketing budget is unavailable.';
+      }
+    };
+    panel.querySelector('#admin-marketing-budget-refresh')?.addEventListener('click', refreshMarketingBudget);
+    refreshMarketingBudget();
+
+    panel.querySelector('#admin-marketing-funding-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-marketing-funding-amount');
+      const referenceInput = form.querySelector('#admin-marketing-funding-reference');
+      const noteInput = form.querySelector('#admin-marketing-funding-note');
+      const status = form.querySelector('#admin-marketing-funding-status');
+      const submit = form.querySelector('#admin-marketing-funding-submit');
+      const rawAmount = String(amountInput?.value || '').trim();
+      const amount = Number(rawAmount);
+      const amountMinor = Math.round(amount * 100);
+      const reference = String(referenceInput?.value || '').trim();
+      if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(rawAmount) ||
+          !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
+          reference.length < 6 || reference.length > 160) {
+        if (status) status.textContent = 'Enter at least USD $1.00 and a valid external funding reference.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure funding reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Confirm that USD ' + money(amountMinor) + ' has already been received and matched to external reference ' + reference + '? Do not record pending or expected funds.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Recording verified funding…';
+      try {
+        const response = await fetch('/api/admin/marketing/funding', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            amountMinor,
+            requestId:window.crypto.randomUUID(),
+            fundingReference:reference,
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing funding could not be recorded.');
+        if (status) status.textContent = 'Funding recorded. Available marketing balance: ' + money(result.availableMinor) + '.';
+        if (amountInput) amountInput.value = '';
+        if (referenceInput) referenceInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing funding could not be recorded.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-marketing-grant-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = form.querySelector('#admin-marketing-member');
+      const amountInput = form.querySelector('#admin-marketing-grant-amount');
+      const noteInput = form.querySelector('#admin-marketing-grant-note');
+      const status = form.querySelector('#admin-marketing-grant-status');
+      const submit = form.querySelector('#admin-marketing-grant-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a valid Minglora username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure grant reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Grant ' + amountCoins.toLocaleString() + ' marketing-funded Coins to @' + memberUsername + '? This reserves ' + money(amountCoins) + ' from the confirmed marketing budget.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Reserving marketing funds and granting Coins…';
+      try {
+        const response = await fetch('/api/admin/marketing/grants', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername,amountCoins,requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing Coin grant failed.');
+        if (status) status.textContent = 'Granted ' + Number(result.amountCoins || amountCoins).toLocaleString() +
+          ' marketing-funded Coins to @' + memberUsername + '.';
+        if (amountInput) amountInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing Coin grant failed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-owner-coin-amount');
+      const noteInput = form.querySelector('#admin-owner-coin-note');
+      const status = form.querySelector('#admin-owner-coin-issuance-status');
+      const submit = form.querySelector('#admin-owner-coin-issue-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 9,007,199,254,740,991.';
+        return;
+      }
+      const formattedAmount = amountCoins.toLocaleString();
+      if (!window.confirm('Issue ' + formattedAmount + ' owner-issued Coins to CreatorHubCreatorNetwork@gmail.com? This is not member credit.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Submitting owner Coin issuance…';
+      try {
+        if (!window.crypto?.randomUUID) throw new Error('A secure request reference could not be generated on this device.');
+        const response = await fetch('/api/admin/coins/owner-issuance', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amountCoins,
+            requestId: window.crypto.randomUUID(),
+            note: String(noteInput?.value || 'Creator Hub owner promotional Coins').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Owner Coin issuance failed.');
+        const balance = Number(result.wallet?.wallet?.balance_coins ?? result.issuance?.issuance?.balanceAfter ?? 0);
+        if (status) status.textContent = 'Issued ' + formattedAmount + ' owner Coins to CreatorHubCreatorNetwork@gmail.com. Wallet balance: ' + balance.toLocaleString() + ' Coins.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Owner Coin issuance could not be completed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => {
+      const enroll = document.querySelector('#enroll-totp');
+      enroll?.scrollIntoView({behavior:'smooth',block:'center'});
+      enroll?.click();
+    });
+  }
+
+  document.addEventListener('click', async event => {
+    const trigger = event.target.closest('[data-open-admin-centre]');
+    if (!trigger) return;
+    trigger.disabled = true;
+    try {
+      if (!window.MingloraSettings?.open) throw new Error('Settings are not available yet. Refresh Minglora and try again.');
+      await window.MingloraSettings.open();
+      addControlCentrePanel();
+      document.querySelector('#admin-control-centre')?.scrollIntoView({behavior:'smooth',block:'start'});
+    } catch (error) {
+      window.alert(error.message || 'The Admin Control Centre could not be opened.');
+    } finally {
+      trigger.disabled = false;
+    }
+  });
+
+  const observer = new MutationObserver(addProfileEntry);
+  observer.observe(document.documentElement, {subtree:true,childList:true});
+  addProfileEntry();
+})(); + (Number(minor || 0) / 100).toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2});
+    const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
+    const refreshMarketingBudget = async () => {
+      if (!budgetSummary) return;
+      budgetSummary.textContent = 'Loading verified budget…';
+      try {
+        const response = await fetch('/api/admin/marketing/budget', {
+          credentials: 'same-origin',
+          headers: {Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing budget could not be loaded.');
+        budgetSummary.textContent =
+          'Funded: ' + money(result.fundedMinor) +
+          ' · Reserved in member wallets/reward pools: ' + money(result.reservedMinor) +
+          ' · Spent on eligible gifts: ' + money(result.spentMinor) +
+          ' · Available to grant: ' + money(result.availableMinor);
+      } catch (error) {
+        budgetSummary.textContent = error.message || 'Marketing budget is unavailable.';
+      }
+    };
+    panel.querySelector('#admin-marketing-budget-refresh')?.addEventListener('click', refreshMarketingBudget);
+    refreshMarketingBudget();
+
+    panel.querySelector('#admin-marketing-funding-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-marketing-funding-amount');
+      const referenceInput = form.querySelector('#admin-marketing-funding-reference');
+      const noteInput = form.querySelector('#admin-marketing-funding-note');
+      const status = form.querySelector('#admin-marketing-funding-status');
+      const submit = form.querySelector('#admin-marketing-funding-submit');
+      const rawAmount = String(amountInput?.value || '').trim();
+      const amount = Number(rawAmount);
+      const amountMinor = Math.round(amount * 100);
+      const reference = String(referenceInput?.value || '').trim();
+      if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(rawAmount) ||
+          !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
+          reference.length < 6 || reference.length > 160) {
+        if (status) status.textContent = 'Enter at least USD $1.00 and a valid external funding reference.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure funding reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Confirm that USD ' + money(amountMinor) + ' has already been received and matched to external reference ' + reference + '? Do not record pending or expected funds.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Recording verified funding…';
+      try {
+        const response = await fetch('/api/admin/marketing/funding', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            amountMinor,
+            requestId:window.crypto.randomUUID(),
+            fundingReference:reference,
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing funding could not be recorded.');
+        if (status) status.textContent = 'Funding recorded. Available marketing balance: ' + money(result.availableMinor) + '.';
+        if (amountInput) amountInput.value = '';
+        if (referenceInput) referenceInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing funding could not be recorded.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-marketing-grant-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = form.querySelector('#admin-marketing-member');
+      const amountInput = form.querySelector('#admin-marketing-grant-amount');
+      const noteInput = form.querySelector('#admin-marketing-grant-note');
+      const status = form.querySelector('#admin-marketing-grant-status');
+      const submit = form.querySelector('#admin-marketing-grant-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a valid Minglora username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure grant reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Grant ' + amountCoins.toLocaleString() + ' marketing-funded Coins to @' + memberUsername + '? This reserves ' + money(amountCoins) + ' from the confirmed marketing budget.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Reserving marketing funds and granting Coins…';
+      try {
+        const response = await fetch('/api/admin/marketing/grants', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername,amountCoins,requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing Coin grant failed.');
+        if (status) status.textContent = 'Granted ' + Number(result.amountCoins || amountCoins).toLocaleString() +
+          ' marketing-funded Coins to @' + memberUsername + '.';
+        if (amountInput) amountInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing Coin grant failed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-owner-coin-amount');
+      const noteInput = form.querySelector('#admin-owner-coin-note');
+      const status = form.querySelector('#admin-owner-coin-issuance-status');
+      const submit = form.querySelector('#admin-owner-coin-issue-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 9,007,199,254,740,991.';
+        return;
+      }
+      const formattedAmount = amountCoins.toLocaleString();
+      if (!window.confirm('Issue ' + formattedAmount + ' owner-issued Coins to CreatorHubCreatorNetwork@gmail.com? This is not member credit.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Submitting owner Coin issuance…';
+      try {
+        if (!window.crypto?.randomUUID) throw new Error('A secure request reference could not be generated on this device.');
+        const response = await fetch('/api/admin/coins/owner-issuance', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amountCoins,
+            requestId: window.crypto.randomUUID(),
+            note: String(noteInput?.value || 'Creator Hub owner promotional Coins').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Owner Coin issuance failed.');
+        const balance = Number(result.wallet?.wallet?.balance_coins ?? result.issuance?.issuance?.balanceAfter ?? 0);
+        if (status) status.textContent = 'Issued ' + formattedAmount + ' owner Coins to CreatorHubCreatorNetwork@gmail.com. Wallet balance: ' + balance.toLocaleString() + ' Coins.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Owner Coin issuance could not be completed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => {
+      const enroll = document.querySelector('#enroll-totp');
+      enroll?.scrollIntoView({behavior:'smooth',block:'center'});
+      enroll?.click();
+    });
+  }
+
+  document.addEventListener('click', async event => {
+    const trigger = event.target.closest('[data-open-admin-centre]');
+    if (!trigger) return;
+    trigger.disabled = true;
+    try {
+      if (!window.MingloraSettings?.open) throw new Error('Settings are not available yet. Refresh Minglora and try again.');
+      await window.MingloraSettings.open();
+      addControlCentrePanel();
+      document.querySelector('#admin-control-centre')?.scrollIntoView({behavior:'smooth',block:'start'});
+    } catch (error) {
+      window.alert(error.message || 'The Admin Control Centre could not be opened.');
+    } finally {
+      trigger.disabled = false;
+    }
+  });
+
+  const observer = new MutationObserver(addProfileEntry);
+  observer.observe(document.documentElement, {subtree:true,childList:true});
+  addProfileEntry();
+})(); + (Number(minor || 0) / 100).toFixed(2);
+    const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
+    const refreshMarketingBudget = async () => {
+      if (!budgetSummary) return;
+      budgetSummary.textContent = 'Loading verified budget…';
+      try {
+        const response = await fetch('/api/admin/marketing/budget', {
+          credentials: 'same-origin',
+          headers: {Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing budget could not be loaded.');
+        budgetSummary.textContent =
+          'Funded: ' + money(result.fundedMinor) +
+          ' · Reserved in member wallets/reward pools: ' + money(result.reservedMinor) +
+          ' · Spent on eligible gifts: ' + money(result.spentMinor) +
+          ' · Available to grant: ' + money(result.availableMinor);
+      } catch (error) {
+        budgetSummary.textContent = error.message || 'Marketing budget is unavailable.';
+      }
+    };
+    panel.querySelector('#admin-marketing-budget-refresh')?.addEventListener('click', refreshMarketingBudget);
+    refreshMarketingBudget();
+
+    panel.querySelector('#admin-marketing-funding-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-marketing-funding-amount');
+      const referenceInput = form.querySelector('#admin-marketing-funding-reference');
+      const noteInput = form.querySelector('#admin-marketing-funding-note');
+      const status = form.querySelector('#admin-marketing-funding-status');
+      const submit = form.querySelector('#admin-marketing-funding-submit');
+      const rawAmount = String(amountInput?.value || '').trim();
+      const amount = Number(rawAmount);
+      const amountMinor = Math.round(amount * 100);
+      const reference = String(referenceInput?.value || '').trim();
+      if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(rawAmount) ||
+          !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
+          reference.length < 6 || reference.length > 160) {
+        if (status) status.textContent = 'Enter at least USD $1.00 and a valid external funding reference.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure funding reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Confirm that USD ' + money(amountMinor) + ' has already been received and matched to external reference ' + reference + '? Do not record pending or expected funds.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Recording verified funding…';
+      try {
+        const response = await fetch('/api/admin/marketing/funding', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            amountMinor,
+            requestId:window.crypto.randomUUID(),
+            fundingReference:reference,
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing funding could not be recorded.');
+        if (status) status.textContent = 'Funding recorded. Available marketing balance: ' + money(result.availableMinor) + '.';
+        if (amountInput) amountInput.value = '';
+        if (referenceInput) referenceInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing funding could not be recorded.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-marketing-grant-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = form.querySelector('#admin-marketing-member');
+      const amountInput = form.querySelector('#admin-marketing-grant-amount');
+      const noteInput = form.querySelector('#admin-marketing-grant-note');
+      const status = form.querySelector('#admin-marketing-grant-status');
+      const submit = form.querySelector('#admin-marketing-grant-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a valid Minglora username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure grant reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Grant ' + amountCoins.toLocaleString() + ' marketing-funded Coins to @' + memberUsername + '? This reserves ' + money(amountCoins) + ' from the confirmed marketing budget.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Reserving marketing funds and granting Coins…';
+      try {
+        const response = await fetch('/api/admin/marketing/grants', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername,amountCoins,requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing Coin grant failed.');
+        if (status) status.textContent = 'Granted ' + Number(result.amountCoins || amountCoins).toLocaleString() +
+          ' marketing-funded Coins to @' + memberUsername + '.';
+        if (amountInput) amountInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing Coin grant failed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-owner-coin-amount');
+      const noteInput = form.querySelector('#admin-owner-coin-note');
+      const status = form.querySelector('#admin-owner-coin-issuance-status');
+      const submit = form.querySelector('#admin-owner-coin-issue-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 9,007,199,254,740,991.';
+        return;
+      }
+      const formattedAmount = amountCoins.toLocaleString();
+      if (!window.confirm('Issue ' + formattedAmount + ' owner-issued Coins to CreatorHubCreatorNetwork@gmail.com? This is not member credit.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Submitting owner Coin issuance…';
+      try {
+        if (!window.crypto?.randomUUID) throw new Error('A secure request reference could not be generated on this device.');
+        const response = await fetch('/api/admin/coins/owner-issuance', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amountCoins,
+            requestId: window.crypto.randomUUID(),
+            note: String(noteInput?.value || 'Creator Hub owner promotional Coins').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Owner Coin issuance failed.');
+        const balance = Number(result.wallet?.wallet?.balance_coins ?? result.issuance?.issuance?.balanceAfter ?? 0);
+        if (status) status.textContent = 'Issued ' + formattedAmount + ' owner Coins to CreatorHubCreatorNetwork@gmail.com. Wallet balance: ' + balance.toLocaleString() + ' Coins.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Owner Coin issuance could not be completed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => {
+      const enroll = document.querySelector('#enroll-totp');
+      enroll?.scrollIntoView({behavior:'smooth',block:'center'});
+      enroll?.click();
+    });
+  }
+
+  document.addEventListener('click', async event => {
+    const trigger = event.target.closest('[data-open-admin-centre]');
+    if (!trigger) return;
+    trigger.disabled = true;
+    try {
+      if (!window.MingloraSettings?.open) throw new Error('Settings are not available yet. Refresh Minglora and try again.');
+      await window.MingloraSettings.open();
+      addControlCentrePanel();
+      document.querySelector('#admin-control-centre')?.scrollIntoView({behavior:'smooth',block:'start'});
+    } catch (error) {
+      window.alert(error.message || 'The Admin Control Centre could not be opened.');
+    } finally {
+      trigger.disabled = false;
+    }
+  });
+
+  const observer = new MutationObserver(addProfileEntry);
+  observer.observe(document.documentElement, {subtree:true,childList:true});
+  addProfileEntry();
+})(); + (Number(minor || 0) / 100).toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2});
+    const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
+    const refreshMarketingBudget = async () => {
+      if (!budgetSummary) return;
+      budgetSummary.textContent = 'Loading verified budget…';
+      try {
+        const response = await fetch('/api/admin/marketing/budget', {
+          credentials: 'same-origin',
+          headers: {Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing budget could not be loaded.');
+        budgetSummary.textContent =
+          'Funded: ' + money(result.fundedMinor) +
+          ' · Reserved in member wallets/reward pools: ' + money(result.reservedMinor) +
+          ' · Spent on eligible gifts: ' + money(result.spentMinor) +
+          ' · Available to grant: ' + money(result.availableMinor);
+      } catch (error) {
+        budgetSummary.textContent = error.message || 'Marketing budget is unavailable.';
+      }
+    };
+    panel.querySelector('#admin-marketing-budget-refresh')?.addEventListener('click', refreshMarketingBudget);
+    refreshMarketingBudget();
+
+    panel.querySelector('#admin-marketing-funding-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-marketing-funding-amount');
+      const referenceInput = form.querySelector('#admin-marketing-funding-reference');
+      const noteInput = form.querySelector('#admin-marketing-funding-note');
+      const status = form.querySelector('#admin-marketing-funding-status');
+      const submit = form.querySelector('#admin-marketing-funding-submit');
+      const rawAmount = String(amountInput?.value || '').trim();
+      const amount = Number(rawAmount);
+      const amountMinor = Math.round(amount * 100);
+      const reference = String(referenceInput?.value || '').trim();
+      if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(rawAmount) ||
+          !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
+          reference.length < 6 || reference.length > 160) {
+        if (status) status.textContent = 'Enter at least USD $1.00 and a valid external funding reference.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure funding reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Confirm that USD ' + money(amountMinor) + ' has already been received and matched to external reference ' + reference + '? Do not record pending or expected funds.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Recording verified funding…';
+      try {
+        const response = await fetch('/api/admin/marketing/funding', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            amountMinor,
+            requestId:window.crypto.randomUUID(),
+            fundingReference:reference,
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing funding could not be recorded.');
+        if (status) status.textContent = 'Funding recorded. Available marketing balance: ' + money(result.availableMinor) + '.';
+        if (amountInput) amountInput.value = '';
+        if (referenceInput) referenceInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing funding could not be recorded.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-marketing-grant-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = form.querySelector('#admin-marketing-member');
+      const amountInput = form.querySelector('#admin-marketing-grant-amount');
+      const noteInput = form.querySelector('#admin-marketing-grant-note');
+      const status = form.querySelector('#admin-marketing-grant-status');
+      const submit = form.querySelector('#admin-marketing-grant-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a valid Minglora username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure grant reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Grant ' + amountCoins.toLocaleString() + ' marketing-funded Coins to @' + memberUsername + '? This reserves ' + money(amountCoins) + ' from the confirmed marketing budget.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Reserving marketing funds and granting Coins…';
+      try {
+        const response = await fetch('/api/admin/marketing/grants', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername,amountCoins,requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing Coin grant failed.');
+        if (status) status.textContent = 'Granted ' + Number(result.amountCoins || amountCoins).toLocaleString() +
+          ' marketing-funded Coins to @' + memberUsername + '.';
+        if (amountInput) amountInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing Coin grant failed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-owner-coin-amount');
+      const noteInput = form.querySelector('#admin-owner-coin-note');
+      const status = form.querySelector('#admin-owner-coin-issuance-status');
+      const submit = form.querySelector('#admin-owner-coin-issue-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 9,007,199,254,740,991.';
+        return;
+      }
+      const formattedAmount = amountCoins.toLocaleString();
+      if (!window.confirm('Issue ' + formattedAmount + ' owner-issued Coins to CreatorHubCreatorNetwork@gmail.com? This is not member credit.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Submitting owner Coin issuance…';
+      try {
+        if (!window.crypto?.randomUUID) throw new Error('A secure request reference could not be generated on this device.');
+        const response = await fetch('/api/admin/coins/owner-issuance', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amountCoins,
+            requestId: window.crypto.randomUUID(),
+            note: String(noteInput?.value || 'Creator Hub owner promotional Coins').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Owner Coin issuance failed.');
+        const balance = Number(result.wallet?.wallet?.balance_coins ?? result.issuance?.issuance?.balanceAfter ?? 0);
+        if (status) status.textContent = 'Issued ' + formattedAmount + ' owner Coins to CreatorHubCreatorNetwork@gmail.com. Wallet balance: ' + balance.toLocaleString() + ' Coins.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Owner Coin issuance could not be completed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => {
+      const enroll = document.querySelector('#enroll-totp');
+      enroll?.scrollIntoView({behavior:'smooth',block:'center'});
+      enroll?.click();
+    });
+  }
+
+  document.addEventListener('click', async event => {
+    const trigger = event.target.closest('[data-open-admin-centre]');
+    if (!trigger) return;
+    trigger.disabled = true;
+    try {
+      if (!window.MingloraSettings?.open) throw new Error('Settings are not available yet. Refresh Minglora and try again.');
+      await window.MingloraSettings.open();
+      addControlCentrePanel();
+      document.querySelector('#admin-control-centre')?.scrollIntoView({behavior:'smooth',block:'start'});
+    } catch (error) {
+      window.alert(error.message || 'The Admin Control Centre could not be opened.');
+    } finally {
+      trigger.disabled = false;
+    }
+  });
+
+  const observer = new MutationObserver(addProfileEntry);
+  observer.observe(document.documentElement, {subtree:true,childList:true});
+  addProfileEntry();
+})(); + (Number(minor || 0) / 100).toFixed(2);
+    const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
     const refreshMarketingBudget = async () => {
       if (!budgetSummary) return;
       budgetSummary.textContent = 'Loading verified budget…';
