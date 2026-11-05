@@ -54,6 +54,7 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
   assert.match(app, /const hostOnly=activeLiveScreenLayout==='full-screen'/);
   assert.match(app, /Host-only full-screen LIVE stage/);
   assert.match(app, /live-host-only-layout/);
+  assert.ok(app.includes("root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly)"), 'layout changes must turn host-only audio mode on and off');
   assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing full-width host stage rules');
   assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){'), 'guest and empty seats must be hidden in Full Screen');
   assert.match(styles, /\.live-audio-stage\.live-host-only-layout #live-speaker-list/);
