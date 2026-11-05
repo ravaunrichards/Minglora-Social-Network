@@ -219,9 +219,13 @@ function sealSessionAuth(value){
 }
 function openSessionAuth(sealed){if(!sealed)return null;try{const bytes=Buffer.from(sealed,'base64url');const iv=bytes.subarray(0,12),tag=bytes.subarray(12,28),encrypted=bytes.subarray(28);const decipher=crypto.createDecipheriv('aes-256-gcm',sessionCipherKey,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(encrypted),decipher.final()]).toString('utf8'));}catch{return null;}}
 function sessionFromRequest(req){const raw=cookie(req,'sid');if(!raw)return null;let decoded;try{decoded=decodeURIComponent(raw);}catch{return null;}const parts=decoded.split('.');if(parts.length!==2)return null;const [id,sig]=parts;if(!id||!sig)return null;const expected=Buffer.from(sign(id),'utf8'),supplied=Buffer.from(sig,'utf8');if(supplied.length!==expected.length||!crypto.timingSafeEqual(supplied,expected))return null;return db.sessions.find(item=>item.id===id&&new Date(item.expiresAt)>new Date())||null;}
-const PLATFORM_OWNER_USER_IDS=new Set(['28e1df97-3fe1-488e-bb84-bdc353c58653','5b998c21-86b5-4621-ab37-e0808a2657b1']);
+const PLATFORM_OWNER_USER_IDS=new Set(['5b998c21-86b5-4621-ab37-e0808a2657b1']);
+const SECONDARY_CREATOR_HUB_USER_ID='28e1df97-3fe1-488e-bb84-bdc353c58653';
+const SECONDARY_CREATOR_HUB_EMAIL='larryjones2019ersky@gmail.com';
 function isPlatformStaffIdentity(user){
   if(!user)return false;
+  const email=String(user.email||'').trim().toLowerCase();
+  if(String(user.id||'')===SECONDARY_CREATOR_HUB_USER_ID||email===SECONDARY_CREATOR_HUB_EMAIL)return false;
   const ids=String(process.env.MODERATOR_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);
   return ['platform_owner','admin','moderator'].includes(user.role)||ids.includes(user.id);
 }
@@ -265,10 +269,12 @@ function ensureLocalUser(authUser, fallback = {}) {
   if (!authUser?.id || !authUser?.email) throw Object.assign(new Error('Supabase Auth returned an incomplete user record.'), { status:502 });
   const metadata = authUser.user_metadata || authUser.raw_user_meta_data || {};
   const appMetadata = authUser.app_metadata || {};
-  const trustedRole = ['platform_owner','admin','moderator'].includes(String(appMetadata.role||''))?String(appMetadata.role):null;
+  const email = normalizeEmail(authUser.email);
+  const isSecondaryCreatorHubTestAccount =
+    String(authUser.id||'')===SECONDARY_CREATOR_HUB_USER_ID || email===SECONDARY_CREATOR_HUB_EMAIL;
+  const trustedRole = !isSecondaryCreatorHubTestAccount && ['platform_owner','admin','moderator'].includes(String(appMetadata.role||''))?String(appMetadata.role):null;
   const verificationBadge = appMetadata.verification_badge==='blue'?'blue':'none';
   const verificationStatus = ['pending','needs_information','verified','rejected','suspended'].includes(String(appMetadata.verification_status||''))?String(appMetadata.verification_status):'not_submitted';
-  const email = normalizeEmail(authUser.email);
   const name = String(metadata.name || metadata.full_name || fallback.name || email.split('@')[0] || 'Minglora Member').trim();
   const username = normalizeUsername(metadata.username || fallback.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
   const contactPhone=normalizeContactPhone(metadata.contact_phone||metadata.phone_number||fallback.phoneNumber||'');
