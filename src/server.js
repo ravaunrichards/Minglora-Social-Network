@@ -1856,6 +1856,27 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
       }
+      if(method==='POST'&&p==='/api/admin/coins/member-credit'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can issue Main Coin member credits.'});
+        }
+        const memberLookup=String(input.memberUsername||input.memberLookup||'').trim().replace(/^@/,'').toLowerCase();
+        const amountCoins=Number(input.amountCoins);
+        const requestId=String(input.requestId||'').trim();
+        const note=String(input.note||'Minglora Main Coin bonus credit').trim().slice(0,240);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!/^[a-z0-9_]{3,30}$/.test(memberLookup)||!Number.isSafeInteger(amountCoins)||amountCoins<1||
+           amountCoins>Number.MAX_SAFE_INTEGER||!uuidPattern.test(requestId)){
+          return json(res,400,{error:'Enter a valid Minglora username, positive whole-number Coin amount and secure request reference.'});
+        }
+        const result=await requestSupabaseState('economy_admin_member_credit',{
+          adminUserId:user.id,adminEmail,memberLookup,amountCoins,requestId,note
+        });
+        return json(res,200,{ok:true,credit:result.credit||result});
+      }
       if(method==='POST'&&p==='/api/admin/coins/owner-issuance'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
