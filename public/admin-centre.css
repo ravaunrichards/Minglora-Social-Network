@@ -228,3 +228,34 @@
   .admin-marketing-form {padding:11px}
   .admin-marketing-form button {width:100%}
 }
+
+/* Admin-controlled member promotional Coin grants */
+.admin-member-promotions{
+  display:grid;
+  gap:14px;
+  min-width:0;
+  margin-top:18px;
+  padding:16px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));
+  border-radius:15px;
+  background:var(--surface-raised,rgba(127,127,127,.05));
+}
+.admin-member-promotions-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-width:0}
+.admin-member-promotions-heading>div{min-width:0}
+.admin-member-promotions-heading strong{display:block;font-weight:800}
+.admin-member-promotions-heading p{margin:5px 0 0;color:var(--muted-text,#777);font-size:.9rem;line-height:1.5}
+.admin-member-promotion-history{display:grid;gap:10px;min-width:0}
+.admin-member-promotion-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#admin-member-promotion-history-list{display:grid;gap:8px;min-width:0}
+.admin-member-promotion-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-width:0;padding:11px 12px;border:1px solid var(--border-color,rgba(127,127,127,.18));border-radius:10px;background:var(--surface,transparent)}
+.admin-member-promotion-recipient{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+.admin-member-promotion-recipient>strong{font-size:.93rem}
+.admin-member-promotion-recipient>small{color:var(--muted-text,#777);font-size:.8rem;line-height:1.4}
+.admin-member-promotion-amount{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.9rem}
+#admin-member-promotion-submit:disabled{opacity:.65;cursor:wait}
+@media(max-width:560px){
+  .admin-member-promotions{padding:12px}
+  .admin-member-promotion-row{flex-direction:column;gap:6px}
+  .admin-member-promotion-amount{white-space:normal}
+  #admin-member-promotion-submit{width:100%}
+}
