@@ -62,11 +62,12 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 });
 
 
-test('Full Screen enlarges the host stage to a balanced responsive portrait size on every device', () => {
+test('Full Screen gives the host a taller portrait stage while reserving room for controls', () => {
   assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
   assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
-  assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
-  assert.match(styles, /max-height:min\(78dvh,760px\)/);
-  assert.match(styles, /aspect-ratio:4 \/ 5/);
+  assert.match(styles, /width:min\(100%,61\.5dvh,570px\)/);
+  assert.match(styles, /max-height:min\(82dvh,760px,calc\(100dvh - 164px\)\)/);
+  assert.match(styles, /aspect-ratio:3 \/ 4/);
+  assert.match(styles, /max-height:min\(76dvh,390px,calc\(100dvh - 142px\)\)/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
