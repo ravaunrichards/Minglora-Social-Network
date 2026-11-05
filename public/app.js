@@ -818,12 +818,17 @@ async function renderLive(){
 function attachLiveTrack(track,participant,local){
   if(!track)return;
   if(track.kind==="video"){
-    const stage=$("#live-video-stage");if(!stage)return;
-    const tile=document.createElement("div");tile.className="live-video-tile"+(local?" local":"");tile.dataset.participant=participant?.identity||"local";
+    const identity=String(participant?.identity||"local");
+    const layout=$("#live-guest-layout");
+    const seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
+    const target=seat?.querySelector(".live-guest-seat-media")||$("#live-video-stage");
+    if(!target)return;
+    const tile=document.createElement("div");tile.className="live-video-tile"+(local?" local":"");tile.dataset.participant=identity;
     const element=track.attach();element.autoplay=true;element.playsInline=true;element.className="live-video-element";if(local)element.muted=true;
     tile.append(element);
     if(!local){const name=document.createElement("span");name.className="live-video-name";name.textContent=participant?.name||participant?.identity||"Guest";tile.append(name);}
-    stage.append(tile);
+    target.append(tile);
+    seat?.classList.add("has-video");
   }else{
     const root=$("#live-audio-root");if(root){const element=track.attach();element.autoplay=true;root.append(element);}
   }
@@ -992,6 +997,62 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
     "<span class='live-speaker-chip "+(person.speaking?"active ":"")+(person.connected?"connected":"connecting")+"' title='"+esc(person.label)+"'>"+
       esc(person.name)+"<small>"+(person.speaking?"Speaking":person.connected?(person.muted?"Microphone muted":"Microphone connected"):"Connected · microphone starting")+"</small></span>"
   ).join("");
+}
+
+function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
+  const root=$("#live-guest-layout");if(!root||!room)return;
+  const local=room.localParticipant;
+  const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
+  const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
+  const hostIdentity=String(hostParticipant?.identity||session?.hostId||"minglora-host");
+  const hostName=hostParticipant?.name||session?.host?.name||(role==="host"?state.user?.name:"Minglora host")||"Minglora host";
+  const guests=[];
+  if(role==="guest"&&local)guests.push(local);
+  for(const person of remotes){
+    if(person.identity===session?.hostId||!participantHasLiveAudio(person))continue;
+    if(!guests.some(item=>item.identity===person.identity))guests.push(person);
+  }
+  const specs=[{
+    key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
+  }];
+  guests.slice(0,8).forEach((person,index)=>specs.push({
+    key:"guest:"+String(person.identity||index),identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
+    person,isHost:false
+  }));
+  while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
+  const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
+  const header=document.createElement("div");
+  header.className="live-guest-layout-heading";
+  header.innerHTML="<strong>Multi-guest stage</strong><small>"+(guests.length+1)+" / 9 seats</small>";
+  const nodes=specs.map(spec=>{
+    if(spec.empty){
+      const seat=previous.get(spec.key)||document.createElement("button");
+      seat.type="button";seat.className="live-guest-seat empty";seat.dataset.seatKey=spec.key;
+      seat.removeAttribute("data-participant");seat.setAttribute("data-open-guest-panel","");
+      seat.setAttribute("aria-label","Open guest seat "+(spec.seatNumber));
+      seat.innerHTML="<span class='live-guest-seat-plus' aria-hidden='true'>+</span><strong>Guest seat</strong><small>"+(role==="host"?"Invite a speaker":"Open seat")+"</small>";
+      return seat;
+    }
+    const seat=previous.get(spec.key)||document.createElement("article");
+    const media=seat.querySelector(".live-guest-seat-media")||document.createElement("div");
+    const identity=String(spec.identity||"");
+    const isLocal=Boolean(spec.person&&spec.person===local);
+    const connected=Boolean(spec.person&&participantHasLiveAudio(spec.person));
+    const muted=Boolean(spec.person&&Array.from(spec.person.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted));
+    const speaking=Boolean(identity&&activeSpeakerIds.has(identity));
+    const name=String(spec.name||"Minglora member");
+    const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||"").join("").toUpperCase()||"M";
+    const status=speaking?"Speaking":connected?(muted?"Microphone muted":"On stage"):spec.isHost?"Waiting for host":"Connecting";
+    const hasVideo=Boolean(media.querySelector(".live-video-element"));
+    seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
+    seat.dataset.seatKey=spec.key;seat.dataset.participant=identity;
+    seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?"HOST":"GUEST")+"</span>"+
+      "<span class='live-guest-seat-avatar' aria-hidden='true'>"+esc(initials)+"</span>"+
+      "<span class='live-guest-seat-meta'><strong>"+esc(name)+"</strong><small>"+esc(status)+"</small></span>";
+    media.className="live-guest-seat-media";seat.append(media);
+    return seat;
+  });
+  root.replaceChildren(header,...nodes);
 }
 
 function liveControlIcon(name){
@@ -1183,8 +1244,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
   activeLiveSession={...session,liveTheme,broadcastType};activeLiveRole=role;liveCameraEnabled=broadcastType==="video_audio";liveMicrophoneEnabled=true;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
-    ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
-    : "<div id='live-video-stage' class='live-video-stage'><div class='live-video-placeholder'>Connecting to LIVE…</div></div>";
+    ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><model-viewer class='live-audio-mic-model' src='/assets/gifts/minglora_golden_microphone.gltf' alt='Minglora 3D golden microphone' auto-rotate camera-controls interaction-prompt='none' shadow-intensity='1' exposure='1.15' loading='eager'></model-viewer><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
+    : "<div id='live-video-stage' class='live-video-stage'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div></div>";
   const liveEntryBanner=state.user?.gifterBadge?.liveEntranceUnlocked
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
@@ -1228,9 +1289,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
-  const refreshSpeakerRoster=()=>renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);
+  const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);};
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false);refreshSpeakerRoster();});
-  room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>element.remove());refreshSpeakerRoster();});
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>{element.closest?.(".live-video-tile")?.remove();element.remove();});refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantConnected,()=>{updatePresence();refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantDisconnected,()=>{updatePresence();refreshSpeakerRoster();});
   if(client.RoomEvent.TrackPublished)room.on(client.RoomEvent.TrackPublished,refreshSpeakerRoster);
@@ -1312,6 +1373,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
       finally{flipCameraControl.disabled=!liveCameraEnabled;}
     });
     $("#live-guests-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-speaker-request-panel"));
+    $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))focusLiveRoomPanel("#live-speaker-request-panel");});
     $("#live-gifts-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-gift-panel"));
     $("#live-rewards-toggle")?.addEventListener("click",()=>focusLiveRoomPanel("#live-reward-panel"));
     $("#live-share-toggle")?.addEventListener("click",async()=>{
