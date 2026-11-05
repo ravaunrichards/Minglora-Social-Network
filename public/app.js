@@ -1726,7 +1726,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);
     startLiveSpeakerRefresh(session,role,room);
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
-    else if(role==="guest")toast("You're on stage. Your microphone is connected; camera publishing is disabled.");
+    else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");
   }catch(error){
     stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
