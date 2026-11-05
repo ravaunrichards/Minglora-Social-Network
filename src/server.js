@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
-import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
+import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
@@ -1526,9 +1526,29 @@ async function route(req, res) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerDecisionMatch[1] && item.status === 'live');
         if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
         const speakerId = liveSpeakerDecisionMatch[2], decision = String(input.decision || '');
-        if (speakerId === user.id || !['accept', 'reject'].includes(decision)) return json(res, 400, { error: 'Choose a valid speaker request decision.' });
-        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === speakerId && item.status === 'requested');
-        if (!request) return json(res, 404, { error: 'This speaker request is no longer pending.' });
+        if (speakerId === user.id || !['accept', 'reject', 'remove'].includes(decision)) return json(res, 400, { error: 'Choose a valid speaker stage action.' });
+        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === speakerId &&
+          (decision === 'remove' ? ['accepted', 'connected'].includes(item.status) : item.status === 'requested'));
+        if (!request) return json(res, 404, { error: decision === 'remove' ? 'This member is not an active approved speaker.' : 'This speaker request is no longer pending.' });
+        if (decision === 'remove') {
+          let removal;
+          try {
+            removal = await removeLiveKitParticipant(session.roomName, speakerId);
+          } catch (error) {
+            console.error('[Minglora LIVE] Could not remove an approved guest from the stage.', {
+              sessionId: session.id, message: String(error?.message || 'LiveKit removal failed').slice(0, 180)
+            });
+            return json(res, 503, { error: 'Minglora could not remove this guest from the LIVE stage. Try again.' });
+          }
+          await requestSupabaseState('live_speaker_mark_left', { broadcastId: session.id, userId: speakerId });
+          const leftAt = now();
+          request.status = 'left';
+          request.leftAt = leftAt;
+          const participant = (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === speakerId);
+          if (participant) { participant.status = 'left'; participant.leftAt = leftAt; }
+          await saveStore();
+          return json(res, 200, { request, removed: true, wasConnected: Boolean(removal?.wasConnected) });
+        }
         if (decision === 'accept') {
           const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
             item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
