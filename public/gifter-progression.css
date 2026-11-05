@@ -184,3 +184,7 @@
 .gp-level-card-copy strong{flex:0 0 auto;white-space:nowrap}
 .gp-level-card-copy small{white-space:nowrap;text-align:right}
 @media(max-width:650px){.gp-level-grid{grid-template-columns:minmax(0,1fr);gap:8px}.gp-level-card{min-height:64px;padding:8px 10px;gap:10px}.gp-level-card-copy{gap:10px}.gp-level-card-copy strong{font-size:.84rem}.gp-level-card-copy small{font-size:.76rem}}
+
+.gp-admin-unlock-note{display:block;margin-top:5px;color:var(--muted,#64748b);font-size:.78rem;line-height:1.4}
+.gp-admin-grant-notice{margin:10px 0 0;padding:9px 11px;border:1px solid rgba(145,113,203,.28);border-radius:9px;background:rgba(145,113,203,.07);font-size:.8rem;line-height:1.45}
+.gp-level-state--admin{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:linear-gradient(145deg,#f7e3a4,#9b6e29);color:#fff;font-size:.7rem;font-weight:950;box-shadow:0 1px 4px rgba(30,25,10,.18)}

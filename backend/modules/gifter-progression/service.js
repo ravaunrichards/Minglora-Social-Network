@@ -35,13 +35,17 @@ export function getGifterLevel(xp) {
   return level;
 }
 
-export function getGifterLevelChart(xp = 0) {
+export function getGifterLevelChart(xp = 0, adminGrantedLevel = 0) {
   const total = Math.max(0, Number.isFinite(Number(xp)) ? Math.floor(Number(xp)) : 0);
-  const currentLevel = getGifterLevel(total);
+  const earnedLevel = getGifterLevel(total);
+  const grantedLevel = Math.max(0, Math.min(LEVEL_CAP, Math.floor(Number(adminGrantedLevel) || 0)));
+  const currentLevel = Math.max(earnedLevel, grantedLevel);
   return Array.from({ length: LEVEL_CAP }, (_, index) => {
     const level = index + 1;
     const tier = TIERS[Math.floor(index / 5)];
     const milestone = level % 5 === 0;
+    const earned = total >= gifterXpRequired(level);
+    const adminGranted = level <= grantedLevel;
     return {
       level,
       coinsRequired: GIFTER_LEVEL_COIN_THRESHOLDS[index],
@@ -49,7 +53,10 @@ export function getGifterLevelChart(xp = 0) {
       tier,
       badgeName: tier + " Gifter · LV " + level,
       reward: level === 25 ? "Special LIVE entrance badge" : milestone ? "Milestone badge finish" : "Level badge",
-      unlocked: total >= gifterXpRequired(level),
+      unlocked: earned || adminGranted,
+      earned,
+      adminGranted,
+      unlockSource: earned ? "gift" : adminGranted ? "admin" : "locked",
       current: currentLevel > 0 && level === currentLevel
     };
   });
@@ -76,6 +83,95 @@ function aggregateBySender(events) {
   return totals;
 }
 
+
+/**
+ * Admin grants are kept separately from confirmed gift transactions. They never
+ * add Coins, XP, gift-history rows, or spending to a member's real progression.
+ */
+export function getGifterAdminGrant(db, userId) {
+  if (!db || typeof db !== "object" || !userId) return null;
+  const grant = (db.gifterBadgeAdminGrants || []).find(item =>
+    item?.userId === userId && item.status === "active"
+  );
+  const level = Math.max(0, Math.min(LEVEL_CAP, Math.floor(Number(grant?.level) || 0)));
+  if (!level) return null;
+  return {
+    level,
+    grantedAt: grant.grantedAt || grant.updatedAt || null,
+    grantedBy: grant.grantedBy || null,
+    note: safeText(grant.note, 240)
+  };
+}
+
+function appendGifterAdminAudit(db, details, action, previousLevel, nextLevel) {
+  db.gifterBadgeAdminAudit ||= [];
+  const auditId = safeText(details.auditId, 180);
+  if (!auditId) throw new TypeError("A unique admin badge audit ID is required.");
+  if (db.gifterBadgeAdminAudit.some(item => item.id === auditId)) {
+    throw new Error("This admin badge action was already recorded.");
+  }
+  const event = {
+    id: auditId,
+    action,
+    targetUserId: details.userId,
+    actorUserId: details.actorId,
+    previousLevel,
+    level: nextLevel,
+    note: safeText(details.note, 240),
+    createdAt: details.now instanceof Date ? details.now.toISOString() : new Date(details.now || Date.now()).toISOString()
+  };
+  db.gifterBadgeAdminAudit.unshift(event);
+  return event;
+}
+
+export function grantGifterBadgeLevel(db, details = {}) {
+  if (!db || typeof db !== "object") throw new TypeError("Gifter progression storage is required.");
+  const userId = safeText(details.userId, 180);
+  const actorId = safeText(details.actorId, 180);
+  const level = Number(details.level);
+  if (!userId || !actorId || !Number.isInteger(level) || level < 1 || level > LEVEL_CAP) {
+    throw new TypeError("Choose a member and a whole-number gifter level from 1 to 50.");
+  }
+  db.gifterBadgeAdminGrants ||= [];
+  const existing = db.gifterBadgeAdminGrants.find(item => item?.userId === userId);
+  const previousLevel = existing?.status === "active" ? Math.max(0, Number(existing.level) || 0) : 0;
+  const stamp = details.now instanceof Date ? details.now.toISOString() : new Date(details.now || Date.now()).toISOString();
+  const grant = existing || { id: userId, userId };
+  Object.assign(grant, {
+    status: "active",
+    level,
+    grantedBy: actorId,
+    grantedAt: stamp,
+    note: safeText(details.note, 240),
+    updatedAt: stamp,
+    resetBy: null,
+    resetAt: null
+  });
+  if (!existing) db.gifterBadgeAdminGrants.push(grant);
+  const audit = appendGifterAdminAudit(db, { ...details, userId, actorId }, "grant", previousLevel, level);
+  return { grant: getGifterAdminGrant(db, userId), audit };
+}
+
+export function resetGifterBadgeAdminGrant(db, details = {}) {
+  if (!db || typeof db !== "object") throw new TypeError("Gifter progression storage is required.");
+  const userId = safeText(details.userId, 180);
+  const actorId = safeText(details.actorId, 180);
+  if (!userId || !actorId) throw new TypeError("Choose a member before resetting an admin badge grant.");
+  db.gifterBadgeAdminGrants ||= [];
+  const existing = db.gifterBadgeAdminGrants.find(item => item?.userId === userId);
+  const previousLevel = existing?.status === "active" ? Math.max(0, Number(existing.level) || 0) : 0;
+  const stamp = details.now instanceof Date ? details.now.toISOString() : new Date(details.now || Date.now()).toISOString();
+  if (existing) Object.assign(existing, {
+    status: "reset",
+    level: 0,
+    resetBy: actorId,
+    resetAt: stamp,
+    note: safeText(details.note, 240),
+    updatedAt: stamp
+  });
+  const audit = appendGifterAdminAudit(db, { ...details, userId, actorId }, "reset", previousLevel, 0);
+  return { grant: getGifterAdminGrant(db, userId), audit, previousLevel };
+}
 
 const senderTotalsCache = new WeakMap();
 
@@ -104,12 +200,19 @@ function getDeduplicatedSenderTotals(db) {
  */
 export function getGifterBadgeSummary(db, userId) {
   if (!db || typeof db !== "object" || !userId) return null;
-  const own = getDeduplicatedSenderTotals(db).get(userId);
-  if (!own || own.giftsSent < 1) return null;
-  const level = getGifterLevel(own.xp);
-  const badge = getGifterLevelChart(own.xp)[level - 1];
+  const own = getDeduplicatedSenderTotals(db).get(userId) || { xp: 0, giftsSent: 0 };
+  const earnedLevel = getGifterLevel(own.xp);
+  const adminGrant = getGifterAdminGrant(db, userId);
+  const adminGrantedLevel = adminGrant?.level || 0;
+  const level = Math.max(earnedLevel, adminGrantedLevel);
+  if (level < 1) return null;
+  const badge = getGifterLevelChart(own.xp, adminGrantedLevel)[level - 1];
   return {
     level,
+    earnedLevel,
+    adminGrantedLevel,
+    adminGranted: level > earnedLevel,
+    unlockSource: level > earnedLevel ? "admin" : "gift",
     tier: badge.tier,
     badgeName: badge.badgeName,
     liveEntranceUnlocked: level >= 25
@@ -192,7 +295,10 @@ export function getGifterProgressionOverview(db, userId) {
   });
   const totals = aggregateBySender(events);
   const own = totals.get(userId) || { xp: 0, giftsSent: 0, recipients: new Set(), firstGiftAt: "", lastGiftAt: "" };
-  const level = getGifterLevel(own.xp);
+  const earnedLevel = getGifterLevel(own.xp);
+  const adminGrant = getGifterAdminGrant(db, userId);
+  const adminGrantedLevel = adminGrant?.level || 0;
+  const level = Math.max(earnedLevel, adminGrantedLevel);
   const nextLevel = level < LEVEL_CAP ? level + 1 : null;
   const currentThreshold = level > 0 ? gifterXpRequired(level) : 0;
   const nextThreshold = nextLevel ? gifterXpRequired(nextLevel) : null;
@@ -202,7 +308,7 @@ export function getGifterProgressionOverview(db, userId) {
   const progressPercent = xpForLevel > 0
     ? Math.max(0, Math.min(100, Math.round((xpIntoLevel / xpForLevel) * 100)))
     : 100;
-  const chart = getGifterLevelChart(own.xp);
+  const chart = getGifterLevelChart(own.xp, adminGrantedLevel);
   const currentBadge = level > 0 ? chart[level - 1] : null;
   const newGifterIdentity = getNewGifterIdentity(db, userId);
 
@@ -212,14 +318,17 @@ export function getGifterProgressionOverview(db, userId) {
       const member = members.get(id);
       if (!member) return null;
       const memberLevel = getGifterLevel(value.xp);
+      const badgeSummary = getGifterBadgeSummary(db, id);
       return {
         userId: id,
         username: safeText(member.username || "member", 40),
         name: safeText(member.name || member.username || "Minglora member", 80),
-        level: memberLevel,
+        level: badgeSummary?.level || memberLevel,
+        earnedLevel: memberLevel,
+        adminGranted: Boolean(badgeSummary?.adminGranted),
         xp: value.xp,
         giftsSent: value.giftsSent,
-        badgeName: getGifterLevelChart(value.xp)[memberLevel - 1].badgeName,
+        badgeName: badgeSummary?.badgeName || null,
         lastGiftAt: value.lastGiftAt
       };
     })
@@ -245,6 +354,10 @@ export function getGifterProgressionOverview(db, userId) {
   return {
     current: {
       level,
+      earnedLevel,
+      adminGrantedLevel,
+      adminGranted: level > earnedLevel,
+      adminGrantNote: adminGrant?.note || "",
       xp: own.xp,
       totalCoinsSent: own.xp,
       giftsSent: own.giftsSent,
@@ -272,6 +385,7 @@ export function getGifterProgressionOverview(db, userId) {
       excluded: ["Coin purchases", "Gifts received", "Unconfirmed or duplicate transactions"],
       maximumLevel: LEVEL_CAP,
       firstLevelRequiresCoinsSent: 1,
+      adminGrantsDoNotChangeCoinsOrGiftHistory: true,
       newGifterIdentityDays: 7
     }
   };

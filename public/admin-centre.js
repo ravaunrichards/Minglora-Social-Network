@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-identity-tools">Gifter badges &amp; profile verification</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -118,6 +118,60 @@
             </div>
             <div id="admin-member-promotion-history-list" aria-live="polite">Loading promotion history…</div>
           </div>
+        </section>
+
+        <section class="admin-control-centre-section admin-identity-tools" id="admin-identity-tools" aria-labelledby="admin-identity-tools-title">
+          <div class="admin-control-centre-section-heading">
+            <div><h3 id="admin-identity-tools-title">Gifter badge &amp; profile verification controls</h3>
+              <p>Find a Minglora member, grant any gifter level from 1–50, reset an admin grant, and manage the blue profile verification check.</p></div>
+          </div>
+          <form id="admin-identity-search-form" class="admin-identity-search">
+            <label for="admin-identity-search-input">Search member by email, username or display name</label>
+            <div class="admin-identity-search-row">
+              <input id="admin-identity-search-input" name="search" type="search" maxlength="80" autocomplete="off" placeholder="Email, @username or name" required>
+              <button type="submit" class="secondary" id="admin-identity-search-submit">Search members</button>
+            </div>
+            <p id="admin-identity-search-status" role="status" aria-live="polite">Search for the exact account before making a change.</p>
+          </form>
+          <div id="admin-identity-search-results" class="admin-identity-search-results" aria-live="polite"></div>
+          <section id="admin-identity-selected" class="admin-identity-selected" hidden>
+            <div id="admin-identity-member-summary" class="admin-identity-member-summary"></div>
+            <div class="admin-identity-actions-grid">
+              <section class="admin-identity-action-card" aria-labelledby="admin-gifter-grant-title">
+                <h4 id="admin-gifter-grant-title">Admin gifter level &amp; badge grant</h4>
+                <p>Admin grants unlock badge display only. They do not create gifts, spending, XP or Coins.</p>
+                <label for="admin-gifter-grant-level">Level to grant (1–50)</label>
+                <input id="admin-gifter-grant-level" type="number" min="1" max="50" step="1" value="50" inputmode="numeric">
+                <label for="admin-gifter-grant-note">Admin reason / audit note</label>
+                <input id="admin-gifter-grant-note" type="text" maxlength="240" value="Creator Hub administrative gifter badge grant">
+                <div class="admin-identity-buttons">
+                  <button type="button" class="primary" id="admin-gifter-grant-selected">Grant selected level</button>
+                  <button type="button" class="secondary" id="admin-gifter-unlock-all">Unlock all 50 levels</button>
+                  <button type="button" class="secondary" id="admin-gifter-reset">Reset admin badge grant</button>
+                </div>
+                <p id="admin-gifter-grant-status" role="status" aria-live="polite"></p>
+              </section>
+              <section class="admin-identity-action-card" aria-labelledby="admin-profile-verification-title">
+                <h4 id="admin-profile-verification-title">Profile verification</h4>
+                <p>Grant the blue verified check or change the member’s verification state. Every change is audit-logged.</p>
+                <label for="admin-profile-verification-status">Verification state</label>
+                <select id="admin-profile-verification-status">
+                  <option value="verified">Verified — blue check ✔</option>
+                  <option value="not_submitted">Remove blue check — not submitted</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+                <label for="admin-profile-verification-note">Admin reason / audit note</label>
+                <textarea id="admin-profile-verification-note" rows="3" maxlength="1500" placeholder="Explain the verification decision"></textarea>
+                <button type="button" class="primary" id="admin-profile-verification-save">Save verification status</button>
+                <p id="admin-profile-verification-action-status" role="status" aria-live="polite"></p>
+              </section>
+            </div>
+            <div class="admin-identity-history">
+              <strong>Recent gifter badge admin history</strong>
+              <div id="admin-identity-history-list" aria-live="polite">No admin badge actions loaded.</div>
+            </div>
+          </section>
         </section>
         <section class="admin-marketing-budget" aria-labelledby="admin-marketing-budget-title">
           <div class="admin-marketing-budget-heading">
@@ -193,6 +247,7 @@
     panel.append(adminSettings);
     root.replaceChildren(panel);
     root.dataset.adminCentreReady = 'true';
+    if (unlocked) setupAdminIdentityTools(panel);
 
     panel.querySelectorAll('[data-admin-jump]').forEach(button => {
       button.addEventListener('click', () => {
@@ -537,6 +592,198 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'The administrator request could not be completed.');
     return payload;
+  }
+
+
+  function setupAdminIdentityTools(panel) {
+    const form = panel.querySelector('#admin-identity-search-form');
+    const searchInput = panel.querySelector('#admin-identity-search-input');
+    const searchStatus = panel.querySelector('#admin-identity-search-status');
+    const searchResults = panel.querySelector('#admin-identity-search-results');
+    const selectedPanel = panel.querySelector('#admin-identity-selected');
+    const summary = panel.querySelector('#admin-identity-member-summary');
+    const historyList = panel.querySelector('#admin-identity-history-list');
+    const grantLevel = panel.querySelector('#admin-gifter-grant-level');
+    const grantNote = panel.querySelector('#admin-gifter-grant-note');
+    const grantStatus = panel.querySelector('#admin-gifter-grant-status');
+    const verificationStatus = panel.querySelector('#admin-profile-verification-status');
+    const verificationNote = panel.querySelector('#admin-profile-verification-note');
+    const verificationActionStatus = panel.querySelector('#admin-profile-verification-action-status');
+    let selectedUserId = '';
+
+    const renderHistory = items => {
+      if (!historyList) return;
+      if (!Array.isArray(items) || !items.length) {
+        historyList.textContent = 'No gifter badge admin actions recorded for this member.';
+        return;
+      }
+      historyList.innerHTML = items.map(item =>
+        '<article class="admin-identity-history-row"><strong>' + escapeText(item.action === 'reset' ? 'Badge grant reset' : 'Badge level granted') +
+        '</strong><span>LV ' + Number(item.previousLevel || 0) + ' → LV ' + Number(item.level || 0) +
+        '</span><small>' + escapeText(item.note || 'No note supplied') + ' · ' +
+        escapeText(item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Time unavailable') + '</small></article>'
+      ).join('');
+    };
+
+    async function refreshSelectedMember() {
+      if (!selectedUserId) return;
+      if (summary) summary.textContent = 'Loading selected member…';
+      if (selectedPanel) selectedPanel.hidden = false;
+      try {
+        const result = await adminCentreApi('/admin/gifter-badges/' + encodeURIComponent(selectedUserId));
+        const member = result.member || {};
+        const current = result.overview?.current || {};
+        const grant = result.adminGrant || null;
+        if (summary) {
+          summary.innerHTML =
+            '<div><strong>' + escapeText(member.name || member.username || 'Minglora member') + '</strong>' +
+            '<small>@' + escapeText(member.username || 'member') + ' · ' + escapeText(member.email || '') + '</small></div>' +
+            '<div class="admin-identity-member-metrics">' +
+              '<span><small>Effective level</small><strong>LV ' + Number(current.level || 0) + ' / 50</strong></span>' +
+              '<span><small>Gift-earned level</small><strong>LV ' + Number(current.earnedLevel || 0) + '</strong></span>' +
+              '<span><small>Admin grant</small><strong>' + (grant ? 'LV ' + Number(grant.level || 0) : 'None') + '</strong></span>' +
+              '<span><small>Real Coins sent</small><strong>' + Number(current.totalCoinsSent || 0).toLocaleString() + '</strong></span>' +
+              '<span><small>Confirmed gifts</small><strong>' + Number(current.giftsSent || 0).toLocaleString() + '</strong></span>' +
+              '<span><small>Profile verification</small><strong>' + escapeText(member.verificationBadge === 'blue' ? '✔ Blue verified' : member.verificationStatus || 'Not submitted') + '</strong></span>' +
+            '</div>' +
+            '<p class="admin-identity-protection-note">Real gift-earned level and Coin totals remain separate from admin-granted badges. No wallet balance is changed by these controls.</p>';
+        }
+        if (grantLevel) grantLevel.value = String(grant?.level || 50);
+        if (verificationStatus) verificationStatus.value = ['verified','not_submitted','rejected','suspended'].includes(member.verificationStatus)
+          ? member.verificationStatus : 'not_submitted';
+        if (verificationNote && !verificationNote.value) verificationNote.value = 'Creator Hub administrative profile verification review';
+        renderHistory(result.history || []);
+      } catch (error) {
+        if (summary) summary.textContent = error.message || 'Selected member details could not be loaded.';
+      }
+    }
+
+    form?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const search = String(searchInput?.value || '').trim();
+      if (search.length < 2) {
+        if (searchStatus) searchStatus.textContent = 'Enter at least two characters.';
+        return;
+      }
+      if (searchStatus) searchStatus.textContent = 'Searching verified Minglora accounts…';
+      if (searchResults) searchResults.textContent = 'Loading member results…';
+      try {
+        const result = await adminCentreApi('/admin/profiles/search?search=' + encodeURIComponent(search));
+        const members = Array.isArray(result.members) ? result.members : [];
+        if (searchStatus) searchStatus.textContent = members.length
+          ? members.length + ' matching member account' + (members.length === 1 ? '' : 's') + ' found.'
+          : 'No matching member account was found.';
+        if (searchResults) searchResults.innerHTML = members.map(member =>
+          '<button type="button" class="admin-identity-member-option" data-admin-identity-member="' + escapeText(member.id) + '">' +
+            '<span><strong>' + escapeText(member.name || member.username || 'Minglora member') + '</strong>' +
+            '<small>@' + escapeText(member.username || 'member') + ' · ' + escapeText(member.email || '') + '</small></span>' +
+            '<span class="admin-identity-verification-chip">' + escapeText(member.verificationBadge === 'blue' ? '✔ Verified' : member.verificationStatus || 'Not verified') + '</span>' +
+          '</button>'
+        ).join('');
+      } catch (error) {
+        if (searchStatus) searchStatus.textContent = error.message || 'Member search could not be completed.';
+        if (searchResults) searchResults.textContent = '';
+      }
+    });
+
+    searchResults?.addEventListener('click', async event => {
+      const button = event.target.closest('[data-admin-identity-member]');
+      if (!button) return;
+      selectedUserId = String(button.dataset.adminIdentityMember || '');
+      searchResults.querySelectorAll('[data-admin-identity-member]').forEach(item =>
+        item.classList.toggle('is-selected', item === button)
+      );
+      if (grantStatus) grantStatus.textContent = '';
+      if (verificationActionStatus) verificationActionStatus.textContent = '';
+      await refreshSelectedMember();
+    });
+
+    async function applyGrant(level, confirmationText) {
+      if (!selectedUserId) {
+        if (grantStatus) grantStatus.textContent = 'Search for and select a member first.';
+        return;
+      }
+      const note = String(grantNote?.value || '').trim().slice(0, 240);
+      if (!Number.isInteger(level) || level < 1 || level > 50) {
+        if (grantStatus) grantStatus.textContent = 'Choose a whole-number level from 1 to 50.';
+        return;
+      }
+      if (!window.confirm(confirmationText)) return;
+      const buttons = [panel.querySelector('#admin-gifter-grant-selected'),panel.querySelector('#admin-gifter-unlock-all'),panel.querySelector('#admin-gifter-reset')];
+      buttons.forEach(button => { if (button) button.disabled = true; });
+      if (grantStatus) grantStatus.textContent = 'Saving admin badge entitlement…';
+      try {
+        await adminCentreApi('/admin/gifter-badges/grant', {
+          method:'POST',
+          body:JSON.stringify({userId:selectedUserId,level,note})
+        });
+        if (grantStatus) grantStatus.textContent = 'LV ' + level + ' admin badge grant saved. Confirmed gift history and Coin balances were not changed.';
+        await refreshSelectedMember();
+      } catch (error) {
+        if (grantStatus) grantStatus.textContent = error.message || 'The badge grant could not be saved.';
+      } finally {
+        buttons.forEach(button => { if (button) button.disabled = false; });
+      }
+    }
+
+    panel.querySelector('#admin-gifter-grant-selected')?.addEventListener('click', () => {
+      applyGrant(Number(grantLevel?.value), 'Grant the selected admin gifter level to this member? This will not add Coins or gift history.');
+    });
+    panel.querySelector('#admin-gifter-unlock-all')?.addEventListener('click', () => {
+      applyGrant(50, 'Unlock all 50 gifter badge levels for the selected account? This will not alter Coins, gift spending or confirmed gift history.');
+    });
+    panel.querySelector('#admin-gifter-reset')?.addEventListener('click', async () => {
+      if (!selectedUserId) {
+        if (grantStatus) grantStatus.textContent = 'Search for and select a member first.';
+        return;
+      }
+      if (!window.confirm('Reset this member’s admin badge grant? Their genuine gift-earned level and all confirmed gift records will be preserved.')) return;
+      if (grantStatus) grantStatus.textContent = 'Resetting admin badge grant…';
+      const buttons = [panel.querySelector('#admin-gifter-grant-selected'),panel.querySelector('#admin-gifter-unlock-all'),panel.querySelector('#admin-gifter-reset')];
+      buttons.forEach(button => { if (button) button.disabled = true; });
+      try {
+        await adminCentreApi('/admin/gifter-badges/reset', {
+          method:'POST',
+          body:JSON.stringify({userId:selectedUserId,note:String(grantNote?.value || 'Reset admin gifter badge grant').trim().slice(0,240)})
+        });
+        if (grantStatus) grantStatus.textContent = 'Admin grant reset. Actual earned levels and gift history remain unchanged.';
+        await refreshSelectedMember();
+      } catch (error) {
+        if (grantStatus) grantStatus.textContent = error.message || 'The admin badge grant could not be reset.';
+      } finally {
+        buttons.forEach(button => { if (button) button.disabled = false; });
+      }
+    });
+
+    panel.querySelector('#admin-profile-verification-save')?.addEventListener('click', async () => {
+      if (!selectedUserId) {
+        if (verificationActionStatus) verificationActionStatus.textContent = 'Search for and select a member first.';
+        return;
+      }
+      const status = String(verificationStatus?.value || '');
+      const note = String(verificationNote?.value || '').trim().slice(0,1500);
+      if (!note || note.length < 5) {
+        if (verificationActionStatus) verificationActionStatus.textContent = 'Enter an audit note of at least 5 characters.';
+        return;
+      }
+      if (!window.confirm('Save profile verification state "' + status + '" for the selected member?')) return;
+      const button = panel.querySelector('#admin-profile-verification-save');
+      if (button) button.disabled = true;
+      if (verificationActionStatus) verificationActionStatus.textContent = 'Updating profile verification and blue check…';
+      try {
+        const result = await adminCentreApi('/admin/profiles/verification', {
+          method:'POST',
+          body:JSON.stringify({userId:selectedUserId,status,note})
+        });
+        if (verificationActionStatus) verificationActionStatus.textContent =
+          result.member?.verificationBadge === 'blue' ? 'Profile verified. The blue check is active.' : 'Verification status updated. The blue check is not active.';
+        await refreshSelectedMember();
+      } catch (error) {
+        if (verificationActionStatus) verificationActionStatus.textContent = error.message || 'Profile verification could not be updated.';
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
   }
 
   async function loadAdminModerationQueue(panel) {

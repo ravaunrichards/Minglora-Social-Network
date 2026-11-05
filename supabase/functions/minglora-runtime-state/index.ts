@@ -84,6 +84,7 @@ Deno.serve(async (req: Request) => {
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
+    "profile_verification_admin_search", "profile_verification_admin_set",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -93,6 +94,25 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+  const creatorHubAdminId = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  const creatorHubAdminEmail = "creatorhubcreatornetwork@gmail.com";
+  const canUseProfileVerificationAdmin = async (actorId: string, actorEmail: string) => {
+    if (actorId !== creatorHubAdminId || actorEmail.trim().toLowerCase() !== creatorHubAdminEmail) return false;
+    const [authResult, staffResult] = await Promise.all([
+      admin.auth.admin.getUserById(actorId),
+      admin.from("minglora_platform_staff")
+        .select("role,active,permissions")
+        .eq("user_id", actorId)
+        .maybeSingle()
+    ]);
+    const authUser = authResult.data?.user;
+    const staff = staffResult.data;
+    const permissions = Array.isArray(staff?.permissions) ? staff.permissions : [];
+    return Boolean(!authResult.error && !staffResult.error && authUser?.email_confirmed_at &&
+      String(authUser.email || "").trim().toLowerCase() === creatorHubAdminEmail &&
+      staff?.role === "owner" && staff.active === true &&
+      permissions.includes("platform:admin") && permissions.includes("verification:review"));
+  };
 
   if (action === "auth_register_user") {
     const email = String(input.email || "").trim().toLowerCase();
@@ -1295,6 +1315,107 @@ Deno.serve(async (req: Request) => {
   }
 
 
+
+  if (action === "profile_verification_admin_search") {
+    const actorId = String(input.actorUserId || "");
+    const actorEmail = String(input.actorEmail || "");
+    const search = String(input.search || "").trim().toLowerCase().slice(0, 80);
+    if (!await canUseProfileVerificationAdmin(actorId, actorEmail)) {
+      return json(403, { error: "MFA-verified Creator Hub owner authorization is required." });
+    }
+    if (search.length < 2) return json(400, { error: "Enter at least two characters to search members." });
+    const { data: authPage, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (authError) return json(503, { error: "Minglora member accounts could not be searched." });
+    const authUsers = Array.isArray(authPage?.users) ? authPage.users : [];
+    const { data: profiles, error: profileError } = await admin.from("profiles")
+      .select("id,username,display_name,verification_status,verification_badge")
+      .limit(1000);
+    if (profileError) return json(503, { error: "Minglora member profiles could not be searched." });
+    const profileMap = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
+    const members = authUsers.map((authUser: any) => {
+      const profile: any = profileMap.get(authUser.id) || {};
+      return {
+        id: authUser.id,
+        email: String(authUser.email || ""),
+        username: String(profile.username || authUser.user_metadata?.username || ""),
+        name: String(profile.display_name || authUser.user_metadata?.name || authUser.user_metadata?.full_name || ""),
+        verificationStatus: String(profile.verification_status || authUser.app_metadata?.verification_status || "not_submitted"),
+        verificationBadge: String(profile.verification_badge || authUser.app_metadata?.verification_badge || "none")
+      };
+    }).filter((member: any) => member.id && (
+      member.email.toLowerCase().includes(search) ||
+      member.username.toLowerCase().includes(search) ||
+      member.name.toLowerCase().includes(search)
+    )).slice(0, 40);
+    return json(200, { members });
+  }
+
+  if (action === "profile_verification_admin_set") {
+    const actorId = String(input.actorUserId || "");
+    const actorEmail = String(input.actorEmail || "");
+    const targetUserId = String(input.targetUserId || "");
+    const status = String(input.status || "");
+    const note = String(input.note || "").trim().slice(0, 1500);
+    if (!await canUseProfileVerificationAdmin(actorId, actorEmail)) {
+      return json(403, { error: "MFA-verified Creator Hub owner authorization is required." });
+    }
+    if (!validUuid(targetUserId) || !["verified", "not_submitted", "rejected", "suspended"].includes(status) || note.length < 5) {
+      return json(400, { error: "Choose a profile and a valid verification status with an audit note." });
+    }
+    const [{ data: authResult, error: authLookupError }, { data: profile, error: profileLookupError }] = await Promise.all([
+      admin.auth.admin.getUserById(targetUserId),
+      admin.from("profiles").select("id,username,display_name,verification_status,verification_badge").eq("id", targetUserId).maybeSingle()
+    ]);
+    const targetAuthUser = authResult?.user;
+    if (authLookupError || profileLookupError) return json(503, { error: "The selected member account could not be checked." });
+    if (!targetAuthUser?.id || !profile) return json(404, { error: "Minglora member profile was not found." });
+    const badge = status === "verified" ? "blue" : "none";
+    const stamp = new Date().toISOString();
+    const nextAppMetadata = {
+      ...(targetAuthUser.app_metadata || {}),
+      verification_status: status,
+      verification_badge: badge
+    };
+    const { error: metadataError } = await admin.auth.admin.updateUserById(targetUserId, { app_metadata: nextAppMetadata });
+    if (metadataError) return fail(metadataError, "Authentication verification metadata could not be updated.");
+    const { error: profileUpdateError } = await admin.from("profiles").update({
+      verification_status: status,
+      verification_badge: badge
+    }).eq("id", targetUserId);
+    if (profileUpdateError) {
+      await admin.auth.admin.updateUserById(targetUserId, { app_metadata: targetAuthUser.app_metadata || {} });
+      return fail(profileUpdateError, "Profile verification could not be updated.");
+    }
+    const { error: auditError } = await admin.from("audit_log").insert({
+      actor_id: actorId,
+      action: "profile_verification_admin_set",
+      target_type: "profile",
+      target_id: targetUserId,
+      metadata: { status, badge, note, previousStatus: profile.verification_status, previousBadge: profile.verification_badge }
+    });
+    if (auditError) return fail(auditError, "Profile verification changed but the required audit entry could not be saved.");
+    await admin.from("notifications").insert({
+      recipient_id: targetUserId,
+      actor_id: actorId,
+      kind: "profile_verification_status",
+      entity_type: "profile",
+      entity_id: targetUserId,
+      payload: {
+        title: "Minglora profile verification update",
+        status,
+        badge,
+        note,
+        updatedAt: stamp
+      }
+    });
+    return json(200, {
+      ok: true,
+      userId: targetUserId,
+      verificationStatus: status,
+      verificationBadge: badge,
+      updatedAt: stamp
+    });
+  }
 
   if (action === "profile_verification_get") {
     const userId=String(input.userId||"");

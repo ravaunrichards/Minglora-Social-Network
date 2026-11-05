@@ -24,7 +24,7 @@ import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
-import { recordGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity } from '../backend/modules/gifter-progression/service.js';
+import { recordGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getGifterAdminGrant, grantGifterBadgeLevel, resetGifterBadgeAdminGrant } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -256,6 +256,9 @@ function hasActiveReviewerSession(user){
   if(!user||!isPlatformStaffIdentity(user))return false;
   if(!PLATFORM_OWNER_USER_IDS.has(user.id))return true;
   return (db.sessions||[]).some(session=>session.userId===user.id&&session.mfaVerified&&new Date(session.expiresAt)>new Date());
+}
+function hasCreatorHubAdminToolsAccess(user,req){
+  return isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user);
 }
 const loginFailures=new Map();
 function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(ip+'|'+email).digest('hex');}
@@ -1849,6 +1852,82 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
+      }
+      if(method==='GET'&&p==='/api/admin/profiles/search'){
+        if(!hasCreatorHubAdminToolsAccess(user,req))return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can search member verification records.'});
+        const search=String(url.searchParams.get('search')||'').trim().slice(0,80);
+        if(search.length<2)return json(res,400,{error:'Enter at least two characters to search members.'});
+        const result=await requestSupabaseState('profile_verification_admin_search',{
+          actorUserId:user.id,actorEmail:normalizeEmail(user.email),search
+        });
+        return json(res,200,{members:Array.isArray(result.members)?result.members:[]});
+      }
+      if(method==='GET'&&p.startsWith('/api/admin/gifter-badges/')){
+        if(!hasCreatorHubAdminToolsAccess(user,req))return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can manage gifter badges.'});
+        const targetUserId=decodeURIComponent(p.slice('/api/admin/gifter-badges/'.length));
+        const target=db.users.find(item=>item.id===targetUserId);
+        if(!target)return json(res,404,{error:'Minglora member was not found.'});
+        const overview=getGifterProgressionOverview(db,targetUserId);
+        const badge=getGifterBadgeSummary(db,targetUserId);
+        const adminGrant=getGifterAdminGrant(db,targetUserId);
+        const history=(db.gifterBadgeAdminAudit||[]).filter(item=>item.targetUserId===targetUserId).slice(0,12);
+        return json(res,200,{
+          member:{id:target.id,email:normalizeEmail(target.email),username:target.username,name:target.name,
+            verificationStatus:target.verificationStatus||'not_submitted',verificationBadge:target.verificationBadge||'none'},
+          badge,adminGrant,overview,history
+        });
+      }
+      if(method==='POST'&&p==='/api/admin/gifter-badges/grant'){
+        if(!hasCreatorHubAdminToolsAccess(user,req))return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can grant gifter badges.'});
+        const targetUserId=String(input.userId||'').trim();
+        const target=db.users.find(item=>item.id===targetUserId);
+        const level=Number(input.level);
+        const note=String(input.note||'Admin gifter badge grant').trim().slice(0,240);
+        if(!target)return json(res,404,{error:'Minglora member was not found.'});
+        if(!Number.isInteger(level)||level<1||level>50)return json(res,400,{error:'Choose a gifter level from 1 to 50.'});
+        const result=grantGifterBadgeLevel(db,{
+          userId:targetUserId,actorId:user.id,level,note,auditId:uid(),now:now()
+        });
+        await saveStore();
+        return json(res,200,{
+          ok:true,grant:result.grant,audit:result.audit,
+          overview:getGifterProgressionOverview(db,targetUserId),
+          badge:getGifterBadgeSummary(db,targetUserId)
+        });
+      }
+      if(method==='POST'&&p==='/api/admin/gifter-badges/reset'){
+        if(!hasCreatorHubAdminToolsAccess(user,req))return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can reset admin gifter badge grants.'});
+        const targetUserId=String(input.userId||'').trim();
+        const target=db.users.find(item=>item.id===targetUserId);
+        const note=String(input.note||'Reset admin gifter badge grant').trim().slice(0,240);
+        if(!target)return json(res,404,{error:'Minglora member was not found.'});
+        const result=resetGifterBadgeAdminGrant(db,{
+          userId:targetUserId,actorId:user.id,note,auditId:uid(),now:now()
+        });
+        await saveStore();
+        return json(res,200,{
+          ok:true,grant:result.grant,previousLevel:result.previousLevel,audit:result.audit,
+          overview:getGifterProgressionOverview(db,targetUserId),
+          badge:getGifterBadgeSummary(db,targetUserId)
+        });
+      }
+      if(method==='POST'&&p==='/api/admin/profiles/verification'){
+        if(!hasCreatorHubAdminToolsAccess(user,req))return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can manage profile verification.'});
+        const targetUserId=String(input.userId||'').trim();
+        const status=String(input.status||'').trim();
+        const note=String(input.note||'').trim().slice(0,1500);
+        const allowedStatuses=['verified','not_submitted','rejected','suspended'];
+        const target=db.users.find(item=>item.id===targetUserId);
+        if(!target)return json(res,404,{error:'Minglora member was not found.'});
+        if(!allowedStatuses.includes(status)||note.length<5)return json(res,400,{error:'Choose a verification status and enter an audit note of at least 5 characters.'});
+        const result=await requestSupabaseState('profile_verification_admin_set',{
+          actorUserId:user.id,actorEmail:normalizeEmail(user.email),targetUserId,status,note
+        });
+        target.verificationStatus=status;
+        target.verificationBadge=status==='verified'?'blue':'none';
+        await saveStore();
+        return json(res,200,{ok:true,member:{id:target.id,email:normalizeEmail(target.email),
+          verificationStatus:target.verificationStatus,verificationBadge:target.verificationBadge},result});
       }
       if(method==='POST'&&p==='/api/admin/coins/owner-issuance'){
         const adminEmail=normalizeEmail(user.email);
