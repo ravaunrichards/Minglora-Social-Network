@@ -89,7 +89,6 @@
     const progressText = current.maxLevel
       ? "You have reached the maximum gifter level."
       : number(current.xpRemaining) + " Coins to Level " + current.nextLevel;
-    const image = "";
     const level25 = (data.levels || []).find(item => item.level === 25);
     const chart = (data.levels || []).map(levelCard).join("");
     const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
