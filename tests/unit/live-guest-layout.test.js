@@ -45,7 +45,7 @@ test('Approved guests can publish camera in video LIVE and remain microphone-onl
 
 
 test('The current host or guest can see their own video in their labeled stage seat', () => {
-  assert.match(app, /identity:String\(person\.identity\|\|\(person===local\?\(state\.user\?\.id\|\|"local"\):index\)\)/);
+  assert.ok(app.includes('const identity=String(person.identity||(person===local?(state.user?.id||"local"):index));'));
   assert.match(app, /role==="guest"\&\&local\)guests\.push\(local\)/);
   assert.match(app, /is-local/);
   assert.match(app, /YOU · GUEST/);
@@ -66,7 +66,7 @@ test('A host can revoke and restore camera permissions for connected guests with
   assert.match(app, /guestCameraAllowed=packet\.enabled/);
   assert.match(app, /if\(packet\.enabled\)toast\("Guest camera access is enabled/);
   assert.match(app, /Guest cameras disabled by host/);
-  assert.match(app, /\\['guestCamera','Guest camera',true/);
+  assert.ok(app.includes("[" + "'guestCamera'" + ",'Guest camera',true"));
 });
 
 test('Hosts and guests have reciprocal live participant visibility and their own device tools', () => {
