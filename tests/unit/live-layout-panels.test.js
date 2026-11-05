@@ -122,15 +122,17 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
   assert.match(styles, /\.live-gift-empty\{/);
 });
 
-test('Confirmed LIVE gifts are broadcast to the room and animated for other participants', () => {
-  assert.match(app, /topic:\"minglora-live-gift\"/);
-  assert.match(app, /type:\"minglora\.live\.gift\"/);
-  assert.match(app, /topic===\"minglora-live-gift\"/);
-  assert.match(app, /window\.MingloraGiftFX\?\.mount\(stage,gift\)/);
-  assert.match(app, /publishData\(packet,\{reliable:true,topic:\"minglora-live-gift\"\}\)/);
-  assert.match(server, /session\.hostId===user\.id/);
+test('LIVE gift animations use server-confirmed gift ledger events, not client messages', () => {
+  assert.match(server, /if\\(method==='GET'&&liveAction\\)/);
+  assert.match(server, /event\\.broadcastId===session\\.id&&event\\.creatorId===session\\.hostId/);
+  assert.match(server, /giftId:String\\(event\\.giftId\\|\\|event\\.id\\|\\|''\\)/);
+  assert.match(app, /function startLiveGiftEvents\\(session\\)/);
+  assert.match(app, /function stopLiveGiftEvents\\(\\)/);
+  assert.match(app, /api\\('/live/sessions/'\\+encodeURIComponent\\(session\\.id\\)\\+'/gifts\\?since='/);
+  assert.match(app, /window\\.MingloraGiftFX\\?\\.mount\\(stage,gift\\)/);
+  assert.doesNotMatch(app, /publishData\\(packet,\\{reliable:true,topic:\\"minglora-live-gift\\"\\}\\)/);
+  assert.doesNotMatch(app, /topic===\\"minglora-live-gift\\"/);
 });
-
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
   for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
     assert.ok(app.includes('liveControlButton("'+id+'"'), 'missing control '+id);
