@@ -1614,8 +1614,189 @@ async function setupLiveMatchPanel(session,role){
   await refreshLiveMatchPanel(session,role);
   liveMatchRefreshTimer=setInterval(()=>void refreshLiveMatchPanel(session,role),5000);
 }
+function stopLiveRecordingListRefresh(){if(liveRecordingClock){clearInterval(liveRecordingClock);liveRecordingClock=null;}}
+function liveRecordingClockText(startedAt){
+  const ms=Math.max(0,Date.now()-new Date(startedAt).getTime()),seconds=Math.floor(ms/1000);
+  return String(Math.floor(seconds/3600)).padStart(2,'0')+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+}
+function drawLiveRecordingFrame(canvas,ctx,session){
+  const width=canvas.width,height=canvas.height;
+  ctx.fillStyle='#0b1222';ctx.fillRect(0,0,width,height);
+  const gradient=ctx.createLinearGradient(0,0,width,height);gradient.addColorStop(0,'#192b48');gradient.addColorStop(1,'#0b1222');
+  ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);
+  ctx.fillStyle='#f5f8ff';ctx.font='700 22px system-ui,sans-serif';ctx.fillText(String(session.title||'Minglora LIVE').slice(0,64),32,42);
+  ctx.fillStyle='#ff5b6e';ctx.beginPath();ctx.arc(width-64,34,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffe3e6';ctx.font='800 13px system-ui,sans-serif';ctx.fillText('LIVE RECORDING',width-204,39);
+  const root=$('#live-guest-layout');
+  const seats=root?[...root.querySelectorAll('.live-guest-seat:not(.empty)')]:[];
+  const columns=3,rows=3,gap=12,pad=28,top=74;
+  const cellW=(width-pad*2-gap*(columns-1))/columns,cellH=(height-top-pad-gap*(rows-1))/rows;
+  if(!seats.length){
+    ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(pad,top,width-pad*2,height-top-pad);
+    ctx.fillStyle='#dfeaff';ctx.font='700 32px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText('MINGLORA LIVE',width/2,height/2-10);ctx.font='18px system-ui,sans-serif';ctx.fillText('Voice and community recording',width/2,height/2+30);ctx.textAlign='left';return;
+  }
+  seats.slice(0,9).forEach((seat,index)=>{
+    const x=pad+(index%columns)*(cellW+gap),y=top+Math.floor(index/columns)*(cellH+gap);
+    ctx.save();ctx.beginPath();ctx.roundRect(x,y,cellW,cellH,14);ctx.clip();
+    ctx.fillStyle='#17243c';ctx.fillRect(x,y,cellW,cellH);
+    const video=seat.querySelector('video.live-video-element,video');
+    if(video&&video.readyState>=2&&video.videoWidth>0){
+      const scale=Math.max(cellW/video.videoWidth,cellH/video.videoHeight),dw=video.videoWidth*scale,dh=video.videoHeight*scale;
+      try{ctx.drawImage(video,x+(cellW-dw)/2,y+(cellH-dh)/2,dw,dh);}catch{}
+    }else{
+      const image=seat.querySelector('img.live-guest-seat-avatar, img.live-audio-host-avatar, img');
+      if(image&&image.complete&&image.naturalWidth>0){
+        const size=Math.min(cellH*.5,cellW*.42),cx=x+(cellW-size)/2,cy=y+(cellH-size)/2-12;
+        try{ctx.save();ctx.beginPath();ctx.arc(cx+size/2,cy+size/2,size/2,0,Math.PI*2);ctx.clip();ctx.drawImage(image,cx,cy,size,size);ctx.restore();}catch{}
+      }else{
+        ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(x+cellW/2,y+cellH/2-8,Math.min(50,cellH*.22),0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.fillStyle='rgba(3,8,18,.76)';ctx.fillRect(x,y+cellH-38,cellW,38);
+    const rawName=String(seat.dataset.name||seat.getAttribute('aria-label')||seat.querySelector('strong')?.textContent||seat.textContent||'Minglora member').trim().replace(/\s+/g,' ').slice(0,40);
+    ctx.fillStyle='#fff';ctx.font='700 14px system-ui,sans-serif';ctx.fillText(rawName||'Minglora member',x+12,y+cellH-14,cellW-24);
+    ctx.restore();
+  });
+}
+function createLiveRecordingComposite(session,room){
+  if(typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream)throw new Error('This browser does not support LIVE recording. Update Chrome or use a supported browser.');
+  const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
+  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Minglora could not prepare the recording canvas.');
+  drawLiveRecordingFrame(canvas,ctx,session);
+  const videoStream=canvas.captureStream(24);
+  const audioContext=new (window.AudioContext||window.webkitAudioContext)();
+  const destination=audioContext.createMediaStreamDestination();
+  const sources=[];
+  const participants=[room.localParticipant,...(room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[])];
+  const seen=new Set();
+  participants.forEach(participant=>{
+    const publications=participant?.trackPublications?.values?Array.from(participant.trackPublications.values()):[];
+    publications.forEach(publication=>{
+      const track=publication?.track,mediaTrack=track?.mediaStreamTrack;
+      if(track?.kind!=='audio'&&mediaTrack?.kind!=='audio')return;
+      if(!mediaTrack||mediaTrack.readyState!=='live'||seen.has(mediaTrack.id))return;
+      seen.add(mediaTrack.id);
+      try{const source=audioContext.createMediaStreamSource(new MediaStream([mediaTrack]));source.connect(destination);sources.push(source);}catch(error){console.warn('[Minglora LIVE] Audio track could not be mixed into recording.',error?.message||error);}
+    });
+  });
+  const audioTracks=destination.stream.getAudioTracks();
+  const mediaStream=new MediaStream([...videoStream.getVideoTracks(),...audioTracks]);
+  const candidates=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  const mimeType=candidates.find(type=>MediaRecorder.isTypeSupported(type));
+  if(!mimeType){audioContext.close().catch(()=>{});throw new Error('This browser cannot encode a WebM LIVE recording.');}
+  const recorder=new MediaRecorder(mediaStream,{mimeType,videoBitsPerSecond:2200000,audioBitsPerSecond:128000});
+  let frameId=null;
+  const draw=()=>{if(!activeLiveRecording||activeLiveRecording.recorder!==recorder)return;drawLiveRecordingFrame(canvas,ctx,session);frameId=requestAnimationFrame(draw);};
+  frameId=requestAnimationFrame(draw);
+  return {recorder,canvas,mediaStream,audioContext,sources,stopDrawing:()=>{if(frameId!==null)cancelAnimationFrame(frameId);videoStream.getTracks().forEach(track=>track.stop());}};
+}
+function renderLiveRecordingList(recordings,role){
+  const root=$('#live-recording-list');if(!root)return;
+  const items=Array.isArray(recordings)?recordings:[];
+  root.innerHTML=items.length?items.map(item=>"<article class='live-recording-item'><div class='live-recording-item-head'><strong>"+esc(item.title||'LIVE recording')+"</strong><small>"+new Date(item.createdAt).toLocaleString()+" · "+liveRecordingClockText(new Date(Date.now()-(Number(item.durationMs)||0)))+"</small></div><video controls playsinline preload='metadata' src='"+esc(item.url)+"'></video><div class='live-recording-item-foot'><small>"+(item.sharedWithGuests?'Shared with approved guest speakers':'Private to host')+" · "+(Number(item.byteSize||0)/1024/1024).toFixed(1)+" MB</small>"+(role==='host'?"<button type='button' class='text-button' data-live-recording-delete='"+esc(item.id)+"'>Delete</button>":"")+"</div></article>").join(""):"<div class='live-recording-empty'><strong>No saved recordings</strong><small>"+(role==='host'?'Start recording to create a private replay.':'The host has not shared a recording with this room.')+"</small></div>";
+}
+async function refreshLiveRecordings(session,role){
+  if(!session?.id||!$('#live-recording-list'))return;
+  try{const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings');if(activeLiveSession?.id!==session.id)return;renderLiveRecordingList(data.recordings||[],role);}
+  catch(error){const root=$('#live-recording-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Recordings could not be loaded: "+esc(error.message)+"</p>";}
+}
+async function finishLiveRecording(session,{discard=false}={}){
+  const active=activeLiveRecording;if(!active||active.sessionId!==session?.id)return;
+  const startButton=$('#live-recording-start'),stopButton=$('#live-recording-stop'),progress=$('#live-recording-progress'),bar=$('#live-recording-upload-progress');
+  if(stopButton)stopButton.disabled=true;
+  if(startButton)startButton.disabled=true;
+  if(active.recorder.state!=='inactive')active.recorder.stop();
+  const blob=await new Promise((resolve,reject)=>{
+    if(active.recorder.state==='inactive'&&active.chunks.length===0){resolve(new Blob([],{type:'video/webm'}));return;}
+    active.recorder.addEventListener('stop',()=>resolve(new Blob(active.chunks,{type:active.recorder.mimeType||'video/webm'})),{once:true});
+    active.recorder.addEventListener('error',event=>reject(event.error||new Error('The browser recording failed.')),{once:true});
+  }).catch(error=>{throw error;});
+  active.stopDrawing();active.mediaStream.getTracks().forEach(track=>track.stop());active.sources.forEach(source=>{try{source.disconnect();}catch{}});await active.audioContext.close().catch(()=>{});
+  const durationMs=Math.max(0,Date.now()-active.startedAt);
+  try{
+    if(discard){
+      await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(active.id),{method:'DELETE'});
+      if(progress)progress.textContent='Recording discarded.';
+    }else{
+      if(!blob.size)throw new Error('The recording contained no media. Check camera and microphone permissions, then retry.');
+      if(blob.size>1024*1024*1024)throw new Error('This recording exceeds Minglora’s 1 GB upload limit.');
+      if(progress)progress.textContent='Uploading your recording…';
+      if(bar){bar.hidden=false;bar.value=0;}
+      const title=String(active.title||session.title||'Minglora LIVE recording').trim().slice(0,120);
+      const file=new File([blob],'minglora-live-'+active.id+'.webm',{type:'video/webm',lastModified:Date.now()});
+      const asset=await uploadMediaFile('live_recording',file,1,0,update=>{
+        if(progress)progress.textContent=update.finalizing?'Verifying private recording upload…':'Uploading recording · '+Number(update.percentage||0)+'%';
+        if(bar)bar.value=Number(update.percentage||0);
+      });
+      const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(active.id),{method:'PATCH',body:JSON.stringify({assetId:asset.id,durationMs,title,shareWithGuests:active.shareWithGuests})});
+      if(progress)progress.textContent=saved.recording?.sharedWithGuests?'Recording saved and shared with guest speakers.':'Recording saved privately to your account.';
+      if(bar){bar.value=100;bar.hidden=true;}
+      toast('Minglora LIVE recording saved.');
+    }
+  }catch(error){
+    await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(active.id),{method:'DELETE'}).catch(()=>{});
+    if(progress)progress.textContent='Recording was not saved: '+(error.message||'Upload failed.');
+    throw error;
+  }finally{
+    activeLiveRecording=null;
+    if(startButton)startButton.disabled=false;
+    if(stopButton){stopButton.disabled=true;stopButton.textContent='Stop & save';}
+    await refreshLiveRecordings(session,activeLiveRole||'host');
+  }
+}
+async function setupLiveRecordingPanel(session,role,room){
+  stopLiveRecordingListRefresh();
+  const panel=$('#live-recording-panel');if(!panel)return;
+  const form=$('#live-recording-form'),startButton=$('#live-recording-start'),stopButton=$('#live-recording-stop'),progress=$('#live-recording-progress');
+  if(role==='host'){
+    startButton?.addEventListener('click',async()=>{
+      if(activeLiveRecording){toast('A LIVE recording is already in progress.');return;}
+      if(!navigator.mediaDevices||!window.MediaRecorder){toast('LIVE recording is not supported on this browser.');return;}
+      startButton.disabled=true;
+      if(progress)progress.textContent='Preparing the LIVE recording…';
+      const title=String(form?.elements.title?.value||session.title||'Minglora LIVE recording').trim().slice(0,120);
+      const shareWithGuests=Boolean(form?.elements.shareWithGuests?.checked);
+      let created;
+      try{
+        const response=await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings',{method:'POST',body:JSON.stringify({title,shareWithGuests})});
+        created=response.recording;
+        const composite=createLiveRecordingComposite(session,room);
+        activeLiveRecording={id:created.id,sessionId:session.id,title,shareWithGuests,startedAt:Date.now(),...composite,chunks:[]};
+        activeLiveRecording.recorder.ondataavailable=event=>{if(event.data?.size)activeLiveRecording?.chunks.push(event.data);};
+        activeLiveRecording.recorder.start(1000);
+        if(stopButton)stopButton.disabled=false;
+        if(progress)progress.textContent='Recording · '+liveRecordingClockText(activeLiveRecording.startedAt)+' · Keep Minglora open.';
+        if(liveRecordingClock)clearInterval(liveRecordingClock);
+        liveRecordingClock=setInterval(()=>{if(activeLiveRecording&&progress)progress.textContent='Recording · '+liveRecordingClockText(activeLiveRecording.startedAt)+' · Keep Minglora open.';},1000);
+        startButton.disabled=true;
+        toast('LIVE recording started. Keep this screen open until you save it.');
+      }catch(error){
+        if(created?.id)await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(created.id),{method:'DELETE'}).catch(()=>{});
+        if(progress)progress.textContent='Recording could not start: '+(error.message||'Unsupported browser.');
+        startButton.disabled=false;toast(error.message||'LIVE recording could not start.');
+      }
+    });
+    stopButton?.addEventListener('click',async()=>{
+      if(!activeLiveRecording||activeLiveRecording.sessionId!==session.id)return;
+      stopButton.disabled=true;stopButton.textContent='Saving…';
+      if(liveRecordingClock){clearInterval(liveRecordingClock);liveRecordingClock=null;}
+      try{await finishLiveRecording(session);}
+      catch(error){toast(error.message||'The recording could not be saved.');}
+      finally{stopButton.textContent='Stop & save';}
+    });
+    $('#live-recording-list')?.addEventListener('click',async event=>{
+      const button=event.target?.closest?.('[data-live-recording-delete]');if(!button)return;
+      if(!window.confirm('Delete this saved LIVE recording permanently?'))return;
+      button.disabled=true;
+      try{await api('/live/sessions/'+encodeURIComponent(session.id)+'/recordings/'+encodeURIComponent(button.dataset.liveRecordingDelete),{method:'DELETE'});await refreshLiveRecordings(session,role);toast('LIVE recording deleted.');}
+      catch(error){button.disabled=false;toast(error.message||'The recording could not be deleted.');}
+    });
+  }
+  await refreshLiveRecordings(session,role);
+  liveRecordingClock=setInterval(()=>void refreshLiveRecordings(session,role),15000);
+}
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveQaRefresh();stopLiveMatchRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveQaRefresh();stopLiveMatchRefresh();stopLiveRecordingListRefresh();
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1920,7 +2101,7 @@ activeLivePinnedComment=null;
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
     if(giftsEnabled)setupLiveRewardPanel(session,role);
-    setupLiveQaPanel(session,role);void setupLiveMatchPanel(session,role);
+    setupLiveQaPanel(session,role);void setupLiveMatchPanel(session,role);setupLiveRecordingPanel(session,role,room);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
     const screenShareControl=$("#live-screen-share-toggle");
