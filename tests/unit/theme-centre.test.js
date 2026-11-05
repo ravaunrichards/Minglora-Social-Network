@@ -51,11 +51,21 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261104-money-to-coins-1/);
-  assert.match(html, /app\.js\?v=20261104-money-to-coins-1/);
+  assert.match(html, /styles\.css\?v=20261104-owner-coin-admin-credit-1/);
+  assert.match(html, /app\.js\?v=20261104-owner-coin-admin-credit-1/);
   assert.match(html, /auth-login\.js\?v=20261104-account-auth-click-2/);
   assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
-  assert.match(sw, /minglora-shell-v79-money-to-coins-1/);
+  assert.match(sw, /minglora-shell-v81-owner-coin-admin-credit-1/);
   assert.match(sw, /auth-login\.js\?v=20261104-account-auth-click-2/);
   assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
+});
+
+
+test('Coin issuance and member-credit controls are segregated and owner protected', () => {
+  assert.match(app, /Owner Coin issuance/);
+  assert.match(app, /Admin Coin credit/);
+  assert.match(app, /\\/coins\\/owner-issuance/);
+  assert.match(app, /\\/coins\\/admin-credit/);
+  assert.match(server, /Creator Hub owner account/);
+  assert.match(server, /verified Creator Hub owner account/);
 });
