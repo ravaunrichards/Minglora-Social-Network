@@ -75,6 +75,9 @@ test('The host has a persistent master Guest stage ON/OFF control', () => {
 
 test('Disabling Guest stage blocks requests, approvals, joins and connected guest sessions', () => {
   assert.match(server, /patch\.guestStageEnabled === false/);
+  assert.match(server, /if \(request\.status === 'connected'\)/);
+  assert.match(server, /request\.status = 'left'/);
+  assert.match(server, /live_speaker_mark_left/);
   assert.match(server, /removeLiveKitParticipant\(session\.roomName, request\.userId\)/);
   assert.match(server, /session\.liveSettings\?\.guestStageEnabled === false/);
   assert.match(server, /The host has disabled the guest stage for this LIVE/);
