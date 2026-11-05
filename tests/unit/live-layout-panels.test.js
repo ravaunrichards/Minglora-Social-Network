@@ -16,7 +16,9 @@ test('LIVE has nine host-selectable screen layouts with a safe default', () => {
     assert.ok(styles.includes('data-live-layout="' + layout + '"'), 'missing responsive layout rules for ' + layout);
   }
   assert.ok(app.includes('normalizeLiveScreenLayout(session.liveLayout)'), 'session must restore the saved host layout');
-  assert.ok(server.includes("liveLayout: 'fluid-grid'"), 'new sessions must have a safe default layout');
+  assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in host-only Full Screen');
+  assert.ok(app.includes("let activeLiveScreenLayout='full-screen'"), 'client must default to Full Screen');
+  assert.ok(app.includes("String(value||'full-screen')"), 'missing saved layout must fall back to Full Screen');
 });
 
 test('Only the signed-in LIVE host can persist a valid layout choice', () => {
@@ -57,4 +59,14 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
   assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing full-width host stage rules');
   assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){'), 'guest and empty seats must be hidden in Full Screen');
   assert.ok(styles.includes('.live-audio-stage.live-host-only-layout #live-speaker-list'), 'audio-only speaker roster must be hidden');
+});
+
+
+test('Full Screen enlarges the host stage to a balanced responsive portrait size on every device', () => {
+  assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
+  assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
+  assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
+  assert.match(styles, /max-height:min\(78dvh,760px\)/);
+  assert.match(styles, /aspect-ratio:4 \/ 5/);
+  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
