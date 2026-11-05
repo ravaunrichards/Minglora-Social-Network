@@ -81,6 +81,7 @@ Deno.serve(async (req: Request) => {
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_campaign_history",
     "economy_admin_promotional_fund_status", "economy_admin_promotional_fund_order_create", "economy_admin_promotional_fund_order_get", "economy_admin_promotional_fund_order_settle",
+    "economy_admin_promotional_gift_backings_list", "economy_admin_promotional_gift_backing_create",
     "economy_promotional_gift_wallet", "economy_send_admin_promotional_gift",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
@@ -411,6 +412,40 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.rpc("admin_campaign_coins_allocate", { p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_member_user_id: member.id, p_amount_coins: amountCoins, p_request_id: requestId, p_campaign_name: "Minglora Admin Promotional Gift Campaign", p_note: note });
     if (error) return fail(error, "Admin Campaign Coins could not be allocated.");
     return json(200, { allocation: data, member: { id: member.id, username: member.username, displayName: member.display_name || "" } });
+  }
+
+  if (action === "economy_admin_promotional_gift_backings_list") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(403, { error: "Only the Creator Hub administrator can review historical promotional gift backing." });
+    }
+    const { data, error } = await admin.rpc("minglora_list_promotional_gifts_for_cash_backing", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail
+    });
+    if (error) return fail(error, "Historical promotional gifts could not be loaded.");
+    return json(200, { items: Array.isArray(data?.items) ? data.items : [] });
+  }
+
+  if (action === "economy_admin_promotional_gift_backing_create") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const giftTransactionId = String(input.giftTransactionId || "");
+    const requestId = String(input.requestId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        !validUuid(giftTransactionId) || !validUuid(requestId)) {
+      return json(400, { error: "Invalid historical promotional gift cash-backing request." });
+    }
+    const { data, error } = await admin.rpc("minglora_backfill_promotional_gift_cash", {
+      p_admin_user_id: adminUserId,
+      p_admin_email: adminEmail,
+      p_gift_transaction_id: giftTransactionId,
+      p_request_id: requestId
+    });
+    if (error) return fail(error, "This gift could not be backed by the verified USD reserve.");
+    return json(200, { backing: data || {} });
   }
 
   if (action === "economy_admin_promotional_fund_status") {
