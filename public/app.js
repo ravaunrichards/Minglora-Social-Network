@@ -1208,6 +1208,9 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
 function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-guest-layout");if(!root||!room)return;
   root.dataset.liveLayout=activeLiveScreenLayout;
+  const hostOnly=activeLiveScreenLayout==='full-screen';
+  root.setAttribute('aria-label',hostOnly?'Host-only full-screen LIVE stage':'LIVE host and guest seats');
+  root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);
   const local=room.localParticipant;
   const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
