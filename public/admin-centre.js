@@ -157,6 +157,46 @@
       });
     });
     const promotionHistoryList = panel.querySelector('#admin-member-promotion-history-list');
+    const promotionMemberSearch = panel.querySelector('#admin-member-promotion-search');
+    const promotionMemberSelect = panel.querySelector('#admin-member-promotion-recipient');
+    const loadPromotionMembers = async (search = '') => {
+      if (!promotionMemberSelect) return;
+      promotionMemberSelect.innerHTML = '<option value="">Loading members…</option>';
+      try {
+        const response = await fetch('/api/admin/coins/member-promotions/members?search=' + encodeURIComponent(search), {
+          credentials:'same-origin',
+          headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Member list could not be loaded.');
+        const members = Array.isArray(result.members) ? result.members : [];
+        if (!members.length) {
+          promotionMemberSelect.innerHTML = '<option value="">No matching members found</option>';
+          return;
+        }
+        promotionMemberSelect.innerHTML = '<option value="">Choose a recipient</option>' + members.map(member => {
+          const username = String(member.username || '');
+          const name = String(member.displayName || '').trim();
+          const joined = member.joinedAt && !Number.isNaN(new Date(member.joinedAt).getTime())
+            ? new Date(member.joinedAt).toLocaleDateString() : '';
+          const label = '@' + username + (name ? ' — ' + name : '') + (joined ? ' · Joined ' + joined : '');
+          return '<option value="' + escapeText(username) + '">' + escapeText(label) + '</option>';
+        }).join('');
+      } catch (error) {
+        promotionMemberSelect.innerHTML = '<option value="">Member list unavailable</option>';
+        if (promotionHistoryList) promotionHistoryList.textContent = error.message || 'Member list could not be loaded.';
+      }
+    };
+    panel.querySelector('#admin-member-promotion-find')?.addEventListener('click', () => {
+      loadPromotionMembers(String(promotionMemberSearch?.value || '').trim());
+    });
+    promotionMemberSearch?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadPromotionMembers(String(promotionMemberSearch.value || '').trim());
+      }
+    });
+    loadPromotionMembers();
     const refreshMemberPromotionHistory = async () => {
       if (!promotionHistoryList) return;
       promotionHistoryList.textContent = 'Loading promotion history…';
@@ -194,7 +234,7 @@
     panel.querySelector('#admin-member-promotion-form')?.addEventListener('submit', async event => {
       event.preventDefault();
       const form = event.currentTarget;
-      const memberInput = form.querySelector('#admin-member-promotion-username');
+      const memberInput = panel.querySelector('#admin-member-promotion-recipient');
       const amountInput = form.querySelector('#admin-member-promotion-amount');
       const noteInput = form.querySelector('#admin-member-promotion-note');
       const status = form.querySelector('#admin-member-promotion-status');
