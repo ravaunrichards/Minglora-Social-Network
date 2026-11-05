@@ -1438,6 +1438,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   if(client.RoomEvent.LocalTrackUnpublished)room.on(client.RoomEvent.LocalTrackUnpublished,publication=>{
     if(isLiveScreenSharePublication(publication)){
       liveScreenShareEnabled=false;
+      $("#live-screen-share-stage")?.replaceChildren();
       $("#live-video-stage")?.classList.remove("has-live-screen-share");
       updateLiveControlButton($("#live-screen-share-toggle"),"screen","Share your screen","Screen",false);
     }
@@ -1560,6 +1561,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
           const mediaTrack=publication?.track?.mediaStreamTrack;
           mediaTrack?.addEventListener?.("ended",()=>{
             liveScreenShareEnabled=false;
+            $("#live-screen-share-stage")?.replaceChildren();
             $("#live-video-stage")?.classList.remove("has-live-screen-share");
             updateLiveControlButton(screenShareControl,"screen","Share your screen","Screen",false);
           },{once:true});
