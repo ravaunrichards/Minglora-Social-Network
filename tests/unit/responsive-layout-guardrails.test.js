@@ -85,7 +85,7 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   const mobile = await read('public/mobile-layout.css');
   assert.ok(html.includes('styles.css?v=20261105-coin-funding-sources-1'));
   assert.ok(html.includes('mobile-layout.css?v=20261104-mobile-navigation-1'));
-  assert.ok(worker.includes('minglora-shell-v84-wallet-earnings-dashboard-1'));
+  assert.ok(worker.includes('minglora-shell-v83-coin-funding-sources-1'));
   assert.ok(worker.includes('/styles.css?v=20261105-coin-funding-sources-1'));
   assert.ok(worker.includes('/mobile-layout.css?v=20261104-mobile-navigation-1'));
   assert.ok(worker.includes('/app.js?v=20261105-coin-funding-sources-1'));
