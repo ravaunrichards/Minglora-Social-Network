@@ -26,7 +26,7 @@
     const className = "gp-badge" + (small ? " gp-badge--small" : "");
     return "<span class='" + className + " gp-tier-" + Math.ceil(Number(level) / 5) + "' aria-label='" +
       esc(tier + " Gifter, LV " + level) + "'><span class='gp-badge-crown'>✦</span><strong>" +
-      number(level) + "</strong><small>GIFTER</small></span>";
+      "LV " + number(level) + "</strong><small>GIFTER</small></span>";
   }
 
   function levelCard(item) {
@@ -87,14 +87,14 @@
     const selected = (data.levels || []).find(item => item.level === state.selectedLevel) ||
       (data.levels || []).find(item => item.current);
     const progressText = current.maxLevel
-      ? "You have reached the maximum gifter level."
+      ? "You have reached the maximum gifter LV."
       : number(current.xpRemaining) + " Coins to LV " + current.nextLevel;
     const level25 = (data.levels || []).find(item => item.level === 25);
     const chart = (data.levels || []).map(levelCard).join("");
     const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
 
     return "<div class='gp-page'>" +
-      "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Levels &amp; Badges</h1>" +
+      "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter LV &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       "<button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></header>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
@@ -115,15 +115,15 @@
       "<p>Tap any level to see the total Coins needed to unlock its badge.</p></div><span class='gp-level-count'>" + current.level + " / 50</span></div>" +
       "<div class='gp-selected-level' id='gp-selected-level'>" + detailMarkup(selected, current) + "</div>" +
       "<div class='gp-level-grid' id='gp-level-grid'>" + chart + "</div></section>" +
-      "<section class='gp-level25 card'><div class='gp-level25-emblem'>25</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>Reach LV 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
+      "<section class='gp-level25 card'><div class='gp-level25-emblem'>LV 25</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>Reach LV 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
       "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +
       "<p>Only successful, server-confirmed gifts are shown.</p></div></div>" + renderHistory(data.history || []) + "</section>" +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>COMMUNITY STANDINGS</span><h2>Top gifters</h2>" +
       "<p>Ranked by confirmed lifetime Coins sent.</p></div></div>" + renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId }) + "</section></div>" +
-      "<section class='gp-rules card'><div><span class='gp-eyebrow'>HOW IT WORKS</span><h2>How gifter levels are earned</h2></div>" +
+      "<section class='gp-rules card'><div><span class='gp-eyebrow'>HOW IT WORKS</span><h2>How gifter LV is earned</h2></div>" +
       "<div class='gp-rule-grid'><article><strong>01 · Send a gift</strong><p>Member gifts and LIVE gifts count after Minglora confirms the transaction.</p></article>" +
       "<article><strong>02 · Earn Coins</strong><p>Each Minglora Coin spent on a confirmed gift adds one point to your lifetime gifter progress.</p></article>" +
-      "<article><strong>03 · Unlock badges</strong><p>Coin totals are lifetime-based. Your earned level badges stay unlocked as you progress.</p></article></div>" +
+      "<article><strong>03 · Unlock badges</strong><p>Coin totals are lifetime-based. Your earned LV badges stay unlocked as you progress.</p></article></div>" +
       "<p class='gp-rule-note'>Coin purchases, gifts you receive, failed sends and duplicate transactions do not increase gifter progression. This gifter track is separate from Creator Leagues.</p></section>" +
       "</div>";
   }
