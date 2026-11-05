@@ -62,13 +62,11 @@ test('Full Screen is a host-only layout with no visible guest seats or guest spe
 });
 
 
-test('Full Screen occupies the complete viewport and keeps one uninterrupted host feed', () => {
-  assert.match(app, /icon:'fullscreen'/);
-  assert.match(app, /function syncLiveFullscreenComposition\(hostOnly\)/);
-  assert.match(app, /shell\.requestFullscreen\(\{navigationUI:'hide'\}\)/);
-  assert.match(app, /Host only · no guest tiles/);
-  assert.match(app, /fullscreen:"<rect x='3' y='3' width='18' height='18'/);
-  assert.match(styles, /\.live-player-shell\.live-full-screen-mode\{[\s\S]*?position:fixed!important[\s\S]*?width:100vw!important[\s\S]*?height:100dvh!important/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>\.live-guest-seat:not\(\.is-host\)\{display:none!important\}/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>\.live-guest-seat\.is-host\{[\s\S]*?inset:0!important[\s\S]*?width:100%!important[\s\S]*?height:100%!important/);
+test('Full Screen enlarges the host stage to a balanced responsive portrait size on every device', () => {
+  assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
+  assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
+  assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
+  assert.match(styles, /max-height:min\(78dvh,760px\)/);
+  assert.match(styles, /aspect-ratio:4 \/ 5/);
+  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
