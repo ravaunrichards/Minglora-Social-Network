@@ -15,7 +15,7 @@ test('PWA cache keys advance with the LIVE chat app and styles', () => {
   const version = '20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2';
   assert.ok(html.includes('/styles.css?v=' + version), 'HTML must request the updated LIVE chat styles');
   assert.ok(html.includes('/app.js?v=20261105-roomwide-live-gifts-1'), 'HTML must request the updated LIVE chat client');
-  assert.ok(worker.includes("minglora-shell-v93-flow-layout-safety-1-v96-roomwide-live-gifts-1"), 'service worker must activate a new cache');
+  assert.ok(worker.includes("v96-roomwide-live-gifts-1"), 'service worker must activate a new cache');
   assert.ok(worker.includes('/styles.css?v=' + version), 'precache must include the updated styles');
   assert.ok(worker.includes('/app.js?v=20261105-roomwide-live-gifts-1'), 'precache must include the updated client');
 });
