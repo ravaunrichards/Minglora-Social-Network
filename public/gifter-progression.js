@@ -100,7 +100,7 @@
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR CURRENT BADGE</span><div class='gp-current-badge-row'>" +
       badgeMarkup(current.level, current.tier) +
-      "<div><h2>Level " + current.level + " · " + esc(current.tier) + "</h2><p>" + esc(current.badgeName) + "</p>" +
+      "<div><h2>LV " + current.level + " · " + esc(current.tier) + "</h2><p>" + esc(current.badgeName) + "</p>" +
       "<span class='gp-rank-chip'>" + (current.rankPosition ? "Community rank #" + current.rankPosition : "Not ranked yet") + "</span></div></div>" +
       "<div class='gp-progress-heading'><strong>" + (current.maxLevel ? "Maximum level reached" : "Progress to LV " + current.nextLevel) +
       "</strong><span>" + number(current.xp) + " Coins</span></div><div class='gp-progress-track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='" +
@@ -111,8 +111,8 @@
       "<article class='gp-stat-card'><span>Coins to next LV</span><strong>" + (current.maxLevel ? "MAX" : number(current.xpRemaining)) + "</strong><small>" + (current.maxLevel ? "LV 50 reached" : "More Coins needed") + "</small></article>" +
       "<article class='gp-stat-card'><span>Gifts sent</span><strong>" + number(current.giftsSent) + "</strong><small>Unique confirmed transactions</small></article>" +
       "<article class='gp-stat-card'><span>Members supported</span><strong>" + number(current.uniqueRecipients) + "</strong><small>Different recipients</small></article></section>" +
-      "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>Levels 1–50</h2>" +
-      "<p>Tap any level to see the total Coins needed to unlock its badge.</p></div><span class='gp-level-count'>" + current.level + " / 50</span></div>" +
+      "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>LV 1–50</h2>" +
+      "<p>Tap any LV badge to see the total Coins needed to unlock it.</p></div><span class='gp-level-count'>LV " + current.level + " / 50</span></div>" +
       "<div class='gp-selected-level' id='gp-selected-level'>" + detailMarkup(selected, current) + "</div>" +
       "<div class='gp-level-grid' id='gp-level-grid'>" + chart + "</div></section>" +
       "<section class='gp-level25 card'><div class='gp-level25-emblem'>LV 25</div><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>Reach LV 25 to unlock your special Minglora LIVE entrance badge and recognition.</p><strong>" + (level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
