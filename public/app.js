@@ -780,13 +780,43 @@ function applyLiveScreenLayout(value){
     root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',hostOnly);
     root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly);
   });
-  document.querySelector('.live-player-shell')?.classList.toggle('live-full-screen-active',hostOnly);
+  const shell=document.querySelector('.live-player-shell');
+  shell?.classList.toggle('live-full-screen-active',hostOnly);
+  if(!hostOnly){
+    shell?.classList.remove('live-full-screen-chat-open','live-full-screen-chat-hidden');
+    setLiveChatControlState(false,'Open LIVE chat','Chat');
+  }
   document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{
     const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;
     button.classList.toggle('active',selected);
     button.setAttribute('aria-pressed',String(selected));
   });
   restoreLiveChatToStage();
+}
+function setLiveChatControlState(pressed,label,caption){
+  const button=$('#live-chat-toggle');
+  if(!button)return;
+  button.setAttribute('aria-pressed',String(Boolean(pressed)));
+  button.setAttribute('aria-label',label);
+  button.title=label;
+  const text=button.querySelector('.live-control-caption');
+  if(text)text.textContent=caption;
+}
+function toggleLiveChatView(){
+  const shell=$('#live-player-shell');
+  if(!shell?.classList.contains('live-full-screen-active')){
+    openLiveToolsPanel('#live-chat-panel');
+    return;
+  }
+  const wideLandscape=Boolean(window.matchMedia?.('(min-width:1024px) and (orientation:landscape)').matches);
+  if(wideLandscape){
+    const hidden=shell.classList.toggle('live-full-screen-chat-hidden');
+    setLiveChatControlState(!hidden,hidden?'Show LIVE chat':'Hide LIVE chat',hidden?'Show chat':'Hide chat');
+    return;
+  }
+  const open=shell.classList.toggle('live-full-screen-chat-open');
+  shell.classList.remove('live-full-screen-chat-hidden');
+  setLiveChatControlState(open,open?'Return to LIVE video':'Open LIVE chat',open?'Video':'Chat');
 }
 function restoreLiveChatToStage(){
   const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
@@ -2334,7 +2364,7 @@ activeLivePinnedComment=null;
       void sendLiveLike();
     });
     $("#live-settings-toggle")?.addEventListener("click",()=>openLiveToolsPanel());
-    $("#live-chat-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-chat-panel"));
+    $("#live-chat-toggle")?.addEventListener("click",()=>toggleLiveChatView());
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
     $("#live-gifts-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));
