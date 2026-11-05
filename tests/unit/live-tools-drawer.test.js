@@ -9,20 +9,19 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('public/app.js');
 const styles = read('public/styles.css');
 
-test('Goody Bags and Treasure Boxes are inside the optional LIVE settings drawer, not the always-visible community column', () => {
-  const drawerStart = app.indexOf("const liveToolsDrawer=");
-  const drawerEnd = app.indexOf("setContent(", drawerStart);
-  const drawer = app.slice(drawerStart, drawerEnd);
-  assert.ok(drawerStart >= 0 && drawerEnd > drawerStart);
-  assert.match(drawer, /live-reward-panel/);
-  assert.match(drawer, /live-reward-create-form/);
+test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settings drawer', () => {
+  assert.match(app, /const rewardTools="<section id='live-reward-panel' class='live-reward-panel'>/);
+  assert.match(app, /const liveToolsDrawer=.*speakerTools\+rewardTools\+liveGiftTools/s);
   assert.match(app, /id='live-tools-backdrop' class='live-tools-backdrop hidden'/);
-  assert.doesNotMatch(app.slice(app.indexOf("<aside class='live-community-panel'"), drawerStart), /live-reward-panel|live-reward-create-form/);
+  const roomMarkup = app.slice(app.indexOf('setContent("<section class=\'live-player-shell'), app.indexOf('const room=new client.Room'));
+  const community = roomMarkup.slice(roomMarkup.indexOf("<aside class='live-community-panel'"), roomMarkup.indexOf("</aside>"));
+  assert.doesNotMatch(community, /speakerTools|rewardTools|liveGiftTools|live-reward-panel/);
+  assert.match(roomMarkup, /liveToolsDrawer/);
 });
 
-test('LIVE settings drawer opens from settings, guest and gift shortcuts and closes accessibly', () => {
-  assert.match(app, /id='live-settings-toggle'/);
-  assert.match(app, /openLiveToolsPanel\(\)/);
+test('LIVE settings, guest and gift controls open one accessible drawer and rewards have no permanent shortcut', () => {
+  assert.match(app, /liveControlButton\("live-settings-toggle","settings"/);
+  assert.match(app, /\$\("#live-settings-toggle"\).*openLiveToolsPanel\(\)/);
   assert.match(app, /id='live-tools-close'/);
   assert.match(app, /aria-modal='true'/);
   assert.match(app, /event\.key==="Escape"/);
@@ -37,15 +36,16 @@ test('Guest tools, gift catalogue and reward setup share the drawer while chat r
   assert.match(app, /id='live-chat-form'/);
 });
 
-test('Room audio has a working mute/unmute control that does not change microphone publishing', () => {
-  assert.match(app, /id="live-audio-toggle"/);
+test('Room audio has a working mute/unmute control separate from microphone publishing', () => {
+  assert.match(app, /liveControlButton\("live-audio-toggle","volume"/);
   assert.match(app, /liveAudioMuted=!liveAudioMuted/);
   assert.match(app, /querySelectorAll\("audio,video"\)/);
   assert.match(app, /element\.muted=liveAudioMuted/);
   assert.match(app, /live-audio-root/);
 });
 
-test('LIVE settings drawer is responsive and scrolls independently without shrinking the stream', () => {
+test('LIVE tools drawer closes on leave and is responsive on phones and desktop', () => {
+  assert.match(app, /closeLiveToolsPanel\(\);stopLiveChatRefresh\(\)/);
   assert.match(styles, /\.live-tools-backdrop/);
   assert.match(styles, /\.live-tools-drawer/);
   assert.match(styles, /\.live-tools-content/);
