@@ -17,8 +17,9 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.doesNotMatch(roomMarkup, /live-reaction-bar|live-reaction-buttons|live-community-panel/);
   assert.match(app, /const liveStageHud=/);
   assert.match(app, /class='live-host-profile'/);
-  assert.match(app, /class='live-like-count'/);
-  assert.doesNotMatch(app, /id='live-heart-like'|live-heart-button|live-reaction-button/);
+  assert.match(app, /class='live-like-control live-like-count'/);
+  assert.match(app, /id='live-heart-like'/);
+  assert.doesNotMatch(app, /live-heart-button|live-reaction-button/);
   assert.match(app, /stage\?\.addEventListener\("click",event=>/);
   assert.match(app, /id='live-leave' class='live-host-power-button'.*<svg/);
   assert.match(styles, /\.live-video-column>\.live-stage-topbar/);

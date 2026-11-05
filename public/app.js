@@ -741,7 +741,16 @@ let liveParticipantSyncBusy=false;
 let liveRewardRefreshTimer=null;
 let liveRewardRefreshBusy=false;
 let liveRewardWalletFetchedAt=0;
+let liveMatchRefreshTimer=null;
+let liveMatchRefreshBusy=false;
+let liveViewerRefreshTimer=null;
+let liveViewerRefreshBusy=false;
+let liveFanClubState=null;
+let liveFanClubHeartbeatTimer=null;
+let liveGiftScope='all';
+let refreshLiveGiftGrid=null;
 let liveDirectoryFilter='all';
+const MINGLORA_FAN_CLUB_GIFT_CODES=Object.freeze(['heart-me-2mk7ob','community-heart-mg6zzi','blue-heart-19gp9xp','flame-heart-yv4ovw','fan-1avs41e']);
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'full-screen',label:'Full Screen',icon:'featured'},
   {value:'fluid-panel',label:'Fluid Panel',icon:'featured'},
@@ -851,6 +860,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
     "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button><button type='button' data-live-filter='mobile_gaming'>Gaming</button><button type='button' data-live-filter='live_studio'>Studio</button></div>"+
+    "<section class='live-discovery-board card'><nav class='live-discovery-tabs' aria-label='LIVE discovery rankings'><button type='button' data-live-discovery='daily'>Daily</button><button type='button' data-live-discovery='popular'>Popular LIVE</button><button type='button' data-live-discovery='league'>League</button></nav><div id='live-discovery-content'><p class='muted'>Loading Daily LIVE rankings…</p></div></section>"+
     "<div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
@@ -925,6 +935,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   $("#refresh-live")?.addEventListener("click",renderLive);
   $("#open-live-coins")?.addEventListener("click",()=>activateNav("coins"));
   bindLiveDirectoryCards(sessions);
+  bindLiveDiscoveryBoards(sessions);
 }
 async function refreshLiveDirectorySessions(){
   if(state.view!=='live'||activeLiveRoom){stopLiveDirectoryRefresh();return;}
@@ -933,6 +944,7 @@ async function refreshLiveDirectorySessions(){
     if(!container)return;
     container.innerHTML=sessions.length?sessions.map(liveSessionCardMarkup).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     bindLiveDirectoryCards(sessions);
+    bindLiveDiscoveryBoards(sessions);
   }catch{}
 }
 async function renderLive(){
@@ -1255,9 +1267,308 @@ function renderLiveViewerPanel(room,role,session){
     const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
     return "<div class='live-viewer-row'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+(participantHasLiveAudio(person)?'Guest speaker':'Viewer')+"</small></span><button type='button' class='text-button' data-live-viewer-profile='"+esc(person.identity||'')+"'>Profile</button></div>";
   }).join(''):"<p class='muted'>No other viewers are connected yet.</p>";
-  list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openProfile(userId);}));
+  list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openLiveProfilePreview(userId,session);}));
 }
 
+function stopLiveMatchRefresh(){if(liveMatchRefreshTimer){clearInterval(liveMatchRefreshTimer);liveMatchRefreshTimer=null;}liveMatchRefreshBusy=false;}
+function stopLiveViewerRefresh(){if(liveViewerRefreshTimer){clearInterval(liveViewerRefreshTimer);liveViewerRefreshTimer=null;}liveViewerRefreshBusy=false;}
+async function refreshLiveViewerRoster(session){
+  if(liveViewerRefreshBusy||!session?.id||activeLiveRole!=='host'||activeLiveSession?.id!==session.id)return;
+  const panel=$('#live-viewer-panel'),list=$('#live-viewer-roster'),count=$('#live-viewer-total');
+  if(!panel||!list||session.liveSettings?.markViewers===false)return;
+  liveViewerRefreshBusy=true;
+  try{
+    const data=await api('/live/sessions/'+encodeURIComponent(session.id)+'/viewers');
+    if(activeLiveSession?.id!==session.id)return;
+    const viewers=Array.isArray(data.viewers)?data.viewers:[];
+    if(count)count.textContent=Number(data.viewerCount||0).toLocaleString()+' people in this LIVE';
+    if(!viewers.length){list.innerHTML="<p class='muted'>No other viewers are connected yet.</p>";return;}
+    list.innerHTML=viewers.map(item=>{
+      const member=item.user||{},name=String(member.name||member.username||'Minglora member');
+      const badge=item.gifterBadge,fan=item.fanClubMembership;
+      const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
+      const priority=item.isGifter?"<span class='live-viewer-gifter-badge'>"+esc(badge?.badgeName||('Gifter LV '+badge.level))+"</span>":"";
+      const fanBadge=fan?.status==='active'?"<span class='live-viewer-fan-points'>♥ "+Number(fan.points||0).toLocaleString()+" Fan Pts</span>":"";
+      const roleLabel=item.role==='guest'?'Guest speaker':'Viewer';
+      return "<div class='live-viewer-row "+(item.isGifter?'is-priority-gifter':'')+"'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+roleLabel+"</small>"+priority+fanBadge+"</span><button type='button' class='text-button' data-live-viewer-profile='"+esc(member.id||'')+"'>Profile</button></div>";
+    }).join('');
+    list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openLiveProfilePreview(userId,session);}));
+    panel.classList.toggle('has-prioritized-gifters',data.prioritized===true);
+  }catch(error){
+    if(list&&!list.children.length)list.innerHTML="<p class='muted'>Viewer details are temporarily unavailable.</p>";
+  }finally{liveViewerRefreshBusy=false;}
+}
+function startLiveViewerRefresh(session){
+  stopLiveViewerRefresh();
+  void refreshLiveViewerRoster(session);
+  liveViewerRefreshTimer=setInterval(()=>void refreshLiveViewerRoster(session),5000);
+}
+function liveMatchStatusLabel(match){
+  if(match.status==='live')return 'LIVE MATCH';
+  if(match.status==='pending')return 'Invitation pending';
+  return String(match.status||'Match').replace(/_/g,' ');
+}
+function renderLiveMatches(matches){
+  const root=$('#live-match-list');if(!root)return;
+  const items=Array.isArray(matches)?matches:[];
+  if(!items.length){root.innerHTML="<div class='live-match-empty'><strong>No League Matches yet</strong><small>Challenge another creator who is currently broadcasting.</small></div>";return;}
+  root.innerHTML=items.map(match=>{
+    const challenger=match.challenger?.name||'Challenger',opponent=match.opponent?.name||'Opponent';
+    const active=match.status==='live',pending=match.status==='pending';
+    const score=match.scores||{challenger:0,opponent:0};
+    const challengerPoints=Number(score.challenger||0),opponentPoints=Number(score.opponent||0);
+    const total=Math.max(1,challengerPoints+opponentPoints);
+    const mine=[match.challengerId,match.opponentId].includes(state.user?.id);
+    const acceptedByMe=match.opponentId===state.user?.id&&pending;
+    const alreadySupported=(match.supporters||[]).some(item=>item.userId===state.user?.id);
+    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+challengerPoints.toLocaleString()+"</b><small>Challenger</small></div>";
+    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+opponentPoints.toLocaleString()+"</b><small>Opponent</small></div>";
+    const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
+    const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
+    const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
+    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
+    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+  }).join('');
+}
+async function refreshLiveMatchPanel(session,role){
+  if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
+  liveMatchRefreshBusy=true;
+  try{const data=await api('/leagues/matches');if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[]);}
+  catch(error){const root=$('#live-match-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Creator League could not be loaded: "+esc(error.message)+"</p>";}
+  finally{liveMatchRefreshBusy=false;}
+}
+async function setupLiveMatchPanel(session,role){
+  stopLiveMatchRefresh();
+  const panel=$('#live-match-panel');if(!panel)return;
+  const form=$('#live-match-create-form'),opponentSelect=$('#live-match-opponent'),giftMode=$('#live-match-gift-mode'),giftCode=$('#live-match-gift-code');
+  if(form&&role==='host'){
+    try{
+      const directory=await api('/live/sessions');
+      const sessions=(directory.sessions||[]).filter(item=>item.status==='live'&&item.id!==session.id&&item.hostId!==state.user?.id);
+      opponentSelect.innerHTML=sessions.length?"<option value=''>Select a creator currently LIVE</option>"+sessions.map(item=>"<option value='"+esc(item.id)+"'>"+esc(item.host?.name||item.host?.username||'Minglora creator')+" · "+esc(item.title||'LIVE')+"</option>").join(''):"<option value=''>No other eligible creators are live</option>";
+    }catch(error){opponentSelect.innerHTML="<option value=''>Live creator list unavailable</option>";}
+    giftMode?.addEventListener('change',()=>{if(giftCode){giftCode.disabled=giftMode.value!=='specific';giftCode.required=giftMode.value==='specific';if(giftMode.value!=='specific')giftCode.value='';}});
+    giftMode?.dispatchEvent(new Event('change'));
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const button=form.querySelector("button[type='submit']");
+      const opponentSessionId=String(opponentSelect?.value||'');
+      if(!opponentSessionId){toast('Choose a creator who is currently live.');return;}
+      button.disabled=true;
+      try{
+        const data=await api('/leagues/matches',{method:'POST',body:JSON.stringify({ownSessionId:session.id,opponentSessionId,giftMode:giftMode?.value||'all',selectedGiftCode:String(giftCode?.value||'').trim()})});
+        toast('League Match challenge sent to '+(data.match?.opponent?.name||'the other creator')+'.');
+        await refreshLiveMatchPanel(session,role);
+      }catch(error){toast(error.message||'The League Match challenge could not be sent.');}
+      finally{button.disabled=false;}
+    });
+  }
+  $('#live-match-list')?.addEventListener('click',async event=>{
+    const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
+    const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
+    const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
+    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId}:{};
+    button.disabled=true;
+    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'League Match power-up activated.');await refreshLiveMatchPanel(session,role);}
+    catch(error){toast(error.message||'The League Match action could not be completed.');}
+    finally{button.disabled=false;}
+  });
+  await refreshLiveMatchPanel(session,role);
+  liveMatchRefreshTimer=setInterval(()=>void refreshLiveMatchPanel(session,role),5000);
+}
+
+function liveCompactCount(value){
+  const count=Math.max(0,Number(value)||0);
+  try{return new Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(count);}
+  catch{return count.toLocaleString();}
+}
+function stopLiveFanClubHeartbeat(){
+  if(liveFanClubHeartbeatTimer){clearInterval(liveFanClubHeartbeatTimer);liveFanClubHeartbeatTimer=null;}
+}
+function renderLiveFanClubStatus(status){
+  liveFanClubState=status||null;
+  const button=$('#live-fan-club-join');
+  const member=Boolean(status?.isMember||status?.membership?.status==='active');
+  const paused=status?.membership?.status==='paused';
+  if(button){
+    button.classList.toggle('is-member',member);
+    button.disabled=false;
+    button.setAttribute('aria-pressed',member?'true':'false');
+    button.textContent=member?'♥ Joined':paused?'♥ Rejoin · 1 Coin':'♥ Join · 1 Coin';
+    button.title=member?'Open your Fan Club status and Team Gifts':paused?'Rejoin this Fan Club for 1 Coin':'Follow the host, then join for 1 Coin';
+  }
+  const panelJoinButton=$('#live-fan-club-join-panel');
+  if(panelJoinButton){panelJoinButton.textContent=member?'♥ Joined Fan Club':paused?'♥ Rejoin for 1 Coin':'♥ Join for 1 Coin';panelJoinButton.disabled=member;}
+  const panel=$('#live-fan-club-status');
+  if(panel){
+    const membership=status?.membership;
+    panel.innerHTML=member
+      ?"<strong>♥ Fan Club member</strong><small>"+Number(membership.points||0).toLocaleString()+" fan points · active until "+(membership.expiresAt?new Date(membership.expiresAt).toLocaleDateString():'your next activity')+"</small>"
+      :paused
+        ?"<strong>Membership paused</strong><small>Earn fan points within seven days to keep membership active, or rejoin for 1 Coin.</small>"
+        :"<strong>Not a member yet</strong><small>Follow the host, then join with the 1-Coin Heart Me gift. Watch, chat and gift to earn Fan Points.</small>";
+  }
+  const count=$('#live-fan-club-member-count');
+  if(count&&Number.isFinite(Number(status?.fanClubMemberCount)))count.textContent=Number(status.fanClubMemberCount).toLocaleString();
+  const follow=$('#live-follow-host');
+  if(follow){
+    const following=Boolean(status?.following);
+    follow.textContent=following?'Following':'Follow';
+    follow.classList.toggle('is-following',following);
+    follow.setAttribute('aria-pressed',following?'true':'false');
+  }
+  refreshLiveGiftGrid?.();
+  const teamButton=$('#live-team-gifts-open');if(teamButton)teamButton.disabled=!member;
+  return member;
+}
+async function loadLiveFanClubStatus(session){
+  if(!session?.id||activeLiveSession?.id!==session.id)return null;
+  try{
+    const status=await api('/live/sessions/'+encodeURIComponent(session.id)+'/fan-club');
+    if(activeLiveSession?.id!==session.id)return null;
+    renderLiveFanClubStatus(status);
+    return status;
+  }catch(error){
+    const panel=$('#live-fan-club-status');
+    if(panel)panel.innerHTML="<small>Fan Club status is temporarily unavailable. Retry from this panel.</small>";
+    return null;
+  }
+}
+function startLiveFanClubHeartbeat(session){
+  stopLiveFanClubHeartbeat();
+  liveFanClubHeartbeatTimer=setInterval(async()=>{
+    if(activeLiveSession?.id!==session?.id||!liveFanClubState?.isMember)return;
+    try{
+      const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/fan-club/watch',{method:'POST',body:'{}'});
+      if(activeLiveSession?.id===session.id&&result.membership){
+        liveFanClubState.membership=result.membership;
+        liveFanClubState.isMember=result.membership.status==='active';
+        renderLiveFanClubStatus(liveFanClubState);
+      }
+    }catch{}
+  },60000);
+}
+async function joinLiveHostFanClub(session){
+  const button=$('#live-fan-club-join');
+  if(!session?.id||!button)return;
+  if(!session.host?.following&&!liveFanClubState?.following){
+    toast('Follow the LIVE host first, then join the Fan Club.');
+    return;
+  }
+  if(liveFanClubState?.isMember){
+    const panel=$('#live-fan-club-panel');
+    if(panel){panel.scrollIntoView?.({behavior:'smooth',block:'nearest'});}
+    openLiveToolsPanel('#live-fan-club-panel');
+    return;
+  }
+  const hostName=String(session.host?.name||session.host?.username||'this creator');
+  if(!window.confirm('Join '+hostName+'’s Fan Club for 1 Minglora Coin using the Heart Me gift? Membership pauses after 7 days without earning Fan Points.'))return;
+  button.disabled=true;
+  try{
+    const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/fan-club/join',{method:'POST',body:'{}'});
+    renderLiveFanClubStatus({
+      membership:result.membership,isMember:true,following:true,fanClubMemberCount:result.fanClubMemberCount
+    });
+    startLiveFanClubHeartbeat(session);
+    toast('You joined '+hostName+'’s Fan Club for 1 Coin.');
+  }catch(error){
+    toast(error.message||'Minglora could not complete the Fan Club join.');
+    button.disabled=false;
+    if(error.code==='follow_required')await loadLiveFanClubStatus(session);
+  }
+}
+async function openLiveProfilePreview(userId,session){
+  const root=$('#live-profile-preview');
+  const id=String(userId||'').trim();
+  if(!root||!id)return;
+  root.classList.remove('hidden');
+  root.setAttribute('aria-hidden','false');
+  root.innerHTML="<section class='live-profile-preview-card' role='dialog' aria-modal='true' aria-label='Minglora profile preview'><button type='button' class='live-profile-preview-close' data-live-profile-preview-close aria-label='Close profile preview'>×</button><p class='muted'>Loading profile…</p></section>";
+  try{
+    const data=await api('/users/'+encodeURIComponent(id));
+    if(activeLiveSession?.id!==session?.id)return;
+    const member=data.user||{};
+    const name=String(member.name||member.username||'Minglora member');
+    const following=Boolean(data.following);
+    const own=member.id===state.user?.id;
+    const followers=Number(data.followersCount||0),followingCount=Number(data.followingCount||0);
+    const bio=String(member.bio||member.about||'');
+    const posts=Array.isArray(data.posts)?data.posts.slice(0,2):[];
+    root.innerHTML="<section class='live-profile-preview-card' role='dialog' aria-modal='true' aria-label='Profile preview for "+esc(name)+"'>"+
+      "<button type='button' class='live-profile-preview-close' data-live-profile-preview-close aria-label='Close profile preview'>×</button>"+
+      "<div class='live-profile-preview-cover'></div><div class='live-profile-preview-main'><img class='live-profile-preview-avatar' src='"+avatar(member)+"' alt=''>"+
+      "<div class='live-profile-preview-heading'><strong>"+esc(name)+"</strong><small>@"+esc(member.username||'member')+"</small></div>"+
+      "<div class='live-profile-preview-stats'><span><b>"+liveCompactCount(followers)+"</b><small>Followers</small></span><span><b>"+liveCompactCount(followingCount)+"</b><small>Following</small></span><span><b>"+liveCompactCount(posts.length===2?Number(data.posts?.length||0):Number(data.posts?.length||0))+"</b><small>Posts</small></span></div>"+
+      (bio?"<p class='live-profile-preview-bio'>"+esc(bio)+"</p>":"<p class='muted'>No bio added yet.</p>")+
+      "<div class='live-profile-preview-posts'>"+(posts.length?posts.map(post=>"<article><small>"+esc(new Date(post.createdAt||Date.now()).toLocaleDateString())+"</small><p>"+esc(String(post.text||post.caption||'Shared a post').slice(0,140))+"</p></article>").join(''):"<small>No recent posts to preview.</small>")+"</div>"+
+      "<div class='live-profile-preview-actions'>"+(!own?"<button type='button' class='primary' id='live-preview-follow' data-following='"+(following?'true':'false')+"'>"+(following?'Following':'Follow')+"</button>":"<span class='muted'>Your profile</span>")+
+      "<button type='button' class='secondary' data-live-profile-preview-close>Back to LIVE</button></div></div></section>";
+    root.querySelectorAll('[data-live-profile-preview-close]').forEach(button=>button.addEventListener('click',closeLiveProfilePreview));
+    root.querySelector('#live-preview-follow')?.addEventListener('click',async buttonEvent=>{
+      const actionButton=buttonEvent.currentTarget;
+      const currentlyFollowing=actionButton.dataset.following==='true';
+      actionButton.disabled=true;
+      try{
+        const result=await api('/users/'+encodeURIComponent(id)+'/follow',{method:currentlyFollowing?'DELETE':'POST',body:'{}'});
+        const next=!currentlyFollowing;
+        actionButton.dataset.following=next?'true':'false';
+        actionButton.textContent=next?(result.friends?'Friends':'Following'):'Follow';
+        if(id===session?.hostId){
+          session.host=session.host||{};
+          session.host.following=next;
+          const status=liveFanClubState||{};
+          status.following=next;
+          renderLiveFanClubStatus(status);
+        }
+        toast(next?'Now following '+name+'.':'Unfollowed '+name+'.');
+      }catch(error){toast(error.message);}
+      finally{actionButton.disabled=false;}
+    });
+  }catch(error){
+    root.innerHTML="<section class='live-profile-preview-card' role='dialog' aria-label='Profile preview'><button type='button' class='live-profile-preview-close' data-live-profile-preview-close aria-label='Close profile preview'>×</button><p>"+esc(error.message||'This profile could not be loaded.')+"</p></section>";
+    root.querySelector('[data-live-profile-preview-close]')?.addEventListener('click',closeLiveProfilePreview);
+  }
+}
+function closeLiveProfilePreview(){
+  const root=$('#live-profile-preview');
+  if(root){root.classList.add('hidden');root.setAttribute('aria-hidden','true');root.innerHTML='';}
+}
+async function loadLiveDiscoveryBoard(tab,sessions){
+  const root=$('#live-discovery-content');if(!root)return;
+  const current=Array.isArray(sessions)?sessions:[];
+  root.innerHTML="<p class='muted'>Loading "+esc(tab)+" rankings…</p>";
+  try{
+    if(tab==='popular'){
+      const popular=current.filter(item=>item.viewerCountVerified===true)
+        .sort((a,b)=>Number(b.viewerCount||0)-Number(a.viewerCount||0));
+      root.innerHTML=popular.length?popular.slice(0,8).map(item=>"<article class='live-ranking-row'><img src='"+avatar(item.host||{})+"' alt=''><span><strong>"+esc(item.host?.name||item.host?.username||'Minglora creator')+"</strong><small>"+esc(item.title||'LIVE')+"</small></span><b>◉ "+liveCompactCount(item.viewerCount||0)+"</b><button type='button' data-live-ranking-watch='"+esc(item.id)+"'>Watch</button></article>").join(''):"<p class='muted'>No verified LIVE audience rankings are available yet.</p>";
+      root.querySelectorAll('[data-live-ranking-watch]').forEach(button=>button.addEventListener('click',()=>{
+        const session=current.find(item=>item.id===button.dataset.liveRankingWatch);
+        if(session)openLiveRoom(session,session.hostId===state.user?.id?'host':'viewer').catch(error=>toast(error.message));
+      }));
+    }else if(tab==='daily'){
+      const data=await api('/live/rankings/daily');
+      const items=Array.isArray(data.leaderboard)?data.leaderboard:[];
+      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Ranked by confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
+        (items.length?items.slice(0,10).map(item=>"<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(item.user?.id||'')+"'><span class='live-ranking-position'>#"+Number(item.position||0)+"</span><img src='"+avatar(item.user||{})+"' alt=''><span><strong>"+esc(item.user?.name||item.user?.username||'Minglora member')+"</strong><small>@"+esc(item.user?.username||'member')+"</small></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>").join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
+      root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
+    }else{
+      const data=await api('/leagues/overview');
+      const items=Array.isArray(data.leaderboard)?data.leaderboard:[];
+      const profile=data.profile||{};
+      root.innerHTML="<div class='live-ranking-heading'><strong>Creator League · "+esc(profile.leagueClass||'D5')+"</strong><small>"+esc(profile.region||'GLOBAL')+" region · Season "+esc(profile.seasonKey||'current')+"</small></div>"+
+        (items.length?items.slice(0,10).map(item=>"<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(item.id||'')+"'><span class='live-ranking-position'>#"+Number(item.position||0)+"</span><img src='"+avatar(item)+"' alt=''><span><strong>"+esc(item.name||item.username||'Minglora member')+"</strong><small>"+esc(item.leagueClass||profile.leagueClass||'League')+"</small></span><b>"+liveCompactCount(item.seasonPoints||0)+" pts</b></button>").join(''):"<p class='muted'>No Creator League ranking is available for this class yet.</p>");
+      root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
+    }
+    document.querySelectorAll('[data-live-discovery]').forEach(button=>button.classList.toggle('active',button.dataset.liveDiscovery===tab));
+  }catch(error){root.innerHTML="<p class='muted'>"+esc(error.message||'LIVE rankings are temporarily unavailable.')+"</p>";}
+}
+function bindLiveDiscoveryBoards(sessions){
+  document.querySelectorAll('[data-live-discovery]').forEach(button=>{
+    button.onclick=()=>void loadLiveDiscoveryBoard(button.dataset.liveDiscovery,sessions);
+  });
+  void loadLiveDiscoveryBoard('daily',sessions);
+}
 function liveControlIcon(name){
   const paths={
     mic:"<rect x='9' y='3' width='6' height='12' rx='3'/><path d='M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6'/>",
@@ -1463,7 +1774,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();
+  stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();liveFanClubState=null;refreshLiveGiftGrid=null;
   try{const progression=await api('/gifter-progression/overview');state.user.gifterBadge=progression.badge||null;}catch{}
   const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
@@ -1519,7 +1830,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<section id='live-gift-panel' class='live-tools-card' data-live-tools-panel='gifts'><strong>Gifts are turned off</strong><p>The host has disabled paid gifts and reward drops for this LIVE.</p></section>"
     : role==="host"
       ? "<section id='live-gift-panel' class='live-tools-card live-gift-host-note' data-live-tools-panel='gifts'><strong>Gifts enabled</strong><p>Viewers can send gifts using Minglora Coins while you are broadcasting.</p></section>"
-      : "<section id='live-gift-panel' class='live-gift-panel' data-live-tools-panel='gifts'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+      : "<section id='live-gift-panel' class='live-gift-panel' data-live-tools-panel='gifts'><div class='live-gift-heading'><strong>Send a gift</strong><span id='live-wallet-balance'>Loading Coins…</span></div><div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note'>Team Gifts are unlocked when you join this host’s Fan Club.</p><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search every gift by name…' aria-label='Search every gift by name'><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>New premium gifts first · highest price next</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label><div id='live-gift-grid' class='live-gift-grid'></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button></section>";
+  const liveFanClubTools="<section id='live-fan-club-panel' class='live-tools-card live-fan-club-panel' data-live-tools-panel='fanclub'><div class='live-panel-title'><strong>♥ Fan Club & Team Gifts</strong><small>Join this creator’s Fan Club with the 1-Coin Heart Me gift. Earn Fan Points by watching, chatting and gifting.</small></div>"+
+    (role==='host'?"<div id='live-fan-club-status' class='live-fan-club-status'><strong>Creator Fan Club</strong><small>Members can unlock Team Gifts and Fan badges.</small></div>":"<div id='live-fan-club-status' class='live-fan-club-status'><small>Checking your Fan Club membership…</small></div><button type='button' id='live-fan-club-join-panel' class='live-fan-club-join-panel'>♥ Join for 1 Coin</button><button type='button' id='live-team-gifts-open' class='secondary'>Open Team Gifts</button>")+
+    "<div class='live-fan-club-member-total'><span>Fan Club members</span><strong id='live-fan-club-member-count'>"+Number(session.fanClubMemberCount||0).toLocaleString()+"</strong></div><small class='live-fan-club-expiry-note'>Membership pauses after 7 days without earning Fan Points.</small></section>";
+  const liveMatchTools="<section id='live-match-panel' class='live-tools-card live-match-panel' data-live-tools-panel='matches'><div class='live-panel-title'><strong>Creator League Match</strong><small>Challenge another live creator, accept an invitation, or support a side. Confirmed gifts count toward eligible match points.</small></div>"+(role==='host'?"<form id='live-match-create-form' class='live-match-create-form'><label for='live-match-opponent'>Challenge a creator who is live</label><select id='live-match-opponent' name='opponentSessionId' required><option value=''>Finding live creators…</option></select><label for='live-match-gift-mode'>Scoring gifts</label><select id='live-match-gift-mode' name='giftMode'><option value='all'>All eligible gifts</option><option value='specific'>One selected gift</option></select><label for='live-match-gift-code'>Selected gift code</label><input id='live-match-gift-code' name='selectedGiftCode' maxlength='60' placeholder='Required only for specific gift mode'><button type='submit' class='secondary'>Send League Match challenge</button></form>":"")+"<div id='live-match-list' class='live-match-list'><p class='muted'>Loading Creator League matches…</p></div></section>";
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance' data-live-tools-panel='appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance' data-live-tools-panel='appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
@@ -1531,6 +1846,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
+    "<button type='button' data-live-tools-panel-target='fanclub' data-live-tools-target='#live-fan-club-panel' aria-pressed='false'>Fan Club</button>"+
+    "<button type='button' data-live-tools-panel-target='matches' data-live-tools-target='#live-match-panel' aria-pressed='false'>Match</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button><button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
     (role==="host"?"<button type='button' data-live-tools-panel-target='appearance' data-live-tools-target='.live-room-appearance' aria-pressed='false'>Appearance</button>":"")+
@@ -1559,25 +1876,30 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
+  const liveHostId=String(session.hostId||session.host?.id||'');
+  const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
-      "<div class='live-stage-top-left'><div class='live-host-profile' aria-label='LIVE host profile'>"+
-        "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
-        "<span><strong>"+esc(liveHostName)+"</strong><small>LIVE</small></span>"+
+      "<div class='live-stage-top-left'>"+
+        "<div class='live-host-profile-wrap'><button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
+          "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+          "<span><strong>"+esc(liveHostName)+"</strong><small><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
+        "</button>"+
+        (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
+        "</div>"+
+        "<div class='live-like-control live-like-count'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
+        (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
       "</div>"+
-      "<div class='live-like-count' role='status' aria-label='LIVE likes'>"+
-        "<strong id='live-reaction-count' data-count='0'>0</strong><span>likes</span>"+
-      "</div></div>"+
       (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
     "</div>";
   const liveChatOverlay=liveSettings.groupChatEnabled!==false
-    ? "<section id='live-chat-overlay' class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></section>"
+    ? "<section id='live-chat-overlay' class='live-chat-overlay' aria-label='LIVE chat and comments'><div id='live-chat-list' class='live-chat-list' aria-live='polite'><p class='muted'>Loading comments…</p></div><div class='live-chat-composer-wrap'><div id='live-chat-emoji-picker' class='live-chat-emoji-picker hidden' aria-label='Quick emojis'>"+['❤️','😂','🔥','👏','😍','🎉','💖','🙌'].map(emoji=>"<button type='button' data-live-chat-emoji='"+emoji+"' aria-label='Insert "+emoji+"'>"+emoji+"</button>").join('')+"</div><form id='live-chat-form' class='live-chat-form'><button type='button' id='live-chat-emoji' class='live-chat-emoji-button' aria-label='Open emoji picker'>😊</button><input name='body' maxlength='500' placeholder='Add a comment…' aria-label='Add a LIVE comment' required><button type='submit' aria-label='Send comment'>➤</button></form></div></section>"
     : "<p class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
-  setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'><button class='text-button' id='live-back'>← Live now</button><div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
+  setContent("<section class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'>"+(role==='viewer'?"<button class='live-exit-button' id='live-back' aria-label='Exit LIVE' title='Exit LIVE'>×</button>":"<button class='text-button' id='live-back'>← Live now</button>")+"<div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">◉ Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"</section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
     if(role==="host"){
     const moderatorList=$("#live-moderator-list");
     const refreshLiveModerators=async()=>{
@@ -1629,19 +1951,19 @@ activeLivePinnedComment=null;
     ...(qualityPreset?.resolution?{videoCaptureDefaults:{resolution:qualityPreset.resolution}}:{})
   };
   const room=new client.Room(roomOptions);activeLiveRoom=room;
-  const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
+  const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+1;const counter=$("#live-viewer-count");if(counter)counter.textContent='◉ '+count.toLocaleString();};
   const activeLiveSpeakerIds=new Set();
   const liveReactionEmoji=Object.freeze({heart:"❤️"});
   const receivedLiveReactionAt=new Map();
   let lastLiveReactionSentAt=0;
-  const showLiveReaction=(reaction)=>{
+  const showLiveReaction=(reaction,options={})=>{
     const emoji=liveReactionEmoji[reaction];
     if(!emoji)return;
     const counter=$("#live-reaction-count");
-    if(counter){
+    if(counter&&options.count!==false){
       const count=Math.max(0,Number(counter.dataset.count||0))+1;
       counter.dataset.count=String(count);
-      counter.textContent=count.toLocaleString();
+      counter.textContent=liveCompactCount(count);
     }
     const layer=$("#live-video-stage .live-reaction-layer");
     if(!layer)return;
@@ -1686,7 +2008,9 @@ activeLivePinnedComment=null;
       if(receivedLiveReactionAt.size>250){
         for(const [key,at] of receivedLiveReactionAt)if(now-at>10000)receivedLiveReactionAt.delete(key);
       }
-      showLiveReaction(packet.reaction);
+      const counter=$("#live-reaction-count");
+      if(counter&&Number.isFinite(Number(packet.likeCount))){counter.dataset.count=String(Math.max(0,Number(packet.likeCount)));counter.textContent=liveCompactCount(packet.likeCount);}
+      showLiveReaction(packet.reaction,{count:false});
       return;
     }
     if(topic==="minglora-live-pin"&&participant.identity===session.hostId&&packet?.type==="minglora.live.pin"&&packet.version===1){
@@ -1723,7 +2047,7 @@ activeLivePinnedComment=null;
     $("#live-audio-waveform")?.classList.toggle("is-active",activeLiveSpeakerIds.size>0);
     refreshSpeakerRoster();
   });
-  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();toast("Your LIVE connection was disconnected.");}});
+  room.on(client.RoomEvent.Disconnected,()=>{if(activeLiveRoom===room){stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();toast("Your LIVE connection was disconnected.");}});
   // Render the host/speaker seat immediately; the connection label upgrades when
   // the microphone publication is confirmed, so the stage never waits for speech.
   refreshSpeakerRoster();
@@ -1759,6 +2083,12 @@ activeLivePinnedComment=null;
     updatePresence();
     refreshSpeakerRoster();
     await syncLiveParticipantPresence(session);
+    if(role==='host')startLiveViewerRefresh(session);
+    if(role==='viewer'){
+      const fanStatus=await loadLiveFanClubStatus(session);
+      if(fanStatus?.isMember)startLiveFanClubHeartbeat(session);
+    }
+    setupLiveMatchPanel(session,role);
     if(giftsEnabled)setupLiveRewardPanel(session,role);
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
@@ -1900,16 +2230,49 @@ activeLivePinnedComment=null;
     });
     const sendLiveLike=async()=>{
       const now=Date.now();
-      if(now-lastLiveReactionSentAt<65)return;
+      if(now-lastLiveReactionSentAt<120)return;
       lastLiveReactionSentAt=now;
       try{
-        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction:"heart"}));
+        const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/likes',{method:'POST',body:'{}'});
+        const counter=$("#live-reaction-count");
+        if(counter&&Number.isFinite(Number(result.likeCount))){counter.dataset.count=String(Math.max(0,Number(result.likeCount)));counter.textContent=liveCompactCount(result.likeCount);}
+        if(result.accepted===false)return;
+        const likeButton=$('#live-heart-like');
+        if(likeButton){likeButton.classList.add('is-liked');likeButton.setAttribute('aria-pressed','true');}
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.reaction",version:1,reaction:"heart",likeCount:result.likeCount}));
         await room.localParticipant.publishData(packet,{reliable:false,topic:"minglora-live-reaction"});
-        showLiveReaction("heart");
-      }catch(error){
-        toast(error.message||"LIVE likes could not be sent right now.");
-      }
+        showLiveReaction("heart",{count:false});
+      }catch(error){toast(error.message||"LIVE likes could not be sent right now.");}
     };
+    $('#live-heart-like')?.addEventListener('click',()=>void sendLiveLike());
+    $('[data-live-profile-preview]')?.addEventListener('click',event=>openLiveProfilePreview(event.currentTarget.dataset.liveProfilePreview,session));
+    $('#live-follow-host')?.addEventListener('click',async event=>{
+      const button=event.currentTarget,following=button.getAttribute('aria-pressed')==='true';
+      button.disabled=true;
+      try{
+        const result=await api('/users/'+encodeURIComponent(session.hostId)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
+        session.host=session.host||{};session.host.following=!following;
+        const status=liveFanClubState||{};status.following=!following;renderLiveFanClubStatus(status);
+        button.setAttribute('aria-pressed',String(!following));button.textContent=!following?(result.friends?'Friends':'Following'):'Follow';
+        toast(!following?'Now following '+(session.host.name||'the host')+'.':'Unfollowed the LIVE host.');
+      }catch(error){toast(error.message||'The follow could not be updated.');}
+      finally{button.disabled=false;}
+    });
+    $('#live-fan-club-join')?.addEventListener('click',()=>void joinLiveHostFanClub(session));
+    $('#live-fan-club-join-panel')?.addEventListener('click',()=>void joinLiveHostFanClub(session));
+    $('#live-team-gifts-open')?.addEventListener('click',()=>{
+      if(!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
+      openLiveToolsPanel('#live-gift-panel');$('#live-gift-scope-team')?.click();
+    });
+    $('#live-chat-emoji')?.addEventListener('click',()=>$('#live-chat-emoji-picker')?.classList.toggle('hidden'));
+    $('#live-chat-emoji-picker')?.addEventListener('click',event=>{
+      const button=event.target?.closest?.('[data-live-chat-emoji]');if(!button)return;
+      const input=$('#live-chat-form input[name="body"]');if(!input)return;
+      const start=input.selectionStart??input.value.length,end=input.selectionEnd??input.value.length;
+      input.value=input.value.slice(0,start)+button.dataset.liveChatEmoji+input.value.slice(end);
+      input.focus();input.setSelectionRange(start+button.dataset.liveChatEmoji.length,start+button.dataset.liveChatEmoji.length);
+      $('#live-chat-emoji-picker')?.classList.add('hidden');
+    });
     stage?.addEventListener("click",event=>{
       const interactiveTarget=event.target?.closest?.("button,a,input,textarea,select,[contenteditable='true'],[role='button'],.live-stage-topbar,.live-chat-form,.live-tools-drawer");
       if(interactiveTarget)return;
@@ -2006,12 +2369,12 @@ activeLivePinnedComment=null;
         if(button)button.disabled=false;
         return;
       }
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
@@ -2035,7 +2398,10 @@ activeLivePinnedComment=null;
       const drawLiveGiftGrid=()=>{
         if(!giftGrid)return;
         const query=liveGiftQuery.trim().toLowerCase();
-        const filtered=liveGiftCatalogue.filter(item=>!query||(item.name+" "+item.category+" "+item.code+" "+String(item.coin_price)).toLowerCase().includes(query));
+        const filtered=liveGiftCatalogue.filter(item=>{
+          const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(item.code);
+          return (liveGiftScope==='all'||teamGift)&&(!query||(item.name+" "+item.category+" "+item.code+" "+String(item.coin_price)).toLowerCase().includes(query));
+        });
         filtered.sort((a,b)=>liveGiftSort==="name"
           ?a.name.localeCompare(b.name)
           :liveGiftSort==="low"
@@ -2044,11 +2410,22 @@ activeLivePinnedComment=null;
         const shown=filtered.slice(0,liveGiftVisible);
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
           const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name)+"'>":esc(gift.emoji||"🎁");
-          return "<button type='button' class='live-gift-button' data-live-gift='"+esc(gift.code)+"'><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins</small></button>";
+          const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
+          const locked=teamGift&&!liveFanClubState?.isMember;
+          return "<button type='button' class='live-gift-button "+(teamGift?'is-team-gift ':'')+(locked?'is-locked':'')+"' data-live-gift='"+esc(gift.code)+"' "+(locked?"disabled aria-disabled='true' title='Join this host’s Fan Club to unlock Team Gifts'":"")+"><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name)+(teamGift?" ♥":"")+"</strong><small>"+Number(gift.coin_price).toLocaleString()+" Coins"+(locked?" · Fan Club only 🔒":"")+"</small></button>";
         }).join(""):"<p class='muted'>No gifts match your search.</p>";
         if(liveGiftMore){liveGiftMore.hidden=shown.length>=filtered.length;liveGiftMore.textContent="Show more gifts · "+Math.max(0,filtered.length-shown.length).toLocaleString()+" remaining";}
       };
+      refreshLiveGiftGrid=drawLiveGiftGrid;
       drawLiveGiftGrid();
+      const giftScopeTabs=document.querySelectorAll('[data-live-gift-scope]');
+      giftScopeTabs.forEach(button=>button.addEventListener('click',()=>{
+        if(button.dataset.liveGiftScope==='team'&&!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
+        liveGiftScope=button.dataset.liveGiftScope;
+        giftScopeTabs.forEach(item=>{const active=item===button;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));});
+        const note=$('#live-gift-team-note');if(note)note.textContent=liveGiftScope==='team'?'Fan Club Team Gifts · for active members of this host’s team.':'Team Gifts are unlocked when you join this host’s Fan Club.';
+        liveGiftVisible=48;drawLiveGiftGrid();
+      }));
       liveGiftSearch?.addEventListener("input",()=>{liveGiftQuery=liveGiftSearch.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftSortControl?.addEventListener("change",()=>{liveGiftSort=liveGiftSortControl.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftMore?.addEventListener("click",()=>{liveGiftVisible+=48;drawLiveGiftGrid();});
