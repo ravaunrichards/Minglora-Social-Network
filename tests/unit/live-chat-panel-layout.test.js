@@ -53,3 +53,19 @@ test('LIVE chat composer remains touch-friendly and avoids small mobile input te
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*#live-chat-panel-body>#live-chat-overlay/);
   assert.match(styles, /@media\(max-height:620px\)[\s\S]*#live-chat-panel-body>#live-chat-overlay/);
 });
+
+
+test('LIVE chat messages flow horizontally as paragraphs and wrap naturally when needed', () => {
+  assert.match(styles, /\.live-chat-overlay \.live-chat-line\{[\s\S]*grid-template-columns:26px minmax\(0,1fr\)[\s\S]*width:100%/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-copy\{[\s\S]*display:block!important[\s\S]*white-space:normal!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-copy>span\{[\s\S]*display:inline!important[\s\S]*overflow-wrap:anywhere!important/);
+  assert.match(styles, /\.live-chat-overlay \.live-chat-copy \.live-chat-time\{[\s\S]*display:inline!important/);
+  assert.match(styles, /\.live-chat-overlay\{[\s\S]*width:min\(92%,760px\)!important/);
+});
+
+test('LIVE Chat tab stays compact instead of expanding into a tall chat screen', () => {
+  assert.match(styles, /#live-chat-panel-body>#live-chat-overlay\{[\s\S]*height:min\(38dvh,340px\)!important[\s\S]*max-height:min\(42dvh,360px\)!important/);
+  assert.match(styles, /@media\(max-width:760px\)[\s\S]*height:min\(36dvh,300px\)!important/);
+  assert.match(styles, /@media\(max-height:620px\)[\s\S]*height:min\(42dvh,230px\)!important/);
+  assert.ok(fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8').includes('minglora-shell-v90-live-layout-expand-1-gifter-badge-3d-1-chat-paragraph-flow-1'));
+});
