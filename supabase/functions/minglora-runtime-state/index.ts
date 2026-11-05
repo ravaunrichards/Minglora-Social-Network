@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
-    "economy_purchase_settle", "economy_send_gift", "economy_live_reward_create",
+    "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit",
@@ -539,6 +539,54 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (artworkError) {
       console.warn("[Minglora LIVE gift] Gift artwork lookup was unavailable.", {
+        giftCode,
+        message: String(artworkError.message || "catalogue lookup failed").slice(0, 160)
+      });
+    } else if (artwork) {
+      gift.giftName = gift.giftName || artwork.name;
+      gift.emoji = gift.emoji || artwork.emoji;
+      gift.imageUrl = gift.imageUrl || artwork.image_url || "";
+      gift.modelUrl = gift.modelUrl || artwork.model_url || "";
+      gift.coinPrice = Number(gift.coinPrice || artwork.coin_price || 0);
+    }
+    return json(200, { gift });
+  }
+
+  if (action === "economy_send_social_gift") {
+    const senderId = String(input.senderId || "");
+    const recipientUsername = String(input.recipientUsername || "").trim().replace(/^@/, "").toLowerCase();
+    const giftCode = String(input.giftCode || "");
+    const contextType = String(input.contextType || "user");
+    const contextId = input.contextId == null ? null : String(input.contextId);
+
+    // Social profile gifts are direct member-to-member transfers. The SQL
+    // routine performs the wallet debit, gift transaction, 50/50 earnings
+    // split and creator ledger credit atomically.
+    if (!validUuid(senderId) ||
+        !/^[a-z0-9_]{3,30}$/.test(recipientUsername) ||
+        !/^[a-z0-9_-]{1,60}$/.test(giftCode) ||
+        contextType !== "user" ||
+        contextId !== null) {
+      return json(400, { error: "Invalid social gift request." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_send_social_gift", {
+      p_sender_id: senderId,
+      p_recipient_username: recipientUsername,
+      p_gift_code: giftCode,
+      p_context_type: "user",
+      p_context_id: null
+    });
+    if (error) return fail(error, "Minglora could not send the social gift.");
+
+    const gift = data && typeof data === "object" && !Array.isArray(data) ? { ...data } : { gift: data };
+    const { data: artwork, error: artworkError } = await admin
+      .from("live_gift_catalog")
+      .select("name,emoji,image_url,model_url,coin_price")
+      .eq("code", giftCode)
+      .maybeSingle();
+    if (artworkError) {
+      console.warn("[Minglora social gift] Gift artwork lookup was unavailable.", {
         giftCode,
         message: String(artworkError.message || "catalogue lookup failed").slice(0, 160)
       });
