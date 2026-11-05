@@ -11,6 +11,10 @@
 - Sending a promotional gift consumes the matching reserve amount atomically.
 - Each funded gift records a 50% creator share and 50% platform share in creator earnings.
 - Creators use the existing PayPal payout account and Payouts API to withdraw eligible available USD.
+- A past ordinary promotional gift can be cash-backed later only by the same amount of already captured USD reserve; the original Coin wallet and source records are left untouched.
+- The historical cash-backing action is owner-only, one-time per gift, request-idempotent, and debits the reserve atomically.
+- A successfully backed historical gift creates one creator earnings ledger row with a 50% creator share and a 50% platform share.
+
 
 ## Admin setup
 
@@ -19,6 +23,8 @@
 3. Fund the separate USD reserve through the PayPal checkout action.
 4. Wait for the callback to verify a completed capture and update the reserve ledger.
 5. Only then issue Admin Promotional Gift Wallet Coins to members. The campaign Coin allocation itself does not add USD.
+6. In the same section, review **Back a past promotional gift with real cash**. An eligible historical ordinary promotional gift can be selected only when the reserve already covers its full value. Confirming the action consumes that reserve exactly once and records the recipient's creator share as available USD earnings.
+
 
 ## Member gifting
 
@@ -40,6 +46,10 @@ The connected PayPal Business account must be approved for PayPal Payouts, with 
 - No test or demo transactions are inserted into production tables.
 - No USD reserve is created by admin Coin allocation.
 - No creator earnings row is created if the reserve cannot cover the full gift value.
+- Historical cash backing is limited to original, wholly ordinary promotional gifts with no cash/marketing/admin-promotional source and no existing creator earnings row.
+- Cash backing never changes or credits the sender's Main Coin wallet; the original gift's promotional Coin source is retained for audit.
+- A later cash-backed gift is shown separately in gift receipt history and counts toward the creator's withdrawable USD balance only after the reserve transaction succeeds.
+
 - PayPal capture and payout IDs are persisted for reconciliation.
 - Creator payouts remain pending until a PayPal-verified webhook reports completion.
 - A missing PayPal credential, disabled Payouts entitlement, or empty PayPal balance blocks cashout rather than faking success.
