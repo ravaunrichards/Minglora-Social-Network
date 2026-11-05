@@ -5821,3 +5821,29 @@ button.live-ranking-row{cursor:pointer}
     min-height:500px!important;
   }
 }
+
+/* Guest request chronology and four-way status summary. */
+.live-guest-stage-overview{grid-template-columns:repeat(4,minmax(0,1fr))}
+.live-speaker-timeline{
+  display:grid;gap:2px;min-width:0;margin-top:2px;padding-top:5px;
+  border-top:1px solid rgba(161,180,214,.12);
+}
+.live-speaker-timeline small{
+  display:block;min-width:0;color:#9eabc0;font-size:9px;line-height:1.4;
+  white-space:normal;overflow-wrap:anywhere;
+}
+.live-speaker-closed{
+  display:block;min-width:0;color:#aeb9ca;font-size:10px;font-weight:750;line-height:1.4;
+  white-space:normal;overflow-wrap:anywhere;
+}
+.live-speaker-request-row.status-rejected{border-color:rgba(242,128,141,.2)}
+.live-speaker-request-row.status-left{border-color:rgba(161,180,214,.15);opacity:.9}
+@media(max-width:520px){
+  .live-guest-stage-overview{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .live-guest-stage-overview>span{padding:8px 4px}
+  .live-guest-stage-overview small{font-size:9px}
+  .live-guest-stage-overview strong{font-size:15px}
+}
+@media(max-width:360px){
+  .live-guest-stage-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
