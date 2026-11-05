@@ -35,13 +35,80 @@
   function updateSelected(){
     const g=selected(),title=document.getElementById("minglora-gift-selected"),price=document.getElementById("minglora-gift-selected-price");
     const image=document.getElementById("minglora-gift-selected-image"),model=document.getElementById("minglora-gift-selected-model");
+    const fallback=document.getElementById("minglora-gift-selected-fallback");
+    const previewStatus=document.getElementById("minglora-gift-preview-status");
     const sound=document.getElementById("minglora-gift-sound"),send=document.getElementById("minglora-gift-send");
     if(title)title.textContent=g?g.name:"Choose a gift above";
     if(price)price.textContent=g?Number(g.coin_price).toLocaleString()+" Minglora Coins · "+(labels[g.category]||"Gift"):"Select a gift to preview it";
-    if(image){image.src=g?.image_url||"";image.alt=g?g.name+" original Minglora artwork":"";image.hidden=!g?.image_url;}
-    if(model){if(g?.model_url){model.src=g.model_url;model.alt=g.name+" original Minglora 3D gift";model.hidden=false;}else{model.removeAttribute("src");model.hidden=true;}}
+    if(image){
+      image.dataset.previewCode=g?.code||"";
+      image.src=g?.image_url||"";
+      image.alt=g?g.name+" original Minglora artwork":"";
+      image.hidden=!g?.image_url;
+    }
+    if(fallback){
+      fallback.textContent=g?.emoji||"🎁";
+      fallback.hidden=Boolean(g?.image_url);
+      fallback.setAttribute("aria-label",g?g.name+" gift artwork fallback":"Gift preview unavailable");
+    }
+    if(model){
+      const nextCode=g?.code||"";
+      const nextModel=g?.model_url||"";
+      model.dataset.previewCode=nextCode;
+      model.alt=g?g.name+" original Minglora 3D gift":"";
+      if(nextModel){
+        model.hidden=false;
+        model.setAttribute("poster",g?.image_url||"");
+        if(model.getAttribute("src")!==nextModel||model.dataset.loadedCode!==nextCode){
+          if(model.getAttribute("src")!==nextModel){
+            model.dataset.loadedCode="";
+            model.setAttribute("src",nextModel);
+          }
+          if(previewStatus)previewStatus.textContent="Preparing the 3D gift preview. Artwork stays visible while it loads.";
+        }else{
+          if(image)image.hidden=true;
+          if(fallback)fallback.hidden=true;
+          if(previewStatus)previewStatus.textContent="3D preview ready. Drag to rotate the gift.";
+        }
+      }else{
+        model.hidden=true;
+        model.removeAttribute("src");
+        model.removeAttribute("poster");
+        model.dataset.loadedCode="";
+        if(previewStatus)previewStatus.textContent=g?"Showing the original gift artwork.":"Choose a gift to preview it.";
+      }
+    }
     if(sound)sound.disabled=!g;
     if(send)send.disabled=!g;
+  }
+  function bindPreviewEvents(){
+    const model=document.getElementById("minglora-gift-selected-model");
+    const image=document.getElementById("minglora-gift-selected-image");
+    const fallback=document.getElementById("minglora-gift-selected-fallback");
+    const previewStatus=document.getElementById("minglora-gift-preview-status");
+    model?.addEventListener("load",()=>{
+      const code=model.dataset.previewCode||"";
+      if(!code||state.selectedCode!==code)return;
+      model.dataset.loadedCode=code;
+      model.hidden=false;
+      if(image)image.hidden=true;
+      if(fallback)fallback.hidden=true;
+      if(previewStatus)previewStatus.textContent="3D preview ready. Drag to rotate the gift.";
+    });
+    model?.addEventListener("error",()=>{
+      const code=model.dataset.previewCode||"";
+      if(!code||state.selectedCode!==code)return;
+      model.hidden=true;
+      if(image)image.hidden=!image.getAttribute("src");
+      if(fallback)fallback.hidden=Boolean(image?.getAttribute("src"));
+      if(previewStatus)previewStatus.textContent="The 3D model could not load. Showing the original gift artwork instead.";
+    });
+    image?.addEventListener("error",()=>{
+      if(image.dataset.previewCode!==state.selectedCode)return;
+      image.hidden=true;
+      if(fallback)fallback.hidden=false;
+      if(previewStatus)previewStatus.textContent="The artwork image could not load. Showing the gift icon instead.";
+    });
   }
   function drawGrid(){
     const grid=document.getElementById("minglora-gift-grid"),count=document.getElementById("minglora-gift-count"),more=document.getElementById("minglora-gift-more");
@@ -63,11 +130,11 @@
     if(!state.selectedCode&&state.gifts.length)state.selectedCode=state.gifts[0].code;
     const balance=state.balance===null?"Balance unavailable":state.balance.toLocaleString()+" Coins available";
     main.innerHTML=
-      "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Each gift is built as original Minglora artwork and a 3D model, with its own animated presentation and synthesized sound effect.</p><button type='button' class='secondary' id='minglora-gifter-progress'>View Gifter LV &amp; Badges</button></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
-      "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original assets</p></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
+      "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Each gift has original Minglora artwork, a rotatable 3D preview, animated presentation and its own sound effect.</p><button type='button' class='secondary' id='minglora-gifter-progress'>View Gifter LV &amp; Badges</button></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
+      "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Live 3D gift preview</span><h2 id='minglora-gift-selected'>Choose a gift below</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><p class='gift-preview-status' id='minglora-gift-preview-status' role='status' aria-live='polite'>Your selected gift preview will appear here.</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage' aria-label='Selected gift artwork and 3D preview'><img id='minglora-gift-selected-image' alt='' hidden><span id='minglora-gift-selected-fallback' class='gift-preview-fallback' hidden>🎁</span><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' loading='eager' reveal='auto' hidden></model-viewer></div></section>"+
+      "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original artwork and 3D previews</p></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
       "<div class='gift-browse-controls'><label class='gift-search-label'><span>Find a gift</span><input id='minglora-gift-search' type='search' placeholder='Search every gift by name…' value='"+esc(state.search)+"'></label><label class='gift-sort-label'><span>Sort</span><select id='minglora-gift-sort'><option value='high'>Price: high to low · Premium first</option><option value='price'>Price: low to high</option><option value='name'>Name A–Z</option></select></label></div>"+
       "<div class='gift-category-row' id='minglora-gift-categories'>"+categoryMarkup()+"</div><div class='gift-catalogue-grid' id='minglora-gift-grid'></div><button type='button' class='secondary gift-load-more' id='minglora-gift-more' hidden>Show more gifts</button></section>"+
-      "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Gift preview</span><h2 id='minglora-gift-selected'>Choose a gift above</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage'><img id='minglora-gift-selected-image' alt='' hidden><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' hidden></model-viewer></div></section>"+
       "<section class='card gift-send-panel'><div class='gift-send-panel-heading'><div><span class='eyebrow'>Send a gift</span><h2>Choose who receives it</h2></div></div><form id='minglora-gift-form' class='gift-send-form'>"+
       "<label>Recipient username<input id='minglora-gift-recipient' name='username' maxlength='31' autocomplete='off' placeholder='@Username' value='"+esc(state.recipient)+"' required></label>"+
       "<label class='gift-funding-source-label'>Pay with<select id='minglora-gift-funding-source' name='fundingSource'><option value='cash'>Main Coin Wallet · "+esc(balance)+"</option><option value='admin_promotional'>Promotional Gift Wallet · "+Number(state.promoWallet?.promotionalCoins||0).toLocaleString()+" Coins</option></select></label>"+
@@ -85,6 +152,7 @@
     document.getElementById("minglora-gift-recharge")?.addEventListener("click",()=>window.activateNav?.("coins"));
     document.getElementById("minglora-gifter-progress")?.addEventListener("click",()=>window.activateNav?.("gifter-progression"));
     document.getElementById("minglora-gift-form")?.addEventListener("submit",sendGift);
+    bindPreviewEvents();
     drawGrid();
   }
   async function sendGift(event){
