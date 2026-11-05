@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
+import { LIVE_MODES, broadcastTypeForLiveMode, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
@@ -1441,15 +1442,25 @@ async function route(req, res) {
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const title = String(input.title || '').trim();
-        const visibility = String(input.visibility || 'public');
-        const broadcastType = String(input.broadcastType || 'video_audio');
-        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(visibility) ||
-            !['video_audio', 'audio_only'].includes(broadcastType)) {
-          return json(res, 400, { error: 'Enter a live title, choose an audience and select Video + Audio or Audio Only.' });
+        const selectedVisibility = String(input.visibility || 'public');
+        const liveMode = String(input.liveMode || (input.broadcastType === 'audio_only' ? 'audio_only' : 'video_audio'));
+        const broadcastType = broadcastTypeForLiveMode(liveMode);
+        const setupResult = normalizeLiveSettings(input.liveSettings || {});
+        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(selectedVisibility) ||
+            !LIVE_MODES.includes(liveMode) || !setupResult.valid) {
+          return json(res, 400, { error: !setupResult.valid ? setupResult.error : 'Enter a LIVE title, choose an audience and select a supported LIVE mode.' });
         }
+        const liveSettings = setupResult.settings;
+        const visibility = liveSettings.practiceMode
+          ? 'private'
+          : liveSettings.audienceControl ? selectedVisibility : 'public';
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
-        const publishSources = broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA];
+        const publishSources = broadcastType === 'audio_only'
+          ? [LIVEKIT_TRACK_SOURCE.MICROPHONE]
+          : liveMode === 'mobile_gaming'
+            ? [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE]
+            : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE];
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
@@ -1459,8 +1470,14 @@ async function route(req, res) {
         });
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
-        const session = { id, roomName, hostId: user.id, title, visibility, broadcastType, liveTheme, status: 'live', createdAt: now(), endedAt: null };
-        await requestSupabaseState('live_broadcast_create',{id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,description:String(input.description||'').slice(0,2000)});
+        const session = {
+          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings,
+          description: liveSettings.aboutMe, liveTheme, status: 'live', createdAt: now(), endedAt: null
+        };
+        await requestSupabaseState('live_broadcast_create',{
+          id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,
+          description:liveSettings.aboutMe.slice(0,2000)
+        });
         db.liveSessions = db.liveSessions || [];
         db.liveSessions.unshift(session);
         if(visibility==='public'){
@@ -1945,6 +1962,7 @@ async function route(req, res) {
       const rewardDropEntry=p.match(/^\/api\/live\/sessions\/([^/]+)\/reward-drops\/([^/]+)\/(join|claim)$/);
       if((method==='GET'||method==='POST')&&rewardDropCollection){
         const session=(db.liveSessions||[]).find(item=>item.id===rewardDropCollection[1]&&item.status==='live');
+        if(session&&(session.liveSettings?.practiceMode||session.liveSettings?.liveGifts===false))return json(res,403,{error:'LIVE reward drops are disabled for this broadcast.'});
         if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE reward room is not available.'});
         const canViewRewardRoom=session.hostId===user.id||session.visibility==='public'||
           (session.visibility==='friends'&&isFriend(user.id,session.hostId));
@@ -2009,6 +2027,7 @@ async function route(req, res) {
       let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
+        if(session&&(session.liveSettings?.practiceMode||session.liveSettings?.liveGifts===false))return json(res,403,{error:'LIVE gifts are disabled for this broadcast.'});
         if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available for gifting.'});
         const friends=isFriend(user.id,session.hostId);
         const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
