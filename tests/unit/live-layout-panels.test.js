@@ -98,3 +98,23 @@ test('Full Screen comments sit in the middle and the composer stays above compac
   assert.match(styles, /\.live-player-controls\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
   assert.match(styles, /\.live-player-controls \.live-control-icon\{[\s\S]*?width:28px!important;height:28px!important/);
 });
+
+
+test('Full Screen keeps comments at the lower left and shares the bottom row with like, coin, gift and share actions', () => {
+  assert.match(app, /function moveLiveFullscreenElement\(/);
+  assert.match(app, /function restoreLiveChatFullscreenElements\(/);
+  assert.match(app, /\$\('\.live-like-control'\),\$\('#live-fan-club-join'\),\$\('#live-gifts-toggle'\),\$\('#live-share-toggle'\)/);
+  assert.match(app, /live-chat-quick-actions/);
+  assert.match(app, /function restoreLiveChatToStage\(\)[\s\S]*?syncLiveFullscreenComposition\(true\)/);
+  assert.match(styles, /\.live-video-stage>\.live-chat-overlay\{[\s\S]*?left:9px!important[\s\S]*?bottom:calc\(132px \+ env\(safe-area-inset-bottom\)\)!important/);
+  assert.match(styles, /\.live-player-controls>\.live-chat-composer-wrap\{[\s\S]*?grid-column:1\/-1!important[\s\S]*?display:flex!important/);
+  assert.match(styles, /\.live-chat-quick-actions\{[\s\S]*?display:flex!important/);
+  assert.match(styles, /\.live-full-screen-two-row-dock \.live-video-stage>\.live-chat-overlay/);
+});
+
+test('Full Screen is inset and constrained on phones, desktops and larger displays', () => {
+  assert.match(styles, /width:min\(calc\(100vw - 12px\),430px\)!important/);
+  assert.match(styles, /height:min\(calc\(100dvh - env\(safe-area-inset-top\) - env\(safe-area-inset-bottom\) - 12px\),780px\)!important/);
+  assert.match(styles, /width:min\(calc\(100vw - 28px\),420px,calc\(\(100dvh - 28px\) \* 9 \/ 16\)\)!important/);
+  assert.match(styles, /height:min\(calc\(100dvh - 28px\),746px\)!important/);
+});
