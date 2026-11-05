@@ -107,11 +107,21 @@
         api('/moderation/access').catch(()=>({canModerate:false})),
         api('/admin/access').catch(()=>({canAccess:false,setupRequired:false})),
         api('/calls/ringtone').catch(error=>({error:error.message,ringtone:null})),
-        api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message}))
+        api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message})),
+        api('/coins/wallet').catch(error=>({error:error.message,wallet:null})),
+        api('/creator/earnings').catch(error=>({error:error.message,availableMinor:null,earnedMinor:null}))
       ]);
       const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],
         isPrivateAdmin=adminWorkspaceAccess.canAccess===true||adminWorkspaceAccess.setupRequired===true,
         canModerate=moderationAccess.canModerate===true&&!isPrivateAdmin;
+      const formatSettingsUSD=minor=>{
+        const value=Number(minor);
+        if(!Number.isFinite(value))return 'Unavailable';
+        return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(value/100);
+      };
+      const settingsMoneyAvailable=formatSettingsUSD(creatorEarningsResult.availableMinor);
+      const settingsLifetimeEarned=formatSettingsUSD(creatorEarningsResult.earnedMinor);
+      const settingsCoinBalance=walletResult.wallet?.balance_coins;
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
@@ -143,6 +153,18 @@
                 <div><small>Username</small><strong>@${escapeHtml(result.account?.username || '')}</strong></div>
                 <div><small>Email address</small><strong>${escapeHtml(result.account?.email || 'Not available')}</strong></div>
               </div>
+              <div class="settings-wallet-summary">
+                <div><small>AVAILABLE MONEY · USD</small><strong>${escapeHtml(settingsMoneyAvailable)}</strong></div>
+                <div><small>LIFETIME EARNED · USD</small><strong>${escapeHtml(settingsLifetimeEarned)}</strong></div>
+                <div><small>COIN BALANCE</small><strong>${settingsCoinBalance==null?'Unavailable':Number(settingsCoinBalance).toLocaleString()+' Coins'}</strong></div>
+              </div>
+              <div class="settings-wallet-actions">
+                <button type="button" class="secondary" data-settings-wallet-tab="recharge">Coins &amp; Get Coins</button>
+                <button type="button" class="secondary" data-settings-wallet-tab="earnings">Live gift rewards &amp; monetization</button>
+                <button type="button" class="secondary" data-settings-wallet-tab="exchange">Exchange</button>
+              </div>
+              <p class="settings-note">Balances above come from the existing Minglora Wallet &amp; earnings service. Wallet settlement is currently in USD; a selectable display-currency conversion is not yet connected.</p>
+              <p class="settings-note">Campaign and subscription management will be added to their dedicated tools when those workflows are available. This page links to the existing wallet rather than creating duplicate transaction controls.</p>
               <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
               <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
             </section>
@@ -491,6 +513,10 @@
       });
 
       const settingsForm = document.querySelector('#settings-form');
+      document.querySelectorAll('[data-settings-wallet-tab]').forEach(button=>button.addEventListener('click',()=>{
+        const tab=button.dataset.settingsWalletTab;
+        window.dispatchEvent(new CustomEvent('minglora:open-wallet',{detail:{tab}}));
+      }));
       const categoryTabs=[...document.querySelectorAll('[data-settings-category-button]')];
       const categorizedSections=[...settingsForm.querySelectorAll('[data-settings-category]')];
       function activateSettingsCategory(category) {
