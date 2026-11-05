@@ -47,6 +47,20 @@ test('Existing settings sections are retained and assigned to one category witho
   assert.match(settings,/FormData\(settingsForm\)/);
 });
 
+test('Account settings reuse the existing server-backed Wallet and earnings view',()=>{
+  assert.match(settings,/api\('\/coins\/wallet'\)/);
+  assert.match(settings,/api\('\/creator\/earnings'\)/);
+  assert.match(settings,/settings-wallet-summary/);
+  assert.match(settings,/AVAILABLE MONEY · USD/);
+  assert.match(settings,/COIN BALANCE/);
+  assert.match(settings,/data-settings-wallet-tab="recharge"/);
+  assert.match(settings,/data-settings-wallet-tab="earnings"/);
+  assert.match(settings,/data-settings-wallet-tab="exchange"/);
+  assert.match(settings,/minglora:open-wallet/);
+  assert.match(read('public/app.js'),/state\.rechargeTab=tab;\s*activateNav\('coins'\)/);
+  assert.match(settings,/a selectable display-currency conversion is not yet connected/);
+});
+
 test('Cache & Cellular safely clears temporary image cache and preserves device downloads',()=>{
   assert.match(settings,/id="settings-clear-image-cache"/);
   assert.match(settings,/request\.destination==='image'/);
