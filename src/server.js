@@ -1472,7 +1472,7 @@ async function route(req, res) {
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
         const session = {
-          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'grid',
+          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'fluid-grid',
           description: liveSettings.aboutMe, liveTheme, status: 'live', createdAt: now(), endedAt: null
         };
         await requestSupabaseState('live_broadcast_create',{
@@ -1488,7 +1488,7 @@ async function route(req, res) {
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
       }
-      const liveRoomSettingsMatch = p.match(/^\\/api\\/live\\/sessions\\/([^/]+)\\/settings$/);
+      const liveRoomSettingsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/settings$/);
       if (method === 'PATCH' && liveRoomSettingsMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveRoomSettingsMatch[1] && item.status === 'live');
         if (!session || session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change room settings.' });
