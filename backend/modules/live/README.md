@@ -78,3 +78,8 @@ The main room layout keeps the video/audio stage, guest seats, reactions, compac
 In video+audio rooms, approved guests can publish microphone and camera tracks and use their own mute/camera controls. In audio-only rooms, guests are restricted to the microphone. The host can accept or decline speaker requests, remove an accepted/connected guest from the stage, and continue the broadcast. Removing a guest disconnects their LiveKit participant and changes their persisted guest-stage status to `left`; they return to the audience and may request a new stage place.
 
 The host may pin or unpin a current chat comment. That pin is an in-room data message, accepted only when its sender identity matches the session host; it is transient and not a permanent chat record. Hearts, applause, fire and laughter are likewise sent as ephemeral data packets. Viewer tokens may publish data only for this interaction path and still cannot publish audio or video.
+
+
+### Host screen sharing
+
+Video+audio LIVE hosts may publish a screen-share track in addition to microphone and camera tracks. The share is rendered as the main stage while the participant seat strip remains visible. Screen-share publishing is not granted to viewers or guest speakers, and audio-only LIVE does not request display capture. Browser display-capture support and the user's explicit screen/window/tab selection are required. A screen share ends when the host stops sharing or the browser/provider reports the capture track as ended.
