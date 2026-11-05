@@ -37,6 +37,11 @@ test('Group LIVE chat is saved at setup, displayed conditionally and enforced by
   assert.ok(server.includes('The host has disabled group LIVE chat'));
 });
 
+test('pre-LIVE availability notice does not call active controls unfinished', () => {
+  assert.ok(app.includes('Additional LIVE integrations'));
+  assert.ok(!app.includes('Moderator assignment · Group LIVE chats'));
+});
+
 test('host moderator manager is connected to list, add and remove API routes', () => {
   assert.ok(app.includes("id='live-moderator-panel'"));
   assert.ok(app.includes("id='live-moderator-form'"));
