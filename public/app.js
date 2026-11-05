@@ -1116,7 +1116,7 @@ async function refreshLiveChat(broadcastId){
       const controls=canModerateChat
         ?"<span class='live-chat-actions'>"+(activeLiveRole==="host"?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>":"")+"<button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
-      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
+      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member)+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
     list.scrollTop=list.scrollHeight;
   }catch(error){if($("#live-chat-list"))toast(error.message);}
