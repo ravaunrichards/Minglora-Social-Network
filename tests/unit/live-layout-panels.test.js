@@ -85,9 +85,16 @@ test('Disabling Guest stage blocks requests, approvals, joins and connected gues
 });
 
 test('The Guest section shows request identity, status, time, counts and usable actions', () => {
-  for (const selector of ['live-guest-pending-count','live-guest-approved-count','live-guest-active-count','live-speaker-username','live-speaker-status','live-speaker-requested-at','data-speaker-accept','data-speaker-reject','data-speaker-remove']) {
+  for (const selector of ['live-guest-pending-count','live-guest-approved-count','live-guest-active-count','live-guest-history-count','live-speaker-username','live-speaker-status','live-speaker-requested-at','live-speaker-timeline','statusLabels','data-speaker-accept','data-speaker-reject','data-speaker-remove']) {
     assert.ok(app.includes(selector), 'missing Guest section detail: '+selector);
   }
+  assert.match(server, /item\.sessionId === session\.id && item\.role === 'guest'/);
+  assert.match(app, /statusLabels=\{requested:/);
+  assert.match(app, /rejected:"Declined",left:"Removed or left stage"/);
+  assert.match(app, /Connected · /);
+  assert.match(app, /Reviewed · /);
+  assert.match(styles, /\.live-speaker-timeline\{/);
+  assert.match(styles, /\.live-guest-stage-overview\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/);
   assert.match(styles, /\.live-speaker-request-row\{[\s\S]*?overflow:visible/);
   assert.match(styles, /\.live-speaker-meta strong\{[\s\S]*?white-space:normal/);
   assert.match(styles, /\.live-speaker-actions button\{[\s\S]*?min-height:34px/);
