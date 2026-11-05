@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
+const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
 test('LIVE has nine host-selectable screen layouts with a safe default', () => {
   assert.ok(app.includes('const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze'), 'missing layout preset registry');
@@ -61,6 +62,35 @@ test('Full Screen keeps the host and visible guest and empty-seat windows', () =
   assert.doesNotMatch(styles, /live-audio-stage\.live-host-only-layout/);
 });
 
+
+test('The host has a persistent master Guest stage ON/OFF control', () => {
+  assert.match(liveSettings, /guestStageEnabled: true/);
+  assert.match(liveSettings, /'guestStageEnabled'/);
+  assert.match(app, /id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'/);
+  assert.match(app, /setting:key,enabled:input\.checked/);
+  assert.match(app, /packet\.setting==='guestStageEnabled'/);
+  assert.match(app, /Turn OFF to stop new requests and remove current speakers/);
+  assert.match(app, /Turn ON to let viewers request a seat again/);
+});
+
+test('Disabling Guest stage blocks requests, approvals, joins and connected guest sessions', () => {
+  assert.match(server, /patch\.guestStageEnabled === false/);
+  assert.match(server, /removeLiveKitParticipant\(session\.roomName, request\.userId\)/);
+  assert.match(server, /session\.liveSettings\?\.guestStageEnabled === false/);
+  assert.match(server, /The host has disabled the guest stage for this LIVE/);
+  assert.match(server, /if \(role === 'guest' && session\.liveSettings\?\.guestStageEnabled === false\)/);
+});
+
+test('The Guest section shows request identity, status, time, counts and usable actions', () => {
+  for (const selector of ['live-guest-pending-count','live-guest-approved-count','live-guest-active-count','live-speaker-username','live-speaker-status','live-speaker-requested-at','data-speaker-accept','data-speaker-reject','data-speaker-remove']) {
+    assert.ok(app.includes(selector), 'missing Guest section detail: '+selector);
+  }
+  assert.match(styles, /\.live-speaker-request-row\{[\s\S]*?overflow:visible/);
+  assert.match(styles, /\.live-speaker-meta strong\{[\s\S]*?white-space:normal/);
+  assert.match(styles, /\.live-speaker-actions button\{[\s\S]*?min-height:34px/);
+  assert.match(styles, /\.live-guest-seat-meta strong,\.live-guest-seat-meta small\{[\s\S]*?white-space:normal!important/);
+  assert.match(styles, /overflow-wrap:anywhere!important/);
+});
 
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
   for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
