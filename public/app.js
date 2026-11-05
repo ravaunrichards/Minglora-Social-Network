@@ -1377,6 +1377,9 @@ async function renderCoins(){
   const ownerIssuancePanel=isCreatorHubCoinOwner
     ? "<section class='card recharge-owner-issuance'><div class='recharge-owner-issuance-head'><div><span class='eyebrow'>CREATOR HUB CREATOR NETWORK</span><h2>Owner Coin issuance</h2><p class='muted'>Issue Minglora Coins directly into your own wallet. This is owner issuance, not a purchase or a member credit.</p></div><span class='recharge-owner-verified'>✓ Verified owner</span></div><div class='recharge-owner-presets'><button type='button' data-owner-issuance='100000'><strong>100,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='1000000'><strong>1,000,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='10000000'><strong>10,000,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='100000000'><strong>100,000,000</strong><small>Coins</small></button><button type='button' data-owner-issuance='custom'><strong>Unlimited</strong><small>Custom amount</small></button></div><form id='owner-issuance-form' class='recharge-owner-issuance-form'><label for='owner-issuance-amount'>Coin amount</label><input id='owner-issuance-amount' type='number' min='1' max='9007199254740991' step='1' inputmode='numeric' placeholder='Choose a preset or enter any amount' required><label for='owner-issuance-note'>Issuance note (optional)</label><input id='owner-issuance-note' type='text' maxlength='240' placeholder='Example: Creator community promotion gifts'><button class='primary' id='owner-issuance-submit' type='submit'>Issue Coins to my wallet</button><p id='owner-issuance-status' class='recharge-form-status' role='status' aria-live='polite'></p><small>No fixed preset cap. The database still protects against numeric overflow and duplicate requests.</small></form></section>"
     : "";
+  const ownerMemberCreditPanel=isCreatorHubCoinOwner
+    ? "<section class='card recharge-owner-issuance recharge-member-credit'><div class='recharge-owner-issuance-head'><div><span class='eyebrow'>MEMBER WALLET MANAGEMENT</span><h2>Admin Coin credit</h2><p class='muted'>Add Coins directly to another member wallet. This is an admin credit, not owner issuance and not a purchase.</p></div><span class='recharge-owner-verified'>✓ Owner only</span></div><form id='owner-member-credit-form' class='recharge-owner-issuance-form'><label for='member-credit-lookup'>Member username or account ID</label><input id='member-credit-lookup' type='text' maxlength='80' autocomplete='off' placeholder='@username or member UUID' required><label for='member-credit-amount'>Coin amount</label><input id='member-credit-amount' type='number' min='1' max='9007199254740991' step='1' inputmode='numeric' placeholder='Enter whole-number Coins' required><label for='member-credit-note'>Credit note (optional)</label><input id='member-credit-note' type='text' maxlength='240' placeholder='Example: Minglora launch promotion'><button class='primary' id='member-credit-submit' type='submit'>Credit Coins to member</button><p id='member-credit-status' class='recharge-form-status' role='status' aria-live='polite'></p><small>Each credit is recorded separately in the member Coin activity and the admin audit log. Your owner wallet is not debited.</small></form></section>"
+    : "";
   const content=
     "<div class='recharge-layout'><section class='card recharge-main-card'><div class='recharge-section-heading'><div><span class='eyebrow'>MINGLORA COINS</span><h2>Choose your package</h2><p class='muted'>Select a package or enter a custom Coin amount.</p></div><span class='recharge-payment-note'>PayPal checkout · USD</span></div>"+
     (packageCards?"<div class='recharge-package-grid' id='recharge-package-grid'>"+packageCards+"</div>":"<div class='recharge-empty'><strong>Coin packages are unavailable</strong><p>You can still enter a valid custom amount below.</p></div>")+
@@ -1384,7 +1387,7 @@ async function renderCoins(){
     "<aside class='card recharge-checkout-card'><span class='eyebrow'>ORDER SUMMARY</span><h2>Your recharge</h2><div id='recharge-order-summary' class='recharge-order-summary'></div><div class='recharge-checkout-rule'></div><div class='recharge-checkout-total'><span>Total</span><strong id='recharge-total'>"+(selection?liveMoney(selection.amountMinor):"—")+"</strong></div><div class='recharge-payment-method'><span class='recharge-paypal-mark'>P</span><div><strong>PayPal</strong><small>Secure checkout</small></div></div><button type='button' id='recharge-confirm' class='primary full' "+(selection?"":"disabled")+">Recharge</button><small class='recharge-secure-note'>You will review and approve the payment on PayPal before Coins are credited.</small></aside></div>"+
     "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>YOUR WALLET</span><h2>Coin activity</h2></div><span class='muted'>Latest transactions</span></div><div class='recharge-history-list'>"+history+"</div></section>"+
     "<p class='recharge-exchange-note'>Minglora Coins are for use within Minglora, including sending gifts. Creator earnings are handled separately in the Exchange tab.</p>";
-  setContent("<div class='recharge-page'>"+header+tabs+ownerIssuancePanel+content+"</div>");
+  setContent("<div class='recharge-page'>"+header+tabs+ownerIssuancePanel+ownerMemberCreditPanel+content+"</div>");
   bindTabs();
   if(isCreatorHubCoinOwner){
     const form=$("#owner-issuance-form"), amountField=$("#owner-issuance-amount");
@@ -1421,6 +1424,53 @@ async function renderCoins(){
         if(submitButton)submitButton.disabled=false;
         if(amountField)amountField.disabled=false;
         if(noteField)noteField.disabled=false;
+      }
+    });
+  }
+
+  if(isCreatorHubCoinOwner){
+    const memberForm=$("#owner-member-credit-form");
+    const memberLookupField=$("#member-credit-lookup");
+    const memberAmountField=$("#member-credit-amount");
+    const memberNoteField=$("#member-credit-note");
+    const memberSubmit=$("#member-credit-submit");
+    const memberStatus=$("#member-credit-status");
+    memberForm?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const memberLookup=String(memberLookupField?.value||"").trim();
+      const raw=String(memberAmountField?.value||"").trim();
+      const amountCoins=Number(raw);
+      if(!memberLookup||memberLookup.length>80){
+        if(memberStatus)memberStatus.textContent="Enter the member Minglora username or account ID.";
+        return;
+      }
+      if(!/^\d+$/.test(raw)||!Number.isSafeInteger(amountCoins)||amountCoins<1){
+        if(memberStatus)memberStatus.textContent="Enter a positive whole-number Coin amount.";
+        return;
+      }
+      const requestId=globalThis.crypto?.randomUUID?.();
+      if(!requestId){if(memberStatus)memberStatus.textContent="Secure request generation is unavailable on this device.";return;}
+      if(!window.confirm("Add "+amountCoins.toLocaleString()+" Minglora Coins to "+memberLookup+" as an admin credit? This will be recorded in the member Coin activity."))return;
+      if(memberSubmit)memberSubmit.disabled=true;
+      if(memberLookupField)memberLookupField.disabled=true;
+      if(memberAmountField)memberAmountField.disabled=true;
+      if(memberNoteField)memberNoteField.disabled=true;
+      if(memberStatus)memberStatus.textContent="Crediting the member wallet securely…";
+      try{
+        const result=await api("/coins/admin-credit",{method:"POST",body:JSON.stringify({
+          memberLookup,amountCoins,requestId,note:String(memberNoteField?.value||"").trim()
+        })});
+        const credit=result.credit||{};
+        const username=String(credit.memberUsername||memberLookup);
+        toast(amountCoins.toLocaleString()+" Minglora Coins credited to "+(username.startsWith("@")?username:"@"+username)+".");
+        await renderCoins();
+      }catch(error){
+        if(memberStatus)memberStatus.textContent=error.message||"The admin credit could not be confirmed. Check the member wallet before retrying.";
+        toast(error.message);
+        if(memberSubmit)memberSubmit.disabled=false;
+        if(memberLookupField)memberLookupField.disabled=false;
+        if(memberAmountField)memberAmountField.disabled=false;
+        if(memberNoteField)memberNoteField.disabled=false;
       }
     });
   }
