@@ -89,8 +89,18 @@
           </div>
           <form id="admin-member-promotion-form" class="admin-marketing-form">
             <strong>Send a promotion to one member</strong>
-            <label for="admin-member-promotion-username">Member username</label>
-            <input id="admin-member-promotion-username" name="memberUsername" type="text" maxlength="31" autocomplete="off" placeholder="@username" required>
+            <p>Newest members are listed first. Search by username or display name, then select the exact recipient before entering an amount.</p>
+            <label for="admin-member-promotion-search">Find a member</label>
+            <div class="admin-member-search-row">
+              <input id="admin-member-promotion-search" type="search" maxlength="80" autocomplete="off" placeholder="Search username or display name">
+              <button type="button" class="secondary" id="admin-member-promotion-find">Search</button>
+            </div>
+            <p id="admin-member-promotion-search-status" class="admin-member-search-status" aria-live="polite">Showing the newest members first.</p>
+            <label for="admin-member-promotion-recipient">Choose recipient</label>
+            <select id="admin-member-promotion-recipient" name="memberUsername" required>
+              <option value="">Loading members…</option>
+            </select>
+            <p class="admin-member-promotion-funding-note">These admin promotional Coins use the non-cash promo balance. They can be spent on Minglora, but they do not create withdrawable creator earnings. Use the separate cash-backed marketing grant below for cash-eligible campaign Coins; that budget must contain confirmed funds first.</p>
             <label for="admin-member-promotion-amount">Promotional Coin amount</label>
             <input id="admin-member-promotion-amount" name="amountCoins" type="number" min="1" max="9007199254740991" step="1" inputmode="numeric" placeholder="Enter the amount you choose" required>
             <label for="admin-member-promotion-note">Reason or promotion note</label>
@@ -159,9 +169,12 @@
     const promotionHistoryList = panel.querySelector('#admin-member-promotion-history-list');
     const promotionMemberSearch = panel.querySelector('#admin-member-promotion-search');
     const promotionMemberSelect = panel.querySelector('#admin-member-promotion-recipient');
+    const promotionMemberSearchStatus = panel.querySelector('#admin-member-promotion-search-status');
     const loadPromotionMembers = async (search = '') => {
       if (!promotionMemberSelect) return;
       promotionMemberSelect.innerHTML = '<option value="">Loading members…</option>';
+      if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent = search
+        ? 'Searching members…' : 'Loading the newest members…';
       try {
         const response = await fetch('/api/admin/coins/member-promotions/members?search=' + encodeURIComponent(search), {
           credentials:'same-origin',
@@ -172,6 +185,8 @@
         const members = Array.isArray(result.members) ? result.members : [];
         if (!members.length) {
           promotionMemberSelect.innerHTML = '<option value="">No matching members found</option>';
+          if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent =
+            search ? 'No members matched that search.' : 'No member accounts are available yet.';
           return;
         }
         promotionMemberSelect.innerHTML = '<option value="">Choose a recipient</option>' + members.map(member => {
@@ -182,9 +197,13 @@
           const label = '@' + username + (name ? ' — ' + name : '') + (joined ? ' · Joined ' + joined : '');
           return '<option value="' + escapeText(username) + '">' + escapeText(label) + '</option>';
         }).join('');
+        if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent =
+          (search ? 'Search results' : 'Newest members first') + ' · ' + members.length + ' member' +
+          (members.length === 1 ? '' : 's') + ' shown.';
       } catch (error) {
         promotionMemberSelect.innerHTML = '<option value="">Member list unavailable</option>';
-        if (promotionHistoryList) promotionHistoryList.textContent = error.message || 'Member list could not be loaded.';
+        if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent =
+          error.message || 'Member list could not be loaded.';
       }
     };
     panel.querySelector('#admin-member-promotion-find')?.addEventListener('click', () => {
