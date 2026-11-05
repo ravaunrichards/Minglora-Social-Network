@@ -82,3 +82,22 @@ test("lit state, duplicate protection, opt-out, creator toggle, and reset are re
   assert.equal(gallery.totals.gifts, 0);
   assert.equal(gallery.period.weekKey, "2026-11-09");
 });
+
+
+test("refunded gift gallery events are retained for audit but excluded from public counts", () => {
+  const db = blankDb();
+  const creator = { id: "creator-refund", country: "Jamaica" };
+  recordGiftGalleryEvent(db, {
+    giftId: "gallery-refund-1", creatorId: creator.id, senderId: "sender",
+    giftCode: "rose", coinAmount: 30000, giftName: "Minglora Rose",
+    now: new Date("2026-11-05T20:37:31.000Z"), timeZone: "America/Jamaica"
+  });
+  assert.equal(getGiftGallery(db, creator, new Date("2026-11-05T21:00:00.000Z")).totals.gifts, 1);
+  db.giftGalleryEvents[0].refundedAt = "2026-11-05T21:08:14.000Z";
+  db.giftGalleryEvents[0].status = "refunded";
+  const gallery = getGiftGallery(db, creator, new Date("2026-11-05T21:09:00.000Z"));
+  assert.equal(db.giftGalleryEvents.length, 1);
+  assert.equal(gallery.totals.gifts, 0);
+  assert.equal(gallery.totals.coins, 0);
+  assert.equal(gallery.entries.length, 0);
+});
