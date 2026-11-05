@@ -4648,3 +4648,23 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 .live-chat-overlay .live-chat-actions{grid-column:2;margin-top:3px}
 .live-pinned-comment{top:58px}
 @media(max-width:520px){.live-pinned-comment{top:53px}}
+
+
+/* Host-managed LIVE moderators and explicit group-chat preference. */
+.live-moderator-panel{display:grid;gap:12px;min-width:0}
+.live-moderator-panel>div:first-child{display:grid;gap:4px}
+.live-moderator-panel>div:first-child strong{font-size:14px}
+.live-moderator-panel>div:first-child small{color:var(--muted);font-size:12px;line-height:1.45}
+.live-moderator-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px}
+.live-moderator-form label{grid-column:1/-1;font-size:12px;font-weight:750}
+.live-moderator-form input{width:100%;min-width:0}
+.live-moderator-form button{min-height:42px;white-space:nowrap}
+.live-moderator-list{display:grid;gap:7px;min-width:0}
+.live-moderator-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:9px 10px;border:1px solid var(--border);border-radius:12px}
+.live-moderator-row>span{display:grid;gap:3px;min-width:0}
+.live-moderator-row strong,.live-moderator-row small{overflow-wrap:anywhere}
+.live-moderator-row strong{font-size:12px}
+.live-moderator-row small{font-size:10px;color:var(--muted)}
+.live-moderator-row button{flex:none}
+.live-chat-disabled-note{margin:0;padding:12px 14px;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-size:13px}
+@media(max-width:520px){.live-moderator-form{grid-template-columns:minmax(0,1fr)}.live-moderator-form label{grid-column:auto}.live-moderator-form button{width:100%}}
