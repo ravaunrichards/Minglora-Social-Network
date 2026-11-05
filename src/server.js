@@ -157,7 +157,7 @@ function safeUser(u,viewerId=null){
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
@@ -182,7 +182,7 @@ function recordProfileActivity(userId,action,summary,targetType='profile',target
 
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','messengerArchivedConversationIds','messengerRestrictedUserIds']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','messengerArchivedConversationIds','messengerRestrictedUserIds']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -190,12 +190,15 @@ function validateSettingsPatch(input,user){
       if(section==='privacy'&&key==='profileVisibility'&&!['public','friends','private'].includes(value))return {valid:false,error:'Profile visibility must be public, friends or private.'};
       if(section==='privacy'&&key==='messageAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Message audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='meetWaveAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'MeetWave invitation audience must be everyone, friends or nobody.'};
+      if(section==='privacy'&&['friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience'].includes(key)&&!['public','friends','followers','private'].includes(value))return {valid:false,error:'Choose a valid audience for this relationship list.'};
+      if(section==='privacy'&&key==='commentAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Comment audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
       if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
       if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
       if(section==='preferences'&&key==='colorTheme'&&!APP_COLOR_THEMES.includes(value))return {valid:false,error:'Choose a supported Minglora colour theme.'};
       if(section==='preferences'&&key==='liveRoomTheme'&&!LIVE_ROOM_THEMES.includes(value))return {valid:false,error:'Choose a supported LIVE room theme.'};
       if(section==='preferences'&&key==='feedSort'&&!['recent','oldest'].includes(value))return {valid:false,error:'Feed sort must be recent or oldest.'};
+      if(section==='preferences'&&key==='displayCurrency'&&!['USD','JMD','CAD','GBP','EUR','TTD','BBD','XCD','GYD','AUD','JPY','INR','NGN','ZAR','KES'].includes(value))return {valid:false,error:'Choose a supported display currency.'};
       if(section==='preferences'&&['reducedMotion','liteMode','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus'].includes(key)&&typeof value!=='boolean')return {valid:false,error:'Messenger and motion preferences must be true or false.'};
       if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key)&&(!Array.isArray(value)||value.length>500||value.some(id=>typeof id!=='string'||!id.trim()||id.length>128)))return {valid:false,error:'Messenger account lists must contain valid account identifiers.'};
       if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key))next[section][key]=[...new Set(value)];
@@ -1162,7 +1165,7 @@ async function route(req, res) {
         };
         return json(res,200,exportData,{'Content-Disposition':'attachment; filename="minglora-account-export.json"','Cache-Control':'no-store'});
       }
-      if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{name:user.name,username:user.username,email:user.email||''}});
+      if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{id:user.id,name:user.name,username:user.username,email:user.email||''}});
       if(method==='PATCH'&&p==='/api/settings'){
         const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
         user.settings=validation.settings;await saveStore();return json(res,200,{settings:getUserSettings(user)});
@@ -2304,7 +2307,7 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:comment.id});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const postOwner=db.users.find(member=>member.id===post.userId);const commentAudience=getUserSettings(postOwner).privacy.commentAudience||'everyone';if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
       if(method==='GET'&&p==='/api/discovery/people'){
         await pruneExpiredStories();
         const follows=db.follows||[];
@@ -2362,6 +2365,9 @@ async function route(req, res) {
         const target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         const relationshipType=m[2];
+        const listPrivacyKey={followers:'followersListAudience',following:'followingListAudience',subscribers:'subscribersListAudience'}[relationshipType];
+        const listAudience=getUserSettings(target).privacy[listPrivacyKey]||'public';
+        if(!canViewProfileAudience(user.id,target.id,listAudience))return json(res,404,{error:'This relationship list is not available.'});
         if(relationshipType==='subscribers'){
           const subscriptions=listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id);
           const seen=new Set(),users=[];
@@ -2451,6 +2457,8 @@ async function route(req, res) {
       if(method==='GET'&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const listAudience=getUserSettings(target).privacy.friendsListAudience||'public';
+        if(!canViewProfileAudience(user.id,target.id,listAudience))return json(res,404,{error:'This friends list is not available.'});
         const rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
         const ids=rows.map(edge=>m[2]==='following'?edge.followedId:edge.followerId);
         const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
