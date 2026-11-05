@@ -1734,6 +1734,19 @@ async function route(req, res) {
         });
         return json(res,200,{items:Array.isArray(result.items)?result.items:[]});
       }
+      if(method==='GET'&&p==='/api/admin/coins/member-promotions/members'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can search members for promotional Coins.'});
+        }
+        const search=new URL(req.url,'http://localhost').searchParams.get('search')||'';
+        const result=await requestSupabaseState('economy_admin_member_search',{
+          adminUserId:user.id,adminEmail,search
+        });
+        return json(res,200,{members:Array.isArray(result.members)?result.members:[]});
+      }
       if(method==='GET'&&p==='/api/admin/marketing/budget'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
