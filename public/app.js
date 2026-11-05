@@ -40,6 +40,7 @@ const gifterProfileBadge = member => {
     ? window.MingloraGifterBadgeArt.render({level,tier,badgeName:title,inline:true})
     : '<span class="gp-inline-badge gp-tier-'+tier+'" role="img" aria-label="'+title+'" title="'+title+'"><strong>'+level+'</strong></span>';
   return identity+artwork+
+    (badge.adminAwarded?'<span class="gp-admin-awarded-marker" title="Admin-awarded gifter badge; no Coin spending was added">ADMIN AWARDED</span>':'')+
     (badge.liveEntranceUnlocked?'<span class="gp-live-entry-badge" role="img" aria-label="LV 25 LIVE entrance unlocked" title="LV 25 LIVE entrance unlocked">LIVE ENTRY</span>':'');
 };
 window.addEventListener('minglora:gifter-badge-updated',event=>{
