@@ -499,6 +499,11 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   }) });
   assert.equal(profileEdit.status, 200);
   assert.equal(profileEdit.body.user.bio, 'A private profile biography');
+  assert.equal(profileEdit.body.user.platformBadge, null, 'ordinary members do not receive a platform-admin badge');
+  const attemptedAdminPromotion = await request('/api/users/me', { method: 'PATCH', body: JSON.stringify({
+    role: 'platform_owner', platformRole: 'platform_owner', platformBadge: 'admin'
+  }) });
+  assert.equal(attemptedAdminPromotion.status, 400, 'profile editing cannot grant platform-admin identity');
   const publicAudience = await request('/api/settings', { method: 'PATCH', body: JSON.stringify({ privacy: { profileVisibility: 'public' } }) });
   assert.equal(publicAudience.status, 200);
   cookie = secondCookie;
