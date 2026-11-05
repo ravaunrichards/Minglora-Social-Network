@@ -158,9 +158,40 @@
         <div class="admin-control-centre-note">
           The owner account is recognized, but protected tools are not unlocked in this session. Set up an authenticator app, then sign in again using its current code.
         </div>
-        <div><button type="button" class="primary" id="admin-centre-enable-mfa">Set up authenticator</button></div>
+        <p class="admin-control-centre-note">Open Admin Settings below to configure or verify your authenticator.</p>
       `}
     `;
+    if (unlocked) {
+      panel.insertAdjacentHTML('beforeend',
+        '<section class="admin-control-centre-section" id="moderation-workspace" aria-labelledby="admin-moderation-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-moderation-title">Moderation reports</h3><p>Review member reports and apply available content or account actions.</p></div>' +
+          '<button type="button" class="secondary" id="admin-centre-refresh-moderation">Refresh</button></div>' +
+          '<div id="moderation-reports-list" aria-live="polite">Loading reports…</div></section>' +
+        '<section class="admin-control-centre-section" id="moderator-support-workspace" aria-labelledby="admin-support-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-support-title">Member support inbox</h3><p>Respond to member tickets and update their status.</p></div>' +
+          '<button type="button" class="secondary" id="admin-centre-refresh-support">Refresh</button></div>' +
+          '<div id="moderator-support-tickets" aria-live="polite">Loading support tickets…</div></section>'
+      );
+    }
+    const adminSettings = document.createElement('section');
+    adminSettings.className = 'admin-control-centre-section admin-centre-settings';
+    adminSettings.id = 'admin-centre-settings';
+    adminSettings.innerHTML =
+      '<div class="admin-control-centre-section-heading"><div><h3>Admin settings</h3><p>Security and session controls for this private administrator workspace.</p></div>' +
+        '<span class="admin-control-centre-status">' + (unlocked ? 'Secure session active' : 'Security setup required') + '</span></div>' +
+      '<div class="admin-centre-settings-grid">' +
+        '<section class="admin-centre-settings-card"><h4>Administrator account security</h4>' +
+          '<p id="admin-centre-security-status" aria-live="polite">Checking authenticator status…</p>' +
+          '<div id="admin-centre-mfa-factors">Loading authenticator details…</div>' +
+          '<button type="button" class="secondary" id="admin-centre-enable-mfa">Set up or restart authenticator</button>' +
+          '<div id="admin-centre-mfa-enrollment-panel"></div></section>' +
+        '<section class="admin-centre-settings-card"><h4>Signed-in devices</h4>' +
+          '<p>Review sessions belonging to this account. You can sign out other devices without ending this session.</p>' +
+          '<div id="admin-centre-session-list" aria-live="polite">Loading active sessions…</div>' +
+          '<button type="button" class="secondary" id="admin-centre-revoke-other-sessions">Log out other devices</button>' +
+          '<p id="admin-centre-session-status" role="status" aria-live="polite"></p></section>' +
+      '</div>';
+    panel.append(adminSettings);
     root.replaceChildren(panel);
     root.dataset.adminCentreReady = 'true';
 
