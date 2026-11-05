@@ -21,9 +21,10 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.doesNotMatch(app, /id='live-heart-like'|live-heart-button|live-reaction-button/);
   assert.match(app, /stage\?\.addEventListener\("click",event=>/);
   assert.match(app, /id='live-leave' class='live-host-power-button'.*<svg/);
-  assert.match(styles, /\.live-video-stage>\.live-stage-topbar/);
+  assert.match(styles, /\.live-video-column>\.live-stage-topbar/);
   assert.match(app, /class='live-chat-overlay'/);
-  assert.ok(app.includes('stage?.insertAdjacentHTML("beforeend",liveStageHud)'));
+  assert.ok(app.includes('stage?.insertAdjacentHTML("beforebegin",liveStageHud)'));
+  assert.ok(app.includes('stage?.insertAdjacentHTML("beforeend",liveChatOverlay)'));
   assert.match(roomMarkup, /liveToolsDrawer/);
 });
 
