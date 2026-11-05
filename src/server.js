@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
-import { LIVE_MODES, broadcastTypeForLiveMode, normalizeLiveSettings } from '../backend/modules/live/settings.js';
+import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
@@ -1456,11 +1456,8 @@ async function route(req, res) {
           : liveSettings.audienceControl ? selectedVisibility : 'public';
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
-        const publishSources = broadcastType === 'audio_only'
-          ? [LIVEKIT_TRACK_SOURCE.MICROPHONE]
-          : liveMode === 'mobile_gaming'
-            ? [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE]
-            : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE];
+        const publishSources = getLivePublishSourceNames(liveMode, 'host', broadcastType)
+          .map(source => LIVEKIT_TRACK_SOURCE[source]);
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
@@ -1595,13 +1592,10 @@ async function route(req, res) {
           item.sessionId === session.id && item.userId === user.id
         );
         const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
-        const publishSources = role === 'host'
-          ? (session.broadcastType === 'audio_only' ? [LIVEKIT_TRACK_SOURCE.MICROPHONE] : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA, LIVEKIT_TRACK_SOURCE.SCREEN_SHARE])
-          : role === 'guest'
-            ? (session.broadcastType === 'audio_only'
-              ? [LIVEKIT_TRACK_SOURCE.MICROPHONE]
-              : [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA])
-            : null;
+        const publishSourceNames = getLivePublishSourceNames(session.liveMode, role, session.broadcastType);
+        const publishSources = publishSourceNames
+          ? publishSourceNames.map(source => LIVEKIT_TRACK_SOURCE[source])
+          : null;
         const liveKit = await createLiveKitToken({
           identity: user.id,
           name: user.name,
