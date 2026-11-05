@@ -1649,6 +1649,32 @@ activeLivePinnedComment=null;
   const room=new client.Room(roomOptions);activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
+  const cameraAllowedNow=()=>cameraFeatureAvailable&&(role!=="guest"||guestCameraAllowed);
+  const refreshLiveDeviceStatus=()=>{
+    const status=$("#live-device-status");
+    if(status){
+      const cameraState=!cameraFeatureAvailable?"Not used in this LIVE mode":role==="guest"&&!guestCameraAllowed?"Disabled by host":liveCameraEnabled?"On":"Off";
+      status.textContent="Microphone: "+(liveMicrophoneEnabled?"On":"Off")+" · Camera: "+cameraState;
+    }
+  };
+  const syncLiveCameraControls=()=>{
+    const allowed=cameraAllowedNow();
+    const enabled=Boolean(allowed&&liveCameraEnabled);
+    const cameraButton=$("#live-camera-toggle");
+    if(cameraButton){
+      cameraButton.disabled=!allowed;
+      updateLiveControlButton(cameraButton,enabled?"camera":"camera-off",
+        allowed?(enabled?"Turn camera off":"Turn camera on"):"Guest cameras disabled by host",
+        allowed?(enabled?"Camera":"Camera off"):"Camera off",enabled);
+    }
+    const flip=$("#live-camera-flip");
+    if(flip)flip.disabled=!allowed||!enabled;
+    refreshLiveDeviceStatus();
+  };
+  const removeLocalCameraTiles=()=>{
+    document.querySelectorAll("#live-guest-layout .live-video-tile.local").forEach(tile=>tile.remove());
+    document.querySelectorAll("#live-guest-layout .live-guest-seat.is-local").forEach(seat=>seat.classList.remove("has-video"));
+  };
   const liveReactionEmoji=Object.freeze({heart:"❤️"});
   const receivedLiveReactionAt=new Map();
   let lastLiveReactionSentAt=0;
@@ -1679,15 +1705,22 @@ activeLivePinnedComment=null;
     if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
       activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
       session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
-      if(role==='guest'&&!packet.enabled){
-        void room.localParticipant.setCameraEnabled(false).then(()=>{
-          liveCameraEnabled=false;
-          const cameraButton=$('#live-camera-toggle');
-          if(cameraButton){cameraButton.disabled=true;updateLiveControlButton(cameraButton,'camera-off','Guest cameras disabled by host','Camera off',false);}
-          $('#live-camera-flip')?.setAttribute('disabled','disabled');
-          toast('The host has turned off guest cameras.');
-        }).catch(error=>toast(error.message||'Minglora could not turn off your camera.'));
-      }else if(role==='guest'&&packet.enabled){toast('The host enabled guest cameras. Rejoin the speaker stage to refresh your camera permission.');}
+      if(role==="guest"){
+        guestCameraAllowed=packet.enabled;
+        if(!packet.enabled&&liveCameraEnabled){
+          void room.localParticipant.setCameraEnabled(false).then(()=>{
+            liveCameraEnabled=false;
+            removeLocalCameraTiles();
+            syncLiveCameraControls();
+            refreshSpeakerRoster();
+            toast("The host turned off guest cameras. Your microphone remains connected.");
+          }).catch(error=>toast(error.message||"Minglora could not turn off your camera."));
+        }else{
+          syncLiveCameraControls();
+          if(packet.enabled)toast("Guest camera access is enabled. Tap Camera off in the LIVE controls to turn your camera on.");
+          else toast("The host turned off guest camera access.");
+        }
+      }
       return;
     }
     if(topic==="minglora-live-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.layout"&&packet.version===1){
@@ -1756,6 +1789,7 @@ activeLivePinnedComment=null;
     $(".live-video-placeholder")?.remove();
     if(role==="host"&&canUseCamera){
       await room.localParticipant.enableCameraAndMicrophone();
+      refreshSpeakerRoster();
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
     }else if(role==="host"||role==="guest"){
       await room.localParticipant.setMicrophoneEnabled(true);
@@ -1769,6 +1803,7 @@ activeLivePinnedComment=null;
       }
       if(role==="guest"&&canUseCamera){
         await room.localParticipant.setCameraEnabled(true);
+        refreshSpeakerRoster();
         for(const publication of room.localParticipant.videoTrackPublications.values()){
           if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
         }
@@ -1784,8 +1819,9 @@ activeLivePinnedComment=null;
     liveScreenShareEnabled=false;
     liveAudioMuted=false;
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
-    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&canUseCamera);
-    if(flipCameraControl)flipCameraControl.disabled=!liveCameraEnabled;
+    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&cameraAllowedNow());
+    if(flipCameraControl)flipCameraControl.disabled=!cameraAllowedNow()||!liveCameraEnabled;
+    syncLiveCameraControls();
     if(screenShareControl&&typeof navigator.mediaDevices?.getDisplayMedia!=="function"){
       screenShareControl.disabled=true;
       screenShareControl.title="Screen capture is not supported by this browser or device.";
@@ -1802,16 +1838,21 @@ activeLivePinnedComment=null;
         await room.localParticipant.setMicrophoneEnabled(nextEnabled);
         liveMicrophoneEnabled=nextEnabled;
         updateLiveControlButton(micControl,nextEnabled?"mic":"mic-off",nextEnabled?"Mute microphone":"Unmute microphone",nextEnabled?"Mute":"Unmute",nextEnabled);
+        refreshLiveDeviceStatus();
         refreshSpeakerRoster();
       }catch(error){toast(error.message);}
       finally{micControl.disabled=false;}
     });
     cameraControl?.addEventListener("click",async()=>{
-      const nextEnabled=!liveCameraEnabled;cameraControl.disabled=true;
+      if(!cameraAllowedNow()){syncLiveCameraControls();toast("The host has disabled guest camera access for this LIVE.");return;}
+      const nextEnabled=!liveCameraEnabled;
+      cameraControl.disabled=true;
       try{
+        if(nextEnabled)refreshSpeakerRoster();
         await room.localParticipant.setCameraEnabled(nextEnabled);
         liveCameraEnabled=nextEnabled;
         if(nextEnabled){
+          refreshSpeakerRoster();
           for(const publication of room.localParticipant.videoTrackPublications.values()){
             if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
           }
@@ -1819,13 +1860,17 @@ activeLivePinnedComment=null;
           for(const publication of room.localParticipant.videoTrackPublications.values()){
             if(publication.track)publication.track.detach().forEach(element=>element.closest?.(".live-video-tile")?.remove());
           }
-          document.querySelectorAll("#live-guest-layout .live-video-tile.local").forEach(tile=>tile.remove());
+          removeLocalCameraTiles();
         }
-        updateLiveControlButton(cameraControl,nextEnabled?"camera":"camera-off",nextEnabled?"Turn camera off":"Turn camera on",nextEnabled?"Camera":"Camera off",nextEnabled);
-        if(flipCameraControl)flipCameraControl.disabled=!nextEnabled;
+        syncLiveCameraControls();
         refreshSpeakerRoster();
-      }catch(error){toast(error.message);}
-      finally{cameraControl.disabled=false;}
+      }catch(error){
+        toast(error.message||"Minglora could not change your camera state.");
+        syncLiveCameraControls();
+      }finally{
+        cameraControl.disabled=!cameraAllowedNow();
+        syncLiveCameraControls();
+      }
     });
     flipCameraControl?.addEventListener("click",async()=>{
       if(!liveCameraEnabled){toast("Turn your camera on before switching cameras.");return;}
@@ -1973,7 +2018,12 @@ activeLivePinnedComment=null;
         session.liveSettings={...(session.liveSettings||{}),...(saved.liveSettings||{})};
         if(key==='guestCamera'&&room.localParticipant?.publishData){
           const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'guestCamera',enabled:input.checked}));
-          await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});
+          try{
+            await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});
+          }catch(error){
+            console.warn('[Minglora LIVE] Guest camera policy was saved but its room event could not be broadcast.',error?.message||error);
+            toast('The guest camera permission was saved, but connected guests may need to refresh their LIVE controls.');
+          }
         }
         if(key==='manageModerators')$('#live-moderator-panel')?.classList.toggle('hidden',!input.checked);
         if(key==='prioritizeGifters')await refreshLiveSpeakerPanel(session,role,room);
