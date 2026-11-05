@@ -1566,34 +1566,84 @@ async function openLiveRoom(session,role,issuedLiveKit){
 
 async function renderCoins(){
   activateSilent("coins");
-  const activeTab=state.rechargeTab==="exchange"?"exchange":"recharge";
+  const activeTab=state.rechargeTab==="earnings"?"earnings":state.rechargeTab==="exchange"?"exchange":"recharge";
   const walletResults=await Promise.allSettled([
     activeTab==="recharge"?api("/coins/catalog"):Promise.resolve({packages:[]}),
-    api("/coins/wallet")
+    api("/coins/wallet"),
+    api("/creator/earnings")
   ]);
   if(activeTab==="recharge"&&walletResults[0].status==="rejected")throw walletResults[0].reason;
   const catalog=walletResults[0].status==="fulfilled"?walletResults[0].value||{}:{};
   const wallet=walletResults[1].status==="fulfilled"?walletResults[1].value:{wallet:null,ledger:[]};
+  const earnings=walletResults[2].status==="fulfilled"?walletResults[2].value:null;
+  const earningsError=walletResults[2].status==="rejected"?(walletResults[2].reason?.message||"Your money earnings are unavailable."):null;
   const balance=Number(wallet.wallet?.balance_coins||0);
   const packages=Array.isArray(catalog.packages)?catalog.packages:[];
   const cashBackedBalance=Number(wallet.wallet?.cash_balance_coins||0);
   const marketingBackedBalance=Number(wallet.wallet?.marketing_balance_coins||0);
   const promoBalance=Number(wallet.wallet?.promo_balance_coins||0);
-  const header="<header class='recharge-page-heading'><div><span class='eyebrow'>MINGLORA WALLET</span><h1>Recharge</h1><p class='muted'>Recharge with PayPal or exchange your available money balance into Minglora Coins.</p></div><div class='coin-balance-card'><small>COIN BALANCE</small><strong>"+(wallet.wallet&&wallet.wallet.balance_coins!=null?balance.toLocaleString():"—")+"</strong><span>Minglora Coins</span></div><div class='coin-source-breakdown' aria-label='Coin balance by funding source'><span><small>Cash-backed</small><strong>"+cashBackedBalance.toLocaleString()+"</strong><em>Purchased or earnings-exchanged</em></span><span><small>Marketing-funded</small><strong>"+marketingBackedBalance.toLocaleString()+"</strong><em>Reserved from funded campaigns</em></span><span><small>Promotional</small><strong>"+promoBalance.toLocaleString()+"</strong><em>Non-cash rewards and admin credits</em></span></div></header>";
-  const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button></nav>";
+  const moneyOverview=earnings
+    ?"<section class='wallet-money-overview'><div class='wallet-money-overview-heading'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Your Minglora money balance</strong><small>Money earned is separate from Minglora Coins.</small></div><button type='button' data-recharge-tab='earnings'>View earnings details ↗</button></div><div class='wallet-money-stat'><small>LIFETIME EARNED</small><strong>"+creatorMoney(earnings.earnedMinor||0)+"</strong><span>Your eligible creator share and subscription earnings</span></div><div class='wallet-money-stat'><small>AVAILABLE MONEY</small><strong>"+creatorMoney(earnings.availableMinor||0)+"</strong><span>Currently available after payouts and Coin exchanges</span></div></section>"
+    :"<section class='wallet-money-overview wallet-money-unavailable'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Money balance unavailable</strong><small>"+esc(earningsError||"Minglora could not load your money balance.")+"</small></div><button type='button' data-recharge-tab='earnings'>Open earnings details</button></section>";
+  const header="<header class='recharge-page-heading'><div><span class='eyebrow'>MINGLORA WALLET</span><h1>Wallet &amp; earnings</h1><p class='muted'>See your real money earnings and Minglora Coins in separate balances.</p></div><div class='coin-balance-card'><small>COIN BALANCE</small><strong>"+(wallet.wallet&&wallet.wallet.balance_coins!=null?balance.toLocaleString():"—")+"</strong><span>Minglora Coins</span></div><div class='coin-source-breakdown' aria-label='Coin balance by funding source'><span><small>Cash-backed</small><strong>"+cashBackedBalance.toLocaleString()+"</strong><em>Purchased or earnings-exchanged</em></span><span><small>Marketing-funded</small><strong>"+marketingBackedBalance.toLocaleString()+"</strong><em>Reserved from funded campaigns</em></span><span><small>Promotional</small><strong>"+promoBalance.toLocaleString()+"</strong><em>Non-cash rewards and admin credits</em></span></div></header>";
+  const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='earnings' class='"+(activeTab==="earnings"?"active":"")+"' aria-current='"+(activeTab==="earnings"?"page":"false")+"'>Earnings</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button></nav>";
   const bindTabs=()=>{
     document.querySelectorAll("[data-recharge-tab]").forEach(button=>button.addEventListener("click",()=>{
-      state.rechargeTab=button.dataset.rechargeTab==="exchange"?"exchange":"recharge";
-      renderCoins().catch(error=>setContent("<section class='card empty-state'><h2>Recharge could not load</h2><p>"+esc(error.message)+"</p><button class='secondary' id='recharge-retry'>Try again</button></section>"));
+      const destination=button.dataset.rechargeTab;
+      state.rechargeTab=destination==="earnings"||destination==="exchange"?destination:"recharge";
+      renderCoins().catch(error=>setContent("<section class='card empty-state'><h2>Wallet could not load</h2><p>"+esc(error.message)+"</p><button class='secondary' id='recharge-retry'>Try again</button></section>"));
     }));
   };
 
-  if(activeTab==="exchange"){
-    let earnings=null,earningsError="";
-    try{earnings=await api("/creator/earnings");}
-    catch(error){earningsError=error.message||"Your money balance is unavailable.";}
+  if(activeTab==="earnings"){
     if(earningsError||!earnings){
-      setContent("<div class='recharge-page'>"+header+tabs+"<section class='card recharge-exchange-unavailable'><span class='eyebrow'>MONEY TO COINS</span><h2>Exchange is unavailable right now</h2><p class='muted'>"+esc(earningsError||"Minglora could not load your available money balance.")+"</p><button type='button' class='secondary' id='recharge-exchange-retry'>Try again</button></section></div>");
+      setContent("<div class='recharge-page'>"+header+moneyOverview+tabs+"<section class='card recharge-exchange-unavailable'><span class='eyebrow'>CREATOR EARNINGS</span><h2>Your earnings could not be loaded</h2><p class='muted'>"+esc(earningsError||"Minglora could not retrieve your money balance.")+"</p><button type='button' class='secondary' id='wallet-earnings-retry'>Try again</button></section></div>");
+      bindTabs();
+      $("#wallet-earnings-retry")?.addEventListener("click",()=>renderCoins().catch(error=>toast(error.message)));
+      return;
+    }
+
+    const payouts=Array.isArray(earnings.payouts)?earnings.payouts:[];
+    const ledger=Array.isArray(earnings.ledger)?earnings.ledger:[];
+    const exchanges=Array.isArray(earnings.exchanges)?earnings.exchanges:[];
+    const paidMinor=payouts.filter(item=>String(item.status||"").toLowerCase()==="paid")
+      .reduce((total,item)=>total+Math.max(0,Number(item.amount_minor)||0),0);
+    const pendingMinor=payouts.filter(item=>["requested","processing"].includes(String(item.status||"").toLowerCase()))
+      .reduce((total,item)=>total+Math.max(0,Number(item.amount_minor)||0),0);
+    const earningsRows=ledger.length?ledger.slice(0,100).map(item=>{
+      const status=String(item.status||"available").replace(/_/g," ");
+      const date=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
+      return "<article class='recharge-history-row'><div><strong>Gift earnings · "+esc(status)+"</strong><small>"+esc(date)+" · 50% creator share</small></div><span>Gift value "+creatorMoney(item.gross_minor||0)+"</span><b class='positive'>+"+creatorMoney(item.creator_share_minor||0)+"</b></article>";
+    }).join(""):"<div class='recharge-empty'><strong>No eligible gift earnings yet</strong><p>Money earned from qualifying Minglora gifts will appear here after the gift transaction is recorded.</p></div>";
+    const payoutRows=payouts.length?payouts.map(item=>{
+      const status=String(item.status||"unknown").replace(/_/g," ").toUpperCase();
+      const date=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
+      return "<article class='recharge-history-row'><div><strong>"+esc(status)+"</strong><small>"+esc(date)+" · PayPal withdrawal</small></div><b>"+creatorMoney(item.amount_minor||0)+"</b></article>";
+    }).join(""):"<div class='recharge-empty'><strong>No withdrawals yet</strong><p>Your payout requests and their latest recorded statuses will appear here.</p></div>";
+    const exchangeRows=exchanges.length?exchanges.map(item=>{
+      const date=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
+      return "<article class='recharge-history-row'><div><strong>Money exchanged for Coins</strong><small>"+esc(date)+"</small></div><b>"+creatorMoney(item.amount_minor||0)+"</b><span>+"+Number(item.coin_amount||0).toLocaleString()+" Coins</span></article>";
+    }).join(""):"<div class='recharge-empty'><strong>No money exchanges yet</strong><p>Money converted into Minglora Coins will be listed here.</p></div>";
+    const earningsContent=
+      "<section class='recharge-exchange-intro'><div><span class='eyebrow'>YOUR CREATOR BALANCE</span><h2>Money earned on Minglora</h2><p>These are money amounts calculated from eligible creator earnings and recorded payouts—not Coin counts.</p></div><span class='recharge-exchange-mark' aria-hidden='true'>$</span></section>"+
+      "<div class='recharge-exchange-metrics wallet-earnings-metrics'>"+
+      "<article><small>Lifetime earned</small><strong>"+creatorMoney(earnings.earnedMinor||0)+"</strong><span>Your lifetime eligible creator share and net subscription earnings</span></article>"+
+      "<article><small>Available money</small><strong>"+creatorMoney(earnings.availableMinor||0)+"</strong><span>Server-calculated amount currently available</span></article>"+
+      "<article><small>Payouts in progress</small><strong>"+creatorMoney(pendingMinor)+"</strong><span>Requested or processing PayPal withdrawals</span></article>"+
+      "<article><small>Already paid out</small><strong>"+creatorMoney(paidMinor)+"</strong><span>Withdrawals recorded as paid</span></article>"+
+      "<article><small>Exchanged for Coins</small><strong>"+creatorMoney(earnings.exchangedMinor||0)+"</strong><span>Money converted into Minglora Coins</span></article></div>"+
+      "<div class='wallet-earnings-columns'><section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>EARNINGS LEDGER</span><h2>Gift earnings</h2></div><span class='muted'>Latest entries</span></div><div class='recharge-history-list'>"+earningsRows+"</div></section>"+
+      "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>PAYOUT HISTORY</span><h2>Withdrawals</h2></div></div><div class='recharge-history-list'>"+payoutRows+"</div></section></div>"+
+      "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>MONEY CONVERSIONS</span><h2>Money exchanged for Coins</h2></div></div><div class='recharge-history-list'>"+exchangeRows+"</div></section>"+
+      "<p class='recharge-exchange-note'>Your lifetime earned amount, available money, pending withdrawals, completed payouts and money exchanged for Coins are tracked separately. Coin purchases and promotional Coin credits are not displayed as cash earnings.</p>";
+    setContent("<div class='recharge-page'>"+header+moneyOverview+tabs+earningsContent+"</div>");
+    bindTabs();
+    return;
+  }
+
+  if(activeTab==="exchange"){
+    if(earningsError||!earnings){
+      setContent("<div class='recharge-page'>"+header+moneyOverview+tabs+"<section class='card recharge-exchange-unavailable'><span class='eyebrow'>MONEY TO COINS</span><h2>Exchange is unavailable right now</h2><p class='muted'>"+esc(earningsError||"Minglora could not load your available money balance.")+"</p><button type='button' class='secondary' id='recharge-exchange-retry'>Try again</button></section></div>");
       bindTabs();
       $("#recharge-exchange-retry")?.addEventListener("click",()=>renderCoins().catch(error=>toast(error.message)));
       return;
@@ -1615,7 +1665,7 @@ async function renderCoins(){
       "<form id='recharge-exchange-form' class='recharge-form'><label for='recharge-exchange-amount'>Money amount (USD)</label><div class='recharge-exchange-amount-wrap'><span>$</span><input id='recharge-exchange-amount' name='amount' type='number' min='1.00' step='0.01' max='"+(availableMinor/100).toFixed(2)+"' value='"+(initialAmount?initialAmount.toFixed(2):"")+"' placeholder='Enter amount' required "+(availableMinor>=100?"":"disabled")+"></div><small>Minimum: USD $1.00 · Maximum: "+creatorMoney(availableMinor)+"</small><div id='recharge-exchange-preview' class='recharge-order-summary' aria-live='polite'><div><span>You will receive</span><strong>"+(initialAmount? "100 Coins":"—")+"</strong></div><p>USD $1.00 = 100 Minglora Coins.</p></div><button type='submit' id='recharge-exchange-confirm' class='primary' "+(availableMinor>=100?"":"disabled")+">Exchange for Coins</button><p id='recharge-exchange-status' class='recharge-form-status' role='status'></p></form></section>"+
       "<section class='card recharge-exchange-card'><span class='eyebrow'>EXCHANGE HISTORY</span><h3>Your transactions</h3><div class='recharge-history-list'>"+exchangeRows+"</div></section></div>"+
       "<p class='recharge-exchange-note'>This converts available money already earned through eligible Minglora LIVE gifts and subscriptions. It does not send money to PayPal. PayPal remains available on the Recharge tab when you want to purchase more Coins. Purchased Coins cannot be converted back into money.</p>";
-    setContent("<div class='recharge-page'>"+header+tabs+exchangeContent+"</div>");
+    setContent("<div class='recharge-page'>"+header+moneyOverview+tabs+exchangeContent+"</div>");
     bindTabs();
 
     const form=$("#recharge-exchange-form");
@@ -1694,7 +1744,7 @@ async function renderCoins(){
     "<aside class='card recharge-checkout-card'><span class='eyebrow'>ORDER SUMMARY</span><h2>Your recharge</h2><div id='recharge-order-summary' class='recharge-order-summary'></div><div class='recharge-checkout-rule'></div><div class='recharge-checkout-total'><span>Total</span><strong id='recharge-total'>"+(selection?liveMoney(selection.amountMinor):"—")+"</strong></div><div class='recharge-payment-method'><span class='recharge-paypal-mark'>P</span><div><strong>PayPal</strong><small>Secure checkout</small></div></div><button type='button' id='recharge-confirm' class='primary full' "+(selection?"":"disabled")+">Recharge</button><small class='recharge-secure-note'>You will review and approve the payment on PayPal before Coins are credited.</small></aside></div>"+
     "<section class='card recharge-history-card'><div class='recharge-section-heading'><div><span class='eyebrow'>YOUR WALLET</span><h2>Coin activity</h2></div><span class='muted'>Latest transactions</span></div><div class='recharge-history-list'>"+history+"</div></section>"+
     "<p class='recharge-exchange-note'>Minglora Coins are for use within Minglora, including sending gifts. Creator earnings are handled separately in the Exchange tab.</p>";
-  setContent("<div class='recharge-page'>"+header+tabs+content+"</div>");
+  setContent("<div class='recharge-page'>"+header+moneyOverview+tabs+content+"</div>");
   bindTabs();
 
   const customInput=$("#recharge-custom-amount");
