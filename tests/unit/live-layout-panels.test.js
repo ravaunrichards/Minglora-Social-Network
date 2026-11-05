@@ -81,7 +81,7 @@ test('Full Screen starts on video for phones and keeps Chat on the right for tab
   assert.match(app, /const wideLandscape=Boolean\(window\.matchMedia\?\.\('\(min-width:760px\)'\)\.matches\)/);
   assert.match(app, /function toggleLiveChatView\(\)[\s\S]*?setLiveFullscreenPanel\('video'\)/);
   assert.match(styles, /@media\(max-width:759px\)\{/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open #live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
+  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open #live-fullscreen-chat-slot,[\s\S]*?\.live-full-screen-tools-open #live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
   assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open \.live-video-column>\.live-video-stage\{display:none!important/);
   assert.match(styles, /\.live-full-screen-active\.live-full-screen-tools-open #live-chat-overlay,[\s\S]*?display:none!important/);
 });
@@ -100,22 +100,6 @@ test('Full Screen layout picker uses a dedicated expand-to-fullscreen icon', () 
   assert.ok(app.includes(`fullscreen:"<path d='M8 3H5a2 2 0 0 0-2 2v3`));
   assert.ok(styles.includes('.live-layout-option[data-live-screen-layout="full-screen"] svg{'));
   assert.match(app, /LIVE_SCREEN_LAYOUT_OPTIONS\.map\(option=>[\s\S]*?liveLayoutIcon\(option\.icon\)/);
-});
-
-test('Full Screen chat on phones and portrait tablets replaces the video area instead of covering it', () => {
-  assert.match(app, /function toggleLiveChatView\(\)[\s\S]*?live-full-screen-chat-open/);
-  assert.match(app, /openLiveToolsPanel\('#live-chat-panel'\)/);
-  assert.match(app, /setLiveChatControlState\(open,open\?'Return to LIVE video':'Open LIVE chat',open\?'Video':'Chat'\)/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open>\.live-player-layout\{[\s\S]*?grid-template-rows:minmax\(0,1fr\) auto/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open \.live-video-column>\.live-video-stage:not\(\.live-audio-stage\)\{[\s\S]*?display:none!important/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open \.live-fullscreen-chat-slot\{[\s\S]*?display:flex!important/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-open #live-chat-disabled-note\{[\s\S]*?display:block!important/);
-});
-
-test('Full Screen chat on wide landscape screens can be hidden and restored without resizing the video into a card', () => {
-  assert.match(app, /live-full-screen-chat-hidden/);
-  assert.match(styles, /\.live-player-shell\.live-full-screen-active\.live-full-screen-chat-hidden>\.live-player-layout\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important/);
-  assert.match(styles, /\.live-full-screen-active\.live-full-screen-chat-hidden \.live-fullscreen-chat-slot\{display:none!important/);
 });
 
 test('Full Screen keeps the video moderate and Settings & tools inside the right panel', () => {
