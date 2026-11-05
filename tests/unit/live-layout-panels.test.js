@@ -125,7 +125,7 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
 test('LIVE gift animations use server-confirmed gift ledger events, not client messages', () => {
   assert.ok(server.includes("if(method==='GET'&&liveAction)"), 'missing authenticated LIVE gifts read route');
   assert.ok(server.includes("event.broadcastId===session.id&&event.creatorId===session.hostId"), 'gift history must be scoped to this broadcast and host');
-  assert.ok(server.includes("giftId:String(event.giftId||event.id||'')"), 'events must expose their confirmed transaction id');
+  assert.ok(server.includes("id:String(event.giftId||event.id||'')"), 'events must expose their confirmed transaction id');
   assert.ok(app.includes('function startLiveGiftEvents(session)'), 'missing room gift event polling');
   assert.ok(app.includes('function stopLiveGiftEvents()'), 'missing LIVE gift polling cleanup');
   assert.ok(app.includes("'/gifts?since='") && app.includes('refreshLiveGiftEvents(session)'), 'poller must fetch newer confirmed events');
