@@ -108,3 +108,22 @@ test('approved guest speakers stay microphone-only in audio LIVE', async () => {
     restoreEnv(original);
   }
 });
+
+test('LIVE viewers can send data-channel reactions without gaining audio or video publishing', async () => {
+  const original = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
+  process.env.LIVEKIT_URL = 'wss://minglora-test.livekit.cloud';
+  process.env.LIVEKIT_API_KEY = 'APIxxxxxxxxxxxx';
+  process.env.LIVEKIT_API_SECRET = 'test-secret-that-is-only-used-by-this-unit-test';
+  try {
+    const result = await createLiveKitToken({
+      identity: 'viewer-reaction-test', name: 'Viewer Reaction Test', roomName: 'minglora-reaction-test',
+      canPublish: false, canPublishData: true
+    });
+    const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString('utf8'));
+    assert.equal(payload.video.canPublish, false);
+    assert.equal(payload.video.canPublishData, true);
+    assert.equal(payload.video.canSubscribe, true);
+  } finally {
+    restoreEnv(original);
+  }
+});
