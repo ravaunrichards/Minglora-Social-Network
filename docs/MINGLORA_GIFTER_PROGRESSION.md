@@ -41,3 +41,8 @@ Confirmed gift transaction IDs are stored in `gifterProgressionLedger`, a persis
 Earned Gifter badges appear in member profiles, post/comment bylines, and LIVE directory identity after the relevant level is achieved. The temporary NEW GIFTER identity appears in those same identity surfaces during its seven-day window. Badge levels and identity dates are calculated by the server from the deduplicated confirmed-gift ledger; the browser cannot assign, unlock, or extend them.
 
 Creator League rank and gifts received do not grant Gifter badges.
+
+
+## Admin-managed badge entitlements
+
+The private Creator Hub Admin Centre can grant a member any level from 1–50, unlock all 50 levels, or reset an admin grant. These entitlements are stored separately from the confirmed gift ledger. An admin grant changes only which badges are displayed as unlocked: it never fabricates gift rows, Coins sent, spending totals, gift history, NEW GIFTER timestamps, or Coin-wallet balances. Resetting an admin grant returns the profile to its genuine gift-earned level and preserves all confirmed gift records.
