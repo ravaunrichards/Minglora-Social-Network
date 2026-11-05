@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLiveKitToken, isLiveKitConfigured, LIVEKIT_TRACK_SOURCE } from '../../backend/modules/live/livekit.js';
+import { RoomServiceClient } from 'livekit-server-sdk';
+import { createLiveKitToken, isLiveKitConfigured, LIVEKIT_TRACK_SOURCE, updateLiveKitGuestCameraPermission } from '../../backend/modules/live/livekit.js';
 
 function restoreEnv(original) {
   if (original.url === undefined) delete process.env.LIVEKIT_URL; else process.env.LIVEKIT_URL = original.url;
@@ -142,6 +143,63 @@ test('host screen-share permission is included only in the video LIVE publisher 
     const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString('utf8'));
     assert.deepEqual(payload.video.canPublishSources, ['microphone', 'camera', 'screen_share']);
   } finally {
+    restoreEnv(original);
+  }
+});
+
+
+test('LiveKit updates an active guest camera permission without removing microphone publishing', async () => {
+  const original = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
+  const originalListParticipants = RoomServiceClient.prototype.listParticipants;
+  const originalUpdateParticipant = RoomServiceClient.prototype.updateParticipant;
+  const permissions = [];
+  process.env.LIVEKIT_URL = 'wss://minglora-test.livekit.cloud';
+  process.env.LIVEKIT_API_KEY = 'APIxxxxxxxxxxxx';
+  process.env.LIVEKIT_API_SECRET = 'test-secret-that-is-only-used-by-this-unit-test';
+  RoomServiceClient.prototype.listParticipants = async function (roomName) {
+    assert.equal(roomName, 'minglora-live-test-room');
+    return [{ identity: 'guest-test' }];
+  };
+  RoomServiceClient.prototype.updateParticipant = async function (roomName, identity, options) {
+    assert.equal(roomName, 'minglora-live-test-room');
+    assert.equal(identity, 'guest-test');
+    permissions.push(options.permission);
+    return {};
+  };
+  try {
+    await updateLiveKitGuestCameraPermission('minglora-live-test-room', 'guest-test', false);
+    await updateLiveKitGuestCameraPermission('minglora-live-test-room', 'guest-test', true);
+    assert.deepEqual(permissions[0].canPublishSources, [LIVEKIT_TRACK_SOURCE.MICROPHONE]);
+    assert.deepEqual(permissions[1].canPublishSources, [LIVEKIT_TRACK_SOURCE.MICROPHONE, LIVEKIT_TRACK_SOURCE.CAMERA]);
+    for (const permission of permissions) {
+      assert.equal(permission.canPublish, true);
+      assert.equal(permission.canSubscribe, true);
+      assert.equal(permission.canPublishData, true);
+    }
+  } finally {
+    RoomServiceClient.prototype.listParticipants = originalListParticipants;
+    RoomServiceClient.prototype.updateParticipant = originalUpdateParticipant;
+    restoreEnv(original);
+  }
+});
+
+test('LiveKit does not modify a participant who is not connected to the target room', async () => {
+  const original = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
+  const originalListParticipants = RoomServiceClient.prototype.listParticipants;
+  const originalUpdateParticipant = RoomServiceClient.prototype.updateParticipant;
+  process.env.LIVEKIT_URL = 'wss://minglora-test.livekit.cloud';
+  process.env.LIVEKIT_API_KEY = 'APIxxxxxxxxxxxx';
+  process.env.LIVEKIT_API_SECRET = 'test-secret-that-is-only-used-by-this-unit-test';
+  RoomServiceClient.prototype.listParticipants = async () => [];
+  RoomServiceClient.prototype.updateParticipant = async () => {
+    throw new Error('Should not update a participant outside the room.');
+  };
+  try {
+    const result = await updateLiveKitGuestCameraPermission('minglora-live-test-room', 'guest-test', true);
+    assert.deepEqual(result, { updated: false, wasConnected: false });
+  } finally {
+    RoomServiceClient.prototype.listParticipants = originalListParticipants;
+    RoomServiceClient.prototype.updateParticipant = originalUpdateParticipant;
     restoreEnv(original);
   }
 });
