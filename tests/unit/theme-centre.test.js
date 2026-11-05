@@ -64,8 +64,8 @@ test('all advertised themes have previews and responsive visual treatment', () =
 test('Coin issuance and member-credit controls are segregated and owner protected', () => {
   assert.match(app, /Owner Coin issuance/);
   assert.match(app, /Admin Coin credit/);
-  assert.match(app, /\\/coins\\/owner-issuance/);
-  assert.match(app, /\\/coins\\/admin-credit/);
+  assert.ok(app.includes('"/coins/owner-issuance"'));
+  assert.ok(app.includes('"/coins/admin-credit"'));
   assert.match(server, /Creator Hub owner account/);
   assert.match(server, /verified Creator Hub owner account/);
 });
