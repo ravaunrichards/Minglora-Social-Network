@@ -1,6 +1,6 @@
 /* Minglora service worker: update-friendly shell caching, email-link handoff refresh, and background Web Push. */
 // Coin funding-source wallet and secure marketing-budget controls.
-const CACHE_NAME='minglora-shell-v84-wallet-earnings-dashboard-1';
+const CACHE_NAME='minglora-shell-v83-coin-funding-sources-1';
 const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261105-coin-funding-sources-1','/mobile-layout.css?v=20261104-mobile-navigation-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/gift-effects.js?v=20261104-minglora-gift-motion-2','/gifts.js?v=20261104-direct-member-gifting-1','/leagues.css?v=20261104-league-refresh-dedupe-2','/leagues.js?v=20261104-league-refresh-dedupe-2','/gifter-progression.css?v=20261104-gifter-progression-1','/gifter-progression.js?v=20261104-gifter-progression-1','/assets/gifters-level-up.png','/app.js?v=20261105-coin-funding-sources-1','/auth-login.js?v=20261105-admin-mfa-enrollment-1','/settings.js?v=20261105-admin-mfa-qr-fix-2','/admin-centre.css?v=20261105-marketing-budget-1','/admin-centre.js?v=20261105-marketing-budget-1','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
