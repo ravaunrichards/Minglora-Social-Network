@@ -10,15 +10,18 @@ const app = read('public/app.js');
 const server = read('src/server.js');
 const styles = read('public/styles.css');
 
-test('LIVE likes are sent by tapping the stream and chat surface, with no dedicated heart button', () => {
+test('LIVE likes have a white-to-red heart button and also respond to stage taps', () => {
   assert.match(app, /class='live-stage-topbar'/);
   assert.match(app, /class='live-host-profile'/);
   assert.match(app, /class='live-like-count'/);
   assert.match(app, /id='live-reaction-count'/);
-  assert.doesNotMatch(app, /id='live-heart-like'|live-heart-button|live-reaction-button/);
+  assert.match(app, /id='live-heart-like'/);
+  assert.match(app, /api\('\/live\/sessions\/\+encodeURIComponent\(session\.id\)\+'\/likes'/);
+  assert.match(app, /classList\.add\('is-liked'\)/);
+  assert.match(styles, /\.live-heart-like\.is-liked\{color:#ff365c/);
   assert.match(app, /stage\?\.addEventListener\("click",event=>/);
   assert.match(app, /interactiveTarget=event\.target\?\.closest\?\./);
-  assert.match(app, /showLiveReaction\("heart"\)/);
+  assert.match(app, /showLiveReaction\("heart",\{count:false\}\)/);
   assert.match(styles, /\.live-like-count/);
 });
 
@@ -38,6 +41,7 @@ test('LIVE reactions travel over the room data channel and are validated before 
   assert.match(app, /Object\.hasOwn\(liveReactionEmoji,packet\.reaction\)/);
   assert.match(app, /publishData\(packet,\{reliable:false,topic:"minglora-live-reaction"\}\)/);
   assert.match(app, /receivedLiveReactionAt/);
+  assert.match(app, /Number\.isFinite\(Number\(packet\.likeCount\)\)/);
 });
 
 test('Viewer join grants data packets only and retains subscribe-only media permissions', () => {
