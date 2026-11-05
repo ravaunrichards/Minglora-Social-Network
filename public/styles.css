@@ -5202,3 +5202,130 @@ button.live-ranking-row{cursor:pointer}
     max-height:min(80dvh,410px,calc(100dvh - 130px));
   }
 }
+
+
+/* Minglora LIVE chat: wide paragraph flow with natural line wrapping.
+   Names, message text and time read as one horizontal sentence; long messages
+   wrap down only when they reach the available width instead of stacking fields. */
+.live-chat-overlay{
+  width:min(92%,760px)!important;
+  max-width:calc(100% - 16px)!important;
+}
+.live-chat-overlay .live-chat-list{
+  align-items:stretch!important;
+  gap:4px!important;
+}
+.live-chat-overlay .live-chat-line{
+  display:grid!important;
+  grid-template-columns:26px minmax(0,1fr)!important;
+  align-items:start!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  padding:3px 4px!important;
+  border:0!important;
+  border-radius:7px!important;
+  background:rgba(4,7,12,.34)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.live-chat-overlay .live-chat-avatar{
+  grid-column:1!important;
+  grid-row:1 / span 2!important;
+  width:24px!important;
+  height:24px!important;
+  margin-top:1px;
+}
+.live-chat-overlay .live-chat-copy{
+  display:block!important;
+  grid-column:2!important;
+  min-width:0!important;
+  white-space:normal!important;
+  overflow-wrap:break-word!important;
+  word-break:normal!important;
+  line-height:1.45!important;
+  text-align:left!important;
+}
+.live-chat-overlay .live-chat-copy strong{
+  display:inline!important;
+  min-width:0;
+  margin:0;
+  color:#e2d8ff;
+  font-size:11px!important;
+  font-weight:850!important;
+  line-height:inherit!important;
+}
+.live-chat-overlay .live-chat-copy>span{
+  display:inline!important;
+  margin-left:.35em;
+  color:#fff!important;
+  font-size:12px!important;
+  line-height:inherit!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+}
+.live-chat-overlay .live-chat-copy .live-chat-time{
+  display:inline!important;
+  margin-left:.6em;
+  color:rgba(255,255,255,.66)!important;
+  font-size:9px!important;
+  white-space:nowrap!important;
+  line-height:inherit!important;
+}
+.live-chat-overlay .live-chat-actions{
+  grid-column:2!important;
+  justify-self:start;
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin:3px 0 0!important;
+}
+.live-chat-overlay .live-chat-line,
+.live-tools-content #live-chat-panel-body>#live-chat-overlay .live-chat-line{
+  flex:0 0 auto;
+}
+
+/* The Chat tab is a compact conversation panel, not a tall expanded screen. */
+#live-chat-panel{
+  align-content:start;
+  min-height:0;
+}
+#live-chat-panel-body{
+  flex:0 1 auto!important;
+  min-height:0!important;
+}
+.live-tools-content #live-chat-panel-body>#live-chat-overlay{
+  height:min(38dvh,340px)!important;
+  min-height:180px!important;
+  max-height:min(42dvh,360px)!important;
+  flex:0 1 auto!important;
+  gap:7px!important;
+}
+.live-tools-content #live-chat-panel-body>#live-chat-overlay>.live-chat-list{
+  min-height:0!important;
+  padding:6px 7px!important;
+  gap:4px!important;
+  scrollbar-gutter:auto!important;
+}
+.live-tools-content #live-chat-panel-body>#live-chat-overlay .live-chat-line{
+  width:100%!important;
+  max-width:none!important;
+}
+@media(max-width:760px){
+  .live-chat-overlay{width:calc(100% - 16px)!important}
+  .live-tools-content #live-chat-panel-body>#live-chat-overlay{
+    height:min(36dvh,300px)!important;
+    min-height:170px!important;
+    max-height:320px!important;
+    gap:6px!important;
+  }
+}
+@media(max-height:620px){
+  .live-tools-content #live-chat-panel-body>#live-chat-overlay{
+    height:min(42dvh,230px)!important;
+    min-height:150px!important;
+    max-height:245px!important;
+  }
+}
