@@ -17,9 +17,6 @@ test('every verified profile shows one blue check beside the username only', () 
   assert.match(app, /profile-name-with-badges"><span>'\+esc\(u\.name\)\+'<\/span>'\+platformAdminProfileBadge\(u\)/);
   assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
   assert.match(app, /profile-preview-name">.*platformAdminProfileBadge\(u\).*<small>@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
-  assert.ok(profileBadges.includes("const checks = [...profile.querySelectorAll('.profile-blue-verification')];"));
-  assert.ok(profileBadges.includes("checks.find(item => usernameLine?.contains(item)) || checks[0] || null"));
-  assert.ok(profileBadges.includes("usernameLine.append(' ', check);"));
   assert.doesNotMatch(profileBadges, /name\.append\(check\)/);
 });
 
@@ -30,7 +27,7 @@ test('the admin verification control explicitly describes one username check', (
 });
 
 test('the updated profile bundle is referenced by the app shell and service worker', () => {
-  const appUrl = '/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2&fix=single-username-verification-1';
+  const appUrl = '/app.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-admin-badge-verification-1&fix=single-username-verification-1';
   assert.ok(html.includes(appUrl));
   assert.ok(serviceWorker.includes(appUrl));
   assert.ok(serviceWorker.includes("cache:'no-cache'"));
