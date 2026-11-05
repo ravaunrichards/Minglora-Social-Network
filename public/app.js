@@ -1115,7 +1115,7 @@ function presentLiveGiftEvent(event){
   if(stage)window.MingloraGiftFX?.mount(stage,gift);
   const sender=String(event.sender?.name||event.sender?.username||'A Minglora member');
   const recipient=String(event.recipient?.name||activeLiveSession?.host?.name||'');
-  toast(sender+' sent '+gift.name+(recipient?' to '+recipient:'')+' 🎁');
+  if(String(event.sender?.id||'')!==String(state.user?.id||''))toast(sender+' sent '+gift.name+(recipient?' to '+recipient:'')+' 🎁');
   const createdAt=String(event.createdAt||'');
   if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
   return true;
