@@ -5794,7 +5794,7 @@ button.live-ranking-row{cursor:pointer}
   }
   .live-video-stage.live-full-screen-layout:not(.live-audio-stage),
   .live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage){
-    width:100%!important;height:auto!important;min-height:470px!important;
+    width:100%!important;height:auto!important;min-height:480px!important;
     max-height:none!important;aspect-ratio:auto!important;flex:none!important;
   }
 }
@@ -5806,6 +5806,6 @@ button.live-ranking-row{cursor:pointer}
   }
   .live-video-stage.live-full-screen-layout:not(.live-audio-stage),
   .live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage){
-    min-height:450px!important;
+    min-height:460px!important;
   }
 }
