@@ -1520,7 +1520,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance' data-live-tools-panel='appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance' data-live-tools-panel='appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
-  const liveModeratorTools=role==="host"
+  const liveModeratorTools=role==="host"&&liveSettings.manageModerators!==false
     ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel' data-live-tools-panel='moderators'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
     : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE panels'>"+
