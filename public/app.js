@@ -1450,7 +1450,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
-  const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming';
+  const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
   if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
@@ -1575,6 +1575,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
         if(key==='manageModerators'&&input.checked===false)$('#live-moderator-panel')?.classList.add('hidden');
         if(key==='manageModerators'&&input.checked===true)$('#live-moderator-panel')?.classList.remove('hidden');
         if(key==='prioritizeGifters')await refreshLiveSpeakerPanel(session,role,activeLiveRoom);
+        if(key==='guestCamera'&&activeLiveRoom?.localParticipant?.publishData){
+          const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'guestCamera',enabled:input.checked}));
+          await activeLiveRoom.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});
+        }
       }catch(error){input.checked=previous;toast(error.message||'The LIVE setting could not be updated.');}
       finally{input.disabled=false;}
     });
@@ -1657,6 +1661,22 @@ activeLivePinnedComment=null;
     if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
+    if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
+      activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
+      session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
+      if(role==='guest'&&!packet.enabled){
+        void room.localParticipant.setCameraEnabled(false).then(()=>{
+          liveCameraEnabled=false;
+          const cameraButton=$('#live-camera-toggle');
+          if(cameraButton){cameraButton.disabled=true;updateLiveControlButton(cameraButton,'camera-off','Guest cameras disabled by host','Camera off',false);}
+          $('#live-camera-flip')?.setAttribute('disabled','disabled');
+          toast('The host has turned off guest cameras.');
+        }).catch(error=>toast(error.message||'Minglora could not turn off your camera.'));
+      }else if(role==='guest'&&packet.enabled){
+        toast('The host enabled guest cameras. Rejoin the speaker stage to refresh your camera permission.');
+      }
+      return;
+    }
     if(topic==="minglora-live-reaction"){
       if(packet?.type!=="minglora.live.reaction"||packet.version!==1||!Object.hasOwn(liveReactionEmoji,packet.reaction))return;
       const identity=String(participant.identity),now=Date.now(),last=receivedLiveReactionAt.get(identity)||0;
