@@ -83,3 +83,27 @@ The host may pin or unpin a current chat comment. That pin is an in-room data me
 ### Host screen sharing
 
 Video+audio LIVE hosts may publish a screen-share track in addition to microphone and camera tracks. The share is rendered as the main stage while the participant seat strip remains visible. Screen-share publishing is not granted to viewers or guest speakers, and audio-only LIVE does not request display capture. Browser display-capture support and the user's explicit screen/window/tab selection are required. A screen share ends when the host stops sharing or the browser/provider reports the capture track as ended.
+
+
+## Pre-LIVE setup and broadcast modes
+
+The pre-LIVE form saves a compact setup object on the session before a room is opened. It includes the LIVE board, title/About me text, audience, practice mode, capture quality, microphone noise suppression, stability optimization, viewer-count visibility, the community-safety reminder, gift availability, audience-control availability, content disclosure and an optional client call-to-action.
+
+The product mode is stored separately from the relational media type so the existing `broadcast_type` constraint remains `video_audio` or `audio_only`:
+
+- **Video + Audio** publishes camera and microphone tracks.
+- **Audio Only** publishes a microphone track and does not request camera access.
+- **Mobile Gaming** uses microphone plus a screen-share track and keeps the camera off. The browser/device must expose `navigator.mediaDevices.getDisplayMedia`; this browser path is not a substitute for native Android MediaProjection/game capture.
+- **Live Studio** uses camera, microphone and host screen sharing in the existing browser LIVE room. It is not yet a multi-scene production compositor or a separate desktop broadcast application.
+
+The room's `audioCaptureDefaults` applies the saved echo-cancellation, noise-suppression and automatic-gain settings. The selected 720p/1080p preset is applied when the installed LiveKit client exposes that preset; Auto leaves the SDK's default capture selection intact. The stability setting controls LiveKit adaptive stream and dynacast options. Screen-share capture uses the selected resolution when the browser and installed client support it.
+
+Practice Mode is enforced by the API: its session audience is forced to private, public follower notifications are not sent, and Coins gifts plus reward drops are rejected by the server. The LIVE Gifts switch is also checked by the gift and reward-drop endpoints, not only by the browser controls. Audience control off forces the session audience to public; when on, the host's selected public/friends/private audience is applied.
+
+The viewer-count option hides the in-room count and directory presence for that session. Content disclosure and the optional client call-to-action are displayed in the room; client links must be HTTPS and are validated server-side.
+
+The Community safety option controls the room's safety reminder. Existing platform reporting/blocking protections remain separate and are not disabled by this visual preference.
+
+### Features intentionally not exposed as working switches yet
+
+Assigned LIVE moderators, separate group LIVE chats, Guardian/family controls, stream recording/egress, visual effects, LIVE Services and Fan Club require additional workflows and enforcement. The pre-LIVE screen identifies these as future work instead of showing nonfunctional switches. Full Android mobile-game capture also requires native Android integration; browser screen sharing alone cannot provide that capability.
