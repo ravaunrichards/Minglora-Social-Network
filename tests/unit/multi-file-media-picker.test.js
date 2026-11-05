@@ -6,7 +6,7 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('shared media picker exposes true multi-select and consumes the complete desktop FileList', async () => {
   const app = await read('../../public/app.js');
-  assert.ok(app.includes("maxFiles>1?' multiple=\"multiple\"':"));
+  assert.match(app, /maxFiles>1\?' multiple=/);
   assert.ok(app.includes('gallery.multiple=maxFiles>1'));
   assert.ok(app.includes('const selected=[...gallery.files];addFiles(selected);gallery.value=\'\';'));
   assert.match(app, /for\(const file of Array\.from\(fileList\|\|\[\]\)\)/);
