@@ -744,6 +744,7 @@ let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
 let liveGiftCatalogue=[];
 let liveSpeakerRefreshTimer=null;
+const liveSpeakerSeenRequestsBySession=new Map();
 let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
 let liveRewardRefreshTimer=null;
@@ -835,6 +836,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
       "<label class='live-preflight-toggle'><input type='checkbox' name='prioritizeGifters'><span class='live-preflight-switch'></span><span><strong>Prioritize gifters</strong><small>Sort guest requests by verified gifter level</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='allowCoHost' checked><span class='live-preflight-switch'></span><span><strong>Allow co-host / guest stage</strong><small>Allow another member to join your stage</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='manageModerators' checked><span class='live-preflight-switch'></span><span><strong>Manage moderators</strong><small>Allow host moderator assignment and removal</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='voiceRings' checked><span class='live-preflight-switch'></span><span><strong>Voice rings</strong><small>Play a short sound when a new guest requests the stage</small></span></label>"+
     "</div></div>"+
     "<div class='live-preflight-unavailable' aria-label='Additional LIVE production integrations'><strong>Additional LIVE integrations</strong><span>Guardian/family controls · Cloud recording/egress · Advanced effects · LIVE Services · Fan Club</span><small>These need verified provider, storage, creator and safety workflows before they can be enabled.</small></div>"+
     "<div class='live-preflight-submit'><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button><p class='form-hint'>Mobile Gaming uses screen sharing. Screen-capture availability depends on the device and browser; native Android game capture still needs platform integration.</p></div></form>"+
@@ -888,6 +890,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
         prioritizeGifters:values.has("prioritizeGifters"),
         allowCoHost:values.has("allowCoHost"),
         manageModerators:values.has("manageModerators"),
+        voiceRings:values.has("voiceRings"),
         practiceMode:values.has("practiceMode"),
         liveQuality:String(values.get("liveQuality")||"auto"),
         noiseSuppression:values.has("noiseSuppression"),
@@ -1021,6 +1024,13 @@ async function refreshLiveSpeakerPanel(session,role,room){
     const list=$("#live-speaker-request-list");if(!list)return;
     try{
       const data=await api(root+"/speaker-requests"),requests=data.requests||[];
+      const currentPendingIds=new Set(requests.filter(request=>request.status==='requested').map(request=>String(request.userId)));
+      const previousPendingIds=liveSpeakerSeenRequestsBySession.get(session.id);
+      if(previousPendingIds&&session.liveSettings?.voiceRings!==false&&Array.from(currentPendingIds).some(id=>!previousPendingIds.has(id))){
+        primeCallAudio();
+        window.setTimeout(()=>playCallTone([620,820],520),160);
+      }
+      liveSpeakerSeenRequestsBySession.set(session.id,currentPendingIds);
       list.innerHTML=requests.length?requests.map(request=>{
         const label=request.status==="requested"?"Pending":request.status==="connected"?"On stage":"Approved";
         const actions=request.status==="requested"
@@ -1521,7 +1531,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['autoAcceptRequests','Auto accept',false,'Approve requests automatically while seats are open'],
     ['prioritizeGifters','Prioritize gifters',false,'Sort requests by verified gifter level'],
     ['allowCoHost','Allow co-host / guest stage',true,'Allow other members to join the stage'],
-    ['manageModerators','Manage moderators',true,'Allow moderator assignments and removal']
+    ['manageModerators','Manage moderators',true,'Allow moderator assignments and removal'],
+    ['voiceRings','Voice rings',true,'Play a short alert when a new guest request arrives']
   ];
   const liveRoomPermissionControls=role==='host'?"<section id='live-room-permission-controls' class='live-room-permission-controls'><div class='live-tools-card-heading'><strong>Guest & host permissions</strong><small>Enable or disable each room control</small></div><div class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveRoomLayoutControl=role==='host'?"<section class='live-room-layout-control'><label for='live-room-layout-select'><strong>Stage layout</strong><small>Switch the room layout without ending LIVE</small><select id='live-room-layout-select'>"+LIVE_ROOM_LAYOUT_OPTIONS.map(option=>"<option value='"+option.value+"'"+(option.value===(liveSettings.roomLayout||'fluid_grid')?' selected':'')+">"+esc(option.label)+"</option>").join('')+"</select></label></section>":'';
