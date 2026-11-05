@@ -5726,3 +5726,52 @@ button.live-ranking-row{cursor:pointer}
   .live-guest-seat-meta strong{font-size:8px!important}
   .live-guest-seat-meta small{font-size:7px!important}
 }
+
+
+/* Guest seats use an in-flow information area so names and statuses are never
+   hidden behind the video, avatar, or the edge of a short grid cell. */
+.live-guest-seat{
+  display:flex!important;flex-direction:column!important;align-items:center!important;
+  justify-content:space-between!important;gap:5px!important;min-width:0!important;
+  min-height:100px!important;height:100%!important;padding:27px 6px 7px!important;
+  box-sizing:border-box!important;overflow:hidden!important;
+}
+.live-guest-seat-tag{top:5px!important;left:5px!important;z-index:5!important}
+.live-guest-seat-avatar{
+  position:relative!important;z-index:2!important;flex:0 0 auto!important;
+  margin:auto auto 0!important;width:clamp(28px,4vw,46px)!important;
+  height:clamp(28px,4vw,46px)!important;
+}
+.live-guest-seat-meta{
+  position:relative!important;inset:auto!important;z-index:4!important;
+  display:grid!important;flex:0 0 auto!important;align-self:stretch!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  margin:5px 0 0!important;padding:5px 6px!important;gap:3px!important;
+  border:1px solid rgba(255,255,255,.1)!important;border-radius:8px!important;
+  background:rgba(3,7,15,.9)!important;text-align:center!important;
+  box-sizing:border-box!important;overflow:visible!important;
+}
+.live-guest-seat-meta strong,.live-guest-seat-meta small{
+  display:block!important;width:100%!important;max-width:100%!important;height:auto!important;
+  max-height:none!important;white-space:normal!important;text-overflow:clip!important;
+  overflow:visible!important;overflow-wrap:anywhere!important;word-break:normal!important;
+  line-height:1.25!important;
+}
+.live-guest-seat-meta strong{font-size:clamp(8px,1.05vw,11px)!important}
+.live-guest-seat-meta small{font-size:clamp(7px,.9vw,9px)!important}
+.live-guest-seat.has-video .live-guest-seat-avatar{opacity:0!important}
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-guest-seat-tag{display:inline-flex!important}
+.live-full-screen-active #live-guest-layout .live-guest-seat.is-host .live-guest-seat-meta{display:grid!important}
+@media(max-width:640px){
+  .live-guest-seat{min-height:92px!important;padding:25px 4px 5px!important;gap:3px!important}
+  .live-guest-seat-meta{margin-top:4px!important;padding:4px!important}
+  .live-guest-seat-meta strong{font-size:8px!important}
+  .live-guest-seat-meta small{font-size:7px!important}
+  .live-guest-seat-avatar{width:29px!important;height:29px!important}
+}
+@media(max-width:380px){
+  .live-guest-seat{min-height:88px!important;padding:24px 3px 4px!important}
+  .live-guest-seat-meta{padding:3px!important;gap:2px!important}
+  .live-guest-seat-meta strong{font-size:7.5px!important}
+  .live-guest-seat-meta small{font-size:6.8px!important}
+}
