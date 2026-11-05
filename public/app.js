@@ -4876,8 +4876,22 @@ function bindNavigation(){
 }
 async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><img class="avatar" src="${avatar(p)}" alt=""><div class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></div><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
 async function enterMingloraApp(user,showWelcome=false){
-  state.user=user;showApp();bindNavigation();await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
+  state.user=user;showApp();bindNavigation();
   const params=new URLSearchParams(window.location.search);
+  const isCreatorHubAdmin=String(user?.id||'')==='5b998c21-86b5-4621-ab37-e0808a2657b1'&&String(user?.email||'').trim().toLowerCase()==='creatorhubcreatornetwork@gmail.com'&&user?.platformRole==='platform_owner';
+  if(isCreatorHubAdmin&&params.get('mfa-setup')==='required'){
+    window.history.replaceState(null,'',window.location.pathname+window.location.hash);
+    activateNav('feed');
+    if(window.MingloraSettings?.open){
+      await window.MingloraSettings.open();
+      const status=document.querySelector('#mfa-status');
+      if(status)status.textContent='Administrator protection is required. Scan this QR code with your authenticator app, then verify its current code.';
+      if(!document.querySelector('#mfa-verify-form'))document.querySelector('#enroll-totp')?.click();
+      document.querySelector('#settings-security')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }else toast('Open Settings → Security to finish administrator authenticator setup.');
+    return;
+  }
+  await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else activateNav('feed');
   if(showWelcome)toast('Welcome to Minglora!');
@@ -4986,6 +5000,7 @@ async function finishMagicLinkFromUrl(){
     });
     if(result.mfaRequired){openMfaLogin(result.challengeId);return true;}
     if(!result.user)throw new Error('Minglora could not finish your magic-link sign-in.');
+    if(result.mfaEnrollmentRequired){const destination=new URL(window.location.href);destination.searchParams.set('mfa-setup','required');window.history.replaceState(null,'',destination.pathname+destination.search);}
     await enterMingloraApp(result.user);
   }catch(error){
     showAuth();
@@ -5004,6 +5019,7 @@ $('#login-form').addEventListener('submit',async e=>{
   try{
     const data=await api('/auth/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});
     if(data.mfaRequired){openMfaLogin(data.challengeId);return;}
+    if(data.mfaEnrollmentRequired){const destination=new URL(window.location.href);destination.searchParams.set('mfa-setup','required');window.history.replaceState(null,'',destination.pathname+destination.search);}
     await enterMingloraApp(data.user);
   }catch(err){error.textContent=err.message;}
   finally{button.disabled=false;button.removeAttribute('aria-busy');}
