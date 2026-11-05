@@ -165,3 +165,12 @@ test("recognisable gifts use their matching object artwork instead of an unrelat
   assert.ok(roseSvg.includes("🌹"), "Rose must visibly render as a rose");
   assert.ok(baseballSvg.includes("⚾"), "Baseball must visibly render as a baseball");
 });
+
+
+test("the active 2026 catalogue excludes obsolete 2025-dated gifts", () => {
+  const retiredNames = ["2025","2025 Love","GG 2025","2025 Glasses","2025 JoyLens","Gamer 2025","Celebrate 2025","Extravaganza 2025","Prime Power 2025"];
+  for (const name of retiredNames) {
+    assert.equal(gifts.some(gift => gift.name === name), false, name + " must not be active in the 2026 catalogue");
+  }
+  assert.equal(gifts.length, 1748);
+});
