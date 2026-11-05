@@ -397,6 +397,12 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({ text: 'Friends-only story from the integration test', audience: 'friends' })
   });
   assert.equal(friendsStory.status, 201);
+  const tooManyStoryAttachments = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'This story exceeds the media attachment cap.', mediaIds: Array.from({ length: 11 }, (_, index) => `story-asset-${index}`) })
+  });
+  assert.equal(tooManyStoryAttachments.status, 400);
+  assert.match(tooManyStoryAttachments.body.error, /up to 10 media attachments/i);
   const invalidStory = await request('/api/stories', {
     method: 'POST',
     body: JSON.stringify({ imageUrl: 'http://example.test/story.jpg' })
