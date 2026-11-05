@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getPlatformAdminBadge } from '../../src/platform-badges.js';
+import { getPlatformAdminBadge, getProfileVerificationBadge } from '../../src/platform-badges.js';
 
 test('the Admin badge is hidden for Larry’s designated account', () => {
   const account = {
