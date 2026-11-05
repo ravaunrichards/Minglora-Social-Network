@@ -731,15 +731,21 @@ function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function liveSessionCardMarkup(session){
   const audioOnly=session.broadcastType==='audio_only';
-  const type=audioOnly?'audio_only':'video_audio';
+  const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
+    ?session.liveMode:(audioOnly?'audio_only':'video_audio');
+  const modeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const theme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
-  const presence=session.viewerCountVerified?'◉ '+Number(session.viewerCount||0).toLocaleString()+' in room':'Live presence unavailable';
-  return "<article class='live-room-card' data-live-type='"+type+"'><div class='live-room-preview live-preview-theme-"+theme+(audioOnly?" live-room-preview-audio":"")+"'>"+
-    "<span class='live-indicator'>LIVE</span><span class='live-type-pill "+(audioOnly?'audio':'video')+"'>"+(audioOnly?'AUDIO ONLY':'VIDEO + AUDIO')+"</span>"+
-    "<span class='live-room-viewers'>"+presence+"</span>"+
-    (audioOnly?"<div class='live-directory-audio-orb'><span>♪</span></div>":"<div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div>")+
-    "</div><div class='live-room-details'><strong>"+esc(session.title)+"</strong><span>"+esc(session.host?.name||'Minglora creator')+"</span><small>@"+esc(session.host?.username||'member')+gifterProfileBadge(session.host)+
-    "</small><button class='primary' data-watch-live='"+esc(session.id)+"'>"+(audioOnly?'Listen LIVE':'Watch LIVE')+"</button></div></article>";
+  const showViewers=session.liveSettings?.markViewers!==false;
+  const presence=!showViewers?'':session.viewerCountVerified?'◉ '+Number(session.viewerCount||0).toLocaleString()+' in room':'Live presence unavailable';
+  const boardLabels={general:'General',gaming:'Gaming',music:'Music',talk:'Talk',education:'Education',beauty:'Beauty',sports:'Sports',business:'Business',lifestyle:'Lifestyle'};
+  return "<article class='live-room-card' data-live-type='"+liveMode+"'><div class='live-room-preview live-preview-theme-"+theme+(audioOnly?" live-room-preview-audio":"")+(liveMode==='mobile_gaming'?" live-room-preview-gaming":"")+"'>"+
+    "<span class='live-indicator'>LIVE</span><span class='live-type-pill "+(audioOnly?'audio':'video')+"'>"+modeLabels[liveMode]+"</span>"+
+    (presence?"<span class='live-room-viewers'>"+presence+"</span>":"")+
+    (audioOnly?"<div class='live-directory-audio-orb'><span>♪</span></div>":liveMode==='mobile_gaming'?"<div class='live-directory-audio-orb'><span>🎮</span></div>":"<div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div>")+
+    "</div><div class='live-room-details'><strong>"+esc(session.title)+"</strong><span>"+esc(session.host?.name||'Minglora creator')+"</span><small>@"+esc(session.host?.username||'member')+gifterProfileBadge(session.host)+"</small>"+
+    "<small class='live-room-board'>"+esc(boardLabels[session.liveSettings?.board]||'General')+"</small>"+
+    (session.description?"<p class='live-room-description'>"+esc(session.description)+"</p>":"")+
+    "<button class='primary' data-watch-live='"+esc(session.id)+"'>"+(audioOnly?'Listen LIVE':'Watch LIVE')+"</button></div></article>";
 }
 function applyLiveDirectoryFilter(filter=liveDirectoryFilter){
   liveDirectoryFilter=filter;
@@ -759,28 +765,106 @@ function renderLiveDirectory(sessions,status,catalog,wallet){
   const liveStatusText=!status.configured?"Live provider not configured":liveReady?"LiveKit ready":"Live provider connection failed";
   const cards=sessions.length?sessions.map(liveSessionCardMarkup).join(""):status.liveDirectoryError
     ?"<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE directory unavailable</h3><p>"+esc(status.liveDirectoryError)+"</p></section>"
-    :"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a video broadcast or an independent audio room and bring your community together.</p></section>";
+    :"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a video broadcast, mobile gaming stream or an independent audio room and bring your community together.</p></section>";
   const packages=Array.isArray(catalog?.packages)?catalog.packages.slice(0,4):[];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Real-time video, independent audio rooms, creator chat and animated 3D gifts.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
-    "<section class='card live-start-card'><div><h2>Start your LIVE</h2><p class='muted'>Choose how people experience your broadcast. Audio Only never requests camera access.</p></div>"+
-    "<form id='live-create-form' class='live-create-form'><fieldset class='live-format-picker'><legend>Broadcast format</legend>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='video_audio' "+(state.liveStartFormat==='video_audio'?'checked':'')+"><span class='live-format-icon'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg></span><span><strong>Video + Audio</strong><small>Camera and microphone</small></span></label>"+
-      "<label class='live-format-card'><input type='radio' name='broadcastType' value='audio_only' "+(state.liveStartFormat==='audio_only'?'checked':'')+"><span class='live-format-icon audio'><svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg></span><span><strong>Audio Only</strong><small>Microphone, voice and audience</small></span></label></fieldset>"+
-      "<input name='title' maxlength='120' required placeholder='What are you going LIVE about?'><select name='visibility' aria-label='Who can watch'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button></form>"+
+  const selectedMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(state.liveStartFormat)?state.liveStartFormat:'video_audio';
+  const modeOptions=[
+    {value:'video_audio',label:'Video + Audio',detail:'Camera and microphone',icon:'live'},
+    {value:'audio_only',label:'Audio Only',detail:'Microphone; no camera access',icon:'microphone'},
+    {value:'mobile_gaming',label:'Mobile Gaming',detail:'Mic + screen share; device support required',icon:'gaming'},
+    {value:'live_studio',label:'Live Studio',detail:'Camera, mic and screen share',icon:'studio'}
+  ];
+  const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='gaming'?"🎮":"🎬")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
+  const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+    "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
+    "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
+    "<div class='live-preflight-fields'>"+
+      "<label class='live-preflight-field'><span>LIVE title</span><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'></label>"+
+      "<label class='live-preflight-field'><span>LIVE board</span><select name='board'>"+boardOptions.map(([value,label])=>"<option value='"+value+"'>"+label+"</option>").join("")+"</select></label>"+
+      "<label class='live-preflight-field' id='live-audience-field'><span>Who can watch?</span><select name='visibility' id='live-audience-select'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='private'>Private room</option></select></label>"+
+      "<label class='live-preflight-field' id='live-quality-field'><span>Live quality</span><select name='liveQuality'><option value='auto'>Auto · Recommended</option><option value='720p'>720p · Balanced</option><option value='1080p'>1080p · High bandwidth</option></select></label>"+
+      "<label class='live-preflight-field live-preflight-wide'><span>About me / live description</span><textarea name='aboutMe' rows='2' maxlength='500' placeholder='Tell viewers what this LIVE is about (optional)'></textarea></label>"+
+    "</div>"+
+    "<div class='live-preflight-section'><div class='live-preflight-section-title'><strong>Broadcast controls</strong><small>Compact controls · change any setting before you start</small></div><div class='live-preflight-switches'>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='practiceMode'><span class='live-preflight-switch'></span><span><strong>Practice mode</strong><small>Private test room; no public alert or paid gifts</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='noiseSuppression' checked><span class='live-preflight-switch'></span><span><strong>Noise suppression</strong><small>Reduce background noise in your microphone</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='optimizeForStability' checked><span class='live-preflight-switch'></span><span><strong>Optimize for stability</strong><small>Adaptive video and bandwidth-saving publishing</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='markViewers' checked><span class='live-preflight-switch'></span><span><strong>Show viewer count</strong><small>Display the verified LIVE audience count</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='communitySafety' checked><span class='live-preflight-switch'></span><span><strong>Community safety</strong><small>Keep LIVE safety and reporting guidance visible</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='liveGifts' checked><span class='live-preflight-switch'></span><span><strong>LIVE gifts</strong><small>Allow Coins gifts and reward drops in this LIVE</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='audienceControl' checked><span class='live-preflight-switch'></span><span><strong>Audience control</strong><small>Use the audience selector above</small></span></label>"+
+    "</div></div>"+
+    "<details class='live-preflight-advanced'><summary>Disclosure & client acquisition <span>More settings</span></summary><div class='live-preflight-fields'>"+
+      "<label class='live-preflight-field'><span>Content disclosure</span><select name='contentDisclosure'><option value='none'>No disclosure</option><option value='branded'>Branded content / partnership</option><option value='sponsored'>Sponsored content</option></select></label>"+
+      "<label class='live-preflight-toggle live-preflight-cta-toggle'><input type='checkbox' name='clientAcquisitionEnabled'><span class='live-preflight-switch'></span><span><strong>Show client call-to-action</strong><small>Add a business, booking or service link to your LIVE</small></span></label>"+
+      "<label class='live-preflight-field'><span>Button label</span><input name='clientCtaLabel' maxlength='48' placeholder='Book a consultation'></label>"+
+      "<label class='live-preflight-field'><span>HTTPS link</span><input name='clientCtaUrl' type='url' inputmode='url' placeholder='https://example.com'></label>"+
+    "</div></details>"+
+    "<div class='live-preflight-unavailable' aria-label='LIVE features planned for a later phase'><strong>Being added in the next LIVE phase</strong><span>Moderator assignment · Group LIVE chats · Guardian controls · LIVE recording · Effects · Services · Fan Club</span><small>These are not active yet, so Minglora will not show switches that pretend they are working.</small></div>"+
+    "<div class='live-preflight-submit'><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button><p class='form-hint'>Mobile Gaming uses screen sharing. Screen-capture availability depends on the device and browser; native Android game capture still needs platform integration.</p></div></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
-    "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button></div>"+
+    "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button><button type='button' data-live-filter='mobile_gaming'>Gaming</button><button type='button' data-live-filter='live_studio'>Studio</button></div>"+
     "<div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
     (packages.length?"<div class='live-package-preview'>"+packages.map(p=>"<span>"+Number(p.coin_amount).toLocaleString()+" Coins · "+liveMoney(p.price_minor)+"</span>").join("")+"</div>":"")+"</section>");
-  $("#live-create-form")?.querySelectorAll("input[name='broadcastType']").forEach(input=>input.addEventListener("change",()=>{state.liveStartFormat=input.value;}));
-  $("#live-create-form")?.addEventListener("submit",async event=>{
-    event.preventDefault();const form=event.currentTarget,button=form.querySelector("button[type='submit']");button.disabled=true;
+  const form=$("#live-create-form");
+  form?.querySelectorAll("input[name='liveMode']").forEach(input=>input.addEventListener("change",()=>{state.liveStartFormat=input.value;}));
+  const audienceSelect=$("#live-audience-select");
+  const audienceControl=form?.querySelector("[name='audienceControl']");
+  const practiceControl=form?.querySelector("[name='practiceMode']");
+  const syncAudienceControls=()=>{
+    if(!audienceSelect)return;
+    const forcedPrivate=Boolean(practiceControl?.checked);
+    const disabled=forcedPrivate||!audienceControl?.checked;
+    if(forcedPrivate)audienceSelect.value='private';
+    else if(!audienceControl?.checked)audienceSelect.value='public';
+    audienceSelect.disabled=disabled;
+    $("#live-audience-field")?.classList.toggle("is-disabled",disabled);
+  };
+  practiceControl?.addEventListener("change",syncAudienceControls);
+  audienceControl?.addEventListener("change",syncAudienceControls);
+  syncAudienceControls();
+  const clientAcquisition=form?.querySelector("[name='clientAcquisitionEnabled']");
+  const ctaLabel=form?.querySelector("[name='clientCtaLabel']");
+  const ctaUrl=form?.querySelector("[name='clientCtaUrl']");
+  const syncCtaControls=()=>{
+    const enabled=Boolean(clientAcquisition?.checked);
+    if(ctaLabel)ctaLabel.required=enabled;
+    if(ctaUrl)ctaUrl.required=enabled;
+    form?.querySelectorAll("[name='clientCtaLabel'],[name='clientCtaUrl']").forEach(input=>input.closest(".live-preflight-field")?.classList.toggle("is-required",enabled));
+  };
+  clientAcquisition?.addEventListener("change",syncCtaControls);
+  syncCtaControls();
+  form?.addEventListener("submit",async event=>{
+    event.preventDefault();const button=form.querySelector("button[type='submit']");button.disabled=true;
     try{
       const values=new FormData(form);
+      const liveMode=String(values.get("liveMode")||"video_audio");
+      const liveSettings={
+        board:String(values.get("board")||"general"),
+        aboutMe:String(values.get("aboutMe")||"").trim(),
+        practiceMode:values.has("practiceMode"),
+        liveQuality:String(values.get("liveQuality")||"auto"),
+        noiseSuppression:values.has("noiseSuppression"),
+        optimizeForStability:values.has("optimizeForStability"),
+        markViewers:values.has("markViewers"),
+        communitySafety:values.has("communitySafety"),
+        liveGifts:values.has("liveGifts"),
+        audienceControl:values.has("audienceControl"),
+        contentDisclosure:String(values.get("contentDisclosure")||"none"),
+        clientAcquisitionEnabled:values.has("clientAcquisitionEnabled"),
+        clientCtaLabel:String(values.get("clientCtaLabel")||"").trim(),
+        clientCtaUrl:String(values.get("clientCtaUrl")||"").trim()
+      };
       const result=await api("/live/sessions",{method:"POST",body:JSON.stringify({
-        title:String(values.get("title")||"").trim(),visibility:values.get("visibility"),broadcastType:values.get("broadcastType")||"video_audio"
+        title:String(values.get("title")||"").trim(),
+        visibility:values.get("visibility")||"public",
+        liveMode,
+        broadcastType:liveMode==="audio_only"?"audio_only":"video_audio",
+        liveSettings
       })});
       await openLiveRoom(result.session,"host",result.liveKit);
     }catch(error){toast(error.message);button.disabled=false;}
