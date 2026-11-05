@@ -10,13 +10,13 @@ const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 
 test('LIVE has nine host-selectable screen layouts with a safe default', () => {
-  assert.match(app, /LIVE_SCREEN_LAYOUT_OPTIONS=Object\\.freeze/);
+  assert.ok(app.includes('const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze'), 'missing layout preset registry');
   for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']) {
     assert.ok(app.includes("value:'" + layout + "'"), 'missing ' + layout + ' layout');
     assert.ok(styles.includes('data-live-layout="' + layout + '"'), 'missing responsive layout rules for ' + layout);
   }
-  assert.match(app, /normalizeLiveScreenLayout\\(session\\.liveLayout\\)/);
-  assert.match(server, /liveLayout: 'fluid-grid'/);
+  assert.ok(app.includes('normalizeLiveScreenLayout(session.liveLayout)'), 'session must restore the saved host layout');
+  assert.ok(server.includes("liveLayout: 'fluid-grid'"), 'new sessions must have a safe default layout');
 });
 
 test('Only the signed-in LIVE host can persist a valid layout choice', () => {
