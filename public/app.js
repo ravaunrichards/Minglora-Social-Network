@@ -2707,9 +2707,9 @@ function openProfileAlbumEditor(profileId,album=null){
 }
 function openProfilePhotoComposer(profileId){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-photo-title"><div class="modal-head"><h2 id="profile-photo-title">Upload a photo</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write something about this photo"></textarea></label></div><div class="field"><label>Select one photo · zoom and rotate before upload</label><div data-profile-photo-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Upload photo</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-photo-title"><div class="modal-head"><h2 id="profile-photo-title">Upload a photo</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write something about this photo"></textarea></label></div><div class="field"><label>Select multiple photos · zoom and rotate before upload (up to 10)</label><div data-profile-photo-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Upload photo</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('[data-profile-photo-picker]'),{slot:'post',maxFiles:1,accept:'image/jpeg,image/png,image/webp,image/avif'});
+  const picker=createMediaPicker(modal.querySelector('[data-profile-photo-picker]'),{slot:'post',maxFiles:10,accept:'image/jpeg,image/png,image/webp,image/avif'});
   const close=()=>{picker.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
@@ -2725,9 +2725,9 @@ function openProfilePhotoComposer(profileId){
 }
 function openProfileReelComposer(profileId){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-reel-title"><div class="modal-head"><h2 id="profile-reel-title">Create a reel</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write a caption for your reel"></textarea></label></div><div class="field"><label>Choose a video</label><div data-profile-reel-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish reel</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-reel-title"><div class="modal-head"><h2 id="profile-reel-title">Create a reel</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write a caption for your reel"></textarea></label></div><div class="field"><label>Choose one or more video clips (up to 10)</label><div data-profile-reel-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish reel</button></div></form></section>';
   document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:1,accept:'video/mp4,video/webm,video/quicktime'});
+  const picker=createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:10,accept:'video/mp4,video/webm,video/quicktime'});
   const close=()=>{picker.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
@@ -3496,8 +3496,9 @@ function createMediaPicker(root,options={}){
   const slot=options.slot||'post',maxFiles=options.maxFiles||10,accept=options.accept||mediaAccept(slot),initialMedia=options.initialMedia||[],maxTotalBytes=Number.isFinite(options.maxTotalBytes)?Math.max(0,options.maxTotalBytes):Infinity;
   const pickerId='minglora-media-picker-'+(++mediaPickerSequence),entries=[],objectUrls=[];
   initialMedia.forEach(item=>entries.push({existing:true,id:item.id,url:item.url,mimeType:item.mimeType||'image/jpeg',mediaType:item.mediaType||'image',name:'Attached media',zoom:1,rotation:0}));
-  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'" '+(maxFiles>1?'multiple':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select media from your gallery, folders or camera. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.'+(Number.isFinite(maxTotalBytes)?' Total selection limit: '+Math.round(maxTotalBytes/1024/1024)+' MB.':'')+'</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
-  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress');
+  root.innerHTML='<div class="media-picker"><div class="media-picker-actions"><button type="button" class="secondary" data-media-gallery>Choose from gallery / files</button><button type="button" class="secondary" data-media-camera>'+(slot==='sound'?'Record audio':'Take photo / video')+'</button><input type="file" class="media-picker-input" data-media-input accept="'+esc(accept)+'"'+(maxFiles>1?' multiple="multiple"':'')+'><input type="file" class="media-picker-input" data-media-camera-input accept="image/*,video/*" capture="environment"></div><p class="media-picker-help">Select multiple files at once, or drag and drop files here. Large uploads retry automatically when the connection briefly drops. Up to '+maxFiles+' files; '+mediaMaxLabel(slot)+' per file.'+(Number.isFinite(maxTotalBytes)?' Total selection limit: '+Math.round(maxTotalBytes/1024/1024)+' MB.':'')+'</p><div class="media-picker-items" data-media-items></div><p class="media-picker-status muted" data-media-status role="status"></p><progress class="media-upload-progress" max="100" value="0" hidden></progress></div>';
+  const gallery=root.querySelector('[data-media-input]'),camera=root.querySelector('[data-media-camera-input]'),list=root.querySelector('[data-media-items]'),status=root.querySelector('[data-media-status]'),progress=root.querySelector('.media-upload-progress'),dropZone=root.querySelector('.media-picker');
+  gallery.multiple=maxFiles>1;
   function mediaCard(entry,index){
     let preview='';
     if(entry.url&&entry.mediaType==='video')preview='<video controls playsinline preload="metadata" src="'+esc(entry.url)+'"></video>';
@@ -3533,8 +3534,12 @@ function createMediaPicker(root,options={}){
     }
     render();
   }
-  gallery.addEventListener('change',()=>{addFiles(gallery.files);gallery.value='';});
-  camera.addEventListener('change',()=>{addFiles(camera.files);camera.value='';});
+  gallery.addEventListener('change',()=>{const selected=[...gallery.files];addFiles(selected);gallery.value='';});
+  camera.addEventListener('change',()=>{const selected=[...camera.files];addFiles(selected);camera.value='';});
+  dropZone.addEventListener('dragenter',event=>{if(!Array.from(event.dataTransfer?.types||[]).includes('Files'))return;event.preventDefault();dropZone.classList.add('is-dragging');});
+  dropZone.addEventListener('dragover',event=>{if(!Array.from(event.dataTransfer?.types||[]).includes('Files'))return;event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='copy';dropZone.classList.add('is-dragging');});
+  dropZone.addEventListener('dragleave',event=>{if(!dropZone.contains(event.relatedTarget))dropZone.classList.remove('is-dragging');});
+  dropZone.addEventListener('drop',event=>{const files=event.dataTransfer?.files;if(!files?.length)return;event.preventDefault();dropZone.classList.remove('is-dragging');const before=entries.length;addFiles(files);const added=entries.length-before;if(added)status.textContent='Added '+added+' file'+(added===1?'':'s')+'. You can add more before publishing.';});
   root.querySelector('[data-media-gallery]').addEventListener('click',()=>gallery.click());
   root.querySelector('[data-media-camera]').addEventListener('click',()=>slot==='sound'?openDeviceAudioCapture({onCapture:file=>addFiles([file])}):openDeviceCapture({mode:'both',onCapture:file=>addFiles([file])}));
   render();
