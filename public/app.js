@@ -1068,8 +1068,9 @@ async function refreshLiveChat(broadcastId){
       const chatAvatar=member.avatar||member.avatar_url||member.avatarUrl||message.avatar||message.avatar_url||"";
       const authorAvatar=avatar({name:author,avatar:chatAvatar});
       const isPinned=activeLivePinnedComment?.id===String(message.id);
-      const controls=activeLiveRole==="host"
-        ?"<span class='live-chat-actions'><button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button><button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
+      const canModerateChat=activeLiveRole==="host"||Boolean(activeLiveSession?.liveModerators?.includes(state.user?.id));
+      const controls=canModerateChat
+        ?"<span class='live-chat-actions'>"+(activeLiveRole==="host"?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>":"")+"<button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
       return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
@@ -1924,7 +1925,7 @@ activeLivePinnedComment=null;
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
     }
-    await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);
+    if(liveSettings.groupChatEnabled!==false){await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);}
     startLiveSpeakerRefresh(session,role,room);
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");
