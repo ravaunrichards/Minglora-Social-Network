@@ -1123,6 +1123,7 @@ function renderLivePinnedComment(comment){
 async function refreshLiveChat(broadcastId){
   try{
     const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
+    const wasNearBottom=!list.dataset.liveChatInitialized||list.scrollHeight-list.scrollTop-list.clientHeight<=72;
     list.innerHTML=(data.messages||[]).map(message=>{
       const member=message.user||message.member||{};
       const author=member.name||message.user_name||"Member";
@@ -1136,7 +1137,8 @@ async function refreshLiveChat(broadcastId){
         :"";
       return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member)+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
-    list.scrollTop=list.scrollHeight;
+    if(wasNearBottom)list.scrollTop=list.scrollHeight;
+    list.dataset.liveChatInitialized='true';
   }catch(error){if($("#live-chat-list"))toast(error.message);}
 }
 async function endHostedLiveSession(session){
