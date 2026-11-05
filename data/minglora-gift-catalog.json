@@ -20,7 +20,7 @@
       "sound_preset": "community-8",
       "animation_duration_ms": 1900,
       "coin_price": 1,
-      "active": true,
+      "active": false,
       "sort_order": 10,
       "image_url": "/assets/gifts/catalog/10-10-12wkkb4.svg",
       "model_url": "/assets/gifts/catalog/10-10-12wkkb4.gltf",
@@ -452,7 +452,7 @@
       "sound_preset": "community-9",
       "animation_duration_ms": 1450,
       "coin_price": 1,
-      "active": true,
+      "active": false,
       "sort_order": 270,
       "image_url": "/assets/gifts/catalog/community-gift-uxpqgw.svg",
       "model_url": "/assets/gifts/catalog/community-gift-uxpqgw.gltf",
@@ -2317,7 +2317,7 @@
     {
       "code": "oranges-n1rjgo",
       "name": "Oranges",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-oranges-n1rjgo",
       "animation_preset": "gift-reveal",
@@ -3361,7 +3361,7 @@
     {
       "code": "goool-1ovbz4f",
       "name": "GOOOL",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-goool-1ovbz4f",
       "animation_preset": "gift-reveal",
@@ -4873,7 +4873,7 @@
     {
       "code": "dumplings-oqyaok",
       "name": "Dumplings",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-dumplings-oqyaok",
       "animation_preset": "gift-reveal",
@@ -5089,7 +5089,7 @@
     {
       "code": "halo-halo-bh7zag",
       "name": "Halo-Halo",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-halo-halo-bh7zag",
       "animation_preset": "gift-reveal",
@@ -5179,7 +5179,7 @@
     {
       "code": "ice-lolly-mm2ra0",
       "name": "Ice Lolly",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-ice-lolly-mm2ra0",
       "animation_preset": "gift-reveal",
@@ -5377,7 +5377,7 @@
     {
       "code": "lucky-pig-dt659n",
       "name": "Lucky Pig",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-lucky-pig-dt659n",
       "animation_preset": "gift-reveal",
@@ -5395,7 +5395,7 @@
     {
       "code": "lucky-pony-14241qt",
       "name": "Lucky Pony",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-lucky-pony-14241qt",
       "animation_preset": "gift-reveal",
@@ -5989,7 +5989,7 @@
     {
       "code": "you-re-the-best-uazu4",
       "name": "You’re the Best!",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-you-re-the-best-uazu4",
       "animation_preset": "gift-reveal",
@@ -6151,7 +6151,7 @@
     {
       "code": "romanian-polenta-e95vn1",
       "name": "Romanian Polenta",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-romanian-polenta-e95vn1",
       "animation_preset": "gift-reveal",
@@ -6277,7 +6277,7 @@
     {
       "code": "g-o-a-t-busker-1s4q9q0",
       "name": "G.O.A.T. Busker",
-      "category": "other",
+      "category": "music",
       "emoji": "🏎️",
       "animation_key": "minglora-g-o-a-t-busker-1s4q9q0",
       "animation_preset": "grand-entry",
@@ -6428,7 +6428,7 @@
       "sound_preset": "other-11",
       "animation_duration_ms": 1450,
       "coin_price": 20,
-      "active": true,
+      "active": false,
       "sort_order": 3600,
       "image_url": "/assets/gifts/catalog/s-flowers-nyemjm.svg",
       "model_url": "/assets/gifts/catalog/s-flowers-nyemjm.gltf",
@@ -6673,7 +6673,7 @@
     {
       "code": "choco-strawberries-c2xn1y",
       "name": "Choco Strawberries",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-choco-strawberries-c2xn1y",
       "animation_preset": "gift-reveal",
@@ -6871,7 +6871,7 @@
     {
       "code": "woodland-wonder-1ktufrg",
       "name": "Woodland Wonder",
-      "category": "other",
+      "category": "nature",
       "emoji": "🎁",
       "animation_key": "minglora-woodland-wonder-1ktufrg",
       "animation_preset": "gift-reveal",
@@ -6907,7 +6907,7 @@
     {
       "code": "you-are-on-a-roll-j8851n",
       "name": "You are on a Roll",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-you-are-on-a-roll-j8851n",
       "animation_preset": "gift-reveal",
@@ -7166,7 +7166,7 @@
       "sound_preset": "other-3",
       "animation_duration_ms": 1450,
       "coin_price": 88,
-      "active": true,
+      "active": false,
       "sort_order": 4010,
       "image_url": "/assets/gifts/catalog/december-6dpx8e.svg",
       "model_url": "/assets/gifts/catalog/december-6dpx8e.gltf",
@@ -7220,7 +7220,7 @@
       "sound_preset": "other-9",
       "animation_duration_ms": 1450,
       "coin_price": 88,
-      "active": true,
+      "active": false,
       "sort_order": 4040,
       "image_url": "/assets/gifts/catalog/march-1u6p1bk.svg",
       "model_url": "/assets/gifts/catalog/march-1u6p1bk.gltf",
@@ -7256,7 +7256,7 @@
       "sound_preset": "other-4",
       "animation_duration_ms": 1450,
       "coin_price": 88,
-      "active": true,
+      "active": false,
       "sort_order": 4060,
       "image_url": "/assets/gifts/catalog/november-juz9r3.svg",
       "model_url": "/assets/gifts/catalog/november-juz9r3.gltf",
@@ -7274,7 +7274,7 @@
       "sound_preset": "other-8",
       "animation_duration_ms": 1450,
       "coin_price": 88,
-      "active": true,
+      "active": false,
       "sort_order": 4070,
       "image_url": "/assets/gifts/catalog/october-1g8qjc7.svg",
       "model_url": "/assets/gifts/catalog/october-1g8qjc7.gltf",
@@ -7303,7 +7303,7 @@
     {
       "code": "takoyaki-13ltr22",
       "name": "Takoyaki",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-takoyaki-13ltr22",
       "animation_preset": "gift-reveal",
@@ -7357,7 +7357,7 @@
     {
       "code": "fist-bump-v0thfp",
       "name": "Fist bump",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-fist-bump-v0thfp",
       "animation_preset": "gift-reveal",
@@ -7483,7 +7483,7 @@
     {
       "code": "breeze-quena-17wbn2y",
       "name": "Breeze Quena",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-breeze-quena-17wbn2y",
       "animation_preset": "gift-reveal",
@@ -7501,7 +7501,7 @@
     {
       "code": "bubble-gum-1243ms",
       "name": "Bubble Gum",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-bubble-gum-1243ms",
       "animation_preset": "gift-reveal",
@@ -8527,7 +8527,7 @@
     {
       "code": "flowers-1nvz0hb",
       "name": "Flowers",
-      "category": "other",
+      "category": "flowers",
       "emoji": "🌹",
       "animation_key": "minglora-flowers-1nvz0hb",
       "animation_preset": "petal-bloom",
@@ -8617,7 +8617,7 @@
     {
       "code": "hand-hearts-k0uda5",
       "name": "Hand Hearts",
-      "category": "other",
+      "category": "hearts",
       "emoji": "💖",
       "animation_key": "minglora-hand-hearts-k0uda5",
       "animation_preset": "heart-pulse",
@@ -8689,7 +8689,7 @@
     {
       "code": "ko-1idnuxm",
       "name": "KO!",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-ko-1idnuxm",
       "animation_preset": "gift-reveal",
@@ -9013,7 +9013,7 @@
     {
       "code": "bowknot-lk0rxt",
       "name": "Bowknot",
-      "category": "other",
+      "category": "fashion_beauty",
       "emoji": "🎁",
       "animation_key": "minglora-bowknot-lk0rxt",
       "animation_preset": "gift-reveal",
@@ -9031,7 +9031,7 @@
     {
       "code": "caterpillar-chaos-hx073s",
       "name": "Caterpillar Chaos",
-      "category": "other",
+      "category": "animals",
       "emoji": "🐱",
       "animation_key": "minglora-caterpillar-chaos-hx073s",
       "animation_preset": "gift-reveal",
@@ -9157,7 +9157,7 @@
     {
       "code": "groove-clarinet-wy6xzb",
       "name": "Groove Clarinet",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-groove-clarinet-wy6xzb",
       "animation_preset": "gift-reveal",
@@ -9283,7 +9283,7 @@
     {
       "code": "raving-snail-1bto3pf",
       "name": "Raving Snail",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-raving-snail-1bto3pf",
       "animation_preset": "gift-reveal",
@@ -9661,7 +9661,7 @@
     {
       "code": "borneo-ihmnu2",
       "name": "Borneo",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-borneo-ihmnu2",
       "animation_preset": "gift-reveal",
@@ -9733,7 +9733,7 @@
     {
       "code": "chirpy-kisses-43k7z0",
       "name": "Chirpy Kisses",
-      "category": "other",
+      "category": "hearts",
       "emoji": "💖",
       "animation_key": "minglora-chirpy-kisses-43k7z0",
       "animation_preset": "heart-pulse",
@@ -10057,7 +10057,7 @@
     {
       "code": "garland-headpiece-zaaju0",
       "name": "Garland Headpiece",
-      "category": "other",
+      "category": "fashion_beauty",
       "emoji": "🎁",
       "animation_key": "minglora-garland-headpiece-zaaju0",
       "animation_preset": "gift-reveal",
@@ -10111,7 +10111,7 @@
     {
       "code": "goalkeeper-save-1lnhinp",
       "name": "Goalkeeper Save",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-goalkeeper-save-1lnhinp",
       "animation_preset": "power-impact",
@@ -10219,7 +10219,7 @@
     {
       "code": "hearts-1a0m01c",
       "name": "Hearts",
-      "category": "other",
+      "category": "hearts",
       "emoji": "💖",
       "animation_key": "minglora-hearts-1a0m01c",
       "animation_preset": "heart-pulse",
@@ -10831,7 +10831,7 @@
     {
       "code": "sending-positivity-7vpsbb",
       "name": "Sending positivity",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-sending-positivity-7vpsbb",
       "animation_preset": "gift-reveal",
@@ -11101,7 +11101,7 @@
     {
       "code": "sunny-side-up-12shmzc",
       "name": "Sunny Side Up",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🌌",
       "animation_key": "minglora-sunny-side-up-12shmzc",
       "animation_preset": "cosmic-orbit",
@@ -11191,7 +11191,7 @@
     {
       "code": "toucan-1ovzxjb",
       "name": "Toucan",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-toucan-1ovzxjb",
       "animation_preset": "gift-reveal",
@@ -11299,7 +11299,7 @@
     {
       "code": "castanets-1b9uyux",
       "name": "Castanets",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-castanets-1b9uyux",
       "animation_preset": "gift-reveal",
@@ -11443,7 +11443,7 @@
     {
       "code": "ramune-1wopl5f",
       "name": "Ramune",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-ramune-1wopl5f",
       "animation_preset": "gift-reveal",
@@ -11659,7 +11659,7 @@
     {
       "code": "dreamy-strings-1m85c5l",
       "name": "Dreamy Strings",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-dreamy-strings-1m85c5l",
       "animation_preset": "royal-shimmer",
@@ -11785,7 +11785,7 @@
     {
       "code": "oud-1fwx11r",
       "name": "Oud",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-oud-1fwx11r",
       "animation_preset": "gift-reveal",
@@ -11803,7 +11803,7 @@
     {
       "code": "palm-breeze-gknyt0",
       "name": "Palm Breeze",
-      "category": "other",
+      "category": "nature",
       "emoji": "🎁",
       "animation_key": "minglora-palm-breeze-gknyt0",
       "animation_preset": "gift-reveal",
@@ -12091,7 +12091,7 @@
     {
       "code": "alpaca-1yilflf",
       "name": "Alpaca",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-alpaca-1yilflf",
       "animation_preset": "gift-reveal",
@@ -12127,7 +12127,7 @@
     {
       "code": "bat-headwear-cbdes5",
       "name": "Bat Headwear",
-      "category": "other",
+      "category": "fashion_beauty",
       "emoji": "🎁",
       "animation_key": "minglora-bat-headwear-cbdes5",
       "animation_preset": "gift-reveal",
@@ -12307,7 +12307,7 @@
     {
       "code": "corgi-11bz8df",
       "name": "Corgi",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-corgi-11bz8df",
       "animation_preset": "gift-reveal",
@@ -12469,7 +12469,7 @@
     {
       "code": "falling-for-you-123gx0c",
       "name": "Falling For You",
-      "category": "other",
+      "category": "hearts",
       "emoji": "🎁",
       "animation_key": "minglora-falling-for-you-123gx0c",
       "animation_preset": "gift-reveal",
@@ -12793,7 +12793,7 @@
     {
       "code": "kicker-challenge-5oglod",
       "name": "Kicker Challenge",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-kicker-challenge-5oglod",
       "animation_preset": "gift-reveal",
@@ -13135,7 +13135,7 @@
     {
       "code": "pug-ojh3jf",
       "name": "Pug",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-pug-ojh3jf",
       "animation_preset": "gift-reveal",
@@ -13855,7 +13855,7 @@
     {
       "code": "tambourine-1my1x2p",
       "name": "Tambourine",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-tambourine-1my1x2p",
       "animation_preset": "gift-reveal",
@@ -13981,7 +13981,7 @@
     {
       "code": "canyon-bighorn-12ndc4u",
       "name": "Canyon Bighorn",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-canyon-bighorn-12ndc4u",
       "animation_preset": "gift-reveal",
@@ -14053,7 +14053,7 @@
     {
       "code": "djembe-master-1v3jzkm",
       "name": "Djembe Master",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-djembe-master-1v3jzkm",
       "animation_preset": "soundwave-ripple",
@@ -14071,7 +14071,7 @@
     {
       "code": "electro-vibes-19lis52",
       "name": "Electro Vibes",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-electro-vibes-19lis52",
       "animation_preset": "gift-reveal",
@@ -14179,7 +14179,7 @@
     {
       "code": "mom-s-bonnet-ntwp80",
       "name": "Mom's Bonnet",
-      "category": "other",
+      "category": "fashion_beauty",
       "emoji": "🎁",
       "animation_key": "minglora-mom-s-bonnet-ntwp80",
       "animation_preset": "gift-reveal",
@@ -14503,7 +14503,7 @@
     {
       "code": "baller-oci0qb",
       "name": "Baller",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-baller-oci0qb",
       "animation_preset": "gift-reveal",
@@ -14521,7 +14521,7 @@
     {
       "code": "bbq-s8c93w",
       "name": "BBQ",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-bbq-s8c93w",
       "animation_preset": "gift-reveal",
@@ -14575,7 +14575,7 @@
     {
       "code": "cactus-shuffle-11c2inv",
       "name": "Cactus Shuffle",
-      "category": "other",
+      "category": "nature",
       "emoji": "🎁",
       "animation_key": "minglora-cactus-shuffle-11c2inv",
       "animation_preset": "gift-reveal",
@@ -14791,7 +14791,7 @@
     {
       "code": "forever-rosa-1o6wl0z",
       "name": "Forever Rosa",
-      "category": "other",
+      "category": "flowers",
       "emoji": "🎁",
       "animation_key": "minglora-forever-rosa-1o6wl0z",
       "animation_preset": "gift-reveal",
@@ -14863,7 +14863,7 @@
     {
       "code": "japanese-dinner-141lwam",
       "name": "Japanese Dinner",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-japanese-dinner-141lwam",
       "animation_preset": "gift-reveal",
@@ -15151,7 +15151,7 @@
     {
       "code": "pink-cassette-1biwc67",
       "name": "Pink Cassette",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-pink-cassette-1biwc67",
       "animation_preset": "gift-reveal",
@@ -15385,7 +15385,7 @@
     {
       "code": "sending-luck-4ao8km",
       "name": "Sending luck",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-sending-luck-4ao8km",
       "animation_preset": "gift-reveal",
@@ -15565,7 +15565,7 @@
     {
       "code": "you-are-loved-1e4rz16",
       "name": "You Are Loved",
-      "category": "other",
+      "category": "community",
       "emoji": "💖",
       "animation_key": "minglora-you-are-loved-1e4rz16",
       "animation_preset": "heart-pulse",
@@ -15637,7 +15637,7 @@
     {
       "code": "cheeky-pup-1bttjtl",
       "name": "Cheeky Pup",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-cheeky-pup-1bttjtl",
       "animation_preset": "gift-reveal",
@@ -15799,7 +15799,7 @@
     {
       "code": "neon-rockstar-bt736m",
       "name": "Neon Rockstar",
-      "category": "other",
+      "category": "music",
       "emoji": "🌌",
       "animation_key": "minglora-neon-rockstar-bt736m",
       "animation_preset": "cosmic-orbit",
@@ -15889,7 +15889,7 @@
     {
       "code": "rock-idol-5wz7qa",
       "name": "Rock Idol",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-rock-idol-5wz7qa",
       "animation_preset": "gift-reveal",
@@ -15925,7 +15925,7 @@
     {
       "code": "snowfall-1jyko1z",
       "name": "Snowfall",
-      "category": "other",
+      "category": "nature",
       "emoji": "🎁",
       "animation_key": "minglora-snowfall-1jyko1z",
       "animation_preset": "gift-reveal",
@@ -15961,7 +15961,7 @@
     {
       "code": "sweet-scoop-vjtutn",
       "name": "Sweet Scoop",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-sweet-scoop-vjtutn",
       "animation_preset": "gift-reveal",
@@ -16015,7 +16015,7 @@
     {
       "code": "batting-cutie-6d5zti",
       "name": "Batting Cutie",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-batting-cutie-6d5zti",
       "animation_preset": "gift-reveal",
@@ -16231,7 +16231,7 @@
     {
       "code": "rock-and-roll-1bo9htk",
       "name": "Rock and Roll",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-rock-and-roll-1bo9htk",
       "animation_preset": "gift-reveal",
@@ -16555,7 +16555,7 @@
     {
       "code": "pink-cowboy-ygt7kk",
       "name": "Pink Cowboy",
-      "category": "other",
+      "category": "fashion_beauty",
       "emoji": "🎁",
       "animation_key": "minglora-pink-cowboy-ygt7kk",
       "animation_preset": "gift-reveal",
@@ -16591,7 +16591,7 @@
     {
       "code": "sloth-peek-1o2i2hm",
       "name": "Sloth Peek",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-sloth-peek-1o2i2hm",
       "animation_preset": "gift-reveal",
@@ -16645,7 +16645,7 @@
     {
       "code": "azura-red-card-1n48q23",
       "name": "Azura red card",
-      "category": "other",
+      "category": "sports",
       "emoji": "🏎️",
       "animation_key": "minglora-azura-red-card-1n48q23",
       "animation_preset": "grand-entry",
@@ -16681,7 +16681,7 @@
     {
       "code": "coral-ueuamq",
       "name": "Coral",
-      "category": "other",
+      "category": "nature",
       "emoji": "🎁",
       "animation_key": "minglora-coral-ueuamq",
       "animation_preset": "gift-reveal",
@@ -16951,7 +16951,7 @@
     {
       "code": "baby-chicks-1nmqd9a",
       "name": "Baby Chicks",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-baby-chicks-1nmqd9a",
       "animation_preset": "gift-reveal",
@@ -17131,7 +17131,7 @@
     {
       "code": "cuddle-with-me-1no8oxw",
       "name": "Cuddle with Me",
-      "category": "other",
+      "category": "hearts",
       "emoji": "🎁",
       "animation_key": "minglora-cuddle-with-me-1no8oxw",
       "animation_preset": "gift-reveal",
@@ -17239,7 +17239,7 @@
     {
       "code": "durian-best-friends-1tjb1zz",
       "name": "Durian Best Friends",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-durian-best-friends-1tjb1zz",
       "animation_preset": "gift-reveal",
@@ -17365,7 +17365,7 @@
     {
       "code": "goldfish-xk73a9",
       "name": "Goldfish",
-      "category": "other",
+      "category": "animals",
       "emoji": "🐬",
       "animation_key": "minglora-goldfish-xk73a9",
       "animation_preset": "royal-shimmer",
@@ -17491,7 +17491,7 @@
     {
       "code": "henna-glow-ln2fc6",
       "name": "Henna Glow",
-      "category": "other",
+      "category": "fashion_beauty",
       "emoji": "🎁",
       "animation_key": "minglora-henna-glow-ln2fc6",
       "animation_preset": "gift-reveal",
@@ -17509,7 +17509,7 @@
     {
       "code": "honey-strummer-12ptq73",
       "name": "Honey Strummer",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-honey-strummer-12ptq73",
       "animation_preset": "gift-reveal",
@@ -18085,7 +18085,7 @@
     {
       "code": "roo-mother-15wlwf2",
       "name": "Roo Mother",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-roo-mother-15wlwf2",
       "animation_preset": "gift-reveal",
@@ -18103,7 +18103,7 @@
     {
       "code": "roses-3mca3z",
       "name": "Roses",
-      "category": "other",
+      "category": "flowers",
       "emoji": "🌹",
       "animation_key": "minglora-roses-3mca3z",
       "animation_preset": "petal-bloom",
@@ -18319,7 +18319,7 @@
     {
       "code": "xxxl-flowers-iwtcrx",
       "name": "XXXL Flowers",
-      "category": "other",
+      "category": "flowers",
       "emoji": "🌹",
       "animation_key": "minglora-xxxl-flowers-iwtcrx",
       "animation_preset": "petal-bloom",
@@ -18337,7 +18337,7 @@
     {
       "code": "you-re-amazing-ojre9n",
       "name": "You're Amazing",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-you-re-amazing-ojre9n",
       "animation_preset": "gift-reveal",
@@ -18355,7 +18355,7 @@
     {
       "code": "you-re-amazing-6zs0up",
       "name": "You’re Amazing",
-      "category": "other",
+      "category": "community",
       "emoji": "🎁",
       "animation_key": "minglora-you-re-amazing-6zs0up",
       "animation_preset": "gift-reveal",
@@ -18805,7 +18805,7 @@
     {
       "code": "sax-appeal-1jazqu2",
       "name": "Sax Appeal",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-sax-appeal-1jazqu2",
       "animation_preset": "gift-reveal",
@@ -18913,7 +18913,7 @@
     {
       "code": "epic-pianist-f9fnl8",
       "name": "Epic Pianist",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-epic-pianist-f9fnl8",
       "animation_preset": "gift-reveal",
@@ -18967,7 +18967,7 @@
     {
       "code": "suncatcher-gir8i7",
       "name": "Suncatcher",
-      "category": "other",
+      "category": "nature",
       "emoji": "🐱",
       "animation_key": "minglora-suncatcher-gir8i7",
       "animation_preset": "cosmic-orbit",
@@ -19129,7 +19129,7 @@
     {
       "code": "sheep-joy-1pkkzuy",
       "name": "Sheep Joy",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-sheep-joy-1pkkzuy",
       "animation_preset": "gift-reveal",
@@ -19183,7 +19183,7 @@
     {
       "code": "bearlicious-sundae-1ewjoef",
       "name": "Bearlicious Sundae",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🐻",
       "animation_key": "minglora-bearlicious-sundae-1ewjoef",
       "animation_preset": "cosmic-orbit",
@@ -19345,7 +19345,7 @@
     {
       "code": "flamingo-floaty-1gskq5p",
       "name": "Flamingo Floaty",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-flamingo-floaty-1gskq5p",
       "animation_preset": "gift-reveal",
@@ -19525,7 +19525,7 @@
     {
       "code": "superstriker-sage-m578z8",
       "name": "Superstriker Sage",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-superstriker-sage-m578z8",
       "animation_preset": "gift-reveal",
@@ -19777,7 +19777,7 @@
     {
       "code": "drums-1duv3qy",
       "name": "Drums",
-      "category": "other",
+      "category": "music",
       "emoji": "🥁",
       "animation_key": "minglora-drums-1duv3qy",
       "animation_preset": "soundwave-ripple",
@@ -19975,7 +19975,7 @@
     {
       "code": "gerry-the-giraffe-m025k3",
       "name": "Gerry the Giraffe",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-gerry-the-giraffe-m025k3",
       "animation_preset": "gift-reveal",
@@ -19993,7 +19993,7 @@
     {
       "code": "giraffe-1tio8bz",
       "name": "Giraffe",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-giraffe-1tio8bz",
       "animation_preset": "gift-reveal",
@@ -20101,7 +20101,7 @@
     {
       "code": "la-route-66-9issrd",
       "name": "LA Route 66",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-la-route-66-9issrd",
       "animation_preset": "gift-reveal",
@@ -20209,7 +20209,7 @@
     {
       "code": "matchtacular-1oygt6n",
       "name": "Matchtacular!",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-matchtacular-1oygt6n",
       "animation_preset": "gift-reveal",
@@ -21361,7 +21361,7 @@
     {
       "code": "hit-the-net-kc8wgi",
       "name": "Hit the Net",
-      "category": "other",
+      "category": "sports",
       "emoji": "🎁",
       "animation_key": "minglora-hit-the-net-kc8wgi",
       "animation_preset": "gift-reveal",
@@ -21566,7 +21566,7 @@
       "sound_preset": "other-7",
       "animation_duration_ms": 1450,
       "coin_price": 1500,
-      "active": true,
+      "active": false,
       "sort_order": 12040,
       "image_url": "/assets/gifts/catalog/raya-gift-card-kog86i.svg",
       "model_url": "/assets/gifts/catalog/raya-gift-card-kog86i.gltf",
@@ -22657,7 +22657,7 @@
     {
       "code": "blow-rosie-kisses-1tsyb6z",
       "name": "Blow Rosie Kisses",
-      "category": "other",
+      "category": "hearts",
       "emoji": "💖",
       "animation_key": "minglora-blow-rosie-kisses-1tsyb6z",
       "animation_preset": "heart-pulse",
@@ -22765,7 +22765,7 @@
     {
       "code": "dancing-capybaras-7xi5r7",
       "name": "Dancing Capybaras",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-dancing-capybaras-7xi5r7",
       "animation_preset": "gift-reveal",
@@ -23611,7 +23611,7 @@
     {
       "code": "ocelot-chase-m2gmvn",
       "name": "Ocelot Chase",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-ocelot-chase-m2gmvn",
       "animation_preset": "gift-reveal",
@@ -23917,7 +23917,7 @@
     {
       "code": "water-buffalo-jqqv35",
       "name": "Water Buffalo",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-water-buffalo-jqqv35",
       "animation_preset": "gift-reveal",
@@ -24511,7 +24511,7 @@
     {
       "code": "cooper-s-curry-yqwj60",
       "name": "Cooper’s Curry",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-cooper-s-curry-yqwj60",
       "animation_preset": "gift-reveal",
@@ -24835,7 +24835,7 @@
     {
       "code": "eid-ma-amoul-lhdz5o",
       "name": "Eid Ma'amoul",
-      "category": "other",
+      "category": "food_drink",
       "emoji": "🎁",
       "animation_key": "minglora-eid-ma-amoul-lhdz5o",
       "animation_preset": "gift-reveal",
@@ -26275,7 +26275,7 @@
     {
       "code": "last-riff-roar-1hfdege",
       "name": "Last Riff Roar",
-      "category": "other",
+      "category": "music",
       "emoji": "🎁",
       "animation_key": "minglora-last-riff-roar-1hfdege",
       "animation_preset": "gift-reveal",
@@ -26635,7 +26635,7 @@
     {
       "code": "chichen-itza-vvvdr7",
       "name": "Chichen Itza",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-chichen-itza-vvvdr7",
       "animation_preset": "gift-reveal",
@@ -27445,7 +27445,7 @@
     {
       "code": "kangaroo-189g5gr",
       "name": "Kangaroo",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-kangaroo-189g5gr",
       "animation_preset": "gift-reveal",
@@ -27985,7 +27985,7 @@
     {
       "code": "cheetah-1ikg4p",
       "name": "Cheetah",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-cheetah-1ikg4p",
       "animation_preset": "gift-reveal",
@@ -28327,7 +28327,7 @@
     {
       "code": "leopard-mhfsoy",
       "name": "Leopard",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-leopard-mhfsoy",
       "animation_preset": "gift-reveal",
@@ -28381,7 +28381,7 @@
     {
       "code": "madrid-1gcz6zc",
       "name": "Madrid",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-madrid-1gcz6zc",
       "animation_preset": "gift-reveal",
@@ -28399,7 +28399,7 @@
     {
       "code": "mammoth-1xmbmcq",
       "name": "Mammoth",
-      "category": "other",
+      "category": "animals",
       "emoji": "🎁",
       "animation_key": "minglora-mammoth-1xmbmcq",
       "animation_preset": "gift-reveal",
@@ -28471,7 +28471,7 @@
     {
       "code": "paris-m6w2ao",
       "name": "Paris",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-paris-m6w2ao",
       "animation_preset": "gift-reveal",
@@ -28597,7 +28597,7 @@
     {
       "code": "riyadh-14cpalq",
       "name": "Riyadh",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-riyadh-14cpalq",
       "animation_preset": "gift-reveal",
@@ -28633,7 +28633,7 @@
     {
       "code": "rome-gne1h0",
       "name": "Rome",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-rome-gne1h0",
       "animation_preset": "gift-reveal",
@@ -28687,7 +28687,7 @@
     {
       "code": "singapore-skyline-1mf0jz6",
       "name": "Singapore Skyline",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-singapore-skyline-1mf0jz6",
       "animation_preset": "gift-reveal",
@@ -28795,7 +28795,7 @@
     {
       "code": "taiwan-night-market-tfevcd",
       "name": "Taiwan Night Market",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-taiwan-night-market-tfevcd",
       "animation_preset": "gift-reveal",
@@ -29209,7 +29209,7 @@
     {
       "code": "gyeongbokgung-14x4ov9",
       "name": "Gyeongbokgung",
-      "category": "other",
+      "category": "travel",
       "emoji": "🎁",
       "animation_key": "minglora-gyeongbokgung-14x4ov9",
       "animation_preset": "gift-reveal",
@@ -30440,7 +30440,7 @@
       "sound_preset": "livecade-symbols-cnc-coin-1",
       "animation_duration_ms": 1900,
       "coin_price": 1,
-      "active": true,
+      "active": false,
       "sort_order": 17000,
       "image_url": "/assets/gifts/catalog/cnc-coin-1-mgl.svg",
       "model_url": "/assets/gifts/catalog/cnc-coin-1-mgl.gltf",
@@ -30656,7 +30656,7 @@
       "sound_preset": "livecade-reactions-pop-don-299",
       "animation_duration_ms": 1450,
       "coin_price": 299,
-      "active": true,
+      "active": false,
       "sort_order": 17120,
       "image_url": "/assets/gifts/catalog/pop-don-299-mgl.svg",
       "model_url": "/assets/gifts/catalog/pop-don-299-mgl.gltf",
@@ -30710,7 +30710,7 @@
       "sound_preset": "livecade-reactions-audience-laughter-1500",
       "animation_duration_ms": 1450,
       "coin_price": 1500,
-      "active": true,
+      "active": false,
       "sort_order": 17150,
       "image_url": "/assets/gifts/catalog/audience-laughter-1500-mgl.svg",
       "model_url": "/assets/gifts/catalog/audience-laughter-1500-mgl.gltf",
