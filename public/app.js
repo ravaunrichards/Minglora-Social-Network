@@ -1143,7 +1143,10 @@ function setupLiveRewardPanel(session,role){
     event.preventDefault();
     if(role!=='host'){toast('Only the LIVE host can create a reward drop.');return;}
     const values=new FormData(form);
+    const requestId=String(form.dataset.pendingRequestId||crypto.randomUUID());
+    form.dataset.pendingRequestId=requestId;
     const payload={
+      requestId,
       kind:String(values.get('kind')||'goody_bag'),
       totalCoins:Number(values.get('totalCoins')),
       winnerCount:Number(values.get('winnerCount')),
@@ -1159,6 +1162,7 @@ function setupLiveRewardPanel(session,role){
     try{
       await api('/live/sessions/'+encodeURIComponent(session.id)+'/reward-drops',{method:'POST',body:JSON.stringify(payload)});
       toast(payload.kind==='goody_bag'?'Goody Bag launched.':'Treasure Box scheduled.');
+      delete form.dataset.pendingRequestId;
       form.reset();syncForm();
       await refreshLiveRewardPanel(session,role);
     }catch(error){toast(error.message);}
