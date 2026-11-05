@@ -45,7 +45,7 @@ test('Room audio has a working mute/unmute control separate from microphone publ
 });
 
 test('LIVE tools drawer closes on leave and is responsive on phones and desktop', () => {
-  assert.match(app, /closeLiveToolsPanel\(\);stopLiveChatRefresh\(\)/);
+  assert.match(app, /closeLiveToolsPanel\(\);renderLivePinnedComment\(null\);stopLiveChatRefresh\(\)/);
   assert.match(styles, /\.live-tools-backdrop/);
   assert.match(styles, /\.live-tools-drawer/);
   assert.match(styles, /\.live-tools-content/);
