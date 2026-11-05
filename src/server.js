@@ -2057,26 +2057,81 @@ async function route(req, res) {
         const result=await requestSupabaseState('economy_marketing_budget');
         return json(res,200,result.budget||{});
       }
-      if(method==='POST'&&p==='/api/admin/marketing/funding'){
+      if(method==='POST'&&p==='/api/admin/marketing/funding/orders'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
         if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
            user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
-          return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can record marketing funds.'});
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can fund the Minglora bonus Coin reserve.'});
         }
         const amountMinor=Number(input.amountMinor);
-        const requestId=String(input.requestId||'').trim();
-        const fundingReference=String(input.fundingReference||'').trim();
-        const note=String(input.note||'').trim().slice(0,240);
-        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if(!Number.isSafeInteger(amountMinor)||amountMinor<100||!uuidPattern.test(requestId)||
-           fundingReference.length<6||fundingReference.length>160){
-          return json(res,400,{error:'Enter a valid amount of at least USD $1.00 and the external funding transaction reference.'});
+        if(!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>50000000){
+          return json(res,400,{error:'Fund at least USD 1.00 and no more than USD 500000.00.'});
         }
-        const result=await requestSupabaseState('economy_marketing_funding',{
-          adminUserId:user.id,adminEmail,amountMinor,requestId,fundingReference,note
+        const requestId=uid(),origin=appOrigin(req);
+        const note=String(input.note||'Minglora cash-backed bonus Coin reserve').trim().slice(0,240);
+        const order=await paypalRequest('/v2/checkout/orders','POST',{
+          intent:'CAPTURE',
+          purchase_units:[{
+            reference_id:requestId,custom_id:user.id,
+            description:'Minglora Cash-Backed Bonus Coin Reserve',
+            amount:{currency_code:'USD',value:(amountMinor/100).toFixed(2)}
+          }],
+          application_context:{
+            brand_name:'Minglora',landing_page:'NO_PREFERENCE',user_action:'PAY_NOW',
+            shipping_preference:'NO_SHIPPING',
+            return_url:origin+'/api/admin/marketing/funding/capture',
+            cancel_url:origin+'/?marketingFunding=cancelled'
+          }
+        },'minglora-marketing-fund-order-'+requestId);
+        const approveUrl=(order.links||[]).find(link=>link.rel==='approve')?.href;
+        if(!order.id||!approveUrl)return json(res,502,{error:'PayPal did not return a marketing funding approval link.'});
+        await requestSupabaseState('economy_marketing_funding_order_create',{
+          adminUserId:user.id,adminEmail,paypalOrderId:order.id,amountMinor,requestId,note
         });
-        return json(res,200,result.funding||result);
+        return json(res,201,{ok:true,orderId:order.id,approveUrl,amountMinor,currency:'USD'});
+      }
+      if(method==='GET'&&p==='/api/admin/marketing/funding/capture'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrator can confirm marketing funding.'});
+        }
+        const orderId=String(url.searchParams.get('token')||'').trim();
+        if(orderId.length<5||orderId.length>160)return json(res,400,{error:'PayPal funding order reference is missing.'});
+        const stored=await requestSupabaseState('economy_marketing_funding_order_get',{
+          adminUserId:user.id,adminEmail,paypalOrderId:orderId
+        });
+        const fundingOrder=stored.order||{};
+        if(fundingOrder.status==='captured'){
+          res.writeHead(303,{Location:appOrigin(req)+'/?marketingFunding=success'});res.end();return;
+        }
+        const details=await paypalRequest('/v2/checkout/orders/'+encodeURIComponent(orderId),'GET',undefined);
+        const units=details.purchase_units||[];
+        const ownerUnit=units.find(unit=>unit.custom_id===user.id&&unit.reference_id===fundingOrder.request_id);
+        const expectedMinor=Number(fundingOrder.amount_minor);
+        if(!ownerUnit||details.id!==orderId||details.intent!=='CAPTURE'||
+           !Number.isSafeInteger(expectedMinor)||expectedMinor<100){
+          return json(res,409,{error:'PayPal order does not match the recorded Minglora marketing funding request.'});
+        }
+        let capture=units.flatMap(unit=>unit.payments?.captures||[]).find(item=>item.status==='COMPLETED');
+        if(!capture&&details.status==='APPROVED'){
+          const captured=await paypalRequest('/v2/checkout/orders/'+encodeURIComponent(orderId)+'/capture','POST',{},'minglora-marketing-fund-capture-'+orderId);
+          capture=(captured.purchase_units||[]).flatMap(unit=>unit.payments?.captures||[]).find(item=>item.status==='COMPLETED');
+        }
+        const paidMinor=Math.round(Number(capture?.amount?.value||0)*100);
+        if(!capture?.id||capture.amount?.currency_code!=='USD'||paidMinor!==expectedMinor){
+          return json(res,409,{error:'PayPal has not confirmed the exact USD funding amount. No bonus Coin backing was added.'});
+        }
+        await requestSupabaseState('economy_marketing_funding_order_settle',{
+          adminUserId:user.id,adminEmail,paypalOrderId:orderId,paypalCaptureId:capture.id,
+          amountMinor:paidMinor,requestId:fundingOrder.request_id
+        });
+        res.writeHead(303,{Location:appOrigin(req)+'/?marketingFunding=success'});res.end();return;
+      }
+      if(method==='POST'&&p==='/api/admin/marketing/funding'){
+        return json(res,410,{error:'Manual funding references are disabled. Use the verified PayPal checkout flow to add real cash backing.'});
       }
       if(method==='POST'&&p==='/api/admin/marketing/grants'){
         const adminEmail=normalizeEmail(user.email);
