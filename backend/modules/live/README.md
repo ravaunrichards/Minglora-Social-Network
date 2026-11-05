@@ -89,7 +89,7 @@ Video+audio LIVE hosts may publish a screen-share track in addition to microphon
 
 The pre-LIVE form saves a compact setup object on the session before a room is opened. It includes the LIVE board, title/About me text, audience, practice mode, capture quality, microphone noise suppression, stability optimization, viewer-count visibility, the community-safety reminder, gift availability, audience-control availability, content disclosure and an optional client call-to-action.
 
-The product mode is stored separately from the relational media type so the existing `broadcast_type` constraint remains `video_audio` or `audio_only`:
+The product mode is stored separately from the relational media type so the existing `broadcast_type` constraint remains `video_audio` or `audio_only`. LiveKit publish-track permissions are derived from the stored mode and participant role on both initial room creation and reconnect; Mobile Gaming hosts get microphone/screen-share, approved guests get microphone only, and audio-only participants never get camera permission:
 
 - **Video + Audio** publishes camera and microphone tracks.
 - **Audio Only** publishes a microphone track and does not request camera access.
