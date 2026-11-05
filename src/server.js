@@ -1521,19 +1521,33 @@ async function route(req, res) {
               request.reviewedAt = now();
               continue;
             }
-            try {
-              await removeLiveKitParticipant(session.roomName, request.userId);
-              await requestSupabaseState('live_speaker_mark_left', { broadcastId: session.id, userId: request.userId });
-              const leftAt = now();
-              request.status = 'left';
-              request.leftAt = leftAt;
-              const participant = (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === request.userId);
-              if (participant) { participant.status = 'left'; participant.leftAt = leftAt; }
-              guestStageRemoved++;
-            } catch (error) {
-              guestStageRemovalFailures++;
-              console.error('[Minglora LIVE] Guest-stage shutdown could not remove one speaker.', {
-                sessionId: session.id, message: String(error?.message || 'LiveKit removal failed').slice(0, 180)
+
+            // An approved speaker who has not connected does not need a LiveKit kick.
+            // Mark every approved request as left so reconnecting clients are returned
+            // to the audience role instead of being stuck with an obsolete approval.
+            let liveKitRemovalFailed = false;
+            if (request.status === 'connected') {
+              try {
+                await removeLiveKitParticipant(session.roomName, request.userId);
+              } catch (error) {
+                liveKitRemovalFailed = true;
+                guestStageRemovalFailures++;
+                console.error('[Minglora LIVE] Guest-stage shutdown could not immediately disconnect one speaker.', {
+                  sessionId: session.id, message: String(error?.message || 'LiveKit removal failed').slice(0, 180)
+                });
+              }
+            }
+
+            await requestSupabaseState('live_speaker_mark_left', { broadcastId: session.id, userId: request.userId });
+            const leftAt = now();
+            request.status = 'left';
+            request.leftAt = leftAt;
+            const participant = (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === request.userId);
+            if (participant) { participant.status = 'left'; participant.leftAt = leftAt; }
+            guestStageRemoved++;
+            if (liveKitRemovalFailed) {
+              console.warn('[Minglora LIVE] Guest state is closed; the client will be instructed to disconnect.', {
+                sessionId: session.id, userId: request.userId
               });
             }
           }
