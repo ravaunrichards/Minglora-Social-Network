@@ -1213,6 +1213,18 @@ function focusLiveRoomPanel(selector){
   window.setTimeout(()=>target.classList.remove("is-focused"),1500);
 }
 
+function liveAudioCaptureOptions(settings={}){
+  return {
+    echoCancellation:true,
+    noiseSuppression:settings.noiseSuppression!==false,
+    autoGainControl:true
+  };
+}
+function liveVideoCaptureOptions(client,quality='auto'){
+  const presetName=quality==='480p'?'h480':quality==='720p'?'h720':quality==='1080p'?'h1080':'';
+  const preset=presetName?client?.VideoPresets?.[presetName]:null;
+  return preset?.resolution?{resolution:preset.resolution}:{};
+}
 function stopLiveRewardRefresh(){
   if(liveRewardRefreshTimer){clearInterval(liveRewardRefreshTimer);liveRewardRefreshTimer=null;}
   liveRewardRefreshBusy=false;
@@ -1534,10 +1546,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
     }finally{if(connectTimeout)clearTimeout(connectTimeout);}
     $(".live-video-placeholder")?.remove();
     if(role==="host"&&cameraMode){
-      await room.localParticipant.enableCameraAndMicrophone();
+      await room.localParticipant.enableCameraAndMicrophone(liveVideoCaptureOptions(client,liveSettings.quality),liveAudioCaptureOptions(liveSettings));
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
     }else if(role==="host"||role==="guest"){
-      await room.localParticipant.setMicrophoneEnabled(true);
+      await room.localParticipant.setMicrophoneEnabled(true,liveAudioCaptureOptions(liveSettings));
       let microphonePublished=participantHasLiveAudio(room.localParticipant);
       for(let attempt=0;attempt<5&&!microphonePublished;attempt++){
         await new Promise(resolve=>setTimeout(resolve,250));
@@ -1547,7 +1559,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check browser microphone permission and try again.");
       }
       if(role==="guest"&&cameraMode){
-        await room.localParticipant.setCameraEnabled(true);
+        await room.localParticipant.setCameraEnabled(true,liveVideoCaptureOptions(client,liveSettings.quality));
         for(const publication of room.localParticipant.videoTrackPublications.values()){
           if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
         }
@@ -1573,7 +1585,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     micControl?.addEventListener("click",async()=>{
       const nextEnabled=!liveMicrophoneEnabled;micControl.disabled=true;
       try{
-        await room.localParticipant.setMicrophoneEnabled(nextEnabled);
+        await room.localParticipant.setMicrophoneEnabled(nextEnabled,liveAudioCaptureOptions(liveSettings));
         liveMicrophoneEnabled=nextEnabled;
         updateLiveControlButton(micControl,nextEnabled?"mic":"mic-off",nextEnabled?"Mute microphone":"Unmute microphone",nextEnabled?"Mute":"Unmute",nextEnabled);
         refreshSpeakerRoster();
@@ -1583,7 +1595,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     cameraControl?.addEventListener("click",async()=>{
       const nextEnabled=!liveCameraEnabled;cameraControl.disabled=true;
       try{
-        await room.localParticipant.setCameraEnabled(nextEnabled);
+        await room.localParticipant.setCameraEnabled(nextEnabled,liveVideoCaptureOptions(client,liveSettings.quality));
         liveCameraEnabled=nextEnabled;
         if(nextEnabled){
           for(const publication of room.localParticipant.videoTrackPublications.values()){
