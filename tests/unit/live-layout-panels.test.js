@@ -16,7 +16,7 @@ test('LIVE has nine host-selectable screen layouts with a safe default', () => {
     assert.ok(styles.includes('data-live-layout="' + layout + '"'), 'missing responsive layout rules for ' + layout);
   }
   assert.ok(app.includes('normalizeLiveScreenLayout(session.liveLayout)'), 'session must restore the saved host layout');
-  assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in Full Screen with guest seats visible');
+  assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in host-only Full Screen');
   assert.ok(app.includes("let activeLiveScreenLayout='full-screen'"), 'client must default to Full Screen');
   assert.ok(app.includes("String(value||'full-screen')"), 'missing saved layout must fall back to Full Screen');
 });
@@ -52,13 +52,13 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
 });
 
 
-test('Full Screen keeps the host and visible guest and empty-seat windows', () => {
-  assert.match(app, /root\.setAttribute\('aria-label','LIVE host and guest seats'\)/);
-  assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
-  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing Full Screen guest layout rules');
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat:not\(\.is-host\)\{display:flex!important/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?grid-row:2/);
-  assert.doesNotMatch(styles, /live-audio-stage\.live-host-only-layout/);
+test('Full Screen is a host-only layout with no visible guest seats or guest speaker roster', () => {
+  assert.match(app, /const hostOnly=activeLiveScreenLayout==='full-screen'/);
+  assert.match(app, /Host-only full-screen LIVE stage/);
+  assert.ok(app.includes("root.closest('.live-audio-stage')?.classList.toggle('live-host-only-layout',hostOnly)"), 'layout changes must turn host-only audio mode on and off');
+  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing full-width host stage rules');
+  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){'), 'guest and empty seats must be hidden in Full Screen');
+  assert.ok(styles.includes('.live-audio-stage.live-host-only-layout #live-speaker-list'), 'audio-only speaker roster must be hidden');
 });
 
 
