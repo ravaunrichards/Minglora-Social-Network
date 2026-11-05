@@ -65,3 +65,33 @@ test('Audio Only LIVE removes the oversized microphone and keeps the room compac
   assert.match(styles, /\.live-audio-scene\{[\s\S]*?min-height:0/);
   assert.match(styles, /\.live-audio-stage \.audio-guest-layout\{[\s\S]*?height:142px/);
 });
+
+
+test('Host-selectable LIVE layouts expose all nine choices and persist during the room', () => {
+  for (const layout of ['full_screen','fluid_panel','fluid_grid','fixed_grid','fixed_panel','side_by_side','spotlight','roundtable_1','roundtable_2']) {
+    assert.match(app, new RegExp("value:'"+layout+"'"));
+    assert.match(styles, new RegExp('\\.live-guest-layout\\.live-layout-'+layout.replace('_','_')));
+  }
+  assert.match(app, /function applyLiveRoomLayout/);
+  assert.match(app, /data-live-layout/);
+  assert.match(app, /api\('\/live\/sessions\/'\+encodeURIComponent\(session\.id\)\+'\/settings'/);
+  assert.match(server, /const liveSettingsMatch = p\.match/);
+  assert.match(server, /Only the LIVE host can change room settings/);
+});
+
+test('LIVE guest permissions are enforced server-side and passed into LiveKit grants', () => {
+  assert.match(server, /allowGuestRequests === false/);
+  assert.match(server, /allowCoHost === false/);
+  assert.match(server, /autoAcceptRequests === true/);
+  assert.match(server, /prioritizeGifters === true/);
+  assert.match(server, /getLivePublishSourceNames\(session\.liveMode, role, session\.broadcastType, session\.liveSettings \|\| \{\}\)/);
+  assert.match(app, /guestCamera!==false/);
+  assert.match(app, /topic:'minglora-live-setting'/);
+});
+
+test('Voice rings are optional and play only for newly received speaker requests', () => {
+  assert.match(app, /name='voiceRings' checked/);
+  assert.match(app, /\['voiceRings','Voice rings',true/);
+  assert.match(app, /session\.liveSettings\?\.voiceRings!==false/);
+  assert.match(app, /playCallTone\(\[620,820\],520\)/);
+});
