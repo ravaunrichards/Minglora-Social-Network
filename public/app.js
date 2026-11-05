@@ -709,6 +709,7 @@ window.addEventListener('pageshow',refreshMingloraCallAvailability);
 let activeLiveRoom=null;
 let activeLiveSession=null;
 let activeLiveRole=null;
+let activeLivePinnedComment=null;
 let liveChatRefreshTimer=null;
 let liveDirectoryRefreshTimer=null;
 let liveCameraEnabled=true;
@@ -927,10 +928,33 @@ function startLiveSpeakerRefresh(session,role,room){
   stopLiveSpeakerRefresh();void refreshLiveSpeakerPanel(session,role,room);
   if(role==="host"||role==="viewer")liveSpeakerRefreshTimer=setInterval(()=>void refreshLiveSpeakerPanel(session,role,room),5000);
 }
+function renderLivePinnedComment(comment){
+  activeLivePinnedComment=comment?.id?{
+    id:String(comment.id),
+    body:String(comment.body||"").slice(0,500),
+    author:String(comment.author||"Member").slice(0,80)
+  }:null;
+  const root=$("#live-pinned-comment");
+  if(!root)return;
+  root.replaceChildren();
+  root.classList.toggle("hidden",!activeLivePinnedComment);
+  if(!activeLivePinnedComment)return;
+  const tag=document.createElement("span");tag.className="live-pinned-tag";tag.textContent="PINNED";
+  const author=document.createElement("strong");author.textContent=activeLivePinnedComment.author+":";
+  const body=document.createElement("span");body.className="live-pinned-body";body.textContent=activeLivePinnedComment.body;
+  root.append(tag,author,body);
+}
 async function refreshLiveChat(broadcastId){
   try{
     const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
-    list.innerHTML=(data.messages||[]).map(message=>"<div class='live-chat-line'><strong>"+esc(message.user?.name||"Member")+"</strong><span>"+esc(message.body)+"</span><small>"+timeAgo(message.created_at)+"</small></div>").join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
+    list.innerHTML=(data.messages||[]).map(message=>{
+      const author=message.user?.name||"Member";
+      const isPinned=activeLivePinnedComment?.id===String(message.id);
+      const pinButton=activeLiveRole==="host"
+        ?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>"
+        :"";
+      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><strong>"+esc(author)+"</strong><span>"+esc(message.body)+"</span><small>"+timeAgo(message.created_at)+"</small>"+pinButton+"</div>";
+    }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
     list.scrollTop=list.scrollHeight;
   }catch(error){if($("#live-chat-list"))toast(error.message);}
 }
@@ -1324,10 +1348,16 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div>"+
     "<aside class='live-community-panel'><div class='live-community-title'><div><strong>LIVE community</strong><small>Be kind. Keep it positive.</small></div></div><div id='live-chat-list' class='live-chat-list'><p class='muted'>Loading comments…</p></div>"+
     "<form id='live-chat-form' class='live-chat-form'><input name='body' maxlength='500' placeholder='Add a comment…' required><button type='submit'>Send</button></form></aside></div>"+liveToolsDrawer+"</section>");
+  activeLivePinnedComment=null;
   const reactionLayer=document.createElement("div");
   reactionLayer.className="live-reaction-layer";
   reactionLayer.setAttribute("aria-hidden","true");
-  $("#live-video-stage")?.append(reactionLayer);
+  const pinnedCommentLayer=document.createElement("div");
+  pinnedCommentLayer.id="live-pinned-comment";
+  pinnedCommentLayer.className="live-pinned-comment hidden";
+  pinnedCommentLayer.setAttribute("aria-live","polite");
+  const stage=$("#live-video-stage");
+  stage?.append(reactionLayer,pinnedCommentLayer);
   const room=new client.Room({adaptiveStream:true,dynacast:true});activeLiveRoom=room;
   const updatePresence=()=>{const count=Number(room.remoteParticipants?.size||0)+(role==="viewer"?0:1);const counter=$("#live-viewer-count");if(counter)counter.textContent=count.toLocaleString()+" in room";};
   const activeLiveSpeakerIds=new Set();
@@ -1355,17 +1385,31 @@ async function openLiveRoom(session,role,issuedLiveKit){
     bubble.addEventListener("animationend",()=>bubble.remove(),{once:true});
   };
   if(client.RoomEvent.DataReceived)room.on(client.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
-    if(topic!=="minglora-live-reaction"||!payload||!participant?.identity)return;
+    if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
-    if(packet?.type!=="minglora.live.reaction"||packet.version!==1||!Object.hasOwn(liveReactionEmoji,packet.reaction))return;
-    const identity=String(participant.identity),now=Date.now(),last=receivedLiveReactionAt.get(identity)||0;
-    if(now-last<150)return;
-    receivedLiveReactionAt.set(identity,now);
-    if(receivedLiveReactionAt.size>250){
-      for(const [key,at] of receivedLiveReactionAt)if(now-at>10000)receivedLiveReactionAt.delete(key);
+    if(topic==="minglora-live-reaction"){
+      if(packet?.type!=="minglora.live.reaction"||packet.version!==1||!Object.hasOwn(liveReactionEmoji,packet.reaction))return;
+      const identity=String(participant.identity),now=Date.now(),last=receivedLiveReactionAt.get(identity)||0;
+      if(now-last<150)return;
+      receivedLiveReactionAt.set(identity,now);
+      if(receivedLiveReactionAt.size>250){
+        for(const [key,at] of receivedLiveReactionAt)if(now-at>10000)receivedLiveReactionAt.delete(key);
+      }
+      showLiveReaction(packet.reaction);
+      return;
     }
-    showLiveReaction(packet.reaction);
+    if(topic==="minglora-live-pin"&&participant.identity===session.hostId&&packet?.type==="minglora.live.pin"&&packet.version===1){
+      if(packet.action==="unpin"){
+        if(activeLivePinnedComment?.id===String(packet.messageId||""))renderLivePinnedComment(null);
+        return;
+      }
+      const messageId=String(packet.messageId||"");
+      const body=String(packet.body||"").trim();
+      const author=String(packet.author||"Member").trim();
+      if(packet.action!=="pin"||!messageId||body.length<1||body.length>500||author.length>80)return;
+      renderLivePinnedComment({id:messageId,body,author});
+    }
   });
   const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);};
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false);refreshSpeakerRoster();});
@@ -1474,6 +1518,26 @@ async function openLiveRoom(session,role,issuedLiveKit){
       }catch(error){toast(error.message||"Could not switch cameras.");}
       finally{flipCameraControl.disabled=!liveCameraEnabled;}
     });
+    $("#live-chat-list")?.addEventListener("click",async event=>{
+      const button=event.target?.closest?.("[data-live-chat-pin]");
+      if(!button||role!=="host")return;
+      const line=button.closest(".live-chat-line");
+      if(!line)return;
+      const messageId=String(button.dataset.liveChatPin||"");
+      const messageBody=String(line.querySelector("span")?.textContent||"").trim();
+      const author=String(line.querySelector("strong")?.textContent||"Member").trim();
+      if(!messageId||!messageBody)return;
+      const unpin=activeLivePinnedComment?.id===messageId;
+      const packet=unpin
+        ?{type:"minglora.live.pin",version:1,action:"unpin",messageId}
+        :{type:"minglora.live.pin",version:1,action:"pin",messageId,body:messageBody,author};
+      button.disabled=true;
+      try{
+        await room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(packet)),{reliable:true,topic:"minglora-live-pin"});
+        renderLivePinnedComment(unpin?null:{id:messageId,body:messageBody,author});
+      }catch(error){toast(error.message||"This comment could not be pinned.");}
+      finally{button.disabled=false;}
+    });
     document.querySelectorAll(".live-reaction-button[data-live-reaction]").forEach(button=>button.addEventListener("click",async()=>{
       const reaction=String(button.dataset.liveReaction||"");
       if(!Object.hasOwn(liveReactionEmoji,reaction))return;
@@ -1541,12 +1605,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
         if(button)button.disabled=false;
         return;
       }
-      closeLiveToolsPanel();stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      closeLiveToolsPanel();stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
