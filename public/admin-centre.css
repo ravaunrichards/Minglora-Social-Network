@@ -196,6 +196,32 @@
 .admin-marketing-form > strong {display:block;font-weight:750}
 .admin-marketing-budget-heading p,
 .admin-marketing-form > p {margin:5px 0 0;color:var(--muted-text,#777);font-size:.9rem;line-height:1.5}
+.admin-marketing-budget-metrics{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+  gap:10px;
+  min-width:0;
+}
+.admin-marketing-budget-metrics>div{
+  display:grid;
+  gap:5px;
+  min-width:0;
+  padding:13px 14px;
+  border:1px solid var(--border-color,rgba(127,127,127,.2));
+  border-radius:11px;
+  background:var(--surface,transparent);
+}
+.admin-marketing-budget-metrics small{
+  color:var(--muted-text,#777);
+  font-size:.82rem;
+  line-height:1.35;
+}
+.admin-marketing-budget-metrics strong{
+  font-size:clamp(1.05rem,2.2vw,1.4rem);
+  line-height:1.25;
+  overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums;
+}
 .admin-marketing-budget-summary {
   padding:12px 14px;
   border-radius:12px;
