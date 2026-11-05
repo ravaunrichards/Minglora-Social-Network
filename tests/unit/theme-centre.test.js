@@ -52,11 +52,11 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261105-live-reward-drops-1/);
-  assert.match(html, /app\.js\?v=20261105-live-reward-drops-1/);
+  assert.match(html, /styles\.css\?v=20261105-coin-funding-sources-1/);
+  assert.match(html, /app\.js\?v=20261105-coin-funding-sources-1/);
   assert.match(html, /auth-login\.js\?v=20261104-account-auth-click-2/);
-  assert.match(html, /settings\.js\?v=20261102-platform-shell-2/);
-  assert.match(sw, /minglora-shell-v81-live-reward-drops-1/);
+  assert.match(html, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
+  assert.match(sw, /minglora-shell-v83-coin-funding-sources-1/);
   assert.match(sw, /auth-login\.js\?v=20261104-account-auth-click-2/);
-  assert.match(sw, /settings\.js\?v=20261102-platform-shell-2/);
+  assert.match(sw, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
 });
