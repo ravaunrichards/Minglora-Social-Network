@@ -748,6 +748,7 @@ let liveMatchRefreshBusy=false;
 let activeLiveRecording=null;
 let liveRecordingFrame=null;
 let liveRecordingClock=null;
+let liveRecordingListTimer=null;
 let liveDirectoryFilter='all';
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'full-screen',label:'Full Screen',icon:'featured'},
@@ -1614,7 +1615,7 @@ async function setupLiveMatchPanel(session,role){
   await refreshLiveMatchPanel(session,role);
   liveMatchRefreshTimer=setInterval(()=>void refreshLiveMatchPanel(session,role),5000);
 }
-function stopLiveRecordingListRefresh(){if(liveRecordingClock){clearInterval(liveRecordingClock);liveRecordingClock=null;}}
+function stopLiveRecordingListRefresh(){if(liveRecordingListTimer){clearInterval(liveRecordingListTimer);liveRecordingListTimer=null;}if(liveRecordingClock){clearInterval(liveRecordingClock);liveRecordingClock=null;}}
 function liveRecordingClockText(startedAt){
   const ms=Math.max(0,Date.now()-new Date(startedAt).getTime()),seconds=Math.floor(ms/1000);
   return String(Math.floor(seconds/3600)).padStart(2,'0')+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
@@ -1705,12 +1706,12 @@ async function finishLiveRecording(session,{discard=false}={}){
   const startButton=$('#live-recording-start'),stopButton=$('#live-recording-stop'),progress=$('#live-recording-progress'),bar=$('#live-recording-upload-progress');
   if(stopButton)stopButton.disabled=true;
   if(startButton)startButton.disabled=true;
-  if(active.recorder.state!=='inactive')active.recorder.stop();
   const blob=await new Promise((resolve,reject)=>{
-    if(active.recorder.state==='inactive'&&active.chunks.length===0){resolve(new Blob([],{type:'video/webm'}));return;}
+    if(active.recorder.state==='inactive')return resolve(new Blob(active.chunks,{type:active.recorder.mimeType||'video/webm'}));
     active.recorder.addEventListener('stop',()=>resolve(new Blob(active.chunks,{type:active.recorder.mimeType||'video/webm'})),{once:true});
     active.recorder.addEventListener('error',event=>reject(event.error||new Error('The browser recording failed.')),{once:true});
-  }).catch(error=>{throw error;});
+    try{active.recorder.stop();}catch(error){reject(error);}
+  });
   active.stopDrawing();active.mediaStream.getTracks().forEach(track=>track.stop());active.sources.forEach(source=>{try{source.disconnect();}catch{}});await active.audioContext.close().catch(()=>{});
   const durationMs=Math.max(0,Date.now()-active.startedAt);
   try{
@@ -1793,7 +1794,7 @@ async function setupLiveRecordingPanel(session,role,room){
     });
   }
   await refreshLiveRecordings(session,role);
-  liveRecordingClock=setInterval(()=>void refreshLiveRecordings(session,role),15000);
+  liveRecordingListTimer=setInterval(()=>void refreshLiveRecordings(session,role),15000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
   stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveQaRefresh();stopLiveMatchRefresh();stopLiveRecordingListRefresh();
