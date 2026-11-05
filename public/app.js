@@ -1123,6 +1123,7 @@ function renderLivePinnedComment(comment){
 async function refreshLiveChat(broadcastId){
   try{
     const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
+    const wasNearBottom=!list.dataset.liveChatInitialized||list.scrollHeight-list.scrollTop-list.clientHeight<=72;
     list.innerHTML=(data.messages||[]).map(message=>{
       const member=message.user||message.member||{};
       const author=member.name||message.user_name||"Member";
@@ -1136,7 +1137,8 @@ async function refreshLiveChat(broadcastId){
         :"";
       return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member)+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
-    list.scrollTop=list.scrollHeight;
+    if(wasNearBottom)list.scrollTop=list.scrollHeight;
+    list.dataset.liveChatInitialized='true';
   }catch(error){if($("#live-chat-list"))toast(error.message);}
 }
 async function endHostedLiveSession(session){
@@ -1881,7 +1883,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Viewers and guests follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
-  const liveChatTools="<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Use the existing chat and moderation controls in this panel.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Chat will appear here when you select this panel.</p></div></section>";
+  const liveChatTools=liveSettings.groupChatEnabled!==false
+    ? "<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Live comments, emoji and host moderation.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Open the Chat tab to view the live conversation.</p></div></section>"
+    : "<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Chat is turned off for this broadcast.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='live-chat-disabled-note' role='status'>The host has turned off Group LIVE chat for this broadcast.</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
