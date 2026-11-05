@@ -78,7 +78,7 @@ test('Host can change the LIVE stage appearance from the settings drawer using t
 });
 
 test('Host and approved guests can use camera controls in video LIVE rooms', () => {
-  assert.match(app, /\(role==="host"\|\|role==="guest"\)&&canUseCamera\?liveControlButton\("live-camera-toggle"/);
+  assert.ok(app.includes('(role==="host"||role==="guest")&&cameraFeatureAvailable?liveControlButton("live-camera-toggle"'));
   assert.match(app, /if\(role==="guest"&&canUseCamera\)/);
   assert.match(app, /await room\.localParticipant\.setCameraEnabled\(true\)/);
   assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&canUseCamera\)/);
