@@ -41,8 +41,8 @@ test('host moderator manager is connected to list, add and remove API routes', (
   assert.ok(app.includes("id='live-moderator-panel'"));
   assert.ok(app.includes("id='live-moderator-form'"));
   assert.ok(app.includes('"/moderators"'));
-  assert.ok(app.includes('"/moderators",{method:"POST"')));
-  assert.ok(app.includes('"/moderators/"+encodeURIComponent(memberId)')));
+  assert.ok(app.includes('"/moderators",{method:"POST"'));
+  assert.ok(app.includes('"/moderators/"+encodeURIComponent(memberId)'));
   assert.ok(app.includes("data-live-tools-target='#live-moderator-panel'"));
   assert.ok(styles.includes('.live-moderator-panel'));
 });
