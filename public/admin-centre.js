@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-owner-coin-issuance-form">Owner Coins</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -80,18 +80,9 @@
           </div>
           <div class="admin-marketing-budget-summary" id="admin-campaign-coins-summary" aria-live="polite">Loading verified campaign balance…</div>
         </section>
-        <form class="admin-owner-coin-issuance" id="admin-owner-coin-issuance-form">
-          <div>
-            <strong>Owner Coin issuance</strong>
-            <p>Issue Coins directly to CreatorHubCreatorNetwork@gmail.com. These are owner-issued promotional Coins, not member credit.</p>
-          </div>
-          <label for="admin-owner-coin-amount">Coin amount</label>
-          <input id="admin-owner-coin-amount" name="amountCoins" type="number" min="1" max="9007199254740991" step="1" value="9007199254740991" inputmode="numeric" required>
-          <label for="admin-owner-coin-note">Issuance note</label>
-          <input id="admin-owner-coin-note" name="note" type="text" maxlength="240" value="Creator Hub owner promotional Coins">
-          <button type="submit" class="primary" id="admin-owner-coin-issue-submit">Issue owner Coins to CreatorHub</button>
-          <p id="admin-owner-coin-issuance-status" aria-live="polite"></p>
-        </form>
+        <div class="admin-control-centre-note" id="admin-main-wallet-protection">
+          CreatorHub Main Coin balance is protected. Member promotions are issued only from the separate Admin Promotional Gift Wallet shown above.
+        </div>
         <section class="admin-member-promotions" aria-labelledby="admin-member-promotions-title">
           <div class="admin-member-promotions-heading">
             <div>
@@ -331,6 +322,7 @@
           balance.toLocaleString() + ' Coins.';
         if (amountInput) amountInput.value = '';
         await refreshMemberPromotionHistory();
+        await refreshAdminCampaignWallet();
       } catch (error) {
         if (status) status.textContent = error.message || 'Promotional Coins could not be sent.';
       } finally {
