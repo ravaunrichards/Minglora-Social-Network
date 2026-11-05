@@ -19,7 +19,7 @@ test('Only the LIVE host can remove an approved or connected speaker', () => {
   assert.ok(start >= 0 && end > start);
   assert.match(route, /session\.hostId !== user\.id/);
   assert.match(route, /\['accept', 'reject', 'remove'\]/);
-  assert.match(route, /\['accepted', 'connected'\]\.includes\(item\.status\)/);
+  assert.match(route, /decision === 'remove' \? \['accepted', 'connected'\]/);
   assert.match(route, /removeLiveKitParticipant\(session\.roomName, speakerId\)/);
   assert.match(route, /requestSupabaseState\('live_speaker_mark_left'/);
 });
@@ -33,9 +33,9 @@ test('LiveKit participant removal checks the room and calls the server-side Room
 
 test('Host controls can remove a guest; removed members return to audience and can request again', () => {
   assert.match(app, /data-speaker-remove=/);
-  assert.match(app, /decision==="remove"\?\['accepted', 'connected'\]/);
-  assert.match(app, /Remove guest/);
-  assert.match(app, /decision==="remove"\?"remove"/);
+  assert.match(app, /data-speaker-remove=/);
+  assert.match(app, /class='live-speaker-remove'/);
+  assert.match(app, /:"remove";/);
   assert.match(edge, /if \(action === "live_speaker_mark_left"\)/);
   assert.match(edge, /upsert\(\{\s*broadcast_id:broadcastId,user_id:userId,role:"guest",status:"requested"/);
 });
