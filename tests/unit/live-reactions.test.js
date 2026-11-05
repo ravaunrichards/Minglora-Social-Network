@@ -10,14 +10,22 @@ const app = read('public/app.js');
 const server = read('src/server.js');
 const styles = read('public/styles.css');
 
-test('LIVE uses a single heart-like control beside the host profile instead of a reaction bar', () => {
+test('LIVE likes are sent by tapping the stream and chat surface, with no dedicated heart button', () => {
   assert.match(app, /class='live-stage-topbar'/);
   assert.match(app, /class='live-host-profile'/);
-  assert.match(app, /id='live-heart-like'.*data-live-reaction='heart'/);
+  assert.match(app, /class='live-like-count'/);
   assert.match(app, /id='live-reaction-count'/);
-  assert.match(app, /Object\.freeze\(\{heart:"❤️"\}\)/);
-  assert.doesNotMatch(app, /live-reaction-bar|data-live-reaction='clap'|data-live-reaction='fire'|data-live-reaction='laugh'/);
-  assert.match(styles, /\.live-heart-button/);
+  assert.doesNotMatch(app, /id='live-heart-like'|live-heart-button|live-reaction-button/);
+  assert.match(app, /stage\?\.addEventListener\("click",event=>/);
+  assert.match(app, /interactiveTarget=event\.target\?\.closest\?\./);
+  assert.match(app, /showLiveReaction\("heart"\)/);
+  assert.match(styles, /\.live-like-count/);
+});
+
+test('Host broadcast exit is a standard power symbol at the top-right of the LIVE stage', () => {
+  assert.match(app, /id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg/);
+  assert.match(styles, /\.live-video-stage>\.live-stage-topbar/);
+  assert.match(styles, /\.live-host-power-button svg/);
 });
 
 test('LIVE reactions travel over the room data channel and are validated before display', () => {
