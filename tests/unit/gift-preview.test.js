@@ -32,7 +32,7 @@ test('gift previews retain visible artwork when the 3D model or artwork cannot l
 test('Gifts preview assets are versioned in both the HTML shell and service worker', () => {
   assert.match(html, /gifts\.js\?v=20261105-gift-preview-visible-1/);
   assert.match(sw, /gifts\.js\?v=20261105-gift-preview-visible-1/);
-  assert.match(html, /styles\.css\?v=[^']*gifts-preview-1/);
-  assert.match(sw, /styles\.css\?v=[^']*gifts-preview-1/);
+  assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1/);
+  assert.match(sw, /styles\.css\?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1/);
   assert.match(sw, /v97-gifts-preview-visible-1/);
 });
