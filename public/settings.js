@@ -222,7 +222,7 @@
                 <p class="muted">Connect an authenticator app to your Supabase account. Minglora requires a current code at sign-in once enabled, and confirms the provider's AAL2 session before marking setup complete.</p>
                 <div id="mfa-enrollment-panel"></div>
                 <div id="mfa-factors-list">${factors.length?factors.map(factor=>'<div class="settings-blocked-person"><div><strong>'+escapeHtml(factor.friendlyName||'Authenticator')+'</strong><small>'+escapeHtml(factor.type||'TOTP')+' · '+escapeHtml(factor.status||'unknown')+'</small></div><button class="secondary" type="button" data-remove-factor="'+escapeHtml(factor.id)+'" data-factor-status="'+escapeHtml(factor.status||'')+'">Remove</button></div>').join(''):'<p class="settings-empty">No authenticator factors enrolled.</p>'}</div>
-                <button class="secondary" type="button" id="enroll-totp" ${mfaResult.available?'':'disabled'}>Set up authenticator</button>
+                <button class="secondary" type="button" id="enroll-totp">Set up or restart authenticator</button>
                 <p class="settings-form-status" id="mfa-status" role="status">${escapeHtml(mfaResult.error||'')}</p>
               </div>
               <div class="settings-security-form">
