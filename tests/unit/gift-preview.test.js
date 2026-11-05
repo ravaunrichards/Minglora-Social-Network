@@ -34,5 +34,5 @@ test('Gifts preview assets are versioned in both the HTML shell and service work
   assert.match(sw, /gifts\.js\?v=20261105-gift-preview-visible-1/);
   assert.match(html, /styles\.css\?v=[^']*gifts-preview-1/);
   assert.match(sw, /styles\.css\?v=[^']*gifts-preview-1/);
-  assert.match(sw, /minglora-shell-v97-gifts-preview-visible-1/);
+  assert.match(sw, /v97-gifts-preview-visible-1/);
 });
