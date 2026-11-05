@@ -220,7 +220,7 @@
             </section>
             <section class="settings-card" id="settings-cache" data-settings-category="cache-cellular">
               ${sectionHeading('Cache &amp; Cellular')}
-              <label class="settings-toggle"><span><strong>Lite mode</strong><small>Reduce decorative motion and heavy visual effects to use less data and keep Minglora responsive.</small></span><input type="checkbox" name="liteMode" ${settings.preferences.liteMode ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Lite mode</strong><small>Reduce decorative motion and heavy visual effects for a simpler, more responsive interface. LIVE and video streaming data use is controlled separately.</small></span><input type="checkbox" name="liteMode" ${settings.preferences.liteMode ? 'checked' : ''}></label>
               <div class="settings-storage-summary">
                 <div><small>Browser storage used</small><strong id="settings-storage-used">Checking…</strong></div>
                 <div><small>Temporary cached images</small><strong id="settings-cached-images">Checking…</strong></div>
