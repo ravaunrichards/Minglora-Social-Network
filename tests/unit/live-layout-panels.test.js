@@ -123,15 +123,13 @@ test('Every Full Screen LIVE control icon has its expected working event handler
   assert.match(app, /typeof navigator\.mediaDevices\?\.getDisplayMedia!=="function"/);
 });;
 
-test('Full Screen host video fits the available stage row and compact controls never need internal scrolling', () => {
-  const fitRules = styles.slice(styles.lastIndexOf('/* Full Screen viewport-fit hardening.'));
-  assert.ok(fitRules.includes('max-height:min(68dvh,100%)!important'), 'host video must stay within the available stage row');
-  assert.ok(fitRules.includes('@media(max-width:759px)'), 'missing phone and tablet control sizing');
-  assert.ok(fitRules.includes('grid-template-columns:repeat(6,minmax(0,1fr))!important'), 'standard phones need a six-column two-row dock');
-  assert.ok(fitRules.includes('@media(max-width:359px)'), 'missing narrow-phone layout');
-  assert.ok(fitRules.includes('grid-template-columns:repeat(5,minmax(0,1fr))!important'), 'narrow phones need five columns so every action stays within two rows');
-  assert.ok(fitRules.includes('overflow:visible!important'), 'mobile controls must not introduce an internal scroll area');
-  assert.ok(fitRules.includes('@media(max-height:520px) and (orientation:landscape)'), 'missing short-landscape sizing');
-  assert.ok(fitRules.includes('grid-auto-rows:37px!important'), 'short-landscape controls must use compact rows');
-  assert.ok(fitRules.includes('max-height:83px!important'), 'short-landscape dock must fit without clipping');
+test('Full Screen uses the compact centered host-only portrait stage from PR #102', () => {
+  assert.match(app, /value:'full-screen',label:'Full Screen',icon:'featured'/);
+  assert.match(app, /classList\.toggle\('live-full-screen-layout',hostOnly\)/);
+  assert.doesNotMatch(app, /classList\.toggle\('live-full-screen-active',hostOnly\)/);
+  assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
+  assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
+  assert.match(styles, /max-height:min\(78dvh,760px\)/);
+  assert.match(styles, /aspect-ratio:4 \/ 5/);
+  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
 });
