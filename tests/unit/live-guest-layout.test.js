@@ -42,3 +42,42 @@ test('Approved guests can publish camera in video LIVE and remain microphone-onl
   assert.match(app, /audio-only LIVE does not use a camera/);
   assert.doesNotMatch(app, /camera publishing is disabled/);
 });
+
+
+test('The current host or guest can see their own video in their labeled stage seat', () => {
+  assert.match(app, /identity:String\(person\.identity\|\|\(person===local\?\(state\.user\?\.id\|\|"local"\):index\)\)/);
+  assert.match(app, /role==="guest"\&\&local\)guests\.push\(local\)/);
+  assert.match(app, /is-local/);
+  assert.match(app, /YOU · GUEST/);
+  assert.match(app, /YOU · HOST/);
+  assert.match(app, /refreshSpeakerRoster\(\);\s*for\(const publication of room\.localParticipant\.videoTrackPublications\.values\(\)\)/);
+});
+
+test('LIVE mic and camera controls change actual LiveKit tracks and keep active UI state in sync', () => {
+  assert.match(app, /setMicrophoneEnabled\(nextEnabled\)/);
+  assert.match(app, /setCameraEnabled\(nextEnabled\)/);
+  assert.match(app, /button\.classList\.toggle\("is-active",active\)/);
+  assert.match(app, /cameraAllowedNow\(\)/);
+  assert.match(app, /syncLiveCameraControls\(\)/);
+  assert.match(app, /removeLocalCameraTiles\(\)/);
+});
+
+test('A host can revoke and restore camera permissions for connected guests without requiring a rejoin', () => {
+  assert.match(app, /guestCameraAllowed=packet\.enabled/);
+  assert.match(app, /if\(packet\.enabled\)toast\("Guest camera access is enabled/);
+  assert.match(app, /Guest cameras disabled by host/);
+  assert.match(app, /data-live-room-setting='guestCamera'/);
+});
+
+test('Hosts and guests have reciprocal live participant visibility and their own device tools', () => {
+  assert.match(app, /role==='viewer'\|\|!room/);
+  assert.match(app, /const liveViewerTools=\(role==="host"\|\|role==="guest"\)/);
+  assert.match(app, /data-live-tools-panel-target='devices'/);
+  assert.match(app, /data-live-tools-panel-target='viewers'/);
+});
+
+test('Host permission toggles show a blue checked state and remain operable', () => {
+  assert.match(styles, /\.live-room-permission-toggle input:checked\+\.live-preflight-switch\{\s*background:#1769e0/);
+  assert.match(styles, /\.live-room-permission-toggle input:checked\+\.live-preflight-switch::after\{\s*transform:translateX\(12px\)/);
+  assert.match(styles, /\.live-control-button\.is-active \.live-control-icon\{\s*background:linear-gradient\(155deg,#348cff,#1769e0\)/);
+});
