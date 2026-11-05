@@ -102,17 +102,70 @@ function getDeduplicatedSenderTotals(db) {
  * Return the public-facing badge for a member, based only on confirmed gifts
  * they sent. Members who have not sent a confirmed gift have no gifter badge.
  */
+function emptyGifterTotals() {
+  return { xp: 0, giftsSent: 0, recipients: new Set(), firstGiftAt: "", lastGiftAt: "" };
+}
+
+function getDeduplicatedGiftEvents(db) {
+  const ledger = Array.isArray(db.gifterProgressionLedger) ? db.gifterProgressionLedger : [];
+  const seen = new Set();
+  return ledger.filter(item => {
+    if (!item?.giftId || seen.has(item.giftId)) return false;
+    seen.add(item.giftId);
+    return true;
+  });
+}
+
+function getAdminGifterOverride(db, userId) {
+  return (Array.isArray(db.gifterBadgeAdminOverrides) ? db.gifterBadgeAdminOverrides : [])
+    .find(item => item?.userId === userId) || null;
+}
+
+function getGifterProgressionContext(db, userId) {
+  const events = getDeduplicatedGiftEvents(db);
+  const lifetimeTotals = aggregateBySender(events);
+  const lifetime = lifetimeTotals.get(userId) || emptyGifterTotals();
+  const override = getAdminGifterOverride(db, userId);
+  const resetAt = String(override?.progressionResetAt || "");
+  const resetAtMs = resetAt ? Date.parse(resetAt) : Number.NaN;
+  const progressionEvents = events.filter(event =>
+    event.senderId === userId &&
+    (!Number.isFinite(resetAtMs) || Date.parse(event.createdAt || "") > resetAtMs)
+  );
+  const progressionTotals = aggregateBySender(progressionEvents);
+  const progression = progressionTotals.get(userId) || emptyGifterTotals();
+  const earnedLevel = getGifterLevel(progression.xp);
+  const grantedLevel = Math.max(0, Math.min(LEVEL_CAP, Math.floor(Number(override?.grantedLevel) || 0)));
+  return {
+    events,
+    lifetime,
+    progression,
+    override,
+    earnedLevel,
+    grantedLevel,
+    level: Math.max(earnedLevel, grantedLevel)
+  };
+}
+
+/**
+ * Return the public-facing badge for a member. Confirmed gifts remain the only
+ * source of earned progress; an audited admin override can separately grant
+ * visibility/unlock status without adding Coin spend or touching any wallet.
+ */
 export function getGifterBadgeSummary(db, userId) {
   if (!db || typeof db !== "object" || !userId) return null;
-  const own = getDeduplicatedSenderTotals(db).get(userId);
-  if (!own || own.giftsSent < 1) return null;
-  const level = getGifterLevel(own.xp);
-  const badge = getGifterLevelChart(own.xp)[level - 1];
+  const context = getGifterProgressionContext(db, userId);
+  if (context.level < 1) return null;
+  const badge = getGifterLevelChart(context.progression.xp)[context.level - 1];
+  const adminAwarded = context.grantedLevel > context.earnedLevel;
   return {
-    level,
+    level: context.level,
     tier: badge.tier,
     badgeName: badge.badgeName,
-    liveEntranceUnlocked: level >= 25
+    liveEntranceUnlocked: context.level >= 25,
+    badgeSource: adminAwarded ? "admin_awarded" : "earned",
+    adminAwarded,
+    unlockedLevels: context.level
   };
 }
 
@@ -182,32 +235,37 @@ export function getGifterProgressionOverview(db, userId) {
   }
   db.gifterProgressionLedger ||= [];
 
-  // Keep the first confirmed copy of each transaction. This protects totals if
-  // an older persisted snapshot contains duplicate transaction records.
-  const seen = new Set();
-  const events = db.gifterProgressionLedger.filter(item => {
-    if (!item?.giftId || seen.has(item.giftId)) return false;
-    seen.add(item.giftId);
-    return true;
-  });
-  const totals = aggregateBySender(events);
-  const own = totals.get(userId) || { xp: 0, giftsSent: 0, recipients: new Set(), firstGiftAt: "", lastGiftAt: "" };
-  const level = getGifterLevel(own.xp);
+  const context = getGifterProgressionContext(db, userId);
+  const events = context.events;
+  const lifetime = context.lifetime;
+  const own = context.progression;
+  const level = context.level;
   const nextLevel = level < LEVEL_CAP ? level + 1 : null;
   const currentThreshold = level > 0 ? gifterXpRequired(level) : 0;
   const nextThreshold = nextLevel ? gifterXpRequired(nextLevel) : null;
   const xpIntoLevel = Math.max(0, own.xp - currentThreshold);
   const xpForLevel = nextThreshold === null ? 0 : nextThreshold - currentThreshold;
   const xpRemaining = nextThreshold === null ? 0 : Math.max(0, nextThreshold - own.xp);
-  const progressPercent = xpForLevel > 0
-    ? Math.max(0, Math.min(100, Math.round((xpIntoLevel / xpForLevel) * 100)))
-    : 100;
-  const chart = getGifterLevelChart(own.xp);
+  const progressPercent = nextThreshold === null
+    ? 100
+    : xpForLevel > 0
+      ? Math.max(0, Math.min(100, Math.round((xpIntoLevel / xpForLevel) * 100)))
+      : 100;
+  const earnedLevel = context.earnedLevel;
+  const grantedLevel = context.grantedLevel;
+  const adminAwarded = grantedLevel > earnedLevel;
+  const chart = getGifterLevelChart(own.xp).map(item => ({
+    ...item,
+    unlocked: item.level <= level,
+    current: level > 0 && item.level === level,
+    adminAwarded: item.level <= grantedLevel && item.level > earnedLevel
+  }));
   const currentBadge = level > 0 ? chart[level - 1] : null;
   const newGifterIdentity = getNewGifterIdentity(db, userId);
 
   const members = new Map((db.users || []).map(member => [member.id, member]));
-  const leaderboard = [...totals.entries()]
+  const lifetimeTotals = aggregateBySender(events);
+  const leaderboard = [...lifetimeTotals.entries()]
     .map(([id, value]) => {
       const member = members.get(id);
       if (!member) return null;
@@ -246,13 +304,17 @@ export function getGifterProgressionOverview(db, userId) {
     current: {
       level,
       xp: own.xp,
-      totalCoinsSent: own.xp,
-      giftsSent: own.giftsSent,
-      uniqueRecipients: own.recipients.size,
+      totalCoinsSent: lifetime.xp,
+      giftsSent: lifetime.giftsSent,
+      uniqueRecipients: lifetime.recipients.size,
       rankPosition,
       tier: currentBadge?.tier || null,
       badgeName: currentBadge?.badgeName || null,
       hasUnlockedBadge: level > 0,
+      badgeSource: adminAwarded ? "admin_awarded" : level > 0 ? "earned" : null,
+      adminAwarded,
+      grantedLevel,
+      progressionResetAt: context.override?.progressionResetAt || null,
       nextLevel,
       nextLevelXp: nextThreshold,
       xpRemaining,
@@ -269,10 +331,12 @@ export function getGifterProgressionOverview(db, userId) {
       xpPerCoin: 1,
       coinsPerProgressPoint: 1,
       source: "Confirmed member-to-member and LIVE gifts sent",
-      excluded: ["Coin purchases", "Gifts received", "Unconfirmed or duplicate transactions"],
+      excluded: ["Coin purchases", "Gifts received", "Failed gift attempts", "Duplicate transactions"],
       maximumLevel: LEVEL_CAP,
       firstLevelRequiresCoinsSent: 1,
-      newGifterIdentityDays: 7
+      newGifterIdentityDays: 7,
+      adminAwardPolicy: "Admin grants unlock badges separately and never add to Coin spend or wallet balances.",
+      resetPolicy: "Admin resets set a new progression start while preserving the original gift ledger and lifetime history."
     }
   };
 }
