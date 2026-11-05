@@ -274,3 +274,53 @@
   .admin-member-promotion-search-row{flex-direction:column}
   .admin-member-promotion-search-row button{width:100%}
 }
+
+/* Searchable, newest-first member selector for Admin promotions */
+.admin-member-search-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:stretch;
+  gap:8px;
+  min-width:0;
+}
+.admin-member-search-row input{
+  width:100%;
+  min-width:0;
+  min-height:42px;
+  padding:10px 12px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));
+  border-radius:9px;
+  color:inherit;
+  background:var(--surface,transparent);
+  font:inherit;
+}
+.admin-member-search-row button{min-height:42px;white-space:nowrap}
+#admin-member-promotion-recipient{
+  width:100%;
+  min-width:0;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));
+  border-radius:9px;
+  color:inherit;
+  background:var(--surface,transparent);
+  font:inherit;
+}
+.admin-member-search-status,
+.admin-member-promotion-funding-note{
+  margin:0;
+  color:var(--muted-text,#777);
+  font-size:.82rem;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+.admin-member-promotion-funding-note{
+  padding:10px 12px;
+  border-left:3px solid var(--border-color,rgba(127,127,127,.28));
+  background:var(--surface,rgba(127,127,127,.04));
+  border-radius:0 8px 8px 0;
+}
+@media(max-width:560px){
+  .admin-member-search-row{grid-template-columns:minmax(0,1fr)}
+  .admin-member-search-row button{width:100%}
+}
