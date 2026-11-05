@@ -1226,7 +1226,7 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/security/mfa/totp/enroll'){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Authenticator-based MFA requires Minglora Supabase Auth.'});
         const auth=await sessionAuth(currentSession);if(!auth?.access_token)return json(res,401,{error:'Your secure session has expired. Log in again.'});
-        const result=await supabaseEnrollTotp(auth.access_token,'Minglora authenticator');
+        const existingFactors=await supabaseListFactors(auth.access_token);for(const factor of existingFactors.factors||[]){if(factor.factor_type==='totp'&&factor.status==='unverified'&&factor.friendly_name==='Minglora authenticator')await supabaseUnenrollFactor(auth.access_token,factor.id);}const result=await supabaseEnrollTotp(auth.access_token,'Minglora authenticator');
         return json(res,201,{factor:{id:result.id,type:result.type||'totp',status:result.status||'unverified',friendlyName:result.friendly_name},totp:result.totp||null});
       }
       if(method==='POST'&&p==='/api/security/mfa/totp/verify'){
