@@ -787,10 +787,37 @@ function restoreLiveFullscreenElement(element){
 }
 function restoreLiveChatFullscreenElements(){
   const composer=$('.live-chat-composer-wrap');
-  const items=[$('.live-like-control'),$('#live-fan-club-join'),$('#live-gifts-toggle'),$('#live-share-toggle')];
-  items.forEach(restoreLiveFullscreenElement);
-  restoreLiveFullscreenElement(composer);
-  composer?.querySelector('.live-chat-quick-actions')?.remove();
+  const moved=[$('.live-like-control'),$('#live-fan-club-join'),$('#live-gifts-toggle'),$('#live-share-toggle'),composer,$('.live-player-controls')];
+  moved.forEach(restoreLiveFullscreenElement);
+  $('.live-fullscreen-dock')?.remove();
+  $('.live-player-shell')?.classList.remove('live-fullscreen-two-row-dock');
+}
+function ensureLiveFullscreenDock(stage){
+  let dock=stage.querySelector(':scope > .live-fullscreen-dock');
+  if(!dock){
+    dock=document.createElement('div');
+    dock.className='live-fullscreen-dock';
+    dock.setAttribute('aria-label','LIVE controls and chat');
+    const tools=document.createElement('div');
+    tools.className='live-fullscreen-tools-row';
+    tools.setAttribute('role','group');
+    tools.setAttribute('aria-label','LIVE room controls');
+    const engagement=document.createElement('div');
+    engagement.className='live-fullscreen-engagement-row';
+    const actions=document.createElement('div');
+    actions.className='live-fullscreen-engagement-actions';
+    actions.setAttribute('role','group');
+    actions.setAttribute('aria-label','Like and gifts');
+    engagement.append(actions);
+    dock.append(tools,engagement);
+    stage.append(dock);
+  }
+  return {
+    dock,
+    tools:dock.querySelector('.live-fullscreen-tools-row'),
+    engagement:dock.querySelector('.live-fullscreen-engagement-row'),
+    actions:dock.querySelector('.live-fullscreen-engagement-actions')
+  };
 }
 function syncLiveFullscreenComposition(hostOnly){
   const shell=$('.live-player-shell'),stage=$('#live-video-stage'),videoColumn=stage?.closest('.live-video-column');
@@ -802,35 +829,26 @@ function syncLiveFullscreenComposition(hostOnly){
   const chat=$('#live-chat-overlay');
   if(hostOnly){
     if(topbar&&topbar.parentElement!==stage)stage.prepend(topbar);
-    if(controls&&controls.parentElement!==stage)stage.append(controls);
     if(back&&activeLiveRole!=='host'&&topbar&&back.parentElement!==topbar){
       back.classList.add('live-stage-exit');
       const power=topbar.querySelector('.live-host-power-button');
       topbar.insertBefore(back,power||null);
     }
     const chatIsInTools=Boolean(chat?.closest('#live-tools-drawer'));
-    const composer=$('.live-chat-composer-wrap');
-    if(composer&&controls&&!chatIsInTools){
-      let quick=composer.querySelector('.live-chat-quick-actions');
-      if(!quick){
-        quick=document.createElement('div');
-        quick.className='live-chat-quick-actions';
-        quick.setAttribute('role','group');
-        quick.setAttribute('aria-label','LIVE quick actions');
-        composer.append(quick);
-      }
-      moveLiveFullscreenElement(composer,controls);
-      [$('.live-like-control'),$('#live-fan-club-join'),$('#live-gifts-toggle'),$('#live-share-toggle')]
-        .filter(Boolean).forEach(element=>moveLiveFullscreenElement(element,quick));
+    const dock=ensureLiveFullscreenDock(stage);
+    if(controls&&controls.parentElement!==dock.tools)moveLiveFullscreenElement(controls,dock.tools);
+    if(!chatIsInTools){
+      const composer=$('.live-chat-composer-wrap');
+      if(composer)moveLiveFullscreenElement(composer,dock.engagement);
+      [$('.live-like-control'),$('#live-fan-club-join'),$('#live-gifts-toggle')]
+        .filter(Boolean).forEach(element=>moveLiveFullscreenElement(element,dock.actions));
     }
     shell.classList.toggle('live-full-screen-two-row-dock',Boolean(controls&&controls.querySelectorAll('.live-control-button').length>4));
   }else{
     restoreLiveChatFullscreenElements();
     if(topbar&&topbar.parentElement!==videoColumn)stage.before(topbar);
-    if(controls&&controls.parentElement!==videoColumn)videoColumn.append(controls);
     if(back&&header&&back.parentElement!==header)header.prepend(back);
     back?.classList.remove('live-stage-exit');
-    shell.classList.remove('live-full-screen-two-row-dock');
   }
   shell.classList.toggle('live-full-screen-mode',Boolean(hostOnly));
 }
@@ -1205,23 +1223,110 @@ function renderLivePinnedComment(comment){
 }
 async function refreshLiveChat(broadcastId){
   try{
-    const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");if(!list)return;
+    const data=await api("/live/sessions/"+encodeURIComponent(broadcastId)+"/chat"),list=$("#live-chat-list");
+    if(!list)return;
+    const messages=Array.isArray(data.messages)?data.messages.slice(-40):[];
     const wasNearBottom=!list.dataset.liveChatInitialized||list.scrollHeight-list.scrollTop-list.clientHeight<=72;
-    list.innerHTML=(data.messages||[]).map(message=>{
+    const existing=new Map([...list.querySelectorAll(':scope > .live-chat-line[data-live-chat-id]')]
+      .map(line=>[String(line.dataset.liveChatId||''),line]));
+    const seen=new Set();
+    let added=0;
+    const canModerateChat=activeLiveRole==="host"||Boolean(activeLiveSession?.liveModerators?.includes(state.user?.id));
+    messages.forEach((message,index)=>{
       const member=message.user||message.member||{};
       const author=member.name||message.user_name||"Member";
       const handle=member.username||message.username||"";
       const chatAvatar=member.avatar||member.avatar_url||member.avatarUrl||message.avatar||message.avatar_url||"";
-      const authorAvatar=avatar({name:author,avatar:chatAvatar});
-      const isPinned=activeLivePinnedComment?.id===String(message.id);
-      const canModerateChat=activeLiveRole==="host"||Boolean(activeLiveSession?.liveModerators?.includes(state.user?.id));
-      const controls=canModerateChat
-        ?"<span class='live-chat-actions'>"+(activeLiveRole==="host"?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>":"")+"<button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
-        :"";
-      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member)+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
-    }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
-    if(wasNearBottom)list.scrollTop=list.scrollHeight;
-    list.dataset.liveChatInitialized='true';
+      const messageId=String(message.id??(String(message.created_at||"message")+"-"+index));
+      const signature=JSON.stringify([author,handle,String(message.body||""),chatAvatar]);
+      let line=existing.get(messageId);
+      const isNew=!line;
+      if(!line){
+        line=document.createElement("div");
+        line.className="live-chat-line";
+        line.dataset.liveChatId=messageId;
+        line.dataset.messageSignature=signature;
+        const image=document.createElement("img");
+        image.className="live-chat-avatar";
+        image.alt="";
+        image.loading="lazy";
+        image.src=avatar({name:author,avatar:chatAvatar});
+        const copy=document.createElement("div");
+        copy.className="live-chat-copy";
+        const name=document.createElement("strong");
+        name.innerHTML=esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member);
+        const body=document.createElement("span");
+        body.textContent=String(message.body||"");
+        const time=document.createElement("small");
+        time.className="live-chat-time";
+        time.textContent=timeAgo(message.created_at);
+        copy.append(name,body,time);
+        line.append(image,copy);
+        if(canModerateChat){
+          const actions=document.createElement("span");
+          actions.className="live-chat-actions";
+          if(activeLiveRole==="host"){
+            const pin=document.createElement("button");
+            pin.type="button";
+            pin.className="live-chat-pin";
+            pin.dataset.liveChatPin=messageId;
+            actions.append(pin);
+          }
+          const remove=document.createElement("button");
+          remove.type="button";
+          remove.className="live-chat-delete";
+          remove.dataset.liveChatDelete=messageId;
+          remove.textContent="Remove";
+          remove.setAttribute("aria-label","Remove this comment");
+          actions.append(remove);
+          line.append(actions);
+        }
+      }else{
+        const time=line.querySelector(".live-chat-time");
+        if(time)time.textContent=timeAgo(message.created_at);
+        if(line.dataset.messageSignature!==signature){
+          const copy=line.querySelector(".live-chat-copy");
+          if(copy){
+            const name=copy.querySelector("strong");
+            const body=copy.querySelector(":scope > span");
+            if(name)name.innerHTML=esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member);
+            if(body)body.textContent=String(message.body||"");
+            const image=line.querySelector(".live-chat-avatar");
+            if(image)image.src=avatar({name:author,avatar:chatAvatar});
+          }
+          line.dataset.messageSignature=signature;
+        }
+      }
+      if(isNew){
+        line.classList.add("live-chat-line-new");
+        line.addEventListener("animationend",()=>line.classList.remove("live-chat-line-new"),{once:true});
+        list.append(line);
+        added++;
+      }
+      const pin=line.querySelector("[data-live-chat-pin]");
+      if(pin){
+        const isPinned=activeLivePinnedComment?.id===messageId;
+        pin.classList.toggle("is-pinned",isPinned);
+        pin.textContent=isPinned?"Unpin":"Pin";
+        pin.setAttribute("aria-label",(isPinned?"Unpin":"Pin")+" this comment");
+      }
+      seen.add(messageId);
+    });
+    existing.forEach((line,id)=>{if(!seen.has(id))line.remove();});
+    const empty=list.querySelector(":scope > .live-chat-empty");
+    if(!messages.length&&!list.querySelector(".live-chat-line")){
+      if(!empty){
+        const placeholder=document.createElement("p");
+        placeholder.className="live-chat-empty";
+        placeholder.textContent="Say hello to the LIVE community.";
+        list.replaceChildren(placeholder);
+      }
+    }else empty?.remove();
+    if(wasNearBottom&&(added>0||!list.dataset.liveChatInitialized)){
+      list.scrollTo?.({top:list.scrollHeight,behavior:list.dataset.liveChatInitialized?"smooth":"auto"});
+      if(!list.scrollTo)list.scrollTop=list.scrollHeight;
+    }
+    list.dataset.liveChatInitialized="true";
   }catch(error){if($("#live-chat-list"))toast(error.message);}
 }
 async function endHostedLiveSession(session){
