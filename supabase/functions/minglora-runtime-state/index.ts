@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
-    "economy_creator_earnings",
+    "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit",
     "economy_get_payout_account", "economy_set_payout_account", "economy_request_payout",
     "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
@@ -268,11 +268,77 @@ Deno.serve(async (req: Request) => {
     const userId = String(input.userId || "");
     if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
     const [walletResult, ledgerResult] = await Promise.all([
-      admin.from("coin_wallets").select("balance_coins,updated_at").eq("user_id", userId).maybeSingle(),
+      admin.from("coin_wallets").select("balance_coins,cash_balance_coins,marketing_balance_coins,promo_balance_coins,updated_at").eq("user_id", userId).maybeSingle(),
       admin.from("coin_ledger").select("id,delta_coins,balance_after,entry_type,description,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100)
     ]);
     if (walletResult.error || ledgerResult.error) return json(503, { error: "Minglora wallet could not be loaded." });
     return json(200, { wallet: walletResult.data || { balance_coins: 0 }, ledger: ledgerResult.data || [] });
+  }
+
+  if (action === "economy_marketing_budget") {
+    const { data, error } = await admin.rpc("minglora_get_marketing_budget");
+    if (error) return fail(error, "Minglora marketing budget could not be loaded.");
+    return json(200, { budget: data || {} });
+  }
+
+  if (action === "economy_marketing_funding") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    const fundingReference = String(input.fundingReference || "").trim();
+    const note = String(input.note || "").trim().slice(0, 240);
+    if (!validUuid(adminUserId) || !validUuid(requestId) ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
+        fundingReference.length < 6 || fundingReference.length > 160 ||
+        adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(400, { error: "Enter a valid verified funding amount and external transaction reference." });
+    }
+    const { data, error } = await admin.rpc("minglora_record_marketing_funding", {
+      p_admin_user_id: adminUserId,
+      p_admin_email: adminEmail,
+      p_amount_minor: amountMinor,
+      p_request_id: requestId,
+      p_funding_reference: fundingReference,
+      p_note: note
+    });
+    if (error) return fail(error, "Minglora could not record marketing funding.");
+    return json(200, { funding: data });
+  }
+
+  if (action === "economy_marketing_grant") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const memberUsername = String(input.memberUsername || "").trim().replace(/^@/, "").toLowerCase();
+    const amountCoins = Number(input.amountCoins);
+    const requestId = String(input.requestId || "");
+    const note = String(input.note || "").trim().slice(0, 240);
+    if (!validUuid(adminUserId) || !validUuid(requestId) ||
+        !/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+        !Number.isSafeInteger(amountCoins) || amountCoins < 1 ||
+        adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(400, { error: "Enter a valid Minglora username and a positive Coin grant." });
+    }
+    const { data: member, error: memberError } = await admin
+      .from("profiles")
+      .select("id,username")
+      .eq("username", memberUsername)
+      .maybeSingle();
+    if (memberError) return json(503, { error: "Minglora could not find that member account." });
+    if (!member?.id) return json(404, { error: "Minglora member was not found." });
+
+    const { data, error } = await admin.rpc("minglora_grant_marketing_coins", {
+      p_admin_user_id: adminUserId,
+      p_admin_email: adminEmail,
+      p_member_user_id: member.id,
+      p_amount_coins: amountCoins,
+      p_request_id: requestId,
+      p_note: note
+    });
+    if (error) return fail(error, "Marketing Coins could not be granted from the funded budget.");
+    return json(200, { grant: data });
   }
 
   if (action === "economy_admin_member_credit") {
