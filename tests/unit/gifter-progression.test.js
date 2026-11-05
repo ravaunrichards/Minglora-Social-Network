@@ -9,15 +9,27 @@ import {
   getGifterBadgeSummary
 } from "../../backend/modules/gifter-progression/service.js";
 
-test("gifter levels use ascending lifetime XP thresholds from level 1 through 50", () => {
+test("gifter levels use the fixed cumulative coin thresholds from the reference chart", () => {
+  const thresholds = [
+    1, 8, 18, 34, 56, 90, 140, 220, 340, 530,
+    820, 1260, 1920, 2840, 4340, 6420, 9280, 13500, 19400, 27600,
+    39600, 54600, 75800, 105000, 144000, 196000, 265000, 357000, 478000, 637000,
+    845000, 1120000, 1470000, 1920000, 2500000, 3230000, 4180000, 5180000, 6890000, 8780000,
+    11200000, 14100000, 17800000, 22300000, 30000000, 37500000, 47500000, 60000000, 75000000, 97500000
+  ];
   assert.equal(gifterXpRequired(1), 0);
-  assert.equal(gifterXpRequired(2), 100);
-  assert.ok(gifterXpRequired(50) > gifterXpRequired(49));
+  assert.equal(gifterXpRequired(2), 8);
+  assert.equal(gifterXpRequired(50), 97500000);
   assert.equal(getGifterLevel(0), 1);
-  assert.equal(getGifterLevel(99), 1);
-  assert.equal(getGifterLevel(100), 2);
-  assert.equal(getGifterLevel(gifterXpRequired(50)), 50);
+  assert.equal(getGifterLevel(7), 1);
+  assert.equal(getGifterLevel(8), 2);
+  assert.equal(getGifterLevel(17), 2);
+  assert.equal(getGifterLevel(18), 3);
+  assert.equal(getGifterLevel(143999), 24);
+  assert.equal(getGifterLevel(144000), 25);
+  assert.equal(getGifterLevel(97500000), 50);
   assert.equal(getGifterLevelChart(0).length, 50);
+  assert.deepEqual(getGifterLevelChart(0).map(item => item.coinsRequired), thresholds);
 });
 
 test("only confirmed positive gifts are recorded and each transaction is unique", () => {
