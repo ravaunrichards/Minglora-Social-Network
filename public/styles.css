@@ -5555,3 +5555,53 @@ button.live-ranking-row{cursor:pointer}
   .live-full-screen-active .live-player-controls{max-height:96px!important;grid-auto-rows:minmax(40px,auto)!important}
   .live-full-screen-active .live-player-controls .live-control-button{height:42px!important;min-height:42px!important}
 }
+
+/* Full Screen viewport-fit hardening.
+   The host stage is capped by its actual grid row, and mobile controls stay visible
+   without creating a nested scroll area. */
+.live-full-screen-active .live-video-column>.live-video-stage:not(.live-audio-stage),
+.live-full-screen-active .live-video-column>.live-video-stage.has-live-screen-share:not(.live-audio-stage),
+.live-full-screen-active .live-video-column>.live-audio-stage{
+  max-height:min(68dvh,100%)!important;
+}
+@media(max-width:759px){
+  .live-full-screen-active .live-player-controls{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-auto-rows:42px!important;
+    min-height:96px!important;max-height:96px!important;
+    padding:4px 6px!important;gap:4px!important;
+    overflow:visible!important;overflow-y:visible!important;
+  }
+  .live-full-screen-active .live-player-controls .live-control-button{
+    width:100%!important;min-width:0!important;max-width:100%!important;
+    height:40px!important;min-height:40px!important;padding:2px 1px!important;gap:2px!important;
+  }
+  .live-full-screen-active .live-player-controls .live-control-icon{
+    width:18px!important;height:18px!important;
+  }
+  .live-full-screen-active .live-player-controls .live-control-caption{
+    max-width:100%!important;font-size:8px!important;line-height:1!important;
+  }
+}
+@media(max-width:359px){
+  .live-full-screen-active .live-player-controls{
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  }
+}
+@media(max-height:520px) and (orientation:landscape){
+  .live-full-screen-active .live-player-controls{
+    grid-auto-rows:37px!important;
+    min-height:83px!important;max-height:83px!important;
+    padding:3px 6px!important;gap:3px!important;
+    overflow:visible!important;overflow-y:visible!important;
+  }
+  .live-full-screen-active .live-player-controls .live-control-button{
+    height:35px!important;min-height:35px!important;padding:1px!important;gap:1px!important;
+  }
+  .live-full-screen-active .live-player-controls .live-control-icon{
+    width:16px!important;height:16px!important;
+  }
+  .live-full-screen-active .live-player-controls .live-control-caption{
+    font-size:7.5px!important;line-height:1!important;
+  }
+}
