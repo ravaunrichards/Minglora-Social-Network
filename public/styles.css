@@ -5561,7 +5561,7 @@ button.live-ranking-row{cursor:pointer}
 .live-full-screen-active.live-full-screen-chat-open .live-fullscreen-chat-slot #live-chat-overlay .live-chat-form{
   flex:none!important;
 }
-.live-full-screen-active.live-full-screen-chat-open .live-fullscreen-chat-slot #live-chat-disabled-note{
+.live-full-screen-active.live-full-screen-chat-open #live-chat-disabled-note{
   display:block!important;align-self:flex-start!important;margin:8px!important;padding:12px!important;
   color:#edf3fb!important;line-height:1.5!important;
 }
