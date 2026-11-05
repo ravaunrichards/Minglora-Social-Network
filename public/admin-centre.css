@@ -259,3 +259,18 @@
   .admin-member-promotion-amount{white-space:normal}
   #admin-member-promotion-submit{width:100%}
 }
+
+.admin-member-promotion-picker{display:grid;gap:8px;min-width:0}
+.admin-member-promotion-picker label{font-size:.88rem;font-weight:650}
+.admin-member-promotion-search-row{display:flex;align-items:stretch;gap:8px;min-width:0}
+.admin-member-promotion-search-row input,
+#admin-member-promotion-recipient{
+  width:100%;min-width:0;min-height:42px;padding:10px 12px;
+  border:1px solid var(--border-color,rgba(127,127,127,.25));
+  border-radius:9px;color:inherit;background:var(--surface,transparent);font:inherit;
+}
+.admin-member-promotion-search-row button{flex:0 0 auto}
+@media(max-width:560px){
+  .admin-member-promotion-search-row{flex-direction:column}
+  .admin-member-promotion-search-row button{width:100%}
+}
