@@ -746,10 +746,25 @@ let liveQaRefreshBusy=false;
 let liveMatchRefreshTimer=null;
 let liveMatchRefreshBusy=false;
 let activeLiveRecording=null;
+let activeLiveCameraEffect='none';
 let liveRecordingFrame=null;
 let liveRecordingClock=null;
 let liveRecordingListTimer=null;
 let liveDirectoryFilter='all';
+const LIVE_CAMERA_EFFECTS=Object.freeze([
+  {value:'none',label:'Natural',filter:'none'},
+  {value:'soft',label:'Soft Glow',filter:'brightness(1.06) saturate(1.12) contrast(.98)'},
+  {value:'warm',label:'Warm',filter:'sepia(.14) saturate(1.18) hue-rotate(-8deg)'},
+  {value:'cool',label:'Cool',filter:'saturate(1.08) hue-rotate(10deg)'},
+  {value:'vivid',label:'Vivid',filter:'saturate(1.35) contrast(1.08)'},
+  {value:'mono',label:'Monochrome',filter:'grayscale(1) contrast(1.1)'}
+]);
+function applyLiveStageCameraEffect(value){
+  const effect=LIVE_CAMERA_EFFECTS.find(item=>item.value===value)?.value||'none';
+  activeLiveCameraEffect=effect;
+  const root=$('#live-guest-layout');if(root)root.dataset.liveCameraEffect=effect;
+  const select=$('#live-camera-effect-select');if(select&&select.value!==effect)select.value=effect;
+}
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'full-screen',label:'Full Screen',icon:'featured'},
   {value:'fluid-panel',label:'Fluid Panel',icon:'featured'},
@@ -1866,6 +1881,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
+    (role==="host"?"<button type='button' data-live-tools-panel-target='effects' aria-pressed='false'>Effects</button>":"")+
     "<button type='button' data-live-tools-panel-target='qa' aria-pressed='false'>Q&A</button>"+
     "<button type='button' data-live-tools-panel-target='recordings' aria-pressed='false'>Recordings</button>"+
     "<button type='button' data-live-tools-panel-target='matches' aria-pressed='false'>Match</button>"+
@@ -1881,6 +1897,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (liveSettings.board?"<span class='live-board-badge'>"+esc(String(liveSettings.board).replace(/^./,x=>x.toUpperCase()))+"</span>":"")+
     (session.description?"<p class='live-session-about'>"+esc(session.description)+"</p>":"")+
     (liveSettings.clientAcquisitionEnabled&&liveSettings.clientCtaUrl&&liveSettings.clientCtaLabel?"<a class='live-client-cta' href='"+esc(liveSettings.clientCtaUrl)+"' target='_blank' rel='noopener noreferrer'>"+esc(liveSettings.clientCtaLabel)+"</a>":"")+"</div>";
+  const liveEffectPanel=role==='host'?"<section id='live-effect-panel' class='live-tools-card live-effect-panel' data-live-tools-panel='effects'><div class='live-panel-title'><strong>LIVE stage effects</strong><small>Apply a visual color look to the stage for everyone. These are not AR masks or face-tracking effects.</small></div><label for='live-camera-effect-select'>Stage look</label><select id='live-camera-effect-select' "+(liveSettings.effectsEnabled===false?'disabled':'')+">"+LIVE_CAMERA_EFFECTS.map(option=>"<option value='"+option.value+"'"+(option.value===activeLiveCameraEffect?' selected':'')+">"+esc(option.label)+"</option>").join('')+"</select><p class='live-effect-status' id='live-effect-status'>"+(liveSettings.effectsEnabled===false?'Stage effects are disabled by host settings.':'This visual look is synchronized to everyone watching the LIVE stage.')+"</p></section>":"";
   const liveRoomPermissionSettings=[
     ['allowGuestRequests','Allow guest requests',true,'Let viewers request a guest seat'],
     ['guestCamera','Guest camera',true,'Allow approved guests to publish video'],
@@ -1905,7 +1922,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveQaTools+liveMatchTools+liveRecordingTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveQaTools+liveMatchTools+liveRecordingTools+liveEffectPanel+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveStageHud=
     "<div class='live-stage-topbar'>"+
@@ -2004,6 +2021,10 @@ activeLivePinnedComment=null;
     if(!payload||!participant?.identity)return;
     let packet;
     try{packet=JSON.parse(new TextDecoder().decode(payload));}catch{return;}
+    if(topic==="minglora-live-effect"&&participant.identity===session.hostId&&packet?.type==="minglora.live.effect"&&packet.version===1&&LIVE_CAMERA_EFFECTS.some(option=>option.value===packet.effect)){
+      if(activeLiveSession?.liveSettings?.effectsEnabled!==false)applyLiveStageCameraEffect(packet.effect);
+      return;
+    }
     if(topic==="minglora-live-setting"&&participant.identity===session.hostId&&packet?.type==="minglora.live.setting"&&packet.version===1&&packet.setting==='guestCamera'&&typeof packet.enabled==='boolean'){
       activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),guestCamera:packet.enabled};
       session.liveSettings={...(session.liveSettings||{}),guestCamera:packet.enabled};
@@ -2300,6 +2321,13 @@ activeLivePinnedComment=null;
         const saved=await api('/live/sessions/'+encodeURIComponent(session.id)+'/settings',{method:'PATCH',body:JSON.stringify({settings:{[key]:input.checked}})});
         activeLiveSession.liveSettings={...(activeLiveSession.liveSettings||{}),...(saved.liveSettings||{})};
         session.liveSettings={...(session.liveSettings||{}),...(saved.liveSettings||{})};
+        if(key==='effectsEnabled'){
+          const select=$('#live-camera-effect-select'),status=$('#live-effect-status');
+          if(select)select.disabled=!input.checked;
+          if(!input.checked){applyLiveStageCameraEffect('none');if(select)select.value='none';if(status)status.textContent='Stage effects are disabled by host settings.';}
+          else if(status)status.textContent='Choose a visual look for the LIVE stage.';
+          if(room.localParticipant?.publishData){const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.effect',version:1,effect:'none'}));await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-effect'});}
+        }
         if(key==='guestCamera'&&room.localParticipant?.publishData){
           const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.setting',version:1,setting:'guestCamera',enabled:input.checked}));
           await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-setting'});
@@ -2314,6 +2342,18 @@ activeLivePinnedComment=null;
         toast((input.checked?'Enabled ':'Disabled ')+input.closest('label')?.querySelector('strong')?.textContent+'.');
       }catch(error){input.checked=previous;toast(error.message||'The LIVE setting could not be updated.');}
       finally{input.disabled=false;}
+    });
+    $('#live-camera-effect-select')?.addEventListener('change',async event=>{
+      const control=event.currentTarget,effect=String(control.value||'none');
+      if(role!=='host'||activeLiveSession?.liveSettings?.effectsEnabled===false||!LIVE_CAMERA_EFFECTS.some(item=>item.value===effect)){control.value=activeLiveCameraEffect;return;}
+      control.disabled=true;
+      try{
+        const packet=new TextEncoder().encode(JSON.stringify({type:'minglora.live.effect',version:1,effect}));
+        await room.localParticipant.publishData(packet,{reliable:true,topic:'minglora-live-effect'});
+        applyLiveStageCameraEffect(effect);
+        $('#live-effect-status').textContent=(LIVE_CAMERA_EFFECTS.find(item=>item.value===effect)?.label||'Natural')+' look is now active for the LIVE stage.';
+      }catch(error){control.value=activeLiveCameraEffect;toast(error.message||'The stage effect could not be synchronized.');}
+      finally{control.disabled=false;}
     });
     $("#live-room-theme-select")?.addEventListener("change",async event=>{
       const control=event.currentTarget,nextTheme=String(control.value||"");
