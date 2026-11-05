@@ -1374,7 +1374,7 @@ Deno.serve(async (req: Request) => {
     const assetId=String(input.assetId||"");
     const slot=String(input.slot||"");
     const originalName=String(input.originalName||"").trim().slice(0,255);
-    if(!uuidPattern.test(assetId)||!["avatar","cover","post","sound","story","group","page","message"].includes(slot)){
+    if(!uuidPattern.test(assetId)||!["avatar","cover","post","sound","story","group","page","message","ringtone"].includes(slot)){
       return json(400,{error:"A valid upload asset ID and media slot are required."});
     }
     const assetStatus=slot==="avatar"||slot==="cover"?"attached":"uploaded";
