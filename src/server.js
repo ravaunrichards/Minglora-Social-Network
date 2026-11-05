@@ -1679,6 +1679,57 @@ async function route(req, res) {
         const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
         return json(res,200,{ok:true,recipientEmail:adminEmail,issuance,wallet});
       }
+      if(method==='GET'&&p==='/api/admin/marketing/budget'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can view the marketing budget.'});
+        }
+        const result=await requestSupabaseState('economy_marketing_budget');
+        return json(res,200,result.budget||{});
+      }
+      if(method==='POST'&&p==='/api/admin/marketing/funding'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can record marketing funds.'});
+        }
+        const amountMinor=Number(input.amountMinor);
+        const requestId=String(input.requestId||'').trim();
+        const fundingReference=String(input.fundingReference||'').trim();
+        const note=String(input.note||'').trim().slice(0,240);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Number.isSafeInteger(amountMinor)||amountMinor<100||!uuidPattern.test(requestId)||
+           fundingReference.length<6||fundingReference.length>160){
+          return json(res,400,{error:'Enter a valid amount of at least USD $1.00 and the external funding transaction reference.'});
+        }
+        const result=await requestSupabaseState('economy_marketing_funding',{
+          adminUserId:user.id,adminEmail,amountMinor,requestId,fundingReference,note
+        });
+        return json(res,200,result.funding||result);
+      }
+      if(method==='POST'&&p==='/api/admin/marketing/grants'){
+        const adminEmail=normalizeEmail(user.email);
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified CreatorHub administrative account can issue marketing-funded Coins.'});
+        }
+        const memberUsername=normalizeUsername(input.memberUsername||input.memberLookup);
+        const amountCoins=Number(input.amountCoins);
+        const requestId=String(input.requestId||'').trim();
+        const note=String(input.note||'').trim().slice(0,240);
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!validateUsername(memberUsername).valid||!Number.isSafeInteger(amountCoins)||amountCoins<1||!uuidPattern.test(requestId)){
+          return json(res,400,{error:'Enter a valid Minglora username, whole-number Coin amount and request reference.'});
+        }
+        const result=await requestSupabaseState('economy_marketing_grant',{
+          adminUserId:user.id,adminEmail,memberUsername,amountCoins,requestId,note
+        });
+        return json(res,200,result.grant||result);
+      }
       if(method==='POST'&&p==='/api/coins/exchange'){
         const amountMinor=Number(input.amountMinor);
         const requestId=String(input.requestId||'').trim();
