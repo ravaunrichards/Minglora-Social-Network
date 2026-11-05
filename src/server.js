@@ -220,6 +220,11 @@ function sealSessionAuth(value){
 function openSessionAuth(sealed){if(!sealed)return null;try{const bytes=Buffer.from(sealed,'base64url');const iv=bytes.subarray(0,12),tag=bytes.subarray(12,28),encrypted=bytes.subarray(28);const decipher=crypto.createDecipheriv('aes-256-gcm',sessionCipherKey,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(encrypted),decipher.final()]).toString('utf8'));}catch{return null;}}
 function sessionFromRequest(req){const raw=cookie(req,'sid');if(!raw)return null;let decoded;try{decoded=decodeURIComponent(raw);}catch{return null;}const parts=decoded.split('.');if(parts.length!==2)return null;const [id,sig]=parts;if(!id||!sig)return null;const expected=Buffer.from(sign(id),'utf8'),supplied=Buffer.from(sig,'utf8');if(supplied.length!==expected.length||!crypto.timingSafeEqual(supplied,expected))return null;return db.sessions.find(item=>item.id===id&&new Date(item.expiresAt)>new Date())||null;}
 const PLATFORM_OWNER_USER_IDS=new Set(['5b998c21-86b5-4621-ab37-e0808a2657b1']);
+const CREATOR_HUB_ADMIN_EMAIL='creatorhubcreatornetwork@gmail.com';
+const CREATOR_HUB_ADMIN_USER_ID='5b998c21-86b5-4621-ab37-e0808a2657b1';
+function isDesignatedCreatorHubAdmin(user){
+  return Boolean(user&&String(user.id||'')===CREATOR_HUB_ADMIN_USER_ID&&normalizeEmail(user.email)===CREATOR_HUB_ADMIN_EMAIL&&user.role==='platform_owner');
+}
 const SECONDARY_CREATOR_HUB_USER_ID='28e1df97-3fe1-488e-bb84-bdc353c58653';
 const SECONDARY_CREATOR_HUB_EMAIL='larryjones2019ersky@gmail.com';
 function isPlatformStaffIdentity(user){
@@ -927,7 +932,10 @@ async function route(req, res) {
         }
         const sessionCookie=await createAppSession(account,authenticated,req);
         await saveStore();
-        return json(res,200,{user:safeUser(account,account.id)},{'Set-Cookie':sessionCookie});
+        return json(res,200,{
+          user:safeUser(account,account.id),
+          mfaEnrollmentRequired:isDesignatedCreatorHubAdmin(account)&&!verifiedTotp
+        },{'Set-Cookie':sessionCookie});
       }
       if(method==='POST'&&p==='/api/auth/login'){
         const email=normalizeEmail(input.email),password=String(input.password||''),rate=checkLoginRateLimit(req,email);
@@ -956,9 +964,10 @@ async function route(req, res) {
           const signedInUser=ensureLocalUser(authenticated.user);
           if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
+          let verifiedTotp=null;
           if(accessToken){
             const factors=await supabaseListFactors(accessToken);
-            const verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified');
+            verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified')||null;
             if(verifiedTotp&&tokenAal(accessToken)!=='aal2'){
               const pendingId=uid();
               db.pendingAuth.push({id:pendingId,userId:signedInUser.id,factorId:verifiedTotp.id,authSealed:sealSessionAuth(authenticated),createdAt:now(),expiresAt:new Date(Date.now()+5*60*1000).toISOString(),userAgent:String(req.headers['user-agent']||'').slice(0,240)});
@@ -968,7 +977,10 @@ async function route(req, res) {
           }
           if(signedInUser.status==='deactivated'){signedInUser.status='active';await supabaseUpdateUserMetadata(accessToken,{account_status:'active'});await saveStore();}
           const sessionCookie=await createAppSession(signedInUser,authenticated,req);clearLoginFailures(rate.key);
-          return json(res,200,{user:safeUser(signedInUser,signedInUser.id)},{'Set-Cookie':sessionCookie});
+          return json(res,200,{
+            user:safeUser(signedInUser,signedInUser.id),
+            mfaEnrollmentRequired:isDesignatedCreatorHubAdmin(signedInUser)&&!verifiedTotp
+          },{'Set-Cookie':sessionCookie});
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -1170,9 +1182,7 @@ async function route(req, res) {
         return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
       }
       if(method==='GET'&&p==='/api/admin/access'){
-        const designatedCreatorHubAdmin = user.id==='5b998c21-86b5-4621-ab37-e0808a2657b1' &&
-          normalizeEmail(user.email)==='creatorhubcreatornetwork@gmail.com' &&
-          user.role==='platform_owner';
+        const designatedCreatorHubAdmin = isDesignatedCreatorHubAdmin(user);
         const canAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
         return json(res,200,{
           canAccess,
