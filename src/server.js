@@ -611,10 +611,18 @@ async function publicPagePost(post) {
   return {...post,media:media.filter(item=>item?.url),author:safeUser(db.users.find(u=>u.id===post.publishedBy))};
 }
 async function publicStory(story,viewerId,includeViews=false) {
-  const asset=story.mediaId?(db.mediaAssets||[]).find(item=>item.id===story.mediaId&&item.ownerId===story.userId&&item.slot==='story'):null;
-  let media=null;if(asset){try{media={mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset)};}catch{}}
+  const mediaIds=Array.isArray(story.mediaIds)&&story.mediaIds.length?story.mediaIds:(story.mediaId?[story.mediaId]:[]);
+  const mediaItems=await Promise.all(mediaIds.map(async id=>{
+    const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===story.userId&&item.slot==='story'&&item.status!=='deleted');
+    if(!asset)return null;
+    try{
+      const url=await resolveAssetUrl(asset);
+      return url?{id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url,byteSize:asset.byteSize}:null;
+    }catch{return null;}
+  }));
+  const visibleMedia=mediaItems.filter(Boolean),media=visibleMedia[0]||null;
   const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
-  return {...story,media,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
+  return {...story,media,mediaItems:visibleMedia,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
     viewers:includeViews&&story.userId===viewerId?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined};
 }
 
@@ -2611,17 +2619,21 @@ async function route(req, res) {
         return json(res,200,{stories});
       }
       if(method==='POST'&&p==='/api/stories'){
-        const text=String(input.text||'').trim(),mediaId=String(input.mediaId||''),audience=String(input.audience||'public');
-        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose a photo or video from your device.'});
+        const text=String(input.text||'').trim(),audience=String(input.audience||'public');
+        if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose media from your device.'});
         if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
-        if(!text&&!mediaId&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
+        if(input.mediaIds!==undefined&&!Array.isArray(input.mediaIds))return json(res,400,{error:'Story media must be provided as a list of uploaded files.'});
+        const requestedMediaIds=Array.isArray(input.mediaIds)?input.mediaIds:(input.mediaId?[input.mediaId]:[]);
+        const mediaIds=[...new Set(requestedMediaIds.map(value=>String(value||'').trim()).filter(Boolean))];
+        if(mediaIds.length>10)return json(res,400,{error:'A story can contain up to 10 media attachments.'});
+        if(!text&&!mediaIds.length&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
-        let asset=null;
-        if(mediaId){asset=(db.mediaAssets||[]).find(item=>item.id===mediaId&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded');if(!asset)return json(res,400,{error:'The selected story media is unavailable. Select it again.'});}
+        const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected story files are unavailable. Select them again.'});
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaId:asset?.id||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
-        if(asset){asset.status='attached';asset.attachedTo=story.id;}
+        const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
         db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
@@ -2640,7 +2652,9 @@ async function route(req, res) {
         const story=db.stories.find(x=>x.id===m[1]);
         if(!story)return json(res,404,{error:'Story not found.'});
         if(story.userId!==user.id)return json(res,403,{error:'Only the story author can delete this story.'});
-        db.stories=db.stories.filter(x=>x.id!==story.id);db.storyViews=(db.storyViews||[]).filter(view=>view.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}
+        db.stories=db.stories.filter(x=>x.id!==story.id);db.storyViews=(db.storyViews||[]).filter(view=>view.storyId!==story.id);
+        const mediaIds=Array.isArray(story.mediaIds)&&story.mediaIds.length?story.mediaIds:(story.mediaId?[story.mediaId]:[]);
+        mediaIds.forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
         await saveStore();return json(res,200,{ok:true,id:story.id});
       }
       if(method==='GET'&&p==='/api/pages'){
