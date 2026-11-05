@@ -84,7 +84,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     read('../../public/sw.js')
   ]);
 
-  assert.ok(app.includes("MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'"));
+  assert.ok(app.includes("MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-wallet-3d-2'"));
   assert.ok(app.includes("function messenger3dIcon(id"));
   assert.ok(css.includes('.messenger-3d-icon{'));
   assert.ok(css.includes('drop-shadow('));

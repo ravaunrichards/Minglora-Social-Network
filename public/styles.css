@@ -3745,3 +3745,17 @@ body.auth-mode .auth-screen{
 .story-media-controls{display:flex;align-items:center;justify-content:center;gap:22px;padding:10px;color:var(--muted);font-size:12px;font-weight:800}
 .story-media-controls button{min-width:42px;min-height:36px;padding:5px 12px;font-size:22px;line-height:1}
 .story-media-count{position:absolute;top:48px;right:7px;padding:4px 7px;border-radius:8px;background:#182238c9;color:#fff;font-size:10px;font-weight:800}
+
+
+/* Verified Creator Hub owner issuance and member-credit controls. */
+.recharge-owner-issuance{border-color:color-mix(in srgb,var(--blue) 28%,var(--line));margin-block:16px}
+.recharge-owner-issuance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.recharge-owner-issuance-head h2{margin:4px 0 6px}
+.recharge-owner-verified{flex:0 0 auto;border-radius:999px;padding:6px 10px;background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue);font-weight:700;font-size:12px}
+.recharge-owner-presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:14px 0}
+.recharge-owner-presets button{display:grid;gap:4px;justify-items:center;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface-2);color:var(--text);cursor:pointer}
+.recharge-owner-presets button strong{font-size:14px}.recharge-owner-presets button small{color:var(--muted)}
+.recharge-owner-issuance-form{display:grid;gap:8px;max-width:620px}
+.recharge-owner-issuance-form label{font-weight:650}.recharge-owner-issuance-form input{width:100%;min-width:0}
+.recharge-form-status{min-height:1.2em}.recharge-member-credit{border-color:color-mix(in srgb,var(--blue) 22%,var(--line))}
+@media(max-width:600px){.recharge-owner-issuance-head{flex-direction:column}.recharge-owner-presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
