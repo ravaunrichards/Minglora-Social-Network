@@ -4628,3 +4628,11 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
   aspect-ratio:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}
 .live-video-tile,.live-video-element{min-height:260px}
 .live-chat-overlay .live-chat-list{max-height:none!important;overflow:visible!important}
+
+
+/* Regression repair: preserve responsive shrink sizing and short-screen dialog access.
+   Dialogs remain in normal flow (not pinned over page content); only their own
+   content scrolls when the available viewport is shorter than the dialog. */
+.layout,.main-content,.profile-body,.settings-panels,.message-layout{min-width:0!important}
+.modal-backdrop{overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain}
+.modal{max-height:calc(100dvh - 24px)!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain}
