@@ -65,3 +65,42 @@ test('Audio Only LIVE removes the oversized microphone and keeps the room compac
   assert.match(styles, /\.live-audio-scene\{[\s\S]*?min-height:0/);
   assert.match(styles, /\.live-audio-stage \.audio-guest-layout\{[\s\S]*?height:142px/);
 });
+
+
+test('Minglora LIVE exposes the nine requested switchable screen layouts', () => {
+  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  for (const layout of layouts) {
+    assert.match(app, new RegExp("value:'" + layout + "'"));
+    assert.match(styles, new RegExp('data-live-layout=\\\\"' + layout + '\\\\"'));
+  }
+  assert.match(server, /LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'\]/);
+  assert.match(app, /function applyLiveScreenLayout/);
+  assert.match(app, /topic:"minglora-live-layout"/);
+  assert.match(app, /data-live-tools-panel-target='permissions'/);
+});
+
+test('Guest requests, co-host permissions, auto-accept, gifter priority and moderators are host controlled', () => {
+  assert.match(app, /name='allowGuestRequests' checked/);
+  assert.match(app, /name='guestCamera' checked/);
+  assert.match(app, /name='autoAcceptRequests'/);
+  assert.match(app, /name='prioritizeGifters'/);
+  assert.match(app, /name='allowCoHost' checked/);
+  assert.match(app, /name='manageModerators' checked/);
+  assert.match(server, /liveRoomSettingsMatch/);
+  assert.match(server, /Only the LIVE host can change room settings/);
+  assert.match(server, /allowGuestRequests === false/);
+  assert.match(server, /allowCoHost === false/);
+  assert.match(server, /autoAcceptRequests === true/);
+  assert.match(server, /prioritizeGifters === true/);
+  assert.match(server, /manageModerators === false/);
+  assert.match(server, /getLivePublishSourceNames\(session\.liveMode, role, session\.broadcastType, session\.liveSettings \|\| \{\}\)/);
+});
+
+test('Guest camera can be disabled by the host and voice rings can be switched off', () => {
+  assert.match(app, /session\.liveSettings\?\.guestCamera!==false/);
+  assert.match(app, /topic==="minglora-live-setting"/);
+  assert.match(app, /setCameraEnabled\(false\)/);
+  assert.match(app, /name='voiceRings' checked/);
+  assert.match(app, /session\.liveSettings\?\.voiceRings!==false/);
+  assert.match(app, /playCallTone\(\[620,820\],520\)/);
+});
