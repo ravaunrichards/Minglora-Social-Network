@@ -33,15 +33,12 @@ export function getPlatformAdminBadge(user, viewerId = null) {
   return ['admin', 'platform_owner'].includes(role) ? 'admin' : null;
 }
 
-const VERIFIED_PROFILE_EMAILS = new Set([
-  CREATOR_HUB_ADMIN_EMAIL,
-  SECONDARY_CREATOR_HUB_EMAIL
-]);
-
-/** Returns the blue verification sticker for the two separate Creator Hub accounts. */
+/**
+ * The public blue check comes only from the current server-synchronized
+ * verification state. Email identity alone never grants or retains a check.
+ */
 export function getProfileVerificationBadge(user) {
   if (!user) return null;
-  const email = String(user.email || '').trim().toLowerCase();
-  if (VERIFIED_PROFILE_EMAILS.has(email)) return 'blue';
-  return user.verificationBadge === 'blue' ? 'blue' : null;
+  const status = String(user.verificationStatus || "not_submitted");
+  return status === "verified" && user.verificationBadge === "blue" ? "blue" : null;
 }
