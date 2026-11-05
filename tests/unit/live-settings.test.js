@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   LIVE_MODES,
   broadcastTypeForLiveMode,
+  getLivePublishSourceNames,
   normalizeLiveSettings
 } from '../../backend/modules/live/settings.js';
 
@@ -35,6 +36,16 @@ test('LIVE setup rejects unknown fields and malformed values', () => {
   assert.equal(normalizeLiveSettings({ guardian: true }).valid, false);
   assert.equal(normalizeLiveSettings({ noiseSuppression: 'yes' }).valid, false);
   assert.equal(normalizeLiveSettings({ liveQuality: '4k' }).valid, false);
+});
+
+test('LiveKit publisher tracks follow mode and role with least privilege', () => {
+  assert.deepEqual(getLivePublishSourceNames('video_audio', 'host'), ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']);
+  assert.deepEqual(getLivePublishSourceNames('video_audio', 'guest'), ['MICROPHONE', 'CAMERA']);
+  assert.deepEqual(getLivePublishSourceNames('audio_only', 'host', 'audio_only'), ['MICROPHONE']);
+  assert.deepEqual(getLivePublishSourceNames('mobile_gaming', 'host'), ['MICROPHONE', 'SCREEN_SHARE']);
+  assert.deepEqual(getLivePublishSourceNames('mobile_gaming', 'guest'), ['MICROPHONE']);
+  assert.equal(getLivePublishSourceNames('live_studio', 'viewer'), null);
+  assert.deepEqual(getLivePublishSourceNames(null, 'host', 'audio_only'), ['MICROPHONE']);
 });
 
 test('client acquisition CTA requires a valid HTTPS destination', () => {
