@@ -46,7 +46,7 @@ export function getGifterLevelChart(xp = 0) {
       coinsRequired: GIFTER_LEVEL_COIN_THRESHOLDS[index],
       xpRequired: gifterXpRequired(level),
       tier,
-      badgeName: tier + " Gifter · Level " + level,
+      badgeName: tier + " Gifter · LV " + level,
       reward: level === 25 ? "Special LIVE entrance badge" : milestone ? "Milestone badge finish" : "Level badge",
       unlocked: level <= currentLevel,
       current: level === currentLevel
