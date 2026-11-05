@@ -3833,3 +3833,61 @@ body.auth-mode .auth-screen{
     font-size:.63rem;
   }
 }
+
+
+/* Minglora LIVE Goody Bag and Treasure Box */
+.live-reward-panel{margin:14px 0 16px;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,rgba(42,112,214,.09),rgba(146,91,224,.08)),var(--surface);box-shadow:0 8px 22px rgba(12,24,48,.08);transition:border-color .2s,box-shadow .2s}
+.live-reward-panel.is-focused{border-color:var(--blue);box-shadow:0 0 0 3px rgba(52,123,232,.18),0 8px 22px rgba(12,24,48,.08)}
+.live-reward-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.live-reward-heading>div{display:grid;gap:3px}
+.live-reward-heading strong{font-size:14px}
+.live-reward-heading small,.live-reward-note,.live-reward-condition,.live-reward-meta,.live-reward-countdown{color:var(--muted);font-size:11px;line-height:1.45}
+.live-reward-balance{font-size:11px;font-weight:800;color:var(--blue);text-align:right}
+.live-reward-create-form{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px;padding:11px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.035)}
+.live-reward-create-form label{display:grid;gap:5px;min-width:0;font-size:11px;font-weight:750;color:var(--muted)}
+.live-reward-create-form label:first-child,.live-reward-create-form label:nth-of-type(3),.live-reward-create-form label:nth-of-type(4),.live-reward-create-form label:nth-of-type(5),.live-reward-create-form>.live-reward-launch,.live-reward-note{grid-column:1/-1}
+.live-reward-create-form input,.live-reward-create-form select{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);padding:9px 10px;font:inherit;font-size:12px}
+.live-reward-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.live-reward-create-form [hidden]{display:none!important}
+.live-reward-launch,.live-reward-action{border:0;border-radius:10px;padding:10px 12px;background:linear-gradient(135deg,#2878e8,#7648d8);color:#fff;font:inherit;font-size:12px;font-weight:850;cursor:pointer;box-shadow:0 5px 14px rgba(48,94,190,.22)}
+.live-reward-launch:disabled,.live-reward-action:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.live-reward-note{margin:0;grid-column:1/-1}
+.live-reward-list{display:grid;gap:9px}
+.live-reward-empty{display:grid;justify-items:center;gap:4px;padding:18px 10px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.live-reward-empty>span{font-size:24px;filter:drop-shadow(0 5px 7px rgba(0,0,0,.22))}
+.live-reward-empty strong{font-size:12px}
+.live-reward-empty small{max-width:230px;color:var(--muted);font-size:10px;line-height:1.45}
+.live-reward-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:10px;align-items:center;min-width:0;padding:10px;border:1px solid var(--line);border-radius:13px;background:var(--surface);overflow:hidden}
+.live-reward-card.goody{border-color:rgba(238,171,67,.38)}
+.live-reward-card.treasure{border-color:rgba(71,143,232,.38)}
+.live-reward-art{display:grid;place-items:center;width:54px;height:62px;border-radius:12px;background:radial-gradient(circle at 30% 18%,rgba(255,255,255,.85),transparent 34%),linear-gradient(145deg,#f8b94d,#d56b32 60%,#8d3e38);box-shadow:inset 0 2px 5px rgba(255,255,255,.55),inset 0 -6px 10px rgba(80,34,19,.23),0 7px 13px rgba(24,24,30,.18)}
+.live-reward-card.treasure .live-reward-art{background:radial-gradient(circle at 28% 16%,rgba(255,255,255,.9),transparent 35%),linear-gradient(145deg,#8ee5f8,#418ce2 58%,#4f49a7);box-shadow:inset 0 2px 5px rgba(255,255,255,.58),inset 0 -6px 10px rgba(27,47,112,.25),0 7px 13px rgba(24,24,30,.18)}
+.live-reward-art span{font-size:27px;filter:drop-shadow(0 3px 3px rgba(20,22,34,.36))}
+.live-reward-main{display:grid;gap:4px;min-width:0}
+.live-reward-title-row{display:flex;align-items:center;justify-content:space-between;gap:7px}
+.live-reward-title-row>strong{font-size:12px}
+.live-reward-state{flex:none;border-radius:999px;padding:3px 7px;background:rgba(100,110,130,.12);color:var(--muted);font-size:9px;font-weight:900;letter-spacing:.04em}
+.live-reward-state.active{background:rgba(25,166,110,.13);color:#14865c}
+.live-reward-state.refunded{background:rgba(140,140,150,.14)}
+.live-reward-pot{font-size:18px;font-weight:950;letter-spacing:-.03em;color:var(--text);line-height:1.12}
+.live-reward-pot span{font-size:10px;letter-spacing:0;color:var(--muted);font-weight:800}
+.live-reward-meta{font-size:10px}
+.live-reward-condition{font-size:10px}
+.live-reward-condition strong{color:var(--text)}
+.live-reward-countdown{font-weight:850;color:var(--blue)}
+.live-reward-action{margin-top:4px;width:100%;padding:8px 10px;font-size:11px}
+.live-reward-action.is-done{background:rgba(30,157,110,.12);color:#12865a;box-shadow:none}
+.live-reward-earned{font-size:11px;font-weight:850;color:#16865b}
+@media(max-width:760px){
+  .live-reward-panel{padding:11px;margin:12px 0}
+  .live-reward-create-form{gap:8px;padding:9px}
+  .live-reward-card{grid-template-columns:48px minmax(0,1fr);gap:8px;padding:9px}
+  .live-reward-art{width:48px;height:56px}
+}
+@media(max-width:380px){
+  .live-reward-create-form{grid-template-columns:1fr}
+  .live-reward-create-form label:first-child,.live-reward-create-form label:nth-of-type(3),.live-reward-create-form label:nth-of-type(4),.live-reward-create-form label:nth-of-type(5),.live-reward-create-form>.live-reward-launch,.live-reward-note{grid-column:1}
+  .live-reward-fields{grid-template-columns:1fr 1fr}
+  .live-reward-heading{align-items:flex-start;flex-direction:column}
+  .live-reward-balance{text-align:left}
+}
