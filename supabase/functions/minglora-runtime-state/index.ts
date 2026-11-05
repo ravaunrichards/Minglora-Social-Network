@@ -426,6 +426,7 @@ Deno.serve(async (req: Request) => {
     const columns = "id,username,display_name,avatar_url,created_at";
     const newestMembers = () => admin.from("profiles")
       .select(columns)
+      .neq("id", adminUserId)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(50);
