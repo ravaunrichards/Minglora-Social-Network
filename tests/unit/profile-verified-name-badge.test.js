@@ -21,7 +21,7 @@ test('Larry keeps the blue verification check beside the username, not the displ
 });
 
 test('the profile bundle remains in the app shell and scripts are revalidated from the network', () => {
-  const appUrl = '/app.js?v=20261105-live-viewer-fanclub-1';
+  const appUrl = '/app.js?v=20261105-live-chat-workspace-1';
   assert.ok(html.includes(appUrl));
   assert.ok(serviceWorker.includes(appUrl));
   assert.match(serviceWorker, /\['style','script','font'\]\.includes\(request\.destination\)/);
