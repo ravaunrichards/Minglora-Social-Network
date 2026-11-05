@@ -25,11 +25,14 @@ import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, c
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { recordLiveGiftForLeagues, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, getGifterProgressionOverview, getGifterBadgeSummary } from '../backend/modules/gifter-progression/service.js';
+import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
+const liveLikeRateLimits = new Map();
+const liveFanClubJoinInProgress = new Set();
 if (process.env.NODE_ENV === 'production' &&
     (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
   throw new Error('Production startup requires SESSION_SECRET to contain at least 32 characters.');
@@ -1426,9 +1429,11 @@ async function route(req, res) {
             }
             sessions.push({
               ...session,
-              host: safeUser(db.users.find(member => member.id === session.hostId), user.id),
+              host: { ...safeUser(db.users.find(member => member.id === session.hostId), user.id), following: (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId) },
               viewerCount: participants.filter(participant => participant.identity !== session.hostId).length,
-              viewerCountVerified: true
+              viewerCountVerified: true,
+              likeCount: Math.max(0, Number(session.likeCount) || 0),
+              fanClubMemberCount: countActiveLiveFanClubMembers(db, session.hostId)
             });
           } catch (error) {
             const startedAt = new Date(session.createdAt || 0).getTime();
@@ -1471,9 +1476,10 @@ async function route(req, res) {
         });
         const requestedLiveTheme = String(input.liveTheme || getUserSettings(user).preferences.liveRoomTheme);
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
+        ensureLiveFanClubCollections(db);
         const session = {
           id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'fluid-grid',
-          description: liveSettings.aboutMe, liveTheme, status: 'live', createdAt: now(), endedAt: null
+          description: liveSettings.aboutMe, liveTheme, likeCount: 0, status: 'live', createdAt: now(), endedAt: null
         };
         await requestSupabaseState('live_broadcast_create',{
           id,hostId:user.id,title,audience:visibility,broadcastType,roomRef:roomName,
@@ -2113,6 +2119,167 @@ async function route(req, res) {
         const result=await requestSupabaseState(action,{userId:user.id,dropId,broadcastId:session.id,keyword:String(input.keyword||'')});
         return json(res,200,result);
       }
+      const liveFanClubMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/fan-club(?:\/(join|watch))?$/);
+      if (liveFanClubMatch && ['GET', 'POST'].includes(method)) {
+        const session = (db.liveSessions || []).find(item => item.id === liveFanClubMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        const friends = isFriend(user.id, session.hostId);
+        const canView = session.hostId === user.id || session.visibility === 'public' ||
+          (session.visibility === 'friends' && friends);
+        if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
+        const action = liveFanClubMatch[2] || '';
+        ensureLiveFanClubCollections(db);
+        if (method === 'GET' && !action) {
+          const membership = getLiveFanClubMembership(db, session.hostId, user.id);
+          const following = (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
+          const status = publicLiveFanClubMembership(db, session.hostId, user.id);
+          await saveStore();
+          return json(res, 200, {
+            membership: status,
+            isMember: membership?.status === 'active',
+            following,
+            joinCost: LIVE_FAN_CLUB_JOIN_COIN_COST,
+            joinGiftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
+            teamGiftCodes: LIVE_FAN_CLUB_GIFT_CODES,
+            fanClubMemberCount: countActiveLiveFanClubMembers(db, session.hostId)
+          });
+        }
+        if (method !== 'POST' || !['join', 'watch'].includes(action)) {
+          return json(res, 405, { error: 'Use GET for Fan Club status or POST for join/watch activity.' });
+        }
+        if (session.hostId === user.id) return json(res, 403, { error: 'The host cannot join their own Fan Club.' });
+        if (session.liveSettings?.practiceMode || session.liveSettings?.liveGifts === false) {
+          return json(res, 403, { error: 'Fan Club purchases are unavailable in this LIVE room.' });
+        }
+        let participants;
+        try {
+          participants = await listLiveKitParticipants(session.roomName);
+        } catch {
+          return json(res, 503, { error: 'Minglora could not verify the LIVE room connection. Try again.' });
+        }
+        if (!participants.some(participant => participant.identity === user.id)) {
+          return json(res, 409, { error: 'Join the LIVE room before using Fan Club features.' });
+        }
+        if (action === 'watch') {
+          const result = awardLiveFanClubPoints(db, {
+            hostId: session.hostId, fanId: user.id, source: 'watch', points: 1, sourceId: uid(), now: new Date()
+          });
+          if (result.awarded) await saveStore();
+          return json(res, 200, {
+            awarded: result.awarded,
+            pointsAwarded: result.points,
+            membership: publicLiveFanClubMembership(db, session.hostId, user.id),
+            fanClubMemberCount: countActiveLiveFanClubMembers(db, session.hostId)
+          });
+        }
+        const existing = getLiveFanClubMembership(db, session.hostId, user.id);
+        if (existing?.status === 'active') {
+          return json(res, 200, {
+            alreadyMember: true,
+            charged: false,
+            membership: publicLiveFanClubMembership(db, session.hostId, user.id),
+            fanClubMemberCount: countActiveLiveFanClubMembers(db, session.hostId)
+          });
+        }
+        const following = (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
+        if (!following) {
+          return json(res, 409, { error: 'Follow the LIVE host before joining their Fan Club.', code: 'follow_required' });
+        }
+        const joinKey = session.id + ':' + user.id;
+        if (liveFanClubJoinInProgress.has(joinKey)) {
+          return json(res, 409, { error: 'Your Fan Club join is already being processed. Please check your membership status.' });
+        }
+        liveFanClubJoinInProgress.add(joinKey);
+        try {
+          const catalogue = await requestSupabaseState('economy_catalog');
+          const joinGift = (catalogue.gifts || []).find(item =>
+            item.code === LIVE_FAN_CLUB_JOIN_GIFT_CODE && item.active !== false
+          );
+          if (!joinGift || Number(joinGift.coin_price) !== LIVE_FAN_CLUB_JOIN_COIN_COST) {
+            return json(res, 503, { error: 'The verified 1-Coin Heart Me gift is unavailable. No Fan Club charge was attempted.' });
+          }
+          const result = await requestSupabaseState('economy_send_gift', {
+            senderId: user.id, broadcastId: session.id, giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE
+          });
+          const gift = result.gift || {};
+          const transactionId = gift.giftTransactionId || gift.id || gift.transactionId || gift.transaction_id;
+          const coinAmount = Number(gift.coinAmount ?? gift.coin_amount ?? gift.coins ?? gift.coinPrice ?? gift.coin_price ?? joinGift.coin_price);
+          if (!transactionId || coinAmount !== LIVE_FAN_CLUB_JOIN_COIN_COST) {
+            return json(res, 502, { error: 'Minglora received an unverified Heart Me transaction response. Check your Coin ledger before retrying.' });
+          }
+          const timestamp = new Date();
+          const host = db.users.find(member => member.id === session.hostId);
+          recordGifterGift(db, {
+            giftId: String(transactionId), senderId: user.id, recipientId: session.hostId,
+            recipientUsername: host?.username || '', giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
+            giftName: gift.giftName || joinGift.name || 'Heart Me', coinAmount,
+            contextType: 'live', now: timestamp
+          });
+          recordLiveGiftForLeagues(db, {
+            giftId: transactionId, recipientId: session.hostId, broadcastId: session.id,
+            giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE, coinAmount,
+            region: host?.country || 'GLOBAL'
+          });
+          recordGiftGalleryEvent(db, {
+            giftId: String(transactionId), creatorId: session.hostId, senderId: user.id,
+            broadcastId: session.id, giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
+            coinAmount, giftName: gift.giftName || joinGift.name || 'Heart Me',
+            emoji: gift.emoji || joinGift.emoji || '💖',
+            imageUrl: gift.imageUrl || joinGift.image_url || '',
+            modelUrl: gift.modelUrl || joinGift.model_url || '',
+            timeZone: giftGalleryTimeZone(host), now: timestamp
+          });
+          const joined = joinLiveFanClub(db, {
+            hostId: session.hostId, fanId: user.id, giftTransactionId: String(transactionId), now: timestamp
+          });
+          awardLiveFanClubPoints(db, {
+            hostId: session.hostId, fanId: user.id, source: 'gift', points: LIVE_FAN_CLUB_JOIN_COIN_COST,
+            sourceId: 'fanclub-join:' + String(transactionId), now: timestamp
+          });
+          notify(session.hostId, user.id, 'fan_club', user.name + ' joined your Fan Club.', { liveSessionId: session.id });
+          await saveStore();
+          return json(res, 201, {
+            alreadyMember: joined.alreadyMember,
+            charged: !joined.alreadyMember,
+            membership: publicLiveFanClubMembership(db, session.hostId, user.id, timestamp),
+            gift: result.gift,
+            fanClubMemberCount: countActiveLiveFanClubMembers(db, session.hostId, timestamp)
+          });
+        } finally {
+          liveFanClubJoinInProgress.delete(joinKey);
+        }
+      }
+      let liveLikeMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/likes$/);
+      if (method === 'POST' && liveLikeMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveLikeMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        const friends = isFriend(user.id, session.hostId);
+        const canView = session.hostId === user.id || session.visibility === 'public' ||
+          (session.visibility === 'friends' && friends);
+        if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
+        let participants;
+        try {
+          participants = await listLiveKitParticipants(session.roomName);
+        } catch {
+          return json(res, 503, { error: 'Minglora could not verify the LIVE room connection. Try again.' });
+        }
+        if (!participants.some(participant => participant.identity === user.id)) {
+          return json(res, 409, { error: 'Join the LIVE room before sending a like.' });
+        }
+        const nowMs = Date.now();
+        const rateKey = session.id + ':' + user.id;
+        const previousAt = liveLikeRateLimits.get(rateKey) || 0;
+        if (nowMs - previousAt < 120) {
+          return json(res, 200, { accepted: false, likeCount: Math.max(0, Number(session.likeCount) || 0) });
+        }
+        liveLikeRateLimits.set(rateKey, nowMs);
+        if (liveLikeRateLimits.size > 50000) {
+          for (const [key, timestamp] of liveLikeRateLimits) if (nowMs - timestamp > 60 * 60 * 1000) liveLikeRateLimits.delete(key);
+        }
+        session.likeCount = Math.max(0, Number(session.likeCount) || 0) + 1;
+        await saveStore();
+        return json(res, 200, { accepted: true, likeCount: session.likeCount });
+      }
       let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
@@ -2121,6 +2288,11 @@ async function route(req, res) {
         const friends=isFriend(user.id,session.hostId);
         const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
         if(!canView)return json(res,404,{error:'LIVE session is not available for gifting.'});
+        const requestedGiftCode=String(input.giftCode||'');
+        if(LIVE_FAN_CLUB_GIFT_CODES.includes(requestedGiftCode)){
+          const fanMembership=getLiveFanClubMembership(db,session.hostId,user.id);
+          if(fanMembership?.status!=='active')return json(res,403,{error:'Join this host’s Fan Club before sending Team Gifts.',code:'fan_club_required'});
+        }
         let hostIsPresent=false;
         try {
           const participants=await listLiveKitParticipants(session.roomName);
@@ -2163,12 +2335,26 @@ async function route(req, res) {
             console.error('[Minglora Gift Gallery] A confirmed LIVE Gift could not be added to the weekly gallery.',{giftId:String(confirmedGiftId),message:String(error?.message||'gallery update failed').slice(0,160)});
           }
         }
+        if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
+          awardLiveFanClubPoints(db,{hostId:session.hostId,fanId:user.id,source:'gift',points:confirmedCoinAmount,sourceId:String(confirmedGiftId),now:new Date()});
+        }
         notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
         await saveStore();
         return json(res,200,{gift:result.gift});
       }
       if(method==='GET'&&p==='/api/gifter-progression/overview'){
         return json(res,200,{viewerId:user.id,badge:getGifterBadgeSummary(db,user.id),...getGifterProgressionOverview(db,user.id)});
+      }
+      if(method==='GET'&&p==='/api/live/rankings/daily'){
+        const dayKey=new Date().toISOString().slice(0,10);
+        const scores=(db.creatorLeagueDailyScores||[]).filter(item=>item.dayKey===dayKey&&Number(item.points)>0)
+          .sort((a,b)=>Number(b.points||0)-Number(a.points||0)||String(a.userId).localeCompare(String(b.userId)))
+          .slice(0,50);
+        const leaderboard=scores.map((item,index)=>{
+          const member=db.users.find(candidate=>candidate.id===item.userId);
+          return member&&!blockedBetween(user.id,member.id)?{position:index+1,user:safeUser(member,user.id),points:Number(item.points||0),dayKey}:null;
+        }).filter(Boolean);
+        return json(res,200,{dayKey,leaderboard,scoring:'confirmed LIVE gift points'});
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
         const overview=getCreatorLeagueOverview(db,user);
@@ -2249,6 +2435,8 @@ async function route(req, res) {
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
         if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
+        const fanPoint=awardLiveFanClubPoints(db,{hostId:session.hostId,fanId:user.id,source:'chat',points:1,sourceId:uid(),now:new Date()});
+        if(fanPoint.awarded)await saveStore();
         return json(res,201,sent);
       }
       const liveChatDelete=p.match(/^\/api\/live\/sessions\/([^/]+)\/chat\/([^/]+)$/);
