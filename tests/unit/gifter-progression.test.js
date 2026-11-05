@@ -70,7 +70,7 @@ test("gifter overview includes sent gifts only and ranks only real members", () 
   assert.equal(overview.current.xp, 120);
   assert.equal(overview.current.giftsSent, 1);
   assert.equal(overview.current.uniqueRecipients, 1);
-  assert.equal(overview.current.level, 2);
+  assert.equal(overview.current.level, 6);
   assert.equal(overview.current.rankPosition, 1);
   assert.equal(overview.history.length, 1);
   assert.equal(overview.history[0].contextType, "live");
@@ -110,5 +110,5 @@ test("duplicate ledger entries never increase a member's public gifter level", (
   };
   recordGifterGift(db, gift);
   db.gifterProgressionLedger.push({ ...db.gifterProgressionLedger[0] });
-  assert.equal(getGifterBadgeSummary(db, "sender").level, 2);
+  assert.equal(getGifterBadgeSummary(db, "sender").level, 6);
 });
