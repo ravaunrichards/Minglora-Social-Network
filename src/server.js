@@ -2119,6 +2119,44 @@ async function route(req, res) {
         const result=await requestSupabaseState(action,{userId:user.id,dropId,broadcastId:session.id,keyword:String(input.keyword||'')});
         return json(res,200,result);
       }
+      const liveViewerRosterMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/viewers$/);
+      if (method === 'GET' && liveViewerRosterMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveViewerRosterMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can view the detailed viewer roster.' });
+        let participants;
+        try {
+          participants = await listLiveKitParticipants(session.roomName);
+        } catch {
+          return json(res, 503, { error: 'Minglora could not refresh the LIVE viewer roster.' });
+        }
+        const viewers = participants.filter(participant => participant.identity !== session.hostId)
+          .map(participant => {
+            const member = db.users.find(candidate => candidate.id === participant.identity);
+            if (!member || blockedBetween(user.id, member.id)) return null;
+            const gifterBadge = getGifterBadgeSummary(db, member.id);
+            return {
+              user: safeUser(member, user.id),
+              gifterBadge,
+              fanClubMembership: publicLiveFanClubMembership(db, session.hostId, member.id),
+              role: (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === member.id && !item.leftAt)?.role || 'viewer',
+              joinedAt: (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === member.id && !item.leftAt)?.joinedAt || null,
+              isGifter: Boolean(gifterBadge)
+            };
+          }).filter(Boolean);
+        if (session.liveSettings?.prioritizeGifters === true) {
+          viewers.sort((a, b) =>
+            Number(b.gifterBadge?.level || 0) - Number(a.gifterBadge?.level || 0) ||
+            Number(b.fanClubMembership?.points || 0) - Number(a.fanClubMembership?.points || 0) ||
+            String(a.joinedAt || '').localeCompare(String(b.joinedAt || ''))
+          );
+        }
+        await saveStore();
+        return json(res, 200, {
+          viewers,
+          viewerCount: participants.filter(participant => participant.identity !== session.hostId).length,
+          prioritized: session.liveSettings?.prioritizeGifters === true
+        });
+      }
       const liveFanClubMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/fan-club(?:\/(join|watch))?$/);
       if (liveFanClubMatch && ['GET', 'POST'].includes(method)) {
         const session = (db.liveSessions || []).find(item => item.id === liveFanClubMatch[1] && item.status === 'live');
@@ -2359,14 +2397,28 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/live/rankings/daily'){
         const dayKey=new Date().toISOString().slice(0,10);
-        const scores=(db.creatorLeagueDailyScores||[]).filter(item=>item.dayKey===dayKey&&Number(item.points)>0)
-          .sort((a,b)=>Number(b.points||0)-Number(a.points||0)||String(a.userId).localeCompare(String(b.userId)))
-          .slice(0,50);
-        const leaderboard=scores.map((item,index)=>{
-          const member=db.users.find(candidate=>candidate.id===item.userId);
-          return member&&!blockedBetween(user.id,member.id)?{position:index+1,user:safeUser(member,user.id),points:Number(item.points||0),dayKey}:null;
-        }).filter(Boolean);
-        return json(res,200,{dayKey,leaderboard,scoring:'confirmed LIVE gift points'});
+        const totals=new Map();
+        for(const event of (db.gifterProgressionLedger||[])){
+          if(!event?.senderId||!String(event.createdAt||'').startsWith(dayKey))continue;
+          const amount=Number(event.coinAmount);
+          if(!Number.isSafeInteger(amount)||amount<=0)continue;
+          const current=totals.get(event.senderId)||{points:0,giftsSent:0,lastGiftAt:event.createdAt};
+          current.points+=amount;current.giftsSent++;
+          if(String(event.createdAt)>String(current.lastGiftAt))current.lastGiftAt=event.createdAt;
+          totals.set(event.senderId,current);
+        }
+        const leaderboard=[...totals.entries()]
+          .sort((a,b)=>b[1].points-a[1].points||b[1].giftsSent-a[1].giftsSent)
+          .slice(0,50)
+          .map(([userId,score],index)=>{
+            const member=db.users.find(candidate=>candidate.id===userId);
+            return member&&!blockedBetween(user.id,member.id)?{
+              position:index+1,user:safeUser(member,user.id),points:score.points,
+              giftsSent:score.giftsSent,lastGiftAt:score.lastGiftAt,dayKey,
+              gifterBadge:getGifterBadgeSummary(db,userId)
+            }:null;
+          }).filter(Boolean);
+        return json(res,200,{dayKey,leaderboard,scoring:'confirmed LIVE Coin gifts sent'});
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
         const overview=getCreatorLeagueOverview(db,user);
