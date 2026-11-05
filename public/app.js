@@ -888,14 +888,19 @@ async function refreshLiveSpeakerPanel(session,role,room){
         const label=request.status==="requested"?"Pending":request.status==="connected"?"On stage":"Approved";
         const actions=request.status==="requested"
           ?"<span class='live-speaker-actions'><button type='button' data-speaker-accept='"+esc(request.userId)+"'>Accept</button><button type='button' data-speaker-reject='"+esc(request.userId)+"'>Decline</button></span>"
-          :"<span class='live-speaker-approved'>"+(request.connectedAt?"On stage":"Approved · waiting to join")+"</span>";
+          :"<span class='live-speaker-approved'>"+(request.status==="connected"?"On stage":"Approved · waiting to join")+"</span><button type='button' class='live-speaker-remove' data-speaker-remove='"+esc(request.userId)+"'>Remove</button>";
         return "<div class='live-speaker-request-row'><span class='live-speaker-avatar'>"+esc((request.user?.name||"M").slice(0,1).toUpperCase())+"</span><span class='live-speaker-meta'><strong>"+esc(request.user?.name||"Member")+"</strong><small>@"+esc(request.user?.username||"member")+" · "+label+"</small></span>"+actions+"</div>";
       }).join(""):"<p class='muted'>No speaker requests yet. Your audience can raise a hand to join the stage.</p>";
-      list.querySelectorAll("[data-speaker-accept],[data-speaker-reject]").forEach(button=>button.addEventListener("click",async()=>{
-        const speakerId=button.dataset.speakerAccept||button.dataset.speakerReject,decision=button.dataset.speakerAccept?"accept":"reject";
+      list.querySelectorAll("[data-speaker-accept],[data-speaker-reject],[data-speaker-remove]").forEach(button=>button.addEventListener("click",async()=>{
+        const speakerId=button.dataset.speakerAccept||button.dataset.speakerReject||button.dataset.speakerRemove;
+        const decision=button.dataset.speakerAccept?"accept":button.dataset.speakerReject?"reject":"remove";
+        if(decision==="remove"&&!window.confirm("Remove this guest from the LIVE stage? They will return to the audience and can request to join again."))return;
         button.disabled=true;
-        try{await api(root+"/speaker-requests/"+encodeURIComponent(speakerId),{method:"PATCH",body:JSON.stringify({decision})});toast(decision==="accept"?"Speaker approved. They can now join the stage.":"Speaker request declined.");await refreshLiveSpeakerPanel(session,role,room);}
-        catch(error){toast(error.message);button.disabled=false;}
+        try{
+          await api(root+"/speaker-requests/"+encodeURIComponent(speakerId),{method:"PATCH",body:JSON.stringify({decision})});
+          toast(decision==="accept"?"Speaker approved. They can now join the stage.":decision==="reject"?"Speaker request declined.":"Guest removed from the stage.");
+          await refreshLiveSpeakerPanel(session,role,room);
+        }catch(error){toast(error.message);button.disabled=false;}
       }));
     }catch(error){list.innerHTML="<p class='muted'>Speaker requests could not be refreshed: "+esc(error.message)+"</p>";}
     return;
@@ -1301,7 +1306,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host'><div class='live-speaker-panel-heading'><strong>Speaker stage</strong><small>Up to 8 guest speakers</small></div><div id='live-speaker-request-list'><p class='muted'>Loading speaker requests…</p></div></section>"
     : role==="viewer"
       ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>"
-      : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>Your microphone is live. Your camera stays off.</small></section>";
+      : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const rewardTools="<section id='live-reward-panel' class='live-reward-panel'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
     (role==="host"
