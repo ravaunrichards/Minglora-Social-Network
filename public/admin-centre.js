@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -243,6 +243,120 @@
           '<div id="moderator-support-tickets" aria-live="polite">Loading support tickets…</div></section>'
       );
     }
+
+    if (unlocked) {
+      panel.insertAdjacentHTML('beforeend',
+        '<section class="admin-control-centre-section admin-live-pro-section" id="admin-live-pro-access" aria-labelledby="admin-live-pro-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-live-pro-title">LIVE Pro access</h3><p>Grant or revoke LIVE Pro for real Minglora member accounts. The designated administrator already receives LIVE Pro automatically.</p></div>' +
+            '<button type="button" class="secondary" id="admin-live-pro-refresh">Refresh grants</button></div>' +
+          '<div class="admin-live-pro-grid">' +
+            '<form id="admin-live-pro-grant-form" class="admin-centre-settings-card admin-live-pro-form">' +
+              '<label for="admin-live-pro-search">Find a member by username, name or email</label>' +
+              '<div class="admin-live-pro-search-row"><input id="admin-live-pro-search" type="search" maxlength="80" autocomplete="off" placeholder="Search Minglora accounts"><button type="button" class="secondary" id="admin-live-pro-search-button">Search</button></div>' +
+              '<p id="admin-live-pro-search-status" aria-live="polite">Choose an actual registered member account.</p>' +
+              '<label for="admin-live-pro-member">Member account</label><select id="admin-live-pro-member" required><option value="">Search for a member first</option></select>' +
+              '<label for="admin-live-pro-duration">LIVE Pro access duration</label><select id="admin-live-pro-duration"><option value="0">Permanent — no expiry</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option></select>' +
+              '<label for="admin-live-pro-reason">Admin note (optional)</label><textarea id="admin-live-pro-reason" maxlength="500" rows="2" placeholder="Reason for this LIVE Pro grant"></textarea>' +
+              '<button type="submit" class="primary" id="admin-live-pro-grant-submit">Grant LIVE Pro</button><p id="admin-live-pro-grant-status" aria-live="polite"></p>' +
+            '</form>' +
+            '<section class="admin-centre-settings-card"><h4>Active LIVE Pro grants</h4><p>Expired or revoked access is not shown as active.</p><div id="admin-live-pro-grants-list" aria-live="polite">Loading grants…</div></section>' +
+          '</div>' +
+          '<p class="admin-live-pro-safety-note">LIVE Pro access does not grant platform-admin permissions. Broadcast publishing, guest approval, room moderation and ending a LIVE remain protected by their existing server-side role checks. Grants do not change Coins or wallet balances.</p>' +
+        '</section>'
+      );
+      const liveProSearch = panel.querySelector('#admin-live-pro-search');
+      const liveProMember = panel.querySelector('#admin-live-pro-member');
+      const liveProSearchStatus = panel.querySelector('#admin-live-pro-search-status');
+      const liveProGrantStatus = panel.querySelector('#admin-live-pro-grant-status');
+      const liveProGrantsList = panel.querySelector('#admin-live-pro-grants-list');
+      const loadLiveProMembers = async (search = '') => {
+        if (!liveProMember) return;
+        liveProMember.innerHTML = '<option value="">Searching accounts…</option>';
+        if (liveProSearchStatus) liveProSearchStatus.textContent = 'Searching Minglora member accounts…';
+        try {
+          const result = await adminCentreApi('/admin/live-pro/members?search=' + encodeURIComponent(search));
+          const members = Array.isArray(result.members) ? result.members : [];
+          liveProMember.innerHTML = '<option value="">Choose a member account</option>' + members.map(member => {
+            const label = (member.displayName || member.username || 'Minglora member') +
+              (member.username ? ' · @' + member.username : '') +
+              (member.email ? ' · ' + member.email : '') +
+              (member.hasLivePro ? ' · LIVE Pro active' : '');
+            return '<option value="' + escapeText(member.id) + '">' + escapeText(label) + '</option>';
+          }).join('');
+          if (liveProSearchStatus) liveProSearchStatus.textContent = members.length
+            ? members.length + ' registered account(s) found. Select one to grant access.'
+            : 'No member accounts matched that search.';
+        } catch (error) {
+          liveProMember.innerHTML = '<option value="">Member search unavailable</option>';
+          if (liveProSearchStatus) liveProSearchStatus.textContent = error.message || 'Could not search member accounts.';
+        }
+      };
+      const loadLiveProGrants = async () => {
+        if (!liveProGrantsList) return;
+        liveProGrantsList.textContent = 'Loading active grants…';
+        try {
+          const result = await adminCentreApi('/admin/live-pro/grants');
+          const grants = Array.isArray(result.grants) ? result.grants : [];
+          liveProGrantsList.innerHTML = grants.length ? grants.map(grant => {
+            const expiry = grant.expiresAt ? 'Expires ' + new Date(grant.expiresAt).toLocaleDateString() : 'Permanent access';
+            const label = (grant.displayName || 'Minglora member') +
+              (grant.username ? ' · @' + grant.username : '') +
+              (grant.email ? ' · ' + grant.email : '');
+            return '<article class="admin-live-pro-grant-row"><div><strong>' + escapeText(label) + '</strong><small>' +
+              escapeText(expiry) + ' · Granted ' + escapeText(grant.grantedAt ? new Date(grant.grantedAt).toLocaleDateString() : 'date unavailable') +
+              '</small></div><button type="button" class="secondary" data-live-pro-revoke="' + escapeText(grant.userId) + '">Revoke</button></article>';
+          }).join('') : '<p class="admin-live-pro-empty">No active member grants yet.</p>';
+        } catch (error) {
+          liveProGrantsList.textContent = error.message || 'Active grants could not be loaded.';
+        }
+      };
+      const runLiveProSearch = () => loadLiveProMembers(String(liveProSearch?.value || '').trim());
+      panel.querySelector('#admin-live-pro-search-button')?.addEventListener('click', runLiveProSearch);
+      liveProSearch?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); runLiveProSearch(); }
+      });
+      panel.querySelector('#admin-live-pro-refresh')?.addEventListener('click', loadLiveProGrants);
+      panel.querySelector('#admin-live-pro-grant-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const submit = panel.querySelector('#admin-live-pro-grant-submit');
+        const userId = String(liveProMember?.value || '');
+        const durationDays = Number(panel.querySelector('#admin-live-pro-duration')?.value || 0);
+        const reason = String(panel.querySelector('#admin-live-pro-reason')?.value || '').trim();
+        if (!userId) { if (liveProGrantStatus) liveProGrantStatus.textContent = 'Select a real member account first.'; return; }
+        if (submit) submit.disabled = true;
+        if (liveProGrantStatus) liveProGrantStatus.textContent = 'Saving LIVE Pro access…';
+        try {
+          const result = await adminCentreApi('/admin/live-pro/grants', {
+            method:'POST',body:JSON.stringify({userId,durationDays,reason})
+          });
+          if (liveProGrantStatus) liveProGrantStatus.textContent = 'LIVE Pro granted to ' +
+            (result.grant?.displayName || 'the selected member') + (result.grant?.expiresAt
+              ? ' until ' + new Date(result.grant.expiresAt).toLocaleDateString() + '.'
+              : ' permanently.');
+          if (panel.querySelector('#admin-live-pro-reason')) panel.querySelector('#admin-live-pro-reason').value = '';
+          await Promise.all([loadLiveProMembers(String(liveProSearch?.value || '').trim()),loadLiveProGrants()]);
+        } catch (error) {
+          if (liveProGrantStatus) liveProGrantStatus.textContent = error.message || 'LIVE Pro could not be granted.';
+        } finally { if (submit) submit.disabled = false; }
+      });
+      liveProGrantsList?.addEventListener('click', async event => {
+        const button = event.target.closest('[data-live-pro-revoke]');
+        if (!button) return;
+        const memberId = String(button.dataset.liveProRevoke || '');
+        if (!memberId || !window.confirm('Revoke LIVE Pro for this member?')) return;
+        button.disabled = true;
+        try {
+          await adminCentreApi('/admin/live-pro/grants/' + encodeURIComponent(memberId), {method:'DELETE'});
+          if (liveProGrantStatus) liveProGrantStatus.textContent = 'LIVE Pro access revoked.';
+          await Promise.all([loadLiveProMembers(String(liveProSearch?.value || '').trim()),loadLiveProGrants()]);
+        } catch (error) {
+          if (liveProGrantStatus) liveProGrantStatus.textContent = error.message || 'LIVE Pro could not be revoked.';
+          button.disabled = false;
+        }
+      });
+      await Promise.all([loadLiveProMembers(''),loadLiveProGrants()]);
+    }
+
     const adminSettings = document.createElement('section');
     adminSettings.className = 'admin-control-centre-section admin-centre-settings';
     adminSettings.id = 'admin-centre-settings';
