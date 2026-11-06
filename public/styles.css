@@ -3674,7 +3674,7 @@ body.auth-mode .auth-screen{
 .recharge-form>small{font-size:.7rem;color:var(--muted)}
 .recharge-form-status{overflow-wrap:anywhere}
 .recharge-exchange-amount-wrap{position:relative}
-.recharge-exchange-amount-wrap>span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;font-weight:800;color:var(--muted)}
+.recharge-exchange-amount-wrap>span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;font-weight:800;color:var(--muted);pointer-events:none}
 .recharge-exchange-amount-wrap input{padding-left:28px}
 .recharge-exchange-note{margin:0;padding:0 2px;font-size:.74rem;line-height:1.55;color:var(--muted)}
 .recharge-exchange-unavailable{padding:24px}
