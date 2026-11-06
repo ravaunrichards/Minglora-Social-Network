@@ -109,3 +109,16 @@ test('Conversation privacy settings are persisted and disappearing messages are 
   assert.ok(css.includes('.message-tools-privacy-card'));
 });
 
+
+test('Direct shared media never returns attachments or links from expired messages',async()=>{
+  const server=await read('../../src/server.js');
+  const route=server.slice(server.indexOf("if(method==='GET'&&p==='/api/messages/shared')"),server.indexOf("if(method==='GET'&&p==='/api/messages/gifs')"));
+  assert.ok(route.includes("&&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)"));
+});
+test('Group calls use the existing eight-participant call limit rather than a separate call backend',async()=>{
+  const [app,server]=await Promise.all([read('../../public/app.js'),read('../../src/server.js')]);
+  assert.ok(app.includes("const participantIds=[...new Set((conversation.group.members||[]).map(member=>member.id)"));
+  assert.ok(app.includes("startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call'"));
+  assert.ok(server.includes('recipientIds.length>CALL_MAX_PARTICIPANTS-1'));
+  assert.ok(server.includes('ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS)'));
+});
