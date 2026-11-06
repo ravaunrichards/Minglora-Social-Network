@@ -5583,6 +5583,9 @@ function startMessengerRealtime(){
   socket.addEventListener('close',()=>{
     if(messengerRealtimeSocket!==socket)return;
     messengerRealtimeSocket=null;state.messengerRealtimeConnected=false;
+    state.messengerPresence={};state.messengerTyping={};
+    state.messageWindows.filter(win=>!win.minimized).forEach(updateMessageWindowPresence);
+    if(state.messengerPanelOpen)renderMessengerPanelList();
     syncMessageRefreshPolling();
     if(!state.user)return;
     messengerRealtimeReconnectAttempts=Math.min(messengerRealtimeReconnectAttempts+1,8);
@@ -5592,16 +5595,33 @@ function startMessengerRealtime(){
   socket.addEventListener('error',()=>{try{socket.close();}catch{}});
 }
 function messageWindowConversationId(win){return win?.groupId?'group:'+win.groupId:String(win?.user?.id||'');}
-function isMessageTyping(win){
+function messengerTypingUsers(win){
   const conversationId=messageWindowConversationId(win),ownId=String(state.user?.id||'');
-  return Object.keys(state.messengerTyping||{}).some(key=>key.startsWith(conversationId+':')&&!key.endsWith(':'+ownId));
+  const prefix=conversationId+':';
+  return Object.keys(state.messengerTyping||{})
+    .filter(key=>key.startsWith(prefix))
+    .map(key=>key.slice(prefix.length))
+    .filter(id=>id&&id!==ownId);
 }
+function isMessageTyping(win){return messengerTypingUsers(win).length>0;}
 function updateMessageWindowPresence(win){
-  if(!win||win.isGroup)return;
+  if(!win)return;
   const root=document.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"]');
   const label=root?.querySelector('[data-message-presence]');
   if(!label)return;
-  const typing=isMessageTyping(win),online=state.messengerPresence[win.user.id]===true;
+  const typingUsers=messengerTypingUsers(win),typing=typingUsers.length>0;
+  if(win.isGroup){
+    const conversation=state.conversations.find(item=>item.user.id===win.user.id);
+    const members=conversation?.group?.members||[];
+    const names=typingUsers.map(id=>members.find(item=>item.id===id)?.user?.name).filter(Boolean);
+    label.textContent=typing
+      ?names.length===1?names[0]+' is typing…':names.length===2?names[0]+' and '+names[1]+' are typing…':typingUsers.length+' people are typing…'
+      :(conversation?.group?.memberCount||members.length)+' members';
+    label.classList.toggle('is-typing',typing);
+    label.classList.remove('is-online');
+    return;
+  }
+  const online=state.messengerPresence[win.user.id]===true;
   label.textContent=typing?'Typing…':online?'Active now':'';
   label.classList.toggle('is-typing',typing);
   label.classList.toggle('is-online',!typing&&online);
@@ -5614,6 +5634,109 @@ function messageTyping(win,active=true){
   if(Date.now()-last<700)return;
   messengerTypingThrottle.set(conversationId,Date.now());
   sendMessengerRealtime({type:'typing',conversationId,active:true});
+}
+function openConversationTools(userId){
+  const win=state.messageWindows.find(item=>item.user.id===userId);
+  if(!win)return;
+  const conversationId=messageWindowConversationId(win);
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop';
+  modal.innerHTML=
+    '<section class="modal message-tools-modal" role="dialog" aria-modal="true" aria-labelledby="message-tools-title">'+
+      '<div class="modal-head"><div><h2 id="message-tools-title">Chat tools</h2><small>'+esc(win.user.name||'Conversation')+'</small></div><button class="modal-close" type="button" aria-label="Close chat tools">×</button></div>'+
+      '<div class="modal-body">'+
+        '<nav class="message-tools-tabs" aria-label="Conversation tools">'+
+          '<button type="button" class="active" data-tools-tab="search" aria-pressed="true">Search messages</button>'+
+          '<button type="button" data-tools-tab="shared" aria-pressed="false">Shared media</button>'+
+        '</nav>'+
+        '<section class="message-tools-view" data-tools-view="search">'+
+          '<form class="message-tools-search-form" data-tools-search-form><input type="search" name="query" maxlength="120" minlength="2" placeholder="Search this conversation…" aria-label="Search messages in this conversation" required><button class="primary" type="submit">Search</button></form>'+
+          '<div class="message-tools-results" data-tools-results aria-live="polite"><p class="muted">Search the messages in this chat. Results stay limited to this conversation.</p></div>'+
+        '</section>'+
+        '<section class="message-tools-view" data-tools-view="shared" hidden>'+
+          '<div class="message-tools-filters" role="group" aria-label="Shared item types">'+
+            '<button type="button" class="active" data-shared-kind="all">All</button>'+
+            '<button type="button" data-shared-kind="photos">Photos</button>'+
+            '<button type="button" data-shared-kind="videos">Videos</button>'+
+            '<button type="button" data-shared-kind="audio">Audio</button>'+
+            '<button type="button" data-shared-kind="files">Files</button>'+
+            '<button type="button" data-shared-kind="links">Links</button>'+
+          '</div>'+
+          '<div class="message-tools-shared" data-tools-shared aria-live="polite"><p class="muted">Loading shared items…</p></div>'+
+        '</section>'+
+      '</div>'+
+    '</section>';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector('.modal-close')?.addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelectorAll('[data-tools-tab]').forEach(button=>button.addEventListener('click',()=>{
+    const active=button.dataset.toolsTab;
+    modal.querySelectorAll('[data-tools-tab]').forEach(tab=>{
+      const selected=tab===button;tab.classList.toggle('active',selected);tab.setAttribute('aria-pressed',String(selected));
+    });
+    modal.querySelectorAll('[data-tools-view]').forEach(view=>{view.hidden=view.dataset.toolsView!==active;});
+    if(active==='shared'&&!modal.dataset.sharedLoaded)loadShared();
+    if(active==='search')modal.querySelector('input[name="query"]')?.focus();
+  }));
+  const searchForm=modal.querySelector('[data-tools-search-form]');
+  const searchResults=modal.querySelector('[data-tools-results]');
+  searchForm?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const query=String(searchForm.elements.query.value||'').trim();
+    if(query.length<2){searchResults.textContent='Enter at least two characters.';return;}
+    searchResults.innerHTML='<p class="muted">Searching messages…</p>';
+    try{
+      const data=await api('/messages/search?q='+encodeURIComponent(query)+'&conversationId='+encodeURIComponent(conversationId));
+      const rows=Array.isArray(data.results)?data.results:[];
+      searchResults.innerHTML=rows.length?rows.map(item=>
+        '<button type="button" class="message-tools-result" data-search-message="'+esc(item.id)+'"><span><strong>'+esc(item.author?.name||'Minglora member')+'</strong><small>'+esc(timeAgo(item.createdAt))+'</small></span><span>'+esc(item.text||'Message')+'</span></button>'
+      ).join(''):'<div class="message-tools-empty"><strong>No matching messages</strong><p>Try another word or phrase.</p></div>';
+      searchResults.querySelectorAll('[data-search-message]').forEach(button=>button.addEventListener('click',()=>{
+        const id=button.dataset.searchMessage;
+        close();
+        const current=state.messageWindows.find(item=>item.user.id===userId);
+        if(current){current.minimized=false;renderMessageWindows();}
+        requestAnimationFrame(()=>{
+          const target=document.querySelector('[data-message-window="'+CSS.escape(userId)+'"] [data-message-id="'+CSS.escape(id)+'"]');
+          target?.scrollIntoView({behavior:'smooth',block:'center'});
+          target?.classList.add('is-search-match');
+          window.setTimeout(()=>target?.classList.remove('is-search-match'),1800);
+        });
+      }));
+    }catch(error){searchResults.textContent=error.message||'Message search is unavailable.';}
+  });
+  let sharedItems=[];
+  let sharedKind='all';
+  function sharedItemMarkup(item){
+    const label=esc(item.name||item.url||'Shared item');
+    const author=esc(item.author?.name||'Minglora member');
+    if(item.kind==='photos')return '<a class="message-tools-media-card" href="'+esc(item.url)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(item.url)+'" alt="'+label+'"><span>'+label+'</span><small>'+author+'</small></a>';
+    if(item.kind==='videos')return '<article class="message-tools-media-card"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><span>'+label+'</span><small>'+author+'</small></article>';
+    if(item.kind==='audio')return '<article class="message-tools-media-card"><audio controls preload="none" src="'+esc(item.url)+'"></audio><span>'+label+'</span><small>'+author+'</small></article>';
+    return '<a class="message-tools-file-card" href="'+esc(item.url)+'" target="_blank" rel="noopener"><strong>'+(item.kind==='links'?'↗':'▤')+' '+label+'</strong><small>'+author+'</small></a>';
+  }
+  function paintShared(){
+    const filtered=sharedKind==='all'?sharedItems:sharedItems.filter(item=>item.kind===sharedKind);
+    const root=modal.querySelector('[data-tools-shared]');
+    root.innerHTML=filtered.length?'<div class="message-tools-shared-grid">'+filtered.map(sharedItemMarkup).join('')+'</div>':'<div class="message-tools-empty"><strong>Nothing shared here yet</strong><p>Photos, videos, audio, files and links shared in this chat will appear here.</p></div>';
+  }
+  async function loadShared(){
+    modal.dataset.sharedLoaded='true';
+    const root=modal.querySelector('[data-tools-shared]');
+    root.innerHTML='<p class="muted">Loading shared items…</p>';
+    try{
+      const data=await api('/messages/shared?conversationId='+encodeURIComponent(conversationId));
+      sharedItems=Array.isArray(data.items)?data.items:[];
+      paintShared();
+    }catch(error){root.textContent=error.message||'Shared items could not be loaded.';}
+  }
+  modal.querySelectorAll('[data-shared-kind]').forEach(button=>button.addEventListener('click',()=>{
+    sharedKind=button.dataset.sharedKind;
+    modal.querySelectorAll('[data-shared-kind]').forEach(item=>item.classList.toggle('active',item===button));
+    if(modal.dataset.sharedLoaded)paintShared();
+  }));
+  searchForm?.elements.query?.focus();
 }
 function renderMessageContent(messages=[]){
   if(!messages.length)return '<div class="message-window-empty">No messages yet. Say hello to start this chat.</div>';
@@ -5849,13 +5972,14 @@ function renderMessageWindows(){
       ?'<button type="button" class="message-window-call" data-message-group-manage="'+esc(win.groupId)+'" title="Group members" aria-label="Group members">'+messenger3dIcon('groups')+'</button>'
       :'<button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button>';
     const profileControl=win.isGroup
-      ?'<span class="message-window-profile is-group"><span class="message-group-avatar">'+messenger3dIcon('groups')+'</span><span><strong>'+esc(win.user.name)+'</strong><small>'+esc(conversation?.group?.memberCount||0)+' members</small></span></span>'
+      ?'<span class="message-window-profile is-group"><span class="message-group-avatar">'+messenger3dIcon('groups')+'</span><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+esc(conversation?.group?.memberCount||0)+' members</small></span></span>'
       :'<button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+(state.messengerPresence[win.user.id]===true?'Active now':'')+'</small></span></button>';
-    return '<section class="message-window '+(win.minimized?'is-minimized':'')+(win.isGroup?' is-group-chat':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header">'+profileControl+'<div class="message-window-controls">'+callControls+'<button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
+    return '<section class="message-window '+(win.minimized?'is-minimized':'')+(win.isGroup?' is-group-chat':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header">'+profileControl+'<div class="message-window-controls"><button type="button" class="message-window-call" data-message-tools="'+esc(win.user.id)+'" title="Search messages and view shared media" aria-label="Search messages and view shared media">'+messenger3dIcon('search')+'</button>'+callControls+'<button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
   }).join('');
   dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{const id=button.dataset.messageClose;cancelMessageVoiceRecording(id);state.messageWindows=state.messageWindows.filter(item=>item.user.id!==id);renderMessageWindows();syncMessageRefreshPolling();});
   dock.querySelectorAll('[data-message-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.messageProfile));
+  dock.querySelectorAll('[data-message-tools]').forEach(button=>button.onclick=()=>openConversationTools(button.dataset.messageTools));
   dock.querySelectorAll('[data-message-group-manage]').forEach(button=>button.onclick=()=>openMessageGroupSettings(button.dataset.messageGroupManage));
   dock.querySelectorAll('[data-message-reply-clear]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageReplyClear);if(win){win.replyToId=null;win.replyPreview=null;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-remove]').forEach(button=>button.onclick=()=>removeMessageConversation(button.dataset.messageRemove));
