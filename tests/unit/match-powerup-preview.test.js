@@ -77,11 +77,11 @@ test('a full app refresh restores the signed-in member to the last page and scro
 });
 
 test('the service worker versions and caches the Match Power-Up 3D models', () => {
-  assert.match(html, /leagues\.js\?v=20261106-preserve-active-page-refresh-1/);
+  assert.match(html, /leagues\\.js\\?v=20261106-match-powerups-3d-preview-1&refresh=20261106-preserve-active-page-1/);
   assert.match(html, /leagues\.css\?v=20261106-match-powerups-3d-preview-1/);
   assert.match(sw, /v101-preserve-active-page-refresh-1/);
   assert.match(sw, /minglora_time_boost\.gltf/);
-  assert.match(html, /app\.js\?v=20261106-preserve-active-page-refresh-1/);
-  assert.ok(sw.includes('/app.js?v=20261106-preserve-active-page-refresh-1'));
+  assert.match(html, /app\\.js\\?v=20261105-roomwide-live-gifts-1-advanced-notifications-1&refresh=20261106-preserve-active-page-1/);
+  assert.ok(sw.includes('/app.js?v=20261105-roomwide-live-gifts-1-advanced-notifications-1&refresh=20261106-preserve-active-page-1'));
   assert.ok(sw.includes("url.pathname.startsWith('/assets/match-powerups/')"));
 });
