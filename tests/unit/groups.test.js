@@ -126,7 +126,7 @@ test('advanced group rules do not call authenticated-only helpers for anonymous 
 test('groups UI exposes member chat, invitations, events, moderation and reactions', () => {
   const app = readFileSync(new URL('../../public/app.js', import.meta.url), 'utf8');
   for (const feature of [
-    "data-group-scope=\"invitations\"", "tabs.push(['chat','Group chat'])",
+    "data-group-scope=\"invitations\"", "tabs.push(['chat','Group chat']",
     "group-chat-form", "data-event-rsvp", "data-review-request",
     "data-review-post", "data-group-post-reaction", "data-group-post-comments"
   ]) assert.ok(app.includes(feature), 'Missing Groups UI feature: ' + feature);
