@@ -80,6 +80,7 @@ Deno.serve(async (req: Request) => {
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
     "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
     "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_campaign_history",
+    "economy_admin_creator_earnings",
     "economy_admin_promotional_fund_status", "economy_admin_promotional_fund_order_create", "economy_admin_promotional_fund_order_get", "economy_admin_promotional_fund_order_settle",
     "economy_promotional_gift_wallet", "economy_send_admin_promotional_gift",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
@@ -514,6 +515,200 @@ Deno.serve(async (req: Request) => {
     });
     if (error) return fail(error, "Verified promotional gift funding could not be settled.");
     return json(200, { settlement: data });
+  }
+
+  if (action === "economy_admin_creator_earnings") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    if (!validUuid(adminUserId) ||
+        adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com") {
+      return json(403, { error: "Only the Creator Hub owner can view creator gift revenue." });
+    }
+
+    // Recheck the verified owner and active platform-admin grant in Supabase.
+    // The Render route also requires the signed-in MFA-verified reviewer session.
+    const [ownerResult, staffResult] = await Promise.all([
+      admin.from("profiles")
+        .select("verification_status,verification_badge")
+        .eq("id", adminUserId)
+        .maybeSingle(),
+      admin.from("minglora_platform_staff")
+        .select("user_id")
+        .eq("user_id", adminUserId)
+        .eq("role", "owner")
+        .eq("active", true)
+        .contains("permissions", ["platform:admin"])
+        .limit(1)
+        .maybeSingle()
+    ]);
+    if (ownerResult.error || staffResult.error) {
+      return json(503, { error: "Minglora owner permissions could not be verified." });
+    }
+    if (ownerResult.data?.verification_status !== "verified" ||
+        ownerResult.data?.verification_badge !== "blue" ||
+        !staffResult.data?.user_id) {
+      return json(403, { error: "The verified Creator Hub owner permission is not active." });
+    }
+
+    const readAllPages = async (table: string, columns: string) => {
+      const rows: any[] = [];
+      const pageSize = 1000;
+      for (let offset = 0; offset < 100000; offset += pageSize) {
+        const { data, error } = await admin.from(table)
+          .select(columns)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        if (error) return { rows: null, error };
+        const page = data || [];
+        rows.push(...page);
+        if (page.length < pageSize) break;
+      }
+      return { rows, error: null };
+    };
+
+    const [ledgerResult, payoutsResult] = await Promise.all([
+      readAllPages(
+        "creator_earnings_ledger",
+        "id,creator_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"
+      ),
+      readAllPages(
+        "creator_payouts",
+        "id,creator_id,amount_minor,currency,status,created_at,paid_at"
+      )
+    ]);
+    if (ledgerResult.error || payoutsResult.error) {
+      console.error("[Minglora admin creator earnings] Ledger read failed.", {
+        ledgerError: ledgerResult.error?.message || null,
+        payoutsError: payoutsResult.error?.message || null
+      });
+      return json(503, { error: "Creator gift earnings or payout history could not be loaded." });
+    }
+
+    const ledger = ledgerResult.rows || [];
+    const payouts = payoutsResult.rows || [];
+    const byCreator = new Map<string, any>();
+    const totals = {
+      giftCount: 0,
+      grossMinor: 0,
+      creatorShareMinor: 0,
+      platformShareMinor: 0,
+      availableLedgerMinor: 0,
+      requestedPayoutMinor: 0,
+      processingPayoutMinor: 0,
+      pendingPayoutMinor: 0,
+      paidPayoutMinor: 0,
+      failedPayoutMinor: 0,
+      splitMismatchCount: 0
+    };
+
+    const ensureCreator = (creatorId: string) => {
+      if (!byCreator.has(creatorId)) {
+        byCreator.set(creatorId, {
+          creatorId,
+          giftCount: 0,
+          grossMinor: 0,
+          creatorShareMinor: 0,
+          platformShareMinor: 0,
+          availableLedgerMinor: 0,
+          requestedPayoutMinor: 0,
+          processingPayoutMinor: 0,
+          pendingPayoutMinor: 0,
+          paidPayoutMinor: 0,
+          failedPayoutMinor: 0,
+          lastGiftAt: null
+        });
+      }
+      return byCreator.get(creatorId);
+    };
+
+    for (const row of ledger) {
+      const creatorId = String(row.creator_id || "");
+      if (!validUuid(creatorId)) continue;
+      const item = ensureCreator(creatorId);
+      const gross = Math.max(0, Math.round(Number(row.gross_minor || 0)));
+      const creatorShare = Math.max(0, Math.round(Number(row.creator_share_minor || 0)));
+      const platformShare = Math.max(0, Math.round(Number(row.platform_share_minor || 0)));
+      item.giftCount += 1;
+      item.grossMinor += gross;
+      item.creatorShareMinor += creatorShare;
+      item.platformShareMinor += platformShare;
+      if (row.status === "available") item.availableLedgerMinor += creatorShare;
+      if (!item.lastGiftAt || new Date(row.created_at || 0).getTime() > new Date(item.lastGiftAt).getTime()) {
+        item.lastGiftAt = row.created_at || null;
+      }
+      totals.giftCount += 1;
+      totals.grossMinor += gross;
+      totals.creatorShareMinor += creatorShare;
+      totals.platformShareMinor += platformShare;
+      if (row.status === "available") totals.availableLedgerMinor += creatorShare;
+      // Permit a one-cent rounding remainder for odd minor-unit totals.
+      if (gross !== creatorShare + platformShare || Math.abs(creatorShare - platformShare) > 1) {
+        totals.splitMismatchCount += 1;
+      }
+    }
+
+    for (const payout of payouts) {
+      const creatorId = String(payout.creator_id || "");
+      if (!validUuid(creatorId)) continue;
+      const item = ensureCreator(creatorId);
+      const amount = Math.max(0, Math.round(Number(payout.amount_minor || 0)));
+      const status = String(payout.status || "").toLowerCase();
+      if (status === "requested") {
+        item.requestedPayoutMinor += amount;
+        item.pendingPayoutMinor += amount;
+        totals.requestedPayoutMinor += amount;
+        totals.pendingPayoutMinor += amount;
+      } else if (status === "processing") {
+        item.processingPayoutMinor += amount;
+        item.pendingPayoutMinor += amount;
+        totals.processingPayoutMinor += amount;
+        totals.pendingPayoutMinor += amount;
+      } else if (status === "paid") {
+        item.paidPayoutMinor += amount;
+        totals.paidPayoutMinor += amount;
+      } else if (status === "failed") {
+        item.failedPayoutMinor += amount;
+        totals.failedPayoutMinor += amount;
+      }
+    }
+
+    const creatorIds = [...byCreator.keys()];
+    const profiles: any[] = [];
+    for (let offset = 0; offset < creatorIds.length; offset += 100) {
+      const batch = creatorIds.slice(offset, offset + 100);
+      if (!batch.length) continue;
+      const { data, error } = await admin.from("profiles")
+        .select("id,username,display_name")
+        .in("id", batch);
+      if (error) return json(503, { error: "Creator account names could not be loaded." });
+      profiles.push(...(data || []));
+    }
+    const profileById = new Map(profiles.map((profile: any) => [profile.id, profile]));
+    const creators = [...byCreator.values()]
+      .map((item: any) => {
+        const profile: any = profileById.get(item.creatorId) || {};
+        return {
+          ...item,
+          username: profile.username || "",
+          displayName: profile.display_name || profile.username || "Unavailable creator"
+        };
+      })
+      .sort((a: any, b: any) => b.grossMinor - a.grossMinor);
+
+    return json(200, {
+      asOf: new Date().toISOString(),
+      currency: "USD",
+      creatorSharePercent: 50,
+      platformSharePercent: 50,
+      payoutScope: "all_creator_earnings_sources",
+      totals: {
+        ...totals,
+        creatorCount: creators.filter((creator: any) => creator.giftCount > 0).length,
+        payoutCount: payouts.length
+      },
+      creators: creators.slice(0, 100)
+    });
   }
 
   if (action === "economy_admin_campaign_history") {
