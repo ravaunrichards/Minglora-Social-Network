@@ -393,6 +393,32 @@
           <div id="admin-gift-earnings-creators" class="admin-gift-earnings-creators" aria-live="polite">Loading creator earnings…</div>
         </div>
         <p class="admin-gift-earnings-footnote">Gift revenue and both 50% shares come from eligible creator earnings ledger records. Pending and paid payout totals cover all creator earnings sources because Minglora uses a shared creator payout ledger. Amounts are recorded earnings, not a statement of cleared bank cash.</p>
+        <section class="admin-platform-payout-controls" aria-labelledby="admin-platform-payout-title">
+          <div>
+            <h4 id="admin-platform-payout-title">Withdraw Minglora's 50% platform share</h4>
+            <p>Manual withdrawals only. No payment is sent until you enter an amount and confirm the PayPal transfer.</p>
+          </div>
+          <div id="admin-platform-payout-summary" class="admin-control-centre-note" aria-live="polite">Loading available platform share…</div>
+          <form id="admin-platform-payout-account-form" class="admin-marketing-form">
+            <strong>PayPal receiving account</strong>
+            <label for="admin-platform-payout-email">Receiving PayPal email</label>
+            <input id="admin-platform-payout-email" name="paypalEmail" type="email" maxlength="127" autocomplete="email" placeholder="Enter the receiving PayPal email" required>
+            <button type="submit" class="secondary" id="admin-platform-payout-account-save">Save PayPal destination</button>
+            <p id="admin-platform-payout-account-status" role="status" aria-live="polite"></p>
+          </form>
+          <p class="admin-platform-payout-warning">PayPal does not allow a Payout to be sent to the same PayPal account that submits it. Use a different receiving PayPal account. If Minglora's sales already settle into the same Business account, those funds are already there and do not need to be paid to that account again.</p>
+          <form id="admin-platform-payout-form" class="admin-marketing-form">
+            <strong>Send an amount when you are ready</strong>
+            <label for="admin-platform-payout-amount">Withdrawal amount (USD)</label>
+            <input id="admin-platform-payout-amount" name="amount" type="number" min="1.00" max="20000.00" step="0.01" inputmode="decimal" placeholder="Enter amount up to available share" required>
+            <button type="submit" class="primary" id="admin-platform-payout-submit">Withdraw to PayPal</button>
+            <p id="admin-platform-payout-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="admin-platform-payout-history">
+            <strong>Platform withdrawal history</strong>
+            <div id="admin-platform-payout-history" aria-live="polite">Loading platform withdrawals…</div>
+          </div>
+        </section>
       `;
       adminSettings.append(giftEarningsSection);
     }
@@ -403,6 +429,70 @@
 
     if (unlocked) {
       panel.querySelector('#admin-gift-earnings-refresh')?.addEventListener('click', () => loadAdminGiftEarnings(panel));
+      panel.querySelector('#admin-platform-payout-account-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const input = form.querySelector('#admin-platform-payout-email');
+        const status = panel.querySelector('#admin-platform-payout-account-status');
+        const submit = form.querySelector('#admin-platform-payout-account-save');
+        const paypalEmail = String(input?.value || '').trim().toLowerCase();
+        if (!paypalEmail || paypalEmail.length > 127) {
+          if (status) status.textContent = 'Enter a valid receiving PayPal email address.';
+          return;
+        }
+        if (submit) submit.disabled = true;
+        if (status) status.textContent = 'Saving the platform PayPal destination…';
+        try {
+          const result = await adminCentreApi('/admin/platform-payout-account', {
+            method:'PUT', body:JSON.stringify({paypalEmail})
+          });
+          if (status) status.textContent = 'PayPal receiving account saved: ' +
+            String(result.payoutAccount?.paypal_email || paypalEmail) + '.';
+          await loadAdminGiftEarnings(panel);
+        } catch (error) {
+          if (status) status.textContent = error.message || 'PayPal destination could not be saved.';
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+      panel.querySelector('#admin-platform-payout-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const amountInput = form.querySelector('#admin-platform-payout-amount');
+        const status = panel.querySelector('#admin-platform-payout-status');
+        const submit = panel.querySelector('#admin-platform-payout-submit');
+        const amount = Number(amountInput?.value);
+        const amountMinor = Math.round(amount * 100);
+        const paypalEmail = String(panel.querySelector('#admin-platform-payout-email')?.value || '').trim().toLowerCase();
+        if (!paypalEmail) {
+          if (status) status.textContent = 'Save the PayPal receiving account before requesting a withdrawal.';
+          return;
+        }
+        if (!Number.isFinite(amount) || !Number.isSafeInteger(amountMinor) ||
+            amountMinor < 100 || amountMinor > 2000000) {
+          if (status) status.textContent = 'Enter an amount from USD 1.00 to USD 20,000.00.';
+          return;
+        }
+        if (!window.confirm('Send USD ' + (amountMinor / 100).toFixed(2) +
+            ' to ' + paypalEmail + ' from Minglora’s available platform share? This submits a real PayPal payout.')) return;
+        if (submit) submit.disabled = true;
+        if (status) status.textContent = 'Submitting your manually approved PayPal withdrawal…';
+        try {
+          const result = await adminCentreApi('/admin/platform-payouts', {
+            method:'POST', body:JSON.stringify({amountMinor})
+          });
+          await loadAdminGiftEarnings(panel);
+          if (status) status.textContent = 'PayPal accepted the withdrawal batch ' +
+            String(result.batchId || 'without a batch reference') +
+            '. It remains Processing until PayPal confirms the final payment.';
+        } catch (error) {
+          if (status) status.textContent = error.message ||
+            'Withdrawal could not be confirmed. Check the withdrawal history before submitting another request.';
+          await loadAdminGiftEarnings(panel);
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
       void loadAdminGiftEarnings(panel);
     }
 
@@ -908,6 +998,10 @@
     const metrics = panel.querySelector('#admin-gift-earnings-metrics');
     const creators = panel.querySelector('#admin-gift-earnings-creators');
     const refresh = panel.querySelector('#admin-gift-earnings-refresh');
+    const platformSummary = panel.querySelector('#admin-platform-payout-summary');
+    const platformAccountInput = panel.querySelector('#admin-platform-payout-email');
+    const platformPayoutHistory = panel.querySelector('#admin-platform-payout-history');
+    const platformPayoutSubmit = panel.querySelector('#admin-platform-payout-submit');
     if (!status || !metrics || !creators) return;
     if (refresh) refresh.disabled = true;
     status.textContent = 'Loading the verified creator earnings and payout ledgers…';
@@ -921,6 +1015,9 @@
         ['Minglora share · 50% · recorded', finance.recordedPlatformShareMinor ?? totals.platformShareMinor],
         ['Creator payouts pending', totals.pendingPayoutMinor],
         ['Creator payouts paid', totals.paidPayoutMinor],
+        ['Minglora available to withdraw', finance.availablePlatformShareMinor],
+        ['Minglora withdrawals pending', finance.pendingPlatformPayoutMinor],
+        ['Minglora withdrawals paid', finance.paidPlatformPayoutMinor],
         ['Non-cash promotional creator share · excluded', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor],
         ['Non-cash promotional platform share · excluded', finance.excludedPromotionalPlatformShareMinor ?? totals.excludedPromotionalPlatformShareMinor]
       ];
@@ -928,6 +1025,43 @@
         '<article class="admin-gift-earnings-metric"><small>' + escapeText(label) +
         '</small><strong>' + escapeText(formatAdminEarningsMoney(value)) + '</strong></article>'
       ).join('');
+
+      const platformAccountEmail = String(report.platformPayoutAccount?.paypal_email || '');
+      if (platformAccountInput && document.activeElement !== platformAccountInput) {
+        platformAccountInput.value = platformAccountEmail;
+      }
+      const availablePlatformMinor = Math.max(0, Number(finance.availablePlatformShareMinor || 0));
+      const reservedPlatformMinor = Math.max(0, Number(finance.pendingPlatformPayoutMinor || 0));
+      const paidPlatformMinor = Math.max(0, Number(finance.paidPlatformPayoutMinor || 0));
+      if (platformSummary) {
+        platformSummary.innerHTML =
+          '<div class="admin-platform-payout-balances">' +
+            '<div><small>Recorded Minglora 50% share</small><strong>' + escapeText(formatAdminEarningsMoney(finance.recordedPlatformShareMinor)) + '</strong></div>' +
+            '<div><small>Available to withdraw</small><strong>' + escapeText(formatAdminEarningsMoney(availablePlatformMinor)) + '</strong></div>' +
+            '<div><small>Reserved / processing</small><strong>' + escapeText(formatAdminEarningsMoney(reservedPlatformMinor)) + '</strong></div>' +
+            '<div><small>Paid through PayPal</small><strong>' + escapeText(formatAdminEarningsMoney(paidPlatformMinor)) + '</strong></div>' +
+          '</div><p>Destination: ' + escapeText(platformAccountEmail || 'Not configured') +
+          '. The available amount is calculated from eligible cash-backed earnings and excludes pending and paid platform withdrawals.</p>';
+      }
+      if (platformPayoutSubmit) {
+        platformPayoutSubmit.disabled = !platformAccountEmail || availablePlatformMinor < 100;
+      }
+      if (platformPayoutHistory) {
+        const platformPayouts = Array.isArray(report.platformPayouts) ? report.platformPayouts : [];
+        platformPayoutHistory.innerHTML = platformPayouts.length
+          ? platformPayouts.map(item => {
+              const created = item.created_at ? new Date(item.created_at).toLocaleString() : 'Date unavailable';
+              const batch = item.paypal_batch_id ? ' · PayPal batch ' + escapeText(item.paypal_batch_id) : '';
+              const paid = item.paid_at ? ' · Paid ' + escapeText(new Date(item.paid_at).toLocaleString()) : '';
+              const failure = item.failure_message ? '<p>' + escapeText(item.failure_message) + '</p>' : '';
+              return '<article class="admin-platform-payout-history-row"><div><strong>' +
+                escapeText(formatAdminEarningsMoney(item.amount_minor)) + ' · ' +
+                escapeText(String(item.status || 'requested').replace(/_/g,' ')) +
+                '</strong><small>To ' + escapeText(item.paypal_email || 'PayPal destination unavailable') +
+                ' · ' + escapeText(created) + batch + paid + '</small>' + failure + '</div></article>';
+            }).join('')
+          : '<p class="admin-platform-payout-empty">No platform withdrawals have been sent.</p>';
+      }
 
       const rows = Array.isArray(report.creators) ? report.creators : [];
       creators.innerHTML = rows.map(creator => {
