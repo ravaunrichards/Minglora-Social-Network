@@ -7,7 +7,7 @@ const collections = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'savedPostCollections', 'mediaAssets',
   
    'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
-  'pageRoles', 'pageFollows', 'pagePosts',
+  'pageRoles', 'pageFollows', 'pagePosts', 'pageViews',
    'messages', 'messageConversationHides', 'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings', 'notifications', 'sessions',
   'liveSessions', 'liveParticipants', 'liveSpeakerRequests', 'reports', 'supportTickets',
   'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',

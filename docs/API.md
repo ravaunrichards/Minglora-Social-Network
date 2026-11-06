@@ -111,10 +111,15 @@ Jobs are separate from Marketplace payments and the commerce ledger. Resume uplo
 | GET | `/api/pages` | List active Pages and current follow/role state |
 | POST | `/api/pages` | Create a Page with a unique handle; creator becomes owner |
 | GET | `/api/pages/:id` | Read a Page and its published posts |
-| DELETE | `/api/pages/:id` | Delete a Page as its owner, including its posts and follows |
+| PATCH | `/api/pages/:id` | Update Page name, handle, description, category, public contact fields and optional action button as owner/admin |
+| DELETE | `/api/pages/:id` | Delete a Page as its owner, including posts, follows, team roles and Page view records |
 | POST/DELETE | `/api/pages/:id/follow` | Follow or unfollow a Page |
 | POST | `/api/pages/:id/posts` | Publish a Page post with text and uploaded media references as a Page owner/admin/editor; pasted image URLs are rejected |
 | DELETE | `/api/pages/:id/posts/:postId` | Delete a Page post as its publisher or Page owner/admin |
+| GET/POST | `/api/pages/:id/roles` | List or add Page team roles as owner/admin; add an existing account by username with admin/editor/analyst access |
+| PATCH/DELETE | `/api/pages/:id/roles/:userId` | Change or remove a non-owner Page team role subject to owner/admin boundaries |
+| GET | `/api/pages/:id/insights?days=7\|30\|90` | Read Page insights as owner/admin/analyst; reports recorded signed-in visitor counts, current followers and published post totals |
+| GET | `/api/pages/:id/followers` | Read follower accounts as owner/admin/analyst |
 
 The current UI assigns only the creator/owner role; an interface for appointing additional Page admins/editors is not implemented.
 

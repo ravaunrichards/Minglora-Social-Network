@@ -27,7 +27,7 @@ Before enabling production withdrawals, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_S
 - Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, automatic friendship on reciprocal follow, clickable follower/following lists, block/unblock and profile counts
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
-- Public Pages with unique handles, Page follows, Page details, owner publishing with device-uploaded media and deletion
+- Advanced public Pages with searchable discovery, unique handles, Page follows, editable public details/contact/action links, Page posts with device-uploaded media, owner/admin/editor/analyst team roles, manager-only follower lists, recorded signed-in visitor insights and owner deletion
 - Text and uploaded photo/video Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Advanced Messenger with direct and private group chats (up to 50 members), uploaded media/documents, browser-recorded voice notes, stickers, Tenor GIF search/send when configured, emoji composer, message replies/reactions/edit/delete/unsend, group read states, per-conversation message search and shared-media browsing; authenticated WebSocket signals carry typing/presence/message updates with a 30-second refresh backstop and five-second polling fallback
 - Advanced account-backed notification centre with social, message, call, LIVE, gift/Fan Club, MeetWave, league and account categories; category filters/counts and search; unread badge; per-item read/delete; separate clear-read/clear-all actions; account notification preferences; and configured per-device Web Push. Foreground inbox refresh currently polls every six seconds (not Supabase Realtime).
@@ -120,7 +120,7 @@ All application API endpoints use the `/api` prefix.
 - `GET /api/users` (lightweight member list), `GET /api/discovery/people` (privacy-filtered outside-profile previews with recent public posts, visible stories and mutual/follower counts), `GET /api/users/:id`, `GET /api/users/:id/followers|following|friends`, `PATCH /api/users/me`
 - `POST /api/friends/:id/request`, `POST /api/friends/:id/accept`
 - `GET /api/groups`, `POST /api/groups`, group detail and discussion routes under `/api/groups/:id`
-- `GET /api/pages`, `POST /api/pages`, Page detail/follow/post routes under `/api/pages/:id`
+- `GET /api/pages`, `POST /api/pages`, Page detail/follow/post routes under `/api/pages/:id`; `PATCH` Page details; role-gated team, follower and insights routes under `/api/pages/:id/roles`, `/followers` and `/insights`
 - `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
 - `GET /api/messages`, `GET /api/messages/search`, `GET /api/messages/shared`, `POST /api/messages`, group management under `/api/message-groups`, and authenticated realtime WebSocket at `/api/messages/realtime`
 - `GET /api/notifications`, `GET /api/search?q=...`

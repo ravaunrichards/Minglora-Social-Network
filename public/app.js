@@ -5552,57 +5552,269 @@ async function openStory(id){
     modal.querySelector('#delete-story')?.addEventListener('click',async()=>{if(!window.confirm('Delete this story?'))return;try{await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');}catch(err){toast(err.message);}});
   }catch(err){toast(err.message);}
 }
-async function loadPages(){state.pages=(await api('/pages')).pages;}
+async function loadPages(){
+  const result=await api('/pages');
+  state.pages=Array.isArray(result.pages)?result.pages:[];
+}
+function pageDirectoryCard(page){
+  const owner=!!page.myRole||page.createdBy===state.user.id;
+  const following=!!page.isFollowing;
+  return '<article class="card page-card page-directory-card">'+
+    '<div class="page-card-top"><div class="page-card-mark">'+esc((page.title||'P').slice(0,1).toUpperCase())+'</div>'+
+    '<span class="page-category">'+esc(page.category||'Community')+'</span></div>'+
+    '<h3>'+esc(page.title)+'</h3><p class="page-handle">@'+esc(page.handle)+'</p>'+
+    (page.description?'<p class="page-directory-description">'+esc(page.description)+'</p>':'<p class="page-directory-description muted">Public Page</p>')+
+    '<div class="page-directory-stats"><strong>'+Number(page.followerCount||0).toLocaleString()+'</strong><span>followers</span></div>'+
+    '<div class="page-directory-actions"><button class="secondary full" data-open-page="'+esc(page.id)+'">View Page</button>'+
+    (owner?'':'<button class="'+(following?'secondary':'primary')+' full" data-follow-page="'+esc(page.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'Following · Unfollow':'Follow Page')+'</button>')+
+    '</div></article>';
+}
+function renderPageDirectoryResults(){
+  const root=$('#pages-directory-results');
+  if(!root)return;
+  const query=String(state.pageQuery||'').trim().toLowerCase();
+  const category=String(state.pageCategory||'all');
+  const sort=String(state.pageSort||'popular');
+  let pages=(state.pages||[]).filter(page=>{
+    const matches=[page.title,page.handle,page.description,page.category].join(' ').toLowerCase().includes(query);
+    return matches&&(category==='all'||String(page.category||'').toLowerCase()===category);
+  });
+  pages.sort((a,b)=>{
+    if(sort==='recent')return new Date(b.createdAt||0)-new Date(a.createdAt||0);
+    if(sort==='az')return String(a.title||'').localeCompare(String(b.title||''));
+    return Number(b.followerCount||0)-Number(a.followerCount||0);
+  });
+  root.innerHTML=pages.length?'<div class="pages-grid">'+pages.map(pageDirectoryCard).join('')+'</div>':
+    '<section class="card empty-state"><h3>No matching Pages</h3><p>Try another search or category. Page results come from actual saved Minglora Pages.</p></section>';
+  root.querySelectorAll('[data-open-page]').forEach(button=>button.addEventListener('click',()=>renderPage(button.dataset.openPage)));
+  root.querySelectorAll('[data-follow-page]').forEach(button=>button.addEventListener('click',async()=>{
+    const follow=button.dataset.following!=='true';
+    button.disabled=true;
+    try{
+      await api('/pages/'+encodeURIComponent(button.dataset.followPage)+'/follow',{method:follow?'POST':'DELETE',body:'{}'});
+      await renderPages();
+      toast(follow?'Page followed.':'Page unfollowed.');
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+}
 async function renderPages(){
-  activateSilent('pages');await loadPages();
-  let html='<div class="page-heading"><h1>Pages</h1><button class="primary" id="create-page">＋ Create Page</button></div><section class="card welcome"><h1>Follow the things you care about</h1><p>Public identities for creators, organisations and community projects.</p></section>';
-  if(state.pages.length){
-    html+='<div class="pages-grid">'+state.pages.map(page=>{
-      const owner=page.createdBy===state.user.id;
-      return '<article class="card page-card"><div class="page-card-mark">'+esc((page.title||'P').slice(0,1).toUpperCase())+'</div><h3>'+esc(page.title)+'</h3><p class="page-handle">@'+esc(page.handle)+'</p>'+(page.category?'<span class="page-category">'+esc(page.category)+'</span>':'')+'<p>'+esc(page.description||'')+'</p><small>'+page.followerCount+' followers</small><button class="secondary full" data-open-page="'+esc(page.id)+'">Open Page</button>'+(owner?'':'<button class="primary full" data-follow-page="'+esc(page.id)+'" data-following="'+(page.isFollowing?'true':'false')+'">'+(page.isFollowing?'Following':'Follow Page')+'</button>')+'</article>';
-    }).join('')+'</div>';
-  }else{
-    html+='<section class="card empty-state"><h3>No Pages have been created yet</h3><p>Create a Page for a real organisation, creator or community. It will appear here once saved.</p></section>';
-  }
+  activateSilent('pages');
+  await loadPages();
+  const categories=[...new Set(state.pages.map(page=>String(page.category||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const categoryOptions='<option value="all">All categories</option>'+categories.map(category=>'<option value="'+esc(category.toLowerCase())+'">'+esc(category)+'</option>').join('');
+  let html='<div class="page-heading"><div><p class="page-eyebrow">MINGLORA DISCOVERY</p><h1>Pages</h1><p class="muted">Discover creators, businesses, organisations and communities.</p></div><button class="primary" id="create-page">＋ Create Page</button></div>'+
+    '<section class="card page-browse-hero"><div><span class="page-hero-kicker">YOUR PUBLIC PRESENCE</span><h2>Build a community around what matters.</h2><p>Create a dedicated identity for your brand, creative work or organisation. Manage its content and team separately from your personal profile.</p></div><div class="page-hero-stats"><strong>'+state.pages.length.toLocaleString()+'</strong><span>public Pages</span></div></section>'+
+    (state.pageCreateOpen?'<section class="card page-create-panel"><div class="page-panel-heading"><div><p class="page-eyebrow">NEW PUBLIC IDENTITY</p><h2>Create a Page</h2><p>Set up the public name and identity. You can complete contact and business details after creation.</p></div><button class="secondary" type="button" id="cancel-create-page">Close</button></div>'+
+      '<form id="create-page-form" class="page-create-form"><div class="field"><label for="page-title">Page name</label><input id="page-title" name="title" minlength="3" maxlength="160" required placeholder="Your brand, community or public identity"></div>'+
+      '<div class="field"><label for="page-handle">Unique Page handle</label><input id="page-handle" name="handle" minlength="3" maxlength="30" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,29}" required placeholder="yourpage"><small>3–30 letters, numbers, underscores or hyphens.</small></div>'+
+      '<div class="field"><label for="page-category">Category</label><input id="page-category" name="category" maxlength="60" placeholder="Creator, Music, Business, Community…"></div>'+
+      '<div class="field"><label for="page-description">Description</label><textarea id="page-description" name="description" maxlength="2000" rows="3" placeholder="Tell people what this Page is about."></textarea></div>'+
+      '<div class="page-form-actions"><button class="primary" type="submit">Create Page</button><p id="page-create-status" class="muted" role="status"></p></div></form></section>':'')+
+    '<section class="page-directory-tools"><label class="page-search-field"><span>Search Pages</span><input id="pages-search" type="search" value="'+esc(state.pageQuery||'')+'" placeholder="Search name, handle or category"></label>'+
+    '<label><span>Category</span><select id="pages-category">'+categoryOptions+'</select></label><label><span>Sort by</span><select id="pages-sort"><option value="popular">Most followers</option><option value="recent">Recently created</option><option value="az">Name A–Z</option></select></label></section>'+
+    '<div class="page-section-heading"><div><p class="page-eyebrow">EXPLORE</p><h2>Discover Pages</h2></div><span>'+state.pages.length.toLocaleString()+' total</span></div>'+
+    '<div id="pages-directory-results"></div>';
   setContent(html);
-  $('#create-page').onclick=()=>openPageComposer();
-  document.querySelectorAll('[data-open-page]').forEach(btn=>btn.addEventListener('click',()=>renderPage(btn.dataset.openPage)));
-  document.querySelectorAll('[data-follow-page]').forEach(btn=>btn.addEventListener('click',async()=>{const follow=btn.dataset.following!=='true';try{await api('/pages/'+btn.dataset.followPage+'/follow',{method:follow?'POST':'DELETE',body:'{}'});await renderPages();toast(follow?'Page followed.':'Page unfollowed.');}catch(e){toast(e.message)}}));
+  if($('#pages-category'))$('#pages-category').value=state.pageCategory||'all';
+  if($('#pages-sort'))$('#pages-sort').value=state.pageSort||'popular';
+  $('#create-page')?.addEventListener('click',()=>{state.pageCreateOpen=!state.pageCreateOpen;renderPages();});
+  $('#cancel-create-page')?.addEventListener('click',()=>{state.pageCreateOpen=false;renderPages();});
+  $('#pages-search')?.addEventListener('input',event=>{state.pageQuery=event.target.value;renderPageDirectoryResults();});
+  $('#pages-category')?.addEventListener('change',event=>{state.pageCategory=event.target.value;renderPageDirectoryResults();});
+  $('#pages-sort')?.addEventListener('change',event=>{state.pageSort=event.target.value;renderPageDirectoryResults();});
+  $('#create-page-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=$('#page-create-status');
+    button.disabled=true;if(status)status.textContent='Creating Page…';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      const result=await api('/pages',{method:'POST',body:JSON.stringify(values)});
+      state.pageCreateOpen=false;state.pageQuery='';state.pageCategory='all';
+      toast('Page created. Complete its public details and team settings next.');
+      await renderPage(result.page.id,'settings');
+    }catch(error){if(status)status.textContent=error.message;button.disabled=false;}
+  });
+  renderPageDirectoryResults();
 }
-function openPageComposer(){
-  const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="create-page-title"><div class="modal-head"><h2 id="create-page-title">Create a Page</h2><button class="modal-close" aria-label="Close">×</button></div><form id="create-page-form" class="modal-body"><div class="field"><label for="page-title">Page name</label><input id="page-title" name="title" minlength="3" maxlength="160" required></div><div class="field"><label for="page-handle">Unique handle</label><input id="page-handle" name="handle" minlength="3" maxlength="30" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,29}" required><small>Use 3–30 letters, numbers, underscores or hyphens.</small></div><div class="field"><label for="page-description">Description</label><textarea id="page-description" name="description" maxlength="2000"></textarea></div><div class="field"><label for="page-category">Category</label><input id="page-category" name="category" maxlength="60" placeholder="Community, Creator, Business..."></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create Page</button></div></form></section>';
-  document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
-  modal.querySelector('form').onsubmit=async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));try{const result=await api('/pages',{method:'POST',body:JSON.stringify(data)});modal.remove();toast('Page created.');await renderPage(result.page.id);}catch(err){toast(err.message);}};
+function pageTabButton(active,tab,label){
+  return '<button type="button" class="page-tab'+(active===tab?' is-active':'')+'" data-page-tab="'+tab+'" aria-current="'+(active===tab?'page':'false')+'">'+label+'</button>';
 }
-async function renderPage(pageId){
-  activateSilent('page');state.activePage=pageId;persistCurrentView();
-  const data=await api('/pages/'+encodeURIComponent(pageId));const page=data.page;
+function pageAboutMarkup(page){
+  const contactRows=[
+    page.website?'<div><small>Website</small><a href="'+esc(page.website)+'" target="_blank" rel="noopener noreferrer">'+esc(page.website)+'</a></div>':'',
+    page.contactEmail?'<div><small>Email</small><a href="mailto:'+esc(page.contactEmail)+'">'+esc(page.contactEmail)+'</a></div>':'',
+    page.phone?'<div><small>Phone</small><a href="tel:'+esc(page.phone)+'">'+esc(page.phone)+'</a></div>':'',
+    page.location?'<div><small>Location</small><strong>'+esc(page.location)+'</strong></div>':''
+  ].filter(Boolean).join('');
+  return '<section class="card page-information-card"><p class="page-eyebrow">ABOUT THIS PAGE</p><h2>About '+esc(page.title)+'</h2>'+
+    (page.description?'<p class="page-about-description">'+esc(page.description)+'</p>':'<p class="muted">This Page has not added a description yet.</p>')+
+    '<div class="page-information-grid"><div><small>Category</small><strong>'+esc(page.category||'Not specified')+'</strong></div><div><small>Page handle</small><strong>@'+esc(page.handle)+'</strong></div><div><small>Created</small><strong>'+esc(page.createdAt?new Date(page.createdAt).toLocaleDateString(): 'Date unavailable')+'</strong></div></div>'+
+    (contactRows?'<div class="page-contact-grid">'+contactRows+'</div>':'<p class="muted">No public contact details have been added.</p>')+
+    (page.actionLabel&&page.actionUrl?'<a class="primary page-action-link" href="'+esc(page.actionUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(page.actionLabel)+'</a>':'')+
+    '</section>';
+}
+function pageSettingsMarkup(page){
+  return '<section class="card page-settings-card"><p class="page-eyebrow">PAGE CONTROL CENTRE</p><h2>Edit public information</h2><p class="muted">Changes are saved to this Page and shown to visitors. Only Page owners and admins can edit these details.</p>'+
+    '<form id="page-settings-form" class="page-settings-form">'+
+    '<div class="field"><label for="edit-page-title">Page name</label><input id="edit-page-title" name="title" minlength="3" maxlength="160" required value="'+esc(page.title||'')+'"></div>'+
+    '<div class="field"><label for="edit-page-handle">Page handle</label><input id="edit-page-handle" name="handle" minlength="3" maxlength="30" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,29}" required value="'+esc(page.handle||'')+'"></div>'+
+    '<div class="field"><label for="edit-page-category">Category</label><input id="edit-page-category" name="category" maxlength="60" value="'+esc(page.category||'')+'"></div>'+
+    '<div class="field"><label for="edit-page-description">Description</label><textarea id="edit-page-description" name="description" rows="4" maxlength="2000">'+esc(page.description||'')+'</textarea></div>'+
+    '<div class="page-settings-divider"><h3>Business and contact details</h3><p>These details are public on the About tab.</p></div>'+
+    '<div class="field"><label for="edit-page-website">Website</label><input id="edit-page-website" name="website" type="url" maxlength="500" placeholder="https://" value="'+esc(page.website||'')+'"></div>'+
+    '<div class="field"><label for="edit-page-email">Public contact email</label><input id="edit-page-email" name="contactEmail" type="email" maxlength="254" value="'+esc(page.contactEmail||'')+'"></div>'+
+    '<div class="field"><label for="edit-page-phone">Public phone</label><input id="edit-page-phone" name="phone" maxlength="50" value="'+esc(page.phone||'')+'"></div>'+
+    '<div class="field"><label for="edit-page-location">Location</label><input id="edit-page-location" name="location" maxlength="160" value="'+esc(page.location||'')+'"></div>'+
+    '<div class="page-settings-divider"><h3>Page action button</h3><p>Add both a button label and a secure website link, or leave both empty.</p></div>'+
+    '<div class="field"><label for="edit-page-action-label">Button label</label><input id="edit-page-action-label" name="actionLabel" maxlength="40" value="'+esc(page.actionLabel||'')+'" placeholder="Visit website, Book now…"></div>'+
+    '<div class="field"><label for="edit-page-action-url">Button destination</label><input id="edit-page-action-url" name="actionUrl" type="url" maxlength="500" value="'+esc(page.actionUrl||'')+'" placeholder="https://"></div>'+
+    '<div class="page-form-actions"><button class="primary" type="submit">Save Page details</button><p id="page-settings-status" class="muted" role="status"></p></div></form>'+
+    (page.myRole==='owner'?'<div class="page-danger-zone"><div><strong>Delete Page</strong><p>Deleting removes this Page, its Page posts, follows, team access and Page analytics.</p></div><button class="secondary danger-button" type="button" id="delete-page">Delete Page</button></div>':'')+
+    '</section>';
+}
+function pageTeamMarkup(page,members){
+  const roleOptions=page.myRole==='owner'?'<option value="admin">Admin</option><option value="editor">Editor</option><option value="analyst">Analyst</option>':'<option value="editor">Editor</option><option value="analyst">Analyst</option>';
+  const rows=members.map(member=>{
+    const account=member.user||{},isOwner=member.role==='owner',isSelf=account.id===state.user.id;
+    const canEditRole=!isOwner&&!isSelf&&(page.myRole==='owner'||(page.myRole==='admin'&&member.role!=='admin'));
+    const canRemove=!isOwner&&!isSelf&&(page.myRole==='owner'||(page.myRole==='admin'&&['editor','analyst'].includes(member.role)));
+    const options=page.myRole==='owner'?'<option value="admin">Admin</option><option value="editor">Editor</option><option value="analyst">Analyst</option>':'<option value="editor">Editor</option><option value="analyst">Analyst</option>';
+    return '<article class="page-team-member"><img src="'+avatar(account)+'" alt="" class="avatar"><div class="page-team-member-name"><strong>'+esc(account.name||account.username||'Minglora member')+'</strong><small>@'+esc(account.username||'member')+'</small></div>'+
+      (isOwner?'<span class="page-role-badge">Owner</span>':'<span class="page-role-badge">'+esc(member.role)+'</span>')+
+      (!canEditRole?'':'<form class="page-role-change-form" data-page-role-form="'+esc(account.id)+'"><select name="role" aria-label="Role for '+esc(account.username||'member')+'">'+options+'</select><button class="secondary" type="submit">Save role</button></form>')+
+      (canRemove?'<button class="secondary danger-button" type="button" data-remove-page-member="'+esc(account.id)+'">Remove</button>':'')+
+      '</article>';
+  }).join('');
+  return '<section class="card page-team-card"><p class="page-eyebrow">ACCESS CONTROL</p><h2>Page team</h2><p class="muted">Give existing Minglora members only the access they need. Owners retain control of Page ownership.</p>'+
+    '<form id="page-team-add-form" class="page-team-add-form"><div class="field"><label for="page-team-username">Member username</label><input id="page-team-username" name="username" required placeholder="Enter an existing @username"></div><div class="field"><label for="page-team-role">Role</label><select id="page-team-role" name="role">'+roleOptions+'</select></div><button class="primary" type="submit">Add team member</button><p id="page-team-status" class="muted" role="status"></p></form>'+
+    '<div class="page-team-list-heading"><h3>People with Page access</h3><span>'+members.length+' members</span></div>'+
+    (rows?'<div class="page-team-list">'+rows+'</div>':'<p class="muted">No team members are listed yet.</p>')+
+    '<div class="page-role-explainer"><p><strong>Admin</strong> — manage Page details and team access.</p><p><strong>Editor</strong> — publish Page posts and media.</p><p><strong>Analyst</strong> — view Page insights and follower information.</p></div></section>';
+}
+function pageInsightsMarkup(data){
+  const metrics=data.metrics||{},series=Array.isArray(data.series)?data.series:[];
+  const peak=Math.max(1,...series.map(item=>Number(item.visitors||0)));
+  const bars=series.map(item=>{
+    const count=Number(item.visitors||0),height=count?Math.max(5,Math.round(count/peak*100)):2;
+    const label=new Date(item.date+'T00:00:00Z').toLocaleDateString(undefined,{month:'short',day:'numeric',timeZone:'UTC'});
+    return '<div class="page-insight-day" title="'+esc(label+': '+count+' recorded visitors')+'"><div class="page-insight-bar-wrap"><span style="height:'+height+'%"></span></div><small>'+esc(label)+'</small></div>';
+  }).join('');
+  return '<section class="card page-insights-card"><div class="page-insights-heading"><div><p class="page-eyebrow">REAL PAGE ACTIVITY</p><h2>Insights</h2><p class="muted">These figures come from recorded Minglora account activity, not estimates.</p></div><label>Period <select id="page-insights-days"><option value="7"'+(data.days===7?' selected':'')+'>7 days</option><option value="30"'+(data.days===30?' selected':'')+'>30 days</option><option value="90"'+(data.days===90?' selected':'')+'>90 days</option></select></label></div>'+
+    '<div class="page-insights-metrics"><article><small>Unique signed-in visitors</small><strong>'+Number(metrics.uniqueVisitors||0).toLocaleString()+'</strong></article><article><small>Followers</small><strong>'+Number(metrics.followers||0).toLocaleString()+'</strong></article><article><small>Published posts</small><strong>'+Number(metrics.publishedPosts||0).toLocaleString()+'</strong></article><article><small>Recorded visitor-days</small><strong>'+Number(metrics.visitorDays||0).toLocaleString()+'</strong></article></div>'+
+    '<div class="page-insight-chart"><div class="page-insight-chart-title"><h3>Daily unique visitors</h3><span>Each signed-in member is counted once per day</span></div><div class="page-insight-bars">'+(bars||'<p class="muted">No visitor data is available for this period.</p>')+'</div></div>'+
+    '<p class="page-insights-footnote">Page views by anonymous visitors and impressions are not included. Analytics start accumulating after this feature is deployed.</p></section>';
+}
+function pageFollowersMarkup(followers){
+  const rows=followers.map(item=>{
+    const account=item.user||{};
+    return '<article class="page-follower-row"><img src="'+avatar(account)+'" class="avatar" alt=""><div><strong>'+esc(account.name||account.username||'Minglora member')+'</strong><small>@'+esc(account.username||'member')+'</small></div><span>Following since '+esc(item.createdAt?new Date(item.createdAt).toLocaleDateString():'date unavailable')+'</span></article>';
+  }).join('');
+  return '<section class="card page-followers-card"><p class="page-eyebrow">COMMUNITY</p><h2>Followers</h2><p class="muted">People who chose to follow this Page.</p><div class="page-followers-list">'+(rows||'<p class="muted">This Page does not have followers yet.</p>')+'</div></section>';
+}
+async function renderPage(pageId,requestedTab='posts',days=30){
+  activateSilent('page');state.activePage=pageId;
+  const data=await api('/pages/'+encodeURIComponent(pageId));
+  const page=data.page,posts=Array.isArray(data.posts)?data.posts:[];
   const canPublish=['owner','admin','editor'].includes(page.myRole);
+  const canManage=['owner','admin'].includes(page.myRole);
+  const canInsights=['owner','admin','analyst'].includes(page.myRole);
   const canDeletePage=page.myRole==='owner';
-  let html='<section class="card page-detail-head"><button class="text-button" id="back-to-pages">← All Pages</button><div class="page-card-mark page-detail-mark">'+esc((page.title||'P').slice(0,1).toUpperCase())+'</div><h1>'+esc(page.title)+'</h1><p class="page-handle">@'+esc(page.handle)+'</p>'+(page.category?'<span class="page-category">'+esc(page.category)+'</span>':'')+'<p>'+esc(page.description||'')+'</p><p class="muted">'+page.followerCount+' followers · Managed by '+esc(page.owner?.name||'account')+'</p><div class="page-detail-actions">'+(page.myRole?'':'<button class="primary" id="toggle-page-follow">'+(page.isFollowing?'Unfollow Page':'Follow Page')+'</button><button class="secondary" id="report-page">Report Page</button>')+(canDeletePage?'<button class="secondary" id="delete-page">Delete Page</button>':'')+'</div></section>';
-  if(canPublish)html+='<section class="card page-post-composer"><h2>Publish as '+esc(page.title)+'</h2><form id="page-post-form"><div class="field"><label for="page-post-text">Post text</label><textarea id="page-post-text" name="text" maxlength="5000" placeholder="Share an update..."></textarea></div><div class="field"><label>Photos and MP4 videos (up to 250 MB each)</label><div id="page-post-media-picker"></div></div><button class="primary" type="submit">Publish Page post</button></form></section>';
-  if(data.posts.length){
-    html+='<div class="page-post-list">'+data.posts.map(post=>'<article class="card page-post"><div class="post-head"><img class="avatar" src="'+avatar(post.author)+'" alt=""><div class="post-author"><strong>'+esc(page.title)+'</strong><small>Published by '+esc(post.author?.name||'Unknown account')+' · '+timeAgo(post.createdAt)+'</small></div>'+(post.publishedBy===state.user.id||['owner','admin'].includes(page.myRole)?'<button class="post-menu" aria-label="Delete Page post" data-delete-page-post="'+esc(post.id)+'">···</button>':'<button class="post-menu" aria-label="Report Page post" data-report-page-post="'+esc(post.id)+'">⚑</button>')+'</div>'+(post.text?'<div class="post-text">'+esc(post.text)+'</div>':'')+renderPostMedia(post)+'</article>').join('')+'</div>';
-  }else html+='<section class="card empty-state"><h3>No Page posts yet</h3><p>New updates published by this Page will show here.</p></section>';
+  const validTabs=['posts','about'];
+  if(canInsights)validTabs.push('insights','followers');
+  if(canManage)validTabs.push('team','settings');
+  const tab=validTabs.includes(requestedTab)?requestedTab:'posts';
+  let extraData=null;
+  if(tab==='insights')extraData=await api('/pages/'+encodeURIComponent(pageId)+'/insights?days='+([7,30,90].includes(Number(days))?Number(days):30));
+  if(tab==='team')extraData=await api('/pages/'+encodeURIComponent(pageId)+'/roles');
+  if(tab==='followers')extraData=await api('/pages/'+encodeURIComponent(pageId)+'/followers');
+  let html='<section class="card page-detail-head"><button class="text-button" id="back-to-pages">← All Pages</button>'+
+    '<div class="page-detail-brand-row"><div class="page-card-mark page-detail-mark">'+esc((page.title||'P').slice(0,1).toUpperCase())+'</div><div><p class="page-eyebrow">MINGLORA PAGE</p><h1>'+esc(page.title)+'</h1><p class="page-handle">@'+esc(page.handle)+'</p>'+(page.category?'<span class="page-category">'+esc(page.category)+'</span>':'')+'</div></div>'+
+    (page.description?'<p class="page-detail-description">'+esc(page.description)+'</p>':'')+
+    '<div class="page-detail-stats"><div><strong>'+Number(page.followerCount||0).toLocaleString()+'</strong><span>Followers</span></div><div><strong>'+posts.length.toLocaleString()+'</strong><span>Published posts</span></div><div><strong>'+esc(page.myRole?String(page.myRole):'Public')+'</strong><span>Access</span></div></div>'+
+    '<div class="page-detail-actions">'+(page.myRole?'':'<button class="'+(page.isFollowing?'secondary':'primary')+'" id="toggle-page-follow">'+(page.isFollowing?'Following · Unfollow':'Follow Page')+'</button><button class="secondary" id="report-page">Report Page</button>')+
+    (canManage?'<button class="secondary" type="button" data-page-tab="settings">Manage Page</button>':'')+
+    (page.actionLabel&&page.actionUrl?'<a class="primary page-action-link" href="'+esc(page.actionUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(page.actionLabel)+'</a>':'')+'</div></section>'+
+    '<nav class="page-tabs" aria-label="Page sections">'+pageTabButton(tab,'posts','Posts')+pageTabButton(tab,'about','About')+
+    (canInsights?pageTabButton(tab,'insights','Insights')+pageTabButton(tab,'followers','Followers'):'')+
+    (canManage?pageTabButton(tab,'team','Team')+pageTabButton(tab,'settings','Settings'):'')+'</nav>';
+  if(tab==='about')html+=pageAboutMarkup(page);
+  else if(tab==='settings')html+=pageSettingsMarkup(page);
+  else if(tab==='team')html+=pageTeamMarkup(page,extraData?.members||[]);
+  else if(tab==='insights')html+=pageInsightsMarkup(extraData||{});
+  else if(tab==='followers')html+=pageFollowersMarkup(extraData?.followers||[]);
+  else{
+    if(canPublish)html+='<section class="card page-post-composer"><div class="page-post-composer-heading"><div><p class="page-eyebrow">PUBLISHING AS THE PAGE</p><h2>Share an update</h2></div><span class="page-post-identity">'+esc(page.title)+'</span></div><form id="page-post-form"><div class="field"><label for="page-post-text">Post text</label><textarea id="page-post-text" name="text" maxlength="5000" placeholder="Share an update with your followers…"></textarea></div><div class="field"><label>Photos and MP4 videos (up to 250 MB each)</label><div id="page-post-media-picker"></div></div><button class="primary" type="submit">Publish Page post</button></form></section>';
+    if(posts.length){
+      html+='<div class="page-post-list">'+posts.map(post=>'<article class="card page-post"><div class="post-head"><img class="avatar" src="'+avatar(post.author)+'" alt=""><div class="post-author"><strong>'+esc(page.title)+'</strong><small>Published by '+esc(post.author?.name||'Minglora member')+' · '+timeAgo(post.createdAt)+'</small></div>'+(post.publishedBy===state.user.id||['owner','admin'].includes(page.myRole)?'<button class="post-menu" aria-label="Delete Page post" data-delete-page-post="'+esc(post.id)+'">···</button>':'<button class="post-menu" aria-label="Report Page post" data-report-page-post="'+esc(post.id)+'">⚑</button>')+'</div>'+(post.text?'<div class="post-text">'+esc(post.text)+'</div>':'')+renderPostMedia(post)+'</article>').join('')+'</div>';
+    }else html+='<section class="card empty-state"><h3>No Page posts yet</h3><p>New updates published by this Page will show here.</p></section>';
+  }
   setContent(html);
   const pageMediaPicker=$('#page-post-media-picker')?createMediaPicker($('#page-post-media-picker'),{slot:'page',maxFiles:10}):null;
   $('#back-to-pages')?.addEventListener('click',()=>renderPages());
+  document.querySelectorAll('[data-page-tab]').forEach(button=>button.addEventListener('click',()=>renderPage(pageId,button.dataset.pageTab,days)));
   $('#report-page')?.addEventListener('click',()=>openReportComposer('page',pageId));
-  $('#toggle-page-follow')?.addEventListener('click',async()=>{try{await api('/pages/'+pageId+'/follow',{method:page.isFollowing?'DELETE':'POST',body:'{}'});await renderPage(pageId);toast(page.isFollowing?'Page unfollowed.':'Page followed.');}catch(e){toast(e.message)}});
-  $('#delete-page')?.addEventListener('click',async()=>{if(!window.confirm('Delete this Page and its posts?'))return;try{await api('/pages/'+pageId,{method:'DELETE',body:'{}'});state.activePage=null;toast('Page deleted.');await renderPages();}catch(e){toast(e.message)}});
-  $('#page-post-form')?.addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button[type="submit"]');button.disabled=true;try{const values=new FormData(e.currentTarget),mediaIds=pageMediaPicker?await pageMediaPicker.upload():[];await api('/pages/'+pageId+'/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});toast('Page post published.');pageMediaPicker?.destroy();await renderPage(pageId);}catch(err){toast(err.message);button.disabled=false;}});
-  document.querySelectorAll('[data-report-page-post]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('post',btn.dataset.reportPagePost)));
-  document.querySelectorAll('[data-delete-page-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this Page post?'))return;try{await api('/pages/'+pageId+'/posts/'+btn.dataset.deletePagePost,{method:'DELETE',body:'{}'});toast('Page post deleted.');await renderPage(pageId);}catch(err){toast(err.message)}}));
-}
-function savedPostHasType(post,type){
-  if(type==='all')return true;
-  const media=Array.isArray(post.media)?post.media:[];
-  if(type==='photo')return media.some(item=>item.mediaType==='image');
-  if(type==='video')return media.some(item=>item.mediaType==='video');
-  if(type==='audio')return media.some(item=>item.mediaType==='audio');
-  if(type==='text')return !media.length;
-  return true;
+  $('#toggle-page-follow')?.addEventListener('click',async()=>{
+    const following=!!page.isFollowing;
+    try{await api('/pages/'+encodeURIComponent(pageId)+'/follow',{method:following?'DELETE':'POST',body:'{}'});await renderPage(pageId,tab,days);toast(following?'Page unfollowed.':'Page followed.');}
+    catch(error){toast(error.message);}
+  });
+  $('#delete-page')?.addEventListener('click',async()=>{
+    if(!window.confirm('Delete this Page and its posts, followers, team access and analytics?'))return;
+    try{await api('/pages/'+encodeURIComponent(pageId),{method:'DELETE',body:'{}'});state.activePage=null;toast('Page deleted.');await renderPages();}
+    catch(error){toast(error.message);}
+  });
+  $('#page-post-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const button=event.currentTarget.querySelector('button[type="submit"]');button.disabled=true;
+    try{
+      const values=new FormData(event.currentTarget),mediaIds=pageMediaPicker?await pageMediaPicker.upload():[];
+      await api('/pages/'+encodeURIComponent(pageId)+'/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
+      toast('Page post published.');pageMediaPicker?.destroy();await renderPage(pageId,'posts');
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
+  document.querySelectorAll('[data-report-page-post]').forEach(button=>button.addEventListener('click',()=>openReportComposer('post',button.dataset.reportPagePost)));
+  document.querySelectorAll('[data-delete-page-post]').forEach(button=>button.addEventListener('click',async()=>{
+    if(!window.confirm('Delete this Page post?'))return;
+    try{await api('/pages/'+encodeURIComponent(pageId)+'/posts/'+encodeURIComponent(button.dataset.deletePagePost),{method:'DELETE',body:'{}'});toast('Page post deleted.');await renderPage(pageId,'posts');}
+    catch(error){toast(error.message);}
+  }));
+  $('#page-settings-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=$('#page-settings-status');
+    button.disabled=true;if(status)status.textContent='Saving Page details…';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      await api('/pages/'+encodeURIComponent(pageId),{method:'PATCH',body:JSON.stringify(values)});
+      toast('Page details saved.');await renderPage(pageId,'settings');
+    }catch(error){if(status)status.textContent=error.message;button.disabled=false;}
+  });
+  $('#page-team-add-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=$('#page-team-status');
+    button.disabled=true;if(status)status.textContent='Adding team member…';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      await api('/pages/'+encodeURIComponent(pageId)+'/roles',{method:'POST',body:JSON.stringify(values)});
+      toast('Page team updated.');await renderPage(pageId,'team');
+    }catch(error){if(status)status.textContent=error.message;button.disabled=false;}
+  });
+  document.querySelectorAll('[data-page-role-form]').forEach(form=>form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const memberId=form.dataset.pageRoleForm,button=form.querySelector('button[type="submit"]');
+    button.disabled=true;
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      await api('/pages/'+encodeURIComponent(pageId)+'/roles/'+encodeURIComponent(memberId),{method:'PATCH',body:JSON.stringify(values)});
+      toast('Team role updated.');await renderPage(pageId,'team');
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-remove-page-member]').forEach(button=>button.addEventListener('click',async()=>{
+    if(!window.confirm('Remove this person from the Page team?'))return;
+    button.disabled=true;
+    try{await api('/pages/'+encodeURIComponent(pageId)+'/roles/'+encodeURIComponent(button.dataset.removePageMember),{method:'DELETE',body:'{}'});toast('Team member removed.');await renderPage(pageId,'team');}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  $('#page-insights-days')?.addEventListener('change',event=>renderPage(pageId,'insights',Number(event.target.value)));
 }
 async function renderSavedPosts({reload=true,preserveSearchFocus=false,caret=null}={}){
   activateSilent('saved');
