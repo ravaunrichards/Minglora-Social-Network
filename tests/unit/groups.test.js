@@ -131,10 +131,25 @@ test('advanced group state collections survive normalization and persistence', (
 
 test('advanced group rules do not call authenticated-only helpers for anonymous sessions', () => {
   const migration = readFileSync(new URL('../../database/migrations/083_minglora_advanced_groups.sql', import.meta.url), 'utf8');
-  const policyAt = migration.indexOf('CREATE POLICY minglora_group_rules_read');
+  const policyAt = migration.indexOf('CREATE POLICY minglora_group_rules_read ON public.group_rules');
   const policy = migration.slice(policyAt, migration.indexOf(');', policyAt) + 2);
   assert.match(policy, /FOR SELECT TO authenticated/);
   assert.doesNotMatch(policy, /TO anon, authenticated/);
+});
+
+test('advanced Groups SQL uses valid dollar-quoted function and DO blocks', () => {
+  const migration = readFileSync(new URL('../../database/migrations/083_minglora_advanced_groups.sql', import.meta.url), 'utf8');
+  assert.match(migration, /DO \$\$/);
+  assert.match(migration, /AS \$\$/);
+  assert.doesNotMatch(migration, /DO \$(?:\n|[^$])/);
+  assert.doesNotMatch(migration, /AS \$(?:\n|[^$])/);
+});
+
+test('anonymous SQL reads are limited to public group rules, announcements and non-group events', () => {
+  const migration = readFileSync(new URL('../../database/migrations/083_minglora_advanced_groups.sql', import.meta.url), 'utf8');
+  assert.match(migration, /minglora_group_rules_read_public_anon[\s\S]*?FOR SELECT TO anon[\s\S]*?g\.visibility='public'/);
+  assert.match(migration, /minglora_group_announcements_read_public_anon[\s\S]*?FOR SELECT TO anon[\s\S]*?g\.visibility='public'/);
+  assert.match(migration, /minglora_events_read_public_anon[\s\S]*?FOR SELECT TO anon[\s\S]*?group_id IS NULL AND visibility='public'/);
 });
 
 test('groups UI exposes member chat, invitations, events, moderation and reactions', () => {
