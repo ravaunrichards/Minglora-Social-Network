@@ -35,6 +35,7 @@ export function canDiscoverGroup(group) {
 
 export function canRequestGroupMembership(group, userId) {
   if (!group || !userId || getGroupRole(group, userId) || group.status !== 'active') return false;
+  if ((group.memberships || []).some(item => item.userId === userId && item.status === 'banned')) return false;
   return group.visibility === 'public' || (group.visibility === 'private' && group.joinApproval !== false && group.discoverable !== false);
 }
 
