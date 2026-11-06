@@ -170,3 +170,18 @@ test('Messenger realtime enforces a per-account connection limit', () => {
   first.socket.close();
   hub.close();
 });
+
+test('Messenger realtime closes sockets after the authenticated application session is revoked', async () => {
+  let authenticated = true;
+  const { hub, connect } = createHub({
+    heartbeatMs: 20,
+    getUserFromRequest: req => authenticated ? { id: req.headers['x-user'] } : null
+  });
+  const alice = connect('alice');
+  assert.equal(alice.socket.readyState, 1);
+  authenticated = false;
+  await delay(65);
+  assert.equal(alice.socket.readyState, 3);
+  assert.equal(hub.isConnected('alice'), false);
+  hub.close();
+});
