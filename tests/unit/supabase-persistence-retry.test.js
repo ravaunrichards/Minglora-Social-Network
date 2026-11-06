@@ -8,7 +8,7 @@ const collections = [
   
    'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
   'pageRoles', 'pageFollows', 'pagePosts',
-   'messages', 'messageConversationHides', 'notifications', 'sessions',
+   'messages', 'messageConversationHides', 'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'notifications', 'sessions',
   'liveSessions', 'liveParticipants', 'liveSpeakerRequests', 'reports', 'supportTickets',
   'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',
   'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance',
