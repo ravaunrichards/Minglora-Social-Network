@@ -640,7 +640,12 @@
       function applySettingsSearch() {
         const query=String(settingsSearch?.value||'').trim().toLocaleLowerCase();
         if(!query){
-          for(const tab of categoryTabs)tab.hidden=false;
+          for(const tab of categoryTabs){
+            tab.hidden=false;
+            const active=tab.dataset.settingsCategoryButton===activeSettingsCategory;
+            tab.classList.toggle('active',active);
+            tab.setAttribute('aria-pressed',active?'true':'false');
+          }
           for(const section of categorizedSections)section.hidden=section.dataset.settingsCategory!==activeSettingsCategory;
           if(settingsSearchStatus)settingsSearchStatus.textContent='Search across all eight settings categories.';
           if(settingsSearchNoResults)settingsSearchNoResults.hidden=true;
