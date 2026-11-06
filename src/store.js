@@ -10,7 +10,7 @@ const dbPath = path.join(dataDir, 'db.json');
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
+  'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'savedPostCollections', 'mediaAssets',
   'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
@@ -129,6 +129,7 @@ function stripLegacyDemoData(state) {
   state.giftGalleryPreferences = (state.giftGalleryPreferences || []).filter(preference => !demoUsers.has(preference.userId));
   state.blocks = (state.blocks || []).filter(b => !demoUsers.has(b.blockerId) && !demoUsers.has(b.blockedId));
   state.savedPosts = (state.savedPosts || []).filter(s => !demoUsers.has(s.userId) && !demoPostIds.has(s.postId));
+  state.savedPostCollections = (state.savedPostCollections || []).filter(collection => !demoUsers.has(collection.userId));
   const removedGroupIds = new Set((state.groups || []).filter(g => g.id === 'group-creators').map(g => g.id));
   state.groups = (state.groups || [])
     .filter(g => !demoUsers.has(g.ownerId) && g.id !== 'group-creators')

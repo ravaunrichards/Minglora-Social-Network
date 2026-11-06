@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge' };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
 const fallbackAvatar = name => {
@@ -364,8 +364,40 @@ function bindSoundtrackPlayback(root=document){
     });
   });
 }
-function postCard(post){
+function renderSavedControls(post){
+  return `<section class="saved-post-manager" aria-label="Saved post organization">
+    <div class="saved-post-manager-top">
+      <div class="saved-post-markers">
+        <span class="saved-private-label">🔒 Private to you</span>
+        ${post.savedAt?`<span class="saved-time-label">Saved ${timeAgo(post.savedAt)}</span>`:''}
+        ${post.isFavorite?'<span class="saved-state-label">★ Favorite</span>':''}
+        ${post.readLater?'<span class="saved-state-label">◷ Read later</span>':''}
+      </div>
+      <label class="saved-move-label">Collection
+        <select data-saved-collection-select="${esc(post.id)}" aria-label="Move saved post to a collection">
+          <option value="">All saved</option>
+          ${state.savedPostCollections.map(collection=>`<option value="${esc(collection.id)}" ${post.collectionId===collection.id?'selected':''}>${esc(collection.title)}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    ${post.note?`<p class="saved-private-note"><strong>Your note:</strong> ${esc(post.note)}</p>`:''}
+    ${Array.isArray(post.tags)&&post.tags.length?`<div class="saved-tags">${post.tags.map(tag=>`<span>#${esc(tag)}</span>`).join('')}</div>`:''}
+    <div class="saved-post-tools">
+      <button type="button" data-saved-favorite="${esc(post.id)}" aria-pressed="${post.isFavorite?'true':'false'}">${post.isFavorite?'★ Favorited':'☆ Add favorite'}</button>
+      <button type="button" data-saved-read-later="${esc(post.id)}" aria-pressed="${post.readLater?'true':'false'}">${post.readLater?'✓ In Read Later':'◷ Read later'}</button>
+      <button type="button" data-saved-note-toggle="${esc(post.id)}">✎ ${post.note||post.tags?.length?'Edit note & tags':'Add private note & tags'}</button>
+    </div>
+    <form class="saved-details-form hidden" data-saved-details-form="${esc(post.id)}">
+      <label>Private note<textarea name="note" maxlength="500" placeholder="Add a reminder or context only you can see…">${esc(post.note||'')}</textarea></label>
+      <label>Tags <input name="tags" maxlength="220" value="${esc((post.tags||[]).join(', '))}" placeholder="ideas, travel, recipes"></label>
+      <div class="saved-details-actions"><button class="primary" type="submit">Save details</button><button class="secondary" type="button" data-saved-details-cancel="${esc(post.id)}">Cancel</button></div>
+    </form>
+  </section>`;
+}
+
+function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
+  const savedControls=options.saved?renderSavedControls(post):'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
       <div class="post-author"><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}</strong><small>@${esc(author.username||'')} ${verifiedProfileBadge(author)}${gifterProfileBadge(author)} · ${timeAgo(post.createdAt)} · ◉</small></div>
@@ -382,6 +414,7 @@ function postCard(post){
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
     </div>
+    ${savedControls}
     ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><strong>${esc(c.author?.name||'Member')}</strong><small class="comment-author-username">@${esc(c.author?.username||'')} ${verifiedProfileBadge(c.author)}${gifterProfileBadge(c.author)}</small>${esc(c.text)}${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
@@ -5489,11 +5522,183 @@ async function renderPage(pageId){
   document.querySelectorAll('[data-report-page-post]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('post',btn.dataset.reportPagePost)));
   document.querySelectorAll('[data-delete-page-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this Page post?'))return;try{await api('/pages/'+pageId+'/posts/'+btn.dataset.deletePagePost,{method:'DELETE',body:'{}'});toast('Page post deleted.');await renderPage(pageId);}catch(err){toast(err.message)}}));
 }
-async function renderSavedPosts(){
+function savedPostHasType(post,type){
+  if(type==='all')return true;
+  const media=Array.isArray(post.media)?post.media:[];
+  if(type==='photo')return media.some(item=>item.mediaType==='image');
+  if(type==='video')return media.some(item=>item.mediaType==='video');
+  if(type==='audio')return media.some(item=>item.mediaType==='audio');
+  if(type==='text')return !media.length;
+  return true;
+}
+async function renderSavedPosts({reload=true,preserveSearchFocus=false,caret=null}={}){
   activateSilent('saved');
-  state.savedPosts=(await api('/saved-posts')).posts;
-  setContent(`<div class="page-heading"><h1>Saved posts</h1></div>${state.savedPosts.length?state.savedPosts.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">▣</div><h3>No saved posts yet</h3><p>Use Save on a post to keep it here for later.</p></section>`}`);
+  if(reload){
+    const result=await api('/saved-posts');
+    state.savedPosts=Array.isArray(result.posts)?result.posts:[];
+    state.savedPostCollections=Array.isArray(result.collections)?result.collections:[];
+  }
+  const all=state.savedPosts||[];
+  const query=String(state.savedSearch||'').trim().toLowerCase();
+  let posts=all.filter(post=>{
+    if(state.savedFilter==='favorites'&&!post.isFavorite)return false;
+    if(state.savedFilter==='read-later'&&!post.readLater)return false;
+    if(state.savedCollection!=='all'&&post.collectionId!==state.savedCollection)return false;
+    if(!savedPostHasType(post,state.savedType))return false;
+    if(query){
+      const haystack=[post.text,post.author?.name,post.author?.username,post.note,...(post.tags||[])].join(' ').toLowerCase();
+      if(!haystack.includes(query))return false;
+    }
+    return true;
+  });
+  const sorters={
+    'saved-newest':(a,b)=>new Date(b.savedAt||0)-new Date(a.savedAt||0),
+    'saved-oldest':(a,b)=>new Date(a.savedAt||0)-new Date(b.savedAt||0),
+    'post-newest':(a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0),
+    'post-oldest':(a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0),
+    'creator-az':(a,b)=>String(a.author?.name||'').localeCompare(String(b.author?.name||''))
+  };
+  posts=[...posts].sort(sorters[state.savedSort]||sorters['saved-newest']);
+  const countFor=id=>all.filter(post=>post.collectionId===id).length;
+  const favCount=all.filter(post=>post.isFavorite).length;
+  const laterCount=all.filter(post=>post.readLater).length;
+  const activeFilter=value=>state.savedFilter===value&&state.savedCollection==='all'?'active':'';
+  const collectionMarkup=state.savedPostCollections.map(collection=>`
+    <div class="saved-collection-chip ${state.savedCollection===collection.id?'active':''}">
+      <button type="button" data-saved-collection-filter="${esc(collection.id)}"><span class="saved-collection-icon">▱</span><span>${esc(collection.title)}</span><b>${countFor(collection.id)}</b></button>
+      <div class="saved-collection-actions">
+        <button type="button" data-saved-rename="${esc(collection.id)}" aria-label="Rename ${esc(collection.title)}" title="Rename collection">✎</button>
+        <button type="button" data-saved-delete-collection="${esc(collection.id)}" aria-label="Delete ${esc(collection.title)}" title="Delete collection">×</button>
+      </div>
+    </div>`).join('');
+  const noItems=all.length===0
+    ?`<section class="card empty-state saved-empty-state"><div class="saved-empty-art">▣</div><h3>Your saved library starts here</h3><p>Save posts from your feed and they will appear here. Only you can see what you save.</p></section>`
+    :`<section class="card empty-state saved-empty-state"><div class="saved-empty-art">⌕</div><h3>No saved posts match these filters</h3><p>Try another search, content type, or collection.</p><button type="button" class="secondary" id="saved-clear-filters">Clear filters</button></section>`;
+  setContent(`<div class="saved-library">
+    <header class="saved-library-header">
+      <div><span class="saved-eyebrow">YOUR PRIVATE LIBRARY</span><h1>Saved Posts</h1><p>Keep the posts worth coming back to, organized your way.</p></div>
+      <button type="button" class="primary" id="saved-new-collection-toggle">＋ New collection</button>
+    </header>
+    <section class="saved-overview" aria-label="Saved Posts overview">
+      <div><strong>${all.length}</strong><span>Saved posts</span></div>
+      <div><strong>${state.savedPostCollections.length}</strong><span>Collections</span></div>
+      <div><strong>${favCount}</strong><span>Favorites</span></div>
+      <div><strong>${laterCount}</strong><span>Read later</span></div>
+    </section>
+    <form id="saved-collection-create" class="saved-inline-create hidden">
+      <label for="saved-collection-title">Collection name</label>
+      <input id="saved-collection-title" name="title" maxlength="40" minlength="2" placeholder="e.g. Ideas, Recipes, Places to visit" required>
+      <button type="submit" class="primary">Create collection</button>
+      <button type="button" class="secondary" id="saved-collection-cancel">Cancel</button>
+    </form>
+    <section class="saved-library-controls">
+      <label class="saved-search-field"><span aria-hidden="true">⌕</span><input id="saved-search" type="search" value="${esc(state.savedSearch)}" placeholder="Search saved posts, creators, notes or tags…" aria-label="Search saved posts"></label>
+      <label class="saved-select-label">Content type
+        <select id="saved-type-filter">
+          <option value="all" ${state.savedType==='all'?'selected':''}>All types</option>
+          <option value="text" ${state.savedType==='text'?'selected':''}>Text posts</option>
+          <option value="photo" ${state.savedType==='photo'?'selected':''}>Photos</option>
+          <option value="video" ${state.savedType==='video'?'selected':''}>Videos</option>
+          <option value="audio" ${state.savedType==='audio'?'selected':''}>Audio</option>
+        </select>
+      </label>
+      <label class="saved-select-label">Sort by
+        <select id="saved-sort">
+          <option value="saved-newest" ${state.savedSort==='saved-newest'?'selected':''}>Recently saved</option>
+          <option value="saved-oldest" ${state.savedSort==='saved-oldest'?'selected':''}>Saved oldest</option>
+          <option value="post-newest" ${state.savedSort==='post-newest'?'selected':''}>Post newest</option>
+          <option value="post-oldest" ${state.savedSort==='post-oldest'?'selected':''}>Post oldest</option>
+          <option value="creator-az" ${state.savedSort==='creator-az'?'selected':''}>Creator A–Z</option>
+        </select>
+      </label>
+    </section>
+    <section class="saved-organize-section">
+      <div class="saved-section-heading"><div><h2>Browse your library</h2><p>Smart shelves and your own collections</p></div></div>
+      <div class="saved-collection-list">
+        <button type="button" class="saved-smart-chip ${activeFilter('all')}" data-saved-filter="all"><span>▣</span><strong>All saved</strong><b>${all.length}</b></button>
+        <button type="button" class="saved-smart-chip ${activeFilter('favorites')}" data-saved-filter="favorites"><span>★</span><strong>Favorites</strong><b>${favCount}</b></button>
+        <button type="button" class="saved-smart-chip ${activeFilter('read-later')}" data-saved-filter="read-later"><span>◷</span><strong>Read later</strong><b>${laterCount}</b></button>
+        ${collectionMarkup||'<span class="saved-no-collections">Create a collection to group related posts.</span>'}
+      </div>
+    </section>
+    <section class="saved-results-section">
+      <div class="saved-results-heading"><div><h2>${state.savedCollection!=='all'?esc(state.savedPostCollections.find(item=>item.id===state.savedCollection)?.title||'Collection'):state.savedFilter==='favorites'?'Your favorites':state.savedFilter==='read-later'?'Read later':'All saved posts'}</h2><p>${posts.length} ${posts.length===1?'post':'posts'} shown</p></div><span class="saved-private-label">🔒 Only you can see this</span></div>
+      ${posts.length?`<div class="saved-post-list">${posts.map(post=>postCard(post,{saved:true})).join('')}</div>`:noItems}
+    </section>
+  </div>`);
   bindFeed();
+  bindSavedPosts();
+  if(preserveSearchFocus){const input=$('#saved-search');input?.focus();if(Number.isInteger(caret))input?.setSelectionRange(caret,caret);}
+}
+function bindSavedPosts(){
+  const root=$('#main-content')||document;
+  $('#saved-new-collection-toggle')?.addEventListener('click',()=>{
+    const form=$('#saved-collection-create');if(!form)return;
+    form.classList.toggle('hidden');if(!form.classList.contains('hidden'))$('#saved-collection-title')?.focus();
+  });
+  $('#saved-collection-cancel')?.addEventListener('click',()=>$('#saved-collection-create')?.classList.add('hidden'));
+  $('#saved-collection-create')?.addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');
+    button.disabled=true;
+    try{
+      const title=String(new FormData(form).get('title')||'').trim();
+      await api('/saved-posts/collections',{method:'POST',body:JSON.stringify({title})});
+      state.savedCollection='all';toast('Collection created.');await renderSavedPosts();
+    }catch(error){toast(error.message);button.disabled=false;}
+  });
+  $('#saved-search')?.addEventListener('input',event=>{const input=event.target;state.savedSearch=input.value;const caret=input.selectionStart;renderSavedPosts({reload:false,preserveSearchFocus:true,caret});});
+  $('#saved-type-filter')?.addEventListener('change',event=>{state.savedType=event.target.value;renderSavedPosts({reload:false});});
+  $('#saved-sort')?.addEventListener('change',event=>{state.savedSort=event.target.value;renderSavedPosts({reload:false});});
+  root.querySelectorAll('[data-saved-filter]').forEach(button=>button.addEventListener('click',()=>{
+    state.savedFilter=button.dataset.savedFilter;state.savedCollection='all';renderSavedPosts({reload:false});
+  }));
+  root.querySelectorAll('[data-saved-collection-filter]').forEach(button=>button.addEventListener('click',()=>{
+    state.savedCollection=button.dataset.savedCollectionFilter;state.savedFilter='all';renderSavedPosts({reload:false});
+  }));
+  root.querySelectorAll('[data-saved-rename]').forEach(button=>button.addEventListener('click',async()=>{
+    const collection=state.savedPostCollections.find(item=>item.id===button.dataset.savedRename);if(!collection)return;
+    const title=window.prompt('Rename collection',collection.title);if(title===null)return;
+    try{await api('/saved-posts/collections/'+encodeURIComponent(collection.id),{method:'PATCH',body:JSON.stringify({title})});toast('Collection renamed.');await renderSavedPosts();}
+    catch(error){toast(error.message);}
+  }));
+  root.querySelectorAll('[data-saved-delete-collection]').forEach(button=>button.addEventListener('click',async()=>{
+    const collection=state.savedPostCollections.find(item=>item.id===button.dataset.savedDeleteCollection);if(!collection)return;
+    if(!window.confirm('Delete "'+collection.title+'"? Your saved posts will remain in All saved.'))return;
+    try{await api('/saved-posts/collections/'+encodeURIComponent(collection.id),{method:'DELETE',body:'{}'});if(state.savedCollection===collection.id)state.savedCollection='all';toast('Collection deleted. Your saved posts were kept.');await renderSavedPosts();}
+    catch(error){toast(error.message);}
+  }));
+  root.querySelectorAll('[data-saved-collection-select]').forEach(select=>select.addEventListener('change',async()=>{
+    try{await api('/saved-posts/'+encodeURIComponent(select.dataset.savedCollectionSelect),{method:'PATCH',body:JSON.stringify({collectionId:select.value||null})});toast('Saved post moved.');await renderSavedPosts();}
+    catch(error){toast(error.message);await renderSavedPosts();}
+  }));
+  root.querySelectorAll('[data-saved-favorite]').forEach(button=>button.addEventListener('click',async()=>{
+    const post=state.savedPosts.find(item=>item.id===button.dataset.savedFavorite);if(!post)return;
+    try{await api('/saved-posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({isFavorite:!post.isFavorite})});await renderSavedPosts();toast(post.isFavorite?'Removed from favorites.':'Added to favorites.');}
+    catch(error){toast(error.message);}
+  }));
+  root.querySelectorAll('[data-saved-read-later]').forEach(button=>button.addEventListener('click',async()=>{
+    const post=state.savedPosts.find(item=>item.id===button.dataset.savedReadLater);if(!post)return;
+    try{await api('/saved-posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({readLater:!post.readLater})});await renderSavedPosts();toast(post.readLater?'Removed from Read Later.':'Added to Read Later.');}
+    catch(error){toast(error.message);}
+  }));
+  root.querySelectorAll('[data-saved-note-toggle]').forEach(button=>button.addEventListener('click',()=>{
+    const form=root.querySelector('[data-saved-details-form="'+CSS.escape(button.dataset.savedNoteToggle)+'"]');
+    if(form){form.classList.toggle('hidden');if(!form.classList.contains('hidden'))form.querySelector('textarea')?.focus();}
+  }));
+  root.querySelectorAll('[data-saved-details-cancel]').forEach(button=>button.addEventListener('click',()=>{
+    root.querySelector('[data-saved-details-form="'+CSS.escape(button.dataset.savedDetailsCancel)+'"]')?.classList.add('hidden');
+  }));
+  root.querySelectorAll('[data-saved-details-form]').forEach(form=>form.addEventListener('submit',async event=>{
+    event.preventDefault();const values=new FormData(form);
+    const tags=String(values.get('tags')||'').split(',').map(tag=>tag.trim().replace(/^#+/,'')).filter(Boolean).slice(0,8);
+    try{
+      await api('/saved-posts/'+encodeURIComponent(form.dataset.savedDetailsForm),{method:'PATCH',body:JSON.stringify({note:values.get('note'),tags})});
+      toast('Private note and tags saved.');await renderSavedPosts();
+    }catch(error){toast(error.message);}
+  }));
+  $('#saved-clear-filters')?.addEventListener('click',()=>{
+    state.savedSearch='';state.savedType='all';state.savedSort='saved-newest';state.savedFilter='all';state.savedCollection='all';renderSavedPosts({reload:false});
+  });
 }
 const messagePickers=new Map();
 const activeMessageRecordings=new Map();

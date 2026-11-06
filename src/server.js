@@ -1267,6 +1267,7 @@ async function route(req, res) {
           follows:(db.follows||[]).filter(item=>item.followerId===user.id||item.followedId===user.id),
           blocks:(db.blocks||[]).filter(item=>item.blockerId===user.id||item.blockedId===user.id),
           savedPosts:(db.savedPosts||[]).filter(item=>item.userId===user.id),
+          savedPostCollections:(db.savedPostCollections||[]).filter(item=>item.userId===user.id),
           groups:ownedGroups,
           groupPosts:(db.groupPosts||[]).filter(item=>item.userId===user.id||ownedGroupIds.has(item.groupId)),
           stories:ownedStories,
@@ -3442,15 +3443,86 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       if(method==='GET'&&p==='/api/saved-posts'){
-        const posts=await Promise.all((db.savedPosts||[]).filter(saved=>saved.userId===user.id).map(saved=>db.posts.find(post=>post.id===saved.postId)).filter(post=>post&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
-        return json(res,200,{posts});
+        const records=(db.savedPosts||[]).filter(saved=>saved.userId===user.id);
+        const posts=(await Promise.all(records.map(async saved=>{
+          const post=db.posts.find(item=>item.id===saved.postId);
+          if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId)))return null;
+          return {
+            ...await publicPost(post,user.id),
+            savedId:saved.id,
+            savedAt:saved.createdAt,
+            collectionId:saved.collectionId||null,
+            note:String(saved.note||''),
+            tags:Array.isArray(saved.tags)?saved.tags:[],
+            isFavorite:Boolean(saved.isFavorite),
+            readLater:Boolean(saved.readLater)
+          };
+        }))).filter(Boolean).sort((a,b)=>new Date(b.savedAt||0)-new Date(a.savedAt||0));
+        const collections=(db.savedPostCollections||[]).filter(item=>item.userId===user.id).sort((a,b)=>String(a.title||'').localeCompare(String(b.title||'')));
+        return json(res,200,{posts,collections});
+      }
+      if(method==='POST'&&p==='/api/saved-posts/collections'){
+        const title=String(input.title||input.name||'').trim().replace(/\s+/g,' ');
+        if(title.length<2||title.length>40)return json(res,400,{error:'Collection names must contain 2–40 characters.'});
+        if((db.savedPostCollections||[]).some(item=>item.userId===user.id&&String(item.title||'').toLowerCase()===title.toLowerCase()))return json(res,409,{error:'You already have a collection with that name.'});
+        db.savedPostCollections.push({id:uid(),userId:user.id,title,createdAt:now(),updatedAt:now()});
+        await saveStore();
+        return json(res,201,{collection:db.savedPostCollections.at(-1)});
+      }
+      m=p.match(/^\/api\/saved-posts\/collections\/([^/]+)$/);
+      if((method==='PATCH'||method==='DELETE')&&m){
+        const collection=(db.savedPostCollections||[]).find(item=>item.id===m[1]&&item.userId===user.id);
+        if(!collection)return json(res,404,{error:'Saved Posts collection not found.'});
+        if(method==='DELETE'){
+          (db.savedPosts||[]).filter(item=>item.userId===user.id&&item.collectionId===collection.id).forEach(item=>{item.collectionId=null;item.updatedAt=now();});
+          db.savedPostCollections=db.savedPostCollections.filter(item=>item.id!==collection.id);
+          await saveStore();
+          return json(res,200,{ok:true,id:collection.id,keptSavedPosts:true});
+        }
+        const title=String(input.title||'').trim().replace(/\s+/g,' ');
+        if(title.length<2||title.length>40)return json(res,400,{error:'Collection names must contain 2–40 characters.'});
+        if((db.savedPostCollections||[]).some(item=>item.userId===user.id&&item.id!==collection.id&&String(item.title||'').toLowerCase()===title.toLowerCase()))return json(res,409,{error:'You already have a collection with that name.'});
+        collection.title=title;collection.updatedAt=now();
+        await saveStore();
+        return json(res,200,{collection});
+      }
+      m=p.match(/^\/api\/saved-posts\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        const saved=(db.savedPosts||[]).find(item=>item.userId===user.id&&item.postId===m[1]);
+        if(!saved)return json(res,404,{error:'Saved post not found.'});
+        if(Object.hasOwn(input,'collectionId')){
+          const collectionId=input.collectionId===null||input.collectionId===''?null:String(input.collectionId);
+          if(collectionId&&!(db.savedPostCollections||[]).some(item=>item.id===collectionId&&item.userId===user.id))return json(res,400,{error:'Choose one of your own Saved Posts collections.'});
+          saved.collectionId=collectionId;
+        }
+        if(Object.hasOwn(input,'note')){
+          const note=String(input.note||'').trim();
+          if(note.length>500)return json(res,400,{error:'Private notes can contain up to 500 characters.'});
+          saved.note=note;
+        }
+        if(Object.hasOwn(input,'tags')){
+          if(!Array.isArray(input.tags))return json(res,400,{error:'Tags must be sent as a list.'});
+          const tags=[...new Set(input.tags.map(tag=>String(tag||'').trim().replace(/^#+/, '').slice(0,24)).filter(Boolean))].slice(0,8);
+          saved.tags=tags;
+        }
+        if(Object.hasOwn(input,'isFavorite')){
+          if(typeof input.isFavorite!=='boolean')return json(res,400,{error:'Favorite must be true or false.'});
+          saved.isFavorite=input.isFavorite;
+        }
+        if(Object.hasOwn(input,'readLater')){
+          if(typeof input.readLater!=='boolean')return json(res,400,{error:'Read Later must be true or false.'});
+          saved.readLater=input.readLater;
+        }
+        saved.updatedAt=now();
+        await saveStore();
+        return json(res,200,{saved:true,record:saved});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/save$/);
       if((method==='POST'||method==='DELETE')&&m){
         const post=db.posts.find(x=>x.id===m[1]);
-        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId)))return json(res,404,{error:'Post not found.'});
         const exists=(db.savedPosts||[]).some(saved=>saved.userId===user.id&&saved.postId===post.id);
-        if(method==='POST'&&!exists)db.savedPosts.push({id:uid(),userId:user.id,postId:post.id,createdAt:now()});
+        if(method==='POST'&&!exists)db.savedPosts.push({id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false});
         if(method==='DELETE'&&exists)db.savedPosts=db.savedPosts.filter(saved=>!(saved.userId===user.id&&saved.postId===post.id));
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
