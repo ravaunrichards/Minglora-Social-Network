@@ -6,7 +6,9 @@ const storeUrl = new URL('../../src/store.js', import.meta.url).href;
 const collections = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
   
-   'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
+   'groups', 'groupPosts', 'groupMembershipRequests', 'groupInvitations', 'groupModerationActions', 'groupAuditLogs',
+  'groupAnnouncements', 'groupEvents', 'groupEventRsvps', 'groupMessages', 'groupRules', 'groupPostComments', 'groupPostReactions',
+  'stories', 'storyViews', 'pages',
   'pageRoles', 'pageFollows', 'pagePosts',
    'messages', 'messageConversationHides', 'notifications', 'sessions',
   'liveSessions', 'liveParticipants', 'liveSpeakerRequests', 'reports', 'supportTickets',
