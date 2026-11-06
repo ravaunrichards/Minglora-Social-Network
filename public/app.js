@@ -1507,8 +1507,72 @@ function liveMatchStatusLabel(match){
   if(match.status==='pending')return 'Invitation pending';
   return String(match.status||'Match').replace(/_/g,' ');
 }
+function renderMatchChatMarkupMessages(messages){
+  if(!Array.isArray(messages)||!messages.length)return "<div class='league-chat-empty'>No match messages yet. Start the conversation.</div>";
+  return messages.map(item=>{
+    const author=item.author||{};
+    const effect=item.effectActive&&item.powerupId?" league-chat-message--"+esc(item.powerupId):"";
+    const boost=item.powerupId?"<span class='league-chat-boost-tag'>"+esc(item.powerupSymbol||"✦")+" "+esc(item.powerupName||"Chat boost")+"</span>":"";
+    const time=item.createdAt?new Date(item.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):"";
+    return "<article class='league-chat-message"+effect+"'><div class='league-chat-message-head'><strong>"+esc(author.name||"Minglora creator")+"</strong>"+boost+"<time>"+esc(time)+"</time></div><p>"+esc(item.body)+"</p></article>";
+  }).join("");
+}
+async function loadLiveMatchChat(matchId){
+  const details=Array.from(document.querySelectorAll("[data-live-match-chat]")).find(item=>item.dataset.liveMatchChat===matchId);
+  const output=details?.querySelector("[data-live-match-chat-messages]");
+  if(!details||!output)return;
+  output.innerHTML="<small>Loading match chat…</small>";
+  try{
+    const data=await api('/leagues/matches/'+encodeURIComponent(matchId)+'/chat');
+    output.innerHTML=renderMatchChatMarkupMessages(data.messages||[]);
+    const used=new Set(data.usedPowerups||[]);
+    details.querySelectorAll("[data-live-match-chat-boost]").forEach(button=>{
+      const spent=used.has(button.dataset.liveMatchChatBoost);
+      button.disabled=spent;
+      button.classList.toggle('is-used',spent);
+      const label=button.querySelector('small');if(label)label.textContent=spent?'Used':'Select';
+    });
+    output.scrollTop=output.scrollHeight;
+  }catch(error){output.innerHTML="<div class='league-chat-empty'>"+esc(error.message||"Match chat is unavailable.")+"</div>";}
+}
+function bindLiveMatchChats(root){
+  root.querySelectorAll("[data-live-match-chat]").forEach(details=>{
+    const matchId=details.dataset.liveMatchChat;
+    const form=details.querySelector("[data-live-match-chat-form]");
+    const textarea=form?.querySelector("textarea[name='body']");
+    const choice=form?.querySelector("input[name='powerupId']");
+    details.addEventListener("toggle",()=>{if(details.open)void loadLiveMatchChat(matchId);});
+    details.querySelectorAll("[data-live-match-chat-boost]").forEach(button=>button.addEventListener("click",()=>{
+      if(!choice||button.disabled)return;
+      choice.value=choice.value===button.dataset.liveMatchChatBoost?"":button.dataset.liveMatchChatBoost;
+      details.querySelectorAll("[data-live-match-chat-boost]").forEach(item=>{
+        const selected=item.dataset.liveMatchChatBoost===choice.value;
+        item.classList.toggle("is-selected",selected);item.setAttribute("aria-pressed",selected?"true":"false");
+      });
+    }));
+    if(form)form.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const send=form.querySelector("button[type='submit']");
+      const body=String(textarea?.value||"").trim();if(!body)return;
+      send.disabled=true;
+      try{
+        await api('/leagues/matches/'+encodeURIComponent(matchId)+'/chat',{method:'POST',body:JSON.stringify({body,powerupId:choice?.value||''})});
+        textarea.value='';if(choice)choice.value='';
+        details.querySelectorAll("[data-live-match-chat-boost]").forEach(item=>{item.classList.remove("is-selected");item.setAttribute("aria-pressed","false");});
+        await loadLiveMatchChat(matchId);
+      }catch(error){toast(error.message||"Your match-chat message could not be sent.");}
+      finally{send.disabled=false;}
+    });
+    if(details.open)void loadLiveMatchChat(matchId);
+  });
+}
 function renderLiveMatches(matches){
   const root=$('#live-match-list');if(!root)return;
+  const openDetails=root.querySelector("[data-live-match-chat][open]");
+  const openChatId=openDetails?.dataset.liveMatchChat||"";
+  const draftForm=openDetails?.querySelector("[data-live-match-chat-form]");
+  const draftBody=draftForm?.querySelector("textarea[name='body']")?.value||"";
+  const selectedBoost=draftForm?.querySelector("input[name='powerupId']")?.value||"";
   const items=Array.isArray(matches)?matches:[];
   if(!items.length){root.innerHTML="<div class='live-match-empty'><strong>No League Matches yet</strong><small>Challenge another creator who is currently broadcasting.</small></div>";return;}
   root.innerHTML=items.map(match=>{
@@ -1525,9 +1589,14 @@ function renderLiveMatches(matches){
     const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
     const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
     const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
-    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
-    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='momentum_boost' data-match-id='"+esc(match.id)+"'>Momentum +25%</button><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>2× Score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
+    const chatPowers=[{id:'spotlight',name:'Spotlight',symbol:'✨'},{id:'megaphone',name:'Megaphone',symbol:'📣'},{id:'cheer_burst',name:'Cheer Burst',symbol:'🎉'}];
+    const used=new Set(match.chatPowerupsUsedByViewer||[]);
+    const chatBoosts=chatPowers.map(power=>"<button type='button' class='league-chat-powerup' data-live-match-chat-boost='"+power.id+"' aria-pressed='false' "+(used.has(power.id)?"disabled":"")+"><span>"+power.symbol+"</span><strong>"+power.name+"</strong><small>"+(used.has(power.id)?"Used":"Select")+"</small></button>").join('');
+    const chat=active?"<details class='league-match-chat' data-live-match-chat='"+esc(match.id)+"' "+(openChatId===match.id?"open":"")+"><summary><strong>Match Chat</strong><span>Live room conversation</span></summary><div class='league-chat-messages' data-live-match-chat-messages='"+esc(match.id)+"'><small>Open to load match chat.</small></div><form class='league-chat-form' data-live-match-chat-form='"+esc(match.id)+"'><label class='league-chat-compose'><span>Message</span><textarea name='body' rows='2' maxlength='280' required placeholder='Cheer on the creators…'>"+(openChatId===match.id?esc(draftBody):"")+"</textarea></label><input type='hidden' name='powerupId' value='"+(openChatId===match.id?esc(selectedBoost):"")+"'><div class='league-chat-powerups'><span class='league-chat-powerups-label'>Match Chat Power-Ups · one use each</span>"+chatBoosts+"</div><div class='league-chat-form-footer'><small>Visual effects only. Chat boosts never add points or Coins.</small><button type='submit' class='primary'>Send message</button></div></form></details>":"";
+    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+chat+"</article>";
   }).join('');
+  bindLiveMatchChats(root);
 }
 async function refreshLiveMatchPanel(session,role){
   if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
