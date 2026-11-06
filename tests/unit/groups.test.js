@@ -32,6 +32,13 @@ test('group post deletion is restricted to author or trusted moderators', () => 
   assert.equal(canDeleteGroupPost(group, post, 'outsider'), false);
   assert.equal(canDeleteGroupPost(group, { ...post, groupId: 'another' }, 'owner'), false);
 });
+test('only the current owner can transfer ownership to an active member', () => {
+  assert.equal(canTransferGroupOwnership(group, 'owner', 'member'), true);
+  assert.equal(canTransferGroupOwnership(group, 'admin', 'member'), false);
+  assert.equal(canTransferGroupOwnership(group, 'owner', 'outsider'), false);
+  assert.equal(canTransferGroupOwnership(group, 'owner', 'owner'), false);
+});
+
 test('group owners cannot leave without transferring ownership', () => {
   assert.equal(canLeaveGroup(group, 'member'), true);
   assert.equal(canLeaveGroup(group, 'owner'), false);
