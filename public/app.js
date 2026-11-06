@@ -5649,6 +5649,7 @@ function openConversationTools(userId){
         '<nav class="message-tools-tabs" aria-label="Conversation tools">'+
           '<button type="button" class="active" data-tools-tab="search" aria-pressed="true">Search messages</button>'+
           '<button type="button" data-tools-tab="shared" aria-pressed="false">Shared media</button>'+
+          '<button type="button" data-tools-tab="privacy" aria-pressed="false">Privacy</button>'+
         '</nav>'+
         '<section class="message-tools-view" data-tools-view="search">'+
           '<form class="message-tools-search-form" data-tools-search-form><input type="search" name="query" maxlength="120" minlength="2" placeholder="Search this conversation…" aria-label="Search messages in this conversation" required><button class="primary" type="submit">Search</button></form>'+
@@ -5665,6 +5666,7 @@ function openConversationTools(userId){
           '</div>'+
           '<div class="message-tools-shared" data-tools-shared aria-live="polite"><p class="muted">Loading shared items…</p></div>'+
         '</section>'+
+        '<section class="message-tools-view" data-tools-view="privacy" hidden><div class="message-tools-privacy" data-tools-privacy><p class="muted">Loading conversation privacy settings…</p></div></section>'+
       '</div>'+
     '</section>';
   document.body.append(modal);
@@ -5678,6 +5680,7 @@ function openConversationTools(userId){
     });
     modal.querySelectorAll('[data-tools-view]').forEach(view=>{view.hidden=view.dataset.toolsView!==active;});
     if(active==='shared'&&!modal.dataset.sharedLoaded)loadShared();
+    if(active==='privacy'&&!modal.dataset.privacyLoaded)loadPrivacy();
     if(active==='search')modal.querySelector('input[name="query"]')?.focus();
   }));
   const searchForm=modal.querySelector('[data-tools-search-form]');
@@ -5732,6 +5735,28 @@ function openConversationTools(userId){
       paintShared();
     }catch(error){root.textContent=error.message||'Shared items could not be loaded.';}
   }
+  async function loadPrivacy(){
+    modal.dataset.privacyLoaded='true';
+    const root=modal.querySelector('[data-tools-privacy]');
+    root.innerHTML='<p class="muted">Loading conversation privacy settings…</p>';
+    try{
+      const data=await api('/messages/settings?conversationId='+encodeURIComponent(conversationId));
+      const settings=data.settings||{},seconds=Number(settings.disappearingAfterSeconds||0);
+      const options=[{value:0,label:'Off'},{value:30,label:'After 30 seconds'},{value:300,label:'After 5 minutes'},{value:3600,label:'After 1 hour'},{value:86400,label:'After 24 hours'},{value:604800,label:'After 7 days'}];
+      root.innerHTML='<div class="message-tools-privacy-card"><strong>Disappearing messages</strong><p>New messages are automatically removed for everyone after the selected time. This does not change older messages.</p><label class="field"><span>Delete new messages after</span><select name="disappearingAfterSeconds" '+(settings.canManage?'':'disabled')+'>'+options.map(option=>'<option value="'+option.value+'" '+(option.value===seconds?'selected':'')+'>'+option.label+'</option>').join('')+'</select></label><p class="muted" data-privacy-status>'+(settings.canManage?'This setting applies to everyone in this conversation.':'Only the group owner or an admin can change this setting.')+'</p>'+(settings.canManage?'<button type="button" class="primary" data-save-disappearing>Save setting</button>':'')+'</div>';
+      root.querySelector('[data-save-disappearing]')?.addEventListener('click',async buttonEvent=>{
+        const button=buttonEvent.currentTarget,status=root.querySelector('[data-privacy-status]');
+        button.disabled=true;status.textContent='Saving…';
+        try{
+          const saved=await api('/messages/settings',{method:'PATCH',body:JSON.stringify({conversationId,disappearingAfterSeconds:Number(root.querySelector('select[name="disappearingAfterSeconds"]').value)})});
+          status.textContent=saved.settings.disappearingAfterSeconds?'Saved. New messages will disappear automatically.':'Saved. Disappearing messages are off.';
+          const index=state.conversations.findIndex(item=>item.user.id===userId);
+          if(index>=0)state.conversations[index].messageSettings=saved.settings;
+        }catch(error){status.textContent=error.message||'Could not save this setting.';}
+        finally{button.disabled=false;}
+      });
+    }catch(error){root.textContent=error.message||'Conversation privacy settings could not be loaded.';}
+  }
   modal.querySelectorAll('[data-shared-kind]').forEach(button=>button.addEventListener('click',()=>{
     sharedKind=button.dataset.sharedKind;
     modal.querySelectorAll('[data-shared-kind]').forEach(item=>item.classList.toggle('active',item===button));
@@ -5746,6 +5771,7 @@ function renderMessageContent(messages=[]){
     const receipt=mine?(message.groupId?(message.readState?.readCount+' of '+message.readState?.total+' seen'):(message.read?'Seen':'Sent')):'';
     const reply=message.replyToId?messages.find(item=>item.id===message.replyToId):null;
     const replyHtml=reply?'<div class="message-reply-preview"><strong>'+esc(reply.author?.name||'Replying to a message')+'</strong><span>'+esc(reply.unsent?'Message unavailable':reply.text||((reply.attachments||[]).length?'Attachment':'Message'))+'</span></div>':'';
+    const expiryLabel=message.expiresAt?'<small class="message-expiry-label" title="This message will be removed automatically">Disappears '+esc(timeAgo(message.expiresAt))+'</small>':'';
     const content=message.unsent?'<p class="message-unsent-label">This message was unsent.</p>':(message.stickerId?'<div class="message-window-sticker">'+esc(message.text||'')+'</div>':(message.text?'<p>'+esc(message.text)+'</p>':''));
     const gif=message.unsent?'':(message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'');
     const attachments=message.unsent?'':messageAttachmentHtml(message.attachments);
@@ -5970,7 +5996,7 @@ function renderMessageWindows(){
       '</div></div>'
     );
     const callControls=win.isGroup
-      ?'<button type="button" class="message-window-call" data-message-group-manage="'+esc(win.groupId)+'" title="Group members" aria-label="Group members">'+messenger3dIcon('groups')+'</button>'
+      ?'<button type="button" class="message-window-call" data-message-group-audio="'+esc(win.groupId)+'" title="Start group voice call" aria-label="Start group voice call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button type="button" class="message-window-call" data-message-group-video="'+esc(win.groupId)+'" title="Start group video call" aria-label="Start group video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button type="button" class="message-window-call" data-message-group-manage="'+esc(win.groupId)+'" title="Group members" aria-label="Group members">'+messenger3dIcon('groups')+'</button>'
       :'<button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button>';
     const profileControl=win.isGroup
       ?'<span class="message-window-profile is-group"><span class="message-group-avatar">'+messenger3dIcon('groups')+'</span><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+esc(conversation?.group?.memberCount||0)+' members</small></span></span>'
@@ -6007,6 +6033,19 @@ function renderMessageWindows(){
       }
     });
   }
+  dock.querySelectorAll('[data-message-group-audio],[data-message-group-video]').forEach(button=>button.onclick=()=>{
+    const groupId=button.dataset.messageGroupAudio||button.dataset.messageGroupVideo;
+    const conversation=state.conversations.find(item=>item.groupId===groupId);
+    if(!conversation?.group){toast('Group call participants could not be loaded.');return;}
+    const participantIds=[...new Set((conversation.group.members||[]).map(member=>member.id).filter(id=>id&&id!==state.user.id))];
+    if(!participantIds.length){toast('Add another member before starting a group call.');return;}
+    const kind=button.dataset.messageGroupAudio?'audio':'video';
+    if(participantIds.length<=7){
+      startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call',avatar:conversation.user.avatar||''},kind,participantIds);
+    }else{
+      openMingloraGroupCallPicker(conversation,kind);
+    }
+  });
   dock.querySelectorAll('[data-message-audio]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageAudio);if(win)startMingloraCall(win.user,'audio');});
   dock.querySelectorAll('[data-message-video]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageVideo);if(win)startMingloraCall(win.user,'video');});
   dock.querySelectorAll('[data-message-attach]').forEach(button=>button.onclick=()=>{const drawer=dock.querySelector('[data-message-attachment-drawer="'+CSS.escape(button.dataset.messageAttach)+'"]');if(drawer)drawer.hidden=!drawer.hidden;});
@@ -6441,7 +6480,32 @@ async function waitForCallAnswer(call,member){
  }
  if(outgoingCallPending&&!outgoingCallPending.cancelled){try{await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch{}closeOutgoingCallOverlay();outgoingCallPending=null;toast('No answer. The call has ended.');}
 }
-async function startMingloraCall(member,kind='video'){
+function openMingloraGroupCallPicker(conversation,kind){
+ const candidates=(conversation.group?.members||[]).filter(member=>member.id&&member.id!==state.user.id);
+ const modal=document.createElement('div');modal.className='modal-backdrop';
+ modal.innerHTML='<section class="modal message-group-call-picker" role="dialog" aria-modal="true" aria-labelledby="message-group-call-title"><div class="modal-head"><div><h2 id="message-group-call-title">Start group '+(kind==='audio'?'voice':'video')+' call</h2><small>Select up to seven people to ring. You can invite more people while in the call.</small></div><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="message-group-call-members">'+candidates.map(member=>'<label class="message-group-call-member"><input type="checkbox" name="participantIds" value="'+esc(member.id)+'"><img src="'+avatar(member.user||{})+'" alt=""><span><strong>'+esc(member.user?.name||'Minglora member')+'</strong><small>@'+esc(member.user?.username||'member')+'</small></span></label>').join('')+'</div><p class="muted" data-call-selection-count>0 of 7 selected</p><p class="auth-error" role="status"></p><div class="modal-actions"><button type="button" class="secondary" data-call-picker-cancel>Cancel</button><button type="submit" class="primary" disabled>Start call</button></div></form></section>';
+ document.body.append(modal);
+ const close=()=>modal.remove(),form=modal.querySelector('form'),submit=form.querySelector('button[type="submit"]'),status=form.querySelector('.auth-error'),count=form.querySelector('[data-call-selection-count]');
+ modal.querySelectorAll('.modal-close,[data-call-picker-cancel]').forEach(button=>button.addEventListener('click',close));
+ modal.addEventListener('click',event=>{if(event.target===modal)close();});
+ const update=()=>{
+   const selected=[...form.querySelectorAll('input[name="participantIds"]:checked')];
+   const full=selected.length>=7;
+   form.querySelectorAll('input[name="participantIds"]').forEach(input=>{input.disabled=!input.checked&&full;});
+   count.textContent=selected.length+' of 7 selected';
+   submit.disabled=selected.length===0;
+ };
+ form.querySelectorAll('input[name="participantIds"]').forEach(input=>input.addEventListener('change',update));
+ form.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const ids=[...form.querySelectorAll('input[name="participantIds"]:checked')].map(input=>input.value);
+   if(!ids.length||ids.length>7)return;
+   submit.disabled=true;status.textContent='Starting call…';
+   close();
+   await startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call',avatar:conversation.user.avatar||''},kind,ids);
+ });
+}
+async function startMingloraCall(member,kind='video',participantIds=null){
  if(!member?.id||!state.user||member.id===state.user.id)return;
  if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before starting another.');return;}
  // Reserve the outgoing state before the network request so a fast double tap
@@ -6449,7 +6513,8 @@ async function startMingloraCall(member,kind='video'){
  outgoingCallPending={callId:null,cancelled:false,starting:true};
  try{
   primeCallAudio();
-  const created=await api('/calls',{method:'POST',body:JSON.stringify({to:member.id,kind})});
+  const callPayload=Array.isArray(participantIds)&&participantIds.length?{participantIds,kind}:{to:member.id,kind};
+  const created=await api('/calls',{method:'POST',body:JSON.stringify(callPayload)});
   if(outgoingCallPending?.cancelled){
    await api('/calls/'+encodeURIComponent(created.call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});
    outgoingCallPending=null;return;
