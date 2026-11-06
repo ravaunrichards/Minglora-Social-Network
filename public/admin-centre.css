@@ -626,3 +626,21 @@
 .admin-gift-earnings-empty{margin:0;color:var(--muted-text,#777);font-size:.88rem}
 #admin-gift-earnings-refresh:disabled{opacity:.6;cursor:wait}
 @media(max-width:560px){.admin-gift-earnings-heading{display:grid;grid-template-columns:1fr}.admin-gift-earnings-heading button{width:100%}.admin-gift-earnings-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-gift-earnings-creator-values{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Owner-controlled manual withdrawal of Minglora's platform gift share. */
+.admin-platform-payout-controls{display:grid;gap:13px;min-width:0;padding-top:14px;border-top:1px solid var(--border-color,rgba(127,127,127,.2))}
+.admin-platform-payout-controls h4{margin:0;font-size:1rem}
+.admin-platform-payout-controls>div:first-child p,.admin-platform-payout-warning{margin:5px 0 0;color:var(--muted-text,#777);font-size:.86rem;line-height:1.5;overflow-wrap:anywhere}
+.admin-platform-payout-balances{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:10px}
+.admin-platform-payout-balances>div{display:grid;gap:5px;min-width:0}
+.admin-platform-payout-balances small{color:var(--muted-text,#777);font-size:.78rem}
+.admin-platform-payout-balances strong{font-size:1.05rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.admin-platform-payout-controls .admin-marketing-form{display:grid;gap:9px;max-width:560px;margin:0}
+.admin-platform-payout-controls .admin-marketing-form button{justify-self:start}
+.admin-platform-payout-warning{padding:10px;border:1px solid var(--border-color,rgba(127,127,127,.2));border-radius:9px}
+.admin-platform-payout-history{display:grid;gap:9px;min-width:0}
+.admin-platform-payout-history-row{display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--border-color,rgba(127,127,127,.16));min-width:0}
+.admin-platform-payout-history-row strong{display:block;font-size:.9rem;text-transform:capitalize;overflow-wrap:anywhere}
+.admin-platform-payout-history-row small,.admin-platform-payout-history-row p,.admin-platform-payout-empty{margin:3px 0 0;color:var(--muted-text,#777);font-size:.8rem;line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:600px){.admin-platform-payout-controls .admin-marketing-form button{width:100%}.admin-platform-payout-controls .admin-marketing-form{padding:11px}}
