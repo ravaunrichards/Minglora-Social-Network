@@ -314,7 +314,7 @@ CREATE INDEX IF NOT EXISTS group_announcements_feed_idx
 ALTER TABLE public.group_announcements ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS minglora_group_announcements_read ON public.group_announcements;
 CREATE POLICY minglora_group_announcements_read ON public.group_announcements
-FOR SELECT TO anon, authenticated
+FOR SELECT TO authenticated
 USING (
   status='published' AND EXISTS (
     SELECT 1 FROM public.social_groups g WHERE g.id=group_announcements.group_id AND (
