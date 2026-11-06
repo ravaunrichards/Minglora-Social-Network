@@ -104,7 +104,7 @@ ALTER TABLE public.group_audit_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS minglora_group_rules_read ON public.group_rules;
 CREATE POLICY minglora_group_rules_read ON public.group_rules
-FOR SELECT TO anon, authenticated
+FOR SELECT TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.social_groups g
