@@ -80,5 +80,5 @@ test('creator earnings are private to the signed-in creator and do not disclose 
   const authGuard = server.indexOf('requireAuth(user);', apiStart);
   assert.ok(apiStart >= 0 && authGuard > apiStart && authGuard < routeStart,
     'creator earnings must remain behind the signed-in API guard');
-  assert.match(migration, /WHERE t\.receiver_id=p_creator_id/);
+  assert.match(migration, /WHERE t\.receiver_id\s*=\s*p_creator_id/);
 });
