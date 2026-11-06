@@ -422,7 +422,7 @@ function syncNavigationActive(){
   const activeView=state.view==='feed'&&state.feedScope==='for-you'?'for-you':state.view;
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===activeView));
   const moreButton=document.querySelector('#mobile-more-nav');
-  moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','live','messages'].includes(activeView));
+  moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','friends','live','messages'].includes(activeView));
 }
 function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.addEventListener('minglora:open-wallet',event=>{
