@@ -782,6 +782,7 @@ Deno.serve(async (req: Request) => {
     const payoutAccountRows = creatorPayoutAccountsResult.data || [];
     const profileIds = [...new Set([
       ...byCreator.keys(),
+      ...payouts.map((row: any) => String(row.creator_id || "")),
       ...promoWalletRows.map((row: any) => String(row.user_id || "")),
       ...promoWalletLedgerRows.flatMap((row: any) => [String(row.user_id || ""), String(row.actor_user_id || "")]),
       ...promoFundLedgerRows.map((row: any) => String(row.actor_user_id || "")),
