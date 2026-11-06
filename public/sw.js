@@ -1,12 +1,14 @@
-/* Minglora service worker: update-friendly shell caching, email-link handoff refresh, and background Web Push. */
+/* Minglora service worker: stable active-page shell caching and background Web Push. */
 // Coin funding-source wallet and secure marketing-budget controls.
-const CACHE_NAME='minglora-shell-v93-flow-layout-safety-1-single-username-verification-1-creator-gift-balance-1-v94-refunded-gift-live-reconciliation-1-v96-roomwide-live-gifts-1-v97-gifts-preview-visible-1-v98-cash-backed-earnings-1-v99-advanced-notifications-1-v100-match-powerups-3d-preview-1-advanced-saved-posts-1-v102-preserve-active-page-refresh-2';
-const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1-advanced-notifications-1','/mobile-layout.css?v=20261105-flow-navigation-1','/layout-safety.css?v=20261105-page-flow-contract-2','/meetwave.css?v=20261105-flow-dialogs-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/gift-effects.js?v=20261104-minglora-gift-motion-2','/gifts.js?v=20261105-gift-preview-visible-1','/leagues.css?v=20261106-match-powerups-3d-preview-1','/leagues.js?v=20261106-match-powerups-3d-preview-1&refresh=20261106-preserve-active-page-3','/assets/match-powerups/minglora_momentum_boost.gltf','/assets/match-powerups/minglora_shield.gltf','/assets/match-powerups/minglora_time_boost.gltf','/assets/match-powerups/minglora_score_multiplier.gltf','/gifter-progression.css?v=20261105-admin-badge-verification-1','/gifter-progression.js?v=20261105-refunded-gift-live-refresh-1','/gifter-badge-3d.css?v=20261105-gifter-badge-3d-1','/gifter-badge-art.js?v=20261105-gifter-badge-3d-1','/assets/gifters-level-up.png','/app.js?v=20261105-roomwide-live-gifts-1-advanced-notifications-1&refresh=20261106-preserve-active-page-3','/auth-login.js?v=20261105-admin-mfa-enrollment-1','/settings.js?v=20261105-admin-mfa-qr-fix-2-advanced-notifications-1','/admin-centre.css?v=20261105-admin-badge-verification-1-promotional-cash-reserve-1','/admin-centre.js?v=20261105-marketing-budget-1-promotional-cash-reserve-1-admin-badge-verification-1','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
+const CACHE_NAME='minglora-shell-v93-flow-layout-safety-1-single-username-verification-1-creator-gift-balance-1-v94-refunded-gift-live-reconciliation-1-v96-roomwide-live-gifts-1-v97-gifts-preview-visible-1-v98-cash-backed-earnings-1-v99-advanced-notifications-1-v100-match-powerups-3d-preview-1-advanced-saved-posts-1-v103-stable-active-page-updates-1';
+const SHELL=['/','/manifest.webmanifest','/styles.css?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1-advanced-notifications-1','/mobile-layout.css?v=20261105-flow-navigation-1','/layout-safety.css?v=20261105-page-flow-contract-2','/meetwave.css?v=20261105-flow-dialogs-1','/marketplace.css?v=20261031-marketplace-commerce-3','/auth-screen.js?v=20261031-community-photo-auth-1','/gift-effects.js?v=20261104-minglora-gift-motion-2','/gifts.js?v=20261105-gift-preview-visible-1','/leagues.css?v=20261106-match-powerups-3d-preview-1','/leagues.js?v=20261106-match-powerups-3d-preview-1&build=20261106-stable-active-page-1','/assets/match-powerups/minglora_momentum_boost.gltf','/assets/match-powerups/minglora_shield.gltf','/assets/match-powerups/minglora_time_boost.gltf','/assets/match-powerups/minglora_score_multiplier.gltf','/gifter-progression.css?v=20261105-admin-badge-verification-1','/gifter-progression.js?v=20261105-refunded-gift-live-refresh-1','/gifter-badge-3d.css?v=20261105-gifter-badge-3d-1','/gifter-badge-art.js?v=20261105-gifter-badge-3d-1','/assets/gifters-level-up.png','/app.js?v=20261105-roomwide-live-gifts-1-advanced-notifications-1&build=20261106-stable-active-page-1','/auth-login.js?v=20261105-admin-mfa-enrollment-1','/settings.js?v=20261105-admin-mfa-qr-fix-2-advanced-notifications-1','/admin-centre.css?v=20261105-admin-badge-verification-1-promotional-cash-reserve-1','/admin-centre.js?v=20261105-marketing-budget-1-promotional-cash-reserve-1-admin-badge-verification-1','/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2'];
 self.addEventListener('install',event=>{
-  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
+  // Let the browser keep the current worker until every open app tab has closed.
+  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)));
 });
 self.addEventListener('activate',event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('minglora-shell-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+  // Activation happens after the old app session ends; do not seize control of open pages.
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('minglora-shell-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))));
 });
 self.addEventListener('fetch',event=>{
   const request=event.request;
@@ -72,12 +74,12 @@ self.addEventListener('notificationclick',event=>{
   const target=new URL('/?'+params.toString(),self.location.origin).href;
   event.waitUntil((async()=>{
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    const existing=windows.find(client=>new URL(client.url).origin===self.location.origin);
-    if(existing){
-      if('navigate' in existing)await existing.navigate(target);
-      await existing.focus();
-    }else{
-      await self.clients.openWindow(target);
+    const exactTarget=windows.find(client=>client.url===target);
+    if(exactTarget){
+      await exactTarget.focus();
+      return;
     }
+    // Open notification destinations separately; never redirect the page already in use.
+    await self.clients.openWindow(target);
   })());
 });
