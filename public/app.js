@@ -36,8 +36,17 @@ function recordBrowserNavigation({replace=false}={}){
   const current=window.history.state?.[MINGLORA_HISTORY_KEY];
   if(current&&JSON.stringify(current)===JSON.stringify(snapshot))return;
   try{
+    const scrollKey=MINGLORA_HISTORY_KEY+'Scroll';
+    if(!replace){
+      const currentState=window.history.state&&typeof window.history.state==='object'?window.history.state:{};
+      if(currentState[MINGLORA_HISTORY_KEY]){
+        window.history.replaceState({...currentState,[scrollKey]:{x:window.scrollX||0,y:window.scrollY||0}},'',window.location.href);
+      }
+    }
+    const nextState=withMingloraHistoryState(snapshot);
+    delete nextState[scrollKey];
     const method=replace?'replaceState':'pushState';
-    window.history[method](withMingloraHistoryState(snapshot),'',window.location.href);
+    window.history[method](nextState,'',window.location.href);
   }catch(error){
     console.warn('Minglora browser navigation history could not be updated:',error?.message||error);
   }
