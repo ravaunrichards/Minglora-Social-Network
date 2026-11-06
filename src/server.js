@@ -3243,8 +3243,12 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
         await syncRefundedGiftActivity();
+        // Reconcile every completed UTC placement before returning the league.
+        // This keeps League Arena aligned with the same persisted class shown
+        // on profiles, including days missed by a delayed scheduler.
+        const leagueReconciliation=settleScheduledCreatorLeagueDays(db,new Date());
         const overview=getCreatorLeagueOverview(db,user);
-        await saveStore();
+        if(leagueReconciliation.changed)await saveStore();
         return json(res,200,{viewerId:user.id,...overview});
       }
       if(method==='GET'&&p==='/api/leagues/matches'){
@@ -3971,6 +3975,9 @@ async function route(req, res) {
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        await syncRefundedGiftActivity();
+        const leagueReconciliation=settleScheduledCreatorLeagueDays(db,new Date());
+        if(leagueReconciliation.changed)await saveStore();
         const leagueUser=safeUser(target,user.id);
         return json(res,200,{creatorLeague:leagueUser?.creatorLeague||null});
       }
