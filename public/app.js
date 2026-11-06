@@ -5811,7 +5811,7 @@ async function toggleMessageVoiceRecording(userId,button,status){
         if(!blob.size)throw new Error('Minglora did not receive any voice audio. Try recording again.');
         const file=new File([blob],'minglora-voice-note-'+Date.now()+'.'+extension,{type,lastModified:Date.now()});
         const asset=await uploadMediaFile('message',file);
-        await api('/messages',{method:'POST',body:JSON.stringify({to:userId,text:'',attachmentIds:[asset.id]})});
+        await asyncSendMessage(userId,{text:'',attachmentIds:[asset.id]});
         await reloadMessageWindows();
       }catch(error){toast(error.message||'The voice note could not be sent.');}
     },{once:true});
@@ -5831,9 +5831,11 @@ function renderMessageWindows(){
     const conversation=state.conversations.find(item=>item.user.id===win.user.id),messages=conversation?.messages||[];
     const stickerButtons=MESSAGE_STICKERS.map(sticker=>'<button type="button" class="message-sticker-choice" data-message-sticker="'+sticker.id+'" aria-label="'+sticker.label+'">'+sticker.emoji+'</button>').join('');
     const emojiButtons=MESSAGE_QUICK_EMOJIS.map(emoji=>'<button type="button" class="message-emoji-choice" data-message-emoji="'+emoji+'" aria-label="Insert '+emoji+'">'+emoji+'</button>').join('');
+    const replyMessage=win.replyToId?state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===win.replyToId):null;
+    const replyBanner=replyMessage?'<div class="message-reply-composer"><span><strong>Replying to '+esc(replyMessage.author?.name||'message')+'</strong><small>'+esc(replyMessage.text||'Attachment')+'</small></span><button type="button" data-message-reply-clear="'+esc(win.user.id)+'" aria-label="Cancel reply">×</button></div>':'';
     const body=win.minimized?'':(
       '<div class="message-window-body"><div class="message-window-scroll" data-message-signature="'+esc(messageSignature(messages))+'">'+renderMessageContent(messages)+'</div>'+
-      '<div class="message-window-composer">'+
+      '<div class="message-window-composer">'+replyBanner+
         '<div class="message-window-attachment-drawer" data-message-attachment-drawer="'+esc(win.user.id)+'" hidden><div data-message-picker="'+esc(win.user.id)+'"></div></div>'+
         '<div class="message-window-sticker-panel" data-message-sticker-panel="'+esc(win.user.id)+'" hidden>'+stickerButtons+'</div>'+
         '<div class="message-window-emoji-panel" data-message-emoji-panel="'+esc(win.user.id)+'" hidden>'+emojiButtons+'</div>'+
@@ -5843,11 +5845,19 @@ function renderMessageWindows(){
         '<form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Aa" autocomplete="off" aria-label="Write a message"><button type="button" class="message-emoji-toggle" data-message-open-emoji="'+esc(win.user.id)+'" aria-label="Choose emoji" title="Emoji">😊</button><button class="message-send-button" type="submit" aria-label="Send message" title="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.2 21 12 3.4 3.8l-.1 6.4 12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>'+
       '</div></div>'
     );
-    return '<section class="message-window '+(win.minimized?'is-minimized':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header"><button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small>@'+esc(win.user.username||'member')+'</small></span></button><div class="message-window-controls"><button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button><button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
+    const callControls=win.isGroup
+      ?'<button type="button" class="message-window-call" data-message-group-manage="'+esc(win.groupId)+'" title="Group members" aria-label="Group members">'+messenger3dIcon('groups')+'</button>'
+      :'<button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button>';
+    const profileControl=win.isGroup
+      ?'<span class="message-window-profile is-group"><span class="message-group-avatar">'+messenger3dIcon('groups')+'</span><span><strong>'+esc(win.user.name)+'</strong><small>'+esc(conversation?.group?.memberCount||0)+' members</small></span></span>'
+      :'<button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+(state.messengerPresence[win.user.id]===true?'Active now':'')+'</small></span></button>';
+    return '<section class="message-window '+(win.minimized?'is-minimized':'')+(win.isGroup?' is-group-chat':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header">'+profileControl+'<div class="message-window-controls">'+callControls+'<button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
   }).join('');
   dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{const id=button.dataset.messageClose;cancelMessageVoiceRecording(id);state.messageWindows=state.messageWindows.filter(item=>item.user.id!==id);renderMessageWindows();syncMessageRefreshPolling();});
   dock.querySelectorAll('[data-message-profile]').forEach(button=>button.onclick=()=>openProfile(button.dataset.messageProfile));
+  dock.querySelectorAll('[data-message-group-manage]').forEach(button=>button.onclick=()=>openMessageGroupSettings(button.dataset.messageGroupManage));
+  dock.querySelectorAll('[data-message-reply-clear]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageReplyClear);if(win){win.replyToId=null;win.replyPreview=null;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-remove]').forEach(button=>button.onclick=()=>removeMessageConversation(button.dataset.messageRemove));
   if(dock.dataset.messageActionsDelegated!=='true'){
     dock.dataset.messageActionsDelegated='true';
@@ -5895,14 +5905,16 @@ function renderMessageWindows(){
     const root=dock.querySelector('[data-message-picker="'+CSS.escape(win.user.id)+'"]');
     if(root)messagePickers.set(win.user.id,createMediaPicker(root,{slot:'message',maxFiles:5,compact:true}));
     const form=dock.querySelector('[data-message-form="'+CSS.escape(win.user.id)+'"]');
+    form?.elements.text?.addEventListener('input',()=>messageTyping(win,true));
+    form?.elements.text?.addEventListener('blur',()=>messageTyping(win,false));
     form?.addEventListener('submit',async event=>{
-      event.preventDefault();const button=form.querySelector('button[type="submit"]'),text=String(form.elements.text.value||'').trim(),picker=messagePickers.get(win.user.id);
+      event.preventDefault();messageTyping(win,false);const button=form.querySelector('button[type="submit"]'),text=String(form.elements.text.value||'').trim(),picker=messagePickers.get(win.user.id);
       button.disabled=true;
       try{
         const attachmentIds=picker?await picker.upload():[];
         if(!text&&!attachmentIds.length){toast('Write a message or attach a file.');return;}
-        await api('/messages',{method:'POST',body:JSON.stringify({to:win.user.id,text,attachmentIds})});
-        form.elements.text.value='';
+        await asyncSendMessage(win.user.id,{text,attachmentIds,replyToId:win.replyToId||undefined});
+        form.elements.text.value='';win.replyToId=null;win.replyPreview=null;
         state.conversations=(await api('/messages')).conversations||[];
         renderMessageWindows();
         if(state.view==='messages')renderMessages().catch(error=>toast(error.message));
@@ -5914,21 +5926,26 @@ function renderMessageWindows(){
   });
   syncMessageRefreshPolling();
 }
-async function openMessageWindow(member){
+async function openMessageWindow(member,options={}){
   if(!member?.id||member.id===state.user.id)return;
-  const existing=state.messageWindows.find(item=>item.user.id===member.id);
+  const groupId=String(options.groupId||member.groupId||'');
+  const isGroup=Boolean(groupId||member.isGroup);
+  const windowId=isGroup?(groupId?'group:'+groupId:String(member.id)) : member.id;
+  const windowUser={...member,id:windowId,isGroup};
+  const existing=state.messageWindows.find(item=>item.user.id===windowId);
   if(existing){existing.minimized=false;}
   else{
     if(state.messageWindows.length>=5){toast('You can keep up to five chat windows open at once.');return;}
-    state.messageWindows.push({user:member,minimized:false});
+    state.messageWindows.push({user:windowUser,minimized:false,groupId:isGroup?groupId:null,isGroup});
   }
   renderMessageWindows();
   syncMessageRefreshPolling();
   try{
     state.conversations=(await api('/messages')).conversations||[];
-    const conversation=state.conversations.find(item=>item.user.id===member.id);
+    const conversation=state.conversations.find(item=>item.user.id===windowId);
     if(conversation?.unreadCount>0){
-      await api('/messages/'+encodeURIComponent(member.id)+'/read',{method:'POST',body:'{}'});
+      if(isGroup&&groupId)await api('/message-groups/'+encodeURIComponent(groupId)+'/read',{method:'POST',body:'{}'});
+      else await api('/messages/'+encodeURIComponent(member.id)+'/read',{method:'POST',body:'{}'});
       state.conversations=(await api('/messages')).conversations||[];
     }
     renderMessageWindows();
