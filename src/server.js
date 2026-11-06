@@ -5182,7 +5182,10 @@ async function sweepExpiredMessengerMessages(){
       changed=true;
       for(const message of expired.filter(item=>removable.has(item.id))){
         if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:expired',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
-        else messengerRealtime?.publish([message.from,message.to],{type:'message:expired',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+        else{
+          messengerRealtime?.publish([message.from],{type:'message:expired',conversationId:message.to,messageId:message.id});
+          messengerRealtime?.publish([message.to],{type:'message:expired',conversationId:message.from,messageId:message.id});
+        }
       }
     }
     if(changed)await saveStore();
