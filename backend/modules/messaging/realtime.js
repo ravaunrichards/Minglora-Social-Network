@@ -64,14 +64,23 @@ export function createMessengerRealtimeHub({
   }
 
   function stopTyping(userId, conversationId) {
-    const key = String(userId) + ':' + String(conversationId);
+    const id = String(userId), conversation = String(conversationId);
+    const key = id + ':' + conversation;
     const timer = typingTimers.get(key);
     if (timer) clearTimeout(timer);
     typingTimers.delete(key);
     typingLastSent.delete(key);
-    for (const peerId of participantIds(conversationId, userId)) {
-      sendUser(peerId, { type: 'typing', userId: String(userId), conversationId: String(conversationId), active: false });
+    for (const socket of socketsByUser.get(id) || []) socket.typingConversations?.delete(conversation);
+    for (const peerId of participantIds(conversation, id)) {
+      sendUser(peerId, { type: 'typing', userId: id, conversationId: conversation, active: false });
     }
+  }
+
+  function anotherSocketIsTyping(userId, conversationId, exceptSocket) {
+    for (const socket of socketsByUser.get(String(userId)) || []) {
+      if (socket !== exceptSocket && socket.typingConversations?.has(String(conversationId))) return true;
+    }
+    return false;
   }
 
   function announcePresence(userId, connected) {
@@ -186,7 +195,7 @@ export function createMessengerRealtimeHub({
       const key = userId + ':' + conversationId;
       if (input.active !== true) {
         socket.typingConversations.delete(conversationId);
-        stopTyping(userId, conversationId);
+        if (!anotherSocketIsTyping(userId, conversationId, socket)) stopTyping(userId, conversationId);
         return;
       }
 
@@ -210,9 +219,12 @@ export function createMessengerRealtimeHub({
     });
 
     socket.on('close', () => {
-      for (const conversationId of socket.typingConversations || []) stopTyping(userId, conversationId);
       const current = socketsByUser.get(userId);
       current?.delete(socket);
+      for (const conversationId of socket.typingConversations || []) {
+        if (!anotherSocketIsTyping(userId, conversationId, null)) stopTyping(userId, conversationId);
+      }
+      socket.typingConversations?.clear();
       if (current && current.size === 0) {
         socketsByUser.delete(userId);
         announcePresence(userId, false);
