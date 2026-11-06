@@ -2394,7 +2394,7 @@ async function route(req, res) {
           'giftCount','receivedCoins','cashBackedCoins','marketingBackedCoins',
           'promotionalCoins','adminPromotionalCoins','cashBackedPromotionalCoins',
           'cashBackedPromotionalGrossMinor','cashBackedPromotionalCreatorShareMinor',
-          'eligibleGrossMinor','creatorShareMinor'
+          'eligibleGrossMinor','creatorShareMinor','platformShareMinor'
         ];
         return json(res,200,{
           ledger:(Array.isArray(result?.ledger)?result.ledger:[]).map(item=>pick(item,[
@@ -2417,6 +2417,8 @@ async function route(req, res) {
           ])),
           payoutAccount:result?.payoutAccount?pick(result.payoutAccount,['paypal_email','updated_at']):null,
           earnedMinor:Number(result?.earnedMinor||0),
+          eligibleGiftEarningsMinor:Number(result?.eligibleGiftEarningsMinor||0),
+          promotionalGiftEarningsExcludedMinor:Number(result?.promotionalGiftEarningsExcludedMinor||0),
           reservedMinor:Number(result?.reservedMinor||0),
           exchangedMinor:Number(result?.exchangedMinor||0),
           availableMinor:Number(result?.availableMinor||0),
