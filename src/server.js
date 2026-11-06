@@ -123,8 +123,8 @@ function paypalConfig(){
 }
 async function paypalToken(){
   const cfg=paypalConfig();
-  if(cfg.productionBlocked)throw Object.assign(new Error('Production Minglora payments require PAYPAL_MODE=live and the official PayPal live API endpoint. Sandbox mode is blocked in production.'),{status:503});
-  if(!cfg.configured)throw Object.assign(new Error('PayPal is not configured for Minglora yet. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to the Minglora server environment.'),{status:503});
+  if(cfg.productionBlocked)throw Object.assign(new Error('Production Minglora payments require PAYPAL_MODE=live and the official PayPal live API endpoint. Sandbox mode is blocked in production.'),{status:503,paypalNoSubmission:true});
+  if(!cfg.configured)throw Object.assign(new Error('PayPal is not configured for Minglora yet. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to the Minglora server environment.'),{status:503,paypalNoSubmission:true});
   if(paypalAccessTokenCache&&paypalAccessTokenCache.expiresAt>Date.now()+60000)return paypalAccessTokenCache.value;
   let response;
   try{
@@ -133,16 +133,19 @@ async function paypalToken(){
       headers:{Authorization:'Basic '+Buffer.from(cfg.clientId+':'+cfg.clientSecret).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},
       body:'grant_type=client_credentials'
     });
-  }catch{throw Object.assign(new Error('Could not reach PayPal. Try again shortly.'),{status:503});}
+  }catch{throw Object.assign(new Error('Could not reach PayPal to obtain an access token. No payout request was sent.'),{status:503,paypalNoSubmission:true});}
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.access_token){
-    throw Object.assign(new Error(String(data.error_description||data.message||'PayPal authentication failed. Check the configured API credentials.')),{status:502,code:data.error||null});
+    throw Object.assign(new Error(String(data.error_description||data.message||'PayPal authentication failed. Check the configured API credentials.')),{status:502,code:data.error||null,paypalNoSubmission:true});
   }
-  paypalAccessTokenCache={value:data.access_token,expiresAt:Date.now()+Math.max(60,Number(data.expires_in||300))*1000};
+  paypalAccessTokenCache={value:data.access_token,scope:String(data.scope||''),expiresAt:Date.now()+Math.max(60,Number(data.expires_in||300))*1000};
   return data.access_token;
 }
 async function paypalRequest(path,method='POST',payload={},requestId){
   const cfg=paypalConfig(),token=await paypalToken();
+  if(path==='/v1/payments/payouts'&&!String(paypalAccessTokenCache?.scope||'').split(/\\s+/).includes('https://uri.paypal.com/payments/payouts')){
+    throw Object.assign(new Error('The PayPal live REST app token does not include the Payouts permission. Enable Payouts for this app in PayPal Developer Dashboard before retrying.'),{status:503,code:'PAYPAL_PAYOUTS_SCOPE_MISSING',paypalNoSubmission:true});
+  }
   let response;
   try{
     response=await fetch(cfg.base+path,{
@@ -158,7 +161,8 @@ async function paypalRequest(path,method='POST',payload={},requestId){
   const data=await response.json().catch(()=>({}));
   if(!response.ok){
     const detail=Array.isArray(data.details)?data.details[0]?.description:null;
-    throw Object.assign(new Error(String(detail||data.message||data.name||'PayPal could not complete the request.')),{status:502,code:data.name||null});
+    const providerStatus=Number(response.status||0);
+    throw Object.assign(new Error(String(detail||data.message||data.name||'PayPal could not complete the request.')),{status:502,code:data.name||null,paypalHttpStatus:providerStatus,paypalDebugId:String(data.debug_id||'').slice(0,80),paypalNoSubmission:[400,401,403,422].includes(providerStatus)});
   }
   return data;
 }
@@ -2461,6 +2465,26 @@ async function route(req, res) {
           await requestSupabaseState('economy_update_payout',{creatorId:user.id,payoutId,status:'processing',paypalBatchId:batchId});
           return json(res,202,{ok:true,payoutId,batchId,status:'processing',amountMinor,currency:'USD'});
         }catch(error){
+          // A provider 4xx response or a failed OAuth/scope check proves that no payout
+          // batch was created. Release that reservation instead of leaving it stuck as
+          // Requested. Network failures and provider 5xx responses remain reserved
+          // because PayPal may have accepted the request before the connection failed.
+          if(error?.paypalNoSubmission===true){
+            try{
+              await requestSupabaseState('economy_update_payout',{creatorId:user.id,payoutId,status:'failed'});
+            }catch(releaseError){
+              console.error('[Minglora payouts] PayPal rejected payout but reservation release failed.',{
+                payoutId,providerCode:error.code||null,providerStatus:error.paypalHttpStatus||null,
+                paypalDebugId:error.paypalDebugId||null,releaseMessage:String(releaseError?.message||releaseError).slice(0,160)
+              });
+              throw Object.assign(new Error('PayPal rejected the payout, but Minglora could not release its reservation. Contact Minglora administration before retrying.'),{status:503,code:'PAYOUT_RESERVATION_RELEASE_FAILED'});
+            }
+            console.warn('[Minglora payouts] Definitively rejected payout marked failed; creator earnings reservation released.',{
+              payoutId,providerCode:error.code||null,providerStatus:error.paypalHttpStatus||null,
+              paypalDebugId:error.paypalDebugId||null
+            });
+            throw Object.assign(new Error('PayPal rejected this payout request. No payment was sent. Minglora marked it Failed and released the reserved creator earnings. Enable the Payouts permission on the PayPal live app before trying again.'),{status:502,code:'PAYPAL_PAYOUT_REJECTED'});
+          }
           // Keep uncertain provider submissions reserved until a verified PayPal event
           // or an administrator reconciliation confirms their final status.
           throw error;
