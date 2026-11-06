@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const leagues = read('public/leagues.js');
+const app = read('public/app.js');
 const styles = read('public/leagues.css');
 const html = read('public/index.html');
 const sw = read('public/sw.js');
@@ -54,9 +55,25 @@ test('preview is separate from live-match activation and preserves existing rest
   assert.match(leagues, /never multiply Creator League points or official class standings/);
 });
 
-test('the 3D model viewer is preserved across background match refreshes', () => {
-  assert.match(leagues, /persistentPreview = \$\("#league-powerup-preview-panel"\)/);
-  assert.match(leagues, /replacementPreview\.replaceWith\(persistentPreview\)/);
+test('background League refresh updates only live-data sections and preserves active interactions', () => {
+  assert.match(leagues, /const refreshZones = \[/);
+  assert.match(leagues, /current\.replaceWith\(incoming\)/);
+  assert.match(leagues, /focused && current\.contains\(focused\)/);
+  assert.doesNotMatch(leagues, /main\.innerHTML = renderMarkup\(state\.overview, state\.sessions\)/);
+  for (const zone of ['league-hero-zone','league-overview-zone','league-progression-zone','league-challenge-zone','league-matches-zone','league-leaderboard-zone','league-events-zone']) {
+    assert.ok(leagues.includes("id='" + zone + "'"), zone + ' is patchable without rebuilding the page');
+  }
+  assert.ok(leagues.includes("id='league-powerup-preview-panel'"), 'the live 3D preview stays outside the refreshed zones');
+});
+
+test('a full app refresh restores the signed-in member to the last page and scroll position', () => {
+  assert.match(app, /LAST_VIEW_SESSION_PREFIX/);
+  assert.match(app, /function persistCurrentView\(/);
+  assert.match(app, /function readPersistedView\(/);
+  assert.match(app, /async function restoreLastView\(/);
+  assert.match(app, /else await restoreLastView\(\)/);
+  assert.match(app, /scrollTo\(Number\(saved\.scrollX\)\|\|0,Number\(saved\.scrollY\)\|\|0\)/);
+  assert.doesNotMatch(app, /else activateNav\('feed'\);/);
 });
 
 test('the service worker versions and caches the Match Power-Up 3D models', () => {
