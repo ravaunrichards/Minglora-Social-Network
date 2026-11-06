@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  canAssignGroupRole, canTransferGroupOwnership, canDeleteGroupPost, canDiscoverGroup, canLeaveGroup,
+  canAssignGroupRole, canTransferGroupOwnership, canDeleteGroupPost, canDiscoverGroup, canLeaveGroup, canManageGroupContent, canModerateGroupPosts,
   canManageGroupEvents, canManageGroupSettings, canModerateGroup,
   canPublishGroupPost, canRequestGroupMembership, canViewGroup,
   getGroupRole, groupPermissionSet, isGroupMember
@@ -88,6 +88,19 @@ test('a banned member has no active role and cannot use active-member permission
   assert.equal(canModerateGroup(banned, 'former'), false);
   assert.equal(canRequestGroupMembership(banned, 'former'), false);
 });
+test('content managers can moderate group posts and announcements without member-management authority', () => {
+  assert.equal(canModerateGroupPosts(group, 'member'), false);
+  assert.equal(canModerateGroupPosts(group, 'mod'), true);
+  assert.equal(canModerateGroupPosts(group, 'outsider'), false);
+  assert.equal(canManageGroupContent(group, 'member'), false);
+  const contentGroup = { ...group, memberships: [...group.memberships, { userId: 'content', role: 'content_manager', status: 'active' }] };
+  assert.equal(canModerateGroupPosts(contentGroup, 'content'), true);
+  assert.equal(canManageGroupContent(contentGroup, 'content'), true);
+  assert.equal(canModerateGroup(contentGroup, 'content'), false);
+  assert.equal(canManageGroupSettings(contentGroup, 'content'), false);
+  assert.equal(canDeleteGroupPost(contentGroup, post, 'content'), true);
+});
+
 test('administrator and moderator role boundaries are enforced', () => {
   assert.equal(canAssignGroupRole(group, 'admin', 'moderator'), true);
   assert.equal(canAssignGroupRole(group, 'admin', 'admin'), false);
