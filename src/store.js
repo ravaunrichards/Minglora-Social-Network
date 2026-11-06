@@ -10,7 +10,7 @@ const dbPath = path.join(dataDir, 'db.json');
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
+  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'mediaAssets',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
@@ -121,6 +121,11 @@ function stripLegacyDemoData(state) {
     .filter(post => !demoUsers.has(post.userId))
     .map(post => ({ ...post, comments: (post.comments || []).filter(comment => !demoUsers.has(comment.userId)) }));
   state.friendships = (state.friendships || []).filter(f => !demoUsers.has(f.from) && !demoUsers.has(f.to));
+  state.friendLists = (state.friendLists || [])
+    .filter(list => !demoUsers.has(list.ownerId))
+    .map(list => ({ ...list, memberIds: (list.memberIds || []).filter(id => !demoUsers.has(id)) }));
+  state.friendPreferences = (state.friendPreferences || [])
+    .filter(item => !demoUsers.has(item.ownerId) && !demoUsers.has(item.targetId));
   state.follows = (state.follows || []).filter(f => !demoUsers.has(f.followerId) && !demoUsers.has(f.followedId));
   state.creatorSubscriptions = (state.creatorSubscriptions || []).filter(subscription => !demoUsers.has(subscription.creatorId) && !demoUsers.has(subscription.subscriberId));
   state.giftGalleryEvents = (state.giftGalleryEvents || []).filter(event => !demoUsers.has(event.creatorId) && !demoUsers.has(event.senderId));
