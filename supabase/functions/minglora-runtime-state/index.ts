@@ -83,7 +83,8 @@ Deno.serve(async (req: Request) => {
     "economy_admin_promotional_fund_status", "economy_admin_promotional_fund_order_create", "economy_admin_promotional_fund_order_get", "economy_admin_promotional_fund_order_settle",
     "economy_promotional_gift_wallet", "economy_send_admin_promotional_gift",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
-    "economy_update_payout", "economy_payout_webhook", "relationship_follow", "relationship_unfollow",
+    "economy_update_payout", "economy_payout_webhook", "economy_admin_platform_payout_account_set",
+    "economy_admin_platform_payout_request", "economy_admin_platform_payout_update", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_members", "profile_verification_admin_set", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
   ];
@@ -215,8 +216,24 @@ Deno.serve(async (req: Request) => {
       .eq("paypal_batch_id", batchId)
       .in("status", ["requested", "processing"])
       .select("id,creator_id,status,amount_minor");
-    if (error) return json(503, { error: "Minglora could not update the payout from PayPal's event." });
-    return json(200, { updated: (data || []).length });
+    if (error) return json(503, { error: "Minglora could not update the creator payout from PayPal's event." });
+    const platformPatch: Record<string, unknown> = { status };
+    if (status === "paid") platformPatch.paid_at = new Date().toISOString();
+    if (status === "failed") {
+      platformPatch.failure_code = "PAYPAL_PAYOUT_FAILED";
+      platformPatch.failure_message = "PayPal reported that the platform payout failed. The amount is no longer reserved.";
+    }
+    const { data: platformData, error: platformError } = await admin.from("minglora_platform_payouts")
+      .update(platformPatch)
+      .eq("paypal_batch_id", batchId)
+      .in("status", ["requested", "processing"])
+      .select("id,status,amount_minor");
+    if (platformError) return json(503, { error: "Creator payout status was updated, but the platform payout status could not be reconciled." });
+    return json(200, {
+      updated: (data || []).length + (platformData || []).length,
+      creatorPayoutsUpdated: (data || []).length,
+      platformPayoutsUpdated: (platformData || []).length
+    });
   }
 
   if (action === "relationship_follow" || action === "relationship_unfollow") {
@@ -622,22 +639,30 @@ Deno.serve(async (req: Request) => {
       return { rows, error: null };
     };
 
-    const [ledgerResult, payoutsResult, platformFinanceResult] = await Promise.all([
+    const [ledgerResult, payoutsResult, platformFinanceResult, platformPayoutAccountResult, platformPayoutsResult] = await Promise.all([
       readAllPages("creator_earnings_ledger",
         "id,creator_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"),
       readAllPages("creator_payouts",
         "id,creator_id,amount_minor,currency,status,created_at,paid_at"),
       admin.rpc("minglora_get_platform_gift_earnings", {
         p_admin_user_id: adminUserId, p_admin_email: adminEmail
-      })
+      }),
+      admin.from("minglora_platform_payout_accounts")
+        .select("paypal_email,updated_at").eq("id", true).maybeSingle(),
+      admin.from("minglora_platform_payouts")
+        .select("id,amount_minor,currency,paypal_email,status,paypal_batch_id,created_at,submitted_at,paid_at,failure_code,failure_message")
+        .order("created_at", { ascending: false }).limit(100)
     ]);
-    if (ledgerResult.error || payoutsResult.error || platformFinanceResult.error) {
+    if (ledgerResult.error || payoutsResult.error || platformFinanceResult.error ||
+        platformPayoutAccountResult.error || platformPayoutsResult.error) {
       console.error("[Minglora admin creator earnings] Financial report read failed.", {
         ledgerError: ledgerResult.error?.message || null,
         payoutsError: payoutsResult.error?.message || null,
-        platformFinanceError: platformFinanceResult.error?.message || null
+        platformFinanceError: platformFinanceResult.error?.message || null,
+        platformPayoutAccountError: platformPayoutAccountResult.error?.message || null,
+        platformPayoutsError: platformPayoutsResult.error?.message || null
       });
-      return json(503, { error: "Cash-backed creator earnings or platform share could not be loaded." });
+      return json(503, { error: "Cash-backed creator earnings, platform PayPal destination or withdrawal history could not be loaded." });
     }
 
     const allLedger = ledgerResult.rows || [];
@@ -749,6 +774,8 @@ Deno.serve(async (req: Request) => {
       platformSharePercent: 50,
       payoutScope: "cash_backed_creator_earnings_only",
       platformFinance,
+      platformPayoutAccount: platformPayoutAccountResult.data || null,
+      platformPayouts: platformPayoutsResult.data || [],
       excludedPromotionalActivity: excludedPromotionalTotals,
       totals: {
         ...totals,
@@ -757,6 +784,76 @@ Deno.serve(async (req: Request) => {
       },
       creators: creators.slice(0, 100)
     });
+  }
+
+  if (action === "economy_admin_platform_payout_account_set") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalEmail = String(input.paypalEmail || "").trim().toLowerCase();
+    const paypalEmailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        paypalEmail.length > 127 || !paypalEmailPattern.test(paypalEmail)) {
+      return json(400, { error: "Enter a valid PayPal receiving email address." });
+    }
+    const [ownerResult, staffResult] = await Promise.all([
+      admin.from("profiles").select("verification_status,verification_badge")
+        .eq("id", adminUserId).maybeSingle(),
+      admin.from("minglora_platform_staff").select("user_id")
+        .eq("user_id", adminUserId).eq("role", "owner").eq("active", true)
+        .contains("permissions", ["platform:admin"]).limit(1).maybeSingle()
+    ]);
+    if (ownerResult.error || staffResult.error) return json(503, { error: "Minglora owner permissions could not be verified." });
+    if (ownerResult.data?.verification_status !== "verified" ||
+        ownerResult.data?.verification_badge !== "blue" || !staffResult.data?.user_id) {
+      return json(403, { error: "The verified Creator Hub owner permission is not active." });
+    }
+    const { data, error } = await admin.from("minglora_platform_payout_accounts")
+      .upsert({ id: true, paypal_email: paypalEmail, updated_by: adminUserId, updated_at: new Date().toISOString() },
+        { onConflict: "id" })
+      .select("paypal_email,updated_at").single();
+    if (error) return fail(error, "Minglora's PayPal receiving email could not be saved.");
+    return json(200, { payoutAccount: data });
+  }
+
+  if (action === "economy_admin_platform_payout_request") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !Number.isSafeInteger(amountMinor) ||
+        amountMinor < 100 || !validUuid(requestId)) {
+      return json(400, { error: "Enter a valid Minglora platform withdrawal amount and request reference." });
+    }
+    const { data, error } = await admin.rpc("minglora_request_platform_payout", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_amount_minor: amountMinor, p_request_id: requestId
+    });
+    if (error) return fail(error, "Minglora could not reserve the requested platform share.");
+    return json(201, { payout: data });
+  }
+
+  if (action === "economy_admin_platform_payout_update") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const payoutId = String(input.payoutId || "");
+    const status = String(input.status || "");
+    const paypalBatchId = input.paypalBatchId ? String(input.paypalBatchId) : null;
+    const failureCode = input.failureCode ? String(input.failureCode) : null;
+    const failureMessage = input.failureMessage ? String(input.failureMessage) : null;
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(payoutId) ||
+        !["processing", "paid", "failed"].includes(status)) {
+      return json(400, { error: "Invalid Minglora platform payout update." });
+    }
+    const { data, error } = await admin.rpc("minglora_update_platform_payout", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_payout_id: payoutId,
+      p_status: status, p_paypal_batch_id: paypalBatchId,
+      p_failure_code: failureCode, p_failure_message: failureMessage
+    });
+    if (error) return fail(error, "Minglora could not update the platform withdrawal record.");
+    return json(200, { payout: data });
   }
 
   if (action === "economy_admin_campaign_history") {
