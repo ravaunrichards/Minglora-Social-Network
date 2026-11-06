@@ -55,6 +55,8 @@ button,input,select,textarea{max-width:100%;min-width:0}
   .layout{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:10px 9px 18px!important}
   .left-rail,.right-rail{display:none!important}
   .main-content,#main-content{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:0!important}
+  #main-content *{min-width:0!important;max-width:100%!important}
+  #main-content svg{max-width:100%!important}
   /* Prevent oversized cards, headers and controls from escaping the phone viewport. */
   #main-content>*{width:100%;max-width:100%;min-width:0}
   .card,.side-card,.welcome,.page-heading,.profile-card,.profile-header,.live-player-shell,
