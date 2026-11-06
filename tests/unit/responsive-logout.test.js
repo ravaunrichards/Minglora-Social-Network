@@ -58,7 +58,7 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(serviceWorker.includes('styles.css?v=20261105-live-layout-expand-1'));
   assert.ok(serviceWorker.includes('app.js?v=20261105-roomwide-live-gifts-1'));
   assert.ok(serviceWorker.includes('settings.js?v=20261105-admin-mfa-qr-fix-2'));
-  assert.ok(serviceWorker.includes('settings-advanced.css?v=20261105-admin-mfa-qr-fix-2'));
+  assert.ok(serviceWorker.includes('settings-advanced.css?v=20261106-advanced-settings-privacy-1'));
   assert.ok(serviceWorker.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(mobileCss.includes('.top-actions #settings-btn{display:none!important}'));
 });
