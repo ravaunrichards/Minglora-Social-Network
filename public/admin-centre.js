@@ -477,17 +477,25 @@
             ' to ' + paypalEmail + ' from Minglora’s available platform share? This submits a real PayPal payout.')) return;
         if (submit) submit.disabled = true;
         if (status) status.textContent = 'Submitting your manually approved PayPal withdrawal…';
+        const requestId = form.dataset.pendingRequestId || window.crypto.randomUUID();
+        form.dataset.pendingRequestId = requestId;
         try {
           const result = await adminCentreApi('/admin/platform-payouts', {
-            method:'POST', body:JSON.stringify({amountMinor})
+            method:'POST', body:JSON.stringify({amountMinor,requestId})
           });
+          delete form.dataset.pendingRequestId;
           await loadAdminGiftEarnings(panel);
-          if (status) status.textContent = 'PayPal accepted the withdrawal batch ' +
-            String(result.batchId || 'without a batch reference') +
-            '. It remains Processing until PayPal confirms the final payment.';
+          if (status) status.textContent = result.alreadyCompleted
+            ? 'This withdrawal was already completed by PayPal.'
+            : 'PayPal accepted the withdrawal batch ' +
+              String(result.batchId || 'without a batch reference') +
+              '. It remains Processing until PayPal confirms the final payment.';
         } catch (error) {
+          if (/marked Failed|previously marked Failed/i.test(String(error.message || ''))) {
+            delete form.dataset.pendingRequestId;
+          }
           if (status) status.textContent = error.message ||
-            'Withdrawal could not be confirmed. Check the withdrawal history before submitting another request.';
+            'Withdrawal could not be confirmed. The same request reference will be reused if you retry; check history before starting another withdrawal.';
           await loadAdminGiftEarnings(panel);
         } finally {
           if (submit) submit.disabled = false;
