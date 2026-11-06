@@ -95,3 +95,43 @@
   .league-podium-member strong { font-size: 10px; }
   .league-podium-points { font-size: 10px; }
 }
+
+/* League Match chat and visual-only chat power-ups. Everything stays in card flow. */
+.league-match-chat{min-width:0;margin-top:12px;border-top:1px solid var(--line);padding-top:9px}
+.league-match-chat>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;cursor:pointer;list-style:none;color:var(--text)}
+.league-match-chat>summary::-webkit-details-marker{display:none}
+.league-match-chat>summary:after{content:"＋";color:var(--muted);font-size:16px;font-weight:800}
+.league-match-chat[open]>summary:after{content:"−"}
+.league-match-chat>summary strong{font-size:12px;font-weight:900}
+.league-match-chat>summary span{margin-left:auto;color:var(--muted);font-size:10px}
+.league-chat-messages{display:grid;gap:8px;max-height:260px;min-height:62px;overflow:auto;overscroll-behavior:contain;padding:9px 2px}
+.league-chat-empty{padding:14px 10px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:11px;text-align:center}
+.league-chat-message{min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:var(--surface,var(--card))}
+.league-chat-message-head{display:flex;align-items:center;gap:7px;min-width:0}
+.league-chat-message-head strong{min-width:0;overflow:hidden;color:var(--text);font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.league-chat-message-head time{margin-left:auto;flex:0 0 auto;color:var(--muted);font-size:9px}
+.league-chat-message p{margin:5px 0 0;color:var(--text);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.league-chat-boost-tag{flex:0 0 auto;padding:3px 6px;border-radius:999px;background:rgba(88,125,220,.12);color:var(--accent,#3978d8);font-size:9px;font-weight:900}
+.league-chat-message--spotlight{border-color:rgba(219,172,57,.65);background:linear-gradient(110deg,rgba(255,224,139,.16),rgba(255,255,255,.02))}
+.league-chat-message--megaphone{border-color:rgba(65,142,226,.58);background:linear-gradient(110deg,rgba(74,145,235,.16),rgba(255,255,255,.02))}
+.league-chat-message--cheer_burst{border-color:rgba(174,108,221,.58);background:linear-gradient(110deg,rgba(174,108,221,.16),rgba(255,255,255,.02))}
+.league-chat-form{display:grid;gap:9px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft,var(--bg))}
+.league-chat-compose{display:grid;gap:5px;color:var(--text);font-size:10px;font-weight:850}
+.league-chat-compose textarea{width:100%;min-width:0;min-height:58px;resize:vertical;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface,var(--card));color:var(--text);font:inherit;font-size:12px;line-height:1.4}
+.league-chat-compose textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.league-chat-powerups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.league-chat-powerups-label{grid-column:1/-1;color:var(--muted);font-size:9px;font-weight:850}
+.league-chat-powerup{min-width:0;display:grid;grid-template-columns:24px minmax(0,1fr);align-items:center;gap:1px 6px;padding:7px;border:1px solid var(--line);border-radius:9px;background:var(--surface,var(--card));color:var(--text);text-align:left;cursor:pointer}
+.league-chat-powerup>span{grid-row:span 2;font-size:19px}
+.league-chat-powerup strong{min-width:0;overflow:hidden;font-size:9px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.league-chat-powerup small{color:var(--muted);font-size:8px}
+.league-chat-powerup.is-selected{border-color:var(--accent);background:rgba(69,126,220,.1);box-shadow:inset 0 0 0 1px var(--accent)}
+.league-chat-powerup:disabled{opacity:.45;cursor:not-allowed}
+.league-chat-form-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.league-chat-form-footer small{max-width:360px;color:var(--muted);font-size:9px;line-height:1.4}
+.league-chat-form-footer button{flex:0 0 auto}
+@media(max-width:600px){
+  .league-chat-powerups{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .league-chat-form-footer{align-items:stretch}
+  .league-chat-form-footer button{width:100%}
+}
