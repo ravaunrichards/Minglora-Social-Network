@@ -430,6 +430,76 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const savedPosts = await request('/api/saved-posts');
   assert.equal(savedPosts.status, 200);
   assert.equal(savedPosts.body.posts.length, 1);
+  const savedCollection = await request('/api/saved-posts/collections', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'Ideas & Reading' })
+  });
+  assert.equal(savedCollection.status, 201);
+  assert.equal(savedCollection.body.collection.title, 'Ideas & Reading');
+  const duplicateSavedCollection = await request('/api/saved-posts/collections', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'ideas & reading' })
+  });
+  assert.equal(duplicateSavedCollection.status, 409);
+
+  const savedDetails = await request(`/api/saved-posts/${post.body.post.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      collectionId: savedCollection.body.collection.id,
+      note: 'Review this idea later.',
+      tags: ['ideas', '#reading', 'ideas'],
+      isFavorite: true,
+      readLater: true
+    })
+  });
+  assert.equal(savedDetails.status, 200);
+  const enrichedSaved = await request('/api/saved-posts');
+  assert.equal(enrichedSaved.body.posts[0].collectionId, savedCollection.body.collection.id);
+  assert.equal(enrichedSaved.body.posts[0].note, 'Review this idea later.');
+  assert.deepEqual(enrichedSaved.body.posts[0].tags, ['ideas', 'reading']);
+  assert.equal(enrichedSaved.body.posts[0].isFavorite, true);
+  assert.equal(enrichedSaved.body.posts[0].readLater, true);
+  assert.equal(enrichedSaved.body.collections.length, 1);
+
+  const invalidSavedCollection = await request(`/api/saved-posts/${post.body.post.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ collectionId: 'not-your-collection' })
+  });
+  assert.equal(invalidSavedCollection.status, 400);
+  const oversizedSavedNote = await request(`/api/saved-posts/${post.body.post.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ note: 'x'.repeat(501) })
+  });
+  assert.equal(oversizedSavedNote.status, 400);
+
+  const renamedSavedCollection = await request(`/api/saved-posts/collections/${savedCollection.body.collection.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title: 'Reading List' })
+  });
+  assert.equal(renamedSavedCollection.status, 200);
+  assert.equal(renamedSavedCollection.body.collection.title, 'Reading List');
+
+  const savedAccountExport = await request('/api/account/export');
+  assert.equal(savedAccountExport.body.savedPosts[0].note, 'Review this idea later.');
+  assert.equal(savedAccountExport.body.savedPostCollections[0].title, 'Reading List');
+
+  const deletedCollection = await request(`/api/saved-posts/collections/${savedCollection.body.collection.id}`, {
+    method: 'DELETE',
+    body: '{}'
+  });
+  assert.equal(deletedCollection.status, 200);
+  assert.equal(deletedCollection.body.keptSavedPosts, true);
+  const savedAfterCollectionDelete = await request('/api/saved-posts');
+  assert.equal(savedAfterCollectionDelete.body.posts.length, 1);
+  assert.equal(savedAfterCollectionDelete.body.posts[0].collectionId, null);
+  assert.equal(savedAfterCollectionDelete.body.posts[0].note, 'Review this idea later.');
+
+  const ownerOnlyCollection = await request('/api/saved-posts/collections', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'Owner only' })
+  });
+  assert.equal(ownerOnlyCollection.status, 201);
+
   const unsaved = await request(`/api/posts/${post.body.post.id}/save`, { method: 'DELETE', body: '{}' });
   assert.equal(unsaved.body.saved, false);
 
@@ -863,6 +933,13 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const otherSave = await request(`/api/posts/${post.body.post.id}/save`, { method: 'POST', body: '{}' });
   assert.equal(otherSave.body.saved, true);
   assert.equal((await request('/api/saved-posts')).body.posts.length, 1);
+  const otherMembersLibrary = await request('/api/saved-posts');
+  assert.equal(otherMembersLibrary.body.collections.length, 0);
+  const forbiddenCollectionEdit = await request(`/api/saved-posts/collections/${ownerOnlyCollection.body.collection.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title: 'Stolen collection' })
+  });
+  assert.equal(forbiddenCollectionEdit.status, 404);
 
   const block = await request(`/api/users/${firstUserId}/block`, { method: 'POST', body: '{}' });
   assert.equal(block.body.blocked, true);

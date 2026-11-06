@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 
 const storeUrl = new URL('../../src/store.js', import.meta.url).href;
 const collections = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
+  'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'savedPostCollections', 'mediaAssets',
   
    'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
   'pageRoles', 'pageFollows', 'pagePosts',
