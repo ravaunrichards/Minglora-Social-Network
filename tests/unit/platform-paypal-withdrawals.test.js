@@ -7,8 +7,9 @@ import { dirname, resolve } from 'node:path';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFile(resolve(root, path), 'utf8');
 
-const [migration, runtime, server, adminCentre, adminCss] = await Promise.all([
+const [migration, retryMigration, runtime, server, adminCentre, adminCss] = await Promise.all([
   read('database/migrations/081_minglora_manual_platform_paypal_withdrawals.sql'),
+  read('database/migrations/082_minglora_platform_payout_retry_safety.sql'),
   read('supabase/functions/minglora-runtime-state/index.ts'),
   read('src/server.js'),
   read('public/admin-centre.js'),
@@ -59,4 +60,14 @@ test('admin sees destination, available share, and platform withdrawal history',
   assert.match(adminCentre, /platformPayouts/);
   assert.match(adminCentre, /PayPal does not allow a Payout to be sent to the same PayPal account/);
   assert.match(adminCss, /admin-platform-payout-balances/);
+});
+
+test('platform payout retries reuse the same request and block parallel outstanding withdrawals', () => {
+  assert.match(server, /String\(input\.requestId\|\|''\)/);
+  assert.match(server, /reservedPayout\.status==='processing'&&reservedPayout\.paypalBatchId/);
+  assert.match(adminCentre, /form\.dataset\.pendingRequestId \|\| window\.crypto\.randomUUID\(\)/);
+  assert.match(adminCentre, /JSON\.stringify\(\{amountMinor,requestId\}\)/);
+  assert.match(retryMigration, /where p\.request_id=p_request_id/);
+  assert.match(retryMigration, /paypalBatchId/);
+  assert.match(retryMigration, /A Minglora platform withdrawal is already requested or processing/);
 });
