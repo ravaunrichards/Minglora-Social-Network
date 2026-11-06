@@ -419,6 +419,43 @@
             <div id="admin-platform-payout-history" aria-live="polite">Loading platform withdrawals…</div>
           </div>
         </section>
+        <section class="admin-withdrawal-tracker" aria-labelledby="admin-withdrawal-tracker-title">
+          <div class="admin-withdrawal-tracker-heading">
+            <div><h4 id="admin-withdrawal-tracker-title">All creator/member withdrawal requests</h4>
+              <p>Every creator payout request, its PayPal batch reference and confirmed status. This list refreshes automatically while the Admin Centre is open.</p></div>
+            <span id="admin-withdrawal-tracker-updated" role="status" aria-live="polite">Loading status…</span>
+          </div>
+          <div id="admin-withdrawal-tracker-summary" class="admin-withdrawal-tracker-summary" aria-live="polite"></div>
+          <div class="admin-withdrawal-tracker-filters">
+            <label>Search account or PayPal reference
+              <input id="admin-withdrawal-tracker-search" type="search" maxlength="100" placeholder="Search username, name, email or batch ID">
+            </label>
+            <label>Filter by status
+              <select id="admin-withdrawal-tracker-status">
+                <option value="all">All statuses</option>
+                <option value="requested">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="paid">Paid</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+          <div id="admin-withdrawal-tracker-list" class="admin-withdrawal-tracker-list" aria-live="polite">Loading withdrawal records…</div>
+        </section>
+        <section class="admin-promotional-tracker" aria-labelledby="admin-promotional-tracker-title">
+          <div class="admin-withdrawal-tracker-heading">
+            <div><h4 id="admin-promotional-tracker-title">Promotional Gift Wallet &amp; cash backing</h4>
+              <p>Separate promotional Coins, member allocations, spending, verified cash funding and any resulting 50/50 creator/platform shares. This report is read-only and never changes the main Coin balance.</p></div>
+          </div>
+          <div id="admin-promotional-tracker-summary" class="admin-withdrawal-tracker-summary" aria-live="polite">Loading promotional wallet and reserve…</div>
+          <div class="admin-promotional-tracker-grid">
+            <div><strong>Member promotional wallets</strong><div id="admin-promotional-wallets" aria-live="polite">Loading wallet balances…</div></div>
+            <div><strong>Promotional wallet activity</strong><div id="admin-promotional-wallet-ledger" aria-live="polite">Loading promotional transactions…</div></div>
+            <div><strong>Cash reserve activity</strong><div id="admin-promotional-fund-ledger" aria-live="polite">Loading cash funding history…</div></div>
+            <div><strong>Cash-backed promotional gifts</strong><div id="admin-promotional-cash-backed-gifts" aria-live="polite">Loading backed gifts…</div></div>
+          </div>
+        </section>
       `;
       adminSettings.append(giftEarningsSection);
     }
@@ -1001,7 +1038,57 @@
     return new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format((Number.isFinite(amount) ? amount : 0) / 100);
   }
 
-  async function loadAdminGiftEarnings(panel) {
+  function renderAdminWithdrawalTracker(panel) {
+    const target = panel.querySelector('#admin-withdrawal-tracker-list');
+    const summary = panel.querySelector('#admin-withdrawal-tracker-summary');
+    const updated = panel.querySelector('#admin-withdrawal-tracker-updated');
+    const searchInput = panel.querySelector('#admin-withdrawal-tracker-search');
+    const statusInput = panel.querySelector('#admin-withdrawal-tracker-status');
+    if (!target) return;
+    const rows = Array.isArray(panel._mingloraCreatorPayoutRows) ? panel._mingloraCreatorPayoutRows : [];
+    const statuses = ['requested','processing','paid','failed','cancelled'];
+    const summaryMarkup = statuses.map(status => {
+      const matches = rows.filter(row => String(row.status || '').toLowerCase() === status);
+      const amount = matches.reduce((sum,row) => sum + Math.max(0,Number(row.amountMinor || 0)),0);
+      const label = status === 'requested' ? 'Pending' : status.charAt(0).toUpperCase() + status.slice(1);
+      return '<article class="admin-withdrawal-tracker-metric"><small>' + escapeText(label) +
+        ' · ' + matches.length.toLocaleString() + '</small><strong>' +
+        escapeText(formatAdminEarningsMoney(amount)) + '</strong></article>';
+    }).join('');
+    if (summary) summary.innerHTML = summaryMarkup || '<p>No withdrawal requests have been recorded.</p>';
+    const query = String(searchInput?.value || '').trim().toLowerCase();
+    const selectedStatus = String(statusInput?.value || 'all').toLowerCase();
+    const filtered = rows.filter(row => {
+      if (selectedStatus !== 'all' && String(row.status || '').toLowerCase() !== selectedStatus) return false;
+      if (!query) return true;
+      return [row.displayName,row.username,row.paypalEmail,row.paypalBatchId,row.id]
+        .some(value => String(value || '').toLowerCase().includes(query));
+    });
+    if (updated) updated.textContent = 'Auto-refresh · ' + (panel._mingloraReportAsOf
+      ? new Date(panel._mingloraReportAsOf).toLocaleTimeString()
+      : 'just now');
+    target.innerHTML = filtered.length ? filtered.map(row => {
+      const status = String(row.status || 'requested').toLowerCase();
+      const statusLabel = status === 'requested' ? 'Pending' : status.charAt(0).toUpperCase() + status.slice(1);
+      const created = row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable';
+      const paid = row.paidAt ? ' · Paid ' + escapeText(new Date(row.paidAt).toLocaleString()) : '';
+      const batch = row.paypalBatchId ? escapeText(row.paypalBatchId) : 'Awaiting PayPal batch reference';
+      return '<article class="admin-withdrawal-tracker-row">' +
+        '<div class="admin-withdrawal-tracker-identity"><strong>' + escapeText(row.displayName || 'Unavailable creator') +
+          '</strong><small>' + (row.username ? '@' + escapeText(row.username) : 'Creator account') +
+          ' · ' + escapeText(row.paypalEmail || 'PayPal destination not available') + '</small></div>' +
+        '<div class="admin-withdrawal-tracker-amount"><strong>' + escapeText(formatAdminEarningsMoney(row.amountMinor)) +
+          '</strong><span class="admin-withdrawal-status admin-withdrawal-status-' + escapeText(status) + '">' +
+          escapeText(statusLabel) + '</span></div>' +
+        '<div class="admin-withdrawal-tracker-reference"><small>Requested ' + escapeText(created) +
+          '</small><small>PayPal batch: ' + batch + paid + '</small><small>Request ID: ' +
+          escapeText(row.id || 'Unavailable') + '</small></div></article>';
+    }).join('') : '<p class="admin-gift-earnings-empty">' +
+      (rows.length ? 'No withdrawal requests match these filters.' : 'No creator/member withdrawal requests have been recorded yet.') +
+      '</p>';
+  }
+
+  async function loadAdminGiftEarnings(panel, { quiet = false } = {}) {
     const status = panel.querySelector('#admin-gift-earnings-status');
     const metrics = panel.querySelector('#admin-gift-earnings-metrics');
     const creators = panel.querySelector('#admin-gift-earnings-creators');
@@ -1010,9 +1097,14 @@
     const platformAccountInput = panel.querySelector('#admin-platform-payout-email');
     const platformPayoutHistory = panel.querySelector('#admin-platform-payout-history');
     const platformPayoutSubmit = panel.querySelector('#admin-platform-payout-submit');
+    const promoSummary = panel.querySelector('#admin-promotional-tracker-summary');
+    const promoWalletsTarget = panel.querySelector('#admin-promotional-wallets');
+    const promoWalletLedgerTarget = panel.querySelector('#admin-promotional-wallet-ledger');
+    const promoFundLedgerTarget = panel.querySelector('#admin-promotional-fund-ledger');
+    const promoBackedGiftsTarget = panel.querySelector('#admin-promotional-cash-backed-gifts');
     if (!status || !metrics || !creators) return;
-    if (refresh) refresh.disabled = true;
-    status.textContent = 'Loading the verified creator earnings and payout ledgers…';
+    if (refresh && !quiet) refresh.disabled = true;
+    if (!quiet) status.textContent = 'Loading the verified creator earnings, withdrawals and promotional ledgers…';
     try {
       const report = await adminCentreApi('/admin/creator-earnings');
       const totals = report.totals || {};
@@ -1071,6 +1163,85 @@
           : '<p class="admin-platform-payout-empty">No platform withdrawals have been sent.</p>';
       }
 
+      panel._mingloraCreatorPayoutRows = Array.isArray(report.creatorPayouts) ? report.creatorPayouts : [];
+      panel._mingloraReportAsOf = report.asOf || new Date().toISOString();
+      if (!panel.dataset.mingloraWithdrawalFilterBound) {
+        panel.querySelector('#admin-withdrawal-tracker-search')?.addEventListener('input', () => renderAdminWithdrawalTracker(panel));
+        panel.querySelector('#admin-withdrawal-tracker-status')?.addEventListener('change', () => renderAdminWithdrawalTracker(panel));
+        panel.dataset.mingloraWithdrawalFilterBound = 'true';
+      }
+      renderAdminWithdrawalTracker(panel);
+
+      const promoWalletTotals = report.promotionalWalletTotals || {};
+      const promoReserve = report.promotionalCashReserve || {};
+      const promoBacking = report.promotionalCashBackings || {};
+      const promoActivity = report.excludedPromotionalActivity || {};
+      const promoMetrics = [
+        ['Promotional Coins available in member wallets', Number(promoWalletTotals.availableCoins || 0).toLocaleString() + ' Coins'],
+        ['Promotional Coins allocated · lifetime', Number(promoWalletTotals.lifetimeAllocatedCoins || 0).toLocaleString() + ' Coins'],
+        ['Promotional Coins spent · lifetime', Number(promoWalletTotals.lifetimeSpentCoins || 0).toLocaleString() + ' Coins'],
+        ['Promotional gift cash reserve · funded', formatAdminEarningsMoney(promoReserve.fundedMinor)],
+        ['Promotional gift cash reserve · spent', formatAdminEarningsMoney(promoReserve.spentMinor)],
+        ['Promotional gift cash reserve · available', formatAdminEarningsMoney(promoReserve.availableMinor)],
+        ['Promotional gift activity · recorded gross', formatAdminEarningsMoney(promoActivity.grossMinor)],
+        ['Promotional creator share · recorded', formatAdminEarningsMoney(promoActivity.creatorShareMinor)],
+        ['Promotional platform share · recorded', formatAdminEarningsMoney(promoActivity.platformShareMinor)],
+        ['Cash-backed promotional gifts', Number(promoBacking.giftCount || 0).toLocaleString() + ' gifts'],
+        ['Cash backing attached to promotional gifts', formatAdminEarningsMoney(promoBacking.backingMinor)],
+        ['Cash-backed promotional creator share · 50%', formatAdminEarningsMoney(promoBacking.creatorShareMinor)],
+        ['Cash-backed promotional platform share · 50%', formatAdminEarningsMoney(promoBacking.platformShareMinor)]
+      ];
+      if (promoSummary) promoSummary.innerHTML = promoMetrics.map(([label,value]) =>
+        '<article class="admin-withdrawal-tracker-metric"><small>' + escapeText(label) +
+        '</small><strong>' + escapeText(value) + '</strong></article>'
+      ).join('') + '<p class="admin-gift-earnings-footnote">Promotional Coin balances remain separate from the main Coin wallet. Promotional activity is always visible here. Cash-backed payouts are reported only where matching reserve funding/backing records exist; this dashboard does not move or convert promotional balances.</p>';
+      const promoWallets = Array.isArray(report.promotionalWallets) ? report.promotionalWallets : [];
+      if (promoWalletsTarget) promoWalletsTarget.innerHTML = promoWallets.length
+        ? promoWallets.map(wallet => '<article class="admin-promotional-ledger-row"><strong>' +
+            escapeText(wallet.displayName || 'Unavailable member') + (wallet.username ? ' · @' + escapeText(wallet.username) : '') +
+            '</strong><small>Available ' + Number(wallet.availableCoins || 0).toLocaleString() +
+            ' Coins · Allocated ' + Number(wallet.lifetimeAllocatedCoins || 0).toLocaleString() +
+            ' · Spent ' + Number(wallet.lifetimeSpentCoins || 0).toLocaleString() +
+            ' · Updated ' + escapeText(wallet.updatedAt ? new Date(wallet.updatedAt).toLocaleString() : 'unknown') +
+            '</small></article>').join('')
+        : '<p class="admin-gift-earnings-empty">No member promotional gift wallets recorded.</p>';
+      const promoWalletLedger = Array.isArray(report.promotionalWalletLedger) ? report.promotionalWalletLedger : [];
+      if (promoWalletLedgerTarget) promoWalletLedgerTarget.innerHTML = promoWalletLedger.length
+        ? promoWalletLedger.map(row => {
+            const delta = Number(row.deltaCoins || 0);
+            return '<article class="admin-promotional-ledger-row"><strong>' +
+              escapeText(row.memberDisplayName || 'Unavailable member') + ' · ' +
+              (delta > 0 ? '+' : '') + delta.toLocaleString() + ' Coins</strong><small>' +
+              escapeText(String(row.eventType || 'activity').replace(/_/g,' ')) +
+              ' · Balance after ' + Number(row.balanceAfter || 0).toLocaleString() +
+              ' · Actor ' + escapeText(row.actorUsername ? '@' + row.actorUsername : 'system') +
+              ' · ' + escapeText(row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable') +
+              (row.note ? ' · ' + escapeText(row.note) : '') + '</small></article>';
+          }).join('')
+        : '<p class="admin-gift-earnings-empty">No promotional wallet transactions recorded.</p>';
+      const promoFundLedger = Array.isArray(promoReserve.ledger) ? promoReserve.ledger : [];
+      if (promoFundLedgerTarget) promoFundLedgerTarget.innerHTML = promoFundLedger.length
+        ? promoFundLedger.map(row => '<article class="admin-promotional-ledger-row"><strong>' +
+            escapeText(String(row.eventType || 'activity').replace(/_/g,' ')) +
+            ' · Funded ' + escapeText(formatAdminEarningsMoney(row.fundedDeltaMinor)) +
+            ' · Spent ' + escapeText(formatAdminEarningsMoney(row.spentDeltaMinor)) +
+            '</strong><small>By ' + escapeText(row.actorUsername ? '@' + row.actorUsername : 'system') +
+            ' · ' + escapeText(row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable') +
+            (row.paypalCaptureId ? ' · PayPal capture ' + escapeText(row.paypalCaptureId) : '') +
+            (row.note ? ' · ' + escapeText(row.note) : '') + '</small></article>').join('')
+        : '<p class="admin-gift-earnings-empty">No promotional cash-fund transactions recorded.</p>';
+      const promoBackedRecords = Array.isArray(promoBacking.records) ? promoBacking.records : [];
+      if (promoBackedGiftsTarget) promoBackedGiftsTarget.innerHTML = promoBackedRecords.length
+        ? promoBackedRecords.map(row => '<article class="admin-promotional-ledger-row"><strong>' +
+            escapeText(row.creatorDisplayName || 'Unavailable creator') + ' · ' +
+            Number(row.giftCoins || 0).toLocaleString() + ' promotional gift Coins</strong><small>Cash backing ' +
+            escapeText(formatAdminEarningsMoney(row.backingMinor)) + ' · Creator 50% ' +
+            escapeText(formatAdminEarningsMoney(row.creatorShareMinor)) + ' · Minglora 50% ' +
+            escapeText(formatAdminEarningsMoney(row.platformShareMinor)) + ' · ' +
+            escapeText(row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable') +
+            '</small></article>').join('')
+        : '<p class="admin-gift-earnings-empty">No promotional gift cash-backing records have been posted yet.</p>';
+
       const rows = Array.isArray(report.creators) ? report.creators : [];
       creators.innerHTML = rows.map(creator => {
         const username = String(creator.username || '').replace(/^@/, '');
@@ -1094,15 +1265,26 @@
       status.textContent = Number(totals.giftCount || 0).toLocaleString() +
         ' cash-backed eligible gift records across ' + Number(totals.creatorCount || 0).toLocaleString() +
         ' creators · ' + Number(totals.splitMismatchCount || 0).toLocaleString() +
-        ' split exceptions · ' + excludedPromoCount.toLocaleString() +
-        ' non-cash promotional records excluded. Minglora share is a recorded ledger amount, not a live PayPal balance confirmation · refreshed ' + updateLabel + '.';
+        ' split exceptions. Promotional activity (' + excludedPromoCount.toLocaleString() +
+        ' records) is displayed separately with wallet and cash-reserve tracking. Minglora share is a recorded ledger amount, not a live PayPal balance confirmation · refreshed ' + updateLabel + '.';
     } catch (error) {
       metrics.innerHTML = '';
       creators.textContent = 'The verified earnings report could not be loaded. ' +
         (error.message || 'Try refreshing the report.');
       status.textContent = 'Financial report unavailable.';
     } finally {
-      if (refresh) refresh.disabled = false;
+      if (refresh && !quiet) refresh.disabled = false;
+    }
+    if (!panel.dataset.mingloraWithdrawalAutoRefresh) {
+      panel.dataset.mingloraWithdrawalAutoRefresh = 'true';
+      panel._mingloraWithdrawalTimer = window.setInterval(() => {
+        if (!panel.isConnected) {
+          window.clearInterval(panel._mingloraWithdrawalTimer);
+          panel._mingloraWithdrawalTimer = null;
+          return;
+        }
+        if (document.visibilityState === 'visible') void loadAdminGiftEarnings(panel, {quiet:true});
+      }, 15000);
     }
   }
 
