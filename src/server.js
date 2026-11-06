@@ -1316,14 +1316,27 @@ async function route(req, res) {
         if(!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>2000000){
           return json(res,400,{error:'Enter a withdrawal from USD 1.00 to USD 20,000.00 per PayPal payout.'});
         }
-        const requestId=uid();
+        const requestId=String(input.requestId||'').trim();
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+        if(!uuidPattern.test(requestId)){
+          return json(res,400,{error:'A valid unique withdrawal request reference is required. Retry from the withdrawal form.'});
+        }
         const reservation=await requestSupabaseState('economy_admin_platform_payout_request',{
           adminUserId:user.id,adminEmail,amountMinor,requestId
         });
-        const payoutId=String(reservation?.payout?.payoutId||'');
-        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const reservedPayout=reservation?.payout||{};
+        const payoutId=String(reservedPayout.payoutId||'');
         if(!uuidPattern.test(payoutId)){
           return json(res,503,{error:'Minglora reserved the withdrawal but did not return its payout reference. Do not submit it again; contact the owner administrator for reconciliation.'});
+        }
+        if(reservedPayout.status==='failed'){
+          return json(res,409,{error:'This withdrawal request was previously marked Failed. No payment was sent; start a new withdrawal after reviewing the history.'});
+        }
+        if(reservedPayout.status==='paid'){
+          return json(res,200,{ok:true,alreadyCompleted:true,payoutId,status:'paid',amountMinor,currency:'USD'});
+        }
+        if(reservedPayout.status==='processing'&&reservedPayout.paypalBatchId){
+          return json(res,202,{ok:true,alreadySubmitted:true,payoutId,batchId:reservedPayout.paypalBatchId,status:'processing',amountMinor,currency:'USD',paypalEmail:reservedPayout.paypalEmail});
         }
         try{
           const payout=await paypalRequest('/v1/payments/payouts','POST',{
