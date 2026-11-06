@@ -4613,7 +4613,7 @@ async function route(req, res) {
         if(method==='PATCH'&&!action){
           if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can edit group details.'});
           const name=normalizeMessageGroupName(input.name??group.name);
-          const description=String(input.description??group.description||'').trim().slice(0,500);
+          const description=String(input.description??(group.description||'')).trim().slice(0,500);
           if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
           group.name=name;group.description=description;group.updatedAt=now();await saveStore();
           messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
