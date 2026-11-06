@@ -25,7 +25,7 @@ export function canViewGroup(group, userId) {
   if (!group || group.status === 'deleted' || group.status === 'archived') return false;
   const role = getGroupRole(group, userId);
   if (role) return true;
-  return group.visibility === 'public' || (group.visibility === 'private' && group.joinApproval !== false && group.discoverable !== false);
+  return group.visibility === 'public' || (group.visibility === 'private' && group.discoverable !== false);
 }
 
 export function canDiscoverGroup(group) {
@@ -45,11 +45,19 @@ export function canPublishGroupPost(group, userId) {
 
 export function canDeleteGroupPost(group, post, userId) {
   if (!group || !post || !userId || post.groupId !== group.id) return false;
-  return post.userId === userId || ['owner', 'admin', 'moderator'].includes(getGroupRole(group, userId));
+  return post.userId === userId || ['owner', 'admin', 'moderator', 'content_manager'].includes(getGroupRole(group, userId));
 }
 
 export function canModerateGroup(group, userId) {
   return ['owner', 'admin', 'moderator'].includes(getGroupRole(group, userId));
+}
+
+export function canModerateGroupPosts(group, userId) {
+  return ['owner', 'admin', 'moderator', 'content_manager'].includes(getGroupRole(group, userId));
+}
+
+export function canManageGroupContent(group, userId) {
+  return ['owner', 'admin', 'moderator', 'content_manager'].includes(getGroupRole(group, userId));
 }
 
 export function canManageGroupSettings(group, userId) {
