@@ -3890,12 +3890,13 @@ async function finishPaypalCoinReturn(){
 
 function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
-async function renderGroups(scope='discover', query=''){
+async function renderGroups(scope='discover', query='', category=''){
   activateSilent('groups');
   state.groupScope=scope;
   state.groupSearch=query;
+  state.groupCategory=category;
   const [groupResult, inviteResult]=await Promise.allSettled([
-    api('/groups?scope='+encodeURIComponent(scope==='mine'?'mine':'discover')+'&q='+encodeURIComponent(query)),
+    api('/groups?scope='+encodeURIComponent(scope==='mine'?'mine':'discover')+'&q='+encodeURIComponent(query)+'&category='+encodeURIComponent(category)),
     api('/group-invitations')
   ]);
   state.groups=groupResult.status==='fulfilled'?groupResult.value.groups||[]:[];
@@ -3928,15 +3929,9 @@ async function renderGroups(scope='discover', query=''){
   }
   setContent(html);
   $('#create-group')?.addEventListener('click',()=>openGroupModal());
-  document.querySelectorAll('[data-group-scope]').forEach(button=>button.addEventListener('click',()=>renderGroups(button.dataset.groupScope)));
-  $('#groups-search-form')?.addEventListener('submit',event=>{event.preventDefault();renderGroups(state.groupScope||'discover',$('#groups-search-input')?.value.trim()||'');});
-  $('#groups-category')?.addEventListener('change',event=>{
-    const category=event.target.value;
-    const cards=state.groups.filter(g=>!category||String(g.category||'').toLowerCase()===category.toLowerCase());
-    const grid=document.querySelector('.groups-grid');
-    if(grid)grid.innerHTML=cards.map(g=>'<article class="card group-card"><div class="group-card-top"><div class="group-icon">◉</div><span class="group-privacy">'+esc(g.visibility==='public'?'Public':g.visibility==='private'?'Private · visible':'Private · hidden')+'</span></div><h3>'+esc(g.name)+'</h3><p>'+esc(g.description||'A Minglora community.')+'</p><div class="group-card-meta"><span>'+Number(g.memberCount||0).toLocaleString()+' members</span><span>'+esc(g.category||'Community')+'</span></div><button class="secondary full" data-open-group="'+esc(g.id)+'">View group</button></article>').join('');
-    document.querySelectorAll('[data-open-group]').forEach(btn=>btn.addEventListener('click',()=>renderGroup(btn.dataset.openGroup)));
-  });
+  document.querySelectorAll('[data-group-scope]').forEach(button=>button.addEventListener('click',()=>renderGroups(button.dataset.groupScope,button.dataset.groupScope==='invitations'?'':state.groupSearch||'',button.dataset.groupScope==='invitations'?'':state.groupCategory||'')));
+  $('#groups-search-form')?.addEventListener('submit',event=>{event.preventDefault();renderGroups(state.groupScope||'discover',$('#groups-search-input')?.value.trim()||'',state.groupCategory||'');});
+  $('#groups-category')?.addEventListener('change',event=>renderGroups(state.groupScope||'discover',state.groupSearch||'',event.target.value));
   document.querySelectorAll('[data-open-group]').forEach(btn=>btn.addEventListener('click',()=>renderGroup(btn.dataset.openGroup)));
   document.querySelectorAll('[data-join-group]').forEach(btn=>btn.addEventListener('click',async()=>{
     btn.disabled=true;
@@ -4010,6 +4005,7 @@ async function renderGroup(groupId,tab='discussion'){
     html+='<h2>Pending posts</h2>';
     if(pendingPosts.length)html+=pendingPosts.map(post=>'<div class="group-request-row"><div><strong>'+esc(post.author?.name||'Member post')+'</strong><small>'+timeAgo(post.createdAt)+'</small><p>'+esc(post.text||'Media post')+'</p></div><button class="primary" data-review-post="'+esc(post.id)+'" data-review-action="approve">Approve</button><button class="secondary" data-review-post="'+esc(post.id)+'" data-review-action="reject">Reject</button></div>').join('');
     else html+='<p class="muted">No posts waiting for approval.</p>';
+    html+='<h2>Invite members</h2><form class="group-inline-form" id="group-invite-search-form"><div class="field"><label for="group-invite-query">Find a Minglora member</label><input id="group-invite-query" name="q" required minlength="2" maxlength="100" placeholder="Search by name or username"></div><button class="secondary" type="submit">Find members</button></form><div id="group-invite-results"></div>';
     html+='<h2>Announcements</h2><form class="group-inline-form" id="group-announcement-form"><div class="field"><label for="group-announcement-title">Title</label><input id="group-announcement-title" name="title" maxlength="140" required minlength="3"></div><div class="field"><label for="group-announcement-body">Message</label><textarea id="group-announcement-body" name="body" maxlength="3000" required></textarea></div><button class="primary" type="submit">Publish announcement</button></form>';
     if(analytics)html+='<h2>Last 30 days</h2><div class="group-analytics-grid"><div><strong>'+Number(analytics.newMembers||0).toLocaleString()+'</strong><small>New members</small></div><div><strong>'+Number(analytics.departures||0).toLocaleString()+'</strong><small>Departures</small></div><div><strong>'+Number(analytics.posts||0).toLocaleString()+'</strong><small>Posts</small></div><div><strong>'+Number(analytics.pendingRequests||0).toLocaleString()+'</strong><small>Pending requests</small></div></div>';
     html+='</section></section>';
@@ -4038,6 +4034,12 @@ async function renderGroup(groupId,tab='discussion'){
   document.querySelectorAll('[data-review-request]').forEach(button=>button.addEventListener('click',async()=>{try{await api('/groups/'+encodeURIComponent(groupId)+'/requests/'+encodeURIComponent(button.dataset.reviewRequest),{method:'POST',body:JSON.stringify({action:button.dataset.reviewAction})});toast('Membership request updated.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}}));
   document.querySelectorAll('[data-review-post]').forEach(button=>button.addEventListener('click',async()=>{try{await api('/groups/'+encodeURIComponent(groupId)+'/posts/'+encodeURIComponent(button.dataset.reviewPost)+'/approval',{method:'POST',body:JSON.stringify({action:button.dataset.reviewAction})});toast('Post review saved.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}}));
   $('#group-settings-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const values=new FormData(form);const body={name:values.get('name'),description:values.get('description'),category:values.get('category'),visibility:values.get('visibility'),joinApproval:form.elements.joinApproval.checked,postApproval:form.elements.postApproval.checked,allowMemberInvites:form.elements.allowMemberInvites.checked};try{await api('/groups/'+encodeURIComponent(groupId),{method:'PATCH',body:JSON.stringify(body)});toast('Group settings saved.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}});
+  $('#group-invite-search-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();const query=String(new FormData(event.currentTarget).get('q')||'').trim();const target=$('#group-invite-results');if(!target||query.length<2)return;
+    try{const results=await api('/search?q='+encodeURIComponent(query));const users=(results.users||[]).filter(member=>member.id!==state.user.id&&!member.isBlocked);target.innerHTML=users.length?users.map(member=>'<div class="group-request-row"><div><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></div><button class="primary" data-invite-user="'+esc(member.id)+'">Invite</button></div>').join(''):'<p class="muted">No matching members found.</p>';
+      target.querySelectorAll('[data-invite-user]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{await api('/groups/'+encodeURIComponent(groupId)+'/invitations',{method:'POST',body:JSON.stringify({inviteeId:button.dataset.inviteUser})});toast('Group invitation sent.');button.textContent='Invited';}catch(error){toast(error.message);button.disabled=false;}}));
+    }catch(error){toast(error.message);}
+  });
   $('#group-announcement-form')?.addEventListener('submit',async event=>{event.preventDefault();const values=new FormData(event.currentTarget);try{await api('/groups/'+encodeURIComponent(groupId)+'/announcements',{method:'POST',body:JSON.stringify({title:values.get('title'),body:values.get('body')})});toast('Announcement published.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}});
   $('#group-event-form')?.addEventListener('submit',async event=>{event.preventDefault();const values=new FormData(event.currentTarget);try{await api('/groups/'+encodeURIComponent(groupId)+'/events',{method:'POST',body:JSON.stringify({title:values.get('title'),description:values.get('description'),startsAt:new Date(values.get('startsAt')).toISOString(),endsAt:values.get('endsAt')?new Date(values.get('endsAt')).toISOString():null,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})});toast('Group event created.');await renderGroup(groupId,'events')}catch(error){toast(error.message)}});
 }
