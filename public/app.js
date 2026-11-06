@@ -3628,6 +3628,7 @@ async function renderCreatorSection(section){
           friendRequests:checkbox("notification-friendRequests"),
           messages:checkbox("notification-messages"),
           interactions:checkbox("notification-interactions"),
+          groups:checkbox("notification-groups"),
           push:checkbox("notification-push")
         },
         preferences:{
