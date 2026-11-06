@@ -13,7 +13,7 @@ import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normal
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
-import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH } from '../backend/modules/messaging/service.js';
+import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -4527,7 +4527,7 @@ async function route(req, res) {
         if(query.length<2)return json(res,400,{error:'Enter at least two characters to search messages.'});
         const results=[];
         const addResult=(message,conversation)=>{
-          if(!message||message.unsent||(Array.isArray(message.deletedFor)&&message.deletedFor.includes(user.id)))return;
+          if(!message||message.unsent||isMessageExpired(message)||(Array.isArray(message.deletedFor)&&message.deletedFor.includes(user.id)))return;
           const value=String(message.text||'');
           if(!value.toLocaleLowerCase().includes(query))return;
           results.push({
@@ -4579,7 +4579,7 @@ async function route(req, res) {
           if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
           if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
           messages=(db.messageGroupMessages||[]).filter(item=>item.groupId===groupId
-            &&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
             &&!blockedBetween(user.id,item.from));
         }else{
           const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
@@ -4651,13 +4651,60 @@ async function route(req, res) {
         }).filter(Boolean);
         return json(res,200,{gifs});
       }
+      if(method==='GET'&&p==='/api/messages/settings'){
+        const requested=String(url.searchParams.get('conversationId')||'').trim().slice(0,180);
+        if(!requested)return json(res,400,{error:'Choose a conversation to view its settings.'});
+        let key='',group=null,peerId='';
+        if(requested.startsWith('group:')){
+          const groupId=requested.slice(6);
+          group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          key=messageConversationKey({groupId});
+        }else{
+          peerId=requested.startsWith('direct:')?requested.slice(7):requested;
+          const peer=db.users.find(item=>item.id===peerId);
+          const hasConversation=peer&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+          key=messageConversationKey({userIds:[user.id,peerId]});
+        }
+        const row=(db.messageConversationSettings||[]).find(item=>item.conversationKey===key);
+        return json(res,200,{settings:{conversationId:requested,disappearingAfterSeconds:getMessageDisappearingSeconds(db,key),canManage:!group||canManageMessageGroup(db,group.id,user.id),updatedAt:row?.updatedAt||null}});
+      }
+      if(method==='PATCH'&&p==='/api/messages/settings'){
+        const requested=String(input.conversationId||'').trim().slice(0,180);
+        const seconds=normalizeMessageDisappearingSeconds(input.disappearingAfterSeconds);
+        if(!requested||seconds===null)return json(res,400,{error:'Choose a supported disappearing-message duration.'});
+        let key='',group=null,peerId='';
+        if(requested.startsWith('group:')){
+          const groupId=requested.slice(6);
+          group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only the group owner or an admin can change disappearing-message settings.'});
+          key=messageConversationKey({groupId});
+        }else{
+          peerId=requested.startsWith('direct:')?requested.slice(7):requested;
+          const peer=db.users.find(item=>item.id===peerId);
+          const hasConversation=peer&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+          key=messageConversationKey({userIds:[user.id,peerId]});
+        }
+        const updatedAt=now();
+        db.messageConversationSettings=db.messageConversationSettings||[];
+        let row=db.messageConversationSettings.find(item=>item.conversationKey===key);
+        if(!row){row={id:uid(),conversationKey:key,disappearingAfterSeconds:seconds,updatedBy:user.id,updatedAt};db.messageConversationSettings.push(row);}
+        else{row.disappearingAfterSeconds=seconds;row.updatedBy=user.id;row.updatedAt=updatedAt;}
+        await saveStore();
+        const recipients=group?getActiveMessageGroupMembers(db,group.id):[user.id,peerId];
+        messengerRealtime?.publish(recipients,{type:'conversation:settings',conversationId:key,disappearingAfterSeconds:seconds});
+        return json(res,200,{ok:true,settings:{conversationId:requested,disappearingAfterSeconds:seconds,canManage:true,updatedAt}});
+      }
       if(method==='GET'&&p==='/api/messages'){
         const peers=[...new Set((db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
         const conversations=await Promise.all(peers.map(async id=>{
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
           const visibleMessages=(db.messages||[]).filter(item=>
             ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
-            !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
+            !isMessageExpired(item) && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
             (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
           ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
           if(!visibleMessages.length)return null;
@@ -4670,7 +4717,7 @@ async function route(req, res) {
             return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
           }));
           const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
-          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id)};
+          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
         }));
         const groupRows = await Promise.all((db.messageGroups||[])
           .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
@@ -4678,7 +4725,7 @@ async function route(req, res) {
           .map(async group=>{
             const members=getActiveMessageGroupMembers(db,group.id);
             const rawMessages=(db.messageGroupMessages||[]).filter(item=>
-              item.groupId===group.id&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+              item.groupId===group.id&&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
               &&!blockedBetween(user.id,item.from)
             ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
             const messages=await Promise.all(rawMessages.map(async item=>{
@@ -4696,7 +4743,7 @@ async function route(req, res) {
               id:'group:'+group.id,kind:'group',groupId:group.id,
               user:{id:'group:'+group.id,name:group.name,username:'group',avatar:group.avatar||'',isGroup:true},
               group:{id:group.id,name:group.name,ownerId:group.ownerId,description:group.description||'',memberCount:members.length,members:memberRecords.map(item=>({id:item.userId,role:item.role,user:safeUser(db.users.find(member=>member.id===item.userId),user.id)})).filter(item=>item.user)},
-              messages,unreadCount,isRequest:false,lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
+              messages,unreadCount,isRequest:false,messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({groupId:group.id}))},lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
             };
           }));
         const all=[...conversations.filter(Boolean),...groupRows]
@@ -4922,7 +4969,8 @@ async function route(req, res) {
         const replyTo=replyToId?(db.messageGroupMessages||[]).find(item=>item.id===replyToId&&item.groupId===groupId&&!item.unsent):null;
         if(replyToId&&!replyTo)return json(res,404,{error:'The message you are replying to is no longer available.'});
         const createdAt=now();
-        const msg={id:uid(),groupId,from:user.id,to:'group:'+groupId,text:stickerEmoji||text,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,replyToId:replyTo?.id||null,readBy:{[user.id]:createdAt},createdAt,read:false};
+        const disappearingAfterSeconds=getMessageDisappearingSeconds(db,messageConversationKey({groupId}));
+        const msg={id:uid(),groupId,from:user.id,to:'group:'+groupId,text:stickerEmoji||text,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,replyToId:replyTo?.id||null,readBy:{[user.id]:createdAt},createdAt,read:false,disappearingAfterSeconds,expiresAt:disappearingAfterSeconds?new Date(Date.parse(createdAt)+disappearingAfterSeconds*1000).toISOString():null};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
         db.messageGroupMessages.push(msg);group.lastActivityAt=createdAt;
         for(const memberId of memberIds)if(memberId!==user.id)notify(memberId,user.id,'message',user.name+' sent a message in '+group.name,{messageGroupId:groupId});
@@ -4947,7 +4995,9 @@ async function route(req, res) {
         const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
         const messageText=stickerEmoji||text;
-        const msg={id:uid(),from:user.id,to,text:messageText,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,createdAt:now(),read:false};
+        const createdAt=now();
+        const disappearingAfterSeconds=getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,to]}));
+        const msg={id:uid(),from:user.id,to,text:messageText,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,createdAt,read:false,disappearingAfterSeconds,expiresAt:disappearingAfterSeconds?new Date(Date.parse(createdAt)+disappearingAfterSeconds*1000).toISOString():null};
         db.messageConversationHides=(db.messageConversationHides||[]).filter(item=>!(item.userId===user.id&&item.peerId===to));
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
         db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
@@ -5091,6 +5141,58 @@ server.on('upgrade',(req,socket,head)=>{
   if(pathname!=='/api/messages/realtime'){socket.destroy();return;}
   messengerRealtime.handleUpgrade(req,socket,head);
 });
+
+let messengerExpirySweepRunning=false;
+async function sweepExpiredMessengerMessages(){
+  if(messengerExpirySweepRunning)return;
+  messengerExpirySweepRunning=true;
+  try{
+    const at=Date.now();
+    const expired=[...(db.messages||[]),...(db.messageGroupMessages||[])].filter(item=>isMessageExpired(item,at));
+    if(!expired.length)return;
+    const removable=new Set();
+    let changed=false;
+    for(const message of expired){
+      const attachmentIds=Array.isArray(message.attachmentIds)?message.attachmentIds:[];
+      let pendingStorageCleanup=false;
+      for(const assetId of attachmentIds){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.slot==='message');
+        if(!asset||asset.status==='deleted')continue;
+        // Hide the object from the signed media gateway immediately, then retry
+        // physical storage deletion until the provider confirms it.
+        if(asset.status!=='expired'){asset.status='expired';asset.expiredAt=now();changed=true;}
+        try{
+          await mediaGateway('media_delete',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
+          asset.status='deleted';asset.deletedAt=now();changed=true;
+        }catch(error){
+          pendingStorageCleanup=true;
+          console.warn('[Minglora Messenger] Expired attachment cleanup will retry.',{assetId:asset.id,message:String(error?.message||'storage cleanup failed').slice(0,120)});
+        }
+      }
+      if(pendingStorageCleanup){
+        if(message.text){message.text='';changed=true;}
+        if(message.gifUrl){message.gifUrl=null;changed=true;}
+        if(message.stickerId){message.stickerId=null;changed=true;}
+        message.expiredCleanupPending=true;
+      }else removable.add(message.id);
+    }
+    if(removable.size){
+      db.messages=(db.messages||[]).filter(item=>!removable.has(item.id));
+      db.messageGroupMessages=(db.messageGroupMessages||[]).filter(item=>!removable.has(item.id));
+      changed=true;
+      for(const message of expired.filter(item=>removable.has(item.id))){
+        if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:expired',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+        else messengerRealtime?.publish([message.from,message.to],{type:'message:expired',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+      }
+    }
+    if(changed)await saveStore();
+  }catch(error){
+    console.warn('[Minglora Messenger] Disappearing-message cleanup retry pending.',{message:String(error?.message||'expiry cleanup failed').slice(0,160)});
+  }finally{messengerExpirySweepRunning=false;}
+}
+const messengerExpiryTimer=setInterval(()=>{void sweepExpiredMessengerMessages();},15000);
+messengerExpiryTimer.unref?.();
+void sweepExpiredMessengerMessages();
 
 let leagueSettlementInProgress=false;
 let lastCreatorLeagueReconciliationAt=0;
