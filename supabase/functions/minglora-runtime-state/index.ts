@@ -623,13 +623,13 @@ Deno.serve(async (req: Request) => {
       return json(403, { error: "The verified Creator Hub owner permission is not active." });
     }
 
-    const readAllPages = async (table: string, columns: string) => {
+    const readAllPages = async (table: string, columns: string, orderBy = "created_at") => {
       const rows: any[] = [];
       const pageSize = 1000;
       for (let offset = 0; offset < 100000; offset += pageSize) {
         const { data, error } = await admin.from(table)
           .select(columns)
-          .order("created_at", { ascending: false })
+          .order(orderBy, { ascending: false })
           .range(offset, offset + pageSize - 1);
         if (error) return { rows: null, error };
         const page = data || [];
@@ -659,7 +659,7 @@ Deno.serve(async (req: Request) => {
       admin.from("creator_payout_accounts")
         .select("user_id,paypal_email,updated_at"),
       readAllPages("admin_promotional_gift_wallets",
-        "user_id,available_coins,lifetime_allocated_coins,lifetime_spent_coins,updated_at"),
+        "user_id,available_coins,lifetime_allocated_coins,lifetime_spent_coins,updated_at", "updated_at"),
       admin.from("admin_promotional_gift_wallet_ledger")
         .select("id,request_id,user_id,actor_user_id,delta_coins,balance_after,event_type,reference_id,note,created_at")
         .order("created_at", { ascending: false }).limit(150),
