@@ -921,7 +921,8 @@
         ['Minglora share · 50% · recorded', finance.recordedPlatformShareMinor ?? totals.platformShareMinor],
         ['Creator payouts pending', totals.pendingPayoutMinor],
         ['Creator payouts paid', totals.paidPayoutMinor],
-        ['Non-cash promotional creator share · excluded', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor]
+        ['Non-cash promotional creator share · excluded', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor],
+        ['Non-cash promotional platform share · excluded', finance.excludedPromotionalPlatformShareMinor ?? totals.excludedPromotionalPlatformShareMinor]
       ];
       metrics.innerHTML = cards.map(([label, value]) =>
         '<article class="admin-gift-earnings-metric"><small>' + escapeText(label) +
