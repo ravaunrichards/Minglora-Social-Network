@@ -3006,8 +3006,6 @@ activeLivePinnedComment=null;
         }catch(error){toast(error.message);}
         finally{liveGiftSending=false;updateLiveGiftPreview();}
       });
-      await loadLiveGiftCatalogue();
-      startLiveGiftEvents(session);
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
       await loadLiveGiftCatalogue();
       startLiveGiftEvents(session);
