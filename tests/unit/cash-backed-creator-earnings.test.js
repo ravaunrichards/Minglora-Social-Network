@@ -48,7 +48,7 @@ test('admin earnings report only totals eligible funding and identifies excluded
 test('creator and admin screens distinguish non-cash promotional activity from withdrawable money', () => {
   assert.match(app, /NON-CASH PROMOTIONAL SHARE/);
   assert.match(app, /Historical promotional activity · not withdrawable/);
-  assert.match(adminCentre, /Non-cash promotional creator share · excluded/);
-  assert.match(adminCentre, /Non-cash promotional platform share · excluded/);
+  assert.match(adminCentre, /Promotional creator share · separately tracked/);
+  assert.match(adminCentre, /Promotional platform share · separately tracked/);
   assert.match(adminCentre, /not a live PayPal balance confirmation/);
 });
