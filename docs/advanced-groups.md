@@ -13,6 +13,7 @@ This document describes the Groups implementation on `feat/minglora-advanced-gro
 - Group rules and moderator announcements.
 - Group events with Going / Interested responses.
 - Member-only group chat with author and moderator message removal.
+- In-app notifications for invitations, membership requests and decisions, member joins, moderation actions, announcements, events, comments, and post reactions. Notification actions link back to the group or invitation view.
 
 ## Roles
 
@@ -36,7 +37,7 @@ Owner and admin checks are server-enforced. A banned account cannot join or acce
 
 ## API areas
 
-The authenticated server API now supports group discovery and creation, membership requests, invitations, group settings, member roles, ownership transfer, confirmed soft deletion, ban/unban operations, post approvals, announcements, rules, events and RSVPs, member chat, post comments and reactions, analytics, and owner/admin audit history.
+The authenticated server API now supports group discovery and creation, membership requests, invitations, group settings, member roles, ownership transfer, confirmed soft deletion, ban/unban operations, post approvals, announcements, rules, events and RSVPs, member chat, post comments and reactions, group activity notifications, ownership transfer, confirmed soft deletion, analytics, and owner/admin audit history.
 
 ## Storage and migration note
 
