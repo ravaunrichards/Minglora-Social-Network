@@ -1,7 +1,7 @@
 (() => {
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
-    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false },
+    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, groups: true, push: true, profileViews: false },
     preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
@@ -221,6 +221,7 @@
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Groups</strong><small>Invitations, membership requests and decisions, announcements, events, group comments and reactions.</small></span><input type="checkbox" name="notificationGroups" ${settings.notifications.groups ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
               <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
@@ -690,6 +691,7 @@
             friendRequests: formData.has('notificationFriendRequests'),
             messages: formData.has('notificationMessages'),
             interactions: formData.has('notificationInteractions'),
+            groups: formData.has('notificationGroups'),
             push: formData.has('notificationPush'),
             profileViews: formData.has('notificationProfileViews')
           },
