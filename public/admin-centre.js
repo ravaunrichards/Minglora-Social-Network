@@ -1268,10 +1268,18 @@
         ' split exceptions. Promotional activity (' + excludedPromoCount.toLocaleString() +
         ' records) is displayed separately with wallet and cash-reserve tracking. Minglora share is a recorded ledger amount, not a live PayPal balance confirmation · refreshed ' + updateLabel + '.';
     } catch (error) {
-      metrics.innerHTML = '';
-      creators.textContent = 'The verified earnings report could not be loaded. ' +
-        (error.message || 'Try refreshing the report.');
-      status.textContent = 'Financial report unavailable.';
+      if (quiet) {
+        const lastUpdate = panel._mingloraReportAsOf
+          ? ' Last successful report: ' + new Date(panel._mingloraReportAsOf).toLocaleString() + '.'
+          : '';
+        status.textContent = 'Automatic refresh could not reach the latest withdrawal and promotional records. The last successful report remains displayed.' +
+          lastUpdate + ' ' + (error.message || '');
+      } else {
+        metrics.innerHTML = '';
+        creators.textContent = 'The verified earnings report could not be loaded. ' +
+          (error.message || 'Try refreshing the report.');
+        status.textContent = 'Financial report unavailable.';
+      }
     } finally {
       if (refresh && !quiet) refresh.disabled = false;
     }
