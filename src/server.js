@@ -4095,8 +4095,8 @@ async function route(req, res) {
         if(getGroupRole(group,user.id))return json(res,200,{group:safeGroupSummary(group),joined:true});
         const invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===user.id&&item.status==='pending');
         if(group.visibility==='hidden'&&!invitation)return json(res,404,{error:'This group is invitation-only.'});
-        if(!canRequestGroupMembership(group,user.id)&&!invitation)return json(res,404,{error:'This group is not accepting public membership requests.'});
-        if((group.joinApproval===true||(group.visibility!=='public'&&group.joinApproval!==false))&&!invitation){
+        if(!['public','private'].includes(group.visibility)||group.discoverable===false&&!invitation)return json(res,404,{error:'This group is not accepting public membership requests.'});
+        if((group.joinApproval===true||(group.visibility==='private'&&group.joinApproval!==false))&&!invitation){
           let request=db.groupMembershipRequests.find(item=>item.groupId===group.id&&item.userId===user.id&&item.status==='pending');
           if(!request){request={id:uid(),groupId:group.id,userId:user.id,status:'pending',createdAt:now()};db.groupMembershipRequests.unshift(request);recordGroupAudit(group,'membership_requested','member',user.id);}
           await saveStore();return json(res,202,{requested:true,message:'Your request was sent to the group administrators.'});
