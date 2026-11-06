@@ -120,6 +120,10 @@ GRANT EXECUTE ON FUNCTION private.can_manage_minglora_group_events(uuid)
   TO authenticated;
 
 DROP POLICY IF EXISTS minglora_events_read ON public.events;
+DROP POLICY IF EXISTS minglora_events_read_public_anon ON public.events;
+CREATE POLICY minglora_events_read_public_anon ON public.events
+FOR SELECT TO anon
+USING (group_id IS NULL AND visibility='public');
 CREATE POLICY minglora_events_read ON public.events
 FOR SELECT TO authenticated
 USING (
@@ -193,6 +197,15 @@ ALTER TABLE public.group_moderation_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_audit_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS minglora_group_rules_read ON public.group_rules;
+DROP POLICY IF EXISTS minglora_group_rules_read_public_anon ON public.group_rules;
+CREATE POLICY minglora_group_rules_read_public_anon ON public.group_rules
+FOR SELECT TO anon
+USING (
+  EXISTS (
+    SELECT 1 FROM public.social_groups g
+    WHERE g.id=group_rules.group_id AND g.visibility='public' AND g.status='active'
+  )
+);
 CREATE POLICY minglora_group_rules_read ON public.group_rules
 FOR SELECT TO authenticated
 USING (
@@ -288,7 +301,10 @@ WITH CHECK (
   AND EXISTS (
     SELECT 1 FROM public.social_groups g
     WHERE g.id=group_membership_requests.group_id AND g.status='active'
-      AND g.visibility IN ('public','private')
+      AND (
+        (g.visibility='public' AND g.join_approval=true)
+        OR (g.visibility='private' AND g.discoverable=true AND g.join_approval=true)
+      )
   )
 );
 DROP POLICY IF EXISTS minglora_group_requests_cancel_self ON public.group_membership_requests;
@@ -311,6 +327,15 @@ CREATE INDEX IF NOT EXISTS group_announcements_feed_idx
   ON public.group_announcements(group_id,created_at DESC) WHERE status='published';
 ALTER TABLE public.group_announcements ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS minglora_group_announcements_read ON public.group_announcements;
+DROP POLICY IF EXISTS minglora_group_announcements_read_public_anon ON public.group_announcements;
+CREATE POLICY minglora_group_announcements_read_public_anon ON public.group_announcements
+FOR SELECT TO anon
+USING (
+  status='published' AND EXISTS (
+    SELECT 1 FROM public.social_groups g
+    WHERE g.id=group_announcements.group_id AND g.visibility='public' AND g.status='active'
+  )
+);
 CREATE POLICY minglora_group_announcements_read ON public.group_announcements
 FOR SELECT TO authenticated
 USING (
