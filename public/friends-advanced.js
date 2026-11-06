@@ -13,6 +13,7 @@ let friendsDashboardState = {
 const FRIENDS_DASHBOARD_TABS = [
   ['all', 'All Friends'],
   ['recent', 'Recently Added'],
+  ['mutual', 'Mutual Connections'],
   ['close', 'Close Friends'],
   ['favorites', 'Favorites'],
   ['lists', 'Friend Lists'],
@@ -38,6 +39,8 @@ function friendsDashboardVisibleFriends() {
   let rows = [...friendsDashboardState.friends];
   if (friendsDashboardState.tab === 'recent') {
     rows.sort((a, b) => Date.parse(b.friendSince || 0) - Date.parse(a.friendSince || 0));
+  } else if (friendsDashboardState.tab === 'mutual') {
+    rows = rows.filter(member => Number(member.mutualFriendsCount || 0) > 0);
   } else if (friendsDashboardState.tab === 'close') {
     rows = rows.filter(member => member.isCloseFriend);
   } else if (friendsDashboardState.tab === 'favorites') {
@@ -67,6 +70,7 @@ function friendsDashboardListSelect(member) {
 function friendsDashboardFriendCard(member, listId = null) {
   const snoozed = friendsDashboardIsSnoozed(member);
   const tags = [
+    Number(member.mutualFriendsCount || 0) > 0 ? '<span class="friend-manager-tag">' + Number(member.mutualFriendsCount).toLocaleString() + ' mutual connections</span>' : '',
     member.isCloseFriend ? '<span class="friend-manager-tag friend-manager-tag--blue">Close Friend</span>' : '',
     member.isFavorite ? '<span class="friend-manager-tag">★ Favorite</span>' : '',
     member.isMutedPosts ? '<span class="friend-manager-tag">Posts muted</span>' : '',
@@ -131,6 +135,7 @@ function friendsDashboardMainMarkup() {
   let listId = null;
   let heading = 'All Friends';
   if (tab === 'recent') heading = 'Recently Added';
+  if (tab === 'mutual') heading = 'Mutual Connections';
   if (tab === 'close') heading = 'Close Friends';
   if (tab === 'favorites') heading = 'Favorites';
   if (tab === 'lists') {
