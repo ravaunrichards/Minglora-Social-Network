@@ -362,4 +362,95 @@ BEGIN
   END IF;
 END $$;
 
+
+-- Member-only threaded group comments and one active reaction per member/post.
+CREATE TABLE IF NOT EXISTS public.group_post_comments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES public.social_groups(id) ON DELETE CASCADE,
+  post_id uuid NOT NULL REFERENCES public.group_posts(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  parent_id uuid REFERENCES public.group_post_comments(id) ON DELETE CASCADE,
+  body text NOT NULL CHECK (length(body) BETWEEN 1 AND 2000),
+  status text NOT NULL DEFAULT 'visible' CHECK (status IN ('visible','deleted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  deleted_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS group_post_comments_thread_idx
+  ON public.group_post_comments(post_id,created_at,id) WHERE status='visible';
+CREATE INDEX IF NOT EXISTS group_post_comments_parent_idx
+  ON public.group_post_comments(parent_id,created_at) WHERE parent_id IS NOT NULL AND status='visible';
+ALTER TABLE public.group_post_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS minglora_group_post_comments_read_member ON public.group_post_comments;
+CREATE POLICY minglora_group_post_comments_read_member ON public.group_post_comments
+FOR SELECT TO authenticated
+USING (
+  status='visible' AND (
+    private.is_minglora_group_member(group_id)
+    OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_comments.group_id AND g.owner_id=(select auth.uid()))
+  )
+);
+DROP POLICY IF EXISTS minglora_group_post_comments_insert_member ON public.group_post_comments;
+CREATE POLICY minglora_group_post_comments_insert_member ON public.group_post_comments
+FOR INSERT TO authenticated
+WITH CHECK (
+  user_id=(select auth.uid()) AND status='visible' AND (
+    private.is_minglora_group_member(group_id)
+    OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_comments.group_id AND g.owner_id=(select auth.uid()))
+  )
+);
+DROP POLICY IF EXISTS minglora_group_post_comments_update_author_or_staff ON public.group_post_comments;
+CREATE POLICY minglora_group_post_comments_update_author_or_staff ON public.group_post_comments
+FOR UPDATE TO authenticated
+USING (
+  user_id=(select auth.uid())
+  OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_comments.group_id AND g.owner_id=(select auth.uid()))
+  OR EXISTS (SELECT 1 FROM public.group_memberships gm WHERE gm.group_id=group_post_comments.group_id
+    AND gm.user_id=(select auth.uid()) AND gm.status='active' AND gm.role IN ('admin','moderator'))
+)
+WITH CHECK (
+  user_id=(select auth.uid())
+  OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_comments.group_id AND g.owner_id=(select auth.uid()))
+  OR EXISTS (SELECT 1 FROM public.group_memberships gm WHERE gm.group_id=group_post_comments.group_id
+    AND gm.user_id=(select auth.uid()) AND gm.status='active' AND gm.role IN ('admin','moderator'))
+);
+GRANT SELECT, INSERT, UPDATE ON public.group_post_comments TO authenticated;
+
+CREATE TABLE IF NOT EXISTS public.group_post_reactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES public.social_groups(id) ON DELETE CASCADE,
+  post_id uuid NOT NULL REFERENCES public.group_posts(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reaction_type text NOT NULL CHECK (reaction_type IN ('like','love','care','haha','wow','sad','angry')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (post_id,user_id)
+);
+CREATE INDEX IF NOT EXISTS group_post_reactions_post_idx
+  ON public.group_post_reactions(post_id,reaction_type);
+ALTER TABLE public.group_post_reactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS minglora_group_post_reactions_read_member ON public.group_post_reactions;
+CREATE POLICY minglora_group_post_reactions_read_member ON public.group_post_reactions
+FOR SELECT TO authenticated
+USING (
+  private.is_minglora_group_member(group_id)
+  OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_reactions.group_id AND g.owner_id=(select auth.uid()))
+);
+DROP POLICY IF EXISTS minglora_group_post_reactions_write_self ON public.group_post_reactions;
+CREATE POLICY minglora_group_post_reactions_write_self ON public.group_post_reactions
+FOR ALL TO authenticated
+USING (
+  user_id=(select auth.uid()) AND (
+    private.is_minglora_group_member(group_id)
+    OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_reactions.group_id AND g.owner_id=(select auth.uid()))
+  )
+)
+WITH CHECK (
+  user_id=(select auth.uid()) AND (
+    private.is_minglora_group_member(group_id)
+    OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_post_reactions.group_id AND g.owner_id=(select auth.uid()))
+  )
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.group_post_reactions TO authenticated;
+
 COMMIT;
