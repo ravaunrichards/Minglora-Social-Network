@@ -72,10 +72,37 @@
   function isLeagueViewActive() {
     return Boolean($("#main-content") && document.querySelector("[data-view='leagues'].active"));
   }
-  function image(member) {
+  function image(member, ringClass = "") {
+    const ring = ringClass ? " " + ringClass : "";
     return member?.avatarUrl
-      ? "<img class='league-avatar' src='" + esc(member.avatarUrl) + "' alt=''>"
-      : "<span class='league-avatar league-avatar-fallback' aria-hidden='true'>" + esc((member?.name || "M").slice(0,1).toUpperCase()) + "</span>";
+      ? "<img class='league-avatar" + ring + "' src='" + esc(member.avatarUrl) + "' alt=''>"
+      : "<span class='league-avatar league-avatar-fallback" + ring + "' aria-hidden='true'>" + esc((member?.name || "M").slice(0,1).toUpperCase()) + "</span>";
+  }
+  function podiumMarkup(leaderboard) {
+    const ranked = [
+      { member: leaderboard[1], place: 2 },
+      { member: leaderboard[0], place: 1 },
+      { member: leaderboard[2], place: 3 }
+    ].filter(entry => entry.member && entry.member.id);
+    if (!ranked.length) return "";
+    return "<div class='league-podium' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
+      "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
+        "<span class='league-podium-crown' aria-hidden='true'>" + (place === 1 ? "👑" : place === 2 ? "✦" : "✧") + "</span>" +
+        image(member, "ml-creator-ring ml-creator-ring--league") +
+        "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
+        "<b class='league-podium-points'>" + Number(member.seasonPoints || 0).toLocaleString() + " pts</b>" +
+        "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
+    ).join("") + "</div>";
+  }
+  function leaderboardMarkup(leaderboard) {
+    if (!leaderboard.length) return "<div class='league-empty-inline'>Your class leaderboard will appear when creators earn confirmed LIVE Gift points in your region.</div>";
+    const remaining = leaderboard.slice(3).map(item =>
+      "<button type='button' class='league-leader-row' data-league-profile='" + esc(item.id || "") + "' " + (!item.id ? "disabled" : "") + ">" +
+        "<b class='league-position'>#" + Number(item.position || 0) + "</b>" + image(item, "ml-creator-ring ml-creator-ring--league") +
+        "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small></span>" +
+        "<strong class='league-leader-points'>" + Number(item.seasonPoints || 0).toLocaleString() + " pts</strong></button>"
+    ).join("");
+    return podiumMarkup(leaderboard) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
   }
   function meter(value, max) {
     const percent = Math.max(0, Math.min(100, Number(value || 0) / Math.max(1, Number(max || 1)) * 100));
@@ -164,7 +191,7 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 5 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
-      "<section class='card league-leaderboard-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings.</p></div></div>" + (leaderboard.length ? "<div class='league-leaderboard'>" + leaderboard.map(item=>"<div class='league-leader-row'><b class='league-position'>#" + item.position + "</b>" + image(item) + "<div class='league-leader-name'><strong>" + esc(item.name) + "</strong><small>@" + esc(item.username) + "</small></div><strong class='league-leader-points'>" + Number(item.seasonPoints).toLocaleString() + " pts</strong></div>").join("") + "</div>" : "<div class='league-empty-inline'>Your class leaderboard will appear when creators earn confirmed LIVE Gift points in your region.</div>") + "</section>" +
+      "<section class='card league-leaderboard-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
       "<section class='card league-events-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
       "<section class='league-powerup-info'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2>Match Power-Ups</h2><p>These temporary effects never multiply Creator League points or official class standings.</p></div></div><div class='league-powerup-info-grid'>" + overview.powerups.map(power=>"<article class='league-powerup-info-card'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p><small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small></article>").join("") + "</div></section>" +
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
@@ -204,6 +231,10 @@
       button.disabled = true;
       try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/powerups", {method:"POST",body:JSON.stringify({powerupId:button.dataset.matchPowerup})}); toast("Match power-up activated."); await render(); }
       catch(error) { toast(error.message); button.disabled = false; }
+    }));
+    document.querySelectorAll("[data-league-profile]").forEach(button => button.addEventListener("click", () => {
+      const userId = button.dataset.leagueProfile;
+      if (userId) window.dispatchEvent(new CustomEvent("minglora:open-profile", { detail: { userId } }));
     }));
     const refreshButton = $("[data-league-refresh]");
     if (refreshButton) refreshButton.addEventListener("click", () => { void refreshScores({force:true}); });
