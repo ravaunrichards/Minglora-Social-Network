@@ -3984,6 +3984,11 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
+        // The profile's league badge must use the same reconciled standings
+        // as League Arena, rather than a stale pre-settlement snapshot.
+        await syncRefundedGiftActivity();
+        const leagueReconciliation=settleScheduledCreatorLeagueDays(db,new Date());
+        if(leagueReconciliation.changed)await saveStore();
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         db.profileViews ||= [];
         db.profileViewPresence ||= [];
