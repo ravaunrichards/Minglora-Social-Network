@@ -5562,7 +5562,6 @@ function startMessengerRealtime(){
         if(win&&!win.isGroup&&win.user.id===message.userId)updateMessageWindowPresence(win);
       });
       if(state.messengerPanelOpen)renderMessengerPanelList();
-    if(state.view==='messages')updateMessageInboxRows();
       return;
     }
     if(message.type==='typing'){
@@ -5620,13 +5619,22 @@ function renderMessageContent(messages=[]){
   if(!messages.length)return '<div class="message-window-empty">No messages yet. Say hello to start this chat.</div>';
   return messages.map(message=>{
     const mine=message.from===state.user.id;
-    const receipt=mine?(message.read?'Seen':'Sent'):'';
+    const receipt=mine?(message.groupId?(message.readState?.readCount+' of '+message.readState?.total+' seen'):(message.read?'Seen':'Sent')):'';
+    const reply=message.replyToId?messages.find(item=>item.id===message.replyToId):null;
+    const replyHtml=reply?'<div class="message-reply-preview"><strong>'+esc(reply.author?.name||'Replying to a message')+'</strong><span>'+esc(reply.unsent?'Message unavailable':reply.text||((reply.attachments||[]).length?'Attachment':'Message'))+'</span></div>':'';
     const content=message.unsent?'<p class="message-unsent-label">This message was unsent.</p>':(message.stickerId?'<div class="message-window-sticker">'+esc(message.text||'')+'</div>':(message.text?'<p>'+esc(message.text)+'</p>':''));
     const gif=message.unsent?'':(message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'');
     const attachments=message.unsent?'':messageAttachmentHtml(message.attachments);
     const editable=mine&&!message.unsent&&!message.stickerId&&!message.gifUrl&&Boolean(message.text);
-    const actions='<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+(editable?'<button type="button" data-message-edit="'+esc(message.id)+'">Edit message</button>':'')+'<button type="button" data-message-delete-me="'+esc(message.id)+'">Delete for me</button>'+(mine&&!message.unsent?'<button type="button" class="danger" data-message-unsend="'+esc(message.id)+'">Unsend for everyone</button>':'')+'</div></details>';
-    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+content+gif+attachments+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
+    const actions='<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+
+      '<button type="button" data-message-reply="'+esc(message.id)+'">Reply</button>'+
+      (editable?'<button type="button" data-message-edit="'+esc(message.id)+'">Edit message</button>':'')+
+      '<button type="button" data-message-delete-me="'+esc(message.id)+'">Delete for me</button>'+
+      (mine&&!message.unsent?'<button type="button" class="danger" data-message-unsend="'+esc(message.id)+'">Unsend for everyone</button>':'')+
+    '</div></details>';
+    const counts={};Object.values(message.reactions||{}).forEach(value=>{counts[value]=(counts[value]||0)+1;});
+    const reactionHtml='<div class="message-reaction-row">'+['👍','❤️','😂','😮','😢','🙏'].map(reaction=>'<button type="button" class="message-reaction-button '+(message.reactions?.[state.user.id]===reaction?'is-selected':'')+'" data-message-react="'+esc(message.id)+'" data-reaction="'+reaction+'" aria-label="React '+reaction+'">'+reaction+(counts[reaction]?' <small>'+counts[reaction]+'</small>':'')+'</button>').join('')+'</div>';
+    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+content+gif+attachments+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
   }).join('');
 }
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
@@ -5645,7 +5653,7 @@ async function refreshMessageConversations(){
   messageRefreshInFlight=true;
   try{
     let result=await api('/messages');
-    const received=(result.conversations||[]).flatMap(conversation=>(conversation.messages||[]).filter(message=>message.to===state.user.id).map(message=>({message,conversation})));
+    const received=(result.conversations||[]).flatMap(conversation=>(conversation.messages||[]).filter(message=>message.to===state.user.id||message.groupId).map(message=>({message,conversation})));
     if(!messageRefreshKnownIncomingPrimed){messageRefreshKnownIncomingPrimed=true;messageRefreshKnownIncomingIds=new Set(received.map(item=>item.message.id));}
     else{
       const fresh=received.filter(item=>!messageRefreshKnownIncomingIds.has(item.message.id));
@@ -5663,6 +5671,7 @@ async function refreshMessageConversations(){
     state.conversations=result.conversations||[];
     paintMessengerBadge(state.conversations);
     if(state.messengerPanelOpen)renderMessengerPanelList();
+    if(state.view==='messages')updateMessageInboxRows();
     const activeIds=new Set(state.messageWindows.filter(win=>!win.minimized).map(win=>win.user.id));
     const unread=state.conversations.filter(conversation=>activeIds.has(conversation.user.id)&&(conversation.unreadCount||0)>0);
     if(unread.length){
@@ -5709,13 +5718,29 @@ async function reloadMessageWindows(){
   renderMessageWindows();
   if(state.view==='messages')renderMessages().catch(error=>toast(error.message));
 }
+function messageSendTarget(userId,payload={}){
+  const win=state.messageWindows.find(item=>item.user.id===userId);
+  return win?.groupId?{groupId:win.groupId,...payload}:{to:userId,...payload};
+}
+function asyncSendMessage(userId,payload={}){return api('/messages',{method:'POST',body:JSON.stringify(messageSendTarget(userId,payload))});}
 async function sendStickerMessage(userId,stickerId){
-  try{await api('/messages',{method:'POST',body:JSON.stringify({to:userId,stickerId})});await reloadMessageWindows();}
+  try{await asyncSendMessage(userId,{stickerId});await reloadMessageWindows();}
   catch(error){toast(error.message);}
 }
 async function sendGifMessage(userId,gifUrl){
-  try{await api('/messages',{method:'POST',body:JSON.stringify({to:userId,gifUrl})});await reloadMessageWindows();}
+  try{await asyncSendMessage(userId,{gifUrl});await reloadMessageWindows();}
   catch(error){toast(error.message);}
+}
+async function toggleMessageReaction(messageId,reaction){
+  try{await api('/messages/'+encodeURIComponent(messageId)+'/reactions',{method:'POST',body:JSON.stringify({reaction})});await reloadMessageWindows();}
+  catch(error){toast(error.message);}
+}
+function setMessageReply(userId,messageId){
+  const win=state.messageWindows.find(item=>item.user.id===userId);if(!win)return;
+  const message=state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===messageId);if(!message)return;
+  win.replyToId=message.id;win.replyPreview=message;
+  renderMessageWindows();
+  document.querySelector('[data-message-form="'+CSS.escape(userId)+'"] input[name="text"]')?.focus();
 }
 function openEditMessage(message){
   const modal=document.createElement('div');modal.className='modal-backdrop';
@@ -5827,10 +5852,16 @@ function renderMessageWindows(){
   if(dock.dataset.messageActionsDelegated!=='true'){
     dock.dataset.messageActionsDelegated='true';
     dock.addEventListener('click',event=>{
-      const button=event.target.closest('[data-message-edit],[data-message-delete-me],[data-message-unsend]');
+      const button=event.target.closest('[data-message-edit],[data-message-delete-me],[data-message-unsend],[data-message-reply],[data-message-react]');
       if(!button||!dock.contains(button))return;
       button.closest('details')?.removeAttribute('open');
-      if(button.hasAttribute('data-message-edit')){
+      if(button.hasAttribute('data-message-reply')){
+        const messageId=button.dataset.messageReply;
+        const win=button.closest('[data-message-window]');
+        if(win)setMessageReply(win.dataset.messageWindow,messageId);
+      }else if(button.hasAttribute('data-message-react')){
+        toggleMessageReaction(button.dataset.messageReact,button.dataset.reaction);
+      }else if(button.hasAttribute('data-message-edit')){
         const messageId=button.dataset.messageEdit;
         const message=state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===messageId);
         if(message)openEditMessage(message);
