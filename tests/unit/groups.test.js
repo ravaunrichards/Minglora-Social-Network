@@ -51,6 +51,7 @@ test('public, private-visible and private-hidden discovery rules are distinct', 
   assert.equal(canDiscoverGroup(privateVisible), true);
   assert.equal(canViewGroup(privateVisible, 'outsider'), true);
   assert.equal(canViewGroup(privateVisible, 'member'), true);
+  assert.equal(canViewGroup({ ...privateVisible, joinApproval: false }, 'outsider'), true);
   const hidden = { ...privateVisible, discoverable: false };
   assert.equal(canDiscoverGroup(hidden), false);
   assert.equal(canViewGroup(hidden, 'outsider'), false);
