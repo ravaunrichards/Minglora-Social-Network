@@ -639,11 +639,15 @@ Deno.serve(async (req: Request) => {
       return { rows, error: null };
     };
 
-    const [ledgerResult, payoutsResult, platformFinanceResult, platformPayoutAccountResult, platformPayoutsResult] = await Promise.all([
+    const [
+      ledgerResult, payoutsResult, platformFinanceResult, platformPayoutAccountResult, platformPayoutsResult,
+      creatorPayoutAccountsResult, promotionalWalletsResult, promotionalWalletLedgerResult,
+      promotionalFundResult, promotionalFundLedgerResult, promotionalCashBackingsResult
+    ] = await Promise.all([
       readAllPages("creator_earnings_ledger",
-        "id,creator_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"),
+        "id,creator_id,gift_transaction_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"),
       readAllPages("creator_payouts",
-        "id,creator_id,amount_minor,currency,status,created_at,paid_at"),
+        "id,creator_id,amount_minor,currency,status,created_at,paid_at,paypal_batch_id"),
       admin.rpc("minglora_get_platform_gift_earnings", {
         p_admin_user_id: adminUserId, p_admin_email: adminEmail
       }),
@@ -651,18 +655,41 @@ Deno.serve(async (req: Request) => {
         .select("paypal_email,updated_at").eq("id", true).maybeSingle(),
       admin.from("minglora_platform_payouts")
         .select("id,amount_minor,currency,paypal_email,status,paypal_batch_id,created_at,submitted_at,paid_at,failure_code,failure_message")
-        .order("created_at", { ascending: false }).limit(100)
+        .order("created_at", { ascending: false }).limit(100),
+      admin.from("creator_payout_accounts")
+        .select("user_id,paypal_email,updated_at"),
+      readAllPages("admin_promotional_gift_wallets",
+        "user_id,available_coins,lifetime_allocated_coins,lifetime_spent_coins,updated_at"),
+      admin.from("admin_promotional_gift_wallet_ledger")
+        .select("id,request_id,user_id,actor_user_id,delta_coins,balance_after,event_type,reference_id,note,created_at")
+        .order("created_at", { ascending: false }).limit(150),
+      admin.from("minglora_promotional_gift_fund")
+        .select("funded_minor,spent_minor,updated_at").eq("id", true).maybeSingle(),
+      admin.from("minglora_promotional_gift_fund_ledger")
+        .select("id,request_id,event_type,reference_id,paypal_order_id,paypal_capture_id,funded_delta_minor,spent_delta_minor,note,actor_user_id,created_at")
+        .order("created_at", { ascending: false }).limit(100),
+      readAllPages("minglora_promotional_gift_cash_backings",
+        "id,gift_transaction_id,creator_id,gift_coin_amount,backing_minor,creator_share_minor,platform_share_minor,fund_ledger_id,actor_user_id,created_at")
     ]);
     if (ledgerResult.error || payoutsResult.error || platformFinanceResult.error ||
-        platformPayoutAccountResult.error || platformPayoutsResult.error) {
+        platformPayoutAccountResult.error || platformPayoutsResult.error ||
+        creatorPayoutAccountsResult.error || promotionalWalletsResult.error ||
+        promotionalWalletLedgerResult.error || promotionalFundResult.error ||
+        promotionalFundLedgerResult.error || promotionalCashBackingsResult.error) {
       console.error("[Minglora admin creator earnings] Financial report read failed.", {
         ledgerError: ledgerResult.error?.message || null,
         payoutsError: payoutsResult.error?.message || null,
         platformFinanceError: platformFinanceResult.error?.message || null,
         platformPayoutAccountError: platformPayoutAccountResult.error?.message || null,
-        platformPayoutsError: platformPayoutsResult.error?.message || null
+        platformPayoutsError: platformPayoutsResult.error?.message || null,
+        creatorPayoutAccountsError: creatorPayoutAccountsResult.error?.message || null,
+        promotionalWalletsError: promotionalWalletsResult.error?.message || null,
+        promotionalWalletLedgerError: promotionalWalletLedgerResult.error?.message || null,
+        promotionalFundError: promotionalFundResult.error?.message || null,
+        promotionalFundLedgerError: promotionalFundLedgerResult.error?.message || null,
+        promotionalCashBackingsError: promotionalCashBackingsResult.error?.message || null
       });
-      return json(503, { error: "Cash-backed creator earnings, platform PayPal destination or withdrawal history could not be loaded." });
+      return json(503, { error: "Creator withdrawals, promotional wallet activity, cash backing or platform withdrawal history could not be loaded." });
     }
 
     const allLedger = ledgerResult.rows || [];
@@ -748,17 +775,29 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const creatorIds = [...byCreator.keys()];
+    const promoWalletRows = promotionalWalletsResult.data || [];
+    const promoWalletLedgerRows = promotionalWalletLedgerResult.data || [];
+    const promoFundLedgerRows = promotionalFundLedgerResult.data || [];
+    const promoCashBackingRows = promotionalCashBackingsResult.rows || [];
+    const payoutAccountRows = creatorPayoutAccountsResult.data || [];
+    const profileIds = [...new Set([
+      ...byCreator.keys(),
+      ...promoWalletRows.map((row: any) => String(row.user_id || "")),
+      ...promoWalletLedgerRows.flatMap((row: any) => [String(row.user_id || ""), String(row.actor_user_id || "")]),
+      ...promoFundLedgerRows.map((row: any) => String(row.actor_user_id || "")),
+      ...promoCashBackingRows.flatMap((row: any) => [String(row.creator_id || ""), String(row.actor_user_id || "")])
+    ].filter(validUuid))];
     const profiles: any[] = [];
-    for (let offset = 0; offset < creatorIds.length; offset += 100) {
-      const batch = creatorIds.slice(offset, offset + 100);
+    for (let offset = 0; offset < profileIds.length; offset += 100) {
+      const batch = profileIds.slice(offset, offset + 100);
       if (!batch.length) continue;
       const { data, error } = await admin.from("profiles")
         .select("id,username,display_name").in("id", batch);
-      if (error) return json(503, { error: "Creator account names could not be loaded." });
+      if (error) return json(503, { error: "Creator and promotional member account names could not be loaded." });
       profiles.push(...(data || []));
     }
     const profileById = new Map(profiles.map((profile: any) => [profile.id, profile]));
+    const payoutAccountById = new Map(payoutAccountRows.map((account: any) => [account.user_id, account]));
     const creators = [...byCreator.values()].map((item: any) => {
       const profile: any = profileById.get(item.creatorId) || {};
       return {
@@ -766,6 +805,89 @@ Deno.serve(async (req: Request) => {
         displayName: profile.display_name || profile.username || "Unavailable creator"
       };
     }).sort((a: any, b: any) => b.grossMinor - a.grossMinor);
+    const creatorPayouts = payouts.map((payout: any) => {
+      const profile: any = profileById.get(payout.creator_id) || {};
+      const account: any = payoutAccountById.get(payout.creator_id) || {};
+      return {
+        id: payout.id, creatorId: payout.creator_id,
+        username: profile.username || "",
+        displayName: profile.display_name || profile.username || "Unavailable creator",
+        amountMinor: Number(payout.amount_minor || 0), currency: payout.currency || "USD",
+        status: payout.status, paypalEmail: account.paypal_email || "",
+        paypalBatchId: payout.paypal_batch_id || null,
+        createdAt: payout.created_at || null, paidAt: payout.paid_at || null
+      };
+    });
+    const promotionalWalletTotals = promoWalletRows.reduce((totals: any, wallet: any) => ({
+      availableCoins: totals.availableCoins + Math.max(0, Number(wallet.available_coins || 0)),
+      lifetimeAllocatedCoins: totals.lifetimeAllocatedCoins + Math.max(0, Number(wallet.lifetime_allocated_coins || 0)),
+      lifetimeSpentCoins: totals.lifetimeSpentCoins + Math.max(0, Number(wallet.lifetime_spent_coins || 0))
+    }), { availableCoins: 0, lifetimeAllocatedCoins: 0, lifetimeSpentCoins: 0 });
+    const promotionalWallets = promoWalletRows.map((wallet: any) => {
+      const profile: any = profileById.get(wallet.user_id) || {};
+      return {
+        userId: wallet.user_id, username: profile.username || "",
+        displayName: profile.display_name || profile.username || "Unavailable member",
+        availableCoins: Number(wallet.available_coins || 0),
+        lifetimeAllocatedCoins: Number(wallet.lifetime_allocated_coins || 0),
+        lifetimeSpentCoins: Number(wallet.lifetime_spent_coins || 0),
+        updatedAt: wallet.updated_at || null
+      };
+    });
+    const promotionalWalletLedger = promoWalletLedgerRows.map((row: any) => {
+      const member: any = profileById.get(row.user_id) || {};
+      const actor: any = profileById.get(row.actor_user_id) || {};
+      return {
+        id: row.id, userId: row.user_id,
+        memberUsername: member.username || "",
+        memberDisplayName: member.display_name || member.username || "Unavailable member",
+        actorUsername: actor.username || "",
+        deltaCoins: Number(row.delta_coins || 0),
+        balanceAfter: Number(row.balance_after || 0),
+        eventType: row.event_type || "activity", referenceId: row.reference_id || null,
+        note: row.note || "", createdAt: row.created_at || null
+      };
+    });
+    const promotionalFund = promotionalFundResult.data || {};
+    const promotionalCashFundedMinor = Math.max(0, Number(promotionalFund.funded_minor || 0));
+    const promotionalCashSpentMinor = Math.max(0, Number(promotionalFund.spent_minor || 0));
+    const promotionalCashReserve = {
+      fundedMinor: promotionalCashFundedMinor,
+      spentMinor: promotionalCashSpentMinor,
+      availableMinor: Math.max(0, promotionalCashFundedMinor - promotionalCashSpentMinor),
+      updatedAt: promotionalFund.updated_at || null,
+      ledger: promoFundLedgerRows.map((row: any) => {
+        const actor: any = profileById.get(row.actor_user_id) || {};
+        return {
+          id: row.id, eventType: row.event_type || "activity",
+          fundedDeltaMinor: Number(row.funded_delta_minor || 0),
+          spentDeltaMinor: Number(row.spent_delta_minor || 0),
+          note: row.note || "", actorUsername: actor.username || "",
+          paypalOrderId: row.paypal_order_id || null,
+          paypalCaptureId: row.paypal_capture_id || null,
+          createdAt: row.created_at || null
+        };
+      })
+    };
+    const promotionalCashBackings = {
+      giftCount: promoCashBackingRows.length,
+      giftCoins: promoCashBackingRows.reduce((sum: number, row: any) => sum + Math.max(0, Number(row.gift_coin_amount || 0)), 0),
+      backingMinor: promoCashBackingRows.reduce((sum: number, row: any) => sum + Math.max(0, Number(row.backing_minor || 0)), 0),
+      creatorShareMinor: promoCashBackingRows.reduce((sum: number, row: any) => sum + Math.max(0, Math.round(Number(row.creator_share_minor || 0))), 0),
+      platformShareMinor: promoCashBackingRows.reduce((sum: number, row: any) => sum + Math.max(0, Math.round(Number(row.platform_share_minor || 0))), 0),
+      records: promoCashBackingRows.slice(0, 150).map((row: any) => {
+        const creator: any = profileById.get(row.creator_id) || {};
+        return {
+          id: row.id, creatorId: row.creator_id,
+          creatorUsername: creator.username || "",
+          creatorDisplayName: creator.display_name || creator.username || "Unavailable creator",
+          giftCoins: Number(row.gift_coin_amount || 0), backingMinor: Number(row.backing_minor || 0),
+          creatorShareMinor: Number(row.creator_share_minor || 0),
+          platformShareMinor: Number(row.platform_share_minor || 0),
+          createdAt: row.created_at || null
+        };
+      })
+    };
 
     return json(200, {
       asOf: new Date().toISOString(),
@@ -776,6 +898,12 @@ Deno.serve(async (req: Request) => {
       platformFinance,
       platformPayoutAccount: platformPayoutAccountResult.data || null,
       platformPayouts: platformPayoutsResult.data || [],
+      creatorPayouts,
+      promotionalWalletTotals,
+      promotionalWallets,
+      promotionalWalletLedger,
+      promotionalCashReserve,
+      promotionalCashBackings,
       excludedPromotionalActivity: excludedPromotionalTotals,
       totals: {
         ...totals,
