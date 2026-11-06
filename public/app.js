@@ -140,7 +140,7 @@ function startCreatorLeagueProfileRefresh(profileId){
     }
     if(document.visibilityState!=='visible')return;
     try{
-      const result=await api('/users/'+encodeURIComponent(profileId)+'/creator-league');
+      const result=await api('/users/'+encodeURIComponent(profileId)+'/creator-league',{cache:'no-store'});
       if(state.profile?.user?.id!==profileId)return;
       const league=result.creatorLeague||null;
       state.profile.user.creatorLeague=league;
