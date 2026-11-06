@@ -327,7 +327,7 @@ USING (
 GRANT SELECT ON public.group_announcements TO anon, authenticated;
 
 -- Group post approval adds a pending state to the existing post workflow.
-DO $
+DO $$
 DECLARE c record;
 BEGIN
   FOR c IN
@@ -337,7 +337,7 @@ BEGIN
   LOOP
     EXECUTE format('ALTER TABLE public.group_posts DROP CONSTRAINT %I', c.conname);
   END LOOP;
-END $;
+END $$;
 ALTER TABLE public.group_posts
   ADD CONSTRAINT group_posts_status_check
   CHECK (status IN ('published','pending','hidden','deleted'));
