@@ -95,6 +95,98 @@ ALTER TABLE public.events
 CREATE INDEX IF NOT EXISTS events_group_starts_idx
   ON public.events(group_id, starts_at) WHERE group_id IS NOT NULL;
 
+-- Group events inherit group visibility and role-based event management.
+CREATE OR REPLACE FUNCTION private.can_manage_minglora_group_events(target_group_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $
+  SELECT EXISTS (
+    SELECT 1 FROM public.social_groups g
+    WHERE g.id=target_group_id AND g.owner_id=(select auth.uid())
+  ) OR EXISTS (
+    SELECT 1 FROM public.group_memberships gm
+    WHERE gm.group_id=target_group_id
+      AND gm.user_id=(select auth.uid())
+      AND gm.status='active'
+      AND gm.role IN ('owner','admin','moderator','event_manager')
+  );
+$;
+REVOKE ALL ON FUNCTION private.can_manage_minglora_group_events(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.can_manage_minglora_group_events(uuid)
+  TO authenticated;
+
+DROP POLICY IF EXISTS minglora_events_read ON public.events;
+CREATE POLICY minglora_events_read ON public.events
+FOR SELECT TO anon, authenticated
+USING (
+  (group_id IS NULL AND visibility='public')
+  OR creator_id=(select auth.uid())
+  OR EXISTS (
+    SELECT 1 FROM public.social_groups g
+    WHERE g.id=events.group_id AND g.status='active'
+      AND (
+        g.visibility='public'
+        OR g.owner_id=(select auth.uid())
+        OR private.is_minglora_group_member(g.id)
+      )
+  )
+);
+
+DROP POLICY IF EXISTS minglora_events_insert_self ON public.events;
+CREATE POLICY minglora_events_insert_self ON public.events
+FOR INSERT TO authenticated
+WITH CHECK (
+  creator_id=(select auth.uid())
+  AND (group_id IS NULL OR private.can_manage_minglora_group_events(group_id))
+);
+
+DROP POLICY IF EXISTS minglora_events_update_self ON public.events;
+CREATE POLICY minglora_events_update_self ON public.events
+FOR UPDATE TO authenticated
+USING (
+  creator_id=(select auth.uid())
+  OR (group_id IS NOT NULL AND private.can_manage_minglora_group_events(group_id))
+)
+WITH CHECK (
+  creator_id=(select auth.uid())
+  OR (group_id IS NOT NULL AND private.can_manage_minglora_group_events(group_id))
+);
+
+DROP POLICY IF EXISTS minglora_events_delete_self ON public.events;
+CREATE POLICY minglora_events_delete_self ON public.events
+FOR DELETE TO authenticated
+USING (
+  creator_id=(select auth.uid())
+  OR (group_id IS NOT NULL AND private.can_manage_minglora_group_events(group_id))
+);
+
+DROP POLICY IF EXISTS minglora_event_rsvps_insert_self ON public.event_rsvps;
+CREATE POLICY minglora_event_rsvps_insert_self ON public.event_rsvps
+FOR INSERT TO authenticated
+WITH CHECK (
+  user_id=(select auth.uid())
+  AND EXISTS (
+    SELECT 1 FROM public.events e
+    WHERE e.id=event_id AND (
+      e.creator_id=(select auth.uid())
+      OR (e.group_id IS NULL AND e.visibility='public')
+      OR EXISTS (
+        SELECT 1 FROM public.social_groups g
+        WHERE g.id=e.group_id AND g.status='active'
+          AND (
+            g.visibility='public'
+            OR g.owner_id=(select auth.uid())
+            OR private.is_minglora_group_member(g.id)
+          )
+      )
+    )
+  )
+);
+
 -- Group data remains protected by RLS; writes to audit and moderation records are
 -- intended to be performed by trusted server-side actions, never direct clients.
 ALTER TABLE public.group_rules ENABLE ROW LEVEL SECURITY;
