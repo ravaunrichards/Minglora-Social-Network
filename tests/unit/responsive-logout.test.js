@@ -13,7 +13,7 @@ const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const mobileCss = fs.readFileSync(path.join(root, 'public/mobile-layout.css'), 'utf8');
 
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
-  assert.ok(html.includes('href="/styles.css?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1"'));
+  assert.ok(html.includes('href="/styles.css?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1-advanced-notifications-1"'));
   assert.ok(html.includes('src="/app.js?v=20261105-roomwide-live-gifts-1"'));
   assert.ok(html.includes('src="/settings.js?v=20261105-admin-mfa-qr-fix-2"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
