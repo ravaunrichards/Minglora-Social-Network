@@ -1271,6 +1271,19 @@ async function route(req, res) {
         });
       }
 
+      if(method==='GET'&&p==='/api/admin/creator-earnings'){
+        const adminEmail=normalizeEmail(user?.email||'');
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(!user||user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can view creator gift revenue.'});
+        }
+        const report=await requestSupabaseState('economy_admin_creator_earnings',{
+          adminUserId:user.id,adminEmail
+        });
+        return json(res,200,report);
+      }
+
       const canManageLivePro = () => isDesignatedCreatorHubAdmin(user) && isModerator(user,req) && hasActiveReviewerSession(user);
       const liveProGrantFor = memberId => (db.liveProGrants || []).find(grant =>
         grant.userId === memberId && grant.status === 'active' &&
