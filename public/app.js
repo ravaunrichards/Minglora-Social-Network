@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, rechargeTab:'recharge' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge' };
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
 const fallbackAvatar = name => {
@@ -204,8 +204,8 @@ let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedA
 let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
 window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
-function showAuth(){ $('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
-function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
+function showAuth(){ stopMessengerRealtime();$('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
+function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startMessengerRealtime();startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
 function primeCallAudio(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;if(!callToneContext)callToneContext=new C();if(callToneContext.state==='suspended')void callToneContext.resume();}catch{}}
 document.addEventListener('pointerdown',primeCallAudio,{capture:true,once:true});
 function base64UrlToBytes(value){
@@ -5515,6 +5515,107 @@ function messageAttachmentHtml(attachments=[]){
 }
 let messageRefreshTimer=null;
 let messageRefreshInFlight=false;
+let messageRefreshIntervalMs=0;
+let messengerRealtimeSocket=null;
+let messengerRealtimeReconnectTimer=null;
+let messengerRealtimeReconnectAttempts=0;
+const messengerTypingThrottle=new Map();
+function sendMessengerRealtime(payload){
+  if(!messengerRealtimeSocket||messengerRealtimeSocket.readyState!==WebSocket.OPEN)return false;
+  try{messengerRealtimeSocket.send(JSON.stringify(payload));return true;}catch{return false;}
+}
+function stopMessengerRealtime(){
+  if(messengerRealtimeReconnectTimer){clearTimeout(messengerRealtimeReconnectTimer);messengerRealtimeReconnectTimer=null;}
+  if(messengerRealtimeSocket){
+    messengerRealtimeSocket.onclose=null;
+    try{messengerRealtimeSocket.close(1000,'Signed out');}catch{}
+    messengerRealtimeSocket=null;
+  }
+  messengerRealtimeReconnectAttempts=0;
+  state.messengerRealtimeConnected=false;
+  state.messengerPresence={};state.messengerTyping={};
+  syncMessageRefreshPolling();
+}
+function startMessengerRealtime(){
+  if(!state.user||!('WebSocket' in window))return;
+  if(messengerRealtimeSocket&&[WebSocket.OPEN,WebSocket.CONNECTING].includes(messengerRealtimeSocket.readyState))return;
+  if(messengerRealtimeReconnectTimer){clearTimeout(messengerRealtimeReconnectTimer);messengerRealtimeReconnectTimer=null;}
+  const scheme=window.location.protocol==='https:'?'wss:':'ws:';
+  const socket=new WebSocket(scheme+'//'+window.location.host+'/api/messages/realtime');
+  messengerRealtimeSocket=socket;
+  socket.addEventListener('open',()=>{
+    if(messengerRealtimeSocket!==socket)return;
+    messengerRealtimeReconnectAttempts=0;state.messengerRealtimeConnected=true;
+    syncMessageRefreshPolling();
+    sendMessengerRealtime({type:'presence_refresh'});
+    refreshMessageConversations().catch(()=>{});
+  });
+  socket.addEventListener('message',event=>{
+    if(messengerRealtimeSocket!==socket)return;
+    let message;try{message=JSON.parse(event.data);}catch{return;}
+    if(!message||typeof message!=='object')return;
+    if(message.type==='presence'){
+      state.messengerPresence[message.userId]=Boolean(message.online);
+      document.querySelectorAll('[data-message-window]').forEach(root=>{
+        const id=root.dataset.messageWindow;
+        const win=state.messageWindows.find(item=>item.user.id===id);
+        if(win&&!win.isGroup&&win.user.id===message.userId)updateMessageWindowPresence(win);
+      });
+      if(state.messengerPanelOpen)renderMessengerPanelList();
+    if(state.view==='messages')updateMessageInboxRows();
+      return;
+    }
+    if(message.type==='typing'){
+      const key=String(message.conversationId||'')+':'+String(message.userId||'');
+      if(message.active)state.messengerTyping[key]=Date.now();
+      else delete state.messengerTyping[key];
+      const win=state.messageWindows.find(item=>item.user.id===message.conversationId||item.groupId&&'group:'+item.groupId===message.conversationId);
+      if(win)updateMessageWindowPresence(win);
+      return;
+    }
+    if(['message:new','message:updated','message:deleted','message:read','message:group-updated','message:group-removed'].includes(message.type)){
+      if(message.type==='message:group-removed'){
+        state.messageWindows=state.messageWindows.filter(item=>item.groupId!==message.groupId);
+        renderMessageWindows();
+      }
+      refreshMessageConversations().catch(()=>{});
+    }
+  });
+  socket.addEventListener('close',()=>{
+    if(messengerRealtimeSocket!==socket)return;
+    messengerRealtimeSocket=null;state.messengerRealtimeConnected=false;
+    syncMessageRefreshPolling();
+    if(!state.user)return;
+    messengerRealtimeReconnectAttempts=Math.min(messengerRealtimeReconnectAttempts+1,8);
+    const delay=Math.min(15000,800*Math.pow(1.7,messengerRealtimeReconnectAttempts));
+    messengerRealtimeReconnectTimer=setTimeout(()=>{messengerRealtimeReconnectTimer=null;startMessengerRealtime();},delay);
+  });
+  socket.addEventListener('error',()=>{try{socket.close();}catch{}});
+}
+function messageWindowConversationId(win){return win?.groupId?'group:'+win.groupId:String(win?.user?.id||'');}
+function isMessageTyping(win){
+  const conversationId=messageWindowConversationId(win),ownId=String(state.user?.id||'');
+  return Object.keys(state.messengerTyping||{}).some(key=>key.startsWith(conversationId+':')&&!key.endsWith(':'+ownId));
+}
+function updateMessageWindowPresence(win){
+  if(!win||win.isGroup)return;
+  const root=document.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"]');
+  const label=root?.querySelector('[data-message-presence]');
+  if(!label)return;
+  const typing=isMessageTyping(win),online=state.messengerPresence[win.user.id]===true;
+  label.textContent=typing?'Typing…':online?'Active now':'';
+  label.classList.toggle('is-typing',typing);
+  label.classList.toggle('is-online',!typing&&online);
+}
+function messageTyping(win,active=true){
+  const conversationId=messageWindowConversationId(win);
+  if(!conversationId)return;
+  if(!active){sendMessengerRealtime({type:'typing',conversationId,active:false});messengerTypingThrottle.delete(conversationId);return;}
+  const last=messengerTypingThrottle.get(conversationId)||0;
+  if(Date.now()-last<700)return;
+  messengerTypingThrottle.set(conversationId,Date.now());
+  sendMessengerRealtime({type:'typing',conversationId,active:true});
+}
 function renderMessageContent(messages=[]){
   if(!messages.length)return '<div class="message-window-empty">No messages yet. Say hello to start this chat.</div>';
   return messages.map(message=>{
@@ -5528,11 +5629,16 @@ function renderMessageContent(messages=[]){
     return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+content+gif+attachments+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
   }).join('');
 }
-function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(',')].join(':')).join('|');}
+function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
 function syncMessageRefreshPolling(){
   const enabled=Boolean(state.user)&&(state.view==='messages'||state.messageWindows.length>0||state.messengerPanelOpen);
-  if(enabled&&!messageRefreshTimer)messageRefreshTimer=setInterval(refreshMessageConversations,5000);
-  if(!enabled&&messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;}
+  const interval=state.messengerRealtimeConnected?30000:5000;
+  if(enabled&&(!messageRefreshTimer||messageRefreshIntervalMs!==interval)){
+    if(messageRefreshTimer)clearInterval(messageRefreshTimer);
+    messageRefreshIntervalMs=interval;
+    messageRefreshTimer=setInterval(refreshMessageConversations,interval);
+  }
+  if(!enabled&&messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;messageRefreshIntervalMs=0;}
 }
 async function refreshMessageConversations(){
   if(!state.user||document.visibilityState==='hidden'||messageRefreshInFlight)return;
@@ -5560,7 +5666,7 @@ async function refreshMessageConversations(){
     const activeIds=new Set(state.messageWindows.filter(win=>!win.minimized).map(win=>win.user.id));
     const unread=state.conversations.filter(conversation=>activeIds.has(conversation.user.id)&&(conversation.unreadCount||0)>0);
     if(unread.length){
-      await Promise.all(unread.map(conversation=>api('/messages/'+encodeURIComponent(conversation.user.id)+'/read',{method:'POST',body:'{}'}).catch(()=>null)));
+      await Promise.all(unread.map(conversation=>conversation.groupId?api('/message-groups/'+encodeURIComponent(conversation.groupId)+'/read',{method:'POST',body:'{}'}).catch(()=>null):api('/messages/'+encodeURIComponent(conversation.user.id)+'/read',{method:'POST',body:'{}'}).catch(()=>null)));
       result=await api('/messages');
       state.conversations=result.conversations||[];
       paintMessengerBadge(state.conversations);
@@ -5571,11 +5677,12 @@ async function refreshMessageConversations(){
       const scroll=document.querySelector('[data-message-window="'+CSS.escape(win.user.id)+'"] .message-window-scroll');
       if(!scroll)return;
       const signature=messageSignature(messages);
-      if(scroll.dataset.messageSignature===signature)return;
+      if(scroll.dataset.messageSignature===signature){updateMessageWindowPresence(win);return;}
       const nearBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<64;
       scroll.innerHTML=renderMessageContent(messages);
       scroll.dataset.messageSignature=signature;
       if(nearBottom)scroll.scrollTop=scroll.scrollHeight;
+      updateMessageWindowPresence(win);
     });
     document.querySelectorAll('[data-inbox-peer]').forEach(row=>{
       const conversation=state.conversations.find(item=>item.user.id===row.dataset.inboxPeer);
