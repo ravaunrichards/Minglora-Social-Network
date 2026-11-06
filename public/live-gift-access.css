@@ -1,4 +1,5 @@
 /* LIVE gift discovery: fast, touch-friendly browsing for large catalogues. */
+.live-gift-scope-tabs{display:flex;gap:7px;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;padding:2px 1px 6px;scrollbar-width:thin;white-space:nowrap}
 .live-gift-browser-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.42fr);gap:9px;align-items:end;min-width:0}
 .live-gift-search-wrap,.live-gift-sort-label{display:grid;gap:5px;min-width:0;color:#b9c7dc;font-size:11px;font-weight:750}
 .live-gift-search-wrap .live-gift-search{margin:0;min-height:42px}
