@@ -11,7 +11,9 @@ const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
-  'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
+  'groups', 'groupPosts', 'groupMembershipRequests', 'groupInvitations', 'groupModerationActions', 'groupAuditLogs',
+  'groupAnnouncements', 'groupEvents', 'groupEventRsvps', 'groupMessages', 'groupRules', 'groupPostComments', 'groupPostReactions',
+  'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
     'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
