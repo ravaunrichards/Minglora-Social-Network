@@ -4216,7 +4216,7 @@ async function route(req, res) {
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         if(!canViewGroup(group,user.id)||(!getGroupRole(group,user.id)&&group.visibility!=='public'))return json(res,404,{error:'Group events are private.'});
-        const events=db.groupEvents.filter(event=>event.groupId===group.id).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt));
+        const events=db.groupEvents.filter(event=>event.groupId===group.id).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)).map(event=>({...event,rsvpCounts:{going:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='going').length,interested:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='interested').length},myResponse:db.groupEventRsvps.find(r=>r.eventId===event.id&&r.userId===user.id)?.response||null}));
         return json(res,200,{events});
       }
       if(method==='POST'&&m){
@@ -4240,6 +4240,27 @@ async function route(req, res) {
         if(title.length<3||title.length>140||body.length<1||body.length>3000)return json(res,400,{error:'Announcement title or message is invalid.'});
         const announcement={id:uid(),groupId:group.id,authorId:user.id,title,body,status:'published',createdAt:now()};
         db.groupAnnouncements.unshift(announcement);recordGroupAudit(group,'announcement_created','announcement',announcement.id);await saveStore();return json(res,201,{announcement});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/audit$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!['owner','admin'].includes(getGroupRole(group,user.id)))return json(res,403,{error:'Only group owners and administrators can view the audit history.'});
+        const events=db.groupAuditLogs.filter(item=>item.groupId===group.id).slice(0,100).map(item=>({...item,actor:safeUser(db.users.find(u=>u.id===item.actorId),user.id)}));
+        return json(res,200,{events});
+      }
+      db.groupEventRsvps ||= [];
+      m=p.match(/^\/api\/groups\/([^/]+)\/events\/([^/]+)\/rsvp$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const event=db.groupEvents.find(item=>item.id===m[2]&&item.groupId===group.id);
+        if(!event)return json(res,404,{error:'Group event not found.'});
+        if(!getGroupRole(group,user.id)&&group.visibility!=='public')return json(res,403,{error:'Join this group to respond to its events.'});
+        const response=String(input.response||'');
+        if(!['going','interested','not_going'].includes(response))return json(res,400,{error:'Choose going, interested or not going.'});
+        let rsvp=db.groupEventRsvps.find(item=>item.eventId===event.id&&item.userId===user.id);
+        if(!rsvp){rsvp={id:uid(),groupId:group.id,eventId:event.id,userId:user.id,createdAt:now()};db.groupEventRsvps.push(rsvp);}
+        rsvp.response=response;rsvp.updatedAt=now();await saveStore();
+        return json(res,200,{rsvp});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/analytics$/);
       if(method==='GET'&&m){
