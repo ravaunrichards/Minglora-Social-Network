@@ -78,9 +78,8 @@ Deno.serve(async (req: Request) => {
     "economy_catalog", "economy_wallet", "economy_refunded_gift_ids", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
-    "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_grant",
-    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_campaign_history",
-    "economy_admin_creator_earnings",
+    "economy_creator_earnings", "economy_marketing_budget", "economy_marketing_funding", "economy_marketing_funding_order_create", "economy_marketing_funding_order_get", "economy_marketing_funding_order_settle", "economy_marketing_grant",
+    "economy_exchange_creator_earnings", "economy_owner_issuance", "economy_admin_member_credit", "economy_admin_member_search", "economy_admin_campaign_wallet", "economy_admin_campaign_allocate", "economy_admin_creator_earnings", "economy_admin_campaign_history",
     "economy_admin_promotional_fund_status", "economy_admin_promotional_fund_order_create", "economy_admin_promotional_fund_order_get", "economy_admin_promotional_fund_order_settle",
     "economy_promotional_gift_wallet", "economy_send_admin_promotional_gift",
     "economy_get_payout_account", "economy_set_payout_account", "economy_unlink_payout_account", "economy_request_payout",
@@ -110,14 +109,11 @@ Deno.serve(async (req: Request) => {
       .map((row: any) => String(row.reference_id || ""))
       .filter((id: string) => uuidPattern.test(id)))];
     if (!references.length) return json(200, { giftIds: [] });
-
     const confirmedIds: string[] = [];
     for (let offset = 0; offset < references.length; offset += 200) {
       const batch = references.slice(offset, offset + 200);
-      const { data: gifts, error: giftError } = await admin
-        .from("live_gift_transactions")
-        .select("id")
-        .in("id", batch);
+      const { data: gifts, error: giftError } = await admin.from("live_gift_transactions")
+        .select("id").in("id", batch);
       if (giftError) return json(503, { error: "Minglora could not verify refunded LIVE Gifts." });
       for (const gift of gifts || []) confirmedIds.push(String(gift.id));
     }
@@ -299,7 +295,7 @@ Deno.serve(async (req: Request) => {
     if (!validUuid(userId)) return json(400, { error: "Invalid member account." });
     const [walletResult, ledgerResult] = await Promise.all([
       admin.from("coin_wallets").select("balance_coins,cash_balance_coins,marketing_balance_coins,promo_balance_coins,updated_at").eq("user_id", userId).maybeSingle(),
-      admin.from("coin_ledger").select("id,delta_coins,balance_after,entry_type,description,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100)
+      admin.from("coin_ledger").select("id,delta_coins,balance_after,entry_type,description,cash_delta_coins,marketing_delta_coins,promo_delta_coins,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100)
     ]);
     if (walletResult.error || ledgerResult.error) return json(503, { error: "Minglora wallet could not be loaded." });
     return json(200, { wallet: walletResult.data || { balance_coins: 0 }, ledger: ledgerResult.data || [] });
@@ -309,6 +305,67 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.rpc("minglora_get_marketing_budget");
     if (error) return fail(error, "Minglora marketing budget could not be loaded.");
     return json(200, { budget: data || {} });
+  }
+
+  if (action === "economy_marketing_funding_order_create") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    const note = String(input.note || "").trim().slice(0, 240);
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160 ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+      return json(400, { error: "Invalid Minglora marketing funding order." });
+    }
+    const { data, error } = await admin.rpc("minglora_create_marketing_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_paypal_order_id: paypalOrderId, p_amount_minor: amountMinor,
+      p_request_id: requestId, p_note: note
+    });
+    if (error) return fail(error, "Minglora marketing funding order could not be recorded.");
+    return json(201, { order: data || null });
+  }
+
+  if (action === "economy_marketing_funding_order_get") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160) {
+      return json(400, { error: "Invalid marketing funding order lookup." });
+    }
+    const { data, error } = await admin.rpc("minglora_get_marketing_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail, p_paypal_order_id: paypalOrderId
+    });
+    if (error) return fail(error, "Minglora marketing funding order could not be verified.");
+    return json(200, { order: data || null });
+  }
+
+  if (action === "economy_marketing_funding_order_settle") {
+    const adminUserId = String(input.adminUserId || "");
+    const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
+    const paypalOrderId = String(input.paypalOrderId || "");
+    const paypalCaptureId = String(input.paypalCaptureId || "");
+    const amountMinor = Number(input.amountMinor);
+    const requestId = String(input.requestId || "");
+    if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        adminEmail !== "creatorhubcreatornetwork@gmail.com" || !validUuid(requestId) ||
+        paypalOrderId.length < 5 || paypalOrderId.length > 160 ||
+        paypalCaptureId.length < 5 || paypalCaptureId.length > 160 ||
+        !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+      return json(400, { error: "Invalid confirmed PayPal marketing funding capture." });
+    }
+    const { data, error } = await admin.rpc("minglora_settle_marketing_funding_order", {
+      p_admin_user_id: adminUserId, p_admin_email: adminEmail,
+      p_paypal_order_id: paypalOrderId, p_paypal_capture_id: paypalCaptureId,
+      p_amount_minor: amountMinor, p_request_id: requestId
+    });
+    if (error) return fail(error, "Confirmed marketing funding could not be settled.");
+    return json(200, { settlement: data || null });
   }
 
   if (action === "economy_marketing_funding") {
@@ -526,8 +583,6 @@ Deno.serve(async (req: Request) => {
       return json(403, { error: "Only the Creator Hub owner can view creator gift revenue." });
     }
 
-    // Recheck the verified owner and active platform-admin grant in Supabase.
-    // The Render route also requires the signed-in MFA-verified reviewer session.
     const [ownerResult, staffResult] = await Promise.all([
       admin.from("profiles")
         .select("verification_status,verification_badge")
@@ -568,14 +623,10 @@ Deno.serve(async (req: Request) => {
     };
 
     const [ledgerResult, payoutsResult] = await Promise.all([
-      readAllPages(
-        "creator_earnings_ledger",
-        "id,creator_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"
-      ),
-      readAllPages(
-        "creator_payouts",
-        "id,creator_id,amount_minor,currency,status,created_at,paid_at"
-      )
+      readAllPages("creator_earnings_ledger",
+        "id,creator_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"),
+      readAllPages("creator_payouts",
+        "id,creator_id,amount_minor,currency,status,created_at,paid_at")
     ]);
     if (ledgerResult.error || payoutsResult.error) {
       console.error("[Minglora admin creator earnings] Ledger read failed.", {
@@ -589,36 +640,18 @@ Deno.serve(async (req: Request) => {
     const payouts = payoutsResult.rows || [];
     const byCreator = new Map<string, any>();
     const totals = {
-      giftCount: 0,
-      grossMinor: 0,
-      creatorShareMinor: 0,
-      platformShareMinor: 0,
-      availableLedgerMinor: 0,
-      requestedPayoutMinor: 0,
-      processingPayoutMinor: 0,
-      pendingPayoutMinor: 0,
-      paidPayoutMinor: 0,
-      failedPayoutMinor: 0,
+      giftCount: 0, grossMinor: 0, creatorShareMinor: 0, platformShareMinor: 0,
+      availableLedgerMinor: 0, requestedPayoutMinor: 0, processingPayoutMinor: 0,
+      pendingPayoutMinor: 0, paidPayoutMinor: 0, failedPayoutMinor: 0,
       splitMismatchCount: 0
     };
-
     const ensureCreator = (creatorId: string) => {
-      if (!byCreator.has(creatorId)) {
-        byCreator.set(creatorId, {
-          creatorId,
-          giftCount: 0,
-          grossMinor: 0,
-          creatorShareMinor: 0,
-          platformShareMinor: 0,
-          availableLedgerMinor: 0,
-          requestedPayoutMinor: 0,
-          processingPayoutMinor: 0,
-          pendingPayoutMinor: 0,
-          paidPayoutMinor: 0,
-          failedPayoutMinor: 0,
-          lastGiftAt: null
-        });
-      }
+      if (!byCreator.has(creatorId)) byCreator.set(creatorId, {
+        creatorId, giftCount: 0, grossMinor: 0, creatorShareMinor: 0,
+        platformShareMinor: 0, availableLedgerMinor: 0, requestedPayoutMinor: 0,
+        processingPayoutMinor: 0, pendingPayoutMinor: 0, paidPayoutMinor: 0,
+        failedPayoutMinor: 0, lastGiftAt: null
+      });
       return byCreator.get(creatorId);
     };
 
@@ -642,7 +675,6 @@ Deno.serve(async (req: Request) => {
       totals.creatorShareMinor += creatorShare;
       totals.platformShareMinor += platformShare;
       if (row.status === "available") totals.availableLedgerMinor += creatorShare;
-      // Permit a one-cent rounding remainder for odd minor-unit totals.
       if (gross !== creatorShare + platformShare || Math.abs(creatorShare - platformShare) > 1) {
         totals.splitMismatchCount += 1;
       }
@@ -679,22 +711,18 @@ Deno.serve(async (req: Request) => {
       const batch = creatorIds.slice(offset, offset + 100);
       if (!batch.length) continue;
       const { data, error } = await admin.from("profiles")
-        .select("id,username,display_name")
-        .in("id", batch);
+        .select("id,username,display_name").in("id", batch);
       if (error) return json(503, { error: "Creator account names could not be loaded." });
       profiles.push(...(data || []));
     }
     const profileById = new Map(profiles.map((profile: any) => [profile.id, profile]));
-    const creators = [...byCreator.values()]
-      .map((item: any) => {
-        const profile: any = profileById.get(item.creatorId) || {};
-        return {
-          ...item,
-          username: profile.username || "",
-          displayName: profile.display_name || profile.username || "Unavailable creator"
-        };
-      })
-      .sort((a: any, b: any) => b.grossMinor - a.grossMinor);
+    const creators = [...byCreator.values()].map((item: any) => {
+      const profile: any = profileById.get(item.creatorId) || {};
+      return {
+        ...item, username: profile.username || "",
+        displayName: profile.display_name || profile.username || "Unavailable creator"
+      };
+    }).sort((a: any, b: any) => b.grossMinor - a.grossMinor);
 
     return json(200, {
       asOf: new Date().toISOString(),
