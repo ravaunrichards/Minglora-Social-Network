@@ -140,8 +140,10 @@ export function createMessengerRealtimeHub({
     }
   }
 
-  wss.on('connection', (socket, _req, user) => {
+  wss.on('connection', (socket, req, user) => {
     const userId = String(user?.id || '');
+    socket.authRequest = req;
+    socket.authUserId = userId;
     if (!userId) {
       socket.close(1008, 'Authentication required');
       return;
@@ -236,6 +238,12 @@ export function createMessengerRealtimeHub({
 
   const heartbeat = setInterval(() => {
     for (const socket of wss.clients || []) {
+      let currentUser = null;
+      try { currentUser = getUserFromRequest(socket.authRequest); } catch {}
+      if (!currentUser?.id || String(currentUser.id) !== String(socket.authUserId)) {
+        try { socket.close(1008, 'Session expired or revoked'); } catch { socket.terminate(); }
+        continue;
+      }
       if (socket.isAlive === false) {
         socket.terminate();
         continue;
