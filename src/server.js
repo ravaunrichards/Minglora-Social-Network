@@ -4212,6 +4212,33 @@ async function route(req, res) {
         db.groupModerationActions.unshift({id:uid(),groupId:group.id,actorId:user.id,targetUserId:targetId,action:input.ban===true?'ban':'remove',reason:String(input.reason||'').slice(0,500),createdAt:now()});
         recordGroupAudit(group,input.ban===true?'member_banned':'member_removed','member',targetId);await saveStore();return json(res,200,{removed:true,banned:input.ban===true});
       }
+      db.groupMessages ||= [];
+      m=p.match(/^\/api\/groups\/([^/]+)\/messages$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!getGroupRole(group,user.id))return json(res,403,{error:'Join this group to access its group chat.'});
+        const messages=await Promise.all(db.groupMessages.filter(item=>item.groupId===group.id&&!item.deletedAt).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100).map(async item=>({...item,author:safeUser(db.users.find(member=>member.id===item.senderId),user.id)})));
+        return json(res,200,{messages});
+      }
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!getGroupRole(group,user.id))return json(res,403,{error:'Join this group to send messages.'});
+        const body=String(input.body||'').trim();
+        if(body.length<1||body.length>5000)return json(res,400,{error:'Group messages must contain 1–5000 characters.'});
+        const message={id:uid(),groupId:group.id,senderId:user.id,body,createdAt:now()};
+        db.groupMessages.push(message);recordGroupAudit(group,'group_message_sent','message',message.id);
+        if(db.groupMessages.length>50000)db.groupMessages.splice(0,db.groupMessages.length-50000);
+        await saveStore();return json(res,201,{message:{...message,author:safeUser(user)}});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/messages\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const message=db.groupMessages.find(item=>item.id===m[2]&&item.groupId===group.id&&!item.deletedAt);
+        if(!message)return json(res,404,{error:'Group message not found.'});
+        if(message.senderId!==user.id&&!canModerateGroup(group,user.id))return json(res,403,{error:'Only the sender or an authorized group moderator can remove this message.'});
+        message.deletedAt=now();message.deletedBy=user.id;recordGroupAudit(group,'group_message_removed','message',message.id);await saveStore();
+        return json(res,200,{ok:true,id:message.id});
+      }
       m=p.match(/^\/api\/groups\/([^/]+)\/events$/);
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
