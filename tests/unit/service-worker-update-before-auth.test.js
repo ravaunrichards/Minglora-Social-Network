@@ -3,14 +3,20 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const app = fs.readFileSync(new URL('../../public/app.js', import.meta.url), 'utf8');
+const worker = fs.readFileSync(new URL('../../public/sw.js', import.meta.url), 'utf8');
+const html = fs.readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
 
-test('updates the application service worker before the signed-out auth bootstrap', () => {
-  const updateCall = app.indexOf('void prepareMingloraServiceWorker();');
+test('registers the service worker without forcing an open page to refresh or change screens', () => {
+  const registerCall = app.indexOf('void prepareMingloraServiceWorker();');
   const authBootstrap = app.indexOf("(async()=>{await finishPasswordRecoveryFromLink();if(await finishMagicLinkFromUrl())return;try{const me=await api('/auth/me')");
-  assert.notEqual(updateCall, -1, 'service-worker update must start at app boot');
+  assert.notEqual(registerCall, -1, 'service-worker registration must start at app boot');
   assert.notEqual(authBootstrap, -1, 'auth bootstrap must exist');
-  assert.ok(updateCall < authBootstrap, 'service-worker update must start before auth bootstrap');
-  assert.match(app, /updateViaCache:'none'/, 'service-worker script updates must bypass the HTTP cache');
-  assert.match(app, /await registration\.update\(\)\.catch\(\(\)=>\{\}\);/, 'registration must actively check for a new worker');
-  assert.match(app, /if\(!state\.user\)return;/, 'push subscription sync must wait until a user is authenticated');
+  assert.ok(registerCall < authBootstrap, 'registration must remain available before auth bootstrap');
+  assert.match(app, /updateViaCache:'none'/, 'service-worker script updates must bypass stale HTTP cache');
+  assert.doesNotMatch(app, /await registration\.update\(\)/, 'do not force an update check during the active session');
+  assert.doesNotMatch(worker, /self\.skipWaiting\(\)/, 'new worker must wait for existing app tabs to close');
+  assert.doesNotMatch(worker, /self\.clients\.claim\(\)/, 'new worker must not take over open tabs');
+  assert.doesNotMatch(worker, /existing\.navigate\(target\)/, 'notification clicks must not redirect the existing tab');
+  assert.match(worker, /await self\.clients\.openWindow\(target\)/, 'notification destinations must open separately');
+  assert.doesNotMatch(html, /&refresh=20261106-preserve-active-page-3/, 'asset cache keys must not use the old refresh marker');
 });
