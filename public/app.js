@@ -6041,7 +6041,7 @@ function renderMessageWindows(){
     if(!participantIds.length){toast('Add another member before starting a group call.');return;}
     const kind=button.dataset.messageGroupAudio?'audio':'video';
     if(participantIds.length<=7){
-      startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call',avatar:conversation.user.avatar||''},kind,participantIds);
+      startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call',avatar:conversation.user.avatar||''},kind,participantIds,conversation.group.id);
     }else{
       openMingloraGroupCallPicker(conversation,kind);
     }
@@ -6502,10 +6502,10 @@ function openMingloraGroupCallPicker(conversation,kind){
    if(!ids.length||ids.length>7)return;
    submit.disabled=true;status.textContent='Starting call…';
    close();
-   await startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call',avatar:conversation.user.avatar||''},kind,ids);
+   await startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call',avatar:conversation.user.avatar||''},kind,ids,conversation.group.id);
  });
 }
-async function startMingloraCall(member,kind='video',participantIds=null){
+async function startMingloraCall(member,kind='video',participantIds=null,groupId=null){
  if(!member?.id||!state.user||member.id===state.user.id)return;
  if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before starting another.');return;}
  // Reserve the outgoing state before the network request so a fast double tap
@@ -6513,7 +6513,7 @@ async function startMingloraCall(member,kind='video',participantIds=null){
  outgoingCallPending={callId:null,cancelled:false,starting:true};
  try{
   primeCallAudio();
-  const callPayload=Array.isArray(participantIds)&&participantIds.length?{participantIds,kind}:{to:member.id,kind};
+  const callPayload=Array.isArray(participantIds)&&participantIds.length?{participantIds,kind,...(groupId?{groupId}:{})}:{to:member.id,kind};
   const created=await api('/calls',{method:'POST',body:JSON.stringify(callPayload)});
   if(outgoingCallPending?.cancelled){
    await api('/calls/'+encodeURIComponent(created.call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});
