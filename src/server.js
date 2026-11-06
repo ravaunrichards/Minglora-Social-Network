@@ -4001,7 +4001,109 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/friends\/([^/]+)\/(request|accept|decline)$/);
       if(method==='POST'&&m)return json(res,409,{error:'Minglora friendships are automatic. Follow each other to become friends.'});
-      m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
+            if(method==='GET'&&p==='/api/friends/manage'){
+        const follows=db.follows||[],blocks=db.blocks||[];
+        const friendIds=getMutualFollowIds(follows,user.id,blocks),friendIdSet=new Set(friendIds);
+        const friends=friendIds.map(targetId=>{
+          const member=db.users.find(item=>item.id===targetId);
+          if(!member||blockedBetween(user.id,targetId)||!canViewProfile(user.id,member))return null;
+          const preferences=normalizeFriendPreferences(friendPreferenceFor(user.id,targetId));
+          const outgoing=follows.find(edge=>edge.followerId===user.id&&edge.followedId===targetId);
+          const incoming=follows.find(edge=>edge.followerId===targetId&&edge.followedId===user.id);
+          const dates=[outgoing?.createdAt,incoming?.createdAt].map(value=>Date.parse(value||'')).filter(Number.isFinite);
+          const targetFriendIds=getMutualFollowIds(follows,targetId,blocks);
+          const mutualFriendsCount=targetFriendIds.filter(id=>friendIdSet.has(id)).length;
+          return {...safeUser(member,user.id),...preferences,friendSince:dates.length?new Date(Math.max(...dates)).toISOString():null,mutualFriendsCount};
+        }).filter(Boolean).sort((a,b)=>Date.parse(b.friendSince||0)-Date.parse(a.friendSince||0));
+        return json(res,200,{friends,count:friends.length});
+      }
+      if(method==='GET'&&p==='/api/friends/lists'){
+        db.friendLists||=[];
+        const currentFriendIds=new Set(getMutualFollowIds(db.follows||[],user.id,db.blocks||[]));
+        let changed=false;
+        const lists=db.friendLists.filter(item=>item.ownerId===user.id).map(item=>{
+          const memberIds=[...new Set((item.memberIds||[]).filter(id=>currentFriendIds.has(id)))];
+          if(memberIds.length!==(item.memberIds||[]).length){item.memberIds=memberIds;item.updatedAt=now();changed=true;}
+          return {id:item.id,name:item.name,description:item.description||'',memberIds,memberCount:memberIds.length,createdAt:item.createdAt,updatedAt:item.updatedAt||item.createdAt};
+        }).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+        if(changed)await saveStore();
+        return json(res,200,{lists});
+      }
+      if(method==='POST'&&p==='/api/friends/lists'){
+        db.friendLists||=[];
+        const name=String(input.name||'').trim().replace(/\s+/g,' ');
+        const description=String(input.description||'').trim();
+        const normalized=name.toLocaleLowerCase();
+        if(name.length<1||name.length>40||description.length>120)return json(res,400,{error:'List names must be 1–40 characters and descriptions no longer than 120 characters.'});
+        if(['all friends','close friends','favorites','recently added','mutual connections'].includes(normalized))return json(res,400,{error:'That name is reserved for a built-in Friends view.'});
+        const ownedLists=db.friendLists.filter(item=>item.ownerId===user.id);
+        if(ownedLists.length>=50)return json(res,409,{error:'You can create up to 50 custom friend lists.'});
+        if(ownedLists.some(item=>String(item.name||'').toLocaleLowerCase()===normalized))return json(res,409,{error:'You already have a list with that name.'});
+        const list={id:uid(),ownerId:user.id,name,description,memberIds:[],createdAt:now(),updatedAt:now()};
+        db.friendLists.unshift(list);await saveStore();
+        return json(res,201,{list:{id:list.id,name:list.name,description:list.description,memberIds:[],memberCount:0,createdAt:list.createdAt,updatedAt:list.updatedAt}});
+      }
+      m=p.match(/^\/api\/friends\/lists\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        const list=(db.friendLists||[]).find(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(!list)return json(res,404,{error:'Friend list not found.'});
+        if(input.name!==undefined){
+          const name=String(input.name||'').trim().replace(/\s+/g,' ');
+          const normalized=name.toLocaleLowerCase();
+          if(name.length<1||name.length>40)return json(res,400,{error:'List names must be 1–40 characters.'});
+          if(['all friends','close friends','favorites','recently added','mutual connections'].includes(normalized))return json(res,400,{error:'That name is reserved for a built-in Friends view.'});
+          if((db.friendLists||[]).some(item=>item.ownerId===user.id&&item.id!==list.id&&String(item.name||'').toLocaleLowerCase()===normalized))return json(res,409,{error:'You already have a list with that name.'});
+          list.name=name;
+        }
+        if(input.description!==undefined){
+          const description=String(input.description||'').trim();
+          if(description.length>120)return json(res,400,{error:'List descriptions cannot exceed 120 characters.'});
+          list.description=description;
+        }
+        list.updatedAt=now();await saveStore();
+        const memberIds=[...new Set(list.memberIds||[])];
+        return json(res,200,{list:{id:list.id,name:list.name,description:list.description||'',memberIds,memberCount:memberIds.length,updatedAt:list.updatedAt}});
+      }
+      if(method==='DELETE'&&m){
+        const list=(db.friendLists||[]).find(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(!list)return json(res,404,{error:'Friend list not found.'});
+        db.friendLists=db.friendLists.filter(item=>item.id!==list.id);
+        await saveStore();return json(res,200,{deleted:true,id:list.id});
+      }
+      m=p.match(/^\/api\/friends\/lists\/([^/]+)\/members\/([^/]+)$/);
+      if((method==='PUT'||method==='DELETE')&&m){
+        const list=(db.friendLists||[]).find(item=>item.id===m[1]&&item.ownerId===user.id);
+        if(!list)return json(res,404,{error:'Friend list not found.'});
+        const targetId=m[2];
+        if(method==='PUT'){
+          const member=db.users.find(item=>item.id===targetId);
+          const mutual=getMutualFollowIds(db.follows||[],user.id,db.blocks||[]).includes(targetId);
+          if(!member||!mutual||blockedBetween(user.id,targetId))return json(res,409,{error:'Only current mutual-follow friends can be added to a list.'});
+          list.memberIds=[...new Set([...(list.memberIds||[]),targetId])];
+        }else{
+          list.memberIds=(list.memberIds||[]).filter(id=>id!==targetId);
+        }
+        list.updatedAt=now();await saveStore();
+        return json(res,200,{memberCount:(list.memberIds||[]).length,memberIds:list.memberIds||[]});
+      }
+      m=p.match(/^\/api\/friends\/([^/]+)\/preferences$/);
+      if(method==='PATCH'&&m){
+        const targetId=m[1];
+        if(!getMutualFollowIds(db.follows||[],user.id,db.blocks||[]).includes(targetId))return json(res,404,{error:'A current mutual-follow friend is required to change friend preferences.'});
+        const validation=validateFriendPreferencePatch(input);
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        db.friendPreferences||=[];
+        let record=db.friendPreferences.find(item=>item.ownerId===user.id&&item.targetId===targetId);
+        if(!record){record={ownerId:user.id,targetId,...normalizeFriendPreferences(null),createdAt:now()};db.friendPreferences.push(record);}
+        Object.assign(record,validation.value,{updatedAt:now()});
+        const hasPreferences=Object.entries(normalizeFriendPreferences(record)).some(([key,value])=>
+          key==='snoozedUntil'?Boolean(value):value===true
+        );
+        if(!hasPreferences)db.friendPreferences=db.friendPreferences.filter(item=>item!==record);
+        await saveStore();
+        return json(res,200,{preferences:normalizeFriendPreferences(friendPreferenceFor(user.id,targetId))});
+      }
+m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&m){const recipient=db.users.find(u=>u.id===m[1]);if(m[1]===user.id||!recipient)return json(res,400,{error:'Invalid friend.'});if(getUserSettings(recipient).privacy.allowFriendRequests===false)return json(res,403,{error:'This member is not accepting friend requests.'});if(blockedBetween(user.id,m[1]))return json(res,403,{error:'This relationship is unavailable.'});let f=db.friendships.find(x=>(x.from===user.id&&x.to===m[1])||(x.to===user.id&&x.from===m[1]));if(f){if(f.status==='pending'&&f.to===user.id){f.status='accepted';f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);}else if(['declined','cancelled'].includes(f.status)){f.from=user.id;f.to=m[1];f.status='pending';f.createdAt=now();f.updatedAt=now();notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}else return json(res,409,{error:'A friend request or friendship already exists.'});}else{f={id:uid(),from:user.id,to:m[1],status:'pending',createdAt:now()};db.friendships.push(f);notify(m[1],user.id,'friend',`${user.name} sent you a friend request.`);}await saveStore();return json(res,200,{friendship:f});}
       m=p.match(/^\/api\/friends\/([^/]+)\/accept$/);
       if(method==='POST'&&m){const f=db.friendships.find(x=>x.from===m[1]&&x.to===user.id&&x.status==='pending');if(!f)return json(res,404,{error:'Pending request not found.'});f.status='accepted';notify(m[1],user.id,'friend',`${user.name} accepted your friend request.`);await saveStore();return json(res,200,{friendship:f});}
@@ -4024,15 +4126,10 @@ async function route(req, res) {
         await saveStore();return json(res,200,{removed:true,wasAccepted});
       }
       if(method==='GET'&&p==='/api/friends'){
-        const followed=(db.follows||[]).filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId);
-        for(const targetId of followed){
-          if(!(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)||blockedBetween(user.id,targetId))continue;
-          let friendship=db.friendships.find(item=>(item.from===user.id&&item.to===targetId)||(item.to===user.id&&item.from===targetId));
-          if(!friendship){friendship={id:uid(),from:user.id,to:targetId,status:'accepted',source:'mutual_follow',createdAt:now(),updatedAt:now()};db.friendships.push(friendship);}
-          else if(friendship.status!=='accepted'&&friendship.source!=='manual_request'){friendship.status='accepted';friendship.source='mutual_follow';friendship.updatedAt=now();}
-        }
-        await saveStore();
-        const list=[...new Set(followed.filter(targetId=>(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)&&!blockedBetween(user.id,targetId)))].map(targetId=>safeUser(db.users.find(u=>u.id===targetId),user.id)).filter(Boolean);
+        const list=getMutualFollowIds(db.follows||[],user.id,db.blocks||[])
+          .map(targetId=>db.users.find(member=>member.id===targetId))
+          .filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
+          .map(member=>safeUser(member,user.id));
         return json(res,200,{friends:list,incoming:[]});
       }
       if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
