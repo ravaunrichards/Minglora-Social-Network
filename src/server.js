@@ -4259,7 +4259,7 @@ async function route(req, res) {
         if(!canViewGroup(group,user.id)||(!isMember&&group.visibility==='hidden'))return json(res,404,{error:'Group not found.'});
         const fullAccess=isMember;
         const posts=fullAccess||isPublic?await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post))):[];
-        const members=fullAccess?group.members.map(id=>safeUser(db.users.find(u=>u.id===id),user.id)).filter(Boolean):[];
+        const members=fullAccess?group.members.map(id=>{const member=safeUser(db.users.find(u=>u.id===id),user.id);return member?{...member,groupRole:getGroupRole(group,id)||'member'}:null;}).filter(Boolean):[];
         const {memberships,...safeGroup}=group;
         return json(res,200,{group:{...safeGroup,owner:safeUser(db.users.find(u=>u.id===group.ownerId),user.id),members,memberCount:group.members.length,isMember,role:getGroupRole(group,user.id),hasPendingRequest:db.groupMembershipRequests.some(r=>r.groupId===group.id&&r.userId===user.id&&r.status==='pending')},posts,restricted:!fullAccess&&!isPublic});
       }
