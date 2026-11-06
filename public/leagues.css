@@ -95,3 +95,29 @@
   .league-podium-member strong { font-size: 10px; }
   .league-podium-points { font-size: 10px; }
 }
+
+/* Match Power-Up Studio: in-flow, rotatable 3D previews matching Gift Studio. */
+.league-powerup-info{padding:22px}
+.league-powerup-preview-layout{display:grid;grid-template-columns:minmax(0,.9fr) minmax(300px,1.1fr);gap:18px;align-items:stretch;margin:4px 0 18px}
+.league-powerup-preview-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:9px}
+.league-powerup-preview-copy h3{font-size:clamp(22px,3vw,30px);margin:0;color:var(--text)}
+.league-powerup-preview-copy>p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+.league-powerup-preview-meta{display:flex;gap:8px;flex-wrap:wrap}
+.league-powerup-preview-meta span{font-size:10px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:var(--surface);color:var(--text)}
+.league-powerup-preview-status{min-height:18px}
+.league-powerup-availability{font-weight:750;color:var(--text)!important}
+.league-powerup-activate{min-height:42px;margin-top:3px}
+.league-powerup-preview-stage{min-width:0;min-height:300px;height:clamp(280px,34vw,380px);display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:radial-gradient(circle at 50% 42%,rgba(80,135,220,.15),transparent 60%),var(--surface)}
+.league-powerup-preview-stage model-viewer{width:100%;height:100%;min-height:280px;--poster-color:transparent}
+.league-powerup-info-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.league-powerup-info-card{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:left;font:inherit;color:var(--text);border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface);cursor:pointer;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.league-powerup-info-card:hover{transform:translateY(-2px);border-color:rgba(55,125,220,.55)}
+.league-powerup-info-card.is-selected{border-color:#347bd2;box-shadow:inset 0 0 0 1px rgba(52,123,210,.3),0 7px 18px rgba(25,70,145,.08)}
+.league-powerup-card-symbol{font-size:25px;line-height:1}
+.league-powerup-info-card strong{font-size:12px;margin:0}
+.league-powerup-info-card p{font-size:11px;line-height:1.5;color:var(--muted);min-height:48px;margin:0}
+.league-powerup-info-card small{font-size:10px;color:var(--muted)}
+.league-powerup-card-link{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:900;color:var(--accent)}
+.league-powerup-info-card:focus-visible,.league-powerup-btn:focus-visible{outline:3px solid rgba(52,123,210,.55);outline-offset:3px}
+@media(max-width:760px){.league-powerup-preview-layout{grid-template-columns:1fr}.league-powerup-preview-stage{height:300px;min-height:260px}.league-powerup-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.league-powerup-info{padding:15px}.league-powerup-info-grid{grid-template-columns:1fr}.league-powerup-preview-stage{height:260px;min-height:240px}.league-powerup-preview-stage model-viewer{min-height:240px}}

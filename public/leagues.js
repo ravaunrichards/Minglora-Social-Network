@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [], lastUpdatedAt: null, refreshing: false, refreshError: "" };
+  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
   let refreshTimer = null;
   let refreshController = null;
   let refreshInFlight = false;
@@ -10,6 +10,129 @@
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   })[char]);
+  const powerupModelPaths = Object.freeze({
+    momentum_boost: "/assets/match-powerups/minglora_momentum_boost.gltf",
+    shield: "/assets/match-powerups/minglora_shield.gltf",
+    time_boost: "/assets/match-powerups/minglora_time_boost.gltf",
+    score_multiplier: "/assets/match-powerups/minglora_score_multiplier.gltf"
+  });
+  function currentPowerup() {
+    return (state.overview?.powerups || []).find(item => item.id === state.selectedPowerupId) || null;
+  }
+  function selectedPowerupMatch() {
+    return (state.overview?.activeMatches || []).find(item => item.id === state.selectedMatchId) || null;
+  }
+  function powerupRestriction(power, match) {
+    if (!power || !match) return "Choose a live match to activate this power-up.";
+    if (match.status !== "live") return "This match is not live.";
+    const viewer = state.overview?.viewerId;
+    const side = match.challengerId === viewer ? "challenger" : match.opponentId === viewer ? "opponent" : "";
+    if (!side) return "Only match participants can activate power-ups.";
+    if (power.usedToday) return "This power-up has already been used today.";
+    if (power.id === "shield" && (match.activeEffects || []).some(effect =>
+      effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now()
+    )) return "Your Shield is already active.";
+    if (power.id === "time_boost" && match.timerMode === "fixed") return "Time Boost is unavailable in fixed-timer matches.";
+    return "";
+  }
+  function powerupDurationLabel(power) {
+    const seconds = Math.max(0, Math.round(Number(power?.durationMs || 0) / 1000));
+    return seconds ? seconds + " second" + (seconds === 1 ? "" : "s") : "Match-limited duration";
+  }
+  function powerupStudioMarkup(overview) {
+    const powerups = Array.isArray(overview.powerups) ? overview.powerups : [];
+    if (!powerups.some(item => item.id === state.selectedPowerupId)) state.selectedPowerupId = powerups[0]?.id || "";
+    const selected = powerups.find(item => item.id === state.selectedPowerupId) || powerups[0] || null;
+    const modelUrl = selected ? powerupModelPaths[selected.id] || "" : "";
+    const cards = powerups.map(power => {
+      const active = power.id === selected?.id;
+      return "<button type='button' class='league-powerup-info-card" + (active ? " is-selected" : "") +
+        "' data-powerup-select='" + esc(power.id) + "' aria-pressed='" + active + "'>" +
+        "<span class='league-powerup-card-symbol' aria-hidden='true'>" + esc(power.symbol) + "</span>" +
+        "<strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p>" +
+        "<small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small>" +
+        "<span class='league-powerup-card-link'>View 3D preview <span aria-hidden='true'>↗</span></span></button>";
+    }).join("");
+    return "<section class='card league-powerup-info' id='league-powerup-preview-panel' aria-labelledby='league-powerup-heading'>" +
+      "<div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2 id='league-powerup-heading'>Match Power-Ups</h2>" +
+      "<p>Inspect every original 3D power-up before activating it. These temporary effects never multiply Creator League points or official class standings.</p></div></div>" +
+      "<div class='league-powerup-preview-layout'><div class='league-powerup-preview-copy'><span class='league-eyebrow'>ROTATABLE 3D PREVIEW</span>" +
+      "<h3 id='league-powerup-preview-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
+      "<p id='league-powerup-preview-description'>" + esc(selected?.description || "Select a Match Power-Up to inspect its original 3D model.") + "</p>" +
+      "<div class='league-powerup-preview-meta'><span id='league-powerup-preview-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
+      "<span id='league-powerup-preview-usage'>" + (selected?.usedToday ? "Used today" : "One free use per UTC day") + "</span></div>" +
+      "<p class='league-powerup-preview-status' id='league-powerup-preview-status' role='status' aria-live='polite'>The selected 3D model is loading. Drag to rotate and pinch or scroll to zoom.</p>" +
+      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose Preview from a live match to prepare an activation.</p>" +
+      "<button type='button' class='primary league-powerup-activate' id='league-powerup-activate' hidden disabled>Activate for this match</button></div>" +
+      "<div class='league-powerup-preview-stage' aria-label='Selected Match Power-Up 3D model'>" +
+      "<model-viewer id='league-powerup-selected-model' src='" + esc(modelUrl) + "' alt='" + esc(selected?.name || "Match Power-Up") + " original 3D model' camera-controls auto-rotate rotation-per-second='18deg' interaction-prompt='none' shadow-intensity='.85' exposure='1.12' loading='eager' reveal='auto'></model-viewer></div></div>" +
+      "<div class='league-powerup-info-grid' aria-label='Available Match Power-Ups'>" + cards + "</div></section>";
+  }
+  function updatePowerupPreview() {
+    const power = currentPowerup();
+    const model = $("#league-powerup-selected-model");
+    const title = $("#league-powerup-preview-title");
+    const description = $("#league-powerup-preview-description");
+    const duration = $("#league-powerup-preview-duration");
+    const usage = $("#league-powerup-preview-usage");
+    const status = $("#league-powerup-preview-status");
+    const availability = $("#league-powerup-availability");
+    const activate = $("#league-powerup-activate");
+    if (!power) return;
+    const source = powerupModelPaths[power.id] || "";
+    if (title) title.textContent = power.name;
+    if (description) description.textContent = power.description;
+    if (duration) duration.textContent = powerupDurationLabel(power);
+    if (usage) usage.textContent = power.usedToday ? "Used today" : "One free use per UTC day";
+    if (model && source) {
+      model.alt = power.name + " original Minglora 3D power-up model";
+      if (model.getAttribute("src") !== source) {
+        model.dataset.powerupId = power.id;
+        if (status) status.textContent = "Loading the original 3D model…";
+        model.setAttribute("src", source);
+      } else model.dataset.powerupId = power.id;
+    } else if (status) status.textContent = "A 3D model is not available for this power-up yet.";
+    const match = selectedPowerupMatch();
+    const reason = powerupRestriction(power, match);
+    if (activate) {
+      activate.hidden = !match;
+      activate.disabled = !match || Boolean(reason);
+      activate.textContent = reason || "Activate for this match";
+      activate.dataset.matchId = match?.id || "";
+      activate.dataset.powerupId = power.id;
+    }
+    if (availability) availability.textContent = match
+      ? (reason || "Ready to activate in the selected live match.")
+      : "Preview only. Choose Preview on one of your live matches to prepare an activation.";
+    document.querySelectorAll("[data-powerup-select]").forEach(button => {
+      const active = button.dataset.powerupSelect === power.id;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  }
+  async function activateSelectedPowerup(button) {
+    const power = currentPowerup();
+    const match = selectedPowerupMatch();
+    const reason = powerupRestriction(power, match);
+    const status = $("#league-powerup-availability");
+    if (reason) {
+      if (status) status.textContent = reason;
+      return;
+    }
+    button.disabled = true;
+    if (status) status.textContent = "Activating " + power.name + " for this match…";
+    try {
+      await request("/leagues/matches/" + encodeURIComponent(match.id) + "/powerups", {
+        method: "POST", body: JSON.stringify({ powerupId: power.id })
+      });
+      toast("Match power-up activated.");
+      await render();
+    } catch (error) {
+      if (status) status.textContent = error.message;
+      toast(error.message);
+      button.disabled = false;
+    }
+  }
   async function request(path, options = {}) {
     let response;
     try {
@@ -149,9 +272,9 @@
         const unavailableShield = power.id === "shield" &&
           (match.activeEffects || []).some(effect => effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now());
         const fixedTimer = power.id === "time_boost" && match.timerMode === "fixed";
-        const disabled = power.usedToday || unavailableShield || fixedTimer;
-        const reason = power.usedToday ? "Used today" : unavailableShield ? "Your Shield is already active" : fixedTimer ? "Fixed timer" : power.description;
-        return "<button type='button' class='league-powerup-btn' data-match-powerup='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' " + (disabled ? "disabled" : "") + " title='" + esc(reason) + "'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (power.usedToday ? "Used today" : unavailableShield ? "Active" : fixedTimer ? "Disabled" : "Use") + "</small></button>";
+        const restriction = power.usedToday ? "Used today" : unavailableShield ? "Shield active" : fixedTimer ? "Fixed timer" : "Preview before use";
+        return "<button type='button' class='league-powerup-btn' data-match-powerup-preview='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Preview " + esc(power.name) + " in 3D'>" +
+          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (restriction === "Preview before use" ? "Preview 3D" : "Preview · " + restriction) + "</small></button>";
       }).join("");
       controls = "<div class='league-powerup-grid'>" + powers + "</div>";
     } else if (match.status === "live" && !isParticipant) {
@@ -190,10 +313,11 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Daily standings are based on confirmed LIVE Gift coin value within your region and current class.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>How to move up</strong><p>Top 20% of an active class group earns one fragment. Four fragments promote you one class and award a League Shield.</p></div><div><strong>How protection works</strong><p>Bottom 20% loses one fragment. If no fragment remains, a League Shield protects one demotion; otherwise the class can drop one level.</p></div><div><strong>Daily activity</strong><p>Every enrolled creator in your region and class is ranked each day by confirmed LIVE Gift points. One Gift Coin of value equals one point; creators with no eligible Gifts score zero. At least two enrolled creators are required, not two Gift senders.</p></div></div></section>" +
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
+      powerupStudioMarkup(overview) +
       "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 5 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
       "<section class='card league-events-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
-      "<section class='league-powerup-info'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2>Match Power-Ups</h2><p>These temporary effects never multiply Creator League points or official class standings.</p></div></div><div class='league-powerup-info-grid'>" + overview.powerups.map(power=>"<article class='league-powerup-info-card'><span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p><small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small></article>").join("") + "</div></section>" +
+
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
   }
   function bindActions() {
@@ -227,11 +351,38 @@
       try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/support", {method:"POST",body:JSON.stringify({side:button.dataset.matchSupport})}); toast("Your match support was counted."); await render(); }
       catch(error) { toast(error.message); button.disabled = false; }
     }));
-    document.querySelectorAll("[data-match-powerup]").forEach(button => button.addEventListener("click", async () => {
-      button.disabled = true;
-      try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/powerups", {method:"POST",body:JSON.stringify({powerupId:button.dataset.matchPowerup})}); toast("Match power-up activated."); await render(); }
-      catch(error) { toast(error.message); button.disabled = false; }
+    document.querySelectorAll("[data-powerup-select]").forEach(button => {
+      if (button.dataset.previewSelectBound) return;
+      button.dataset.previewSelectBound = "true";
+      button.addEventListener("click", () => {
+        state.selectedPowerupId = button.dataset.powerupSelect || "";
+        state.selectedMatchId = "";
+        updatePowerupPreview();
+      });
+    });
+    document.querySelectorAll("[data-match-powerup-preview]").forEach(button => button.addEventListener("click", () => {
+      state.selectedPowerupId = button.dataset.matchPowerupPreview || "";
+      state.selectedMatchId = button.dataset.matchId || "";
+      updatePowerupPreview();
+      $("#league-powerup-preview-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
     }));
+    const powerupModel = $("#league-powerup-selected-model");
+    if (powerupModel && !powerupModel.dataset.previewEventsBound) {
+      powerupModel.dataset.previewEventsBound = "true";
+      powerupModel.addEventListener("load", () => {
+        if ($("#league-powerup-preview-status")) $("#league-powerup-preview-status").textContent = "3D preview ready. Drag to rotate and pinch or scroll to zoom.";
+      });
+      powerupModel.addEventListener("error", () => {
+        if ($("#league-powerup-preview-status")) $("#league-powerup-preview-status").textContent = "The 3D model could not load. Check your connection and try again; no flat icon is substituted.";
+      });
+    }
+    const activatePowerup = $("#league-powerup-activate");
+    if (activatePowerup && !activatePowerup.dataset.actionBound) {
+      activatePowerup.dataset.actionBound = "true";
+      activatePowerup.addEventListener("click", () => { void activateSelectedPowerup(activatePowerup); });
+    }
+    updatePowerupPreview();
+
     document.querySelectorAll("[data-league-profile]").forEach(button => button.addEventListener("click", () => {
       const userId = button.dataset.leagueProfile;
       if (userId) window.dispatchEvent(new CustomEvent("minglora:open-profile", { detail: { userId } }));
@@ -277,7 +428,10 @@
       state.lastUpdatedAt = new Date();
       state.refreshError = "";
       const scrollTop = main.scrollTop;
+      const persistentPreview = $("#league-powerup-preview-panel");
       main.innerHTML = renderMarkup(state.overview, state.sessions);
+      const replacementPreview = $("#league-powerup-preview-panel");
+      if (persistentPreview && replacementPreview) replacementPreview.replaceWith(persistentPreview);
       main.scrollTop = scrollTop;
       bindActions();
     } catch (error) {
