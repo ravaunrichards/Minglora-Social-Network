@@ -43,8 +43,20 @@ test('Existing settings sections are retained and assigned to one category witho
   assert.match(settings,/renderThemeChoices\('colorTheme', APP_THEMES/);
   assert.match(settings,/renderThemeChoices\('liveRoomTheme', LIVE_THEMES/);
   assert.match(settings,/settings-category-intro/);
-  assert.match(settings,/section\.hidden=section\.dataset\.settingsCategory!==category/);
+  assert.match(settings,/section\.hidden=section\.dataset\.settingsCategory!==activeSettingsCategory/);
   assert.match(settings,/FormData\(settingsForm\)/);
+  assert.match(settings,/settings-search-tools/);
+  assert.match(settings,/settings-overview-grid/);
+  assert.match(settings,/applySettingsSearch\(\)/);
+  assert.match(settings,/data-settings-jump/);
+  assert.match(settings,/name="messengerActiveStatus"/);
+  assert.match(settings,/name="messengerIncomingCallSounds"/);
+  assert.match(settings,/name="messengerMessageSounds"/);
+  assert.match(settings,/name="messengerAutoOpenNewMessages"/);
+  assert.match(settings,/messengerActiveStatus: formData\.has\('messengerActiveStatus'\)/);
+  assert.match(settings,/messengerAutoOpenNewMessages: formData\.has\('messengerAutoOpenNewMessages'\)/);
+  assert.match(server,/messengerActiveStatus/);
+  assert.match(server,/messengerAutoOpenNewMessages/);
 });
 
 test('Account settings reuse the existing server-backed Wallet and earnings view',()=>{

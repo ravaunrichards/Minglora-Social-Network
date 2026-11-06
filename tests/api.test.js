@@ -254,7 +254,11 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     body: JSON.stringify({
       privacy: { profileVisibility: 'friends', allowFriendRequests: false, messageAudience: 'friends' },
       notifications: { inApp: true, messages: false },
-      preferences: { theme: 'dark', feedSort: 'oldest', reducedMotion: true }
+      preferences: {
+        theme: 'dark', feedSort: 'oldest', reducedMotion: true,
+        messengerIncomingCallSounds: false, messengerMessageSounds: false,
+        messengerAutoOpenNewMessages: true, messengerActiveStatus: false
+      }
     })
   });
   assert.equal(savedSettings.status, 200, JSON.stringify(savedSettings.body));
@@ -263,6 +267,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const reloadedSettings = await request('/api/settings');
   assert.equal(reloadedSettings.body.settings.privacy.allowFriendRequests, false);
   assert.equal(reloadedSettings.body.settings.notifications.messages, false);
+  assert.equal(reloadedSettings.body.settings.preferences.messengerIncomingCallSounds, false);
+  assert.equal(reloadedSettings.body.settings.preferences.messengerMessageSounds, false);
+  assert.equal(reloadedSettings.body.settings.preferences.messengerAutoOpenNewMessages, true);
+  assert.equal(reloadedSettings.body.settings.preferences.messengerActiveStatus, false);
   assert.equal(reloadedSettings.body.settings.privacy.meetWaveAudience, 'everyone');
   const meetWavePrivacyUpdate = await request('/api/settings', {
     method: 'PATCH', body: JSON.stringify({ privacy: { meetWaveAudience: 'nobody' } })
@@ -274,6 +282,31 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
     method: 'PATCH', body: JSON.stringify({ privacy: { meetWaveAudience: 'anyone' } })
   });
   assert.equal(invalidMeetWavePrivacyUpdate.status, 400);
+
+  const messengerPreferencesUpdate = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      preferences: {
+        messengerActiveStatus: false,
+        messengerIncomingCallSounds: false,
+        messengerMessageSounds: false,
+        messengerAutoOpenNewMessages: true
+      }
+    })
+  });
+  assert.equal(messengerPreferencesUpdate.status, 200, JSON.stringify(messengerPreferencesUpdate.body));
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerActiveStatus, false);
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerIncomingCallSounds, false);
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerMessageSounds, false);
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerAutoOpenNewMessages, true);
+  const reloadedMessengerSettings = await request('/api/settings');
+  assert.equal(reloadedMessengerSettings.body.settings.preferences.messengerActiveStatus, false);
+  assert.equal(reloadedMessengerSettings.body.settings.preferences.messengerAutoOpenNewMessages, true);
+  const invalidMessengerPreference = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ preferences: { messengerActiveStatus: 'yes' } })
+  });
+  assert.equal(invalidMessengerPreference.status, 400);
 
   const firstAccountCookie = cookie;
   const privacyTestRegistration = await request('/api/auth/register', {
