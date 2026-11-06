@@ -2,7 +2,97 @@ const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','more','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications']);
+const MINGLORA_HISTORY_KEY='mingloraNavigation';
 let restoringSavedView=false;
+let restoringBrowserNavigation=false;
+function getBrowserNavigationSnapshot(){
+  return {
+    view:state.view,
+    feedScope:state.feedScope||'all',
+    profileId:state.profileTargetId||state.profile?.user?.id||'',
+    profileTab:state.profileTab||'posts',
+    activePage:state.activePage||'',
+    pageTab:state.pageTab||'posts',
+    pageDays:state.pageDays||30,
+    activeGroup:state.activeGroup||'',
+    activeConnections:state.activeConnections||null,
+    searchQuery:state.searchQuery||'',
+    creatorSection:state.creatorStudio?.section||state.restoreCreatorSection||'overview',
+    rechargeTab:state.rechargeTab||'recharge',
+    savedFilter:state.savedFilter||'all',
+    savedCollection:state.savedCollection||'all',
+    savedType:state.savedType||'all',
+    savedSort:state.savedSort||'saved-newest',
+    savedSearch:state.savedSearch||''
+  };
+}
+function withMingloraHistoryState(snapshot){
+  const existing=window.history.state&&typeof window.history.state==='object'?window.history.state:{};
+  return {...existing,[MINGLORA_HISTORY_KEY]:snapshot};
+}
+function recordBrowserNavigation({replace=false}={}){
+  if(!state.user||restoringBrowserNavigation)return;
+  const snapshot=getBrowserNavigationSnapshot();
+  const current=window.history.state?.[MINGLORA_HISTORY_KEY];
+  if(current&&JSON.stringify(current)===JSON.stringify(snapshot))return;
+  try{
+    const method=replace?'replaceState':'pushState';
+    window.history[method](withMingloraHistoryState(snapshot),'',window.location.href);
+  }catch(error){
+    console.warn('Minglora browser navigation history could not be updated:',error?.message||error);
+  }
+}
+function initializeBrowserNavigation(){
+  if(!state.user)return;
+  try{
+    window.history.replaceState(withMingloraHistoryState(getBrowserNavigationSnapshot()),'',window.location.href);
+  }catch(error){
+    console.warn('Minglora browser navigation could not be initialized:',error?.message||error);
+  }
+}
+async function restoreBrowserNavigation(event){
+  const saved=event?.state?.[MINGLORA_HISTORY_KEY];
+  if(!state.user||!saved||!RESTORABLE_VIEWS.has(saved.view))return;
+  if(saved.view==='profile'&&!saved.profileId)return;
+  if(saved.view==='page'&&!saved.activePage)return;
+  if(saved.view==='group'&&!saved.activeGroup)return;
+  if(saved.view==='connections'&&!saved.activeConnections?.profileId)return;
+  if(saved.view==='search'&&!saved.searchQuery)return;
+  restoringBrowserNavigation=true;
+  try{
+    state.view=saved.view;
+    state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
+    state.profileTargetId=String(saved.profileId||'');
+    state.profileTab=['posts','about','friends','photos','reels','more','gift-gallery'].includes(saved.profileTab)?saved.profileTab:'posts';
+    state.activePage=String(saved.activePage||'')||null;
+    state.pageTab=String(saved.pageTab||'posts');
+    state.pageDays=[7,30,90].includes(Number(saved.pageDays))?Number(saved.pageDays):30;
+    state.activeGroup=String(saved.activeGroup||'')||null;
+    state.activeConnections=saved.activeConnections||null;
+    state.searchQuery=String(saved.searchQuery||'');
+    state.restoreCreatorSection=String(saved.creatorSection||'overview');
+    state.rechargeTab=['recharge','earnings','exchange'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
+    state.savedFilter=String(saved.savedFilter||'all');
+    state.savedCollection=String(saved.savedCollection||'all');
+    state.savedType=String(saved.savedType||'all');
+    state.savedSort=String(saved.savedSort||'saved-newest');
+    state.savedSearch=String(saved.savedSearch||'');
+    syncNavigationActive();
+    syncMessageRefreshPolling();
+    await renderView();
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    persistCurrentView();
+    const position=event.state?.[MINGLORA_HISTORY_KEY+'Scroll'];
+    if(position&&Number.isFinite(Number(position.y)))window.scrollTo(Number(position.x)||0,Number(position.y)||0);
+  }catch(error){
+    console.warn('Minglora could not restore the previous browser screen:',error?.message||error);
+    setContent('<section class="card empty-state"><h3>Could not restore this page</h3><p>'+esc(error?.message||'Please try again.')+'</p><button class="primary" id="retry-view">Try again</button></section>');
+    $('#retry-view')?.addEventListener('click',()=>void renderView());
+  }finally{
+    restoringBrowserNavigation=false;
+  }
+}
+window.addEventListener('popstate',event=>{void restoreBrowserNavigation(event);});
 function lastViewStorageKey(){return LAST_VIEW_SESSION_PREFIX+String(state.user?.id||'');}
 function persistCurrentView(){
   if(!state.user||restoringSavedView)return;
@@ -13,6 +103,8 @@ function persistCurrentView(){
       profileId:state.profileTargetId||state.profile?.user?.id||'',
       profileTab:state.profileTab||'posts',
       activePage:state.activePage||'',
+      pageTab:state.pageTab||'posts',
+      pageDays:state.pageDays||30,
       activeGroup:state.activeGroup||'',
       activeConnections:state.activeConnections||null,
       searchQuery:state.searchQuery||'',
@@ -48,6 +140,8 @@ async function restoreLastView(){
   state.profileTab=['posts','about','friends','photos','reels','more','gift-gallery'].includes(saved.profileTab)?saved.profileTab:'posts';
   state.profileTargetId=String(saved.profileId||'');
   state.activePage=String(saved.activePage||'')||null;
+  state.pageTab=String(saved.pageTab||'posts');
+  state.pageDays=[7,30,90].includes(Number(saved.pageDays))?Number(saved.pageDays):30;
   state.activeGroup=String(saved.activeGroup||'')||null;
   state.activeConnections=saved.activeConnections||null;
   state.searchQuery=String(saved.searchQuery||'');
@@ -347,7 +441,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();return renderView();}
+function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
@@ -3628,6 +3722,7 @@ async function renderCreatorSection(section){
   s.section=section;
   state.restoreCreatorSection=section;
   persistCurrentView();
+  recordBrowserNavigation();
   let content="";
   if(section==="overview"){
     content=creatorOverviewMarkup();
@@ -4104,7 +4199,7 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();}
+function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();recordBrowserNavigation();}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
   activateSilent('groups');await loadGroups();
@@ -4126,7 +4221,7 @@ async function renderGroups(){
   document.querySelectorAll('[data-leave-group]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Leave this group?'))return;try{await api('/groups/'+btn.dataset.leaveGroup+'/join',{method:'DELETE',body:'{}'});toast('You left the group.');await renderGroups()}catch(e){toast(e.message)}}));
 }
 async function renderGroup(groupId){
-  activateSilent('group');state.activeGroup=groupId;persistCurrentView();
+  state.activeGroup=groupId;activateSilent('group');persistCurrentView();
   const data=await api('/groups/'+encodeURIComponent(groupId));
   const g=data.group;const isOwner=g.ownerId===state.user.id;
   let html='<section class="card group-detail-head"><button class="text-button" id="back-to-groups">← All groups</button><div class="group-icon">◉</div><h1>'+esc(g.name)+'</h1>'+(g.description?'<p>'+esc(g.description)+'</p>':'')+'<p class="muted">'+g.memberCount+' members · Created by '+esc(g.owner?.name||'account')+'</p><div class="group-members">'+(g.members||[]).slice(0,12).map(m=>'<span class="group-member" title="'+esc(m.name)+'">'+esc(m.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase())+'</span>').join('')+'</div>';
@@ -4838,6 +4933,8 @@ function renderProfile(data){
   setContent('<section class="card profile-header-card" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'')+'</div>'+(isMe?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info"><div class="profile-avatar-edit-wrap"><img class="avatar" data-view-image="'+esc(u.avatar||'')+'" data-image-label="'+esc(u.name)+' profile picture" src="'+avatar(u)+'" alt="">'+(profileThought?'<button type="button" class="ml-profile-thought-bubble" data-view-profile-thought-user="'+esc(u.id)+'" aria-label="Read '+esc(u.name)+'’s thought"><span>'+(profileThought.mood?esc(profileThought.mood)+' · ':'')+'</span>'+esc(String(profileThought.text||'').slice(0,76))+(String(profileThought.text||'').length>76?'…':'')+'</button>':(isMe?'<button type="button" class="ml-profile-thought-add" data-edit-profile-thought>Share a thought</button>':''))+(isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+gifterProfileBadge(u)+'</p>'+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+relationshipActions+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status" aria-label="Share a thought (Profile status)"><span aria-hidden="true">✎</span><span>Share a thought</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
+    persistCurrentView();
+    recordBrowserNavigation();
     document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&nextTab==='gift-gallery');button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
     const panel=$('#profile-tab-panel');if(!panel)return;
     panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
@@ -5821,7 +5918,10 @@ function pageFollowersMarkup(followers){
   return '<section class="card page-followers-card"><p class="page-eyebrow">COMMUNITY</p><h2>Followers</h2><p class="muted">People who chose to follow this Page.</p><div class="page-followers-list">'+(rows||'<p class="muted">This Page does not have followers yet.</p>')+'</div></section>';
 }
 async function renderPage(pageId,requestedTab='posts',days=30){
-  activateSilent('page');state.activePage=pageId;
+  state.activePage=pageId;
+  state.pageTab=String(requestedTab||'posts');
+  state.pageDays=[7,30,90].includes(Number(days))?Number(days):30;
+  activateSilent('page');
   const data=await api('/pages/'+encodeURIComponent(pageId));
   const page=data.page,posts=Array.isArray(data.posts)?data.posts:[];
   const canPublish=['owner','admin','editor'].includes(page.myRole);
@@ -7251,7 +7351,7 @@ async function markNotificationInCenter(id){
   if(item){item.read=true;item.readAt=new Date().toISOString();}
 }
 async function renderNotifications(){
-  state.view='notifications';syncNavigationActive();persistCurrentView();
+  state.view='notifications';syncNavigationActive();persistCurrentView();recordBrowserNavigation();
   const response=await api('/notifications');
   state.notifications=Array.isArray(response.notifications)?response.notifications:[];
   const notifications=state.notifications;
@@ -7485,7 +7585,7 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
@@ -7527,7 +7627,7 @@ function bindNavigation(){
 }
 async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><img class="avatar" src="${avatar(p)}" alt=""><div class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></div><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
 async function enterMingloraApp(user,showWelcome=false){
-  state.user=user;showApp();bindNavigation();
+  state.user=user;showApp();bindNavigation();initializeBrowserNavigation();
   const params=new URLSearchParams(window.location.search);
   const isCreatorHubAdmin=String(user?.id||'')==='5b998c21-86b5-4621-ab37-e0808a2657b1'&&String(user?.email||'').trim().toLowerCase()==='creatorhubcreatornetwork@gmail.com'&&user?.platformRole==='platform_owner';
   if(isCreatorHubAdmin&&params.get('mfa-setup')==='required'){
