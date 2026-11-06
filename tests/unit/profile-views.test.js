@@ -103,7 +103,9 @@ test('profile viewer history is opt-in, reciprocal and managed in notification s
   assert.match(server, /recordedView\.historyEligible=true/);
   assert.match(server, /p==='\/api\/profile-views'/);
   assert.match(server, /windowDays:30/);
-  assert.match(server, /n\.type==='profile_view'\?prefs\.profileViews/);
+  assert.match(server, /function notificationPreferenceKey/);
+  assert.match(server, /if\(type==='profile_view'\)return 'profileViews'/);
+  assert.match(server, /notificationTypeEnabled\(prefs,n\.type\)/);
   assert.match(app, /data-profile-view-actor/);
   assert.match(app, /minglora:open-profile/);
   assert.match(css, /\.settings-profile-viewer-list/);
