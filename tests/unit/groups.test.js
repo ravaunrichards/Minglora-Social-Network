@@ -79,6 +79,7 @@ test('a banned member has no active role and cannot use active-member permission
   assert.equal(getGroupRole(banned, 'former'), null);
   assert.equal(canPublishGroupPost(banned, 'former'), false);
   assert.equal(canModerateGroup(banned, 'former'), false);
+  assert.equal(canRequestGroupMembership(banned, 'former'), false);
 });
 test('administrator and moderator role boundaries are enforced', () => {
   assert.equal(canAssignGroupRole(group, 'admin', 'moderator'), true);
