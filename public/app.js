@@ -3890,52 +3890,158 @@ async function finishPaypalCoinReturn(){
 
 function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
-async function renderGroups(){
-  activateSilent('groups');await loadGroups();
-  let html='<div class="page-heading"><h1>Groups</h1><button class="primary" id="create-group">＋ Create group</button></div><section class="card welcome"><h1>Find your people</h1><p>Join communities around your interests or start your own.</p></section>';
-  if(state.groups.length){
-    html+='<div class="groups-grid">'+state.groups.map(g=>{
-      const owner=g.ownerId===state.user.id;
-      let action='';
-      if(!g.isMember)action='<button class="primary full" data-join-group="'+esc(g.id)+'">Join group</button>';
-      else if(!owner)action='<button class="secondary full" data-leave-group="'+esc(g.id)+'">Leave group</button>';
-      return '<article class="card group-card"><div class="group-icon">◉</div><h3>'+esc(g.name)+'</h3>'+(g.description?'<p>'+esc(g.description)+'</p>':'')+'<small>'+(g.memberCount??(g.members||[]).length)+' members · Created by '+esc(g.owner?.name||'account')+'</small><div class="group-card-actions"><button class="secondary full" data-open-group="'+esc(g.id)+'">Open group</button>'+action+'</div></article>';
-    }).join('')+'</div>';
+async function renderGroups(scope='discover', query=''){
+  activateSilent('groups');
+  state.groupScope=scope;
+  state.groupSearch=query;
+  const [groupResult, inviteResult]=await Promise.allSettled([
+    api('/groups?scope='+encodeURIComponent(scope==='mine'?'mine':'discover')+'&q='+encodeURIComponent(query)),
+    api('/group-invitations')
+  ]);
+  state.groups=groupResult.status==='fulfilled'?groupResult.value.groups||[]:[];
+  const invitations=inviteResult.status==='fulfilled'?inviteResult.value.invitations||[]:[];
+  const count=state.groups.length;
+  let html='<div class="page-heading"><div><h1>Groups</h1><p class="muted">Discover communities, build connections around shared interests, and manage the groups you belong to.</p></div><button class="primary" id="create-group">＋ Create group</button></div>';
+  html+='<section class="card groups-hub-intro"><div><span class="groups-kicker">MINGLORA COMMUNITIES</span><h2>Find your people</h2><p>Explore real communities or create a space for your own.</p></div><div class="groups-hub-symbol" aria-hidden="true">✦</div></section>';
+  html+='<nav class="groups-hub-tabs" aria-label="Groups sections"><button type="button" data-group-scope="discover" class="'+(scope==='discover'?'active':'')+'">Discover</button><button type="button" data-group-scope="mine" class="'+(scope==='mine'?'active':'')+'">My groups</button><button type="button" data-group-scope="invitations" class="'+(scope==='invitations'?'active':'')+'">Invitations'+(invitations.length?' <span>'+invitations.length+'</span>':'')+'</button></nav>';
+  if(scope==='invitations'){
+    html+='<section class="card"><div class="section-heading"><div><h2>Group invitations</h2><p class="muted">Invitations sent to your Minglora account.</p></div></div>';
+    if(invitations.length){
+      html+='<div class="groups-invitation-list">'+invitations.map(invite=>'<article class="group-invitation-row"><div class="group-icon">✉</div><div class="group-invitation-copy"><strong>'+esc(invite.group?.name||'Group invitation')+'</strong><small>Invited by '+esc(invite.inviter?.name||'a Minglora member')+'</small></div><div class="group-invitation-actions"><button class="primary" data-accept-invite="'+esc(invite.id)+'" data-invite-group="'+esc(invite.groupId)+'">Accept</button><button class="secondary" data-decline-invite="'+esc(invite.id)+'" data-invite-group="'+esc(invite.groupId)+'">Decline</button></div></article>').join('')+'</div>';
+    }else html+='<div class="empty-state"><h3>No pending invitations</h3><p>Group invitations sent to you will appear here.</p></div>';
+    html+='</section>';
   }else{
-    html+='<section class="card empty-state"><h3>No groups have been created yet</h3><p>Start a group and invite people to join. Groups will appear here after someone creates one.</p></section>';
-  }
-  setContent(html);$('#create-group').onclick=()=>openGroupModal();
-  document.querySelectorAll('[data-open-group]').forEach(btn=>btn.addEventListener('click',()=>renderGroup(btn.dataset.openGroup)));
-  document.querySelectorAll('[data-join-group]').forEach(btn=>btn.addEventListener('click',async()=>{try{await api('/groups/'+btn.dataset.joinGroup+'/join',{method:'POST',body:'{}'});toast('You joined the group.');await renderGroups()}catch(e){toast(e.message)}}));
-  document.querySelectorAll('[data-leave-group]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Leave this group?'))return;try{await api('/groups/'+btn.dataset.leaveGroup+'/join',{method:'DELETE',body:'{}'});toast('You left the group.');await renderGroups()}catch(e){toast(e.message)}}));
-}
-async function renderGroup(groupId){
-  activateSilent('group');state.activeGroup=groupId;
-  const data=await api('/groups/'+encodeURIComponent(groupId));
-  const g=data.group;const isOwner=g.ownerId===state.user.id;
-  let html='<section class="card group-detail-head"><button class="text-button" id="back-to-groups">← All groups</button><div class="group-icon">◉</div><h1>'+esc(g.name)+'</h1>'+(g.description?'<p>'+esc(g.description)+'</p>':'')+'<p class="muted">'+g.memberCount+' members · Created by '+esc(g.owner?.name||'account')+'</p><div class="group-members">'+(g.members||[]).slice(0,12).map(m=>'<span class="group-member" title="'+esc(m.name)+'">'+esc(m.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase())+'</span>').join('')+'</div>';
-  if(g.isMember&&!isOwner)html+='<button class="secondary" id="leave-current-group">Leave group</button>';
-  if(!g.isMember)html+='<button class="primary" id="join-current-group">Join group</button>';
-  if(!isOwner)html+='<button class="secondary" id="report-group">Report group</button>';
-  html+='</section>';
-  if(g.isMember){
-    html+='<section class="card group-post-composer"><h2>Group discussion</h2><form id="group-post-form"><label for="group-post-text">Share with this group</label><textarea id="group-post-text" name="text" maxlength="5000" placeholder="Write a group post..."></textarea><div class="field"><label>Photos and MP4 videos (up to 250 MB each)</label><div id="group-post-media-picker"></div></div><div class="group-form-actions"><small class="muted">Visible to group members and group visitors.</small><button class="primary" type="submit">Publish</button></div></form></section>';
-  }
-  if(data.posts.length){
-    html+='<div class="group-post-list">'+data.posts.map(p=>'<article class="card group-post"><div class="post-head"><img class="avatar" src="'+avatar(p.author)+'" alt=""><div class="post-author"><strong>'+esc(p.author?.name||'Unknown account')+'</strong><small>'+timeAgo(p.createdAt)+'</small></div>'+(p.userId===state.user.id||isOwner?'<button class="post-menu" aria-label="Delete group post" data-delete-group-post="'+esc(p.id)+'">···</button>':'<button class="post-menu" aria-label="Report group post" data-report-group-post="'+esc(p.id)+'">⚑</button>')+'</div>'+(p.text?'<div class="post-text">'+esc(p.text)+'</div>':'')+renderPostMedia(p)+'</article>').join('')+'</div>';
-  }else{
-    html+='<section class="card empty-state"><h3>No group posts yet</h3><p>Be the first member to start a discussion.</p></section>';
+    const categories=['All categories','Business','Education','Entertainment','Gaming','Health & Fitness','Local Community','Music','Technology','Sports','Travel','Art & Design','Food'];
+    html+='<section class="card groups-filter-panel"><form id="groups-search-form" class="groups-search-form"><label class="sr-only" for="groups-search-input">Search groups</label><input id="groups-search-input" name="q" type="search" maxlength="100" placeholder="Search by group name, topic or interest" value="'+esc(query)+'"><button class="primary" type="submit">Search</button></form><div class="groups-filter-bottom"><label for="groups-category">Category</label><select id="groups-category">'+categories.map(category=>'<option value="'+esc(category==='All categories'?'':category)+'">'+esc(category)+'</option>').join('')+'</select><span class="muted">'+count+' '+(count===1?'group':'groups')+' found</span></div></section>';
+    html+='<section class="groups-results-section"><div class="section-heading"><div><h2>'+(scope==='mine'?'Your groups':'Explore groups')+'</h2><p class="muted">'+(scope==='mine'?'Groups you own or have joined.':'Discover public and visible private communities.')+'</p></div></div>';
+    if(count){
+      html+='<div class="groups-grid">'+state.groups.map(g=>{
+        const owner=g.ownerId===state.user.id, privacy=g.visibility==='hidden'?'Private · hidden':g.visibility==='private'?'Private · visible':'Public';
+        let action='';
+        if(g.isMember&&!owner)action='<button class="secondary full" data-leave-group="'+esc(g.id)+'">Leave group</button>';
+        else if(!g.isMember&&g.hasPendingRequest)action='<button class="secondary full" disabled>Request pending</button>';
+        else if(!g.isMember)action='<button class="primary full" data-join-group="'+esc(g.id)+'">'+(g.visibility==='private'?'Request to join':'Join group')+'</button>';
+        return '<article class="card group-card"><div class="group-card-top"><div class="group-icon">◉</div><span class="group-privacy">'+esc(privacy)+'</span></div><h3>'+esc(g.name)+'</h3>'+(g.description?'<p>'+esc(g.description)+'</p>':'<p class="muted">A Minglora community.</p>')+'<div class="group-card-meta"><span>'+Number(g.memberCount||0).toLocaleString()+' members</span><span>'+esc(g.category||'Community')+'</span></div><small>Created by '+esc(g.owner?.name||'Minglora member')+(g.role?' · '+esc(g.role.replace('_',' ')):'')+'</small><div class="group-card-actions"><button class="secondary full" data-open-group="'+esc(g.id)+'">View group</button>'+action+'</div></article>';
+      }).join('')+'</div>';
+    }else html+='<section class="card empty-state"><h3>'+(scope==='mine'?'You have not joined any groups yet':'No matching groups found')+'</h3><p>'+(scope==='mine'?'Discover a community or create your own.':'Try another search or category. New groups appear here when members create them.')+'</p></section>';
+    html+='</section>';
   }
   setContent(html);
-  const groupMediaPicker=$('#group-post-media-picker')?createMediaPicker($('#group-post-media-picker'),{slot:'group',maxFiles:10}):null;
-  $('#back-to-groups')?.addEventListener('click',()=>renderGroups());
-  $('#report-group')?.addEventListener('click',()=>openReportComposer('group',groupId));
-  $('#join-current-group')?.addEventListener('click',async()=>{try{await api('/groups/'+groupId+'/join',{method:'POST',body:'{}'});toast('You joined the group.');await renderGroup(groupId)}catch(e){toast(e.message)}});
-  $('#leave-current-group')?.addEventListener('click',async()=>{if(!window.confirm('Leave this group?'))return;try{await api('/groups/'+groupId+'/join',{method:'DELETE',body:'{}'});toast('You left the group.');await renderGroup(groupId)}catch(e){toast(e.message)}});
-  $('#group-post-form')?.addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button[type="submit"]');button.disabled=true;try{const values=new FormData(e.currentTarget),mediaIds=groupMediaPicker?await groupMediaPicker.upload():[];await api('/groups/'+groupId+'/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});groupMediaPicker?.destroy();toast('Group post published.');await renderGroup(groupId)}catch(err){toast(err.message);button.disabled=false;}});
-  document.querySelectorAll('[data-report-group-post]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('post',btn.dataset.reportGroupPost)));
-  document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
+  $('#create-group')?.addEventListener('click',()=>openGroupModal());
+  document.querySelectorAll('[data-group-scope]').forEach(button=>button.addEventListener('click',()=>renderGroups(button.dataset.groupScope)));
+  $('#groups-search-form')?.addEventListener('submit',event=>{event.preventDefault();renderGroups(state.groupScope||'discover',$('#groups-search-input')?.value.trim()||'');});
+  $('#groups-category')?.addEventListener('change',event=>{
+    const category=event.target.value;
+    const cards=state.groups.filter(g=>!category||String(g.category||'').toLowerCase()===category.toLowerCase());
+    const grid=document.querySelector('.groups-grid');
+    if(grid)grid.innerHTML=cards.map(g=>'<article class="card group-card"><div class="group-card-top"><div class="group-icon">◉</div><span class="group-privacy">'+esc(g.visibility==='public'?'Public':g.visibility==='private'?'Private · visible':'Private · hidden')+'</span></div><h3>'+esc(g.name)+'</h3><p>'+esc(g.description||'A Minglora community.')+'</p><div class="group-card-meta"><span>'+Number(g.memberCount||0).toLocaleString()+' members</span><span>'+esc(g.category||'Community')+'</span></div><button class="secondary full" data-open-group="'+esc(g.id)+'">View group</button></article>').join('');
+    document.querySelectorAll('[data-open-group]').forEach(btn=>btn.addEventListener('click',()=>renderGroup(btn.dataset.openGroup)));
+  });
+  document.querySelectorAll('[data-open-group]').forEach(btn=>btn.addEventListener('click',()=>renderGroup(btn.dataset.openGroup)));
+  document.querySelectorAll('[data-join-group]').forEach(btn=>btn.addEventListener('click',async()=>{
+    btn.disabled=true;
+    try{const result=await api('/groups/'+encodeURIComponent(btn.dataset.joinGroup)+'/join',{method:'POST',body:'{}'});toast(result.requested?'Your request was sent.':'You joined the group.');await renderGroups(state.groupScope||'discover',state.groupSearch||'');}
+    catch(error){toast(error.message);btn.disabled=false;}
+  }));
+  document.querySelectorAll('[data-leave-group]').forEach(btn=>btn.addEventListener('click',async()=>{
+    if(!window.confirm('Leave this group?'))return;
+    try{await api('/groups/'+encodeURIComponent(btn.dataset.leaveGroup)+'/join',{method:'DELETE',body:'{}'});toast('You left the group.');await renderGroups(state.groupScope||'mine',state.groupSearch||'');}
+    catch(error){toast(error.message);}
+  }));
+  document.querySelectorAll('[data-accept-invite],[data-decline-invite]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const action=btn.hasAttribute('data-accept-invite')?'accept':'decline';
+    try{await api('/groups/'+encodeURIComponent(btn.dataset.inviteGroup)+'/invitations/'+encodeURIComponent(btn.dataset.acceptInvite||btn.dataset.declineInvite)+'/respond',{method:'POST',body:JSON.stringify({action})});toast(action==='accept'?'Invitation accepted.':'Invitation declined.');await renderGroups('invitations');}
+    catch(error){toast(error.message);}
+  }));
 }
+
+async function renderGroup(groupId,tab='discussion'){
+  activateSilent('group');state.activeGroup=groupId;state.activeGroupTab=tab;
+  const data=await api('/groups/'+encodeURIComponent(groupId));
+  const g=data.group,isOwner=g.ownerId===state.user.id,isMember=!!g.isMember;
+  const role=g.role||'visitor',staff=['owner','admin','moderator'].includes(role);
+  const canEvents=['owner','admin','moderator','event_manager'].includes(role);
+  const results=await Promise.allSettled([
+    api('/groups/'+encodeURIComponent(groupId)+'/events'),
+    api('/groups/'+encodeURIComponent(groupId)+'/announcements'),
+    staff?api('/groups/'+encodeURIComponent(groupId)+'/requests'):Promise.resolve({requests:[]}),
+    staff?api('/groups/'+encodeURIComponent(groupId)+'/pending-posts'):Promise.resolve({posts:[]}),
+    staff?api('/groups/'+encodeURIComponent(groupId)+'/analytics'):Promise.resolve(null)
+  ]);
+  const events=results[0].status==='fulfilled'?results[0].value.events||[]:[];
+  const announcements=results[1].status==='fulfilled'?results[1].value.announcements||[]:[];
+  const requests=results[2].status==='fulfilled'?results[2].value.requests||[]:[];
+  const pendingPosts=results[3].status==='fulfilled'?results[3].value.posts||[]:[];
+  const analytics=results[4].status==='fulfilled'?results[4].value:null;
+  const memberList=g.members||[];
+  let html='<section class="card group-detail-head"><button class="text-button" id="back-to-groups">← All groups</button><div class="group-detail-banner"><div class="group-icon">◉</div><div><div class="group-detail-label">'+esc(g.category||'Minglora community')+' · '+esc(g.visibility==='public'?'Public':g.visibility==='private'?'Private group':'Hidden group')+'</div><h1>'+esc(g.name)+'</h1><p class="muted">'+esc(g.description||'A community on Minglora.')+'</p></div></div><div class="group-detail-meta"><span>'+Number(g.memberCount||0).toLocaleString()+' members</span><span>Created by '+esc(g.owner?.name||'Minglora member')+'</span>'+(isMember?'<span class="group-role-pill">'+esc(role.replace('_',' '))+'</span>':'')+'</div><div class="group-detail-actions">';
+  if(isMember&&!isOwner)html+='<button class="secondary" id="leave-current-group">Leave group</button>';
+  if(!isMember&&g.hasPendingRequest)html+='<button class="secondary" disabled>Membership request pending</button>';
+  else if(!isMember)html+='<button class="primary" id="join-current-group">'+(g.visibility==='private'?'Request to join':'Join group')+'</button>';
+  if(!isOwner)html+='<button class="secondary" id="report-group">Report group</button>';
+  html+='</div></section>';
+  const tabs=[['discussion','Discussion'],['about','About'],['members','Members'],['events','Events']];
+  if(isMember)tabs.push(['media','Media']);
+  if(staff)tabs.push(['manage','Manage']);
+  html+='<nav class="group-detail-tabs" aria-label="Group sections">'+tabs.map(item=>'<button type="button" data-group-tab="'+item[0]+'" class="'+(tab===item[0]?'active':'')+'">'+item[1]+'</button>').join('')+'</nav>';
+  if(tab==='about'){
+    html+='<section class="card group-about-grid"><div><h2>About this group</h2><p>'+esc(g.description||'The group has not added a description yet.')+'</p><dl><dt>Category</dt><dd>'+esc(g.category||'Not specified')+'</dd><dt>Privacy</dt><dd>'+esc(g.visibility==='public'?'Public group':g.visibility==='private'?'Private and visible':'Private and hidden')+'</dd><dt>Membership</dt><dd>'+esc(g.joinApproval?'Administrator approval required':'Members can join directly')+'</dd><dt>Posting</dt><dd>'+esc(g.postApproval?'Posts require approval':'Member posts are published directly')+'</dd></dl></div><div><h2>Community topics</h2><div class="group-topic-list">'+((g.topics||[]).map(topic=>'<span>'+esc(topic)+'</span>').join('')||'<p class="muted">No topics added yet.</p>')+'</div><h2>Community rules</h2><p class="muted">Group rules and moderation actions are managed by this community’s administrators.</p></div></section>';
+  }else if(tab==='members'){
+    html+='<section class="card"><div class="section-heading"><div><h2>Members</h2><p class="muted">'+(isMember?'Member directory for this group.':'Join this group to see its member directory.')+'</p></div></div>';
+    if(isMember&&memberList.length){
+      html+='<div class="group-member-list">'+memberList.map(member=>{
+        const memberRole=member.groupRole||'member',canChange=['owner','admin'].includes(role)&&member.id!==g.ownerId;
+        return '<article class="group-member-row"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="group-member-info"><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+' · '+esc(memberRole.replace('_',' '))+'</small></div><button class="secondary" data-view-group-member="'+esc(member.id)+'">View profile</button>'+(canChange?'<label class="sr-only" for="role-'+esc(member.id)+'">Role for '+esc(member.name||'member')+'</label><select id="role-'+esc(member.id)+'" data-member-role="'+esc(member.id)+'"><option value="member" '+(memberRole==='member'?'selected':'')+'>Member</option><option value="event_manager" '+(memberRole==='event_manager'?'selected':'')+'>Event manager</option><option value="content_manager" '+(memberRole==='content_manager'?'selected':'')+'>Content manager</option><option value="moderator" '+(memberRole==='moderator'?'selected':'')+'>Moderator</option></select><button class="secondary" data-save-member-role="'+esc(member.id)+'">Save role</button>':'')+(staff&&member.id!==g.ownerId?'<button class="text-button" data-remove-group-member="'+esc(member.id)+'">Remove</button>':'')+'</article>';
+      }).join('')+'</div>';
+    }else html+='<div class="empty-state"><h3>Member directory unavailable</h3><p>'+(isMember?'No members to display yet.':'Join the group to access the member directory.')+'</p></div>';
+    html+='</section>';
+  }else if(tab==='events'){
+    html+='<section class="card"><div class="section-heading"><div><h2>Group events</h2><p class="muted">Activities scheduled by this community.</p></div></div>';
+    if(events.length)html+='<div class="group-event-list">'+events.map(event=>'<article class="group-event-row"><div class="group-event-date">'+esc(new Date(event.startsAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}))+'</div><div><strong>'+esc(event.title)+'</strong><p>'+esc(event.description||'')+'</p><small>'+esc(new Date(event.startsAt).toLocaleString())+(event.timeZone?' · '+esc(event.timeZone):'')+'</small></div></article>').join('')+'</div>';
+    else html+='<div class="empty-state"><h3>No upcoming events</h3><p>When this group schedules an event, it will appear here.</p></div>';
+    if(canEvents)html+='<form class="group-inline-form" id="group-event-form"><h3>Create an event</h3><div class="field"><label for="group-event-title">Event name</label><input id="group-event-title" name="title" required minlength="3" maxlength="160"></div><div class="field"><label for="group-event-description">Description</label><textarea id="group-event-description" name="description" maxlength="2000"></textarea></div><div class="field"><label for="group-event-start">Starts</label><input id="group-event-start" name="startsAt" type="datetime-local" required></div><div class="field"><label for="group-event-end">Ends (optional)</label><input id="group-event-end" name="endsAt" type="datetime-local"></div><button class="primary" type="submit">Create event</button></form>';
+    html+='</section>';
+  }else if(tab==='manage'&&staff){
+    html+='<section class="groups-manage-grid">';
+    html+='<section class="card"><h2>Group settings</h2><form id="group-settings-form" class="group-inline-form"><div class="field"><label for="manage-group-name">Group name</label><input id="manage-group-name" name="name" value="'+esc(g.name)+'" minlength="3" maxlength="80" required></div><div class="field"><label for="manage-group-description">Description</label><textarea id="manage-group-description" name="description" maxlength="500">'+esc(g.description||'')+'</textarea></div><div class="field"><label for="manage-group-category">Category</label><input id="manage-group-category" name="category" value="'+esc(g.category||'')+'" maxlength="80"></div><div class="field"><label for="manage-group-visibility">Privacy</label><select id="manage-group-visibility" name="visibility"><option value="public" '+(g.visibility==='public'?'selected':'')+'>Public</option><option value="private" '+(g.visibility==='private'?'selected':'')+'>Private · visible</option><option value="hidden" '+(g.visibility==='hidden'?'selected':'')+'>Private · hidden</option></select></div><label class="group-check"><input type="checkbox" name="joinApproval" '+(g.joinApproval?'checked':'')+'> Require approval for join requests</label><label class="group-check"><input type="checkbox" name="postApproval" '+(g.postApproval?'checked':'')+'> Approve posts before publication</label><label class="group-check"><input type="checkbox" name="allowMemberInvites" '+(g.allowMemberInvites!==false?'checked':'')+'> Allow members to invite people</label><button class="primary" type="submit">Save group settings</button></form></section>';
+    html+='<section class="card"><h2>Membership requests</h2>';
+    if(requests.length)html+=requests.map(request=>'<div class="group-request-row"><div><strong>'+esc(request.user?.name||'Minglora member')+'</strong><small>Requested '+timeAgo(request.createdAt)+'</small></div><button class="primary" data-review-request="'+esc(request.id)+'" data-review-action="approve">Approve</button><button class="secondary" data-review-request="'+esc(request.id)+'" data-review-action="decline">Decline</button></div>').join('');
+    else html+='<p class="muted">No pending membership requests.</p>';
+    html+='<h2>Pending posts</h2>';
+    if(pendingPosts.length)html+=pendingPosts.map(post=>'<div class="group-request-row"><div><strong>'+esc(post.author?.name||'Member post')+'</strong><small>'+timeAgo(post.createdAt)+'</small><p>'+esc(post.text||'Media post')+'</p></div><button class="primary" data-review-post="'+esc(post.id)+'" data-review-action="approve">Approve</button><button class="secondary" data-review-post="'+esc(post.id)+'" data-review-action="reject">Reject</button></div>').join('');
+    else html+='<p class="muted">No posts waiting for approval.</p>';
+    html+='<h2>Announcements</h2><form class="group-inline-form" id="group-announcement-form"><div class="field"><label for="group-announcement-title">Title</label><input id="group-announcement-title" name="title" maxlength="140" required minlength="3"></div><div class="field"><label for="group-announcement-body">Message</label><textarea id="group-announcement-body" name="body" maxlength="3000" required></textarea></div><button class="primary" type="submit">Publish announcement</button></form>';
+    if(analytics)html+='<h2>Last 30 days</h2><div class="group-analytics-grid"><div><strong>'+Number(analytics.newMembers||0).toLocaleString()+'</strong><small>New members</small></div><div><strong>'+Number(analytics.departures||0).toLocaleString()+'</strong><small>Departures</small></div><div><strong>'+Number(analytics.posts||0).toLocaleString()+'</strong><small>Posts</small></div><div><strong>'+Number(analytics.pendingRequests||0).toLocaleString()+'</strong><small>Pending requests</small></div></div>';
+    html+='</section></section>';
+  }else{
+    if(announcements.length){
+      html+='<section class="group-announcements">'+announcements.map(item=>'<article class="card group-announcement"><span>ANNOUNCEMENT</span><h3>'+esc(item.title)+'</h3><p>'+esc(item.body)+'</p><small>'+timeAgo(item.createdAt)+'</small></article>').join('')+'</section>';
+    }
+    if(isMember)html+='<section class="card group-post-composer"><h2>Group discussion</h2><form id="group-post-form"><label for="group-post-text">Share with this group</label><textarea id="group-post-text" name="text" maxlength="5000" placeholder="Write a group post..."></textarea><div class="field"><label>Photos and MP4 videos (up to 250 MB each)</label><div id="group-post-media-picker"></div></div><div class="group-form-actions"><small class="muted">'+(g.postApproval?'Posts are reviewed by group moderators before publication.':'Visible to group members and group visitors for public groups.')+'</small><button class="primary" type="submit">Publish</button></div></form></section>';
+    else if(data.restricted)html+='<section class="card empty-state"><h3>Private group</h3><p>Join this group or receive an invitation to access discussions, posts and its member directory.</p></section>';
+    if(data.posts.length)html+='<div class="group-post-list">'+data.posts.map(post=>'<article class="card group-post"><div class="post-head"><img class="avatar" src="'+avatar(post.author)+'" alt=""><div class="post-author"><strong>'+esc(post.author?.name||'Unknown account')+'</strong><small>'+timeAgo(post.createdAt)+'</small></div>'+(post.userId===state.user.id||staff?'<button class="post-menu" aria-label="Delete group post" data-delete-group-post="'+esc(post.id)+'">···</button>':'<button class="post-menu" aria-label="Report group post" data-report-group-post="'+esc(post.id)+'">⚑</button>')+'</div>'+(post.text?'<div class="post-text">'+esc(post.text)+'</div>':'')+renderPostMedia(post)+'</article>').join('')+'</div>';
+    else if(!data.restricted)html+='<section class="card empty-state"><h3>No group posts yet</h3><p>Be the first member to start a discussion.</p></section>';
+  }
+  setContent(html);
+  document.querySelectorAll('[data-group-tab]').forEach(button=>button.addEventListener('click',()=>renderGroup(groupId,button.dataset.groupTab)));
+  $('#back-to-groups')?.addEventListener('click',()=>renderGroups('discover'));
+  $('#report-group')?.addEventListener('click',()=>openReportComposer('group',groupId));
+  $('#join-current-group')?.addEventListener('click',async()=>{try{const result=await api('/groups/'+encodeURIComponent(groupId)+'/join',{method:'POST',body:'{}'});toast(result.requested?'Membership request sent.':'You joined the group.');await renderGroup(groupId)}catch(error){toast(error.message)}});
+  $('#leave-current-group')?.addEventListener('click',async()=>{if(!window.confirm('Leave this group?'))return;try{await api('/groups/'+encodeURIComponent(groupId)+'/join',{method:'DELETE',body:'{}'});toast('You left the group.');await renderGroups('mine')}catch(error){toast(error.message)}});
+  const groupMediaPicker=$('#group-post-media-picker')?createMediaPicker($('#group-post-media-picker'),{slot:'group',maxFiles:10}):null;
+  $('#group-post-form')?.addEventListener('submit',async event=>{event.preventDefault();const button=event.currentTarget.querySelector('button[type="submit"]');button.disabled=true;try{const values=new FormData(event.currentTarget),mediaIds=groupMediaPicker?await groupMediaPicker.upload():[];await api('/groups/'+encodeURIComponent(groupId)+'/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});groupMediaPicker?.destroy();toast(g.postApproval?'Post submitted for review.':'Group post published.');await renderGroup(groupId)}catch(error){toast(error.message);button.disabled=false;}});
+  document.querySelectorAll('[data-report-group-post]').forEach(button=>button.addEventListener('click',()=>openReportComposer('post',button.dataset.reportGroupPost)));
+  document.querySelectorAll('[data-delete-group-post]').forEach(button=>button.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+encodeURIComponent(groupId)+'/posts/'+encodeURIComponent(button.dataset.deleteGroupPost),{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(error){toast(error.message)}}));
+  document.querySelectorAll('[data-view-group-member]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.viewGroupMember)));
+  document.querySelectorAll('[data-save-member-role]').forEach(button=>button.addEventListener('click',async()=>{const memberId=button.dataset.saveMemberRole,role=document.querySelector('[data-member-role="'+memberId+'"]')?.value;try{await api('/groups/'+encodeURIComponent(groupId)+'/members/'+encodeURIComponent(memberId)+'/role',{method:'PATCH',body:JSON.stringify({role})});toast('Member role updated.');await renderGroup(groupId,'members')}catch(error){toast(error.message)}}));
+  document.querySelectorAll('[data-remove-group-member]').forEach(button=>button.addEventListener('click',async()=>{if(!window.confirm('Remove this member from the group?'))return;try{await api('/groups/'+encodeURIComponent(groupId)+'/members/'+encodeURIComponent(button.dataset.removeGroupMember),{method:'DELETE',body:JSON.stringify({reason:'Removed by group moderator'})});toast('Member removed.');await renderGroup(groupId,'members')}catch(error){toast(error.message)}}));
+  document.querySelectorAll('[data-review-request]').forEach(button=>button.addEventListener('click',async()=>{try{await api('/groups/'+encodeURIComponent(groupId)+'/requests/'+encodeURIComponent(button.dataset.reviewRequest),{method:'POST',body:JSON.stringify({action:button.dataset.reviewAction})});toast('Membership request updated.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}}));
+  document.querySelectorAll('[data-review-post]').forEach(button=>button.addEventListener('click',async()=>{try{await api('/groups/'+encodeURIComponent(groupId)+'/posts/'+encodeURIComponent(button.dataset.reviewPost)+'/approval',{method:'POST',body:JSON.stringify({action:button.dataset.reviewAction})});toast('Post review saved.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}}));
+  $('#group-settings-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const values=new FormData(form);const body={name:values.get('name'),description:values.get('description'),category:values.get('category'),visibility:values.get('visibility'),joinApproval:form.elements.joinApproval.checked,postApproval:form.elements.postApproval.checked,allowMemberInvites:form.elements.allowMemberInvites.checked};try{await api('/groups/'+encodeURIComponent(groupId),{method:'PATCH',body:JSON.stringify(body)});toast('Group settings saved.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}});
+  $('#group-announcement-form')?.addEventListener('submit',async event=>{event.preventDefault();const values=new FormData(event.currentTarget);try{await api('/groups/'+encodeURIComponent(groupId)+'/announcements',{method:'POST',body:JSON.stringify({title:values.get('title'),body:values.get('body')})});toast('Announcement published.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}});
+  $('#group-event-form')?.addEventListener('submit',async event=>{event.preventDefault();const values=new FormData(event.currentTarget);try{await api('/groups/'+encodeURIComponent(groupId)+'/events',{method:'POST',body:JSON.stringify({title:values.get('title'),description:values.get('description'),startsAt:new Date(values.get('startsAt')).toISOString(),endsAt:values.get('endsAt')?new Date(values.get('endsAt')).toISOString():null,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})});toast('Group event created.');await renderGroup(groupId,'events')}catch(error){toast(error.message)}});
+}
+
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
 async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profile?.user?.id!==id)state.profileTab='posts';try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
