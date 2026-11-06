@@ -3865,6 +3865,13 @@ async function route(req, res) {
           return json(res,400,{error:error.message||'Gift Gallery settings could not be saved.'});
         }
       }
+      m=p.match(/^\/api\/users\/([^/]+)\/creator-league$/);
+      if(method==='GET'&&m){
+        const target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const leagueUser=safeUser(target,user.id);
+        return json(res,200,{creatorLeague:leagueUser?.creatorLeague||null});
+      }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
