@@ -7,13 +7,14 @@ import { dirname, resolve } from 'node:path';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFile(resolve(root, path), 'utf8');
 
-const [migration, runtime, app, gifts, html, worker] = await Promise.all([
+const [migration, runtime, app, gifts, html, worker, server] = await Promise.all([
   read('supabase/migrations/20261105205451_minglora_creator_gift_balance_summary.sql'),
   read('supabase/functions/minglora-runtime-state/index.ts'),
   read('public/app.js'),
   read('public/gifts.js'),
   read('public/index.html'),
-  read('public/sw.js')
+  read('public/sw.js'),
+  read('src/server.js')
 ]);
 
 test('creator gift summary includes all received gifts and separates Coin funding sources', () => {
@@ -55,4 +56,26 @@ test('gift send confirmation explains why ordinary promotional Coins do not crea
 test('the app bundle and service-worker cache are refreshed for the gift balance interface', () => {
   assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
   assert.match(worker, /minglora-shell-v93-flow-layout-safety-1-single-username-verification-1-creator-gift-balance-1/);
+});
+
+test('creator earnings are private to the signed-in creator and do not disclose Minglora share fields', () => {
+  const start = runtime.indexOf('if (action === "economy_creator_earnings")');
+  const end = runtime.indexOf('if (action === "economy_exchange_creator_earnings")', start);
+  assert.ok(start >= 0 && end > start, 'creator earnings action must exist');
+  const creatorEarningsAction = runtime.slice(start, end);
+  assert.match(creatorEarningsAction, /\.eq\("creator_id", creatorId\)/);
+  assert.match(creatorEarningsAction, /creator_share_minor/);
+  assert.doesNotMatch(creatorEarningsAction, /platform_share_minor|platformSharePercent/);
+
+  const routeStart = server.indexOf("if(method==='GET'&&p==='/api/creator/earnings')");
+  const routeEnd = server.indexOf("if(method==='GET'&&p==='/api/creator/payout-account')", routeStart);
+  assert.ok(routeStart >= 0 && routeEnd > routeStart, 'creator earnings route must exist');
+  const earningsRoute = server.slice(routeStart, routeEnd);
+  assert.match(earningsRoute, /creatorId:user\.id/);
+
+  const apiStart = server.indexOf("if (p.startsWith('/api/'))");
+  const authGuard = server.indexOf('requireAuth(user);', apiStart);
+  assert.ok(apiStart >= 0 && authGuard > apiStart && authGuard < routeStart,
+    'creator earnings must remain behind the signed-in API guard');
+  assert.match(migration, /WHERE t\.receiver_id=p_creator_id/);
 });
