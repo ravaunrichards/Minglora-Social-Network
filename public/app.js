@@ -217,7 +217,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261106-advanced-notifications-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     await registration.update().catch(()=>{});
     if(!state.user)return;
@@ -238,7 +238,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.register('/sw.js?v=20261106-advanced-notifications-1',{scope:'/',updateViaCache:'none'})
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
@@ -6261,6 +6261,7 @@ async function markNotificationInCenter(id){
   if(item){item.read=true;item.readAt=new Date().toISOString();}
 }
 async function renderNotifications(){
+  state.view='notifications';syncNavigationActive();
   const response=await api('/notifications');
   state.notifications=Array.isArray(response.notifications)?response.notifications:[];
   const notifications=state.notifications;
@@ -6407,6 +6408,7 @@ async function pollBrowserNotifications(){
   void updateMessengerBadge();
   try{
     const items=(await api('/notifications')).notifications||[];
+    paintNotificationBadge(items);
     if(!browserNotificationPrimed){
       browserNotificationSeen=new Set(items.map(item=>item.id));
       browserNotificationPrimed=true;
@@ -6420,7 +6422,7 @@ async function pollBrowserNotifications(){
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
       }
     }
-    $('#notification-dot')?.classList.toggle('hidden',!items.some(item=>!item.read));
+    if(fresh.length&&state.view==='notifications')void renderNotifications();
   }catch{}
 }
 function startBrowserNotificationPolling(){
@@ -6429,7 +6431,15 @@ function startBrowserNotificationPolling(){
   pollBrowserNotifications();
   browserNotificationTimer=setInterval(pollBrowserNotifications,6000);
 }
-async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));void updateMessengerBadge();}catch{}}
+function paintNotificationBadge(items){
+  const unread=(items||[]).filter(item=>!item.read).length;
+  const dot=$('#notification-dot');
+  if(dot)dot.classList.add('hidden');
+  const badge=$('#notification-unread-count');
+  if(badge){badge.textContent=unread>99?'99+':String(unread);badge.classList.toggle('hidden',unread===0);}
+  $('#notifications-btn')?.setAttribute('aria-label',unread?'Notifications, '+unread+' unread':'Notifications');
+}
+async function updateNotificationDot(){try{const result=await api('/notifications');paintNotificationBadge(result.notifications||[]);void updateMessengerBadge();}catch{}}
 async function renderSearch(q){
   activateSilent('search');
   const data=await api('/search?q='+encodeURIComponent(q));
