@@ -5768,7 +5768,7 @@ function syncMessageRefreshPolling(){
   if(enabled&&(!messageRefreshTimer||messageRefreshIntervalMs!==interval)){
     if(messageRefreshTimer)clearInterval(messageRefreshTimer);
     messageRefreshIntervalMs=interval;
-    messageRefreshTimer=setInterval(refreshMessageConversations,interval);
+    messageRefreshTimer=interval===5000?setInterval(refreshMessageConversations,5000):setInterval(refreshMessageConversations,30000);
   }
   if(!enabled&&messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;messageRefreshIntervalMs=0;}
 }
