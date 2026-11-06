@@ -14,6 +14,7 @@ This document describes the Groups implementation on `feat/minglora-advanced-gro
 - Group events with Going / Interested responses.
 - Member-only group chat with author and moderator message removal.
 - In-app notifications for invitations, membership requests and decisions, member joins, moderation actions, announcements, events, comments, and post reactions. Notification actions link back to the group or invitation view.
+- An independent Groups notification preference is available under Settings & privacy → Activity → Notifications, and also in the account-backed Creator Studio settings.
 
 ## Roles
 
