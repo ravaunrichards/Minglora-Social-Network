@@ -6453,12 +6453,14 @@ async function openMingloraCall(call,liveKit){
 async function renderNotifications(){
   state.notifications=(await api('/notifications')).notifications;
   const rows=state.notifications.map(n=>{
-    const icon=n.type==='message'?'▤':n.type==='profile_view'?'◉':n.type==='friend'?'♧':n.type==='call'?'📞':n.type==='live'?'🔴':n.type==='reaction'?'♡':'♢';
+    const icon=n.type==='message'?'▤':n.type==='profile_view'?'◉':n.type==='friend'?'♧':n.type==='call'?'📞':n.type==='live'?'🔴':n.type==='reaction'?'♡':String(n.type||'').startsWith('group_')?'♧':'♢';
     let actions='';
     if(n.type==='call'&&n.callId)actions='<div class="notice-actions"><button class="primary" type="button" data-answer-call="'+esc(n.callId)+'">Answer</button><button class="secondary" type="button" data-decline-call="'+esc(n.callId)+'">Decline</button></div>';
     else if(n.type==='live'&&n.liveSessionId)actions='<div class="notice-actions"><button class="primary" type="button" data-watch-notified-live="'+esc(n.liveSessionId)+'">Watch LIVE</button></div>';
     else if(n.type==='message'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-message-actor="'+esc(n.actor.id)+'">Open message</button></div>';
     else if(n.type==='profile_view'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-profile-view-actor="'+esc(n.actor.id)+'">View profile</button></div>';
+    else if(n.type==='group_invite')actions='<div class="notice-actions"><button class="secondary" type="button" data-view-group-invitations>View invitation</button></div>';
+    else if(n.groupId&&['group_request','group_member','group_announcement','group_event','group_comment','group_reaction','group_request_update'].includes(n.type))actions='<div class="notice-actions"><button class="secondary" type="button" data-open-notified-group="'+esc(n.groupId)+'" data-notified-group-tab="'+(n.type==='group_event'?'events':n.type==='group_request'?'manage':n.type==='group_member'?'members':'discussion')+'">Open group</button></div>';
     return '<article class="notice-item '+(n.read?'':'unread')+'"><div class="notice-icon">'+icon+'</div><div class="notice-content"><p>'+esc(n.text)+'</p><small>'+timeAgo(n.createdAt)+'</small>'+actions+'</div></article>';
   }).join('');
   setContent('<div class="page-heading"><div><h1>Notifications</h1><p class="muted">Receive LIVE, call and message alerts, including when Minglora is in the background.</p></div><div class="notice-actions"><button class="secondary" id="enable-browser-alerts">Enable device push</button><button class="text-button" id="mark-read">Mark all read</button></div></div><section class="card">'+(rows||'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>')+'</section>');
@@ -6467,6 +6469,8 @@ async function renderNotifications(){
   document.querySelectorAll('[data-decline-call]').forEach(button=>button.onclick=()=>declineMingloraCall(button.dataset.declineCall));
   document.querySelectorAll('[data-message-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.messageActor);if(item?.actor)openMessageWindow(item.actor);});
   document.querySelectorAll('[data-profile-view-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.profileViewActor);if(item?.actor)openProfile(item.actor.id);});
+  document.querySelectorAll('[data-open-notified-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openNotifiedGroup,button.dataset.notifiedGroupTab||'discussion')));
+  document.querySelectorAll('[data-view-group-invitations]').forEach(button=>button.addEventListener('click',()=>renderGroups('invitations')));
   document.querySelectorAll('[data-watch-notified-live]').forEach(button=>button.onclick=async()=>{
     try{const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.watchNotifiedLive);if(!session){toast('This LIVE session has ended.');return;}await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');}
     catch(error){toast(error.message);}
