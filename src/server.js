@@ -16,7 +16,7 @@ import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
-import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
+import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup, canViewGroup, canDiscoverGroup, canRequestGroupMembership, canModerateGroup, canManageGroupSettings, canManageGroupEvents, canAssignGroupRole, getGroupRole } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
@@ -3989,49 +3989,329 @@ async function route(req, res) {
         const list=[...new Set(followed.filter(targetId=>(db.follows||[]).some(edge=>edge.followerId===targetId&&edge.followedId===user.id)&&!blockedBetween(user.id,targetId)))].map(targetId=>safeUser(db.users.find(u=>u.id===targetId),user.id)).filter(Boolean);
         return json(res,200,{friends:list,incoming:[]});
       }
-      if(method==='GET'&&p==='/api/groups')return json(res,200,{groups:db.groups.map(g=>({...g,owner:safeUser(db.users.find(u=>u.id===g.ownerId)),memberCount:g.members.length,isMember:g.members.includes(user.id)}))});
+      db.groups ||= [];
+      db.groupMembershipRequests ||= [];
+      db.groupInvitations ||= [];
+      db.groupModerationActions ||= [];
+      db.groupAuditLogs ||= [];
+      db.groupAnnouncements ||= [];
+      db.groupEvents ||= [];
+      const recordGroupAudit=(group,action,targetType=null,targetId=null,details={})=>{
+        db.groupAuditLogs.unshift({id:uid(),groupId:group.id,actorId:user.id,action,targetType,targetId,details,createdAt:now()});
+        if(db.groupAuditLogs.length>5000)db.groupAuditLogs.length=5000;
+      };
+      const ensureGroupRoles=group=>{
+        group.members ||= [];
+        group.memberships ||= [];
+        if(group.ownerId&&!group.members.includes(group.ownerId))group.members.unshift(group.ownerId);
+        if(group.ownerId&&!group.memberships.some(item=>item.userId===group.ownerId)){
+          group.memberships.push({userId:group.ownerId,role:'owner',status:'active',joinedAt:group.createdAt||now()});
+        }
+        for(const id of group.members){
+          if(!group.memberships.some(item=>item.userId===id&&item.status==='active')){
+            group.memberships.push({userId:id,role:'member',status:'active',joinedAt:group.createdAt||now()});
+          }
+        }
+        return group;
+      };
+      const setGroupMembership=(group,targetId,role='member',status='active')=>{
+        ensureGroupRoles(group);
+        let record=group.memberships.find(item=>item.userId===targetId);
+        if(!record){record={userId:targetId,role,status,joinedAt:now()};group.memberships.push(record);}
+        record.role=role;record.status=status;record.updatedAt=now();
+        if(status==='active'&&!group.members.includes(targetId))group.members.push(targetId);
+        if(status!=='active')group.members=group.members.filter(id=>id!==targetId);
+        return record;
+      };
+      const safeGroupSummary=(group)=>{
+        ensureGroupRoles(group);
+        const role=getGroupRole(group,user.id);
+        return {
+          id:group.id,name:group.name,description:group.description||'',category:group.category||'',
+          topics:Array.isArray(group.topics)?group.topics:[],visibility:group.visibility||'public',
+          discoverable:group.discoverable!==false,status:group.status||'active',
+          ownerId:group.ownerId,owner:safeUser(db.users.find(u=>u.id===group.ownerId),user.id),
+          memberCount:group.members.length,isMember:!!role,role,
+          hasPendingRequest:db.groupMembershipRequests.some(r=>r.groupId===group.id&&r.userId===user.id&&r.status==='pending'),
+          createdAt:group.createdAt,updatedAt:group.updatedAt||group.createdAt
+        };
+      };
+      if(method==='GET'&&p==='/api/groups'){
+        const query=String(url.searchParams.get('q')||'').trim().toLowerCase();
+        const category=String(url.searchParams.get('category')||'').trim().toLowerCase();
+        const scope=String(url.searchParams.get('scope')||'discover');
+        const groups=db.groups.filter(group=>{
+          ensureGroupRoles(group);
+          const member=!!getGroupRole(group,user.id);
+          if(scope==='mine'&&!member)return false;
+          if(!member&&!canDiscoverGroup(group))return false;
+          if(query&&!((group.name+' '+(group.description||'')+' '+(group.category||'')+' '+(group.topics||[]).join(' ')).toLowerCase().includes(query)))return false;
+          if(category&&String(group.category||'').toLowerCase()!==category)return false;
+          return group.status!=='deleted'&&group.status!=='archived';
+        }).map(safeGroupSummary);
+        return json(res,200,{groups});
+      }
       if(method==='POST'&&p==='/api/groups'){
         const name=String(input.name||'').trim(),description=String(input.description||'').trim();
+        const visibility=String(input.visibility||'public');
+        const category=String(input.category||'').trim().slice(0,80);
+        const topics=Array.isArray(input.topics)?[...new Set(input.topics.map(x=>String(x).trim().slice(0,40)).filter(Boolean))].slice(0,12):String(input.topics||'').split(',').map(x=>x.trim().slice(0,40)).filter(Boolean).slice(0,12);
         if(name.length<3||name.length>80||description.length>500)return json(res,400,{error:'Group name must be 3–80 characters; description max 500.'});
-        const g={id:uid(),name,description,ownerId:user.id,members:[user.id],createdAt:now()};db.groups.unshift(g);await saveStore();return json(res,201,{group:g});
+        if(!['public','private','hidden'].includes(visibility))return json(res,400,{error:'Choose public, private-visible or private-hidden privacy.'});
+        const g={id:uid(),name,description,category,topics,visibility,discoverable:visibility!=='hidden'&&input.discoverable!==false,joinApproval:input.joinApproval===true||input.joinApproval==='true'||visibility!=='public',postApproval:input.postApproval===true||input.postApproval==='true',allowMemberInvites:input.allowMemberInvites!==false&&input.allowMemberInvites!=='false',status:'active',ownerId:user.id,members:[user.id],memberships:[{userId:user.id,role:'owner',status:'active',joinedAt:now()}],createdAt:now(),updatedAt:now()};
+        db.groups.unshift(g);recordGroupAudit(g,'group_created','group',g.id,{visibility,category});await saveStore();
+        return json(res,201,{group:safeGroupSummary(g)});
+      }
+      if(method==='GET'&&p==='/api/group-invitations'){
+        const invitations=db.groupInvitations.filter(invite=>invite.inviteeId===user.id&&invite.status==='pending').map(invite=>({...invite,group:(db.groups.find(g=>g.id===invite.groupId)?{id:db.groups.find(g=>g.id===invite.groupId).id,name:db.groups.find(g=>g.id===invite.groupId).name}:null),inviter:safeUser(db.users.find(u=>u.id===invite.inviterId),user.id)}));
+        return json(res,200,{invitations});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts$/);
       if(method==='POST'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        ensureGroupRoles(group);
         if(!canPublishGroupPost(group,user.id))return json(res,403,{error:'Join this group before posting.'});
+        if(group.postApproval&& !canModerateGroup(group,user.id))return json(res,403,{error:'This group requires an administrator to approve posts.'});
         const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='group'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected group media files are unavailable.'});
-        const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now()};
+        const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,status:group.postApproval?'pending':'published',createdAt:now(),updatedAt:now()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        db.groupPosts.push(post);await saveStore();return json(res,201,{post:await publicGroupPost(post)});
+        db.groupPosts.push(post);recordGroupAudit(group,'group_post_created','post',post.id);await saveStore();return json(res,201,{post:await publicGroupPost(post)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
-        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         const post=(db.groupPosts||[]).find(x=>x.groupId===group.id&&x.id===m[2]);
         if(!post)return json(res,404,{error:'Group post not found.'});
-        if(!canDeleteGroupPost(group,post,user.id))return json(res,403,{error:'Only the post author or group owner can delete this post.'});
-        db.groupPosts=db.groupPosts.filter(x=>x.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});await saveStore();return json(res,200,{ok:true,id:post.id});
+        if(!canDeleteGroupPost(group,post,user.id))return json(res,403,{error:'Only the post author or an authorized group moderator can delete this post.'});
+        db.groupPosts=db.groupPosts.filter(x=>x.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});recordGroupAudit(group,'group_post_deleted','post',post.id);await saveStore();return json(res,200,{ok:true,id:post.id});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/join$/);
       if(method==='POST'&&m){
-        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        if(!group.members.includes(user.id))group.members.push(user.id);await saveStore();return json(res,200,{group:{...group,isMember:true}});
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(group.status!=='active')return json(res,409,{error:'This group is not accepting members.'});
+        if(getGroupRole(group,user.id))return json(res,200,{group:safeGroupSummary(group),joined:true});
+        const invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===user.id&&item.status==='pending');
+        if(group.visibility==='hidden'&&!invitation)return json(res,404,{error:'This group is invitation-only.'});
+        if(!['public','private'].includes(group.visibility)||group.discoverable===false&&!invitation)return json(res,404,{error:'This group is not accepting public membership requests.'});
+        if((group.joinApproval===true||(group.visibility==='private'&&group.joinApproval!==false))&&!invitation){
+          let request=db.groupMembershipRequests.find(item=>item.groupId===group.id&&item.userId===user.id&&item.status==='pending');
+          if(!request){request={id:uid(),groupId:group.id,userId:user.id,status:'pending',createdAt:now()};db.groupMembershipRequests.unshift(request);recordGroupAudit(group,'membership_requested','member',user.id);}
+          await saveStore();return json(res,202,{requested:true,message:'Your request was sent to the group administrators.'});
+        }
+        setGroupMembership(group,user.id,'member','active');
+        if(invitation)invitation.status='accepted',invitation.respondedAt=now();
+        recordGroupAudit(group,'member_joined','member',user.id);await saveStore();
+        return json(res,200,{group:safeGroupSummary(group),joined:true});
       }
       if(method==='DELETE'&&m){
-        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        if(!canLeaveGroup(group,user.id))return json(res,409,{error:'The group owner cannot leave without transferring ownership or deleting the group.'});
-        group.members=group.members.filter(id=>id!==user.id);await saveStore();return json(res,200,{left:!group.members.includes(user.id)});
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canLeaveGroup(group,user.id))return json(res,409,{error:'The group owner cannot leave without transferring ownership.'});
+        setGroupMembership(group,user.id,'member','left');recordGroupAudit(group,'member_left','member',user.id);await saveStore();return json(res,200,{left:true});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/pending-posts$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review pending posts.'});
+        const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='pending').sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(post=>publicGroupPost(post)));
+        return json(res,200,{posts});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/approval$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review pending posts.'});
+        const post=(db.groupPosts||[]).find(item=>item.groupId===group.id&&item.id===m[2]&&item.status==='pending');
+        if(!post)return json(res,404,{error:'Pending group post not found.'});
+        const action=String(input.action||'');
+        if(!['approve','reject'].includes(action))return json(res,400,{error:'Choose approve or reject.'});
+        post.status=action==='approve'?'published':'hidden';post.reviewedBy=user.id;post.reviewedAt=now();post.updatedAt=now();
+        recordGroupAudit(group,'group_post_'+post.status,'post',post.id);await saveStore();
+        return json(res,200,{post:await publicGroupPost(post)});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/requests$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review membership requests.'});
+        const requests=db.groupMembershipRequests.filter(item=>item.groupId===group.id&&item.status==='pending').map(item=>({...item,user:safeUser(db.users.find(u=>u.id===item.userId),user.id)}));
+        return json(res,200,{requests});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/requests\/([^/]+)$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review membership requests.'});
+        const request=db.groupMembershipRequests.find(item=>item.id===m[2]&&item.groupId===group.id&&item.status==='pending');
+        if(!request)return json(res,404,{error:'Membership request not found.'});
+        const action=String(input.action||'');
+        if(!['approve','decline'].includes(action))return json(res,400,{error:'Choose approve or decline.'});
+        request.status=action==='approve'?'approved':'declined';request.reviewedBy=user.id;request.reviewedAt=now();
+        if(action==='approve')setGroupMembership(group,request.userId,'member','active');
+        recordGroupAudit(group,'membership_'+request.status,'member',request.userId);await saveStore();
+        return json(res,200,{request});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/invitations$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const role=getGroupRole(group,user.id);
+        if(!role||(!canManageGroupSettings(group,user.id)&&group.allowMemberInvites===false))return json(res,403,{error:'You do not have permission to invite members.'});
+        const inviteeId=String(input.inviteeId||'');
+        if(!inviteeId||inviteeId===user.id||!db.users.some(u=>u.id===inviteeId))return json(res,400,{error:'Choose a valid Minglora member to invite.'});
+        if(blockedBetween(user.id,inviteeId))return json(res,403,{error:'This invitation cannot be sent.'});
+        if(getGroupRole(group,inviteeId))return json(res,409,{error:'This member already belongs to the group.'});
+        let invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===inviteeId&&item.status==='pending');
+        if(!invitation){invitation={id:uid(),groupId:group.id,inviterId:user.id,inviteeId,status:'pending',createdAt:now()};db.groupInvitations.unshift(invitation);}
+        recordGroupAudit(group,'member_invited','member',inviteeId);await saveStore();return json(res,201,{invitation});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/invitations\/([^/]+)\/respond$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const invitation=db.groupInvitations.find(item=>item.id===m[2]&&item.groupId===group.id&&item.inviteeId===user.id&&item.status==='pending');
+        if(!invitation)return json(res,404,{error:'Invitation not found.'});
+        const action=String(input.action||'');
+        if(!['accept','decline'].includes(action))return json(res,400,{error:'Choose accept or decline.'});
+        invitation.status=action==='accept'?'accepted':'declined';invitation.respondedAt=now();
+        if(action==='accept')setGroupMembership(group,user.id,'member','active');
+        recordGroupAudit(group,'invitation_'+invitation.status,'member',user.id);await saveStore();
+        return json(res,200,{invitation,joined:action==='accept'});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canManageGroupSettings(group,user.id))return json(res,403,{error:'Only the group owner or an administrator can change group settings.'});
+        const allowed=['name','description','category','visibility','discoverable','joinApproval','postApproval','allowMemberInvites'];
+        for(const key of allowed){if(input[key]===undefined)continue;const value=input[key];
+          if(key==='name'){const v=String(value).trim();if(v.length<3||v.length>80)return json(res,400,{error:'Group name must be 3–80 characters.'});group.name=v;}
+          else if(key==='description'){const v=String(value).trim();if(v.length>500)return json(res,400,{error:'Description must be 500 characters or less.'});group.description=v;}
+          else if(key==='category')group.category=String(value).trim().slice(0,80);
+          else if(key==='visibility'){if(!['public','private','hidden'].includes(value))return json(res,400,{error:'Invalid group privacy.'});group.visibility=value;group.discoverable=value!=='hidden';}
+          else if(['discoverable','joinApproval','postApproval','allowMemberInvites'].includes(key)){if(typeof value!=='boolean')return json(res,400,{error:key+' must be true or false.'});group[key]=value;}
+        }
+        group.updatedAt=now();recordGroupAudit(group,'group_settings_updated','group',group.id,{fields:Object.keys(input).filter(k=>allowed.includes(k))});await saveStore();
+        return json(res,200,{group:safeGroupSummary(group)});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/members\/([^/]+)\/role$/);
+      if(method==='PATCH'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const targetId=m[2],role=String(input.role||'');
+        if(!group.members.includes(targetId))return json(res,404,{error:'Active group member not found.'});
+        if(!canAssignGroupRole(group,user.id,role))return json(res,403,{error:'You cannot assign this role.'});
+        const targetRole=getGroupRole(group,targetId);
+        if(getGroupRole(group,user.id)==='admin'&&['owner','admin'].includes(targetRole))return json(res,403,{error:'Administrators cannot change another administrator or owner.'});
+        if(targetRole==='owner'||role==='owner')return json(res,403,{error:'Ownership transfer requires the dedicated ownership transfer workflow.'});
+        setGroupMembership(group,targetId,role,'active');recordGroupAudit(group,'member_role_changed','member',targetId,{role});await saveStore();return json(res,200,{memberId:targetId,role});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/members\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const targetId=m[2],targetRole=getGroupRole(group,targetId);
+        if(!targetRole)return json(res,404,{error:'Active group member not found.'});
+        if(!canModerateGroup(group,user.id)||targetId===group.ownerId)return json(res,403,{error:'You cannot remove this member.'});
+        if(getGroupRole(group,user.id)==='moderator'&&['admin','moderator'].includes(targetRole))return json(res,403,{error:'Moderators cannot remove another moderator or administrator.'});
+        setGroupMembership(group,targetId,'member',input.ban===true?'banned':'left');
+        db.groupModerationActions.unshift({id:uid(),groupId:group.id,actorId:user.id,targetUserId:targetId,action:input.ban===true?'ban':'remove',reason:String(input.reason||'').slice(0,500),createdAt:now()});
+        recordGroupAudit(group,input.ban===true?'member_banned':'member_removed','member',targetId);await saveStore();return json(res,200,{removed:true,banned:input.ban===true});
+      }
+      db.groupMessages ||= [];
+      m=p.match(/^\/api\/groups\/([^/]+)\/messages$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!getGroupRole(group,user.id))return json(res,403,{error:'Join this group to access its group chat.'});
+        const messages=await Promise.all(db.groupMessages.filter(item=>item.groupId===group.id&&!item.deletedAt).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100).map(async item=>({...item,author:safeUser(db.users.find(member=>member.id===item.senderId),user.id)})));
+        return json(res,200,{messages});
+      }
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!getGroupRole(group,user.id))return json(res,403,{error:'Join this group to send messages.'});
+        const body=String(input.body||'').trim();
+        if(body.length<1||body.length>5000)return json(res,400,{error:'Group messages must contain 1–5000 characters.'});
+        const message={id:uid(),groupId:group.id,senderId:user.id,body,createdAt:now()};
+        db.groupMessages.push(message);recordGroupAudit(group,'group_message_sent','message',message.id);
+        if(db.groupMessages.length>50000)db.groupMessages.splice(0,db.groupMessages.length-50000);
+        await saveStore();return json(res,201,{message:{...message,author:safeUser(user)}});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/messages\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const message=db.groupMessages.find(item=>item.id===m[2]&&item.groupId===group.id&&!item.deletedAt);
+        if(!message)return json(res,404,{error:'Group message not found.'});
+        if(message.senderId!==user.id&&!canModerateGroup(group,user.id))return json(res,403,{error:'Only the sender or an authorized group moderator can remove this message.'});
+        message.deletedAt=now();message.deletedBy=user.id;recordGroupAudit(group,'group_message_removed','message',message.id);await saveStore();
+        return json(res,200,{ok:true,id:message.id});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/events$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canViewGroup(group,user.id)||(!getGroupRole(group,user.id)&&group.visibility!=='public'))return json(res,404,{error:'Group events are private.'});
+        const events=db.groupEvents.filter(event=>event.groupId===group.id).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)).map(event=>({...event,rsvpCounts:{going:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='going').length,interested:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='interested').length},myResponse:db.groupEventRsvps.find(r=>r.eventId===event.id&&r.userId===user.id)?.response||null}));
+        return json(res,200,{events});
+      }
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canManageGroupEvents(group,user.id))return json(res,403,{error:'You do not have permission to manage group events.'});
+        const title=String(input.title||'').trim(),startsAt=Date.parse(input.startsAt),endsAt=input.endsAt?Date.parse(input.endsAt):null;
+        if(title.length<3||title.length>160||!Number.isFinite(startsAt)||(endsAt!==null&&(!Number.isFinite(endsAt)||endsAt<startsAt)))return json(res,400,{error:'Provide an event title and valid start/end times.'});
+        const event={id:uid(),groupId:group.id,creatorId:user.id,title,description:String(input.description||'').trim().slice(0,2000),startsAt:new Date(startsAt).toISOString(),endsAt:endsAt?new Date(endsAt).toISOString():null,timeZone:String(input.timeZone||'UTC').slice(0,80),status:'scheduled',createdAt:now()};
+        db.groupEvents.unshift(event);recordGroupAudit(group,'group_event_created','event',event.id);await saveStore();return json(res,201,{event});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/announcements$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!getGroupRole(group,user.id)&&group.visibility!=='public')return json(res,404,{error:'Group announcements are private.'});
+        return json(res,200,{announcements:db.groupAnnouncements.filter(item=>item.groupId===group.id&&item.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))});
+      }
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only moderators can publish group announcements.'});
+        const title=String(input.title||'').trim(),body=String(input.body||'').trim();
+        if(title.length<3||title.length>140||body.length<1||body.length>3000)return json(res,400,{error:'Announcement title or message is invalid.'});
+        const announcement={id:uid(),groupId:group.id,authorId:user.id,title,body,status:'published',createdAt:now()};
+        db.groupAnnouncements.unshift(announcement);recordGroupAudit(group,'announcement_created','announcement',announcement.id);await saveStore();return json(res,201,{announcement});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/audit$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!['owner','admin'].includes(getGroupRole(group,user.id)))return json(res,403,{error:'Only group owners and administrators can view the audit history.'});
+        const events=db.groupAuditLogs.filter(item=>item.groupId===group.id).slice(0,100).map(item=>({...item,actor:safeUser(db.users.find(u=>u.id===item.actorId),user.id)}));
+        return json(res,200,{events});
+      }
+      db.groupEventRsvps ||= [];
+      m=p.match(/^\/api\/groups\/([^/]+)\/events\/([^/]+)\/rsvp$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const event=db.groupEvents.find(item=>item.id===m[2]&&item.groupId===group.id);
+        if(!event)return json(res,404,{error:'Group event not found.'});
+        if(!getGroupRole(group,user.id)&&group.visibility!=='public')return json(res,403,{error:'Join this group to respond to its events.'});
+        const response=String(input.response||'');
+        if(!['going','interested','not_going'].includes(response))return json(res,400,{error:'Choose going, interested or not going.'});
+        let rsvp=db.groupEventRsvps.find(item=>item.eventId===event.id&&item.userId===user.id);
+        if(!rsvp){rsvp={id:uid(),groupId:group.id,eventId:event.id,userId:user.id,createdAt:now()};db.groupEventRsvps.push(rsvp);}
+        rsvp.response=response;rsvp.updatedAt=now();await saveStore();
+        return json(res,200,{rsvp});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/analytics$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Group analytics are available to moderators and administrators.'});
+        const since=Date.now()-30*86400000;
+        const posts=(db.groupPosts||[]).filter(post=>post.groupId===group.id);
+        const requests=db.groupMembershipRequests.filter(item=>item.groupId===group.id);
+        const joins=group.memberships.filter(item=>item.status==='active'&&new Date(item.joinedAt||item.updatedAt||0).getTime()>=since).length;
+        const departures=group.memberships.filter(item=>item.status==='left'&&new Date(item.updatedAt||0).getTime()>=since).length;
+        return json(res,200,{periodDays:30,memberCount:group.members.length,activeMembers:group.members.length,posts:posts.filter(post=>new Date(post.createdAt).getTime()>=since).length,pendingRequests:requests.filter(item=>item.status==='pending').length,newMembers:joins,departures});
       }
       m=p.match(/^\/api\/groups\/([^/]+)$/);
       if(method==='GET'&&m){
-        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
-        const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status!=='hidden').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post)));
-        return json(res,200,{group:{...group,owner:safeUser(db.users.find(u=>u.id===group.ownerId)),members:group.members.map(id=>safeUser(db.users.find(u=>u.id===id))).filter(Boolean),memberCount:group.members.length,isMember:group.members.includes(user.id)},posts});
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const isMember=!!getGroupRole(group,user.id),isPublic=group.visibility==='public';
+        if(!canViewGroup(group,user.id)||(!isMember&&group.visibility==='hidden'))return json(res,404,{error:'Group not found.'});
+        const fullAccess=isMember;
+        const posts=fullAccess||isPublic?await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post))):[];
+        const members=fullAccess?group.members.map(id=>{const member=safeUser(db.users.find(u=>u.id===id),user.id);return member?{...member,groupRole:getGroupRole(group,id)||'member'}:null;}).filter(Boolean):[];
+        const {memberships,...safeGroup}=group;
+        return json(res,200,{group:{...safeGroup,owner:safeUser(db.users.find(u=>u.id===group.ownerId),user.id),members,memberCount:group.members.length,isMember,role:getGroupRole(group,user.id),hasPendingRequest:db.groupMembershipRequests.some(r=>r.groupId===group.id&&r.userId===user.id&&r.status==='pending')},posts,restricted:!fullAccess&&!isPublic});
       }
-      if(method==='GET'&&p==='/api/stories'){
+            if(method==='GET'&&p==='/api/stories'){
         await pruneExpiredStories();
         const visible=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const stories=await Promise.all(visible.map(story=>publicStory(story,user.id)));
