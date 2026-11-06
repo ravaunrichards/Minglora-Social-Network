@@ -4081,6 +4081,46 @@ async function route(req, res) {
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
         db.groupPosts.push(post);recordGroupAudit(group,'group_post_created','post',post.id);await saveStore();return json(res,201,{post:await publicGroupPost(post)});
       }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/comments$/);
+      if(['GET','POST'].includes(method)&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const post=(db.groupPosts||[]).find(item=>item.id===m[2]&&item.groupId===group.id&&item.status==='published');
+        if(!post)return json(res,404,{error:'Group post not found.'});
+        if(!getGroupRole(group,user.id))return json(res,403,{error:'Join this group to participate in its discussions.'});
+        if(method==='GET'){
+          const comments=await Promise.all(db.groupPostComments.filter(item=>item.postId===post.id&&item.status!=='deleted'&&!blockedBetween(user.id,item.userId)).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(async item=>({...item,author:safeUser(db.users.find(member=>member.id===item.userId),user.id)})));
+          return json(res,200,{comments});
+        }
+        const body=String(input.body||'').trim(),parentId=input.parentId?String(input.parentId):null;
+        if(body.length<1||body.length>2000)return json(res,400,{error:'Group comments must contain 1–2000 characters.'});
+        if(parentId&&!db.groupPostComments.some(item=>item.id===parentId&&item.postId===post.id&&item.status!=='deleted'))return json(res,400,{error:'The reply target is not part of this discussion.'});
+        const comment={id:uid(),groupId:group.id,postId:post.id,userId:user.id,parentId,body,status:'visible',createdAt:now(),updatedAt:now()};
+        db.groupPostComments.push(comment);recordGroupAudit(group,'group_comment_created','comment',comment.id);await saveStore();
+        return json(res,201,{comment:{...comment,author:safeUser(user)}});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/comments\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const comment=db.groupPostComments.find(item=>item.id===m[3]&&item.postId===m[2]&&item.groupId===group.id&&item.status!=='deleted');
+        if(!comment)return json(res,404,{error:'Group comment not found.'});
+        if(comment.userId!==user.id&&!canModerateGroup(group,user.id))return json(res,403,{error:'Only the comment author or group moderators can delete this comment.'});
+        comment.status='deleted';comment.deletedAt=now();recordGroupAudit(group,'group_comment_deleted','comment',comment.id);await saveStore();
+        return json(res,200,{deleted:true});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/reactions$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const post=(db.groupPosts||[]).find(item=>item.id===m[2]&&item.groupId===group.id&&item.status==='published');
+        if(!post)return json(res,404,{error:'Group post not found.'});
+        if(!getGroupRole(group,user.id))return json(res,403,{error:'Join this group to react to posts.'});
+        const reactionType=String(input.reactionType||'like');
+        if(!['like','love','care','haha','wow','sad','angry'].includes(reactionType))return json(res,400,{error:'Choose a supported reaction.'});
+        let reaction=db.groupPostReactions.find(item=>item.postId===post.id&&item.userId===user.id);
+        if(reaction&&reaction.reactionType===reactionType){db.groupPostReactions=db.groupPostReactions.filter(item=>item!==reaction);reaction=null;}
+        else if(reaction)reaction.reactionType=reactionType;
+        else {reaction={id:uid(),groupId:group.id,postId:post.id,userId:user.id,reactionType,createdAt:now()};db.groupPostReactions.push(reaction);}
+        await saveStore();return json(res,200,{reaction:reaction||null});
+      }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
@@ -4227,6 +4267,8 @@ async function route(req, res) {
         recordGroupAudit(group,input.ban===true?'member_banned':'member_removed','member',targetId);await saveStore();return json(res,200,{removed:true,banned:input.ban===true});
       }
       db.groupMessages ||= [];
+      db.groupPostComments ||= [];
+      db.groupPostReactions ||= [];
       m=p.match(/^\/api\/groups\/([^/]+)\/messages$/);
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
@@ -4341,7 +4383,7 @@ async function route(req, res) {
         const isMember=!!getGroupRole(group,user.id),isPublic=group.visibility==='public';
         if(!canViewGroup(group,user.id)||(!isMember&&group.visibility==='hidden'))return json(res,404,{error:'Group not found.'});
         const fullAccess=isMember;
-        const posts=fullAccess||isPublic?await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post))):[];
+        const posts=fullAccess||isPublic?await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async post=>{const clean=await publicGroupPost(post);const reactions=db.groupPostReactions.filter(item=>item.postId===post.id);return {...clean,commentCount:db.groupPostComments.filter(item=>item.postId===post.id&&item.status!=='deleted').length,reactionCounts:Object.fromEntries(['like','love','care','haha','wow','sad','angry'].map(type=>[type,reactions.filter(item=>item.reactionType===type).length])),myReaction:reactions.find(item=>item.userId===user.id)?.reactionType||null};})):[];
         const members=fullAccess?group.members.map(id=>{const member=safeUser(db.users.find(u=>u.id===id),user.id);return member?{...member,groupRole:getGroupRole(group,id)||'member'}:null;}).filter(Boolean):[];
         const {memberships,...safeGroup}=group;
         const bannedMembers=canModerateGroup(group,user.id)?group.memberships.filter(item=>item.status==='banned').map(item=>{const member=safeUser(db.users.find(u=>u.id===item.userId),user.id);return member?{...member,groupRole:item.role||'member'}:null;}).filter(Boolean):[];
