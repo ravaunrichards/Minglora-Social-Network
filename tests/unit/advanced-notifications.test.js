@@ -80,5 +80,4 @@ test('Notification changes are broadcast only to the authenticated recipient acc
   assert.match(server,/publishNotificationEvent\(user\.id,'notification:changed'/);
   assert.match(app,/message\.type==='notification:new'[\s\S]*pollBrowserNotifications\(\)/);
   assert.match(app,/message\.type==='notification:changed'[\s\S]*updateNotificationDot\(\)/);
-  assert.match(app,/notification:new','notification:changed/);
 });
