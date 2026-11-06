@@ -237,14 +237,6 @@
     startRefresh();
   }
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && isGifterViewActive()) void refreshOverview();
-  });
-  window.addEventListener("online", () => {
-    if (isGifterViewActive()) void refreshOverview();
-  });
-  window.addEventListener("pageshow", () => {
-    if (isGifterViewActive()) void refreshOverview();
-  });
+  // Do not refresh or replace this screen when the tab becomes visible or reconnects.
   window.MingloraGifterProgression = { render, onNavigateAway };
 })();
