@@ -23,7 +23,7 @@ import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-b
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
-import { recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches } from '../backend/modules/leagues/service.js';
+import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
@@ -198,6 +198,21 @@ function safeUser(u,viewerId=null){
   if(gifterBadge)result.gifterBadge=gifterBadge;
   const newGifterIdentity=getNewGifterIdentity(db,u.id);
   if(newGifterIdentity)result.newGifterIdentity=newGifterIdentity;
+  const creatorLeagueProfile=(db.creatorLeagueProfiles||[]).find(item=>item.userId===u.id);
+  if(creatorLeagueProfile){
+    const leagueClass=CREATOR_LEAGUE_CLASSES.includes(creatorLeagueProfile.leagueClass)?creatorLeagueProfile.leagueClass:'D5';
+    result.creatorLeague={
+      leagueClass,
+      region:String(creatorLeagueProfile.region||'GLOBAL').trim().toUpperCase()||'GLOBAL',
+      fragments:Math.max(0,Math.min(3,Math.floor(Number(creatorLeagueProfile.fragments)||0))),
+      fragmentsNeeded:4,
+      leagueShields:Math.max(0,Math.floor(Number(creatorLeagueProfile.leagueShields)||0)),
+      seasonPoints:Math.max(0,Number(creatorLeagueProfile.seasonPoints)||0),
+      lifetimeGiftPoints:Math.max(0,Number(creatorLeagueProfile.lifetimeGiftPoints)||0),
+      seasonKey:creatorLeagueProfile.seasonKey||null,
+      updatedAt:creatorLeagueProfile.updatedAt||null
+    };
+  }
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
@@ -3850,6 +3865,13 @@ async function route(req, res) {
           return json(res,400,{error:error.message||'Gift Gallery settings could not be saved.'});
         }
       }
+      m=p.match(/^\/api\/users\/([^/]+)\/creator-league$/);
+      if(method==='GET'&&m){
+        const target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        const leagueUser=safeUser(target,user.id);
+        return json(res,200,{creatorLeague:leagueUser?.creatorLeague||null});
+      }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
@@ -4696,18 +4718,23 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+let leagueSettlementInProgress=false;
 const leagueSettlementTimer=setInterval(async()=>{
+  if(leagueSettlementInProgress)return;
+  leagueSettlementInProgress=true;
   const currentTime=Date.now();
   const due=(db.creatorLeagueMatches||[]).some(match=>
     (match.status==='live'&&Date.parse(match.endsAt)<=currentTime)||
     (match.status==='pending'&&Date.parse(match.expiresAt)<=currentTime)
   );
-  if(!due)return;
   try{
-    settleExpiredLeagueMatches(db,new Date(currentTime));
-    await saveStore();
+    const scheduled=settleScheduledCreatorLeagueDays(db,new Date(currentTime));
+    if(due)settleExpiredLeagueMatches(db,new Date(currentTime));
+    if(due||scheduled.changed)await saveStore();
   }catch(error){
-    console.error('[Minglora League settlement] Could not persist expired match state.',{message:String(error?.message||'settlement failed').slice(0,180)});
+    console.error('[Minglora League settlement] Could not persist scheduled League state.',{message:String(error?.message||'settlement failed').slice(0,180)});
+  }finally{
+    leagueSettlementInProgress=false;
   }
 },10000);
 leagueSettlementTimer.unref?.();
