@@ -16,7 +16,7 @@ import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
-import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup, canViewGroup, canDiscoverGroup, canRequestGroupMembership, canModerateGroup, canManageGroupSettings, canManageGroupEvents, canAssignGroupRole, getGroupRole } from '../backend/modules/groups/service.js';
+import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup, canViewGroup, canDiscoverGroup, canRequestGroupMembership, canModerateGroup, canManageGroupSettings, canManageGroupEvents, canAssignGroupRole, canTransferGroupOwnership, getGroupRole } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
@@ -4234,6 +4234,32 @@ async function route(req, res) {
         }
         group.updatedAt=now();recordGroupAudit(group,'group_settings_updated','group',group.id,{fields:Object.keys(input).filter(k=>allowed.includes(k))});await saveStore();
         return json(res,200,{group:safeGroupSummary(group)});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/transfer-ownership$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const targetId=String(input.targetUserId||'');
+        if(!canTransferGroupOwnership(group,user.id,targetId))return json(res,403,{error:'Only the current owner can transfer ownership to an active group member.'});
+        const previousOwnerId=group.ownerId;
+        const targetRecord=group.memberships.find(item=>item.userId===targetId);
+        if(!targetRecord||targetRecord.status!=='active')return json(res,404,{error:'Choose an active group member.'});
+        group.ownerId=targetId;
+        setGroupMembership(group,previousOwnerId,'admin','active');
+        setGroupMembership(group,targetId,'owner','active');
+        group.updatedAt=now();
+        recordGroupAudit(group,'group_ownership_transferred','member',targetId,{previousOwnerId});
+        await saveStore();
+        return json(res,200,{group:safeGroupSummary(group),previousOwnerId,newOwnerId:targetId});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/delete$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(group.ownerId!==user.id)return json(res,403,{error:'Only the group owner can delete this group.'});
+        if(String(input.confirmName||'')!==group.name)return json(res,400,{error:'Type the exact group name to confirm deletion.'});
+        group.status='deleted';group.deletedAt=now();group.deletedBy=user.id;group.updatedAt=now();
+        recordGroupAudit(group,'group_deleted','group',group.id,{name:group.name});
+        await saveStore();
+        return json(res,200,{deleted:true,groupId:group.id});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/members\/([^/]+)\/role$/);
       if(method==='PATCH'&&m){
