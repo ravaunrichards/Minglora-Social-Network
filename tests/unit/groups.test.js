@@ -102,3 +102,32 @@ test('hidden groups are undiscoverable but remain visible to active members', ()
   assert.equal(canViewGroup(hidden, 'member'), true);
   assert.equal(canRequestGroupMembership(hidden, 'outsider'), false);
 });
+
+import { readFileSync } from 'node:fs';
+
+test('advanced group state collections survive normalization and persistence', () => {
+  const storeSource = readFileSync(new URL('../../src/store.js', import.meta.url), 'utf8');
+  const collectionBlock = storeSource.slice(storeSource.indexOf('const COLLECTIONS'), storeSource.indexOf('];', storeSource.indexOf('const COLLECTIONS')) + 2);
+  for (const collection of [
+    'groupMembershipRequests', 'groupInvitations', 'groupModerationActions',
+    'groupAuditLogs', 'groupAnnouncements', 'groupEvents', 'groupEventRsvps',
+    'groupMessages', 'groupRules', 'groupPostComments', 'groupPostReactions'
+  ]) assert.match(collectionBlock, new RegExp("'" + collection + "'"));
+});
+
+test('advanced group rules do not call authenticated-only helpers for anonymous sessions', () => {
+  const migration = readFileSync(new URL('../../database/migrations/083_minglora_advanced_groups.sql', import.meta.url), 'utf8');
+  const policyAt = migration.indexOf('CREATE POLICY minglora_group_rules_read');
+  const policy = migration.slice(policyAt, migration.indexOf(');', policyAt) + 2);
+  assert.match(policy, /FOR SELECT TO authenticated/);
+  assert.doesNotMatch(policy, /TO anon, authenticated/);
+});
+
+test('groups UI exposes member chat, invitations, events, moderation and reactions', () => {
+  const app = readFileSync(new URL('../../public/app.js', import.meta.url), 'utf8');
+  for (const feature of [
+    "data-group-scope=\"invitations\"", "data-group-tab=\"chat\"",
+    "group-chat-form", "data-event-rsvp", "data-review-request",
+    "data-review-post", "data-group-post-reaction", "data-group-post-comments"
+  ]) assert.ok(app.includes(feature), 'Missing Groups UI feature: ' + feature);
+});
