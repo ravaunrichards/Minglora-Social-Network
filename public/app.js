@@ -1599,7 +1599,9 @@ function renderLiveMatches(matches){
   bindLiveMatchChats(root);
 }
 async function refreshLiveMatchPanel(session,role){
-  if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
+  const matchRoot=$('#live-match-list');
+  if(liveMatchRefreshBusy||!session?.id||!matchRoot)return;
+  if(matchRoot.querySelector("[data-live-match-chat-form] textarea:focus"))return;
   liveMatchRefreshBusy=true;
   try{const data=await api('/leagues/matches');if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[]);}
   catch(error){const root=$('#live-match-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Creator League could not be loaded: "+esc(error.message)+"</p>";}
