@@ -4589,7 +4589,7 @@ async function route(req, res) {
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
           messages=(db.messages||[]).filter(item=>
             ((item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))
-            &&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
             &&(!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
           );
         }
