@@ -1118,8 +1118,8 @@
         ['Minglora available to withdraw', finance.availablePlatformShareMinor],
         ['Minglora withdrawals pending', finance.pendingPlatformPayoutMinor],
         ['Minglora withdrawals paid', finance.paidPlatformPayoutMinor],
-        ['Non-cash promotional creator share · excluded', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor],
-        ['Non-cash promotional platform share · excluded', finance.excludedPromotionalPlatformShareMinor ?? totals.excludedPromotionalPlatformShareMinor]
+        ['Promotional creator share · separately tracked', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor],
+        ['Promotional platform share · separately tracked', finance.excludedPromotionalPlatformShareMinor ?? totals.excludedPromotionalPlatformShareMinor]
       ];
       metrics.innerHTML = cards.map(([label, value]) =>
         '<article class="admin-gift-earnings-metric"><small>' + escapeText(label) +
