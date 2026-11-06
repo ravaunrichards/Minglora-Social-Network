@@ -617,6 +617,88 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(deniedPagePublish.status, 403);
   const deniedPagePostDelete = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(deniedPagePostDelete.status, 403);
+  const deniedPageTeam = await request(`/api/pages/${page.body.page.id}/roles`);
+  assert.equal(deniedPageTeam.status, 404);
+  const deniedPageInsights = await request(`/api/pages/${page.body.page.id}/insights`);
+  assert.equal(deniedPageInsights.status, 404);
+  cookie = firstCookie;
+  const pageSettingsEdit = await request(`/api/pages/${page.body.page.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      title: 'Minglora Labs Updated',
+      website: 'https://minglora.example',
+      contactEmail: 'hello@minglora.example',
+      phone: '+18765550111',
+      location: 'Kingston, Jamaica',
+      actionLabel: 'Visit website',
+      actionUrl: 'https://minglora.example'
+    })
+  });
+  assert.equal(pageSettingsEdit.status, 200, JSON.stringify(pageSettingsEdit.body));
+  assert.equal(pageSettingsEdit.body.page.website, 'https://minglora.example');
+  assert.equal(pageSettingsEdit.body.page.actionLabel, 'Visit website');
+  const unsafePageWebsite = await request(`/api/pages/${page.body.page.id}`, {
+    method: 'PATCH', body: JSON.stringify({ website: 'javascript:alert(1)' })
+  });
+  assert.equal(unsafePageWebsite.status, 400);
+  const invalidPageAction = await request(`/api/pages/${page.body.page.id}`, {
+    method: 'PATCH', body: JSON.stringify({ actionLabel: 'Book now', actionUrl: '' })
+  });
+  assert.equal(invalidPageAction.status, 400);
+  const addPageAnalyst = await request(`/api/pages/${page.body.page.id}/roles`, {
+    method: 'POST', body: JSON.stringify({ username: 'secondtest', role: 'analyst' })
+  });
+  assert.equal(addPageAnalyst.status, 201, JSON.stringify(addPageAnalyst.body));
+  assert.equal(addPageAnalyst.body.member.role, 'analyst');
+  const ownerPageTeam = await request(`/api/pages/${page.body.page.id}/roles`);
+  assert.equal(ownerPageTeam.status, 200);
+  assert.equal(ownerPageTeam.body.members.length, 2);
+  assert.equal(ownerPageTeam.body.members.some(member => member.role === 'owner'), true);
+  const ownerPageInsights = await request(`/api/pages/${page.body.page.id}/insights?days=7`);
+  assert.equal(ownerPageInsights.status, 200, JSON.stringify(ownerPageInsights.body));
+  assert.equal(ownerPageInsights.body.metrics.followers, 1);
+  assert.equal(ownerPageInsights.body.metrics.uniqueVisitors, 1);
+  assert.equal(ownerPageInsights.body.series.length, 7);
+  const ownerPageFollowers = await request(`/api/pages/${page.body.page.id}/followers`);
+  assert.equal(ownerPageFollowers.status, 200);
+  assert.equal(ownerPageFollowers.body.followers.length, 1);
+  assert.equal(ownerPageFollowers.body.followers[0].user.id, secondUserId);
+  const updatedPageDetail = await request(`/api/pages/${page.body.page.id}`);
+  assert.equal(updatedPageDetail.body.page.title, 'Minglora Labs Updated');
+  assert.equal(updatedPageDetail.body.page.contactEmail, 'hello@minglora.example');
+  cookie = secondCookie;
+  const analystCannotPublish = await request(`/api/pages/${page.body.page.id}/posts`, {
+    method: 'POST', body: JSON.stringify({ text: 'Analysts cannot publish' })
+  });
+  assert.equal(analystCannotPublish.status, 403);
+  const analystCannotManageTeam = await request(`/api/pages/${page.body.page.id}/roles`);
+  assert.equal(analystCannotManageTeam.status, 404);
+  const analystPageInsights = await request(`/api/pages/${page.body.page.id}/insights`);
+  assert.equal(analystPageInsights.status, 200);
+  const analystCanReadFollowers = await request(`/api/pages/${page.body.page.id}/followers`);
+  assert.equal(analystCanReadFollowers.status, 200);
+  cookie = firstCookie;
+  const promotePageEditor = await request(`/api/pages/${page.body.page.id}/roles/${secondUserId}`, {
+    method: 'PATCH', body: JSON.stringify({ role: 'editor' })
+  });
+  assert.equal(promotePageEditor.status, 200);
+  assert.equal(promotePageEditor.body.member.role, 'editor');
+  cookie = secondCookie;
+  const editorPagePost = await request(`/api/pages/${page.body.page.id}/posts`, {
+    method: 'POST', body: JSON.stringify({ text: 'A Page editor can publish' })
+  });
+  assert.equal(editorPagePost.status, 201);
+  const editorCannotManagePage = await request(`/api/pages/${page.body.page.id}`, {
+    method: 'PATCH', body: JSON.stringify({ title: 'Editor cannot rename Page' })
+  });
+  assert.equal(editorCannotManagePage.status, 403);
+  cookie = firstCookie;
+  const removePageEditor = await request(`/api/pages/${page.body.page.id}/roles/${secondUserId}`, {
+    method: 'DELETE', body: '{}'
+  });
+  assert.equal(removePageEditor.status, 200);
+  const ownerAfterTeamRemoval = await request(`/api/pages/${page.body.page.id}/roles`);
+  assert.equal(ownerAfterTeamRemoval.body.members.length, 1);
   cookie = firstCookie;
   const ownerDeletePagePost = await request(`/api/pages/${page.body.page.id}/posts/${pagePost.body.post.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(ownerDeletePagePost.status, 200);
