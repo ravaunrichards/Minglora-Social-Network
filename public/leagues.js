@@ -184,8 +184,8 @@
       status.textContent = state.refreshError
         ? "Refresh failed. Tap Refresh to retry."
         : state.lastUpdatedAt
-          ? "Updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + " · Auto-refresh every 5s"
-          : "Auto-refresh every 5 seconds";
+          ? "Updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + " · Updates when you tap Refresh"
+          : "Tap Refresh when you want the latest scores";
     }
     if (button) {
       button.disabled = state.refreshing;
@@ -487,18 +487,8 @@
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
     updateRefreshStatus();
-    if (isLeagueViewActive()) refreshTimer = setInterval(() => {
-      if (document.visibilityState === "visible") void refreshScores();
-    }, 5000);
+    // No background refresh: preserve the current screen until the member taps Refresh.
   }
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && isLeagueViewActive()) void refreshScores();
-  });
-  window.addEventListener("online", () => {
-    if (isLeagueViewActive()) void refreshScores();
-  });
-  window.addEventListener("pageshow", () => {
-    if (isLeagueViewActive()) void refreshScores();
-  });
+  // Reconnection and tab visibility do not replace or refresh the League screen automatically.
   window.MingloraLeagues = { render, onNavigateAway };
 })();
