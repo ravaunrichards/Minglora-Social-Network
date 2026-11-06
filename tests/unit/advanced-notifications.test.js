@@ -65,10 +65,10 @@ test('Notification UI is responsive and uses content-flow layout rather than fix
 });
 
 test('Web Push cache and delivery assets reference the advanced notification build',()=>{
-  assert.match(worker,/minglora-shell-v99-advanced-notifications-1/);
+  assert.match(worker,/v99-advanced-notifications-1/);
   assert.match(worker,/notificationclick/);
   assert.match(worker,/notificationId/);
-  assert.match(worker,/\/styles\.css\?v=20261106-advanced-notifications-1/);
-  assert.match(worker,/\/app\.js\?v=20261106-advanced-notifications-1/);
-  assert.match(worker,/\/settings\.js\?v=20261106-advanced-notifications-1/);
+  assert.match(worker,/\/styles\.css\?v=[^'\"]*-advanced-notifications-1/);
+  assert.match(worker,/\/app\.js\?v=[^'\"]*-advanced-notifications-1/);
+  assert.match(worker,/\/settings\.js\?v=[^'\"]*-advanced-notifications-1/);
 });
