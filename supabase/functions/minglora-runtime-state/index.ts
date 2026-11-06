@@ -660,14 +660,12 @@ Deno.serve(async (req: Request) => {
         .select("user_id,paypal_email,updated_at"),
       readAllPages("admin_promotional_gift_wallets",
         "user_id,available_coins,lifetime_allocated_coins,lifetime_spent_coins,updated_at", "updated_at"),
-      admin.from("admin_promotional_gift_wallet_ledger")
-        .select("id,request_id,user_id,actor_user_id,delta_coins,balance_after,event_type,reference_id,note,created_at")
-        .order("created_at", { ascending: false }).limit(150),
+      readAllPages("admin_promotional_gift_wallet_ledger",
+        "id,request_id,user_id,actor_user_id,delta_coins,balance_after,event_type,reference_id,note,created_at"),
       admin.from("minglora_promotional_gift_fund")
         .select("funded_minor,spent_minor,updated_at").eq("id", true).maybeSingle(),
-      admin.from("minglora_promotional_gift_fund_ledger")
-        .select("id,request_id,event_type,reference_id,paypal_order_id,paypal_capture_id,funded_delta_minor,spent_delta_minor,note,actor_user_id,created_at")
-        .order("created_at", { ascending: false }).limit(100),
+      readAllPages("minglora_promotional_gift_fund_ledger",
+        "id,request_id,event_type,reference_id,paypal_order_id,paypal_capture_id,funded_delta_minor,spent_delta_minor,note,actor_user_id,created_at"),
       readAllPages("minglora_promotional_gift_cash_backings",
         "id,gift_transaction_id,creator_id,gift_coin_amount,backing_minor,creator_share_minor,platform_share_minor,fund_ledger_id,actor_user_id,created_at")
     ]);
@@ -776,8 +774,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const promoWalletRows = promotionalWalletsResult.data || [];
-    const promoWalletLedgerRows = promotionalWalletLedgerResult.data || [];
-    const promoFundLedgerRows = promotionalFundLedgerResult.data || [];
+    const promoWalletLedgerRows = promotionalWalletLedgerResult.rows || [];
+    const promoFundLedgerRows = promotionalFundLedgerResult.rows || [];
     const promoCashBackingRows = promotionalCashBackingsResult.rows || [];
     const payoutAccountRows = creatorPayoutAccountsResult.data || [];
     const profileIds = [...new Set([
