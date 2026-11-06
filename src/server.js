@@ -13,7 +13,7 @@ import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normal
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
-import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired } from '../backend/modules/messaging/service.js';
+import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired, getMessageConversationPeerId } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -4392,6 +4392,12 @@ async function route(req, res) {
         const recipientIds=[...new Set([String(input.to||''),...(Array.isArray(input.participantIds)?input.participantIds.map(String):[])].filter(Boolean))];
         const kind=String(input.kind||'video');
         if(!['audio','video'].includes(kind)||!recipientIds.length||recipientIds.length>CALL_MAX_PARTICIPANTS-1)return json(res,400,{error:'Choose audio or video and invite between one and seven other members.'});
+        const groupId=String(input.groupId||'').trim();
+        if(groupId){
+          if(!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          const activeGroupMembers=new Set(getActiveMessageGroupMembers(db,groupId));
+          if(recipientIds.some(id=>!activeGroupMembers.has(id)))return json(res,403,{error:'Group calls can only be started with current members of this Messenger group.'});
+        }
         const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
         if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
         if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
@@ -4663,7 +4669,7 @@ async function route(req, res) {
         }else{
           peerId=requested.startsWith('direct:')?requested.slice(7):requested;
           const peer=db.users.find(item=>item.id===peerId);
-          const hasConversation=peer&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          const hasConversation=Boolean(peer&&((db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))||(db.messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))));
           if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
           key=messageConversationKey({userIds:[user.id,peerId]});
         }
@@ -4684,7 +4690,7 @@ async function route(req, res) {
         }else{
           peerId=requested.startsWith('direct:')?requested.slice(7):requested;
           const peer=db.users.find(item=>item.id===peerId);
-          const hasConversation=peer&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          const hasConversation=Boolean(peer&&((db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))||(db.messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))));
           if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
           key=messageConversationKey({userIds:[user.id,peerId]});
         }
@@ -4699,7 +4705,9 @@ async function route(req, res) {
         return json(res,200,{ok:true,settings:{conversationId:requested,disappearingAfterSeconds:seconds,canManage:true,updatedAt}});
       }
       if(method==='GET'&&p==='/api/messages'){
-        const peers=[...new Set((db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
+        const messagePeers=(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from);
+        const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id));
+        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
         const conversations=await Promise.all(peers.map(async id=>{
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
           const visibleMessages=(db.messages||[]).filter(item=>
@@ -4707,7 +4715,8 @@ async function route(req, res) {
             !isMessageExpired(item) && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
             (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
           ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
-          if(!visibleMessages.length)return null;
+          const savedConversationSettings=(db.messageConversationSettings||[]).find(item=>item.conversationKey===messageConversationKey({userIds:[user.id,id]}));
+          if(!visibleMessages.length&&!savedConversationSettings)return null;
           const messages=await Promise.all(visibleMessages.map(async item=>{
             const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
               const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
