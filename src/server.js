@@ -1266,7 +1266,9 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/settings')return json(res,200,{settings:getUserSettings(user),account:{id:user.id,name:user.name,username:user.username,email:user.email||''}});
       if(method==='PATCH'&&p==='/api/settings'){
         const validation=validateSettingsPatch(input,user);if(!validation.valid)return json(res,400,{error:validation.error});
-        user.settings=validation.settings;await saveStore();return json(res,200,{settings:getUserSettings(user)});
+        user.settings=validation.settings;await saveStore();
+        if(Object.hasOwn(input.preferences||{},'messengerActiveStatus'))messengerRealtime?.refreshPresence(user.id);
+        return json(res,200,{settings:getUserSettings(user)});
       }
       const currentSession=sessionFromRequest(req);
       if(method==='POST'&&p==='/api/security/email'){
@@ -4501,6 +4503,115 @@ async function route(req, res) {
           (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=call.endedAt;});
           await saveStore();await cleanupCallRoom(call,'ended-by-host');return json(res,200,{ok:true,call});
         }
+      }
+      if(method==='GET'&&p==='/api/messages/search'){
+        const query=String(url.searchParams.get('q')||'').trim().toLocaleLowerCase().slice(0,120);
+        const conversationId=String(url.searchParams.get('conversationId')||'').trim().slice(0,140);
+        if(query.length<2)return json(res,400,{error:'Enter at least two characters to search messages.'});
+        const results=[];
+        const addResult=(message,conversation)=>{
+          if(!message||message.unsent||(Array.isArray(message.deletedFor)&&message.deletedFor.includes(user.id)))return;
+          const value=String(message.text||'');
+          if(!value.toLocaleLowerCase().includes(query))return;
+          results.push({
+            id:message.id,
+            text:value.slice(0,500),
+            createdAt:message.createdAt,
+            author:safeUser(db.users.find(member=>member.id===message.from),user.id),
+            conversationId:conversation.conversationId,
+            groupId:conversation.groupId||null,
+            conversationName:conversation.name
+          });
+        };
+        if(conversationId.startsWith('group:')){
+          const groupId=conversationId.slice(6);
+          const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
+          for(const message of db.messageGroupMessages||[]){
+            if(message.groupId===groupId&&!blockedBetween(user.id,message.from)){
+              addResult(message,{conversationId:'group:'+groupId,groupId,name:group.name});
+            }
+          }
+        }else{
+          const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
+          const allowedPeers=peerId?[peerId]:[...new Set((db.messages||[])
+            .filter(item=>item.from===user.id||item.to===user.id)
+            .map(item=>item.from===user.id?item.to:item.from))];
+          for(const targetId of allowedPeers){
+            const peer=db.users.find(member=>member.id===targetId);
+            if(!peer||targetId===user.id||blockedBetween(user.id,targetId))continue;
+            const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===targetId);
+            for(const message of db.messages||[]){
+              if(!((message.from===user.id&&message.to===targetId)||(message.from===targetId&&message.to===user.id)))continue;
+              if(hide&&new Date(message.createdAt)<=new Date(hide.hiddenAt))continue;
+              addResult(message,{conversationId:targetId,name:peer.name});
+            }
+          }
+        }
+        results.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0));
+        return json(res,200,{results:results.slice(0,50),total:results.length});
+      }
+      if(method==='GET'&&p==='/api/messages/shared'){
+        let conversationId=String(url.searchParams.get('conversationId')||'').trim().slice(0,140);
+        if(!conversationId)return json(res,400,{error:'Choose a conversation to view shared items.'});
+        let messages=[];
+        if(conversationId.startsWith('group:')){
+          const groupId=conversationId.slice(6);
+          const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
+          messages=(db.messageGroupMessages||[]).filter(item=>item.groupId===groupId
+            &&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&!blockedBetween(user.id,item.from));
+        }else{
+          const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
+          const peer=db.users.find(member=>member.id===peerId);
+          const hasConversation=peer&&peerId!==user.id&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          if(!peer||!hasConversation||blockedBetween(user.id,peerId))return json(res,404,{error:'Conversation not found.'});
+          const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
+          messages=(db.messages||[]).filter(item=>
+            ((item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))
+            &&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&(!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
+          );
+        }
+        const items=[];
+        for(const message of messages){
+          const author=safeUser(db.users.find(member=>member.id===message.from),user.id);
+          for(const assetId of message.attachmentIds||[]){
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.status==='attached'&&item.slot==='message');
+            if(!asset)continue;
+            try{
+              const url=await resolveAssetUrl(asset);
+              const mediaType=String(asset.mediaType||'').toLowerCase();
+              const mimeType=String(asset.mimeType||'').toLowerCase();
+              const kind=mediaType==='image'||mimeType.startsWith('image/')?'photos'
+                :mediaType==='video'||mimeType.startsWith('video/')?'videos'
+                :mediaType==='audio'||mimeType.startsWith('audio/')?'audio':'files';
+              items.push({
+                id:'asset:'+asset.id,kind,messageId:message.id,createdAt:message.createdAt,
+                author,name:asset.originalName||asset.fileName||'Shared attachment',
+                mimeType:asset.mimeType||'',mediaType:asset.mediaType||kind,byteSize:Number(asset.byteSize||0),url
+              });
+            }catch{}
+          }
+          const links=[...new Set(String(message.text||'').match(/https?:\/\/[^\s<>"']+/gi)||[])];
+          for(const rawLink of links){
+            const clean=rawLink.replace(/[),.!?;:]+$/,'');
+            try{
+              const parsed=new URL(clean);
+              if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)continue;
+              items.push({
+                id:'link:'+message.id+':'+items.length,kind:'links',messageId:message.id,
+                createdAt:message.createdAt,author,name:parsed.hostname,url:parsed.toString(),
+                text:String(message.text||'').slice(0,240)
+              });
+            }catch{}
+          }
+        }
+        items.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0));
+        return json(res,200,{items:items.slice(0,250),total:items.length});
       }
       if(method==='GET'&&p==='/api/messages/gifs'){
         const apiKey=String(process.env.TENOR_API_KEY||'').trim();
