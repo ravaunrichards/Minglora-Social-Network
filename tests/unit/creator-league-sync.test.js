@@ -19,7 +19,7 @@ function makeDb() {
   };
 }
 
-test("scheduled league settlement promotes the top active creator once per completed day", () => {
+test("scheduled league settlement does not delay lifetime milestone class promotion", () => {
   const db = makeDb();
   const previousDay = new Date("2026-11-05T12:00:00.000Z");
   const currentDay = new Date("2026-11-06T12:00:00.000Z");
@@ -43,7 +43,8 @@ test("scheduled league settlement promotes the top active creator once per compl
   const topProfile = db.creatorLeagueProfiles.find(item => item.userId === "top-creator");
 
   assert.deepEqual(firstRun.settledDays, ["2026-11-05"]);
-  assert.equal(topProfile.fragments, 1);
+  assert.equal(topProfile.fragments, 0);
+  assert.equal(topProfile.leagueClass, "D5");
   assert.equal(db.creatorLeagueDailySettlements.length, 1);
 
   const secondRun = settleScheduledCreatorLeagueDays(db, currentDay);
