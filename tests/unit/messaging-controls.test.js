@@ -84,3 +84,28 @@ test('Messenger notification sound reuses the user-activated call audio context'
   assert.ok(app.includes('const context=callToneContext||messengerMessageSoundContext||new AudioContextClass()'));
   assert.ok(app.includes('if(context.state!==\'running\')return'));
 });
+
+test('Group Messenger windows expose real voice and video call entry points',async()=>{
+  const [app,server]=await Promise.all([read('../../public/app.js'),read('../../src/server.js')]);
+  assert.ok(app.includes('data-message-group-audio='));
+  assert.ok(app.includes('data-message-group-video='));
+  assert.ok(app.includes('openMingloraGroupCallPicker'));
+  assert.ok(app.includes('participantIds,kind'));
+  assert.ok(server.includes('participantIds.map(String)'));
+});
+
+test('Conversation privacy settings are persisted and disappearing messages are expired on the server',async()=>{
+  const [app,server,store,css]=await Promise.all([
+    read('../../public/app.js'),read('../../src/server.js'),read('../../src/store.js'),read('../../public/styles.css')
+  ]);
+  assert.ok(app.includes('data-tools-tab="privacy"'));
+  assert.ok(app.includes("api('/messages/settings?conversationId='+encodeURIComponent(conversationId))"));
+  assert.ok(app.includes("api('/messages/settings',{method:'PATCH'"));
+  assert.ok(server.includes("if(method==='PATCH'&&p==='/api/messages/settings')"));
+  assert.ok(server.includes('expiresAt:disappearingAfterSeconds?'));
+  assert.ok(server.includes('sweepExpiredMessengerMessages'));
+  assert.ok(server.includes("mediaGateway('media_delete'"));
+  assert.ok(store.includes('messageConversationSettings'));
+  assert.ok(css.includes('.message-tools-privacy-card'));
+});
+
