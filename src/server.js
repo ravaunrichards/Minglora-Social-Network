@@ -16,7 +16,7 @@ import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
-import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup, canViewGroup, canDiscoverGroup, canRequestGroupMembership, canModerateGroup, canManageGroupSettings, canManageGroupEvents, canAssignGroupRole, canTransferGroupOwnership, getGroupRole } from '../backend/modules/groups/service.js';
+import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup, canViewGroup, canDiscoverGroup, canRequestGroupMembership, canModerateGroup, canModerateGroupPosts, canManageGroupContent, canManageGroupSettings, canManageGroupEvents, canAssignGroupRole, canTransferGroupOwnership, getGroupRole } from '../backend/modules/groups/service.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
@@ -4113,7 +4113,7 @@ async function route(req, res) {
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         const comment=db.groupPostComments.find(item=>item.id===m[3]&&item.postId===m[2]&&item.groupId===group.id&&item.status!=='deleted');
         if(!comment)return json(res,404,{error:'Group comment not found.'});
-        if(comment.userId!==user.id&&!canModerateGroup(group,user.id))return json(res,403,{error:'Only the comment author or group moderators can delete this comment.'});
+        if(comment.userId!==user.id&&!canModerateGroupPosts(group,user.id))return json(res,403,{error:'Only the comment author or authorized group content moderators can delete this comment.'});
         comment.status='deleted';comment.deletedAt=now();recordGroupAudit(group,'group_comment_deleted','comment',comment.id);await saveStore();
         return json(res,200,{deleted:true});
       }
@@ -4166,14 +4166,14 @@ async function route(req, res) {
       m=p.match(/^\/api\/groups\/([^/]+)\/pending-posts$/);
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
-        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review pending posts.'});
+        if(!canModerateGroupPosts(group,user.id))return json(res,403,{error:'You do not have permission to review group posts.'});
         const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='pending').sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(post=>publicGroupPost(post)));
         return json(res,200,{posts});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/approval$/);
       if(method==='POST'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
-        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review pending posts.'});
+        if(!canModerateGroupPosts(group,user.id))return json(res,403,{error:'You do not have permission to review group posts.'});
         const post=(db.groupPosts||[]).find(item=>item.groupId===group.id&&item.id===m[2]&&item.status==='pending');
         if(!post)return json(res,404,{error:'Pending group post not found.'});
         const action=String(input.action||'');
@@ -4379,7 +4379,7 @@ async function route(req, res) {
       }
       if(method==='POST'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
-        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only moderators can publish group announcements.'});
+        if(!canManageGroupContent(group,user.id))return json(res,403,{error:'You do not have permission to publish group announcements.'});
         const title=String(input.title||'').trim(),body=String(input.body||'').trim();
         if(title.length<3||title.length>140||body.length<1||body.length>3000)return json(res,400,{error:'Announcement title or message is invalid.'});
         const announcement={id:uid(),groupId:group.id,authorId:user.id,title,body,status:'published',createdAt:now()};
