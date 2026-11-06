@@ -1295,7 +1295,7 @@ async function route(req, res) {
           return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can change the platform PayPal destination.'});
         }
         const paypalEmail=String(input.paypalEmail||'').trim().toLowerCase();
-        const paypalEmailPattern=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;
+        const paypalEmailPattern=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}$/i;
         if(paypalEmail.length>127||!paypalEmailPattern.test(paypalEmail)){
           return json(res,400,{error:'Enter a valid PayPal receiving email address (127 characters or fewer).'});
         }
