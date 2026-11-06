@@ -46,3 +46,27 @@ export function validateMessageGroupReaction(value) {
   const reaction = String(value || '');
   return MESSAGE_GROUP_REACTIONS.includes(reaction) ? reaction : null;
 }
+
+export const MESSAGE_DISAPPEARING_OPTIONS = Object.freeze([0,30,300,3600,86400,604800]);
+
+export function normalizeMessageDisappearingSeconds(value) {
+  const seconds = Number(value);
+  return Number.isInteger(seconds) && MESSAGE_DISAPPEARING_OPTIONS.includes(seconds) ? seconds : null;
+}
+
+export function messageConversationKey({ groupId = '', userIds = [] } = {}) {
+  if (groupId) return 'group:' + String(groupId);
+  const ids = [...new Set((Array.isArray(userIds) ? userIds : []).map(value => String(value || '').trim()).filter(Boolean))].sort();
+  return ids.length === 2 ? 'direct:' + ids.join(':') : '';
+}
+
+export function getMessageDisappearingSeconds(db, conversationKey) {
+  const row = (db.messageConversationSettings || []).find(item => item.conversationKey === conversationKey);
+  return normalizeMessageDisappearingSeconds(row?.disappearingAfterSeconds ?? 0) ?? 0;
+}
+
+export function isMessageExpired(message, at = Date.now()) {
+  if (!message?.expiresAt) return false;
+  const expiresAt = Date.parse(message.expiresAt);
+  return Number.isFinite(expiresAt) && expiresAt <= at;
+}
