@@ -292,7 +292,7 @@
     const ownOptions = own.map(item => "<option value='" + esc(item.id) + "'>" + esc(item.title || "Your LIVE session") + "</option>").join("");
     const otherOptions = others.map(item => "<option value='" + esc(item.id) + "'>" + esc(item.host?.name || "Creator") + " · @" + esc(item.host?.username || "creator") + "</option>").join("");
     const giftOptions = gifts.map(item => "<option value='" + esc(item.code) + "'>" + esc(item.name) + " · " + Number(item.coin_price || 0).toLocaleString() + " Coins</option>").join("");
-    return "<section class='card league-challenge-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>GO HEAD-TO-HEAD</span><h2>Challenge a creator</h2><p>Both creators must be connected to a real LIVE room before a match can begin.</p></div><span class='league-feature-icon'>⚔️</span></div>" +
+    return "<section class='card league-challenge-panel' id='league-challenge-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>GO HEAD-TO-HEAD</span><h2>Challenge a creator</h2><p>Both creators must be connected to a real LIVE room before a match can begin.</p></div><span class='league-feature-icon'>⚔️</span></div>" +
       (own.length && others.length ? "<form id='league-challenge-form' class='league-challenge-form'><label>Your LIVE session<select name='ownSessionId' required>" + ownOptions + "</select></label><label>Creator to challenge<select name='opponentSessionId' required><option value=''>Choose a creator who is LIVE</option>" + otherOptions + "</select></label><label>Match scoring<select name='giftMode'><option value='all'>All LIVE Gifts count</option><option value='specific'>One selected Gift counts</option></select></label><label id='league-specific-gift-field' class='hidden'>Scoring Gift<select name='selectedGiftCode'>" + giftOptions + "</select></label><button class='primary' type='submit'>Send League Match challenge</button></form>" :
         "<div class='league-empty-inline'>" + (!own.length ? "Start your LIVE broadcast first. It will appear here once connected." : "No other eligible creators are LIVE right now. You can challenge someone when they go LIVE.") + "</div>") +
       "</section>";
@@ -306,17 +306,17 @@
       "<span class='league-fragment " + (index < p.fragments ? "earned" : "") + "'></span>"
     ).join("");
     const matchPercent = p.matchRankPoints;
-    return "<div class='league-page'><section class='league-hero'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'><span>🏆</span><small>" + esc(p.leagueClass) + "</small></div></section>" +
-      "<section class='league-overview-grid'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.seasonPoints).toLocaleString() + " season points</strong><p>" + Number(p.todayGiftPoints).toLocaleString() + " points from LIVE Gifts today</p><div class='league-fragments' aria-label='" + p.fragments + " of 4 promotion fragments'>" + fragments + "</div><small>" + p.fragments + " / 4 fragments to promotion</small></article>" +
+    return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'><span>🏆</span><small>" + esc(p.leagueClass) + "</small></div></section>" +
+      "<section class='league-overview-grid' id='league-overview-zone'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.seasonPoints).toLocaleString() + " season points</strong><p>" + Number(p.todayGiftPoints).toLocaleString() + " points from LIVE Gifts today</p><div class='league-fragments' aria-label='" + p.fragments + " of 4 promotion fragments'>" + fragments + "</div><small>" + p.fragments + " / 4 fragments to promotion</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>MATCH RANK</span><div class='league-stat-value match-rank-value'>" + esc(p.matchRank) + "</div><strong>" + Number(p.matchRankPoints).toLocaleString() + " / 100 rank points</strong>" + meter(matchPercent,100) + "<p>" + (p.matchRankPointsToNext === null ? "Highest match rank reached" : p.matchRankPointsToNext + " points to next rank") + "</p><small>" + p.matchWins + " wins · " + p.matchLosses + " losses · " + p.matchDraws + " draws</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE SHIELDS</span><div class='league-stat-value'>🛡️ " + Number(p.leagueShields).toLocaleString() + "</div><strong>Promotion protection</strong><p>Shields protect against one eligible league demotion step. They never change match results.</p><small>" + Number(p.lifetimeGiftPoints).toLocaleString() + " lifetime LIVE Gift points</small></article></section>" +
-      "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Daily standings are based on confirmed LIVE Gift coin value within your region and current class.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>How to move up</strong><p>Top 20% of an active class group earns one fragment. Four fragments promote you one class and award a League Shield.</p></div><div><strong>How protection works</strong><p>Bottom 20% loses one fragment. If no fragment remains, a League Shield protects one demotion; otherwise the class can drop one level.</p></div><div><strong>Daily activity</strong><p>Every enrolled creator in your region and class is ranked each day by confirmed LIVE Gift points. One Gift Coin of value equals one point; creators with no eligible Gifts score zero. At least two enrolled creators are required, not two Gift senders.</p></div></div></section>" +
+      "<section class='card league-ladder-panel' id='league-progression-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Daily standings are based on confirmed LIVE Gift coin value within your region and current class.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>How to move up</strong><p>Top 20% of an active class group earns one fragment. Four fragments promote you one class and award a League Shield.</p></div><div><strong>How protection works</strong><p>Bottom 20% loses one fragment. If no fragment remains, a League Shield protects one demotion; otherwise the class can drop one level.</p></div><div><strong>Daily activity</strong><p>Every enrolled creator in your region and class is ranked each day by confirmed LIVE Gift points. One Gift Coin of value equals one point; creators with no eligible Gifts score zero. At least two enrolled creators are required, not two Gift senders.</p></div></div></section>" +
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
-      "<section class='league-matches-section'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 5 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
-      "<section class='card league-leaderboard-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
-      "<section class='card league-events-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
+      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Auto-refresh every 5 seconds</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
+      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
+      "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
   }
@@ -427,12 +427,34 @@
       state.sessions = normalizeSessions(sessions.sessions);
       state.lastUpdatedAt = new Date();
       state.refreshError = "";
+      // Update only live-data sections. Replacing #main-content every five
+      // seconds reset scroll, dropped focus and disrupted the user's current
+      // interaction even though they had not navigated away from League Arena.
       const scrollTop = main.scrollTop;
-      const persistentPreview = $("#league-powerup-preview-panel");
-      main.innerHTML = renderMarkup(state.overview, state.sessions);
-      const replacementPreview = $("#league-powerup-preview-panel");
-      if (persistentPreview && replacementPreview) replacementPreview.replaceWith(persistentPreview);
+      const scrollX = window.scrollX || 0;
+      const scrollY = window.scrollY || 0;
+      const focused = document.activeElement;
+      const incomingRoot = document.createElement("div");
+      incomingRoot.innerHTML = renderMarkup(state.overview, state.sessions);
+      const refreshZones = [
+        "league-hero-zone",
+        "league-overview-zone",
+        "league-progression-zone",
+        "league-challenge-zone",
+        "league-matches-zone",
+        "league-leaderboard-zone",
+        "league-events-zone"
+      ];
+      for (const id of refreshZones) {
+        const current = document.getElementById(id);
+        const incoming = incomingRoot.querySelector("#" + id);
+        if (!current || !incoming) continue;
+        // Never remove a control while the user is interacting with its section.
+        if (focused && current.contains(focused) && !focused.matches("[data-league-refresh]")) continue;
+        current.replaceWith(incoming);
+      }
       main.scrollTop = scrollTop;
+      window.scrollTo(scrollX, scrollY);
       bindActions();
     } catch (error) {
       if (token === refreshToken && error?.name !== "AbortError") {

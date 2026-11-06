@@ -1,5 +1,76 @@
 const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge' };
+const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
+const RESTORABLE_VIEWS=new Set(['feed','more','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications']);
+let restoringSavedView=false;
+function lastViewStorageKey(){return LAST_VIEW_SESSION_PREFIX+String(state.user?.id||'');}
+function persistCurrentView(){
+  if(!state.user||restoringSavedView)return;
+  try{
+    sessionStorage.setItem(lastViewStorageKey(),JSON.stringify({
+      view:state.view,
+      feedScope:state.feedScope,
+      profileId:state.profileTargetId||state.profile?.user?.id||'',
+      profileTab:state.profileTab||'posts',
+      activePage:state.activePage||'',
+      activeGroup:state.activeGroup||'',
+      activeConnections:state.activeConnections||null,
+      searchQuery:state.searchQuery||'',
+      creatorSection:state.creatorStudio?.section||state.restoreCreatorSection||'overview',
+      rechargeTab:state.rechargeTab||'recharge',
+      savedFilter:state.savedFilter||'all',
+      savedCollection:state.savedCollection||'all',
+      savedType:state.savedType||'all',
+      savedSort:state.savedSort||'saved-newest',
+      savedSearch:state.savedSearch||'',
+      scrollX:window.scrollX||0,
+      scrollY:window.scrollY||0,
+      mainScrollTop:document.querySelector('#main-content')?.scrollTop||0
+    }));
+  }catch{}
+}
+function readPersistedView(){
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(lastViewStorageKey())||'null');
+    if(!saved||!RESTORABLE_VIEWS.has(saved.view))return null;
+    if(saved.view==='profile'&&!saved.profileId)return null;
+    if(saved.view==='page'&&!saved.activePage)return null;
+    if(saved.view==='group'&&!saved.activeGroup)return null;
+    if(saved.view==='connections'&&!saved.activeConnections?.profileId)return null;
+    if(saved.view==='search'&&!saved.searchQuery)return null;
+    return saved;
+  }catch{return null;}
+}
+async function restoreLastView(){
+  const saved=readPersistedView();
+  if(!saved){activateNav('feed');return;}
+  state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
+  state.profileTab=['posts','about','friends','photos','reels','more','gift-gallery'].includes(saved.profileTab)?saved.profileTab:'posts';
+  state.profileTargetId=String(saved.profileId||'');
+  state.activePage=String(saved.activePage||'')||null;
+  state.activeGroup=String(saved.activeGroup||'')||null;
+  state.activeConnections=saved.activeConnections||null;
+  state.searchQuery=String(saved.searchQuery||'');
+  state.restoreCreatorSection=String(saved.creatorSection||'overview');
+  state.rechargeTab=['recharge','earnings','exchange'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
+  state.savedFilter=String(saved.savedFilter||'all');
+  state.savedCollection=String(saved.savedCollection||'all');
+  state.savedType=String(saved.savedType||'all');
+  state.savedSort=String(saved.savedSort||'saved-newest');
+  state.savedSearch=String(saved.savedSearch||'');
+  restoringSavedView=true;
+  try{
+    await activateNav(saved.view);
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    window.scrollTo(Number(saved.scrollX)||0,Number(saved.scrollY)||0);
+    const main=document.querySelector('#main-content');
+    if(main)main.scrollTop=Number(saved.mainScrollTop)||0;
+  }finally{
+    restoringSavedView=false;
+    persistCurrentView();
+  }
+}
+window.addEventListener('pagehide',persistCurrentView);
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
 const fallbackAvatar = name => {
@@ -276,7 +347,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();syncNavigationActive();renderView();}
+function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();return renderView();}
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
@@ -3446,6 +3517,8 @@ async function renderCreatorSection(section){
   disposeCreatorStudioStage();
   creatorStudioDestroyPagePickers();
   s.section=section;
+  state.restoreCreatorSection=section;
+  persistCurrentView();
   let content="";
   if(section==="overview"){
     content=creatorOverviewMarkup();
@@ -3922,7 +3995,7 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));}
+function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
   activateSilent('groups');await loadGroups();
@@ -3944,7 +4017,7 @@ async function renderGroups(){
   document.querySelectorAll('[data-leave-group]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Leave this group?'))return;try{await api('/groups/'+btn.dataset.leaveGroup+'/join',{method:'DELETE',body:'{}'});toast('You left the group.');await renderGroups()}catch(e){toast(e.message)}}));
 }
 async function renderGroup(groupId){
-  activateSilent('group');state.activeGroup=groupId;
+  activateSilent('group');state.activeGroup=groupId;persistCurrentView();
   const data=await api('/groups/'+encodeURIComponent(groupId));
   const g=data.group;const isOwner=g.ownerId===state.user.id;
   let html='<section class="card group-detail-head"><button class="text-button" id="back-to-groups">← All groups</button><div class="group-icon">◉</div><h1>'+esc(g.name)+'</h1>'+(g.description?'<p>'+esc(g.description)+'</p>':'')+'<p class="muted">'+g.memberCount+' members · Created by '+esc(g.owner?.name||'account')+'</p><div class="group-members">'+(g.members||[]).slice(0,12).map(m=>'<span class="group-member" title="'+esc(m.name)+'">'+esc(m.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase())+'</span>').join('')+'</div>';
@@ -3971,13 +4044,13 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profile?.user?.id!==id)state.profileTab='posts';try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profileTargetId!==String(id))state.profileTab='posts';state.profileTargetId=String(id);persistCurrentView();try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 window.addEventListener('minglora:open-profile',event=>{const userId=event.detail?.userId;if(state.user&&userId)void openProfile(String(userId));});
 
 async function renderConnections(profileId,kind){
   if(!['followers','following','friends','subscribers'].includes(kind))return;
-  state.activeConnections={profileId,kind};activateSilent('connections');
+  state.activeConnections={profileId,kind};activateSilent('connections');persistCurrentView();
   try{
     const results=await Promise.all([api('/users/'+encodeURIComponent(profileId)+'/'+kind),api('/users/'+encodeURIComponent(profileId))]);
     const data=results[0],profile=results[1],users=data.users||[];
@@ -5503,7 +5576,7 @@ function openPageComposer(){
   modal.querySelector('form').onsubmit=async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));try{const result=await api('/pages',{method:'POST',body:JSON.stringify(data)});modal.remove();toast('Page created.');await renderPage(result.page.id);}catch(err){toast(err.message);}};
 }
 async function renderPage(pageId){
-  activateSilent('page');state.activePage=pageId;
+  activateSilent('page');state.activePage=pageId;persistCurrentView();
   const data=await api('/pages/'+encodeURIComponent(pageId));const page=data.page;
   const canPublish=['owner','admin','editor'].includes(page.myRole);
   const canDeletePage=page.myRole==='owner';
@@ -6848,7 +6921,7 @@ async function markNotificationInCenter(id){
   if(item){item.read=true;item.readAt=new Date().toISOString();}
 }
 async function renderNotifications(){
-  state.view='notifications';syncNavigationActive();
+  state.view='notifications';syncNavigationActive();persistCurrentView();
   const response=await api('/notifications');
   state.notifications=Array.isArray(response.notifications)?response.notifications:[];
   const notifications=state.notifications;
@@ -7028,6 +7101,7 @@ function paintNotificationBadge(items){
 }
 async function updateNotificationDot(){try{const result=await api('/notifications');paintNotificationBadge(result.notifications||[]);void updateMessengerBadge();}catch{}}
 async function renderSearch(q){
+  state.searchQuery=String(q||'').trim();
   activateSilent('search');
   const data=await api('/search?q='+encodeURIComponent(q));
   state.searchResults=data;
@@ -7081,7 +7155,7 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator')await renderCreator();else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
@@ -7109,6 +7183,7 @@ function bindNavigation(){
       await api('/auth/logout',{method:'POST',body:'{}'});
     }finally{
       activeMessageRecordings.forEach((recording,userId)=>cancelMessageVoiceRecording(userId));
+      try{sessionStorage.removeItem(lastViewStorageKey());}catch{}
       state.user=null;
       messageRefreshKnownIncomingIds=new Set();messageRefreshKnownIncomingPrimed=false;
       closeMessengerPanel();state.messageWindows=[];
@@ -7139,7 +7214,7 @@ async function enterMingloraApp(user,showWelcome=false){
   }
   await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
-  else activateNav('feed');
+  else await restoreLastView();
   if(showWelcome)toast('Welcome to Minglora!');
 }
 function openMfaLogin(challengeId){
