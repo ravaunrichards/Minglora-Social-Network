@@ -4070,7 +4070,7 @@ async function route(req, res) {
         const topics=Array.isArray(input.topics)?[...new Set(input.topics.map(x=>String(x).trim().slice(0,40)).filter(Boolean))].slice(0,12):String(input.topics||'').split(',').map(x=>x.trim().slice(0,40)).filter(Boolean).slice(0,12);
         if(name.length<3||name.length>80||description.length>500)return json(res,400,{error:'Group name must be 3–80 characters; description max 500.'});
         if(!['public','private','hidden'].includes(visibility))return json(res,400,{error:'Choose public, private-visible or private-hidden privacy.'});
-        const g={id:uid(),name,description,category,topics,visibility,discoverable:visibility!=='hidden'&&input.discoverable!==false,joinApproval:input.joinApproval===true||input.joinApproval==='true'||visibility!=='public',postApproval:input.postApproval===true||input.postApproval==='true',allowMemberInvites:input.allowMemberInvites!==false&&input.allowMemberInvites!=='false',status:'active',ownerId:user.id,members:[user.id],memberships:[{userId:user.id,role:'owner',status:'active',joinedAt:now()}],createdAt:now(),updatedAt:now()};
+        const g={id:uid(),name,description,category,topics,visibility,discoverable:visibility!=='hidden'&&input.discoverable!==false,joinApproval:input.joinApproval===undefined?visibility!=='public':(input.joinApproval===true||input.joinApproval==='true'),postApproval:input.postApproval===true||input.postApproval==='true',allowMemberInvites:input.allowMemberInvites!==false&&input.allowMemberInvites!=='false',status:'active',ownerId:user.id,members:[user.id],memberships:[{userId:user.id,role:'owner',status:'active',joinedAt:now()}],createdAt:now(),updatedAt:now()};
         db.groups.unshift(g);recordGroupAudit(g,'group_created','group',g.id,{visibility,category});await saveStore();
         return json(res,201,{group:safeGroupSummary(g)});
       }
@@ -4198,6 +4198,7 @@ async function route(req, res) {
         const action=String(input.action||'');
         if(!['approve','decline'].includes(action))return json(res,400,{error:'Choose approve or decline.'});
         request.status=action==='approve'?'approved':'declined';request.reviewedBy=user.id;request.reviewedAt=now();
+        if(action==='approve'&&group.memberships.some(item=>item.userId===request.userId&&item.status==='banned'))return json(res,409,{error:'This member is banned and must be unbanned before approval.'});
         if(action==='approve')setGroupMembership(group,request.userId,'member','active');
         notify(request.userId,user.id,'group_request_update',action==='approve'?`Your request to join ${group.name} was approved.`:`Your request to join ${group.name} was declined.`,{groupId:group.id,groupName:group.name});
         recordGroupAudit(group,'membership_'+request.status,'member',request.userId);await saveStore();
@@ -4225,6 +4226,7 @@ async function route(req, res) {
         if(blockedBetween(user.id,invitation.inviterId))return json(res,403,{error:'This invitation is no longer available.'});
         const action=String(input.action||'');
         if(!['accept','decline'].includes(action))return json(res,400,{error:'Choose accept or decline.'});
+        if(action==='accept'&&group.memberships.some(item=>item.userId===user.id&&item.status==='banned'))return json(res,403,{error:'You are banned from this group. Contact a group administrator for review.'});
         invitation.status=action==='accept'?'accepted':'declined';invitation.respondedAt=now();
         if(action==='accept'){setGroupMembership(group,user.id,'member','active');notifyGroupStaff(group,user.id,'group_member',`${user.name||'A member'} joined ${group.name} from an invitation.`);}
         recordGroupAudit(group,'invitation_'+invitation.status,'member',user.id);await saveStore();
