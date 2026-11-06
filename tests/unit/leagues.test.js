@@ -1,13 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  CREATOR_LEAGUE_CLASSES, MATCH_RANKS, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
+  CREATOR_LEAGUE_CLASSES, MATCH_RANKS, MATCH_CHAT_POWERUPS, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues, refundCreatorLeagueGift, settleCreatorLeagueDay, createCreatorLeagueMatch,
   acceptCreatorLeagueMatch, useCreatorLeaguePowerup, supportCreatorLeagueMatch,
+  sendCreatorLeagueMatchChatMessage, listCreatorLeagueMatchChat,
   settleExpiredLeagueMatches, getCreatorLeagueOverview, listCreatorLeagueMatches
 } from "../../backend/modules/leagues/service.js";
 
-function blankDb() { return { users: [], creatorLeagueProfiles: [], creatorLeagueGiftLedger: [], creatorLeagueDailyScores: [], creatorLeagueDailySettlements: [], creatorLeagueMatches: [], creatorLeaguePowerupUses: [], creatorLeagueEvents: [] }; }
+function blankDb() { return { users: [], creatorLeagueProfiles: [], creatorLeagueGiftLedger: [], creatorLeagueDailyScores: [], creatorLeagueDailySettlements: [], creatorLeagueMatches: [], creatorLeaguePowerupUses: [], creatorLeagueMatchChatMessages: [], creatorLeagueMatchChatPowerupUses: [], creatorLeagueEvents: [] }; }
 
 test("Minglora keeps the full creator class and match rank hierarchies", () => {
   assert.equal(CREATOR_LEAGUE_CLASSES[0], "D5");
@@ -451,4 +452,63 @@ test("refunded LIVE Gifts remain auditable but are removed from Creator League t
   assert.equal(profile.seasonPoints, 0);
   assert.equal(db.creatorLeagueDailyScores[0].points, 0);
   assert.equal(refundCreatorLeagueGift(db, "gift-refund-1").reason, "already_refunded");
+});
+
+
+test("Match Chat Power-Ups are expressive-only, scoped to one match and persisted with messages", () => {
+  const db = blankDb();
+  db.users.push({ id: "viewer-1", name: "Viewer One", username: "viewerone" });
+  const now = new Date("2026-11-06T15:00:00.000Z");
+  const match = createCreatorLeagueMatch(db, {
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    giftMode: "all", now
+  });
+  acceptCreatorLeagueMatch(db, match, "creator-b", now);
+  assert.deepEqual(MATCH_CHAT_POWERUPS.map(item => item.id), ["spotlight", "megaphone", "cheer_burst"]);
+
+  const message = sendCreatorLeagueMatchChatMessage(db, match, "viewer-1", {
+    body: "  Let’s go team!  ", powerupId: "spotlight"
+  }, new Date(now.getTime() + 2000));
+  assert.equal(message.body, "Let’s go team!");
+  assert.equal(message.powerupId, "spotlight");
+  assert.equal(message.author.name, "Viewer One");
+  assert.equal(match.scores.challenger, 0);
+  assert.equal(match.scores.opponent, 0);
+
+  const chat = listCreatorLeagueMatchChat(db, db.users, match.id, "viewer-1", new Date(now.getTime() + 3000));
+  assert.equal(chat.messages.length, 1);
+  assert.equal(chat.messages[0].effectActive, true);
+  assert.deepEqual(chat.usedPowerups, ["spotlight"]);
+  assert.throws(() => sendCreatorLeagueMatchChatMessage(db, match, "viewer-1", {
+    body: "Spotlight again", powerupId: "spotlight"
+  }, new Date(now.getTime() + 4000)), /already used this chat power-up/i);
+
+  const noBoost = sendCreatorLeagueMatchChatMessage(db, match, "viewer-1", {
+    body: "Regular message"
+  }, new Date(now.getTime() + 5000));
+  assert.equal(noBoost.powerupId, null);
+  assert.equal(match.scores.challenger, 0);
+  assert.equal(match.scores.opponent, 0);
+  assert.equal(db.creatorLeagueMatchChatMessages.length, 2);
+});
+
+test("Match Chat validates text, rate-limits rapid sends and expires visual effects", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-06T15:10:00.000Z");
+  const match = createCreatorLeagueMatch(db, {
+    challengerId: "creator-a", opponentId: "creator-b",
+    challengerSessionId: "live-a", opponentSessionId: "live-b",
+    giftMode: "all", now
+  });
+  acceptCreatorLeagueMatch(db, match, "creator-b", now);
+  assert.throws(() => sendCreatorLeagueMatchChatMessage(db, match, "viewer-2", { body: "   " }, now), /write a message/i);
+  assert.throws(() => sendCreatorLeagueMatchChatMessage(db, match, "viewer-2", { body: "x".repeat(281) }, now), /280 characters/i);
+
+  sendCreatorLeagueMatchChatMessage(db, match, "viewer-2", { body: "First", powerupId: "cheer_burst" }, new Date(now.getTime() + 1000));
+  assert.throws(() => sendCreatorLeagueMatchChatMessage(db, match, "viewer-2", { body: "Too fast" }, new Date(now.getTime() + 1500)), /wait a moment/i);
+
+  const expired = listCreatorLeagueMatchChat(db, db.users, match.id, "viewer-2", new Date(now.getTime() + 7000));
+  assert.equal(expired.messages[0].effectActive, false);
+  assert.equal(expired.messages[0].body, "First");
 });

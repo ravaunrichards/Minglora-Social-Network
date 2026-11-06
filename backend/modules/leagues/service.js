@@ -19,9 +19,16 @@ export const MATCH_POWERUPS = Object.freeze([
   { id: "score_multiplier", name: "Score Multiplier", symbol: "⭐", durationMs: 15000, multiplier: 2, description: "Doubles eligible match points for 15 seconds only." }
 ]);
 
+export const MATCH_CHAT_POWERUPS = Object.freeze([
+  { id: "spotlight", name: "Spotlight", symbol: "✨", durationMs: 10000, description: "Highlights one match-chat message for 10 seconds." },
+  { id: "megaphone", name: "Megaphone", symbol: "📣", durationMs: 8000, description: "Gives one message a bold match-chat announcement style." },
+  { id: "cheer_burst", name: "Cheer Burst", symbol: "🎉", durationMs: 5000, description: "Adds an animated celebration to one message without changing the score." }
+]);
+
 const COLLECTIONS = [
   "creatorLeagueProfiles", "creatorLeagueGiftLedger", "creatorLeagueDailyScores",
   "creatorLeagueDailySettlements", "creatorLeagueMatches", "creatorLeaguePowerupUses",
+  "creatorLeagueMatchChatMessages", "creatorLeagueMatchChatPowerupUses",
   "creatorLeagueEvents"
 ];
 
@@ -201,6 +208,12 @@ const ensureCollections = db => {
   db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
     item.userId && item.powerupId && item.dayKey ? [item.userId, item.powerupId, item.dayKey].join(":") : item.id
   );
+  db.creatorLeagueMatchChatMessages = uniqueRecords(db.creatorLeagueMatchChatMessages, item => item.id);
+  db.creatorLeagueMatchChatPowerupUses = uniqueRecords(db.creatorLeagueMatchChatPowerupUses, item =>
+    item.userId && item.matchId && item.powerupId
+      ? [item.userId, item.matchId, item.powerupId].join(":") : item.id
+  );
+
   db.creatorLeagueEvents = uniqueRecords(db.creatorLeagueEvents, item => item.id);
   db.creatorLeagueMatches = compactMatches(db.creatorLeagueMatches).map(normalizeMatch);
 };
@@ -660,6 +673,80 @@ function publicMember(users, id) {
 function decorateMatch(match, users) {
   return { ...match, challenger: publicMember(users, match.challengerId), opponent: publicMember(users, match.opponentId) };
 }
+export function sendCreatorLeagueMatchChatMessage(db, match, userId, input = {}, now = new Date()) {
+  ensureCollections(db);
+  match = resolveCanonicalMatch(db, match);
+  if (!match || match.status !== "live") {
+    throw Object.assign(new Error("Match chat is available only while a League Match is live."), { status: 409 });
+  }
+  if (!userId) throw Object.assign(new Error("Sign in to use match chat."), { status: 401 });
+
+  const body = String(input.body || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  if (!body) throw Object.assign(new Error("Write a message before sending."), { status: 400 });
+  if ([...body].length > 280) throw Object.assign(new Error("Match-chat messages must be 280 characters or fewer."), { status: 400 });
+
+  const timestamp = now instanceof Date ? now : new Date(now);
+  const lastMessage = db.creatorLeagueMatchChatMessages
+    .filter(item => item.matchId === match.id && item.userId === userId)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+  if (lastMessage && timestamp.getTime() - Date.parse(lastMessage.createdAt) < 1200) {
+    throw Object.assign(new Error("Please wait a moment before sending another match-chat message."), { status: 429 });
+  }
+
+  const powerupId = String(input.powerupId || "").trim();
+  let powerup = null;
+  if (powerupId) {
+    powerup = MATCH_CHAT_POWERUPS.find(item => item.id === powerupId);
+    if (!powerup) throw Object.assign(new Error("Choose a valid Match Chat Power-Up."), { status: 400 });
+    if (db.creatorLeagueMatchChatPowerupUses.some(item =>
+      item.userId === userId && item.matchId === match.id && item.powerupId === powerupId
+    )) {
+      throw Object.assign(new Error("You have already used this chat power-up in this match."), { status: 409 });
+    }
+    db.creatorLeagueMatchChatPowerupUses.push({
+      id: randomUUID(), userId, matchId: match.id, powerupId, createdAt: timestamp.toISOString()
+    });
+  }
+
+  const message = {
+    id: randomUUID(), matchId: match.id, userId, body,
+    powerupId: powerup?.id || null,
+    powerupName: powerup?.name || null,
+    powerupSymbol: powerup?.symbol || null,
+    effectExpiresAt: powerup ? new Date(timestamp.getTime() + powerup.durationMs).toISOString() : null,
+    createdAt: timestamp.toISOString()
+  };
+  db.creatorLeagueMatchChatMessages.push(message);
+
+  const matchMessages = db.creatorLeagueMatchChatMessages
+    .filter(item => item.matchId === match.id)
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  if (matchMessages.length > 200) {
+    const removeIds = new Set(matchMessages.slice(0, matchMessages.length - 200).map(item => item.id));
+    db.creatorLeagueMatchChatMessages = db.creatorLeagueMatchChatMessages.filter(item => !removeIds.has(item.id));
+  }
+  return { ...message, author: publicMember(db.users, userId) };
+}
+export function listCreatorLeagueMatchChat(db, users, matchId, userId, now = new Date()) {
+  ensureCollections(db);
+  const currentTime = now instanceof Date ? now.getTime() : Date.parse(now);
+  const messages = db.creatorLeagueMatchChatMessages
+    .filter(item => item.matchId === matchId)
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+    .slice(-100)
+    .map(item => ({
+      ...item,
+      effectActive: Boolean(item.effectExpiresAt && Date.parse(item.effectExpiresAt) > currentTime),
+      author: publicMember(users, item.userId)
+    }));
+  return {
+    messages,
+    usedPowerups: db.creatorLeagueMatchChatPowerupUses
+      .filter(item => item.matchId === matchId && item.userId === userId)
+      .map(item => item.powerupId),
+    powerups: MATCH_CHAT_POWERUPS.map(item => ({ ...item, durationMs: undefined }))
+  };
+}
 export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   ensureCollections(db);
   settleExpiredLeagueMatches(db, now);
@@ -675,7 +762,12 @@ export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   });
   return matches
     .sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt))
-    .slice(0, 50).map(match => decorateMatch(match, users));
+    .slice(0, 50).map(match => ({
+      ...decorateMatch(match, users),
+      chatPowerupsUsedByViewer: db.creatorLeagueMatchChatPowerupUses
+        .filter(item => item.matchId === match.id && item.userId === userId)
+        .map(item => item.powerupId)
+    }));
 }
 export function getCreatorLeagueOverview(db, user, now = new Date()) {
   ensureCollections(db);
@@ -712,6 +804,7 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
     leaderboard: leaders,
     recentEvents: db.creatorLeagueEvents.filter(item => item.userId === user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 12),
     powerups: MATCH_POWERUPS.map(item => ({ ...item, usedToday: uses.some(use => use.powerupId === item.id) })),
+    chatPowerups: MATCH_CHAT_POWERUPS.map(item => ({ id: item.id, name: item.name, symbol: item.symbol, description: item.description })),
     activeMatches: listCreatorLeagueMatches(db, db.users, user.id, now)
   };
 }
