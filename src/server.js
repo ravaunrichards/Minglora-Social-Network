@@ -20,7 +20,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
-import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
+import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
@@ -1276,6 +1276,7 @@ async function route(req, res) {
           pageRoles:(db.pageRoles||[]).filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
           pageFollows:(db.pageFollows||[]).filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
           pagePosts:(db.pagePosts||[]).filter(item=>item.publishedBy===user.id||ownedPageIds.has(item.pageId)),
+          pageViews:(db.pageViews||[]).filter(item=>item.viewerId===user.id||ownedPageIds.has(item.pageId)),
           messages:(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id),
           notifications:(db.notifications||[]).filter(item=>item.userId===user.id)
         };
@@ -4180,7 +4181,7 @@ async function route(req, res) {
         const validation=validatePageInput(input,db.pages || []);
         if(!validation.valid)return json(res,validation.errors.some(error=>error.includes('already taken'))?409:400,{error:validation.errors.join(' ')});
         const {handle,title,description,category}=validation.value;
-        const page={id:uid(),handle,title,description,category,status:'active',createdBy:user.id,createdAt:now()};
+        const page={id:uid(),handle,title,description,category,website:'',contactEmail:'',phone:'',location:'',actionLabel:'',actionUrl:'',status:'active',createdBy:user.id,createdAt:now(),updatedAt:now()};
         db.pages.push(page);db.pageRoles.push({pageId:page.id,userId:user.id,role:'owner',createdAt:now()});await saveStore();
         return json(res,201,{page:{...page,owner:safeUser(user),followerCount:0,isFollowing:false,myRole:'owner'}});
       }
@@ -4215,10 +4216,102 @@ async function route(req, res) {
         if(!canDeletePagePost(db.pageRoles || [],post,user.id))return json(res,403,{error:'Only the publisher or Page owner/admin can delete this post.'});
         db.pagePosts=db.pagePosts.filter(item=>item.id!==post.id);(post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});await saveStore();return json(res,200,{ok:true,id:post.id});
       }
+      m=p.match(/^\/api\/pages\/([^/]+)\/roles$/);
+      if(method==='GET'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||!canManagePageTeamPolicy(db.pageRoles||[],page.id,user.id))return json(res,404,{error:'Page team not found.'});
+        const members=(db.pageRoles||[]).filter(role=>role.pageId===page.id).map(role=>({...role,user:safeUser(db.users.find(member=>member.id===role.userId))})).filter(role=>role.user);
+        return json(res,200,{members});
+      }
+      if(method==='POST'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||!canManagePageTeamPolicy(db.pageRoles||[],page.id,user.id))return json(res,404,{error:'Page team not found.'});
+        const role=String(input.role||'editor').trim().toLowerCase();
+        const username=String(input.username||'').trim().replace(/^@/,'').toLowerCase();
+        const target=(db.users||[]).find(member=>member.id===input.userId||(username&&String(member.username||'').toLowerCase()===username));
+        if(!target)return json(res,404,{error:'Find an existing Minglora account by username before adding a Page team member.'});
+        if(target.id===user.id||blockedBetween(user.id,target.id))return json(res,400,{error:'This account cannot be added to the Page team.'});
+        const existing=(db.pageRoles||[]).find(item=>item.pageId===page.id&&item.userId===target.id);
+        if(existing){
+          if(!canChangePageRolePolicy(db.pageRoles||[],page.id,user.id,target.id,role))return json(res,403,{error:'You cannot change this team member’s role.'});
+          existing.role=role;existing.updatedAt=now();await saveStore();
+          return json(res,200,{member:{...existing,user:safeUser(target)}});
+        }
+        if(!canAssignPageRolePolicy(db.pageRoles||[],page.id,user.id,target.id,role))return json(res,403,{error:'You cannot assign that Page role.'});
+        const member={pageId:page.id,userId:target.id,role,createdAt:now()};
+        db.pageRoles.push(member);await saveStore();
+        return json(res,201,{member:{...member,user:safeUser(target)}});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)\/roles\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        const targetId=decodeURIComponent(m[2]);
+        const member=(db.pageRoles||[]).find(item=>item.pageId===m[1]&&item.userId===targetId);
+        const role=String(input.role||'').trim().toLowerCase();
+        if(!page||!member)return json(res,404,{error:'Page team member not found.'});
+        if(!canChangePageRolePolicy(db.pageRoles||[],page.id,user.id,targetId,role))return json(res,403,{error:'You cannot change this team member’s role.'});
+        member.role=role;member.updatedAt=now();await saveStore();
+        return json(res,200,{member:{...member,user:safeUser(db.users.find(item=>item.id===targetId))}});
+      }
+      if(method==='DELETE'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        const targetId=decodeURIComponent(m[2]);
+        const member=(db.pageRoles||[]).find(item=>item.pageId===m[1]&&item.userId===targetId);
+        if(!page||!member)return json(res,404,{error:'Page team member not found.'});
+        if(!canRemovePageRolePolicy(db.pageRoles||[],page.id,user.id,targetId))return json(res,403,{error:'You cannot remove this Page team member.'});
+        db.pageRoles=db.pageRoles.filter(item=>!(item.pageId===page.id&&item.userId===targetId));
+        await saveStore();return json(res,200,{ok:true,userId:targetId});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)\/insights$/);
+      if(method==='GET'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||!canViewPageInsightsPolicy(db.pageRoles||[],page.id,user.id))return json(res,404,{error:'Page insights are not available for this account.'});
+        const requestedDays=Number(url.searchParams.get('days')||7);
+        const days=[7,30,90].includes(requestedDays)?requestedDays:7;
+        const cutoff=Date.now()-days*24*60*60*1000;
+        const views=(db.pageViews||[]).filter(item=>item.pageId===page.id&&Date.parse(item.createdAt||item.viewedAt||'')>=cutoff);
+        const daily=new Map();
+        for(let offset=days-1;offset>=0;offset--){
+          const date=new Date(Date.now()-offset*24*60*60*1000).toISOString().slice(0,10);
+          daily.set(date,new Set());
+        }
+        views.forEach(view=>{
+          const date=String(view.dateKey||view.createdAt||view.viewedAt||'').slice(0,10);
+          if(daily.has(date)&&view.viewerId)daily.get(date).add(view.viewerId);
+        });
+        const publishedPosts=(db.pagePosts||[]).filter(item=>item.pageId===page.id&&item.status==='published');
+        const followers=(db.pageFollows||[]).filter(item=>item.pageId===page.id);
+        const series=[...daily.entries()].map(([date,visitors])=>({date,visitors:visitors.size}));
+        return json(res,200,{days,metrics:{visitorDays:views.length,uniqueVisitors:new Set(views.map(item=>item.viewerId).filter(Boolean)).size,followers:followers.length,publishedPosts:publishedPosts.length},series,generatedAt:now()});
+      }
+      m=p.match(/^\/api\/pages\/([^/]+)\/followers$/);
+      if(method==='GET'&&m){
+        const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
+        if(!page||!canViewPageInsightsPolicy(db.pageRoles||[],page.id,user.id))return json(res,404,{error:'Page followers are not available for this account.'});
+        const followers=(db.pageFollows||[]).filter(item=>item.pageId===page.id&&!blockedBetween(user.id,item.userId)).map(item=>({...item,user:safeUser(db.users.find(member=>member.id===item.userId),user.id)})).filter(item=>item.user);
+        return json(res,200,{followers});
+      }
+      if(method==='PATCH'&&/^\/api\/pages\/[^/]+$/.test(p)){
+        const pageId=p.match(/^\/api\/pages\/([^/]+)$/)[1];
+        const page=(db.pages||[]).find(item=>item.id===pageId&&item.status==='active');
+        if(!page)return json(res,404,{error:'Page not found.'});
+        if(!['owner','admin'].includes(pageRole(page.id,user.id)))return json(res,403,{error:'Only Page owners or admins can edit Page details.'});
+        const validation=validatePageUpdate(input,page,db.pages||[]);
+        if(!validation.valid)return json(res,validation.errors.some(error=>error.includes('already taken'))?409:400,{error:validation.errors.join(' ')});
+        Object.assign(page,validation.value,{updatedAt:now()});
+        await saveStore();
+        return json(res,200,{page:{...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(item=>item.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(item=>item.pageId===page.id&&item.userId===user.id),myRole:pageRole(page.id,user.id)}});
+      }
       m=p.match(/^\/api\/pages\/([^/]+)$/);
       if(method==='GET'&&m){
         const page=(db.pages||[]).find(item=>item.id===m[1]&&item.status==='active');
         if(!page||blockedBetween(user.id,page.createdBy))return json(res,404,{error:'Page not found.'});
+        if(!pageRole(page.id,user.id)){
+          const dateKey=new Date().toISOString().slice(0,10);
+          db.pageViews=db.pageViews||[];
+          const alreadyCounted=db.pageViews.some(view=>view.pageId===page.id&&view.viewerId===user.id&&view.dateKey===dateKey);
+          if(!alreadyCounted){db.pageViews.push({id:uid(),pageId:page.id,viewerId:user.id,dateKey,createdAt:now()});await saveStore();}
+        }
         const posts=await Promise.all((db.pagePosts||[]).filter(post=>post.pageId===page.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async post=>({...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}})));
         return json(res,200,{page:{...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)},posts});
       }
@@ -4232,6 +4325,7 @@ async function route(req, res) {
         db.pageRoles=db.pageRoles.filter(role=>role.pageId!==page.id);
         db.pageFollows=db.pageFollows.filter(f=>f.pageId!==page.id);
         db.pagePosts=db.pagePosts.filter(post=>post.pageId!==page.id);
+        db.pageViews=(db.pageViews||[]).filter(view=>view.pageId!==page.id);
         await saveStore();return json(res,200,{ok:true,id:page.id});
       }
       if(method==='GET'&&p==='/api/meetwave/status'){
