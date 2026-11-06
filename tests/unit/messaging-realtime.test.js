@@ -116,10 +116,17 @@ test('Messenger presence is limited to conversation peers and disappears after t
   assert.equal(bob.socket.sent.some(item => item.type === 'presence' && item.userId === 'alice' && item.online), true);
 
   const bobSecondDevice = connect('bob');
+  const offlineEventsBeforeDisconnect = alice.socket.sent.filter(item =>
+    item.type === 'presence' && item.userId === 'bob' && item.online === false
+  ).length;
   bob.socket.close();
-  assert.equal(alice.socket.sent.some(item => item.type === 'presence' && item.userId === 'bob' && item.online === false), false);
+  assert.equal(alice.socket.sent.filter(item =>
+    item.type === 'presence' && item.userId === 'bob' && item.online === false
+  ).length, offlineEventsBeforeDisconnect);
   bobSecondDevice.socket.close();
-  assert.equal(alice.socket.sent.some(item => item.type === 'presence' && item.userId === 'bob' && item.online === false), true);
+  assert.equal(alice.socket.sent.filter(item =>
+    item.type === 'presence' && item.userId === 'bob' && item.online === false
+  ).length, offlineEventsBeforeDisconnect + 1);
   // A blocked relationship never receives presence broadcasts.
   const carol = connect('carol');
   assert.equal(carol.socket.sent.some(item => item.type === 'presence' && item.userId === 'alice'), false);
