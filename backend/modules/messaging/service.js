@@ -50,6 +50,7 @@ export function validateMessageGroupReaction(value) {
 export const MESSAGE_DISAPPEARING_OPTIONS = Object.freeze([0,30,300,3600,86400,604800]);
 
 export function normalizeMessageDisappearingSeconds(value) {
+  if (value === null || value === undefined || value === '') return null;
   const seconds = Number(value);
   return Number.isInteger(seconds) && MESSAGE_DISAPPEARING_OPTIONS.includes(seconds) ? seconds : null;
 }
