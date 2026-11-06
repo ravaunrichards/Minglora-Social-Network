@@ -17,6 +17,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
+import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
 import { validatePageInput, canManagePage as canManagePagePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
@@ -254,6 +255,22 @@ const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid'
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
+function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
+function friendUpdatesSnoozed(viewerId,targetId){
+  if(!viewerId||!targetId||viewerId===targetId||!isFriend(viewerId,targetId))return false;
+  const until=Date.parse(friendPreferenceFor(viewerId,targetId)?.snoozedUntil||'');
+  return Number.isFinite(until)&&until>Date.now();
+}
+function friendPostsMuted(viewerId,targetId){
+  if(!viewerId||!targetId||viewerId===targetId||!isFriend(viewerId,targetId))return false;
+  const preference=friendPreferenceFor(viewerId,targetId);
+  return Boolean(preference?.isMutedPosts||friendUpdatesSnoozed(viewerId,targetId));
+}
+function friendStoriesMuted(viewerId,targetId){
+  if(!viewerId||!targetId||viewerId===targetId||!isFriend(viewerId,targetId))return false;
+  const preference=friendPreferenceFor(viewerId,targetId);
+  return Boolean(preference?.isMutedStories||friendUpdatesSnoozed(viewerId,targetId));
+}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
 const DEFAULT_PROFILE_SECTIONS={about:true,friends:true,photos:true,reels:true,groups:true,events:true,checkIns:true,highlights:true};
 function readProfileSections(userId){
@@ -266,6 +283,10 @@ function canViewProfileAudience(viewerId,ownerId,audience='public'){
   if(audience==='public')return true;
   if(audience==='friends')return isFriend(viewerId,ownerId);
   if(audience==='followers')return (db.follows||[]).some(edge=>edge.followerId===viewerId&&edge.followedId===ownerId);
+  if(audience==='close_friends'){
+    if(!isFriend(viewerId,ownerId))return false;
+    return Boolean((db.friendPreferences||[]).some(item=>item.ownerId===ownerId&&item.targetId===viewerId&&item.isCloseFriend===true));
+  }
   return false;
 }
 function recordProfileActivity(userId,action,summary,targetType='profile',targetId=userId){
@@ -615,9 +636,17 @@ function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
-const canViewStory = (viewerId, story) => canViewStoryPolicy({
-  viewerId, story, friendships:db.friendships, follows:db.follows || [], blocks:db.blocks || []
-});
+const canViewStory = (viewerId, story) => {
+  if(!story?.userId)return false;
+  if(viewerId!==story.userId&&friendStoriesMuted(viewerId,story.userId))return false;
+  if(story.audience==='close_friends')return canViewProfileAudience(viewerId,story.userId,'close_friends');
+  const mutualFriendships=getMutualFollowIds(db.follows||[],story.userId,db.blocks||[])
+    .map(friendId=>({from:friendId,to:story.userId,status:'accepted'}));
+  return canViewStoryPolicy({
+    viewerId,story,friendships:[...(db.friendships||[]),...mutualFriendships],
+    follows:db.follows||[],blocks:db.blocks||[]
+  });
+};
 async function pruneExpiredStories() {
   const current = Date.now();
   const activeStories=db.stories||[];
