@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { WebSocketServer, WebSocket } from 'ws';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -11,6 +12,8 @@ import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLive
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
+import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
+import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -4521,10 +4524,10 @@ async function route(req, res) {
         return json(res,200,{gifs});
       }
       if(method==='GET'&&p==='/api/messages'){
-        const peers=[...new Set(db.messages.filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id));
+        const peers=[...new Set((db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
         const conversations=await Promise.all(peers.map(async id=>{
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
-          const visibleMessages=db.messages.filter(item=>
+          const visibleMessages=(db.messages||[]).filter(item=>
             ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
             !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
             (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
@@ -4536,19 +4539,143 @@ async function route(req, res) {
               if(!asset)return null;
               try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
             }));
-            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from))};
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
           }));
           const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
-          return {user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id)};
+          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id)};
         }));
-        return json(res,200,{conversations:conversations.filter(Boolean)});
+        const groupRows = await Promise.all((db.messageGroups||[])
+          .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .filter(group=>getActiveMessageGroupMembers(db,group.id).every(memberId=>!blockedBetween(user.id,memberId)))
+          .map(async group=>{
+            const members=getActiveMessageGroupMembers(db,group.id);
+            const rawMessages=(db.messageGroupMessages||[]).filter(item=>
+              item.groupId===group.id&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+              &&!blockedBetween(user.id,item.from)
+            ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+            const messages=await Promise.all(rawMessages.map(async item=>{
+              const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+                const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+                if(!asset)return null;
+                try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+              }));
+              return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id),readState:summarizeGroupReadState(item,members)};
+            }));
+            const unreadCount=rawMessages.filter(item=>item.from!==user.id&&!item.readBy?.[user.id]).length;
+            const memberRecords=(db.messageGroupMembers||[]).filter(item=>item.groupId===group.id&&item.status==='active');
+            const lastMessage=messages.at(-1);
+            return {
+              id:'group:'+group.id,kind:'group',groupId:group.id,
+              user:{id:'group:'+group.id,name:group.name,username:'group',avatar:group.avatar||'',isGroup:true},
+              group:{id:group.id,name:group.name,ownerId:group.ownerId,description:group.description||'',memberCount:members.length,members:memberRecords.map(item=>({id:item.userId,role:item.role,user:safeUser(db.users.find(member=>member.id===item.userId),user.id)})).filter(item=>item.user)},
+              messages,unreadCount,isRequest:false,lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
+            };
+          }));
+        const all=[...conversations.filter(Boolean),...groupRows]
+          .sort((a,b)=>new Date(b.lastActivityAt||b.messages.at(-1)?.createdAt||0)-new Date(a.lastActivityAt||a.messages.at(-1)?.createdAt||0));
+        return json(res,200,{conversations:all});
+      }
+      if(method==='GET'&&p==='/api/message-groups'){
+        const groups=(db.messageGroups||[]).filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .map(group=>({...group,memberCount:getActiveMessageGroupMembers(db,group.id).length,role:(db.messageGroupMembers||[]).find(item=>item.groupId===group.id&&item.userId===user.id)?.role||'member'}));
+        return json(res,200,{groups});
+      }
+      if(method==='POST'&&p==='/api/message-groups'){
+        const name=normalizeMessageGroupName(input.name);
+        const description=String(input.description||'').trim().slice(0,500);
+        const memberIds=normalizeMessageGroupMemberIds(input.memberIds,user.id);
+        if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
+        if(memberIds.length<2)return json(res,400,{error:'Choose at least one other member for the group chat.'});
+        if(memberIds.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'Messenger groups support up to 50 members.'});
+        const members=memberIds.map(id=>db.users.find(item=>item.id===id));
+        if(members.some(member=>!member||['suspended','deactivated'].includes(member.status)||blockedBetween(user.id,member.id)))
+          return json(res,400,{error:'One or more selected members are unavailable for this group.'});
+        for(const member of members){
+          if(member.id===user.id)continue;
+          const settings=getUserSettings(member);
+          if(settings.privacy.messageAudience==='nobody'||(settings.privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))
+            return json(res,403,{error:'One or more members only accept new messages from confirmed friends.'});
+        }
+        const group={id:uid(),name,description,ownerId:user.id,status:'active',createdAt:now(),lastActivityAt:now()};
+        db.messageGroups.push(group);
+        for(const member of members)db.messageGroupMembers.push({id:uid(),groupId:group.id,userId:member.id,role:member.id===user.id?'owner':'member',status:'active',joinedAt:now(),addedBy:user.id});
+        for(const member of members)if(member.id!==user.id)notify(member.id,user.id,'message',user.name+' added you to the Messenger group '+name,{messageGroupId:group.id});
+        await saveStore();
+        return json(res,201,{group:{...group,memberCount:members.length},members:members.map(member=>safeUser(member,user.id))});
+      }
+      const messageGroupMatch=p.match(/^\/api\/message-groups\/([^/]+)(?:\/(members|leave|read))?(?:\/([^/]+))?$/);
+      if(messageGroupMatch){
+        const groupId=decodeURIComponent(messageGroupMatch[1]);
+        const action=messageGroupMatch[2]||'';
+        const extraId=messageGroupMatch[3]?decodeURIComponent(messageGroupMatch[3]):'';
+        const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+        if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+        if(method==='PATCH'&&!action){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can edit group details.'});
+          const name=normalizeMessageGroupName(input.name??group.name);
+          const description=String(input.description??group.description||'').trim().slice(0,500);
+          if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
+          group.name=name;group.description=description;group.updatedAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          return json(res,200,{group});
+        }
+        if(method==='POST'&&action==='members'){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can add members.'});
+          const memberIds=normalizeMessageGroupMemberIds(input.memberIds||[input.userId],null);
+          if(!memberIds.length||memberIds.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'Choose between one and 50 members to add.'});
+          const current=getActiveMessageGroupMembers(db,groupId);
+          const invitees=memberIds.filter(id=>!current.includes(id)).map(id=>db.users.find(item=>item.id===id));
+          if(invitees.length!==memberIds.length||current.length+invitees.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'One or more selected members are unavailable or the group is full.'});
+          if(invitees.some(member=>!member||blockedBetween(user.id,member.id)||blockedBetween(member.id,group.ownerId)))return json(res,400,{error:'One or more selected members are unavailable for this group.'});
+          for(const member of invitees){
+            const settings=getUserSettings(member);
+            if(settings.privacy.messageAudience==='nobody'||(settings.privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))return json(res,403,{error:'One or more members only accept new messages from confirmed friends.'});
+          }
+          for(const member of invitees){
+            db.messageGroupMembers.push({id:uid(),groupId,userId:member.id,role:'member',status:'active',joinedAt:now(),addedBy:user.id});
+            notify(member.id,user.id,'message',user.name+' added you to the Messenger group '+group.name,{messageGroupId:groupId});
+          }
+          group.lastActivityAt=now();await saveStore();
+          messengerRealtime?.publish([...current,...invitees.map(item=>item.id)],{type:'message:group-updated',groupId});
+          return json(res,201,{members:getActiveMessageGroupMembers(db,groupId)});
+        }
+        if(method==='DELETE'&&action==='members'&&extraId){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can remove members.'});
+          const target=(db.messageGroupMembers||[]).find(item=>item.groupId===groupId&&item.userId===extraId&&item.status==='active');
+          if(!target)return json(res,404,{error:'Active group member not found.'});
+          if(target.role==='owner'||extraId===group.ownerId)return json(res,403,{error:'The group owner cannot be removed. Transfer ownership first.'});
+          if(target.role==='admin'&&target.addedBy!==user.id&&user.id!==group.ownerId)return json(res,403,{error:'Only the group owner can remove another administrator.'});
+          target.status='removed';target.leftAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          messengerRealtime?.publish([extraId],{type:'message:group-removed',groupId});
+          return json(res,200,{ok:true});
+        }
+        if(method==='POST'&&action==='leave'){
+          if(user.id===group.ownerId)return json(res,403,{error:'The group owner must transfer ownership before leaving.'});
+          const membership=(db.messageGroupMembers||[]).find(item=>item.groupId===groupId&&item.userId===user.id&&item.status==='active');
+          if(!membership)return json(res,404,{error:'Active group membership not found.'});
+          membership.status='left';membership.leftAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          return json(res,200,{ok:true});
+        }
+        if(method==='POST'&&action==='read'){
+          const readAt=now();let updated=0;
+          for(const message of db.messageGroupMessages||[]){
+            if(message.groupId!==groupId||message.from===user.id)continue;
+            if(!message.readBy||typeof message.readBy!=='object')message.readBy={};
+            if(!message.readBy[user.id]){message.readBy[user.id]=readAt;updated++;}
+          }
+          if(updated)await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:read',conversationId:'group:'+groupId,groupId,userId:user.id});
+          return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
+        }
       }
       const messageActionMatch=p.match(/^\/api\/messages\/([^/]+)$/);
       if(method==='DELETE'&&messageActionMatch){
         let target;
         try{target=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message or conversation identifier is invalid.'});}
         if(!target)return json(res,400,{error:'The message or conversation identifier is invalid.'});
-        const message=db.messages.find(item=>item.id===target&&(item.from===user.id||item.to===user.id));
+        const message=db.messages.find(item=>item.id===target&&(item.from===user.id||item.to===user.id))||db.messageGroupMessages.find(item=>item.id===target&&canAccessMessageGroup(db,item.groupId,user.id));
         if(message){
           const scope=String(input.scope||'me');
           if(scope==='everyone'){
@@ -4568,6 +4695,8 @@ async function route(req, res) {
             }
             await saveStore();
             await Promise.allSettled(attachmentAssets.map(asset=>mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path})));
+            if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:deleted',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+            else messengerRealtime?.publish([message.from,message.to],{type:'message:deleted',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
             return json(res,200,{ok:true,unsent:true});
           }
           if(scope!=='me')return json(res,400,{error:'Choose delete for me or unsend for everyone.'});
@@ -4575,6 +4704,8 @@ async function route(req, res) {
           deletedFor.add(user.id);
           message.deletedFor=[...deletedFor];
           await saveStore();
+          if(message.groupId)messengerRealtime?.publish([user.id],{type:'message:deleted',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+          else messengerRealtime?.publish([message.from,message.to],{type:'message:deleted',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
           return json(res,200,{ok:true,deletedForMe:true});
         }
         const peerId=target;
@@ -4592,8 +4723,8 @@ async function route(req, res) {
       if(method==='PATCH'&&messageActionMatch){
         let messageId;
         try{messageId=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message identifier is invalid.'});}
-        const message=db.messages.find(item=>item.id===messageId);
-        if(!message||(message.from!==user.id&&message.to!==user.id))return json(res,404,{error:'Message not found.'});
+        const message=db.messages.find(item=>item.id===messageId)||db.messageGroupMessages.find(item=>item.id===messageId);
+        if(!message||(message.from!==user.id&&message.to!==user.id&&!canAccessMessageGroup(db,message.groupId,user.id)))return json(res,404,{error:'Message not found.'});
         if(message.from!==user.id)return json(res,403,{error:'Only the sender can edit this message.'});
         if(message.unsent||message.stickerId||message.gifUrl)return json(res,409,{error:'This type of message cannot be edited.'});
         const text=String(input.text||'').trim();
@@ -4601,7 +4732,25 @@ async function route(req, res) {
         message.text=text;
         message.editedAt=now();
         await saveStore();
+        if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:updated',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+        else messengerRealtime?.publish([message.from,message.to],{type:'message:updated',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
         return json(res,200,{ok:true,message:{id:message.id,text:message.text,editedAt:message.editedAt}});
+      }
+      const messageReactionMatch=p.match(/^\/api\/messages\/([^/]+)\/reactions$/);
+      if(method==='POST'&&messageReactionMatch){
+        const messageId=decodeURIComponent(messageReactionMatch[1]);
+        const message=db.messages.find(item=>item.id===messageId)||db.messageGroupMessages.find(item=>item.id===messageId&&canAccessMessageGroup(db,item.groupId,user.id));
+        if(!message||message.unsent)return json(res,404,{error:'Message not found.'});
+        if(message.groupId&&!canAccessMessageGroup(db,message.groupId,user.id))return json(res,404,{error:'Message not found.'});
+        if(!message.groupId&&message.from!==user.id&&message.to!==user.id)return json(res,404,{error:'Message not found.'});
+        const reaction=String(input.reaction||'');
+        if(!['👍','❤️','😂','😮','😢','🙏','🔥','🎉'].includes(reaction))return json(res,400,{error:'Choose a supported Messenger reaction.'});
+        message.reactions=message.reactions&&typeof message.reactions==='object'?message.reactions:{};
+        if(message.reactions[user.id]===reaction)delete message.reactions[user.id];else message.reactions[user.id]=reaction;
+        await saveStore();
+        const recipients=message.groupId?getActiveMessageGroupMembers(db,message.groupId):[message.from,message.to];
+        messengerRealtime?.publish(recipients,{type:'message:updated',conversationId:message.groupId?'group:'+message.groupId:(message.from===user.id?message.to:message.from),groupId:message.groupId||null,messageId});
+        return json(res,200,{ok:true,reactions:message.reactions});
       }
       const messageReadMatch=p.match(/^\/api\/messages\/([^/]+)\/read$/);
       if(method==='POST'&&messageReadMatch){
@@ -4622,7 +4771,37 @@ async function route(req, res) {
           }
         }
         if(updated)await saveStore();
+        if(updated)messengerRealtime?.publish([peerId,user.id],{type:'message:read',conversationId:peerId,userId:user.id});
         return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
+      }
+      if(method==='POST'&&p==='/api/messages'&&input.groupId){
+        const groupId=String(input.groupId||'');
+        const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+        if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+        const memberIds=getActiveMessageGroupMembers(db,groupId);
+        if(memberIds.some(id=>blockedBetween(user.id,id)))return json(res,403,{error:'This group chat is unavailable because a member relationship is blocked.'});
+        const text=String(input.text||'').trim();
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
+        const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
+        const replyToId=String(input.replyToId||'').trim();
+        if(input.stickerId&&!stickerEmoji)return json(res,400,{error:'That Minglora sticker is not available.'});
+        if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
+        if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
+        if(text.length>MESSAGE_GROUP_MESSAGE_MAX_LENGTH||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Enter a message, attach a file, or select a sticker or GIF.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const replyTo=replyToId?(db.messageGroupMessages||[]).find(item=>item.id===replyToId&&item.groupId===groupId&&!item.unsent):null;
+        if(replyToId&&!replyTo)return json(res,404,{error:'The message you are replying to is no longer available.'});
+        const createdAt=now();
+        const msg={id:uid(),groupId,from:user.id,to:'group:'+groupId,text:stickerEmoji||text,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,replyToId:replyTo?.id||null,readBy:{[user.id]:createdAt},createdAt,read:false};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messageGroupMessages.push(msg);group.lastActivityAt=createdAt;
+        for(const memberId of memberIds)if(memberId!==user.id)notify(memberId,user.id,'message',user.name+' sent a message in '+group.name,{messageGroupId:groupId});
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        messengerRealtime?.publish(memberIds,{type:'message:new',conversationId:'group:'+groupId,groupId,messageId:msg.id,senderId:user.id});
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
       }
       if(method==='POST'&&p==='/api/messages'){
         const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
@@ -4646,6 +4825,7 @@ async function route(req, res) {
         db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
         await saveStore();
         const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        messengerRealtime?.publish([user.id,to],{type:'message:new',conversationId:to,messageId:msg.id,senderId:user.id});
         return json(res,201,{message:{...msg,attachments,author:safeUser(user)}});
       }
       if(method==='GET'&&p==='/api/push/public-key'){
@@ -4718,6 +4898,50 @@ async function route(req, res) {
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+const messengerRealtime=createMessengerRealtimeHub({
+  WebSocketServer,WebSocket,
+  getUserFromRequest:req=>sessionUser(req),
+  isOriginAllowed:(origin,req)=>isAllowedAppOrigin(origin,req),
+  getPeerIds:userId=>[
+    ...new Set([
+      ...(db.messages||[]).filter(item=>item.from===userId||item.to===userId).map(item=>item.from===userId?item.to:item.from),
+      ...(db.messageGroupMembers||[]).filter(item=>item.userId===userId&&item.status==='active').flatMap(item=>getActiveMessageGroupMembers(db,item.groupId))
+    ])
+  ].filter(id=>id&&id!==userId&&!blockedBetween(userId,id)),
+  getParticipantIds:(conversationId,senderId)=>{
+    if(String(conversationId).startsWith('group:')){
+      const groupId=String(conversationId).slice(6);
+      return canAccessMessageGroup(db,groupId,senderId)?getActiveMessageGroupMembers(db,groupId):[];
+    }
+    const peer=String(conversationId||'');
+    return peer&&peer!==senderId&&!blockedBetween(senderId,peer)?[peer]:[];
+  },
+  canMessage:(senderId,conversationId)=>{
+    if(String(conversationId).startsWith('group:')){
+      return canAccessMessageGroup(db,String(conversationId).slice(6),senderId);
+    }
+    const peer=String(conversationId||'');
+    if(!peer||peer===senderId||blockedBetween(senderId,peer))return false;
+    const recipient=db.users.find(item=>item.id===peer);
+    if(!recipient)return false;
+    const settings=getUserSettings(recipient);
+    if((settings.preferences.messengerRestrictedUserIds||[]).includes(senderId))return false;
+    const hasHistory=(db.messages||[]).some(item=>(item.from===senderId&&item.to===peer)||(item.from===peer&&item.to===senderId));
+    return hasHistory||settings.privacy.messageAudience==='everyone'||(settings.privacy.messageAudience==='friends'&&isFriend(senderId,peer));
+  },
+  isBlocked:blockedBetween,
+  isPresenceEnabled:userId=>{
+    const member=db.users.find(item=>item.id===userId);
+    return member?getUserSettings(member).preferences.messengerActiveStatus!==false:false;
+  }
+});
+server.on('upgrade',(req,socket,head)=>{
+  let pathname='';
+  try{pathname=new URL(req.url,'http://localhost').pathname;}catch{}
+  if(pathname!=='/api/messages/realtime'){socket.destroy();return;}
+  messengerRealtime.handleUpgrade(req,socket,head);
+});
+
 let leagueSettlementInProgress=false;
 const leagueSettlementTimer=setInterval(async()=>{
   if(leagueSettlementInProgress)return;
