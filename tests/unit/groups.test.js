@@ -70,3 +70,27 @@ test('archived and deleted groups are not visible to outsiders', () => {
   assert.equal(canViewGroup({ ...group, status: 'archived' }, 'outsider'), false);
   assert.equal(canViewGroup({ ...group, status: 'deleted' }, 'member'), false);
 });
+
+test('a banned member has no active role and cannot use active-member permissions', () => {
+  const banned = { ...group, members: ['owner'], memberships: [
+    { userId: 'owner', role: 'owner', status: 'active' },
+    { userId: 'former', role: 'member', status: 'banned' }
+  ] };
+  assert.equal(getGroupRole(banned, 'former'), null);
+  assert.equal(canPublishGroupPost(banned, 'former'), false);
+  assert.equal(canModerateGroup(banned, 'former'), false);
+});
+test('administrator and moderator role boundaries are enforced', () => {
+  assert.equal(canAssignGroupRole(group, 'admin', 'moderator'), true);
+  assert.equal(canAssignGroupRole(group, 'admin', 'admin'), false);
+  assert.equal(canAssignGroupRole(group, 'mod', 'member'), false);
+  assert.equal(canManageGroupSettings(group, 'admin'), true);
+  assert.equal(canManageGroupSettings(group, 'mod'), false);
+});
+test('hidden groups are undiscoverable but remain visible to active members', () => {
+  const hidden = { ...group, visibility: 'hidden', discoverable: false };
+  assert.equal(canDiscoverGroup(hidden), false);
+  assert.equal(canViewGroup(hidden, 'outsider'), false);
+  assert.equal(canViewGroup(hidden, 'member'), true);
+  assert.equal(canRequestGroupMembership(hidden, 'outsider'), false);
+});
