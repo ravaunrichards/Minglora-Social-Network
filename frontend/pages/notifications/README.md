@@ -1,3 +1,5 @@
 # Notification views
 
-Render only persisted in-app notifications and actual unread state. Per-event/channel preference settings and push/email delivery remain planned.
+The current Notifications page renders persisted account notifications and provides All, Unread, Social, Messages, Calls, LIVE, Gifts, MeetWave, Leagues and Other filters, category counts, search, unread totals, per-item mark-read and delete actions, bulk mark-all-read, clear-read and confirmed clear-all actions. Relevant existing event types expose links/actions to profiles, Messenger, Gifts, LIVE, MeetWave and Leagues. Incoming calls retain Answer and Decline controls.
+
+The Settings & privacy Activity category stores event preferences for in-app and Web Push. Device push is enabled per browser/device through the existing service-worker subscription workflow. The foreground page polls every six seconds and refreshes the visible inbox when new records arrive. It is not Supabase Realtime. Email delivery, digests and quiet hours remain planned and are not shown as active controls.
