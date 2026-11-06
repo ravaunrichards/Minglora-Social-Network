@@ -60,7 +60,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -419,7 +419,7 @@
             <div id="admin-platform-payout-history" aria-live="polite">Loading platform withdrawals…</div>
           </div>
         </section>
-        <section class="admin-withdrawal-tracker" aria-labelledby="admin-withdrawal-tracker-title">
+        <section class="admin-withdrawal-tracker" id="admin-withdrawal-tracker" aria-labelledby="admin-withdrawal-tracker-title">
           <div class="admin-withdrawal-tracker-heading">
             <div><h4 id="admin-withdrawal-tracker-title">All creator/member withdrawal requests</h4>
               <p>Every creator payout request, its PayPal batch reference and confirmed status. This list refreshes automatically while the Admin Centre is open.</p></div>
@@ -443,7 +443,7 @@
           </div>
           <div id="admin-withdrawal-tracker-list" class="admin-withdrawal-tracker-list" aria-live="polite">Loading withdrawal records…</div>
         </section>
-        <section class="admin-promotional-tracker" aria-labelledby="admin-promotional-tracker-title">
+        <section class="admin-promotional-tracker" id="admin-promotional-tracker" aria-labelledby="admin-promotional-tracker-title">
           <div class="admin-withdrawal-tracker-heading">
             <div><h4 id="admin-promotional-tracker-title">Promotional Gift Wallet &amp; cash backing</h4>
               <p>Separate promotional Coins, member allocations, spending, verified cash funding and any resulting 50/50 creator/platform shares. This report is read-only and never changes the main Coin balance.</p></div>
