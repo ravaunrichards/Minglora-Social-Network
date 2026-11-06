@@ -143,7 +143,7 @@ async function paypalToken(){
 }
 async function paypalRequest(path,method='POST',payload={},requestId){
   const cfg=paypalConfig(),token=await paypalToken();
-  if(path==='/v1/payments/payouts'&&!String(paypalAccessTokenCache?.scope||'').split(/\\s+/).includes('https://uri.paypal.com/payments/payouts')){
+  if(path==='/v1/payments/payouts'&&!String(paypalAccessTokenCache?.scope||'').split(/\s+/).includes('https://uri.paypal.com/payments/payouts')){
     throw Object.assign(new Error('The PayPal live REST app token does not include the Payouts permission. Enable Payouts for this app in PayPal Developer Dashboard before retrying.'),{status:503,code:'PAYPAL_PAYOUTS_SCOPE_MISSING',paypalNoSubmission:true});
   }
   let response;
