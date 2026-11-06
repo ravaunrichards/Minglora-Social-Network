@@ -23,7 +23,7 @@ This document describes the Groups implementation on `feat/minglora-advanced-gro
 - Event Manager: group event management.
 - Member: participation, posts, comments, reactions, event responses, invitations where permitted, and group chat.
 
-Owner and admin checks are server-enforced. A banned account cannot join or accept a new invitation until an authorized moderator unbans it. The owner cannot leave without transferring ownership.
+Owner and admin checks are server-enforced. A banned account cannot join or accept a new invitation until an authorized moderator unbans it. The current owner can transfer ownership to an active member; the previous owner becomes an administrator. A group owner can also soft-delete a group by confirming its exact name. Soft deletion removes the group from discovery while retaining its records for audit and retention procedures.
 
 ## Privacy and behavior
 
@@ -36,7 +36,7 @@ Owner and admin checks are server-enforced. A banned account cannot join or acce
 
 ## API areas
 
-The authenticated server API now supports group discovery and creation, membership requests, invitations, group settings, member roles, ban/unban operations, post approvals, announcements, rules, events and RSVPs, member chat, post comments and reactions, analytics, and owner/admin audit history.
+The authenticated server API now supports group discovery and creation, membership requests, invitations, group settings, member roles, ownership transfer, confirmed soft deletion, ban/unban operations, post approvals, announcements, rules, events and RSVPs, member chat, post comments and reactions, analytics, and owner/admin audit history.
 
 ## Storage and migration note
 
