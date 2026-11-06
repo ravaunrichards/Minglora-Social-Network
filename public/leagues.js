@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [], lastUpdatedAt: null, refreshing: false, refreshError: "" };
+  const state = { overview: null, sessions: [], gifts: [], lastUpdatedAt: null, refreshing: false, refreshError: "", openMatchChatIds: new Set(), matchChatDrafts: new Map() };
   let refreshTimer = null;
   let refreshController = null;
   let refreshInFlight = false;
@@ -129,6 +129,62 @@
     if (item.type === "match_challenge_sent") return "You sent a League Match challenge";
     return item.type.replaceAll("_", " ");
   }
+  function matchChatMarkup(match, overview) {
+    const used = new Set(match.chatPowerupsUsedByViewer || []);
+    const powers = (overview.chatPowerups || []).map(power => {
+      const isUsed = used.has(power.id);
+      return "<button type='button' class='league-chat-powerup' data-match-chat-powerup-select='" + esc(power.id) + "' " +
+        (isUsed ? "disabled aria-pressed='false'" : "aria-pressed='false'") + " title='" + esc(power.description) + "'>" +
+        "<span>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (isUsed ? "Used" : "Select") + "</small></button>";
+    }).join("");
+    const draft = state.matchChatDrafts.get(match.id) || "";
+    return "<details class='league-match-chat' data-match-chat='" + esc(match.id) + "' " +
+      (state.openMatchChatIds.has(match.id) ? "open" : "") + ">" +
+      "<summary><strong>Match Chat</strong><span>Live room conversation</span></summary>" +
+      "<div class='league-chat-messages' data-match-chat-messages='" + esc(match.id) + "' aria-live='polite'><small>Open to load match chat.</small></div>" +
+      "<form class='league-chat-form' data-match-chat-form='" + esc(match.id) + "'>" +
+      "<label class='league-chat-compose'><span>Message</span><textarea name='body' rows='2' maxlength='280' required placeholder='Cheer on the creators…'>" + esc(draft) + "</textarea></label>" +
+      "<input type='hidden' name='powerupId' data-match-chat-powerup-choice value=''>" +
+      "<div class='league-chat-powerups'><span class='league-chat-powerups-label'>Chat Power-Ups · one use each per match</span>" + powers + "</div>" +
+      "<div class='league-chat-form-footer'><small>Chat effects are visual only. They never add match points or Coins.</small><button type='submit' class='primary league-action'>Send message</button></div>" +
+      "</form></details>";
+  }
+  function renderMatchChatMessages(messages) {
+    if (!messages.length) return "<div class='league-chat-empty'>No match messages yet. Start the conversation.</div>";
+    return messages.map(item => {
+      const author = item.author || {};
+      const activeEffect = Boolean(item.effectActive && item.powerupId);
+      const effectClass = activeEffect ? " league-chat-message--" + esc(item.powerupId) : "";
+      const boost = item.powerupId
+        ? "<span class='league-chat-boost-tag'>" + esc(item.powerupSymbol || "✦") + " " + esc(item.powerupName || "Chat boost") + "</span>"
+        : "";
+      const time = item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : "";
+      return "<article class='league-chat-message" + effectClass + "'><div class='league-chat-message-head'><strong>" +
+        esc(author.name || "Minglora creator") + "</strong>" + boost + "<time>" + esc(time) + "</time></div><p>" +
+        esc(item.body) + "</p></article>";
+    }).join("");
+  }
+  async function loadMatchChat(matchId) {
+    const details = Array.from(document.querySelectorAll("[data-match-chat]")).find(item => item.dataset.matchChat === matchId);
+    const messagesRoot = details?.querySelector("[data-match-chat-messages]");
+    if (!details || !messagesRoot) return;
+    messagesRoot.innerHTML = "<small>Loading match chat…</small>";
+    try {
+      const data = await request("/leagues/matches/" + encodeURIComponent(matchId) + "/chat");
+      messagesRoot.innerHTML = renderMatchChatMessages(data.messages || []);
+      const used = new Set(data.usedPowerups || []);
+      details.querySelectorAll("[data-match-chat-powerup-select]").forEach(button => {
+        const spent = used.has(button.dataset.matchChatPowerupSelect);
+        button.disabled = spent;
+        button.classList.toggle("is-used", spent);
+        const label = button.querySelector("small");
+        if (label) label.textContent = spent ? "Used" : "Select";
+      });
+      messagesRoot.scrollTop = messagesRoot.scrollHeight;
+    } catch (error) {
+      messagesRoot.innerHTML = "<div class='league-chat-empty'>" + esc(error.message || "Match chat is unavailable.") + "</div>";
+    }
+  }
   function matchCard(match, overview) {
     const profile = overview.profile;
     const viewer = overview.viewerId;
@@ -160,7 +216,7 @@
     const result = match.status === "completed"
       ? "<span class='league-match-result'>" + (match.result === "draw" ? "Draw" : (match.winnerId === viewer ? "You won" : match.winnerId ? "Match completed" : "Completed")) + "</span>"
       : "<span class='league-live-label'>" + (match.status === "live" ? "● LIVE MATCH" : "Awaiting acceptance") + "</span>";
-    return "<article class='league-match-card' data-league-match='" + esc(match.id) + "'><div class='league-match-head'><div><span class='league-eyebrow'>MINGLORA LEAGUE MATCH</span><h3>" + esc(match.status === "live" ? "Live creator battle" : "Creator challenge") + "</h3></div>" + result + "</div><div class='league-scoreboard'><div class='league-side'>" + image(match.challenger) + "<strong>" + esc(challengerName) + "</strong><small>Challenger</small><b>" + challengerScore.toLocaleString() + "</b></div><span class='league-score-divider'>VS</span><div class='league-side'>" + image(match.opponent) + "<strong>" + esc(opponentName) + "</strong><small>Opponent</small><b>" + opponentScore.toLocaleString() + "</b></div></div><div class='league-match-meta'><span>" + (match.giftMode === "specific" ? "Selected Gift scoring" : "All LIVE Gifts score") + "</span>" + (match.status === "live" ? "<span>Ends " + new Date(match.endsAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + "</span>" : "") + "</div>" + controls + "</article>";
+    return "<article class='league-match-card' data-league-match='" + esc(match.id) + "'><div class='league-match-head'><div><span class='league-eyebrow'>MINGLORA LEAGUE MATCH</span><h3>" + esc(match.status === "live" ? "Live creator battle" : "Creator challenge") + "</h3></div>" + result + "</div><div class='league-scoreboard'><div class='league-side'>" + image(match.challenger) + "<strong>" + esc(challengerName) + "</strong><small>Challenger</small><b>" + challengerScore.toLocaleString() + "</b></div><span class='league-score-divider'>VS</span><div class='league-side'>" + image(match.opponent) + "<strong>" + esc(opponentName) + "</strong><small>Opponent</small><b>" + opponentScore.toLocaleString() + "</b></div></div><div class='league-match-meta'><span>" + (match.giftMode === "specific" ? "Selected Gift scoring" : "All LIVE Gifts score") + "</span>" + (match.status === "live" ? "<span>Ends " + new Date(match.endsAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + "</span>" : "") + "</div>" + controls + (match.status === "live" ? matchChatMarkup(match, overview) : "") + "</article>";
   }
   function challengeMarkup(overview, sessions) {
     const own = sessions.filter(item => item.hostId === overview.viewerId);
@@ -232,6 +288,55 @@
       try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/powerups", {method:"POST",body:JSON.stringify({powerupId:button.dataset.matchPowerup})}); toast("Match power-up activated."); await render(); }
       catch(error) { toast(error.message); button.disabled = false; }
     }));
+    document.querySelectorAll("[data-match-chat]").forEach(details => {
+      const matchId = details.dataset.matchChat;
+      details.addEventListener("toggle", () => {
+        if (details.open) {
+          state.openMatchChatIds.add(matchId);
+          void loadMatchChat(matchId);
+        } else {
+          state.openMatchChatIds.delete(matchId);
+        }
+      });
+      const form = details.querySelector("[data-match-chat-form]");
+      const choice = form?.querySelector("[data-match-chat-powerup-choice]");
+      const textarea = form?.querySelector("textarea[name='body']");
+      if (textarea) textarea.addEventListener("input", () => state.matchChatDrafts.set(matchId, textarea.value));
+      details.querySelectorAll("[data-match-chat-powerup-select]").forEach(button => button.addEventListener("click", () => {
+        if (!choice || button.disabled) return;
+        choice.value = choice.value === button.dataset.matchChatPowerupSelect ? "" : button.dataset.matchChatPowerupSelect;
+        details.querySelectorAll("[data-match-chat-powerup-select]").forEach(item => {
+          item.classList.toggle("is-selected", item.dataset.matchChatPowerupSelect === choice.value);
+          item.setAttribute("aria-pressed", item.dataset.matchChatPowerupSelect === choice.value ? "true" : "false");
+        });
+      }));
+      if (form) form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const send = form.querySelector("button[type='submit']");
+        const body = String(textarea?.value || "").trim();
+        if (!body) return;
+        send.disabled = true;
+        try {
+          await request("/leagues/matches/" + encodeURIComponent(matchId) + "/chat", {
+            method: "POST",
+            body: JSON.stringify({ body, powerupId: choice?.value || "" })
+          });
+          textarea.value = "";
+          state.matchChatDrafts.delete(matchId);
+          if (choice) choice.value = "";
+          details.querySelectorAll("[data-match-chat-powerup-select]").forEach(item => {
+            item.classList.remove("is-selected");
+            item.setAttribute("aria-pressed", "false");
+          });
+          await loadMatchChat(matchId);
+        } catch (error) {
+          toast(error.message || "Your match-chat message could not be sent.");
+        } finally {
+          send.disabled = false;
+        }
+      });
+      if (state.openMatchChatIds.has(matchId)) details.open = true;
+    });
     document.querySelectorAll("[data-league-profile]").forEach(button => button.addEventListener("click", () => {
       const userId = button.dataset.leagueProfile;
       if (userId) window.dispatchEvent(new CustomEvent("minglora:open-profile", { detail: { userId } }));
