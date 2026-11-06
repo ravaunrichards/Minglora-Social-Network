@@ -68,6 +68,12 @@ export function canAssignGroupRole(group, actorId, targetRole) {
   return true;
 }
 
+export function canTransferGroupOwnership(group, actorId, targetId) {
+  return Boolean(group && actorId && targetId && actorId !== targetId &&
+    group.ownerId === actorId && isGroupMember(group, targetId) &&
+    getGroupRole(group, targetId) !== null && getGroupRole(group, targetId) !== 'owner');
+}
+
 export function canLeaveGroup(group, userId) {
   return Boolean(group && userId && group.ownerId !== userId && isGroupMember(group, userId));
 }
