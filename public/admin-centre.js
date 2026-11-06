@@ -914,12 +914,15 @@
     try {
       const report = await adminCentreApi('/admin/creator-earnings');
       const totals = report.totals || {};
+      const finance = report.platformFinance || {};
       const cards = [
-        ['Recorded gift value', totals.grossMinor],
+        ['Eligible gift value · cash-backed', totals.grossMinor],
         ['Creator share · 50%', totals.creatorShareMinor],
-        ['Minglora share · 50%', totals.platformShareMinor],
+        ['Minglora share · 50% · recorded', finance.recordedPlatformShareMinor ?? totals.platformShareMinor],
         ['Creator payouts pending', totals.pendingPayoutMinor],
-        ['Creator payouts paid', totals.paidPayoutMinor]
+        ['Creator payouts paid', totals.paidPayoutMinor],
+        ['Non-cash promotional creator share · excluded', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor],
+        ['Non-cash promotional platform share · excluded', finance.excludedPromotionalPlatformShareMinor ?? totals.excludedPromotionalPlatformShareMinor]
       ];
       metrics.innerHTML = cards.map(([label, value]) =>
         '<article class="admin-gift-earnings-metric"><small>' + escapeText(label) +
@@ -945,10 +948,12 @@
 
       const updated = report.asOf ? new Date(report.asOf) : new Date();
       const updateLabel = Number.isNaN(updated.getTime()) ? 'just now' : updated.toLocaleString();
+      const excludedPromoCount = Number(finance.excludedPromotionalGiftCount ?? totals.excludedPromotionalGiftCount ?? 0);
       status.textContent = Number(totals.giftCount || 0).toLocaleString() +
-        ' eligible gift records across ' + Number(totals.creatorCount || 0).toLocaleString() +
+        ' cash-backed eligible gift records across ' + Number(totals.creatorCount || 0).toLocaleString() +
         ' creators · ' + Number(totals.splitMismatchCount || 0).toLocaleString() +
-        ' split exceptions · refreshed ' + updateLabel + '.';
+        ' split exceptions · ' + excludedPromoCount.toLocaleString() +
+        ' non-cash promotional records excluded. Minglora share is a recorded ledger amount, not a live PayPal balance confirmation · refreshed ' + updateLabel + '.';
     } catch (error) {
       metrics.innerHTML = '';
       creators.textContent = 'The verified earnings report could not be loaded. ' +
