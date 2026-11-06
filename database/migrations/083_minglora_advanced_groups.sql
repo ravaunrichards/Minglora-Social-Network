@@ -157,4 +157,75 @@ REVOKE ALL ON public.group_moderation_actions, public.group_audit_logs FROM anon
 GRANT SELECT ON public.group_moderation_actions, public.group_audit_logs TO authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.group_rules, public.group_invitations FROM anon, authenticated;
 
+
+-- Private, member-only group chat. There are no seeded messages.
+CREATE TABLE IF NOT EXISTS public.group_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES public.social_groups(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  body text NOT NULL CHECK (length(body) BETWEEN 1 AND 5000),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  edited_at timestamptz,
+  deleted_at timestamptz,
+  deleted_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS group_messages_history_idx
+  ON public.group_messages(group_id, created_at DESC, id DESC);
+ALTER TABLE public.group_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS minglora_group_messages_read_member ON public.group_messages;
+CREATE POLICY minglora_group_messages_read_member ON public.group_messages
+FOR SELECT TO authenticated
+USING (
+  deleted_at IS NULL AND (
+    private.is_minglora_group_member(group_id)
+    OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_messages.group_id AND g.owner_id=(select auth.uid()))
+  )
+);
+DROP POLICY IF EXISTS minglora_group_messages_insert_member ON public.group_messages;
+CREATE POLICY minglora_group_messages_insert_member ON public.group_messages
+FOR INSERT TO authenticated
+WITH CHECK (
+  sender_id=(select auth.uid()) AND (
+    private.is_minglora_group_member(group_id)
+    OR EXISTS (SELECT 1 FROM public.social_groups g WHERE g.id=group_messages.group_id AND g.owner_id=(select auth.uid()))
+  )
+);
+DROP POLICY IF EXISTS minglora_group_messages_update_author_or_staff ON public.group_messages;
+CREATE POLICY minglora_group_messages_update_author_or_staff ON public.group_messages
+FOR UPDATE TO authenticated
+USING (
+  sender_id=(select auth.uid())
+  OR EXISTS (
+    SELECT 1 FROM public.social_groups g WHERE g.id=group_messages.group_id AND g.owner_id=(select auth.uid())
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.group_memberships gm
+    WHERE gm.group_id=group_messages.group_id AND gm.user_id=(select auth.uid())
+      AND gm.status='active' AND gm.role IN ('admin','moderator')
+  )
+)
+WITH CHECK (
+  sender_id=(select auth.uid())
+  OR EXISTS (
+    SELECT 1 FROM public.social_groups g WHERE g.id=group_messages.group_id AND g.owner_id=(select auth.uid())
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.group_memberships gm
+    WHERE gm.group_id=group_messages.group_id AND gm.user_id=(select auth.uid())
+      AND gm.status='active' AND gm.role IN ('admin','moderator')
+  )
+);
+GRANT SELECT, INSERT, UPDATE ON public.group_messages TO authenticated;
+ALTER TABLE public.group_messages REPLICA IDENTITY FULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname='supabase_realtime')
+     AND NOT EXISTS (
+       SELECT 1 FROM pg_publication_tables
+       WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='group_messages'
+     ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.group_messages;
+  END IF;
+END $$;
+
 COMMIT;
