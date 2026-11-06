@@ -36,7 +36,7 @@ self.addEventListener('push',event=>{
   const data=payload.data||{};
   const type=String(data.type||'notification');
   const params=new URLSearchParams({'minglora-push':type});
-  for(const key of ['callId','liveSessionId','actorId','notificationId'])if(data[key])params.set(key,String(data[key]));
+  for(const key of ['callId','liveSessionId','actorId','notificationId','roomId','invitationId','matchId','sellerId'])if(data[key])params.set(key,String(data[key]));
   const url='/?'+params.toString();
   const actions=type==='call'?[{action:'answer',title:'Answer'},{action:'decline',title:'Decline'}]:
     type==='live'?[{action:'watch',title:'Watch LIVE'}]:
