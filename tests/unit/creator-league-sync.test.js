@@ -49,7 +49,8 @@ test("scheduled league settlement does not delay lifetime milestone class promot
 
   const secondRun = settleScheduledCreatorLeagueDays(db, currentDay);
   assert.deepEqual(secondRun.settledDays, []);
-  assert.equal(topProfile.fragments, 1);
+  assert.equal(topProfile.fragments, 0);
+  assert.equal(topProfile.leagueClass, "D5");
   assert.equal(db.creatorLeagueDailySettlements.length, 1);
 });
 
