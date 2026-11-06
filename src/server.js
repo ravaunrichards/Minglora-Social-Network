@@ -251,7 +251,7 @@ function safeUser(u,viewerId=null){
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
 const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]}};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
@@ -276,7 +276,7 @@ function recordProfileActivity(userId,action,summary,targetType='profile',target
 
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','messengerArchivedConversationIds','messengerRestrictedUserIds']};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','messengerArchivedConversationIds','messengerRestrictedUserIds']};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     for(const [key,value] of Object.entries(values)){
@@ -581,10 +581,27 @@ async function deliverUserPush(userId,notification){
     await saveStore().catch(()=>{});
   }
 }
+function notificationPreferenceKey(type){
+  if(type==='friend')return 'friendRequests';
+  if(type==='message')return 'messages';
+  if(type==='profile_view')return 'profileViews';
+  if(['reaction','comment','follow'].includes(type))return 'interactions';
+  if(type==='call')return 'calls';
+  if(['live','live_moderator'].includes(type))return 'live';
+  if(['gift','fan_club'].includes(type))return 'gifts';
+  if(type==='meetwave_invite')return 'meetWave';
+  if(type==='league_match')return 'leagues';
+  if(['account_security','verification_application','verification_status','admin_alert'].includes(type))return 'account';
+  return null;
+}
+function notificationTypeEnabled(preferences,type){
+  const key=notificationPreferenceKey(type);
+  return !key||preferences[key]!==false;
+}
 const notify = (userId, actorId, type, text, extra = {}) => {
   const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
   const prefs=getUserSettings(recipient).notifications;
-  if((type==='friend'&&!prefs.friendRequests)||(type==='message'&&!prefs.messages)||(type==='profile_view'&&!prefs.profileViews)||(['reaction','comment','follow'].includes(type)&&!prefs.interactions))return;
+  if(!notificationTypeEnabled(prefs,type)||(!prefs.inApp&&!prefs.push))return;
   const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
   if(prefs.inApp)db.notifications.unshift(notification);
   if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
@@ -4676,9 +4693,31 @@ async function route(req, res) {
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
         if(db.notifications.length!==before)await saveStore();
-        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&(n.type==='friend'?prefs.friendRequests:n.type==='message'?prefs.messages:n.type==='profile_view'?prefs.profileViews:['reaction','comment','follow'].includes(n.type)?prefs.interactions:true)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId))})):[];return json(res,200,{notifications});
+        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
+        const unreadCount=notifications.filter(item=>!item.read).length;
+        const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
+        return json(res,200,{notifications,unreadCount,categoryCounts});
       }
-      if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>n.read=true);await saveStore();return json(res,200,{ok:true});}
+      const notificationReadMatch=p.match(/^\\/api\\/notifications\\/([^/]+)\\/read$/);
+      if(method==='POST'&&notificationReadMatch){
+        let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch[1]);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        const notification=(db.notifications||[]).find(item=>item.id===notificationId&&item.userId===user.id);
+        if(!notification)return json(res,404,{error:'Notification not found.'});
+        notification.read=true;notification.readAt=now();await saveStore();return json(res,200,{ok:true,notificationId});
+      }
+      if(method==='DELETE'&&/^\\/api\\/notifications\\/[^/]+$/.test(p)){
+        let notificationId;try{notificationId=decodeURIComponent(p.split('/').at(-1));}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>!(item.id===notificationId&&item.userId===user.id));
+        if(db.notifications.length===before)return json(res,404,{error:'Notification not found.'});
+        await saveStore();return json(res,200,{ok:true,removed:1});
+      }
+      if(method==='POST'&&p==='/api/notifications/clear'){
+        const readOnly=input.readOnly===true;const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||(readOnly&&!item.read));
+        const removed=before-db.notifications.length;await saveStore();return json(res,200,{ok:true,removed,readOnly});
+      }
+      if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>{n.read=true;n.readAt=now();});await saveStore();return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){
         const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
         const q=rawQuery.replace(/^@/,'').trim();
