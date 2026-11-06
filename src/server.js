@@ -3376,9 +3376,9 @@ async function route(req, res) {
         if(scope==='following'){
           eligibleIds=new Set([user.id,...(db.follows||[]).filter(f=>f.followerId===user.id).map(f=>f.followedId)]);
         } else if(scope==='friends'){
-          eligibleIds=new Set([user.id,...db.friendships.filter(f=>f.status==='accepted'&&(f.from===user.id||f.to===user.id)).map(f=>f.from===user.id?f.to:f.from)]);
+          eligibleIds=new Set([user.id,...getMutualFollowIds(db.follows||[],user.id,db.blocks||[])]);
         }
-        const visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&(!eligibleIds||eligibleIds.has(x.userId)));
+        const visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
         const orderedPosts=scope==='for-you'
           ?rankForYouFeed(visiblePosts,user.id,db.follows||[],db.savedPosts||[])
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -3453,10 +3453,12 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/posts'){
         const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
+        const audience=String(input.audience||'public');
+        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported post audience.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,createdAt:now(),reactions:{},comments:[]};
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,createdAt:now(),reactions:{},comments:[]};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
@@ -3467,12 +3469,17 @@ async function route(req, res) {
         const validation=validatePostInput({text:input.text===undefined?post.text:input.text,mediaIds:input.mediaIds===undefined?(post.mediaIds||[]):input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         let nextSoundtrack=post.soundtrack||null;
+        let nextAudience=post.audience||'public';
+        if(Object.prototype.hasOwnProperty.call(input,'audience')){
+          nextAudience=String(input.audience||'');
+          if(!['public','friends','close_friends','followers','private'].includes(nextAudience))return json(res,400,{error:'Unsupported post audience.'});
+        }
         if(Object.prototype.hasOwnProperty.call(input,'soundtrack')){try{nextSoundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}}
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&(asset.status==='uploaded'||asset.attachedTo===post.id)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are not available to this post.'});
         (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
+        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -3487,7 +3494,7 @@ async function route(req, res) {
         const records=(db.savedPosts||[]).filter(saved=>saved.userId===user.id);
         const posts=(await Promise.all(records.map(async saved=>{
           const post=db.posts.find(item=>item.id===saved.postId);
-          if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId)))return null;
+          if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||!canViewProfileAudience(user.id,post.userId,post.audience||'public'))return null;
           return {
             ...await publicPost(post,user.id),
             savedId:saved.id,
@@ -3586,7 +3593,7 @@ async function route(req, res) {
         const follows=db.follows||[];
         const activityAt=new Map();
         for(const post of db.posts||[]){
-          if(post.status==='hidden'||blockedBetween(user.id,post.userId))continue;
+          if(post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfileAudience(user.id,post.userId,post.audience||'public')||friendPostsMuted(user.id,post.userId))continue;
           const timestamp=Date.parse(post.createdAt)||0;
           if(timestamp>(activityAt.get(post.userId)||0))activityAt.set(post.userId,timestamp);
         }
@@ -3605,7 +3612,7 @@ async function route(req, res) {
             .map(edge=>edge.followerId)
             .filter(id=>!blockedBetween(user.id,id)))];
           const memberPosts=(db.posts||[])
-            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!blockedBetween(user.id,post.userId))
+            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId))
             .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
           const recentPosts=await Promise.all(memberPosts.slice(0,2).map(publicDiscoveryPost));
           const storyRecord=(db.stories||[])
@@ -4031,7 +4038,7 @@ async function route(req, res) {
         const profileInsights=target.id===user.id
           ?getProfileViewStats({views:db.profileViews.filter(view=>view.historyEligible===true),presence:db.profileViewPresence,targetUserId:target.id})
           :undefined;
-        const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&post.userId===target.id&&!blockedBetween(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&post.userId===target.id&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId)).map(post=>publicPost(post,user.id)));
         const viewerIsFriend=isFriend(user.id,target.id);
         const profileAlbums=await Promise.all((db.albums||[]).filter(album=>album.ownerId===target.id&&(user.id===target.id||album.visibility==='public'||(album.visibility==='friends'&&viewerIsFriend))).map(async album=>{
           const ordered=[...(album.items||[])].sort((a,b)=>new Date(a.addedAt||0)-new Date(b.addedAt||0));
@@ -4302,7 +4309,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&p==='/api/stories'){
         const text=String(input.text||'').trim(),audience=String(input.audience||'public');
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose media from your device.'});
-        if(!['public','friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
         if(input.mediaIds!==undefined&&!Array.isArray(input.mediaIds))return json(res,400,{error:'Story media must be provided as a list of uploaded files.'});
         const requestedMediaIds=Array.isArray(input.mediaIds)?input.mediaIds:(input.mediaId?[input.mediaId]:[]);
         const mediaIds=[...new Set(requestedMediaIds.map(value=>String(value||'').trim()).filter(Boolean))];
@@ -5376,7 +5383,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
         if(db.notifications.length!==before)await saveStore();
-        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||!blockedBetween(user.id,n.actorId))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
+        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
         const unreadCount=notifications.filter(item=>!item.read).length;
         const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
         return json(res,200,{notifications,unreadCount,categoryCounts});
