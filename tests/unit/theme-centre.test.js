@@ -60,5 +60,5 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(sw, /v97-gifts-preview-visible-1/);
   assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(sw, /settings\.js\?v=20261105-admin-mfa-qr-fix-2/);
-  assert.match(sw, /settings-advanced\.css\?v=20261105-admin-mfa-qr-fix-2/);
+  assert.match(sw, /settings-advanced\.css\?v=20261106-advanced-settings-privacy-1/);
 });
