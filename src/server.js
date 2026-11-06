@@ -606,9 +606,16 @@ const notify = (userId, actorId, type, text, extra = {}) => {
   const prefs=getUserSettings(recipient).notifications;
   if(!notificationTypeEnabled(prefs,type)||(!prefs.inApp&&!prefs.push))return;
   const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
-  if(prefs.inApp)db.notifications.unshift(notification);
+  if(prefs.inApp){
+    db.notifications.unshift(notification);
+    publishNotificationEvent(userId,'notification:new',notification.id);
+  }
   if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
 };
+function publishNotificationEvent(userId,type,notificationId=null){
+  if(!userId||!['notification:new','notification:changed'].includes(type))return 0;
+  return messengerRealtime?.publish([userId],{type,notificationId:notificationId||null})||0;
+}
 function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
   for(const reviewer of (db.users||[])){
     if(reviewer.id===applicantId||!hasActiveReviewerSession(reviewer))continue;
@@ -5219,21 +5226,21 @@ async function route(req, res) {
         let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
         const notification=(db.notifications||[]).find(item=>item.id===notificationId&&item.userId===user.id);
         if(!notification)return json(res,404,{error:'Notification not found.'});
-        notification.read=true;notification.readAt=now();await saveStore();return json(res,200,{ok:true,notificationId});
+        notification.read=true;notification.readAt=now();await saveStore();publishNotificationEvent(user.id,'notification:changed',notificationId);return json(res,200,{ok:true,notificationId});
       }
       if(method==='DELETE'&&p.startsWith('/api/notifications/')&&p.split('/').length===4){
         let notificationId;try{notificationId=decodeURIComponent(p.split('/').at(-1));}catch{return json(res,400,{error:'Invalid notification identifier.'});}
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>!(item.id===notificationId&&item.userId===user.id));
         if(db.notifications.length===before)return json(res,404,{error:'Notification not found.'});
-        await saveStore();return json(res,200,{ok:true,removed:1});
+        await saveStore();publishNotificationEvent(user.id,'notification:changed',notificationId);return json(res,200,{ok:true,removed:1});
       }
       if(method==='POST'&&p==='/api/notifications/clear'){
         const readOnly=input.readOnly===true;const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||(readOnly&&!item.read));
-        const removed=before-db.notifications.length;await saveStore();return json(res,200,{ok:true,removed,readOnly});
+        const removed=before-db.notifications.length;await saveStore();publishNotificationEvent(user.id,'notification:changed');return json(res,200,{ok:true,removed,readOnly});
       }
-      if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>{n.read=true;n.readAt=now();});await saveStore();return json(res,200,{ok:true});}
+      if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>{n.read=true;n.readAt=now();});await saveStore();publishNotificationEvent(user.id,'notification:changed');return json(res,200,{ok:true});}
       if(method==='GET'&&p==='/api/search'){
         const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
         const q=rawQuery.replace(/^@/,'').trim();

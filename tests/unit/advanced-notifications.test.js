@@ -72,3 +72,12 @@ test('Web Push cache and delivery assets reference the advanced notification bui
   assert.match(worker,/\/app\.js\?v=[^'\"]*-advanced-notifications-1/);
   assert.match(worker,/\/settings\.js\?v=[^'\"]*-advanced-notifications-1/);
 });
+
+test('Notification changes are broadcast only to the authenticated recipient account realtime sockets',()=>{
+  assert.match(server,/function publishNotificationEvent\(userId,type,notificationId=null\)/);
+  assert.match(server,/messengerRealtime\?\.publish\(\[userId\],\{type,notificationId:notificationId\|\|null\}\)/);
+  assert.match(server,/publishNotificationEvent\(userId,'notification:new',notification\.id\)/);
+  assert.match(server,/publishNotificationEvent\(user\.id,'notification:changed'/);
+  assert.match(app,/message\.type==='notification:new'[\s\S]*pollBrowserNotifications\(\)/);
+  assert.match(app,/message\.type==='notification:changed'[\s\S]*updateNotificationDot\(\)/);
+});
