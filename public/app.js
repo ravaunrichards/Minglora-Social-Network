@@ -234,33 +234,7 @@ function stopCreatorLeagueProfileRefresh(){
   if(creatorLeagueProfileRefreshTimer!==null)window.clearInterval(creatorLeagueProfileRefreshTimer);
   creatorLeagueProfileRefreshTimer=null;
 }
-function startCreatorLeagueProfileRefresh(profileId){
-  stopCreatorLeagueProfileRefresh();
-  creatorLeagueProfileRefreshTimer=window.setInterval(async()=>{
-    if(!state.user||state.view!=='profile'||state.profile?.user?.id!==profileId){
-      stopCreatorLeagueProfileRefresh();
-      return;
-    }
-    if(document.visibilityState!=='visible')return;
-    try{
-      const result=await api('/users/'+encodeURIComponent(profileId)+'/creator-league',{cache:'no-store'});
-      if(state.profile?.user?.id!==profileId)return;
-      const league=result.creatorLeague||null;
-      state.profile.user.creatorLeague=league;
-      const line=document.querySelector('.profile-username-line');
-      if(!line)return;
-      const existing=line.querySelector('.creator-league-profile-badge');
-      const markup=creatorLeagueProfileBadge({creatorLeague:league});
-      if(!markup){existing?.remove();return;}
-      const holder=document.createElement('span');
-      holder.innerHTML=markup;
-      const replacement=holder.firstElementChild;
-      if(!replacement)return;
-      if(existing)existing.replaceWith(replacement);
-      else line.append(replacement);
-    }catch{}
-  },15000);
-}
+function startCreatorLeagueProfileRefresh(){ /* Automatic page refresh disabled. */ }
 function stopProfilePresence(){stopCreatorLeagueProfileRefresh();}
 const APP_PALETTE_OPTIONS=[
   {value:'minglora',label:'Minglora Blue',color:'#1769e0'},
@@ -941,13 +915,7 @@ async function refreshPeopleDiscovery(){
   }catch(error){console.warn('People discovery refresh failed:',error.message);}
   finally{peopleDiscoveryRefreshBusy=false;}
 }
-function startPeopleDiscoveryRefresh(){
-  stopPeopleDiscoveryRefresh();
-  peopleDiscoveryRefreshTimer=setInterval(()=>void refreshPeopleDiscovery(),20000);
-}
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&state.view==='friends')void refreshPeopleDiscovery();
-});
+function startPeopleDiscoveryRefresh(){ /* Automatic page refresh disabled; refresh when the member opens Friends. */ }
 async function renderFriends(){
   activateSilent('friends');stopPeopleDiscoveryRefresh();
   await loadPeopleDiscovery();
@@ -958,7 +926,7 @@ async function renderFriends(){
   state.discoveryLiveSessions=liveResult.sessions||[];
   const friends=result.friends||[];
   setContent('<div class="page-heading"><div><h1>Friends</h1><p class="muted">Discover members through the moments they choose to share.</p></div></div>'+
-    '<div class="feed-header"><h2>People you may know</h2><span class="people-refresh-note">Live member previews · refresh automatically</span></div>'+
+    '<div class="feed-header"><h2>People you may know</h2><span class="people-refresh-note">Live member previews</span></div>'+
     '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
     '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
     (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="person-meta"><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
@@ -6506,14 +6474,7 @@ function renderMessageContent(messages=[]){
 }
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
 function syncMessageRefreshPolling(){
-  const enabled=Boolean(state.user)&&(state.view==='messages'||state.messageWindows.length>0||state.messengerPanelOpen);
-  const interval=state.messengerRealtimeConnected?30000:5000;
-  if(enabled&&(!messageRefreshTimer||messageRefreshIntervalMs!==interval)){
-    if(messageRefreshTimer)clearInterval(messageRefreshTimer);
-    messageRefreshIntervalMs=interval;
-    messageRefreshTimer=interval===5000?setInterval(refreshMessageConversations,5000):setInterval(refreshMessageConversations,30000);
-  }
-  if(!enabled&&messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;messageRefreshIntervalMs=0;}
+  if(messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;messageRefreshIntervalMs=0;}
 }
 async function refreshMessageConversations(){
   if(!state.user||document.visibilityState==='hidden'||messageRefreshInFlight)return;
@@ -7525,10 +7486,8 @@ async function pollBrowserNotifications(){
   }catch{}
 }
 function startBrowserNotificationPolling(){
-  if(browserNotificationTimer)clearInterval(browserNotificationTimer);
+  if(browserNotificationTimer){clearInterval(browserNotificationTimer);browserNotificationTimer=null;}
   browserNotificationPrimed=false;browserNotificationSeen=new Set();
-  pollBrowserNotifications();
-  browserNotificationTimer=setInterval(pollBrowserNotifications,6000);
 }
 function paintNotificationBadge(items){
   const unread=(items||[]).filter(item=>!item.read).length;
