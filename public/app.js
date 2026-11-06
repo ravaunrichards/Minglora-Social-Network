@@ -3956,18 +3956,23 @@ async function renderGroup(groupId,tab='discussion'){
   const g=data.group,isOwner=g.ownerId===state.user.id,isMember=!!g.isMember;
   const role=g.role||'visitor',staff=['owner','admin','moderator'].includes(role);
   const canEvents=['owner','admin','moderator','event_manager'].includes(role);
+  const ownerOrAdmin=['owner','admin'].includes(role);
   const results=await Promise.allSettled([
     api('/groups/'+encodeURIComponent(groupId)+'/events'),
     api('/groups/'+encodeURIComponent(groupId)+'/announcements'),
     staff?api('/groups/'+encodeURIComponent(groupId)+'/requests'):Promise.resolve({requests:[]}),
     staff?api('/groups/'+encodeURIComponent(groupId)+'/pending-posts'):Promise.resolve({posts:[]}),
-    staff?api('/groups/'+encodeURIComponent(groupId)+'/analytics'):Promise.resolve(null)
+    staff?api('/groups/'+encodeURIComponent(groupId)+'/analytics'):Promise.resolve(null),
+    isMember?api('/groups/'+encodeURIComponent(groupId)+'/messages'):Promise.resolve({messages:[]}),
+    ownerOrAdmin?api('/groups/'+encodeURIComponent(groupId)+'/audit'):Promise.resolve({events:[]})
   ]);
   const events=results[0].status==='fulfilled'?results[0].value.events||[]:[];
   const announcements=results[1].status==='fulfilled'?results[1].value.announcements||[]:[];
   const requests=results[2].status==='fulfilled'?results[2].value.requests||[]:[];
   const pendingPosts=results[3].status==='fulfilled'?results[3].value.posts||[]:[];
   const analytics=results[4].status==='fulfilled'?results[4].value:null;
+  const chatMessages=results[5].status==='fulfilled'?results[5].value.messages||[]:[];
+  const auditEvents=results[6].status==='fulfilled'?results[6].value.events||[]:[];
   const memberList=g.members||[];
   let html='<section class="card group-detail-head"><button class="text-button" id="back-to-groups">← All groups</button><div class="group-detail-banner"><div class="group-icon">◉</div><div><div class="group-detail-label">'+esc(g.category||'Minglora community')+' · '+esc(g.visibility==='public'?'Public':g.visibility==='private'?'Private group':'Hidden group')+'</div><h1>'+esc(g.name)+'</h1><p class="muted">'+esc(g.description||'A community on Minglora.')+'</p></div></div><div class="group-detail-meta"><span>'+Number(g.memberCount||0).toLocaleString()+' members</span><span>Created by '+esc(g.owner?.name||'Minglora member')+'</span>'+(isMember?'<span class="group-role-pill">'+esc(role.replace('_',' '))+'</span>':'')+'</div><div class="group-detail-actions">';
   if(isMember&&!isOwner)html+='<button class="secondary" id="leave-current-group">Leave group</button>';
@@ -3976,11 +3981,15 @@ async function renderGroup(groupId,tab='discussion'){
   if(!isOwner)html+='<button class="secondary" id="report-group">Report group</button>';
   html+='</div></section>';
   const tabs=[['discussion','Discussion'],['about','About'],['members','Members'],['events','Events']];
-  if(isMember)tabs.push(['media','Media']);
+  if(isMember)tabs.push(['chat','Group chat'],['media','Media']);
   if(staff)tabs.push(['manage','Manage']);
   html+='<nav class="group-detail-tabs" aria-label="Group sections">'+tabs.map(item=>'<button type="button" data-group-tab="'+item[0]+'" class="'+(tab===item[0]?'active':'')+'">'+item[1]+'</button>').join('')+'</nav>';
   if(tab==='about'){
     html+='<section class="card group-about-grid"><div><h2>About this group</h2><p>'+esc(g.description||'The group has not added a description yet.')+'</p><dl><dt>Category</dt><dd>'+esc(g.category||'Not specified')+'</dd><dt>Privacy</dt><dd>'+esc(g.visibility==='public'?'Public group':g.visibility==='private'?'Private and visible':'Private and hidden')+'</dd><dt>Membership</dt><dd>'+esc(g.joinApproval?'Administrator approval required':'Members can join directly')+'</dd><dt>Posting</dt><dd>'+esc(g.postApproval?'Posts require approval':'Member posts are published directly')+'</dd></dl></div><div><h2>Community topics</h2><div class="group-topic-list">'+((g.topics||[]).map(topic=>'<span>'+esc(topic)+'</span>').join('')||'<p class="muted">No topics added yet.</p>')+'</div><h2>Community rules</h2><p class="muted">Group rules and moderation actions are managed by this community’s administrators.</p></div></section>';
+  }else if(tab==='chat'&&isMember){
+    html+='<section class="card group-chat-panel"><div class="section-heading"><div><h2>Group chat</h2><p class="muted">A private conversation for active members of this group.</p></div><button type="button" class="secondary" id="refresh-group-chat">Refresh</button></div>';
+    html+='<div class="group-chat-messages" aria-live="polite">'+(chatMessages.length?chatMessages.map(message=>'<article class="group-chat-message"><img class="avatar" src="'+avatar(message.author)+'" alt=""><div class="group-chat-message-body"><div><strong>'+esc(message.author?.name||'Minglora member')+'</strong><small>'+timeAgo(message.createdAt)+'</small></div><p>'+esc(message.body)+'</p></div>'+(message.senderId===state.user.id||staff?'<button type="button" class="text-button" data-delete-group-message="'+esc(message.id)+'">Delete</button>':'')+'</article>').join(''):'<div class="empty-state"><h3>No group messages yet</h3><p>Start the conversation with your members.</p></div>')+'</div>';
+    html+='<form class="group-chat-composer" id="group-chat-form"><label class="sr-only" for="group-chat-input">Write a group message</label><textarea id="group-chat-input" name="body" maxlength="5000" rows="2" required placeholder="Write a message to group members..."></textarea><button class="primary" type="submit">Send message</button></form></section>';
   }else if(tab==='members'){
     html+='<section class="card"><div class="section-heading"><div><h2>Members</h2><p class="muted">'+(isMember?'Member directory for this group.':'Join this group to see its member directory.')+'</p></div></div>';
     if(isMember&&memberList.length){
@@ -3992,7 +4001,7 @@ async function renderGroup(groupId,tab='discussion'){
     html+='</section>';
   }else if(tab==='events'){
     html+='<section class="card"><div class="section-heading"><div><h2>Group events</h2><p class="muted">Activities scheduled by this community.</p></div></div>';
-    if(events.length)html+='<div class="group-event-list">'+events.map(event=>'<article class="group-event-row"><div class="group-event-date">'+esc(new Date(event.startsAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}))+'</div><div><strong>'+esc(event.title)+'</strong><p>'+esc(event.description||'')+'</p><small>'+esc(new Date(event.startsAt).toLocaleString())+(event.timeZone?' · '+esc(event.timeZone):'')+'</small></div></article>').join('')+'</div>';
+    if(events.length)html+='<div class="group-event-list">'+events.map(event=>'<article class="group-event-row"><div class="group-event-date">'+esc(new Date(event.startsAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}))+'</div><div class="group-event-copy"><strong>'+esc(event.title)+'</strong><p>'+esc(event.description||'')+'</p><small>'+esc(new Date(event.startsAt).toLocaleString())+(event.timeZone?' · '+esc(event.timeZone):'')+'</small><div class="group-event-rsvp"><span>'+Number(event.rsvpCounts?.going||0)+' going · '+Number(event.rsvpCounts?.interested||0)+' interested</span><button type="button" class="secondary" data-event-rsvp="'+esc(event.id)+'" data-rsvp-response="going">'+(event.myResponse==='going'?'Going ✓':'Going')+'</button><button type="button" class="secondary" data-event-rsvp="'+esc(event.id)+'" data-rsvp-response="interested">'+(event.myResponse==='interested'?'Interested ✓':'Interested')+'</button></div></div></article>').join('')+'</div>';
     else html+='<div class="empty-state"><h3>No upcoming events</h3><p>When this group schedules an event, it will appear here.</p></div>';
     if(canEvents)html+='<form class="group-inline-form" id="group-event-form"><h3>Create an event</h3><div class="field"><label for="group-event-title">Event name</label><input id="group-event-title" name="title" required minlength="3" maxlength="160"></div><div class="field"><label for="group-event-description">Description</label><textarea id="group-event-description" name="description" maxlength="2000"></textarea></div><div class="field"><label for="group-event-start">Starts</label><input id="group-event-start" name="startsAt" type="datetime-local" required></div><div class="field"><label for="group-event-end">Ends (optional)</label><input id="group-event-end" name="endsAt" type="datetime-local"></div><button class="primary" type="submit">Create event</button></form>';
     html+='</section>';
@@ -4008,6 +4017,7 @@ async function renderGroup(groupId,tab='discussion'){
     html+='<h2>Invite members</h2><form class="group-inline-form" id="group-invite-search-form"><div class="field"><label for="group-invite-query">Find a Minglora member</label><input id="group-invite-query" name="q" required minlength="2" maxlength="100" placeholder="Search by name or username"></div><button class="secondary" type="submit">Find members</button></form><div id="group-invite-results"></div>';
     html+='<h2>Announcements</h2><form class="group-inline-form" id="group-announcement-form"><div class="field"><label for="group-announcement-title">Title</label><input id="group-announcement-title" name="title" maxlength="140" required minlength="3"></div><div class="field"><label for="group-announcement-body">Message</label><textarea id="group-announcement-body" name="body" maxlength="3000" required></textarea></div><button class="primary" type="submit">Publish announcement</button></form>';
     if(analytics)html+='<h2>Last 30 days</h2><div class="group-analytics-grid"><div><strong>'+Number(analytics.newMembers||0).toLocaleString()+'</strong><small>New members</small></div><div><strong>'+Number(analytics.departures||0).toLocaleString()+'</strong><small>Departures</small></div><div><strong>'+Number(analytics.posts||0).toLocaleString()+'</strong><small>Posts</small></div><div><strong>'+Number(analytics.pendingRequests||0).toLocaleString()+'</strong><small>Pending requests</small></div></div>';
+    if(ownerOrAdmin)html+='<h2>Group audit history</h2>'+(auditEvents.length?'<div class="group-audit-list">'+auditEvents.slice(0,30).map(item=>'<div class="group-audit-row"><strong>'+esc(String(item.action||'Activity').replaceAll('_',' '))+'</strong><small>'+esc(item.actor?.name||'Former member')+' · '+timeAgo(item.createdAt)+'</small></div>').join('')+'</div>':'<p class="muted">No administrative actions recorded yet.</p>');
     html+='</section></section>';
   }else{
     if(announcements.length){
@@ -4041,6 +4051,22 @@ async function renderGroup(groupId,tab='discussion'){
     }catch(error){toast(error.message);}
   });
   $('#group-announcement-form')?.addEventListener('submit',async event=>{event.preventDefault();const values=new FormData(event.currentTarget);try{await api('/groups/'+encodeURIComponent(groupId)+'/announcements',{method:'POST',body:JSON.stringify({title:values.get('title'),body:values.get('body')})});toast('Announcement published.');await renderGroup(groupId,'manage')}catch(error){toast(error.message)}});
+  $('#refresh-group-chat')?.addEventListener('click',()=>renderGroup(groupId,'chat'));
+  $('#group-chat-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),body=String(new FormData(form).get('body')||'').trim();
+    if(!body)return;button.disabled=true;
+    try{await api('/groups/'+encodeURIComponent(groupId)+'/messages',{method:'POST',body:JSON.stringify({body})});await renderGroup(groupId,'chat');}
+    catch(error){toast(error.message);button.disabled=false;}
+  });
+  document.querySelectorAll('[data-delete-group-message]').forEach(button=>button.addEventListener('click',async()=>{
+    if(!window.confirm('Delete this group message?'))return;
+    try{await api('/groups/'+encodeURIComponent(groupId)+'/messages/'+encodeURIComponent(button.dataset.deleteGroupMessage),{method:'DELETE',body:'{}'});toast('Group message deleted.');await renderGroup(groupId,'chat');}
+    catch(error){toast(error.message);}
+  }));
+  document.querySelectorAll('[data-event-rsvp]').forEach(button=>button.addEventListener('click',async()=>{
+    try{await api('/groups/'+encodeURIComponent(groupId)+'/events/'+encodeURIComponent(button.dataset.eventRsvp)+'/rsvp',{method:'POST',body:JSON.stringify({response:button.dataset.rsvpResponse})});await renderGroup(groupId,'events');}
+    catch(error){toast(error.message);}
+  }));
   $('#group-event-form')?.addEventListener('submit',async event=>{event.preventDefault();const values=new FormData(event.currentTarget);try{await api('/groups/'+encodeURIComponent(groupId)+'/events',{method:'POST',body:JSON.stringify({title:values.get('title'),description:values.get('description'),startsAt:new Date(values.get('startsAt')).toISOString(),endsAt:values.get('endsAt')?new Date(values.get('endsAt')).toISOString():null,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})});toast('Group event created.');await renderGroup(groupId,'events')}catch(error){toast(error.message)}});
 }
 
