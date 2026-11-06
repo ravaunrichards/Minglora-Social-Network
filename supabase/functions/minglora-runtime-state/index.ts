@@ -728,7 +728,6 @@ Deno.serve(async (req: Request) => {
       asOf: new Date().toISOString(),
       currency: "USD",
       creatorSharePercent: 50,
-      platformSharePercent: 50,
       payoutScope: "all_creator_earnings_sources",
       totals: {
         ...totals,
@@ -1158,7 +1157,7 @@ Deno.serve(async (req: Request) => {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
     const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult, giftBalanceResult] = await Promise.all([
-      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,gift_transaction_id,funding_source").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
+      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,currency,status,created_at,funding_source").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle(),
       admin.from("creator_coin_exchanges").select("id,amount_minor,coin_amount,currency,created_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
