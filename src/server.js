@@ -4039,6 +4039,15 @@ async function route(req, res) {
           createdAt:group.createdAt,updatedAt:group.updatedAt||group.createdAt
         };
       };
+      const notifyGroupStaff=(group,actorId,type,message,extra={})=>{
+        ensureGroupRoles(group);
+        const recipients=new Set([group.ownerId,...group.memberships.filter(item=>item.status==='active'&&['owner','admin','moderator'].includes(item.role)).map(item=>item.userId)]);
+        for(const recipientId of recipients)if(recipientId&&recipientId!==actorId)notify(recipientId,actorId,type,message,{groupId:group.id,groupName:group.name,...extra});
+      };
+      const notifyGroupMembers=(group,actorId,type,message,extra={})=>{
+        ensureGroupRoles(group);
+        for(const memberId of new Set(group.members))if(memberId&&memberId!==actorId&&!blockedBetween(memberId,actorId))notify(memberId,actorId,type,message,{groupId:group.id,groupName:group.name,...extra});
+      };
       if(method==='GET'&&p==='/api/groups'){
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase();
         const category=String(url.searchParams.get('category')||'').trim().toLowerCase();
@@ -4096,7 +4105,7 @@ async function route(req, res) {
         if(body.length<1||body.length>2000)return json(res,400,{error:'Group comments must contain 1–2000 characters.'});
         if(parentId&&!db.groupPostComments.some(item=>item.id===parentId&&item.postId===post.id&&item.status!=='deleted'))return json(res,400,{error:'The reply target is not part of this discussion.'});
         const comment={id:uid(),groupId:group.id,postId:post.id,userId:user.id,parentId,body,status:'visible',createdAt:now(),updatedAt:now()};
-        db.groupPostComments.push(comment);recordGroupAudit(group,'group_comment_created','comment',comment.id);await saveStore();
+        db.groupPostComments.push(comment);recordGroupAudit(group,'group_comment_created','comment',comment.id);if(post.userId!==user.id)notify(post.userId,user.id,'group_comment',`${user.name||'A member'} commented on your post in ${group.name}.`,{groupId:group.id,groupName:group.name,postId:post.id,commentId:comment.id});await saveStore();
         return json(res,201,{comment:{...comment,author:safeUser(user)}});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/comments\/([^/]+)$/);
@@ -4120,7 +4129,7 @@ async function route(req, res) {
         if(reaction&&reaction.reactionType===reactionType){db.groupPostReactions=db.groupPostReactions.filter(item=>item!==reaction);reaction=null;}
         else if(reaction)reaction.reactionType=reactionType;
         else {reaction={id:uid(),groupId:group.id,postId:post.id,userId:user.id,reactionType,createdAt:now()};db.groupPostReactions.push(reaction);}
-        await saveStore();return json(res,200,{reaction:reaction||null});
+        if(reaction&&post.userId!==user.id)notify(post.userId,user.id,'group_reaction',`${user.name||'A member'} reacted to your post in ${group.name}.`,{groupId:group.id,groupName:group.name,postId:post.id});await saveStore();return json(res,200,{reaction:reaction||null});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -4141,7 +4150,7 @@ async function route(req, res) {
         if(!['public','private'].includes(group.visibility)||group.discoverable===false&&!invitation)return json(res,404,{error:'This group is not accepting public membership requests.'});
         if((group.joinApproval===true||(group.visibility==='private'&&group.joinApproval!==false))&&!invitation){
           let request=db.groupMembershipRequests.find(item=>item.groupId===group.id&&item.userId===user.id&&item.status==='pending');
-          if(!request){request={id:uid(),groupId:group.id,userId:user.id,status:'pending',createdAt:now()};db.groupMembershipRequests.unshift(request);recordGroupAudit(group,'membership_requested','member',user.id);}
+          if(!request){request={id:uid(),groupId:group.id,userId:user.id,status:'pending',createdAt:now()};db.groupMembershipRequests.unshift(request);recordGroupAudit(group,'membership_requested','member',user.id);notifyGroupStaff(group,user.id,'group_request',`${user.name||'A member'} requested to join ${group.name}.`,{requestId:request.id});}
           await saveStore();return json(res,202,{requested:true,message:'Your request was sent to the group administrators.'});
         }
         setGroupMembership(group,user.id,'member','active');
@@ -4190,6 +4199,7 @@ async function route(req, res) {
         if(!['approve','decline'].includes(action))return json(res,400,{error:'Choose approve or decline.'});
         request.status=action==='approve'?'approved':'declined';request.reviewedBy=user.id;request.reviewedAt=now();
         if(action==='approve')setGroupMembership(group,request.userId,'member','active');
+        notify(request.userId,user.id,'group_request_update',action==='approve'?`Your request to join ${group.name} was approved.`:`Your request to join ${group.name} was declined.`,{groupId:group.id,groupName:group.name});
         recordGroupAudit(group,'membership_'+request.status,'member',request.userId);await saveStore();
         return json(res,200,{request});
       }
@@ -4205,7 +4215,7 @@ async function route(req, res) {
         if(group.memberships.some(item=>item.userId===inviteeId&&item.status==='banned'))return json(res,403,{error:'This member must be unbanned before receiving a group invitation.'});
         let invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===inviteeId&&item.status==='pending');
         if(!invitation){invitation={id:uid(),groupId:group.id,inviterId:user.id,inviteeId,status:'pending',createdAt:now()};db.groupInvitations.unshift(invitation);}
-        recordGroupAudit(group,'member_invited','member',inviteeId);await saveStore();return json(res,201,{invitation});
+        recordGroupAudit(group,'member_invited','member',inviteeId);notify(inviteeId,user.id,'group_invite',`${user.name||'A member'} invited you to join ${group.name}.`,{groupId:group.id,groupName:group.name,invitationId:invitation.id});await saveStore();return json(res,201,{invitation});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/invitations\/([^/]+)\/respond$/);
       if(method==='POST'&&m){
@@ -4216,7 +4226,7 @@ async function route(req, res) {
         const action=String(input.action||'');
         if(!['accept','decline'].includes(action))return json(res,400,{error:'Choose accept or decline.'});
         invitation.status=action==='accept'?'accepted':'declined';invitation.respondedAt=now();
-        if(action==='accept')setGroupMembership(group,user.id,'member','active');
+        if(action==='accept'){setGroupMembership(group,user.id,'member','active');notifyGroupStaff(group,user.id,'group_member',`${user.name||'A member'} joined ${group.name} from an invitation.`);}
         recordGroupAudit(group,'invitation_'+invitation.status,'member',user.id);await saveStore();
         return json(res,200,{invitation,joined:action==='accept'});
       }
@@ -4292,7 +4302,7 @@ async function route(req, res) {
         if(getGroupRole(group,user.id)==='admin'&&targetRole==='admin')return json(res,403,{error:'Administrators cannot remove another administrator.'});
         setGroupMembership(group,targetId,'member',input.ban===true?'banned':'left');
         db.groupModerationActions.unshift({id:uid(),groupId:group.id,actorId:user.id,targetUserId:targetId,action:input.ban===true?'ban':'remove',reason:String(input.reason||'').slice(0,500),createdAt:now()});
-        recordGroupAudit(group,input.ban===true?'member_banned':'member_removed','member',targetId);await saveStore();return json(res,200,{removed:true,banned:input.ban===true});
+        recordGroupAudit(group,input.ban===true?'member_banned':'member_removed','member',targetId);notify(targetId,user.id,'group_moderation',input.ban===true?`You were banned from ${group.name}.`:`You were removed from ${group.name}.`,{groupId:group.id,groupName:group.name,action:input.ban===true?'ban':'remove'});await saveStore();return json(res,200,{removed:true,banned:input.ban===true});
       }
       db.groupMessages ||= [];
       db.groupPostComments ||= [];
@@ -4336,7 +4346,7 @@ async function route(req, res) {
         const title=String(input.title||'').trim(),startsAt=Date.parse(input.startsAt),endsAt=input.endsAt?Date.parse(input.endsAt):null;
         if(title.length<3||title.length>160||!Number.isFinite(startsAt)||(endsAt!==null&&(!Number.isFinite(endsAt)||endsAt<startsAt)))return json(res,400,{error:'Provide an event title and valid start/end times.'});
         const event={id:uid(),groupId:group.id,creatorId:user.id,title,description:String(input.description||'').trim().slice(0,2000),startsAt:new Date(startsAt).toISOString(),endsAt:endsAt?new Date(endsAt).toISOString():null,timeZone:String(input.timeZone||'UTC').slice(0,80),status:'scheduled',createdAt:now()};
-        db.groupEvents.unshift(event);recordGroupAudit(group,'group_event_created','event',event.id);await saveStore();return json(res,201,{event});
+        db.groupEvents.unshift(event);recordGroupAudit(group,'group_event_created','event',event.id);notifyGroupMembers(group,user.id,'group_event',`A new event was scheduled in ${group.name}: ${title}`,{eventId:event.id});await saveStore();return json(res,201,{event});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/rules$/);
       if(method==='GET'&&m){
@@ -4371,7 +4381,7 @@ async function route(req, res) {
         const title=String(input.title||'').trim(),body=String(input.body||'').trim();
         if(title.length<3||title.length>140||body.length<1||body.length>3000)return json(res,400,{error:'Announcement title or message is invalid.'});
         const announcement={id:uid(),groupId:group.id,authorId:user.id,title,body,status:'published',createdAt:now()};
-        db.groupAnnouncements.unshift(announcement);recordGroupAudit(group,'announcement_created','announcement',announcement.id);await saveStore();return json(res,201,{announcement});
+        db.groupAnnouncements.unshift(announcement);recordGroupAudit(group,'announcement_created','announcement',announcement.id);notifyGroupMembers(group,user.id,'group_announcement',`New announcement in ${group.name}: ${title}`,{announcementId:announcement.id});await saveStore();return json(res,201,{announcement});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/audit$/);
       if(method==='GET'&&m){
