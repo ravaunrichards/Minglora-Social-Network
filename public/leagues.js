@@ -351,11 +351,15 @@
       try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/support", {method:"POST",body:JSON.stringify({side:button.dataset.matchSupport})}); toast("Your match support was counted."); await render(); }
       catch(error) { toast(error.message); button.disabled = false; }
     }));
-    document.querySelectorAll("[data-powerup-select]").forEach(button => button.addEventListener("click", () => {
-      state.selectedPowerupId = button.dataset.powerupSelect || "";
-      state.selectedMatchId = "";
-      updatePowerupPreview();
-    }));
+    document.querySelectorAll("[data-powerup-select]").forEach(button => {
+      if (button.dataset.previewSelectBound) return;
+      button.dataset.previewSelectBound = "true";
+      button.addEventListener("click", () => {
+        state.selectedPowerupId = button.dataset.powerupSelect || "";
+        state.selectedMatchId = "";
+        updatePowerupPreview();
+      });
+    });
     document.querySelectorAll("[data-match-powerup-preview]").forEach(button => button.addEventListener("click", () => {
       state.selectedPowerupId = button.dataset.matchPowerupPreview || "";
       state.selectedMatchId = button.dataset.matchId || "";
