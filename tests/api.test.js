@@ -283,6 +283,31 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(invalidMeetWavePrivacyUpdate.status, 400);
 
+  const messengerPreferencesUpdate = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      preferences: {
+        messengerActiveStatus: false,
+        messengerIncomingCallSounds: false,
+        messengerMessageSounds: false,
+        messengerAutoOpenNewMessages: true
+      }
+    })
+  });
+  assert.equal(messengerPreferencesUpdate.status, 200, JSON.stringify(messengerPreferencesUpdate.body));
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerActiveStatus, false);
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerIncomingCallSounds, false);
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerMessageSounds, false);
+  assert.equal(messengerPreferencesUpdate.body.settings.preferences.messengerAutoOpenNewMessages, true);
+  const reloadedMessengerSettings = await request('/api/settings');
+  assert.equal(reloadedMessengerSettings.body.settings.preferences.messengerActiveStatus, false);
+  assert.equal(reloadedMessengerSettings.body.settings.preferences.messengerAutoOpenNewMessages, true);
+  const invalidMessengerPreference = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ preferences: { messengerActiveStatus: 'yes' } })
+  });
+  assert.equal(invalidMessengerPreference.status, 400);
+
   const firstAccountCookie = cookie;
   const privacyTestRegistration = await request('/api/auth/register', {
     method: 'POST',
