@@ -790,7 +790,7 @@ Deno.serve(async (req: Request) => {
     const adminUserId = String(input.adminUserId || "");
     const adminEmail = String(input.adminEmail || "").trim().toLowerCase();
     const paypalEmail = String(input.paypalEmail || "").trim().toLowerCase();
-    const paypalEmailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;
+    const paypalEmailPattern = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}$/i;
     if (!validUuid(adminUserId) || adminUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
         adminEmail !== "creatorhubcreatornetwork@gmail.com" ||
         paypalEmail.length > 127 || !paypalEmailPattern.test(paypalEmail)) {
