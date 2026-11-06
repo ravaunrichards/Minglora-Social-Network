@@ -72,6 +72,9 @@ test('creator earnings are private to the signed-in creator and do not disclose 
   assert.ok(routeStart >= 0 && routeEnd > routeStart, 'creator earnings route must exist');
   const earningsRoute = server.slice(routeStart, routeEnd);
   assert.match(earningsRoute, /creatorId:user\.id/);
+  assert.match(earningsRoute, /const pick=\(row,fields\)/);
+  assert.match(earningsRoute, /creator_share_minor/);
+  assert.doesNotMatch(earningsRoute, /platform_share_minor|platformSharePercent|paypal_batch_id/);
 
   const apiStart = server.indexOf("if (p.startsWith('/api/'))");
   const authGuard = server.indexOf('requireAuth(user);', apiStart);
