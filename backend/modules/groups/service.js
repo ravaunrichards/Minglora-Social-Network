@@ -25,7 +25,7 @@ export function canViewGroup(group, userId) {
   if (!group || group.status === 'deleted' || group.status === 'archived') return false;
   const role = getGroupRole(group, userId);
   if (role) return true;
-  return group.visibility === 'public' || (group.visibility === 'private' && group.discoverable !== false);
+  return group.visibility === 'public' || (group.visibility === 'private' && group.joinApproval !== false && group.discoverable !== false);
 }
 
 export function canDiscoverGroup(group) {
