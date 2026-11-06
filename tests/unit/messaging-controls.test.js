@@ -84,3 +84,57 @@ test('Messenger notification sound reuses the user-activated call audio context'
   assert.ok(app.includes('const context=callToneContext||messengerMessageSoundContext||new AudioContextClass()'));
   assert.ok(app.includes('if(context.state!==\'running\')return'));
 });
+
+test('Group Messenger windows expose real voice and video call entry points',async()=>{
+  const [app,server]=await Promise.all([read('../../public/app.js'),read('../../src/server.js')]);
+  assert.ok(app.includes('data-message-group-audio='));
+  assert.ok(app.includes('data-message-group-video='));
+  assert.ok(app.includes('openMingloraGroupCallPicker'));
+  assert.ok(app.includes('participantIds,kind'));
+  assert.ok(server.includes('participantIds.map(String)'));
+});
+
+test('Conversation privacy settings are persisted and disappearing messages are expired on the server',async()=>{
+  const [app,server,store,css]=await Promise.all([
+    read('../../public/app.js'),read('../../src/server.js'),read('../../src/store.js'),read('../../public/styles.css')
+  ]);
+  assert.ok(app.includes('data-tools-tab="privacy"'));
+  assert.ok(app.includes("api('/messages/settings?conversationId='+encodeURIComponent(conversationId))"));
+  assert.ok(app.includes("api('/messages/settings',{method:'PATCH'"));
+  assert.ok(server.includes("if(method==='PATCH'&&p==='/api/messages/settings')"));
+  assert.ok(server.includes('expiresAt:disappearingAfterSeconds?'));
+  assert.ok(server.includes('sweepExpiredMessengerMessages'));
+  assert.ok(server.includes("mediaGateway('media_delete'"));
+  assert.ok(store.includes('messageConversationSettings'));
+  assert.ok(css.includes('.message-tools-privacy-card'));
+});
+
+
+test('Direct shared media never returns attachments or links from expired messages',async()=>{
+  const server=await read('../../src/server.js');
+  const route=server.slice(server.indexOf("if(method==='GET'&&p==='/api/messages/shared')"),server.indexOf("if(method==='GET'&&p==='/api/messages/gifs')"));
+  assert.ok(route.includes("&&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)"));
+});
+test('Group calls use the existing eight-participant call limit rather than a separate call backend',async()=>{
+  const [app,server]=await Promise.all([read('../../public/app.js'),read('../../src/server.js')]);
+  assert.ok(app.includes("const participantIds=[...new Set((conversation.group.members||[]).map(member=>member.id)"));
+  assert.ok(app.includes("startMingloraCall({id:conversation.user.id,name:conversation.group.name+' group call'"));
+  assert.ok(server.includes('recipientIds.length>CALL_MAX_PARTICIPANTS-1'));
+  assert.ok(server.includes('ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS)'));
+});
+
+test('Server validates group-call participants against the authenticated current group',async()=>{
+  const server=await read('../../src/server.js');
+  const callRoute=server.slice(server.indexOf("if(method==='POST'&&p==='/api/calls')"),server.indexOf("if(method==='POST'&&p==='/api/calls",server.indexOf("if(method==='POST'&&p==='/api/calls')")+10));
+  assert.ok(callRoute.includes("const groupId=String(input.groupId||'').trim()"));
+  assert.ok(callRoute.includes('canAccessMessageGroup(db,groupId,user.id)'));
+  assert.ok(callRoute.includes('activeGroupMembers.has(id)'));
+});
+
+test('Direct chat remains available for retention management after all expiring messages are deleted',async()=>{
+  const [server,service]=await Promise.all([read('../../src/server.js'),read('../../backend/modules/messaging/service.js')]);
+  assert.ok(service.includes('export function getMessageConversationPeerId'));
+  assert.ok(server.includes('const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id))'));
+  assert.ok(server.includes('if(!visibleMessages.length&&!savedConversationSettings)return null'));
+  assert.ok(server.includes('messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))'));
+});

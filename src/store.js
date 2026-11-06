@@ -11,7 +11,7 @@ const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'mediaAssets',
-  'messageGroups', 'messageGroupMembers', 'messageGroupMessages',
+  'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',

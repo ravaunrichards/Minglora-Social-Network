@@ -6147,3 +6147,24 @@ button.live-ranking-row{cursor:pointer}
 .message-tools-file-card{justify-content:center;min-height:78px}
 .message-window-bubble.is-search-match{outline:3px solid rgba(23,105,224,.65);outline-offset:2px;transition:outline-color .3s}
 @media(max-width:560px){.message-tools-modal{width:calc(100vw - 14px);max-height:calc(100dvh - 24px)}.message-tools-modal .modal-body{padding:12px}.message-tools-search-form{flex-direction:column}.message-tools-search-form button{width:100%}.message-tools-shared-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.message-tools-privacy{display:block;max-width:100%}
+.message-tools-privacy-card{display:grid;gap:14px;max-width:560px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.message-tools-privacy-card>strong{font-size:15px}
+.message-tools-privacy-card>p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.message-tools-privacy-card .field{display:grid;gap:7px}
+.message-tools-privacy-card select{width:100%;min-width:0;min-height:42px}
+.message-tools-privacy-card [data-save-disappearing]{justify-self:start}
+.message-expiry-label{display:block;margin:4px 0 2px;color:var(--muted);font-size:10px;letter-spacing:.01em}
+.message-group-call-members{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;max-height:min(52dvh,440px);overflow:auto;padding:2px}
+.message-group-call-member{display:flex;align-items:center;gap:10px;min-width:0;padding:9px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer}
+.message-group-call-member:has(input:checked){border-color:var(--primary);background:var(--surface-soft)}
+.message-group-call-member input{flex:0 0 auto;accent-color:var(--primary)}
+.message-group-call-member img{width:38px;height:38px;flex:0 0 38px;border-radius:50%;object-fit:cover}
+.message-group-call-member span{display:grid;min-width:0;gap:3px}
+.message-group-call-member strong,.message-group-call-member small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.message-group-call-member strong{font-size:12px}
+.message-group-call-member small{font-size:10px;color:var(--muted)}
+.message-group-call-picker{width:min(680px,calc(100vw - 24px));max-height:min(92dvh,760px);overflow:auto}
+.message-group-call-picker .modal-body{display:grid;gap:12px}
+@media(max-width:560px){.message-group-call-members{grid-template-columns:minmax(0,1fr);max-height:50dvh}.message-tools-privacy-card{padding:13px}}

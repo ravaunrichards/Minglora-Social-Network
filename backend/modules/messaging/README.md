@@ -38,3 +38,11 @@ Realtime delivery currently runs in the same Node.js application process as the 
 The API enforces message-audience preferences, restrictions, block relationships, active group membership, sender ownership, attachment ownership and supported message types. Group search and shared-media requests are filtered to active members. Per-user deletes are hidden only from that account; unsend requires the sender and removes the original attachment references.
 
 Supabase refresh-token rotation remains serialized per application session. The application currently persists its route model through the JSONB compatibility state adapter; normalized message and conversation tables are not yet the route layer's transactional source of truth.
+
+
+## Completion update (6 November 2026)
+
+- Messenger direct and group conversations can set a shared disappearing-message timer: off, 30 seconds, 5 minutes, 1 hour, 24 hours or 7 days. Direct-chat participants may change their shared policy; in group chats only an owner or admin can change it.
+- The server stamps every new message with its expiry deadline. Expired messages are filtered out of inbox, search and shared-media responses immediately, then background cleanup deletes their private storage objects. Storage failures are retried without making expired content visible again.
+- Group chat headers now expose voice and video call actions. Groups with up to seven other members can start directly; larger groups get a member picker capped at the existing eight-person LiveKit room limit. The caller can add more people from the call controls while connected.
+- Retention settings apply to new messages only. They do not retroactively change messages sent before the policy was saved.
