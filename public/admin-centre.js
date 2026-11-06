@@ -375,9 +375,36 @@
           '<button type="button" class="secondary" id="admin-centre-revoke-other-sessions">Log out other devices</button>' +
           '<p id="admin-centre-session-status" role="status" aria-live="polite"></p></section>' +
       '</div>';
+    if (unlocked) {
+      const giftEarningsSection = document.createElement('section');
+      giftEarningsSection.className = 'admin-control-centre-section admin-gift-earnings-report';
+      giftEarningsSection.id = 'admin-gift-earnings';
+      giftEarningsSection.setAttribute('aria-labelledby', 'admin-gift-earnings-title');
+      giftEarningsSection.innerHTML = `
+        <div class="admin-control-centre-section-heading admin-gift-earnings-heading">
+          <div><h3 id="admin-gift-earnings-title">LIVE gift revenue &amp; creator earnings</h3>
+            <p>Read-only financial reporting from the verified gift earnings ledger. This does not move or change any wallet funds.</p></div>
+          <button type="button" class="secondary" id="admin-gift-earnings-refresh">Refresh report</button>
+        </div>
+        <p id="admin-gift-earnings-status" class="admin-gift-earnings-status" role="status" aria-live="polite">Loading actual gift earnings…</p>
+        <div id="admin-gift-earnings-metrics" class="admin-gift-earnings-metrics"></div>
+        <div class="admin-gift-earnings-list-wrap">
+          <h4>Creator-by-creator 50/50 breakdown</h4>
+          <div id="admin-gift-earnings-creators" class="admin-gift-earnings-creators" aria-live="polite">Loading creator earnings…</div>
+        </div>
+        <p class="admin-gift-earnings-footnote">Gift revenue and both 50% shares come from eligible creator earnings ledger records. Pending and paid payout totals cover all creator earnings sources because Minglora uses a shared creator payout ledger. Amounts are recorded earnings, not a statement of cleared bank cash.</p>
+      `;
+      adminSettings.append(giftEarningsSection);
+    }
+
     panel.append(adminSettings);
     root.replaceChildren(panel);
     root.dataset.adminCentreReady = 'true';
+
+    if (unlocked) {
+      panel.querySelector('#admin-gift-earnings-refresh')?.addEventListener('click', () => loadAdminGiftEarnings(panel));
+      void loadAdminGiftEarnings(panel);
+    }
 
     panel.querySelectorAll('[data-admin-jump]').forEach(button => {
       button.addEventListener('click', () => {
@@ -869,6 +896,67 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'The administrator request could not be completed.');
     return payload;
+  }
+
+  function formatAdminEarningsMoney(minor) {
+    const amount = Number(minor || 0);
+    return new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format((Number.isFinite(amount) ? amount : 0) / 100);
+  }
+
+  async function loadAdminGiftEarnings(panel) {
+    const status = panel.querySelector('#admin-gift-earnings-status');
+    const metrics = panel.querySelector('#admin-gift-earnings-metrics');
+    const creators = panel.querySelector('#admin-gift-earnings-creators');
+    const refresh = panel.querySelector('#admin-gift-earnings-refresh');
+    if (!status || !metrics || !creators) return;
+    if (refresh) refresh.disabled = true;
+    status.textContent = 'Loading the verified creator earnings and payout ledgers…';
+    try {
+      const report = await adminCentreApi('/admin/creator-earnings');
+      const totals = report.totals || {};
+      const cards = [
+        ['Recorded gift value', totals.grossMinor],
+        ['Creator share · 50%', totals.creatorShareMinor],
+        ['Minglora share · 50%', totals.platformShareMinor],
+        ['Creator payouts pending', totals.pendingPayoutMinor],
+        ['Creator payouts paid', totals.paidPayoutMinor]
+      ];
+      metrics.innerHTML = cards.map(([label, value]) =>
+        '<article class="admin-gift-earnings-metric"><small>' + escapeText(label) +
+        '</small><strong>' + escapeText(formatAdminEarningsMoney(value)) + '</strong></article>'
+      ).join('');
+
+      const rows = Array.isArray(report.creators) ? report.creators : [];
+      creators.innerHTML = rows.map(creator => {
+        const username = String(creator.username || '').replace(/^@/, '');
+        const identity = escapeText(creator.displayName || 'Unavailable creator');
+        const handle = username ? '@' + escapeText(username) : 'Account profile unavailable';
+        return '<article class="admin-gift-earnings-creator">' +
+          '<div class="admin-gift-earnings-creator-heading"><strong>' + identity +
+            '</strong><small>' + handle + ' · ' + Number(creator.giftCount || 0).toLocaleString() + ' eligible gifts</small></div>' +
+          '<div class="admin-gift-earnings-creator-values">' +
+            '<div><small>Gift value</small><strong>' + escapeText(formatAdminEarningsMoney(creator.grossMinor)) + '</strong></div>' +
+            '<div><small>Creator 50%</small><strong>' + escapeText(formatAdminEarningsMoney(creator.creatorShareMinor)) + '</strong></div>' +
+            '<div><small>Minglora 50%</small><strong>' + escapeText(formatAdminEarningsMoney(creator.platformShareMinor)) + '</strong></div>' +
+            '<div><small>Pending payouts</small><strong>' + escapeText(formatAdminEarningsMoney(creator.pendingPayoutMinor)) + '</strong></div>' +
+            '<div><small>Paid payouts</small><strong>' + escapeText(formatAdminEarningsMoney(creator.paidPayoutMinor)) + '</strong></div>' +
+          '</div></article>';
+      }).join('') || '<p class="admin-gift-earnings-empty">No eligible gift earnings have been recorded yet.</p>';
+
+      const updated = report.asOf ? new Date(report.asOf) : new Date();
+      const updateLabel = Number.isNaN(updated.getTime()) ? 'just now' : updated.toLocaleString();
+      status.textContent = Number(totals.giftCount || 0).toLocaleString() +
+        ' eligible gift records across ' + Number(totals.creatorCount || 0).toLocaleString() +
+        ' creators · ' + Number(totals.splitMismatchCount || 0).toLocaleString() +
+        ' split exceptions · refreshed ' + updateLabel + '.';
+    } catch (error) {
+      metrics.innerHTML = '';
+      creators.textContent = 'The verified earnings report could not be loaded. ' +
+        (error.message || 'Try refreshing the report.');
+      status.textContent = 'Financial report unavailable.';
+    } finally {
+      if (refresh) refresh.disabled = false;
+    }
   }
 
   async function loadAdminModerationQueue(panel) {
