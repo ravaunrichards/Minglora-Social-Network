@@ -199,20 +199,20 @@ function safeUser(u,viewerId=null){
   const newGifterIdentity=getNewGifterIdentity(db,u.id);
   if(newGifterIdentity)result.newGifterIdentity=newGifterIdentity;
   const creatorLeagueProfile=(db.creatorLeagueProfiles||[]).find(item=>item.userId===u.id);
-  if(creatorLeagueProfile){
-    const leagueClass=CREATOR_LEAGUE_CLASSES.includes(creatorLeagueProfile.leagueClass)?creatorLeagueProfile.leagueClass:'D5';
-    result.creatorLeague={
-      leagueClass,
-      region:String(creatorLeagueProfile.region||'GLOBAL').trim().toUpperCase()||'GLOBAL',
-      fragments:Math.max(0,Math.min(3,Math.floor(Number(creatorLeagueProfile.fragments)||0))),
-      fragmentsNeeded:4,
-      leagueShields:Math.max(0,Math.floor(Number(creatorLeagueProfile.leagueShields)||0)),
-      seasonPoints:Math.max(0,Number(creatorLeagueProfile.seasonPoints)||0),
-      lifetimeGiftPoints:Math.max(0,Number(creatorLeagueProfile.lifetimeGiftPoints)||0),
-      seasonKey:creatorLeagueProfile.seasonKey||null,
-      updatedAt:creatorLeagueProfile.updatedAt||null
-    };
-  }
+  const creatorLeagueClass=CREATOR_LEAGUE_CLASSES.includes(creatorLeagueProfile?.leagueClass)
+    ?creatorLeagueProfile.leagueClass:'D5';
+  result.creatorLeague={
+    leagueClass:creatorLeagueClass,
+    region:String(creatorLeagueProfile?.region||u.country||u.region||'GLOBAL').trim().toUpperCase()||'GLOBAL',
+    fragments:Math.max(0,Math.min(3,Math.floor(Number(creatorLeagueProfile?.fragments)||0))),
+    fragmentsNeeded:4,
+    leagueShields:Math.max(0,Math.floor(Number(creatorLeagueProfile?.leagueShields)||0)),
+    seasonPoints:Math.max(0,Number(creatorLeagueProfile?.seasonPoints)||0),
+    lifetimeGiftPoints:Math.max(0,Number(creatorLeagueProfile?.lifetimeGiftPoints)||0),
+    seasonKey:creatorLeagueProfile?.seasonKey||null,
+    updatedAt:creatorLeagueProfile?.updatedAt||null,
+    initialized:Boolean(creatorLeagueProfile)
+  };
   const legacySection={bio:'intro',location:'personalDetails',country:'personalDetails',county:'personalDetails',parish:'personalDetails',city:'personalDetails',gender:'personalDetails',relationshipStatus:'personalDetails',contactPhone:'contactInfo'};
   const fields=['bio','location','country','county','parish','city','gender','relationshipStatus','contactPhone'];
   for(const key of fields){
@@ -4719,6 +4719,7 @@ async function route(req, res) {
 }
 const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
 let leagueSettlementInProgress=false;
+let lastCreatorLeagueReconciliationAt=0;
 const leagueSettlementTimer=setInterval(async()=>{
   if(leagueSettlementInProgress)return;
   leagueSettlementInProgress=true;
@@ -4727,10 +4728,14 @@ const leagueSettlementTimer=setInterval(async()=>{
     (match.status==='live'&&Date.parse(match.endsAt)<=currentTime)||
     (match.status==='pending'&&Date.parse(match.expiresAt)<=currentTime)
   );
+  const reconcileCreatorLeagues=currentTime-lastCreatorLeagueReconciliationAt>=60000;
   try{
-    const scheduled=settleScheduledCreatorLeagueDays(db,new Date(currentTime));
+    const scheduled=reconcileCreatorLeagues
+      ?settleScheduledCreatorLeagueDays(db,new Date(currentTime))
+      :{changed:false};
     if(due)settleExpiredLeagueMatches(db,new Date(currentTime));
     if(due||scheduled.changed)await saveStore();
+    if(reconcileCreatorLeagues)lastCreatorLeagueReconciliationAt=currentTime;
   }catch(error){
     console.error('[Minglora League settlement] Could not persist scheduled League state.',{message:String(error?.message||'settlement failed').slice(0,180)});
   }finally{

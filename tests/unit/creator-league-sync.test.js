@@ -103,3 +103,24 @@ test("scheduled reconciliation corrects season and lifetime points for every cre
   assert.equal(profile.seasonPoints, 200);
   assert.equal(profile.lifetimeGiftPoints, 500);
 });
+
+test("scheduled reconciliation creates a default Creator League profile for every account", () => {
+  const db = makeDb();
+  db.users = [
+    { id: "new-creator", username: "new_creator" },
+    { id: "jamaica-creator", username: "jamaica_creator", country: "Jamaica" }
+  ];
+
+  const now = new Date("2026-11-06T13:00:00.000Z");
+  const firstRun = settleScheduledCreatorLeagueDays(db, now);
+
+  assert.equal(firstRun.profilesCreated, 2);
+  assert.equal(firstRun.changed, true);
+  assert.equal(db.creatorLeagueProfiles.length, 2);
+  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "new-creator").leagueClass, "D5");
+  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "jamaica-creator").region, "JAMAICA");
+
+  const secondRun = settleScheduledCreatorLeagueDays(db, now);
+  assert.equal(secondRun.profilesCreated, 0);
+  assert.equal(db.creatorLeagueProfiles.length, 2);
+});

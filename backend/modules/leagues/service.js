@@ -370,6 +370,36 @@ function settlePastDays(db, now) {
  */
 export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
   ensureCollections(db);
+
+  // Give every account a persisted starting class, even before their first
+  // LIVE Gift or first visit to League Arena.
+  const knownProfileIds = new Set(db.creatorLeagueProfiles.map(profile => profile.userId));
+  let profilesCreated = 0;
+  const seasonKeyForNewProfiles = creatorLeagueSeasonKey(now);
+  const initializedAt = now.toISOString();
+  for (const user of db.users || []) {
+    if (!user?.id || knownProfileIds.has(user.id)) continue;
+    db.creatorLeagueProfiles.push({
+      userId: user.id,
+      region: String(user.country || user.region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
+      leagueClass: "D5",
+      fragments: 0,
+      leagueShields: 0,
+      lifetimeGiftPoints: 0,
+      seasonPoints: 0,
+      seasonKey: seasonKeyForNewProfiles,
+      matchRankIndex: 0,
+      matchRankPoints: 0,
+      matchWins: 0,
+      matchLosses: 0,
+      matchDraws: 0,
+      createdAt: initializedAt,
+      updatedAt: initializedAt
+    });
+    knownProfileIds.add(user.id);
+    profilesCreated += 1;
+  }
+
   const today = utcDayKey(now);
   const pendingDays = [...new Set(db.creatorLeagueDailyScores
     .filter(item => item.dayKey && item.dayKey < today)
@@ -415,10 +445,11 @@ export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
   }
 
   return {
-    changed: settledDays.length > 0 || profilesUpdated > 0,
+    changed: settledDays.length > 0 || profilesUpdated > 0 || profilesCreated > 0,
     settledDays,
     placementsProcessed,
     profilesUpdated,
+    profilesCreated,
     seasonKey
   };
 }
