@@ -121,7 +121,7 @@ GRANT EXECUTE ON FUNCTION private.can_manage_minglora_group_events(uuid)
 
 DROP POLICY IF EXISTS minglora_events_read ON public.events;
 CREATE POLICY minglora_events_read ON public.events
-FOR SELECT TO anon, authenticated
+FOR SELECT TO authenticated
 USING (
   (group_id IS NULL AND visibility='public')
   OR creator_id=(select auth.uid())
