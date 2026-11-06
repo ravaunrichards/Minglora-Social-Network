@@ -5992,3 +5992,26 @@ button.live-ranking-row{cursor:pointer}
 .live-pro-history-item>span{white-space:nowrap;font-weight:800}
 @media(max-width:760px){.live-pro-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.live-pro-capabilities{grid-template-columns:repeat(2,minmax(0,1fr))}.live-pro-page-heading{align-items:flex-start;flex-direction:column}.live-pro-open-button{margin-left:0}}
 @media(max-width:480px){.live-pro-capabilities{grid-template-columns:1fr}.live-pro-card-heading{align-items:flex-start;flex-direction:column}.live-pro-card-heading button{width:100%}.live-pro-history-item{align-items:flex-start;flex-direction:column}}
+
+
+/* Current Creator League class, shared by public profiles, creator cards and LIVE surfaces. */
+.creator-league-profile-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-left:5px;
+  padding:3px 8px;
+  border:1px solid rgba(188,145,55,.38);
+  border-radius:999px;
+  background:linear-gradient(135deg,#fff7df 0%,#f2dfae 100%);
+  color:#704a12;
+  font-size:10px;
+  font-weight:850;
+  line-height:1.25;
+  letter-spacing:.035em;
+  vertical-align:middle;
+  white-space:nowrap;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 1px 3px rgba(106,75,19,.12);
+}
+.creator-league-profile-badge>span{font-size:11px;line-height:1}
+.profile-username-line .creator-league-profile-badge{margin-left:2px}

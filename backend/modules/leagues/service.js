@@ -360,6 +360,99 @@ function settlePastDays(db, now) {
     if (key !== today && !db.creatorLeagueDailySettlements.some(item => item.dayKey === key)) settleCreatorLeagueDay(db, key, now);
   }
 }
+
+/**
+ * Scheduled reconciliation for every creator league profile.
+ *
+ * Daily placements run once per completed UTC day, even when nobody opens
+ * League Arena. Gift ledger values remain authoritative: refunds are excluded
+ * and weekly points are rebuilt from the current season's ledger rows.
+ */
+export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
+  ensureCollections(db);
+
+  // Give every account a persisted starting class, even before their first
+  // LIVE Gift or first visit to League Arena.
+  const knownProfileIds = new Set(db.creatorLeagueProfiles.map(profile => profile.userId));
+  let profilesCreated = 0;
+  const seasonKeyForNewProfiles = creatorLeagueSeasonKey(now);
+  const initializedAt = now.toISOString();
+  for (const user of db.users || []) {
+    if (!user?.id || knownProfileIds.has(user.id)) continue;
+    db.creatorLeagueProfiles.push({
+      userId: user.id,
+      region: String(user.country || user.region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
+      leagueClass: "D5",
+      fragments: 0,
+      leagueShields: 0,
+      lifetimeGiftPoints: 0,
+      seasonPoints: 0,
+      seasonKey: seasonKeyForNewProfiles,
+      matchRankIndex: 0,
+      matchRankPoints: 0,
+      matchWins: 0,
+      matchLosses: 0,
+      matchDraws: 0,
+      createdAt: initializedAt,
+      updatedAt: initializedAt
+    });
+    knownProfileIds.add(user.id);
+    profilesCreated += 1;
+  }
+
+  const today = utcDayKey(now);
+  const pendingDays = [...new Set(db.creatorLeagueDailyScores
+    .filter(item => item.dayKey && item.dayKey < today)
+    .map(item => String(item.dayKey)))]
+    .filter(dayKey => !db.creatorLeagueDailySettlements.some(item => item.dayKey === dayKey))
+    .sort();
+
+  let placementsProcessed = 0;
+  const settledDays = [];
+  for (const dayKey of pendingDays) {
+    const result = settleCreatorLeagueDay(db, dayKey, now);
+    if (!result.settled) continue;
+    settledDays.push(dayKey);
+    placementsProcessed += Number(result.placementsProcessed || 0);
+  }
+
+  const seasonKey = creatorLeagueSeasonKey(now);
+  const lifetimeTotals = new Map();
+  const seasonTotals = new Map();
+  for (const gift of db.creatorLeagueGiftLedger) {
+    if (gift.refundedAt || gift.status === "refunded" || !gift.userId) continue;
+    const amount = Math.max(0, asNumber(gift.coinAmount));
+    if (!amount) continue;
+    lifetimeTotals.set(gift.userId, (lifetimeTotals.get(gift.userId) || 0) + amount);
+    if (gift.seasonKey === seasonKey) {
+      seasonTotals.set(gift.userId, (seasonTotals.get(gift.userId) || 0) + amount);
+    }
+  }
+
+  let profilesUpdated = 0;
+  for (const profile of db.creatorLeagueProfiles) {
+    const lifetimeGiftPoints = lifetimeTotals.get(profile.userId) || 0;
+    const seasonPoints = seasonTotals.get(profile.userId) || 0;
+    const needsUpdate = profile.seasonKey !== seasonKey ||
+      asNumber(profile.seasonPoints) !== seasonPoints ||
+      asNumber(profile.lifetimeGiftPoints) !== lifetimeGiftPoints;
+    if (!needsUpdate) continue;
+    profile.seasonKey = seasonKey;
+    profile.seasonPoints = seasonPoints;
+    profile.lifetimeGiftPoints = lifetimeGiftPoints;
+    profile.updatedAt = now.toISOString();
+    profilesUpdated += 1;
+  }
+
+  return {
+    changed: settledDays.length > 0 || profilesUpdated > 0 || profilesCreated > 0,
+    settledDays,
+    placementsProcessed,
+    profilesUpdated,
+    profilesCreated,
+    seasonKey
+  };
+}
 function applyMatchRating(db, userId, delta, now) {
   const profile = ensureCreatorLeagueProfile(db, userId, "GLOBAL", now);
   const before = MATCH_RANKS[profile.matchRankIndex];
