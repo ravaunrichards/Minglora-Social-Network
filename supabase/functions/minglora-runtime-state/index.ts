@@ -622,28 +622,46 @@ Deno.serve(async (req: Request) => {
       return { rows, error: null };
     };
 
-    const [ledgerResult, payoutsResult] = await Promise.all([
+    const [ledgerResult, payoutsResult, platformFinanceResult] = await Promise.all([
       readAllPages("creator_earnings_ledger",
         "id,creator_id,gross_minor,creator_share_minor,platform_share_minor,currency,status,created_at,funding_source"),
       readAllPages("creator_payouts",
-        "id,creator_id,amount_minor,currency,status,created_at,paid_at")
+        "id,creator_id,amount_minor,currency,status,created_at,paid_at"),
+      admin.rpc("minglora_get_platform_gift_earnings", {
+        p_admin_user_id: adminUserId, p_admin_email: adminEmail
+      })
     ]);
-    if (ledgerResult.error || payoutsResult.error) {
-      console.error("[Minglora admin creator earnings] Ledger read failed.", {
+    if (ledgerResult.error || payoutsResult.error || platformFinanceResult.error) {
+      console.error("[Minglora admin creator earnings] Financial report read failed.", {
         ledgerError: ledgerResult.error?.message || null,
-        payoutsError: payoutsResult.error?.message || null
+        payoutsError: payoutsResult.error?.message || null,
+        platformFinanceError: platformFinanceResult.error?.message || null
       });
-      return json(503, { error: "Creator gift earnings or payout history could not be loaded." });
+      return json(503, { error: "Cash-backed creator earnings or platform share could not be loaded." });
     }
 
-    const ledger = ledgerResult.rows || [];
+    const allLedger = ledgerResult.rows || [];
+    const eligibleFundingSources = new Set(["cash", "marketing", "mixed", "admin_promotional"]);
+    const ledger = allLedger.filter((row: any) => eligibleFundingSources.has(String(row.funding_source || "")));
+    const excludedPromotionalLedger = allLedger.filter((row: any) => String(row.funding_source || "") === "promo");
     const payouts = payoutsResult.rows || [];
+    const platformFinance = platformFinanceResult.data || {};
+    const excludedPromotionalTotals = {
+      giftCount: excludedPromotionalLedger.length,
+      grossMinor: excludedPromotionalLedger.reduce((sum: number, row: any) => sum + Math.max(0, Math.round(Number(row.gross_minor || 0))), 0),
+      creatorShareMinor: excludedPromotionalLedger.reduce((sum: number, row: any) => sum + Math.max(0, Math.round(Number(row.creator_share_minor || 0))), 0),
+      platformShareMinor: excludedPromotionalLedger.reduce((sum: number, row: any) => sum + Math.max(0, Math.round(Number(row.platform_share_minor || 0))), 0)
+    };
     const byCreator = new Map<string, any>();
     const totals = {
       giftCount: 0, grossMinor: 0, creatorShareMinor: 0, platformShareMinor: 0,
       availableLedgerMinor: 0, requestedPayoutMinor: 0, processingPayoutMinor: 0,
       pendingPayoutMinor: 0, paidPayoutMinor: 0, failedPayoutMinor: 0,
-      splitMismatchCount: 0
+      splitMismatchCount: 0,
+      excludedPromotionalGiftCount: excludedPromotionalTotals.giftCount,
+      excludedPromotionalGrossMinor: excludedPromotionalTotals.grossMinor,
+      excludedPromotionalCreatorShareMinor: excludedPromotionalTotals.creatorShareMinor,
+      excludedPromotionalPlatformShareMinor: excludedPromotionalTotals.platformShareMinor
     };
     const ensureCreator = (creatorId: string) => {
       if (!byCreator.has(creatorId)) byCreator.set(creatorId, {
@@ -729,7 +747,9 @@ Deno.serve(async (req: Request) => {
       currency: "USD",
       creatorSharePercent: 50,
       platformSharePercent: 50,
-      payoutScope: "all_creator_earnings_sources",
+      payoutScope: "cash_backed_creator_earnings_only",
+      platformFinance,
+      excludedPromotionalActivity: excludedPromotionalTotals,
       totals: {
         ...totals,
         creatorCount: creators.filter((creator: any) => creator.giftCount > 0).length,
@@ -1158,7 +1178,7 @@ Deno.serve(async (req: Request) => {
     const creatorId = String(input.creatorId || "");
     if (!validUuid(creatorId)) return json(400, { error: "Invalid creator account." });
     const [ledgerResult, payoutsResult, accountResult, exchangesResult, balanceResult, giftBalanceResult] = await Promise.all([
-      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,currency,status,created_at,funding_source").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(250),
+      admin.from("creator_earnings_ledger").select("id,gross_minor,creator_share_minor,currency,status,created_at,funding_source").eq("creator_id", creatorId).in("funding_source", ["cash", "marketing", "mixed", "admin_promotional"]).order("created_at", { ascending: false }).limit(250),
       admin.from("creator_payouts").select("id,amount_minor,currency,paypal_batch_id,status,created_at,paid_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
       admin.from("creator_payout_accounts").select("paypal_email,updated_at").eq("user_id", creatorId).maybeSingle(),
       admin.from("creator_coin_exchanges").select("id,amount_minor,coin_amount,currency,created_at").eq("creator_id", creatorId).order("created_at", { ascending: false }).limit(100),
