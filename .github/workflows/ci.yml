@@ -84,6 +84,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/friends-advanced.js
           node --check public/gifts.js
           node --check public/gift-effects.js
           node --check scripts/generate-minglora-gifts.mjs
@@ -93,6 +94,8 @@ jobs:
           node --check public/admin-centre.js
           node --check src/server.js
           node --check src/store.js
+          node --check backend/modules/relationships/friends.js
+          node --check tests/unit/friends-domain.test.js
           node --check tests/unit/supabase-persistence-retry.test.js
           node --check backend/modules/live/livekit.js
           node --check backend/modules/live/settings.js
