@@ -4093,6 +4093,7 @@ async function route(req, res) {
       if(method==='POST'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         if(group.status!=='active')return json(res,409,{error:'This group is not accepting members.'});
+        if(group.memberships.some(item=>item.userId===user.id&&item.status==='banned'))return json(res,403,{error:'You are banned from this group. Contact a group administrator for review.'});
         if(getGroupRole(group,user.id))return json(res,200,{group:safeGroupSummary(group),joined:true});
         const invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===user.id&&item.status==='pending');
         if(group.visibility==='hidden'&&!invitation)return json(res,404,{error:'This group is invitation-only.'});
@@ -4160,6 +4161,7 @@ async function route(req, res) {
         if(!inviteeId||inviteeId===user.id||!db.users.some(u=>u.id===inviteeId))return json(res,400,{error:'Choose a valid Minglora member to invite.'});
         if(blockedBetween(user.id,inviteeId))return json(res,403,{error:'This invitation cannot be sent.'});
         if(getGroupRole(group,inviteeId))return json(res,409,{error:'This member already belongs to the group.'});
+        if(group.memberships.some(item=>item.userId===inviteeId&&item.status==='banned'))return json(res,403,{error:'This member must be unbanned before receiving a group invitation.'});
         let invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===inviteeId&&item.status==='pending');
         if(!invitation){invitation={id:uid(),groupId:group.id,inviterId:user.id,inviteeId,status:'pending',createdAt:now()};db.groupInvitations.unshift(invitation);}
         recordGroupAudit(group,'member_invited','member',inviteeId);await saveStore();return json(res,201,{invitation});
@@ -4202,6 +4204,16 @@ async function route(req, res) {
         if(targetRole==='owner'||role==='owner')return json(res,403,{error:'Ownership transfer requires the dedicated ownership transfer workflow.'});
         setGroupMembership(group,targetId,role,'active');recordGroupAudit(group,'member_role_changed','member',targetId,{role});await saveStore();return json(res,200,{memberId:targetId,role});
       }
+      m=p.match(/^\/api\/groups\/([^/]+)\/members\/([^/]+)\/unban$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        const targetId=m[2],record=group.memberships.find(item=>item.userId===targetId&&item.status==='banned');
+        if(!record)return json(res,404,{error:'Banned group member not found.'});
+        const actorRole=getGroupRole(group,user.id);
+        if(!canModerateGroup(group,user.id)||(actorRole==='moderator'&&['admin','moderator','owner'].includes(record.role))||(actorRole==='admin'&&['admin','owner'].includes(record.role)))return json(res,403,{error:'You cannot unban this member.'});
+        setGroupMembership(group,targetId,'member','left');recordGroupAudit(group,'member_unbanned','member',targetId);await saveStore();
+        return json(res,200,{unbanned:true,memberId:targetId});
+      }
       m=p.match(/^\/api\/groups\/([^/]+)\/members\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
@@ -4209,6 +4221,7 @@ async function route(req, res) {
         if(!targetRole)return json(res,404,{error:'Active group member not found.'});
         if(!canModerateGroup(group,user.id)||targetId===group.ownerId)return json(res,403,{error:'You cannot remove this member.'});
         if(getGroupRole(group,user.id)==='moderator'&&['admin','moderator'].includes(targetRole))return json(res,403,{error:'Moderators cannot remove another moderator or administrator.'});
+        if(getGroupRole(group,user.id)==='admin'&&targetRole==='admin')return json(res,403,{error:'Administrators cannot remove another administrator.'});
         setGroupMembership(group,targetId,'member',input.ban===true?'banned':'left');
         db.groupModerationActions.unshift({id:uid(),groupId:group.id,actorId:user.id,targetUserId:targetId,action:input.ban===true?'ban':'remove',reason:String(input.reason||'').slice(0,500),createdAt:now()});
         recordGroupAudit(group,input.ban===true?'member_banned':'member_removed','member',targetId);await saveStore();return json(res,200,{removed:true,banned:input.ban===true});
@@ -4331,7 +4344,8 @@ async function route(req, res) {
         const posts=fullAccess||isPublic?await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post))):[];
         const members=fullAccess?group.members.map(id=>{const member=safeUser(db.users.find(u=>u.id===id),user.id);return member?{...member,groupRole:getGroupRole(group,id)||'member'}:null;}).filter(Boolean):[];
         const {memberships,...safeGroup}=group;
-        return json(res,200,{group:{...safeGroup,owner:safeUser(db.users.find(u=>u.id===group.ownerId),user.id),members,memberCount:group.members.length,isMember,role:getGroupRole(group,user.id),hasPendingRequest:db.groupMembershipRequests.some(r=>r.groupId===group.id&&r.userId===user.id&&r.status==='pending')},posts,restricted:!fullAccess&&!isPublic});
+        const bannedMembers=canModerateGroup(group,user.id)?group.memberships.filter(item=>item.status==='banned').map(item=>{const member=safeUser(db.users.find(u=>u.id===item.userId),user.id);return member?{...member,groupRole:item.role||'member'}:null;}).filter(Boolean):[];
+        return json(res,200,{group:{...safeGroup,owner:safeUser(db.users.find(u=>u.id===group.ownerId),user.id),members,bannedMembers,memberCount:group.members.length,isMember,role:getGroupRole(group,user.id),hasPendingRequest:db.groupMembershipRequests.some(r=>r.groupId===group.id&&r.userId===user.id&&r.status==='pending')},posts,restricted:!fullAccess&&!isPublic});
       }
             if(method==='GET'&&p==='/api/stories'){
         await pruneExpiredStories();
