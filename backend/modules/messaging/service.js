@@ -71,3 +71,12 @@ export function isMessageExpired(message, at = Date.now()) {
   const expiresAt = Date.parse(message.expiresAt);
   return Number.isFinite(expiresAt) && expiresAt <= at;
 }
+
+export function getMessageConversationPeerId(conversationKey, userId) {
+  const parts = String(conversationKey || '').split(':');
+  if (parts.length !== 3 || parts[0] !== 'direct') return '';
+  const participants = parts.slice(1);
+  const current = String(userId || '');
+  if (!current || !participants.includes(current)) return '';
+  return participants.find(id => id !== current) || '';
+}
