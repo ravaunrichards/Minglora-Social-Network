@@ -4698,7 +4698,7 @@ async function route(req, res) {
         const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
         return json(res,200,{notifications,unreadCount,categoryCounts});
       }
-      const notificationReadMatch=p.startsWith('/api/notifications/')&&p.endsWith('/read')?p.split('/').at(-2):null;
+      const notificationReadMatch=p.startsWith('/api/notifications/')&&p.endsWith('/read')&&p.split('/').length===5?p.split('/').at(-2):null;
       if(method==='POST'&&notificationReadMatch){
         let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
         const notification=(db.notifications||[]).find(item=>item.id===notificationId&&item.userId===user.id);
