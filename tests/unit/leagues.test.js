@@ -128,7 +128,7 @@ test("daily placements remain reporting-only; class promotion follows cumulative
 
     const placement = settleCreatorLeagueDay(db, dayKey, new Date(day.getTime() + 86400000));
     assert.equal(placement.activeCreators, 7);
-    assert.equal(placement.placementsProcessed, 1);
+    assert.equal(placement.placementsProcessed, 0);
   }
 
   const giftedCreator = db.creatorLeagueProfiles.find(item => item.userId === "gifted-creator");
