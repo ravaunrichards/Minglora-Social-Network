@@ -5851,6 +5851,15 @@ function startMessengerRealtime(){
       if(win)updateMessageWindowPresence(win);
       return;
     }
+    if(message.type==='notification:new'){
+      void pollBrowserNotifications();
+      return;
+    }
+    if(message.type==='notification:changed'){
+      void updateNotificationDot();
+      if(state.view==='notifications')void renderNotifications().catch(()=>{});
+      return;
+    }
     if(['message:new','message:updated','message:deleted','message:expired','message:read','message:group-updated','message:group-removed','conversation:settings'].includes(message.type)){
       if(message.type==='message:group-removed'){
         state.messageWindows=state.messageWindows.filter(item=>item.groupId!==message.groupId);
