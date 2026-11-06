@@ -122,3 +122,19 @@ test('Group calls use the existing eight-participant call limit rather than a se
   assert.ok(server.includes('recipientIds.length>CALL_MAX_PARTICIPANTS-1'));
   assert.ok(server.includes('ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS)'));
 });
+
+test('Server validates group-call participants against the authenticated current group',async()=>{
+  const server=await read('../../src/server.js');
+  const callRoute=server.slice(server.indexOf("if(method==='POST'&&p==='/api/calls')"),server.indexOf("if(method==='POST'&&p==='/api/calls",server.indexOf("if(method==='POST'&&p==='/api/calls')")+10));
+  assert.ok(callRoute.includes("const groupId=String(input.groupId||'').trim()"));
+  assert.ok(callRoute.includes('canAccessMessageGroup(db,groupId,user.id)'));
+  assert.ok(callRoute.includes('activeGroupMembers.has(id)'));
+});
+
+test('Direct chat remains available for retention management after all expiring messages are deleted',async()=>{
+  const [server,service]=await Promise.all([read('../../src/server.js'),read('../../backend/modules/messaging/service.js')]);
+  assert.ok(service.includes('export function getMessageConversationPeerId'));
+  assert.ok(server.includes('const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id))'));
+  assert.ok(server.includes('if(!visibleMessages.length&&!savedConversationSettings)return null'));
+  assert.ok(server.includes('messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))'));
+});
