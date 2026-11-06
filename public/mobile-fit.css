@@ -1,0 +1,167 @@
+/* Minglora universal phone fit pass — loaded after feature styles so every screen shares the same guardrails. */
+:root{--minglora-mobile-nav-height:64px}
+html,body,#app{width:100%;max-width:100%;min-width:320px;overflow-x:clip!important}
+*,*::before,*::after{box-sizing:border-box}
+img,video,canvas,svg,model-viewer{max-width:100%}
+button,input,select,textarea{max-width:100%;min-width:0}
+@media(max-width:760px){
+  html{scroll-padding-top:58px!important}
+  body{padding-bottom:calc(var(--minglora-mobile-nav-height) + env(safe-area-inset-bottom) + 12px)!important}
+  #app{min-height:100dvh;overflow-x:clip!important}
+  /* Keep the search and account actions reachable while the content moves. */
+  .topbar{
+    position:sticky!important;top:0!important;left:auto!important;right:auto!important;bottom:auto!important;
+    z-index:80!important;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
+    justify-content:space-between!important;gap:7px!important;width:100%!important;max-width:100%!important;
+    min-height:54px!important;height:auto!important;margin:0!important;padding:6px 9px!important;
+    overflow:visible!important;background:var(--card)!important;
+  }
+  .top-left{display:flex!important;flex:1 1 auto!important;align-items:center!important;gap:7px!important;min-width:0!important}
+  .brand{flex:0 0 auto!important;gap:5px!important;min-width:0!important;font-size:19px!important}
+  .brand-mark{width:32px!important;height:32px!important;flex:0 0 32px!important;font-size:23px!important}
+  .search-box{display:flex!important;flex:1 1 105px!important;width:auto!important;min-width:0!important;max-width:none!important;height:36px!important;padding:0 8px!important}
+  .search-box input{width:100%!important;min-width:0!important;font-size:12px!important}
+  .top-nav{display:none!important}
+  .top-actions{display:flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:flex-end!important;gap:4px!important;min-width:0!important}
+  .top-actions .circle-action{display:grid!important;place-items:center!important;flex:0 0 32px!important;width:32px!important;height:32px!important;min-width:32px!important;font-size:17px!important}
+  .top-actions #settings-btn{display:none!important}
+  .top-actions .profile-menu{display:flex!important;flex:0 0 31px!important;width:31px!important;min-width:31px!important;height:31px!important;align-items:center!important;justify-content:center!important;gap:0!important;padding:1px!important;font-size:0!important}
+  .top-actions .profile-menu img{width:29px!important;height:29px!important;flex:0 0 29px!important}
+  .top-actions #top-name,.top-actions .logout-btn{display:none!important}
+  /* Main navigation stays reachable without covering the page content. */
+  .mobile-nav{
+    position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;
+    z-index:1000!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    align-items:stretch!important;justify-items:stretch!important;gap:3px!important;
+    width:100%!important;max-width:100%!important;height:calc(var(--minglora-mobile-nav-height) + env(safe-area-inset-bottom))!important;
+    min-height:var(--minglora-mobile-nav-height)!important;max-height:none!important;margin:0!important;
+    padding:5px max(4px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(4px,env(safe-area-inset-left))!important;
+    border-top:1px solid var(--line)!important;background:color-mix(in srgb,var(--card) 97%,transparent)!important;
+    box-shadow:0 -5px 18px rgba(20,35,60,.10)!important;overflow:visible!important;
+    transform:none!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)
+  }
+  .mobile-nav>button{
+    display:flex!important;flex:1 1 0!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+    gap:1px!important;width:100%!important;min-width:0!important;max-width:100%!important;min-height:46px!important;
+    margin:0!important;padding:3px 1px!important;border:0!important;border-radius:9px!important;background:transparent!important;
+    color:var(--muted)!important;font-size:12px!important;overflow:hidden!important
+  }
+  .mobile-nav>button.active{background:var(--surface-soft)!important;color:var(--blue)!important}
+  .mobile-nav>button .nav-3d-icon{display:block!important;width:23px!important;height:23px!important;max-width:100%!important}
+  .mobile-nav>button small{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;
+    font-size:9px!important;line-height:1.1!important;font-weight:800!important;text-align:center!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .mobile-nav .mobile-more-symbol{font-size:22px!important;line-height:1!important}
+  .layout{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:10px 9px 18px!important}
+  .left-rail,.right-rail{display:none!important}
+  .main-content,#main-content{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:0!important}
+  /* Prevent oversized cards, headers and controls from escaping the phone viewport. */
+  #main-content>*{width:100%;max-width:100%;min-width:0}
+  .card,.side-card,.welcome,.page-heading,.profile-card,.profile-header,.live-player-shell,
+  .creator-studio-shell,.settings-layout,.settings-content,.messenger-panel,.message-window,
+  .notification-center,.gift-catalogue-panel,.gift-preview-panel,.gift-send-panel{
+    min-width:0!important;max-width:100%!important
+  }
+  .card{padding:12px!important;margin:0 0 10px!important;border-radius:12px!important}
+  .page-heading,.section-heading,.card-heading,.feed-heading,.notification-center-header,
+  .gift-catalogue-toolbar,.gift-send-panel-heading,.live-gift-heading{
+    min-width:0!important;max-width:100%!important;gap:8px!important;flex-wrap:wrap!important
+  }
+  h1{font-size:clamp(19px,5.2vw,24px)!important;line-height:1.2!important;overflow-wrap:anywhere}
+  h2{font-size:clamp(15px,4.2vw,19px)!important;line-height:1.25!important;overflow-wrap:anywhere}
+  h3{font-size:14px!important;line-height:1.25!important;overflow-wrap:anywhere}
+  p,small,label,strong,span{overflow-wrap:anywhere}
+  .main-content button,.main-content .button,.main-content input,.main-content select,.main-content textarea{
+    max-width:100%;min-width:0
+  }
+  .main-content button{min-height:38px}
+  .main-content input,.main-content select,.main-content textarea{font-size:16px;line-height:1.3}
+  .main-content input,.main-content select,.main-content textarea{width:100%;max-width:100%}
+  .main-content img,.main-content video,.main-content canvas,.main-content model-viewer{max-width:100%;height:auto}
+  .main-content iframe{max-width:100%}
+  /* Flex and grid children must be allowed to shrink instead of forcing overflow. */
+  .main-content [class*="grid"],.main-content [class*="layout"],.main-content [class*="row"]{min-width:0;max-width:100%}
+  .main-content [class*="grid"]>* ,.main-content [class*="layout"]>*{min-width:0;max-width:100%}
+  .main-content form{min-width:0;max-width:100%}
+  .main-content form label{min-width:0;max-width:100%}
+  .main-content .actions,.main-content [class*="actions"],.main-content [class*="toolbar"]{
+    min-width:0;max-width:100%;flex-wrap:wrap
+  }
+  .main-content table{width:100%;max-width:100%;table-layout:fixed}
+  .main-content th,.main-content td{min-width:0;padding:7px 5px;overflow-wrap:anywhere;white-space:normal}
+  .main-content pre,.main-content code{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
+  /* Internal panels fit the viewport; only the document owns vertical scrolling. */
+  .main-content .modal,.main-content .modal-body,.main-content .modal-content,
+  .main-content .live-tools-content,.main-content .settings-nav,.main-content .creator-studio-nav{
+    min-width:0!important;max-width:100%!important
+  }
+  .profile-cover{width:100%!important;max-width:100%!important}
+  .profile-info{gap:9px!important;padding:0 12px 13px!important}
+  .profile-info-main{min-width:0!important;flex:1 1 150px!important}
+  .profile-info h1{font-size:20px!important}
+  .profile-actions{display:flex!important;flex-wrap:wrap!important;gap:6px!important;width:100%!important;margin:4px 0 0!important}
+  .profile-actions>*{flex:1 1 auto;min-width:0}
+  .profile-tabs{max-width:100%!important;gap:5px!important}
+  .profile-tabs-list{display:flex!important;flex-wrap:wrap!important;gap:4px!important;overflow:visible!important}
+  .profile-tabs-list button{min-width:0!important;padding:8px 7px!important;font-size:10px!important}
+  /* Make compact two-column cards usable on normal phones and one-column only on very narrow devices. */
+  .people-grid,.groups-grid,.live-room-grid,.creator-metrics-grid,.creator-analytics-grid,
+  .creator-audience-summary,.creator-earning-metrics,.notification-summary,.gift-catalogue-grid,
+  .settings-card-grid,.settings-quick-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important
+  }
+  .gift-catalogue-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .stories,.story-cards,.profile-tabs-list{max-width:100%;overscroll-behavior-inline:contain}
+  .post-image,.post-video,.post-media,.story-image,.profile-photo,.profile-gallery img{max-width:100%!important}
+  .profile-counts{display:flex!important;flex-wrap:wrap!important;gap:6px 10px!important}
+  .profile-counts>*{flex:1 1 76px;min-width:0}
+  .live-player-controls{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+  .live-player-controls button{flex:1 1 88px!important;min-width:0!important;max-width:100%!important;padding:8px 6px!important}
+  .live-video-stage{width:100%!important;max-width:100%!important}
+  .live-community-panel,.live-tools-content,.live-tools-drawer{min-width:0!important;max-width:100%!important}
+  .toast{max-width:calc(100vw - 20px)!important}
+  .hidden,[hidden]{display:none!important}
+}
+@media(max-width:430px){
+  :root{--minglora-mobile-nav-height:60px}
+  .topbar{gap:5px!important;padding:5px 7px!important}
+  .brand{font-size:17px!important}
+  .brand-mark{width:30px!important;height:30px!important;flex-basis:30px!important}
+  .top-actions{gap:3px!important}
+  .top-actions .circle-action{width:30px!important;height:30px!important;flex-basis:30px!important;min-width:30px!important}
+  .top-actions .profile-menu{width:29px!important;height:29px!important;flex-basis:29px!important;min-width:29px!important}
+  .top-actions .profile-menu img{width:27px!important;height:27px!important;flex-basis:27px!important}
+  .layout{padding-right:7px!important;padding-left:7px!important}
+  .card{padding:10px!important}
+  .people-grid,.groups-grid,.live-room-grid,.creator-metrics-grid,.creator-analytics-grid,
+  .creator-audience-summary,.creator-earning-metrics,.notification-summary,
+  .settings-card-grid,.settings-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .gift-catalogue-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .main-content button{padding-inline:8px}
+  .profile-info .avatar{width:76px!important;height:76px!important}
+}
+@media(max-width:360px){
+  .brand>span:last-child{display:none!important}
+  .search-box{flex-basis:80px!important}
+  .top-actions .circle-action{width:28px!important;height:28px!important;flex-basis:28px!important;min-width:28px!important}
+  .top-actions .profile-menu{width:27px!important;height:27px!important;flex-basis:27px!important;min-width:27px!important}
+  .top-actions .profile-menu img{width:25px!important;height:25px!important;flex-basis:25px!important}
+  .mobile-nav>button .nav-3d-icon{width:21px!important;height:21px!important}
+  .mobile-nav>button small{font-size:8px!important}
+  .main-content .card{padding:9px!important}
+  .people-grid,.groups-grid,.live-room-grid,.creator-metrics-grid,.creator-analytics-grid,
+  .creator-audience-summary,.creator-earning-metrics,.notification-summary,
+  .settings-card-grid,.settings-quick-grid{grid-template-columns:minmax(0,1fr)!important}
+  .gift-catalogue-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-height:520px) and (orientation:landscape) and (max-width:900px){
+  :root{--minglora-mobile-nav-height:52px}
+  .topbar{min-height:48px!important;padding-block:3px!important}
+  .mobile-nav{padding-top:2px!important;padding-bottom:calc(2px + env(safe-area-inset-bottom))!important}
+  .mobile-nav>button{min-height:38px!important}
+  .mobile-nav>button .nav-3d-icon{width:19px!important;height:19px!important}
+  .mobile-nav>button small{font-size:8px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .mobile-nav,.topbar{scroll-behavior:auto!important;transition:none!important}
+}
