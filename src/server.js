@@ -561,10 +561,10 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:notification.type==='live'?'Minglora LIVE':notification.type==='call'?'Incoming Minglora call':notification.type==='message'?'New Minglora message':notification.type==='profile_view'?'Profile view':'Minglora notification',
+    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update'})[notification.type]||'Minglora account update',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
-    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,sellerId:notification.sellerId||null}
+    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
   });
   await Promise.all(subscriptions.map(async subscription=>{
     try{
