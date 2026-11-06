@@ -1,0 +1,72 @@
+/* Minglora advanced Friends dashboard */
+.friends-advanced{display:grid;gap:16px;min-width:0}
+.friends-advanced-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.friends-advanced-head h1{margin:0;font-size:27px;letter-spacing:-.55px}
+.friends-advanced-head p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.friends-advanced-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.friends-advanced-stat{min-width:0;padding:13px 15px;border:1px solid var(--line);border-radius:13px;background:var(--card)}
+.friends-advanced-stat strong{display:block;font-size:23px;line-height:1.15;color:var(--text);font-variant-numeric:tabular-nums}
+.friends-advanced-stat span{display:block;margin-top:4px;color:var(--muted);font-size:11px;font-weight:700}
+.friends-advanced-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.friends-advanced-search{display:flex;align-items:center;gap:9px;flex:1 1 240px;min-width:0;max-width:520px;padding:0 13px;border:1px solid var(--line);border-radius:11px;background:var(--card)}
+.friends-advanced-search input{width:100%;min-width:0;height:42px;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:13px}
+.friends-advanced-search span{color:var(--muted);font-size:18px}
+.friends-advanced-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:4px 0}
+.friends-advanced-tabs button{border:1px solid var(--line);border-radius:999px;padding:9px 13px;background:var(--card);color:var(--muted);font-size:12px;font-weight:750}
+.friends-advanced-tabs button[aria-pressed="true"]{border-color:color-mix(in srgb,var(--blue) 38%,var(--line));background:color-mix(in srgb,var(--blue) 9%,var(--card));color:var(--blue)}
+.friends-advanced-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;min-width:0}
+.friend-manager-card{display:grid;gap:12px;min-width:0;padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:0 5px 18px rgba(25,45,75,.045)}
+.friend-manager-identity{display:flex;align-items:center;gap:11px;min-width:0}
+.friend-manager-identity .avatar{width:54px;height:54px;flex:0 0 54px;border:2px solid var(--line)}
+.friend-manager-person{min-width:0;flex:1}
+.friend-manager-person strong,.friend-manager-person small{display:block;min-width:0;overflow-wrap:anywhere}
+.friend-manager-person strong{font-size:14px}
+.friend-manager-person small{margin-top:3px;color:var(--muted);font-size:11px}
+.friend-manager-since{color:var(--muted);font-size:10px;white-space:nowrap}
+.friend-manager-tags{display:flex;gap:6px;flex-wrap:wrap}
+.friend-manager-tag{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 8px;color:var(--muted);font-size:10px;font-weight:750}
+.friend-manager-tag--blue{border-color:#b7d2ff;background:#edf5ff;color:#1769c2}
+.friend-manager-actions{display:flex;gap:7px;flex-wrap:wrap}
+.friend-manager-actions button,.friend-manager-actions select{min-height:34px;border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--surface-soft);color:var(--text);font-size:11px;font-weight:700}
+.friend-manager-actions button.is-on{border-color:#b9d5ff;background:#eaf3ff;color:#155ab4}
+.friend-manager-actions button.danger{color:#b42332}
+.friend-manager-list-add{display:flex;gap:7px;min-width:0}
+.friend-manager-list-add select{flex:1;min-width:0;max-width:100%;background:var(--card);color:var(--text)}
+.friends-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.friends-list-toolbar h2{margin:0;font-size:17px}
+.friends-custom-lists{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.friends-custom-list{display:grid;gap:7px;text-align:left;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text)}
+.friends-custom-list strong{font-size:13px;overflow-wrap:anywhere}
+.friends-custom-list small{color:var(--muted);font-size:11px}
+.friends-custom-list button{justify-self:start;border:0;background:transparent;color:var(--blue);font-size:11px;font-weight:750;padding:2px 0}
+.friends-empty{padding:25px 16px;border:1px dashed var(--line);border-radius:13px;text-align:center;color:var(--muted)}
+.friends-empty h3{margin:0 0 5px;color:var(--text);font-size:15px}
+.friends-empty p{margin:0;font-size:12px}
+.friends-list-detail{display:grid;gap:12px}
+.friends-list-detail-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.friends-list-detail-head h2{margin:0;font-size:18px}
+.friends-list-detail-actions{display:flex;gap:7px;flex-wrap:wrap}
+.friends-list-detail-actions button{border:1px solid var(--line);border-radius:9px;background:var(--surface-soft);color:var(--text);padding:8px 10px;font-size:11px;font-weight:750}
+.friends-list-detail-actions button.danger{color:#b42332}
+.friends-advanced-note{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+@media(max-width:760px){
+ .friends-advanced{gap:13px}
+ .friends-advanced-head h1{font-size:23px}
+ .friends-advanced-stats{gap:7px}
+ .friends-advanced-stat{padding:11px}
+ .friends-advanced-stat strong{font-size:20px}
+ .friends-advanced-grid{grid-template-columns:1fr;gap:10px}
+ .friends-custom-lists{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .friend-manager-card{padding:13px}
+ .friend-manager-since{display:none}
+ .friends-advanced-tabs{flex-wrap:nowrap;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin}
+ .friends-advanced-tabs button{flex:0 0 auto}
+}
+@media(max-width:390px){
+ .friends-custom-lists{grid-template-columns:1fr}
+ .friends-advanced-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .friends-advanced-stat{padding:9px}
+ .friends-advanced-stat strong{font-size:18px}
+ .friends-advanced-stat span{font-size:10px}
+ .friend-manager-actions button,.friend-manager-actions select{font-size:10px;padding:7px}
+}
