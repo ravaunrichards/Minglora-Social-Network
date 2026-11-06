@@ -290,7 +290,7 @@ async function prepareMingloraServiceWorker(){
   try{
     const registration=await navigator.serviceWorker.register('/sw.js?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-advanced-notifications-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
-    await registration.update().catch(()=>{});
+    // The browser checks for worker updates normally; new versions must not take over this open page.
     if(!state.user)return;
     const subscription=await registration.pushManager.getSubscription();
     if(subscription){
