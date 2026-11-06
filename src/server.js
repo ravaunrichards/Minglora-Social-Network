@@ -2380,7 +2380,46 @@ async function route(req, res) {
         return json(res,200,{ok:true,settlement:settlement.settlement,wallet});
       }
       if(method==='GET'&&p==='/api/creator/earnings'){
-        return json(res,200,await requestSupabaseState('economy_creator_earnings',{creatorId:user.id}));
+        if(!user?.id)return json(res,401,{error:'Sign in to view your creator earnings.'});
+        const result=await requestSupabaseState('economy_creator_earnings',{creatorId:user.id});
+        const pick=(row,fields)=>Object.fromEntries(fields
+          .filter(field=>row&&Object.prototype.hasOwnProperty.call(row,field))
+          .map(field=>[field,row[field]]));
+        const giftBalance=result?.giftBalance||{};
+        const safeGiftFields=[
+          'giftCount','receivedCoins','cashBackedCoins','marketingBackedCoins',
+          'promotionalCoins','adminPromotionalCoins','cashBackedPromotionalCoins',
+          'cashBackedPromotionalGrossMinor','cashBackedPromotionalCreatorShareMinor',
+          'eligibleGrossMinor','creatorShareMinor'
+        ];
+        return json(res,200,{
+          ledger:(Array.isArray(result?.ledger)?result.ledger:[]).map(item=>pick(item,[
+            'id','gross_minor','creator_share_minor','currency','status','created_at','funding_source'
+          ])),
+          giftBalance:{
+            ...pick(giftBalance,safeGiftFields),
+            recent:(Array.isArray(giftBalance.recent)?giftBalance.recent:[]).map(item=>pick(item,[
+              'id','giftCode','giftName','giftEmoji','coinAmount','grossMinor','creatorShareMinor',
+              'cashBackedCoins','marketingBackedCoins','promotionalCoins','adminPromotionalCoins',
+              'cashBackingMinor','cashBackingCreatorShareMinor','cashBackingCreatedAt',
+              'fundingSource','senderUsername','senderDisplayName','createdAt'
+            ]))
+          },
+          payouts:(Array.isArray(result?.payouts)?result.payouts:[]).map(item=>pick(item,[
+            'id','amount_minor','currency','status','created_at','paid_at'
+          ])),
+          exchanges:(Array.isArray(result?.exchanges)?result.exchanges:[]).map(item=>pick(item,[
+            'id','amount_minor','coin_amount','currency','created_at'
+          ])),
+          payoutAccount:result?.payoutAccount?pick(result.payoutAccount,['paypal_email','updated_at']):null,
+          earnedMinor:Number(result?.earnedMinor||0),
+          reservedMinor:Number(result?.reservedMinor||0),
+          exchangedMinor:Number(result?.exchangedMinor||0),
+          availableMinor:Number(result?.availableMinor||0),
+          currency:'USD',
+          creatorSharePercent:50,
+          coinPerCent:1
+        });
       }
       if(method==='GET'&&p==='/api/creator/payout-account'){
         return json(res,200,await requestSupabaseState('economy_get_payout_account',{userId:user.id}));
