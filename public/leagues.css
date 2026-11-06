@@ -135,3 +135,13 @@
   .league-chat-form-footer{align-items:stretch}
   .league-chat-form-footer button{width:100%}
 }
+
+@keyframes league-chat-spotlight-in{0%{transform:scale(.985);box-shadow:0 0 0 rgba(219,172,57,0)}45%{transform:scale(1.01);box-shadow:0 0 18px rgba(219,172,57,.2)}100%{transform:scale(1);box-shadow:0 0 0 rgba(219,172,57,0)}}
+@keyframes league-chat-megaphone-in{0%{transform:translateX(-5px)}35%{transform:translateX(3px)}70%{transform:translateX(-1px)}100%{transform:translateX(0)}}
+@keyframes league-chat-cheer-in{0%{opacity:0;transform:translateY(5px) scale(.92)}45%{opacity:1;transform:translateY(-2px) scale(1.04)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.league-chat-message--spotlight{animation:league-chat-spotlight-in .85s ease-out 1}
+.league-chat-message--megaphone{animation:league-chat-megaphone-in .55s ease-out 1}
+.league-chat-message--cheer_burst:before{content:"🎉  ✨  🎉";display:block;margin:0 0 5px;text-align:right;font-size:15px;letter-spacing:4px;animation:league-chat-cheer-in .65s ease-out 1}
+@media(prefers-reduced-motion:reduce){
+  .league-chat-message--spotlight,.league-chat-message--megaphone,.league-chat-message--cheer_burst:before{animation:none}
+}
