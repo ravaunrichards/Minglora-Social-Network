@@ -55,7 +55,39 @@ window.addEventListener('minglora:gifter-badge-updated',event=>{
 });
 const timeAgo = date => {const sec=Math.max(0,(Date.now()-new Date(date).getTime())/1000);if(sec<60)return 'Just now';if(sec<3600)return `${Math.floor(sec/60)}m`;if(sec<86400)return `${Math.floor(sec/3600)}h`;if(sec<604800)return `${Math.floor(sec/86400)}d`;return new Date(date).toLocaleDateString();};
 async function api(path, options={}) { let res;try{res=await fetch('/api'+path,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});}catch{throw new Error(navigator.onLine===false?'You appear to be offline. Reconnect and try again.':'Could not reach Minglora. Check your connection and try again.');}let data={};try{data=await res.json()}catch{}if(!res.ok){const error=new Error(data.error||`Request failed (${res.status})`);error.status=res.status;error.code=data.code||'';const retryAfter=Number(res.headers?.get?.('Retry-After')||data.retryAfterSeconds);if(Number.isFinite(retryAfter)&&retryAfter>0)error.retryAfterSeconds=Math.ceil(retryAfter);throw error;}return data; }
-function stopProfilePresence(){}
+let creatorLeagueProfileRefreshTimer=null;
+function stopCreatorLeagueProfileRefresh(){
+  if(creatorLeagueProfileRefreshTimer!==null)window.clearInterval(creatorLeagueProfileRefreshTimer);
+  creatorLeagueProfileRefreshTimer=null;
+}
+function startCreatorLeagueProfileRefresh(profileId){
+  stopCreatorLeagueProfileRefresh();
+  creatorLeagueProfileRefreshTimer=window.setInterval(async()=>{
+    if(!state.user||state.view!=='profile'||state.profile?.user?.id!==profileId){
+      stopCreatorLeagueProfileRefresh();
+      return;
+    }
+    if(document.visibilityState!=='visible')return;
+    try{
+      const result=await api('/users/'+encodeURIComponent(profileId)+'/creator-league');
+      if(state.profile?.user?.id!==profileId)return;
+      const league=result.creatorLeague||null;
+      state.profile.user.creatorLeague=league;
+      const line=document.querySelector('.profile-username-line');
+      if(!line)return;
+      const existing=line.querySelector('.creator-league-profile-badge');
+      const markup=creatorLeagueProfileBadge({creatorLeague:league});
+      if(!markup){existing?.remove();return;}
+      const holder=document.createElement('span');
+      holder.innerHTML=markup;
+      const replacement=holder.firstElementChild;
+      if(!replacement)return;
+      if(existing)existing.replaceWith(replacement);
+      else line.append(replacement);
+    }catch{}
+  },15000);
+}
+function stopProfilePresence(){stopCreatorLeagueProfileRefresh();}
 const APP_PALETTE_OPTIONS=[
   {value:'minglora',label:'Minglora Blue',color:'#1769e0'},
   {value:'ocean',label:'Ocean Breeze',color:'#0f766e'},
@@ -4580,6 +4612,7 @@ async function handleProfileOverflowAction(action,u,data){
 }
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
+  startCreatorLeagueProfileRefresh(u.id);
   const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
     :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
