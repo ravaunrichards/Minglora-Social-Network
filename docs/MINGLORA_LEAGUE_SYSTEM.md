@@ -2,7 +2,7 @@
 
 ## Two separate progression tracks
 
-Minglora has a Creator League class and a Match Rank. LIVE Gift activity changes the Creator League only. Completed League Match results change Match Rank only. Match power-ups never multiply Creator League points or official class standings.
+Minglora has a Creator League class and a Match Rank. Confirmed LIVE Gift activity changes the Creator League only. Completed League Match results change Match Rank only. Match power-ups never multiply Creator League points or official class standings.
 
 ## Creator League classes
 
@@ -12,11 +12,13 @@ Progression from lowest to highest:
 
 New creators start at D5. A1 is the ceiling and D5 is the floor.
 
-Creator League points are awarded only after the trusted Minglora LIVE Gift settlement function returns a confirmed transaction. The server uses its giftTransactionId and coinAmount fields; the browser cannot supply points. One confirmed Minglora Coin of LIVE Gift value earns one Creator League point. Coin purchases, direct profile gifts, social gifts, viewer support and power-up bonuses do not add Creator League points.
+Creator League points are awarded only after the trusted Minglora LIVE Gift settlement function returns a confirmed transaction. The server uses its confirmed gift transaction ID and coin amount; the browser cannot supply points. One confirmed Minglora Coin of LIVE Gift value earns one Creator League point.
 
-Weekly seasons start Monday at 00:00 UTC. Season points reset; lifetime LIVE Gift points remain. Daily placements rank every creator with a Creator League profile in the same region and class by confirmed LIVE Gift points earned that UTC day. One confirmed Minglora Coin of LIVE Gift value equals one Creator League point; a 500-Coin Gift earns 500 points. Creators who receive no eligible LIVE Gifts remain in the standings with zero points, so a creator who does receive Gifts can still compete even when they are the only gifter that day. At least two enrolled creators in the same region/class are required for placement; two Gift senders are not required. The top 20% earn one promotion fragment; four fragments promote a creator one class and award one League Shield. The bottom 20% lose one fragment. If no fragment remains, a League Shield prevents one class demotion; without a shield, the creator moves down one class. D5 cannot be demoted and A1 cannot be promoted. A tie that crosses both movement boundaries is neutral so equal scores do not cause arbitrary movement.
+**Automatic class progression:** every 100,000 confirmed lifetime LIVE Gift points advances a creator exactly one class in the hierarchy above. The class updates as soon as the confirmed Gift is recorded; it does not wait for the end of a UTC day, a relative leaderboard placement, or four promotion fragments. A creator with 985,092 eligible lifetime LIVE Gift points is therefore in C1. A1 is reached at 1,700,000 points. These are Minglora progression settings, not claims about TikTok's internal thresholds.
 
-These are initial Minglora rules, not claims about TikTok's internal thresholds.
+Weekly seasons start Monday at 00:00 UTC. Season points reset weekly; lifetime LIVE Gift points and the class earned from them remain. Refunded LIVE Gifts are excluded and removed from the lifetime total when their refund is reconciled. Daily and weekly leaderboards are informational rankings and do not override a creator's lifetime-point class.
+
+Coin purchases, direct profile gifts, social gifts, viewer support and match power-up bonuses do not add Creator League points. Match power-ups change only an active match score.
 
 ## Match Rank
 
@@ -28,7 +30,7 @@ New creators start at Bronze III. A completed match awards +25 rating points to 
 
 ## LIVE League Matches
 
-A challenge pairs two active, independently hosted LIVE sessions. Both hosts must be connected to their LiveKit rooms when a challenge is sent and accepted. Invitations expire after two minutes. An accepted match runs for five minutes by default. Match scoring can use all LIVE Gifts or one selected Gift. Confirmed Gift value scores the match while its original transaction value also contributes to the recipient's Creator League.
+A challenge pairs two active, independently hosted LIVE sessions. Both hosts must be connected to their LiveKit rooms when a challenge is sent and accepted. Invitations expire after two minutes. An accepted match runs for five minutes by default. Match scoring can use all LIVE Gifts or one selected Gift. Confirmed Gift value scores the match while its original eligible LIVE Gift value also contributes to the recipient's Creator League.
 
 Viewers can support one side once per match for three match points. Creators cannot support their own match. Viewer support changes only that match result and Match Rank; it does not change Creator League points.
 
@@ -45,10 +47,10 @@ Each power-up is available once per member per UTC day. These affect only the ac
 | Time Boost | Adds 30 seconds in flexible-timer matches. Fixed-timer matches reject it. |
 | Score Multiplier | Doubles eligible match Gift points for 15 seconds. |
 
-Momentum Boost and Score Multiplier do not stack multiplicatively; the strongest active multiplier is used. No power-up changes the underlying Gift transaction, Creator League total, or league standings.
+Momentum Boost and Score Multiplier do not stack multiplicatively; the strongest active multiplier is used. No power-up changes the underlying Gift transaction, Creator League total, or league class.
 
 ## TikTok-inspired principles, Minglora-owned rules
 
-The public TikTok LIVE Match description supports solo or team competition, viewer participation through Gifts or Likes, timed scoring, and the side with the most points winning. Minglora uses its own class names, promotion rules, match rating values, power-up values, and original assets.
+Minglora uses original class names, progression values, match rating rules, power-up values, and original assets. The class thresholds above are Minglora-owned settings.
 
 The current implementation pairs two separate existing LIVE sessions. It does not claim to provide a shared co-host stage or a full 2v2 multi-creator room.
