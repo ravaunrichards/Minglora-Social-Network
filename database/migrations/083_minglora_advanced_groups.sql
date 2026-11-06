@@ -369,12 +369,15 @@ CREATE TABLE IF NOT EXISTS public.group_post_comments (
   group_id uuid NOT NULL REFERENCES public.social_groups(id) ON DELETE CASCADE,
   post_id uuid NOT NULL REFERENCES public.group_posts(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  parent_id uuid REFERENCES public.group_post_comments(id) ON DELETE CASCADE,
+  parent_id uuid,
   body text NOT NULL CHECK (length(body) BETWEEN 1 AND 2000),
   status text NOT NULL DEFAULT 'visible' CHECK (status IN ('visible','deleted')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  UNIQUE (id,post_id),
+  CONSTRAINT group_post_comments_parent_same_post_fk
+    FOREIGN KEY (parent_id,post_id) REFERENCES public.group_post_comments(id,post_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS group_post_comments_thread_idx
   ON public.group_post_comments(post_id,created_at,id) WHERE status='visible';
