@@ -335,7 +335,10 @@
           send.disabled = false;
         }
       });
-      if (state.openMatchChatIds.has(matchId)) details.open = true;
+      if (state.openMatchChatIds.has(matchId)) {
+        details.open = true;
+        void loadMatchChat(matchId);
+      }
     });
     document.querySelectorAll("[data-league-profile]").forEach(button => button.addEventListener("click", () => {
       const userId = button.dataset.leagueProfile;
