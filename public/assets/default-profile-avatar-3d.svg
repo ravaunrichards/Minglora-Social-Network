@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+<title id="title">Minglora default 3D profile avatar</title>
+<desc id="desc">A friendly dimensional illustrated portrait on a luminous blue background.</desc>
+<defs>
+  <linearGradient id="bg" x1="90" y1="40" x2="930" y2="1000" gradientUnits="userSpaceOnUse"><stop stop-color="#112e72"/><stop offset=".48" stop-color="#1769e0"/><stop offset="1" stop-color="#6b35bc"/></linearGradient>
+  <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="matrix(0 520 -520 0 520 365)" gradientUnits="userSpaceOnUse"><stop stop-color="#b8eeff" stop-opacity=".72"/><stop offset=".48" stop-color="#73caff" stop-opacity=".18"/><stop offset="1" stop-color="#73caff" stop-opacity="0"/></radialGradient>
+  <linearGradient id="shirt" x1="278" y1="695" x2="748" y2="1010" gradientUnits="userSpaceOnUse"><stop stop-color="#d9f4ff"/><stop offset=".28" stop-color="#4cbbff"/><stop offset=".72" stop-color="#1769e0"/><stop offset="1" stop-color="#102d78"/></linearGradient>
+  <linearGradient id="skin" x1="346" y1="286" x2="687" y2="738" gradientUnits="userSpaceOnUse"><stop stop-color="#f4c69e"/><stop offset=".42" stop-color="#d99568"/><stop offset="1" stop-color="#925039"/></linearGradient>
+  <linearGradient id="faceLight" x1="335" y1="327" x2="590" y2="651" gradientUnits="userSpaceOnUse"><stop stop-color="#ffe0be" stop-opacity=".85"/><stop offset="1" stop-color="#ffe0be" stop-opacity="0"/></linearGradient>
+  <linearGradient id="hair" x1="321" y1="209" x2="706" y2="501" gradientUnits="userSpaceOnUse"><stop stop-color="#27334d"/><stop offset=".45" stop-color="#10182c"/><stop offset="1" stop-color="#070d1d"/></linearGradient>
+  <linearGradient id="neck" x1="436" y1="634" x2="602" y2="790" gradientUnits="userSpaceOnUse"><stop stop-color="#e9b184"/><stop offset="1" stop-color="#985638"/></linearGradient>
+  <filter id="shadow" x="120" y="90" width="790" height="1000" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="27"/></filter>
+  <filter id="soft" x="0" y="0" width="1024" height="1024" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<rect width="1024" height="1024" rx="512" fill="url(#bg)"/>
+<circle cx="512" cy="420" r="510" fill="url(#halo)"/>
+<circle cx="512" cy="512" r="444" fill="none" stroke="#d6f4ff" stroke-opacity=".17" stroke-width="3"/>
+<circle cx="512" cy="512" r="397" fill="none" stroke="#d6f4ff" stroke-opacity=".12" stroke-width="2" stroke-dasharray="5 20"/>
+<g fill="#dff8ff"><circle cx="210" cy="328" r="8" opacity=".65"/><circle cx="820" cy="286" r="6" opacity=".75"/><circle cx="798" cy="696" r="9" opacity=".56"/><circle cx="244" cy="754" r="5" opacity=".72"/></g>
+<ellipse cx="518" cy="927" rx="300" ry="72" fill="#061843" opacity=".42" filter="url(#shadow)"/>
+<path d="M214 1024c19-164 110-268 269-306l29-7h0l28 7c160 38 251 142 270 306H214Z" fill="url(#shirt)"/>
+<path d="M406 734c24-42 62-74 106-86 44 12 82 44 106 86l-53 76H459l-53-76Z" fill="#f5faff" opacity=".9"/>
+<path d="M423 649c14 55 43 94 89 121 46-27 75-66 89-121l-22-33H445l-22 33Z" fill="url(#neck)"/>
+<path d="M355 419c0-150 68-235 168-235 113 0 178 89 178 239v85c0 121-81 211-180 211-91 0-166-88-166-210v-90Z" fill="url(#skin)"/>
+<path d="M365 432c24-97 67-151 152-171 93-22 149 14 184 94-4-123-70-213-179-213-111 0-184 92-184 219 0 30 9 54 27 71Z" fill="url(#hair)"/>
+<path d="M344 432c-32 18-49 56-42 104 6 42 24 67 54 72l-12-176Z" fill="#a96648"/>
+<path d="M680 432c32 18 49 56 42 104-6 42-24 67-54 72l12-176Z" fill="#a96648"/>
+<path d="M392 410c24-23 56-34 89-29" fill="none" stroke="#633d35" stroke-width="18" stroke-linecap="round"/>
+<path d="M546 381c35-8 70 3 93 27" fill="none" stroke="#633d35" stroke-width="18" stroke-linecap="round"/>
+<ellipse cx="445" cy="448" rx="14" ry="11" fill="#17243a"/><ellipse cx="590" cy="448" rx="14" ry="11" fill="#17243a"/>
+<circle cx="440" cy="444" r="4" fill="#fff"/><circle cx="585" cy="444" r="4" fill="#fff"/>
+<path d="M514 455c-4 37-17 62-14 75 3 10 15 15 29 12" fill="none" stroke="#92543d" stroke-width="13" stroke-linecap="round"/>
+<path d="M453 571c36 36 87 38 127-1" fill="none" stroke="#783c37" stroke-width="13" stroke-linecap="round"/>
+<path d="M460 568c32 20 80 21 113-1" fill="none" stroke="#fff0e3" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+<path d="M359 328c30-72 81-115 154-124 78-9 137 21 183 87-18-102-88-171-185-171-104 0-178 75-192 190l40 18Z" fill="url(#hair)"/>
+<path d="M338 397c10-83 55-141 119-171-26 35-38 74-42 116-22 25-48 45-77 55Z" fill="#48536b" opacity=".48"/>
+<path d="M579 229c45 19 80 52 105 99-13-67-47-120-99-150l-6 51Z" fill="#62708a" opacity=".24"/>
+<path d="M358 327c-24 52-29 102-21 151 12-32 28-56 50-73l-29-78Z" fill="#121b31"/>
+<path d="M670 348c24 41 31 87 23 139-12-33-27-56-49-74l26-65Z" fill="#0a1225"/>
+<path d="M300 1024c18-119 68-201 154-250l58 92 58-92c86 49 136 131 154 250H300Z" fill="url(#shirt)" opacity=".98"/>
+<path d="m454 773 58 93 58-93" fill="none" stroke="#f8fdff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+<path d="M325 916c65-49 120-57 187-50" fill="none" stroke="#9ce7ff" stroke-width="8" stroke-linecap="round" opacity=".28"/>
+<path d="M697 916c-65-49-120-57-187-50" fill="none" stroke="#9ce7ff" stroke-width="8" stroke-linecap="round" opacity=".2"/>
+<ellipse cx="444" cy="494" rx="50" ry="76" fill="url(#faceLight)" opacity=".38" filter="url(#soft)"/>
+<path d="M404 616c25 23 59 35 96 35 43 0 77-14 103-40" fill="none" stroke="#ffe5c9" stroke-width="7" stroke-linecap="round" opacity=".35"/>
+</svg>
