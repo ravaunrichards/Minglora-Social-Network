@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  canAssignGroupRole, canDeleteGroupPost, canDiscoverGroup, canLeaveGroup,
+  canAssignGroupRole, canTransferGroupOwnership, canDeleteGroupPost, canDiscoverGroup, canLeaveGroup,
   canManageGroupEvents, canManageGroupSettings, canModerateGroup,
   canPublishGroupPost, canRequestGroupMembership, canViewGroup,
   getGroupRole, groupPermissionSet, isGroupMember
