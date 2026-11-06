@@ -18,5 +18,6 @@ test('registers the service worker without forcing an open page to refresh or ch
   assert.doesNotMatch(worker, /self\.clients\.claim\(\)/, 'new worker must not take over open tabs');
   assert.doesNotMatch(worker, /existing\.navigate\(target\)/, 'notification clicks must not redirect the existing tab');
   assert.match(worker, /await self\.clients\.openWindow\(target\)/, 'notification destinations must open separately');
-  assert.doesNotMatch(html, /&refresh=20261106-preserve-active-page-3/, 'asset cache keys must not use the old refresh marker');
+  assert.match(html, /app\\.js\\?v=[^\"' ]+&refresh=20261106-preserve-active-page-3/, 'keep the static asset cache key; it does not reload the page');
+  assert.match(worker, /app\\.js\\?v=[^\"' ]+&refresh=20261106-preserve-active-page-3/, 'the service-worker shell must cache the same versioned app asset');
 });
