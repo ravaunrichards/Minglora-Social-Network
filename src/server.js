@@ -4700,7 +4700,7 @@ async function route(req, res) {
       }
       const notificationReadMatch=p.match(/^\\/api\\/notifications\\/([^/]+)\\/read$/);
       if(method==='POST'&&notificationReadMatch){
-        let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch[1]);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
         const notification=(db.notifications||[]).find(item=>item.id===notificationId&&item.userId===user.id);
         if(!notification)return json(res,404,{error:'Notification not found.'});
         notification.read=true;notification.readAt=now();await saveStore();return json(res,200,{ok:true,notificationId});
