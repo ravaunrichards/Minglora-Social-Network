@@ -111,7 +111,7 @@
   function preview(gift){
     if(!gift)return false;
     play(gift);
-    const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image");
+    const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image")||document.getElementById("live-gift-preview-model")||document.getElementById("live-gift-preview-image");
     if(target){
       const identity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
       const seed=hash([identity,gift.code,gift.name].join("|"));
