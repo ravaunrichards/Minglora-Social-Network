@@ -728,6 +728,7 @@ Deno.serve(async (req: Request) => {
       asOf: new Date().toISOString(),
       currency: "USD",
       creatorSharePercent: 50,
+      platformSharePercent: 50,
       payoutScope: "all_creator_earnings_sources",
       totals: {
         ...totals,
@@ -1189,7 +1190,6 @@ Deno.serve(async (req: Request) => {
       availableMinor: Number(moneyBalance.availableMinor || 0),
       currency: "USD",
       creatorSharePercent: 50,
-      platformSharePercent: 50,
       coinPerCent: 1
     });
   }
