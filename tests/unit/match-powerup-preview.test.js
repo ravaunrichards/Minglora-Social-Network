@@ -60,8 +60,8 @@ test('the 3D model viewer is preserved across background match refreshes', () =>
 });
 
 test('the service worker versions and caches the Match Power-Up 3D models', () => {
-  assert.match(html, /leagues\.js\?v=20261106-match-powerups-3d-preview-1/);
-  assert.match(html, /leagues\.css\?v=20261106-match-powerups-3d-preview-1/);
+  assert.match(html, /leagues\.js\?v=20261106-match-powerups-3d-preview-chat-1/);
+  assert.match(html, /leagues\.css\?v=20261106-match-powerups-3d-preview-chat-1/);
   assert.match(sw, /v101-match-chat-powerups-1/);
   assert.match(sw, /minglora_time_boost\.gltf/);
   assert.ok(sw.includes("url.pathname.startsWith('/assets/match-powerups/')"));
