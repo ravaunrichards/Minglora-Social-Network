@@ -13,7 +13,7 @@ const collections = [
   'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',
   'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance',
   'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
-  'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
+  'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueMatchChatMessages', 'creatorLeagueMatchChatPowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
   'liveFanClubMemberships', 'liveFanClubEvents',
   'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences',
   'sounds', 'soundFavorites',
