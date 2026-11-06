@@ -3995,6 +3995,7 @@ async function route(req, res) {
       db.groupModerationActions ||= [];
       db.groupAuditLogs ||= [];
       db.groupAnnouncements ||= [];
+      db.groupRules ||= [];
       db.groupEvents ||= [];
       const recordGroupAudit=(group,action,targetType=null,targetId=null,details={})=>{
         db.groupAuditLogs.unshift({id:uid(),groupId:group.id,actorId:user.id,action,targetType,targetId,details,createdAt:now()});
@@ -4253,6 +4254,27 @@ async function route(req, res) {
         if(title.length<3||title.length>160||!Number.isFinite(startsAt)||(endsAt!==null&&(!Number.isFinite(endsAt)||endsAt<startsAt)))return json(res,400,{error:'Provide an event title and valid start/end times.'});
         const event={id:uid(),groupId:group.id,creatorId:user.id,title,description:String(input.description||'').trim().slice(0,2000),startsAt:new Date(startsAt).toISOString(),endsAt:endsAt?new Date(endsAt).toISOString():null,timeZone:String(input.timeZone||'UTC').slice(0,80),status:'scheduled',createdAt:now()};
         db.groupEvents.unshift(event);recordGroupAudit(group,'group_event_created','event',event.id);await saveStore();return json(res,201,{event});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/rules$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!getGroupRole(group,user.id)&&group.visibility!=='public')return json(res,404,{error:'Group rules are private.'});
+        return json(res,200,{rules:db.groupRules.filter(item=>item.groupId===group.id).sort((a,b)=>a.position-b.position||new Date(a.createdAt)-new Date(b.createdAt))});
+      }
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can manage community rules.'});
+        const title=String(input.title||'').trim(),body=String(input.body||'').trim();
+        if(title.length<1||title.length>120||body.length<1||body.length>2000)return json(res,400,{error:'Rule title or description is invalid.'});
+        const rule={id:uid(),groupId:group.id,title,body,position:db.groupRules.filter(item=>item.groupId===group.id).length,createdBy:user.id,createdAt:now(),updatedAt:now()};
+        db.groupRules.push(rule);recordGroupAudit(group,'group_rule_created','rule',rule.id);await saveStore();return json(res,201,{rule});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/rules\/([^/]+)$/);
+      if(method==='DELETE'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can manage community rules.'});
+        const rule=db.groupRules.find(item=>item.id===m[2]&&item.groupId===group.id);if(!rule)return json(res,404,{error:'Group rule not found.'});
+        db.groupRules=db.groupRules.filter(item=>item.id!==rule.id);recordGroupAudit(group,'group_rule_deleted','rule',rule.id);await saveStore();return json(res,200,{deleted:true});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/announcements$/);
       if(method==='GET'&&m){
