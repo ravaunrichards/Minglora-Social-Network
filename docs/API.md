@@ -219,6 +219,21 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 | POST | `/api/notifications/clear` | Clear all read notifications when `readOnly:true`, or clear all current account notifications when `readOnly:false` |
 | GET | `/api/search?q=...` | Search accounts, posts, groups and active Pages; blocked accounts/Pages are filtered |
 
+## Creator League matches
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/leagues/overview` | Read the signed-in creator's league profile, match rank, gameplay and chat power-up catalogues, leaderboard and visible active matches |
+| GET | `/api/leagues/matches` | List participant matches and active matches whose two LIVE rooms are visible to the signed-in member |
+| POST | `/api/leagues/matches` | Challenge another currently connected LIVE creator |
+| POST | `/api/leagues/matches/:id/accept` | Accept a pending challenge after both creator connections are verified |
+| POST | `/api/leagues/matches/:id/support` | Support one side of a live match once per viewer |
+| POST | `/api/leagues/matches/:id/powerups` | Activate a creator-only match gameplay power-up |
+| GET | `/api/leagues/matches/:id/chat` | Read match chat; completed-match history is limited to participants |
+| POST | `/api/leagues/matches/:id/chat` | Send a match-chat message with optional `powerupId`; body is limited to 280 characters |
+
+Match-chat access checks blocking relationships and visibility of both LIVE rooms for non-participants. Messages are stored with the match, limited to 200 retained messages per match, and rate-limited per sender. Spotlight, Megaphone and Cheer Burst each have one use per account per match; they change message presentation only and never add Coins, creator earnings, LIVE Gift totals, Creator League standings or match score. Gameplay boosts affect match-only scoring/timing and never multiply Creator League points.
+
 ## General behavior
 
 - JSON API responses use `Cache-Control: no-store`.
