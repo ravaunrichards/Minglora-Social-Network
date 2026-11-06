@@ -26,6 +26,27 @@ const COLLECTIONS = [
 ];
 
 const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+export const CREATOR_LEAGUE_POINTS_PER_CLASS = 100000;
+export function creatorLeagueClassForPoints(value) {
+  const points = Math.max(0, asNumber(value));
+  const index = Math.min(CREATOR_LEAGUE_CLASSES.length - 1, Math.floor(points / CREATOR_LEAGUE_POINTS_PER_CLASS));
+  return CREATOR_LEAGUE_CLASSES[index];
+}
+export function creatorLeagueProgressForPoints(value) {
+  const points = Math.max(0, asNumber(value));
+  const index = Math.min(CREATOR_LEAGUE_CLASSES.length - 1, Math.floor(points / CREATOR_LEAGUE_POINTS_PER_CLASS));
+  const nextClass = index >= CREATOR_LEAGUE_CLASSES.length - 1 ? null : CREATOR_LEAGUE_CLASSES[index + 1];
+  const classProgressPoints = index >= CREATOR_LEAGUE_CLASSES.length - 1
+    ? CREATOR_LEAGUE_POINTS_PER_CLASS
+    : points - index * CREATOR_LEAGUE_POINTS_PER_CLASS;
+  return {
+    leagueClass: CREATOR_LEAGUE_CLASSES[index],
+    nextClass,
+    classProgressPoints,
+    pointsPerClass: CREATOR_LEAGUE_POINTS_PER_CLASS,
+    pointsToNextClass: nextClass ? CREATOR_LEAGUE_POINTS_PER_CLASS - classProgressPoints : null
+  };
+}
 const recordTime = record => {
   const value = Date.parse(record?.updatedAt || record?.completedAt || record?.startedAt || record?.createdAt || "");
   return Number.isFinite(value) ? value : 0;
@@ -191,9 +212,7 @@ const ensureCollections = db => {
     db.creatorLeagueDailyScores.push({ id: randomUUID(), userId, dayKey, points });
   }
   for (const profile of db.creatorLeagueProfiles) {
-    if (lifetimeGiftUsers.has(profile.userId)) {
-      profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId) || 0;
-    }
+    profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId) || 0;
     const seasonKey = String(profile.userId) + "\u0000" + String(profile.seasonKey || "");
     if (seasonGiftKeys.has(seasonKey)) profile.seasonPoints = seasonGiftTotals.get(seasonKey) || 0;
   }
@@ -263,6 +282,19 @@ export function refundCreatorLeagueGift(db, giftId, now = new Date()) {
     giftId: id, coinAmount: asNumber(gift.coinAmount), giftCode: String(gift.giftCode || "")
   }, new Date(timestamp));
   ensureCollections(db);
+  const profile = db.creatorLeagueProfiles.find(item => item.userId === gift.userId);
+  if (profile) {
+    const from = profile.leagueClass;
+    const to = creatorLeagueClassForPoints(profile.lifetimeGiftPoints);
+    profile.leagueClass = to;
+    profile.fragments = 0;
+    profile.leagueShields = 0;
+    if (from !== to) {
+      event(db, profile.userId, CREATOR_LEAGUE_CLASSES.indexOf(to) < CREATOR_LEAGUE_CLASSES.indexOf(from) ? "creator_demotion" : "creator_promotion", {
+        from, to, lifetimeGiftPoints: profile.lifetimeGiftPoints, reason: "gift_refund_reconciliation"
+      }, new Date(timestamp));
+    }
+  }
   return { reversed: true, userId: gift.userId, coinAmount: asNumber(gift.coinAmount) };
 }
 export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = new Date()) {
@@ -317,43 +349,21 @@ function applyClassMovement(profile, direction, db, now) {
 }
 export function settleCreatorLeagueDay(db, dayKey, now = new Date()) {
   ensureCollections(db);
-  if (db.creatorLeagueDailySettlements.some(item => item.dayKey === dayKey)) return { settled: false, reason: "already_settled" };
-  const points = new Map();
-  for (const score of db.creatorLeagueDailyScores.filter(item => item.dayKey === dayKey && Number(item.points) > 0)) {
-    points.set(score.userId, (points.get(score.userId) || 0) + Number(score.points));
+  if (db.creatorLeagueDailySettlements.some(item => item.dayKey === dayKey)) {
+    return { settled: false, reason: "already_settled" };
   }
-  // Every enrolled creator in the same region/class is part of that day's
-  // standings. A creator who receives no eligible LIVE Gifts scores zero;
-  // omitting zero-score creators can prevent a gifting creator from advancing
-  // simply because they are the only member who received Gifts that day.
+
+  // Daily Gift scores remain available for reporting. Class promotion is
+  // determined only by cumulative confirmed lifetime LIVE Gift points.
   const profiles = db.creatorLeagueProfiles.filter(profile => profile?.userId);
-  const buckets = new Map();
-  for (const profile of profiles) {
-    const key = (profile.region || "GLOBAL") + ":" + profile.leagueClass;
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push({ profile, points: points.get(profile.userId) || 0 });
-  }
-  let moved = 0;
-  for (const members of buckets.values()) {
-    if (members.length < 2) continue;
-    members.sort((a, b) => b.points - a.points || a.profile.userId.localeCompare(b.profile.userId));
-    const slots = Math.max(1, Math.ceil(members.length * 0.2));
-    const promotionBoundary = members[slots - 1].points;
-    const demotionBoundary = members[members.length - slots].points;
-    const promoted = new Set(members.filter(item => item.points >= promotionBoundary).map(item => item.profile.userId));
-    const demoted = new Set(members.filter(item => item.points <= demotionBoundary).map(item => item.profile.userId));
-    for (const item of members) {
-      // A score tied across both cutoffs is neutral rather than arbitrarily moved.
-      if (promoted.has(item.profile.userId) && demoted.has(item.profile.userId)) continue;
-      if (promoted.has(item.profile.userId)) { applyClassMovement(item.profile, 1, db, now); moved += 1; }
-      else if (demoted.has(item.profile.userId)) { applyClassMovement(item.profile, -1, db, now); moved += 1; }
-    }
-  }
   db.creatorLeagueDailySettlements.push({
-    id: randomUUID(), dayKey, settledAt: now.toISOString(),
-    activeCreators: profiles.length, placementsProcessed: moved
+    id: randomUUID(),
+    dayKey,
+    settledAt: now.toISOString(),
+    activeCreators: profiles.length,
+    placementsProcessed: 0
   });
-  return { settled: true, activeCreators: profiles.length, placementsProcessed: moved };
+  return { settled: true, activeCreators: profiles.length, placementsProcessed: 0 };
 }
 function settlePastDays(db, now) {
   const today = utcDayKey(now);
@@ -437,14 +447,26 @@ export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
   for (const profile of db.creatorLeagueProfiles) {
     const lifetimeGiftPoints = lifetimeTotals.get(profile.userId) || 0;
     const seasonPoints = seasonTotals.get(profile.userId) || 0;
+    const nextClass = creatorLeagueClassForPoints(lifetimeGiftPoints);
+    const previousClass = profile.leagueClass;
     const needsUpdate = profile.seasonKey !== seasonKey ||
       asNumber(profile.seasonPoints) !== seasonPoints ||
-      asNumber(profile.lifetimeGiftPoints) !== lifetimeGiftPoints;
+      asNumber(profile.lifetimeGiftPoints) !== lifetimeGiftPoints ||
+      previousClass !== nextClass;
     if (!needsUpdate) continue;
     profile.seasonKey = seasonKey;
     profile.seasonPoints = seasonPoints;
     profile.lifetimeGiftPoints = lifetimeGiftPoints;
+    profile.leagueClass = nextClass;
+    profile.fragments = 0;
+    profile.leagueShields = 0;
     profile.updatedAt = now.toISOString();
+    if (previousClass !== nextClass) {
+      event(db, profile.userId, CREATOR_LEAGUE_CLASSES.indexOf(nextClass) < CREATOR_LEAGUE_CLASSES.indexOf(previousClass) ? "creator_demotion" : "creator_promotion", {
+        from: previousClass, to: nextClass, lifetimeGiftPoints,
+        reason: "lifetime_gift_milestone_reconciliation"
+      }, now);
+    }
     profilesUpdated += 1;
   }
 
@@ -531,6 +553,17 @@ export function recordLiveGiftForLeagues(db, details) {
   if (!daily) { daily = { id: randomUUID(), userId: details.recipientId, dayKey, points: 0 }; db.creatorLeagueDailyScores.push(daily); }
   daily.points += amount;
   profile.lifetimeGiftPoints += amount;
+  const previousClass = profile.leagueClass;
+  profile.leagueClass = creatorLeagueClassForPoints(profile.lifetimeGiftPoints);
+  profile.fragments = 0;
+  profile.leagueShields = 0;
+  if (previousClass !== profile.leagueClass) {
+    event(db, profile.userId, "creator_promotion", {
+      from: previousClass, to: profile.leagueClass,
+      lifetimeGiftPoints: profile.lifetimeGiftPoints,
+      milestonePoints: CREATOR_LEAGUE_POINTS_PER_CLASS * (CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass))
+    }, now);
+  }
   if (profile.seasonKey !== seasonKey) { profile.seasonKey = seasonKey; profile.seasonPoints = 0; }
   profile.seasonPoints += amount;
   profile.updatedAt = now.toISOString();
@@ -699,8 +732,9 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
   const matchRank = MATCH_RANKS[profile.matchRankIndex] || MATCH_RANKS[0];
   return {
     profile: {
-      leagueClass: profile.leagueClass, region: profile.region, fragments: profile.fragments, fragmentsNeeded: 4,
-      leagueShields: profile.leagueShields, lifetimeGiftPoints: profile.lifetimeGiftPoints,
+      ...creatorLeagueProgressForPoints(profile.lifetimeGiftPoints),
+      region: profile.region, fragments: 0, fragmentsNeeded: 0, leagueShields: 0,
+      lifetimeGiftPoints: profile.lifetimeGiftPoints,
       seasonPoints: profile.seasonPoints, todayGiftPoints: Number(daily ? daily.points : 0),
       seasonKey: profile.seasonKey, seasonEndsAt: seasonEndsAt(now),
       matchRank, matchRankIndex: profile.matchRankIndex, matchRankPoints: profile.matchRankPoints,
