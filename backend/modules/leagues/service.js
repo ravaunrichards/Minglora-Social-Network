@@ -676,7 +676,7 @@ export function sendCreatorLeagueMatchChatMessage(db, match, userId, input = {},
   }
   if (!userId) throw Object.assign(new Error("Sign in to use match chat."), { status: 401 });
 
-  const body = String(input.body || "").replace(/[\\u0000-\\u001f\\u007f]/g, " ").replace(/\\s+/g, " ").trim();
+  const body = String(input.body || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
   if (!body) throw Object.assign(new Error("Write a message before sending."), { status: 400 });
   if ([...body].length > 280) throw Object.assign(new Error("Match-chat messages must be 280 characters or fewer."), { status: 400 });
 
