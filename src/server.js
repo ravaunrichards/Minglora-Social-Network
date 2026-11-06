@@ -4096,7 +4096,7 @@ async function route(req, res) {
         const invitation=db.groupInvitations.find(item=>item.groupId===group.id&&item.inviteeId===user.id&&item.status==='pending');
         if(group.visibility==='hidden'&&!invitation)return json(res,404,{error:'This group is invitation-only.'});
         if(!canRequestGroupMembership(group,user.id)&&!invitation)return json(res,404,{error:'This group is not accepting public membership requests.'});
-        if((group.joinApproval||group.visibility!=='public')&&!invitation){
+        if((group.joinApproval===true||(group.visibility!=='public'&&group.joinApproval!==false))&&!invitation){
           let request=db.groupMembershipRequests.find(item=>item.groupId===group.id&&item.userId===user.id&&item.status==='pending');
           if(!request){request={id:uid(),groupId:group.id,userId:user.id,status:'pending',createdAt:now()};db.groupMembershipRequests.unshift(request);recordGroupAudit(group,'membership_requested','member',user.id);}
           await saveStore();return json(res,202,{requested:true,message:'Your request was sent to the group administrators.'});
@@ -4110,6 +4110,25 @@ async function route(req, res) {
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         if(!canLeaveGroup(group,user.id))return json(res,409,{error:'The group owner cannot leave without transferring ownership.'});
         setGroupMembership(group,user.id,'member','left');recordGroupAudit(group,'member_left','member',user.id);await saveStore();return json(res,200,{left:true});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/pending-posts$/);
+      if(method==='GET'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review pending posts.'});
+        const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status==='pending').sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(post=>publicGroupPost(post)));
+        return json(res,200,{posts});
+      }
+      m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)\/approval$/);
+      if(method==='POST'&&m){
+        const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
+        if(!canModerateGroup(group,user.id))return json(res,403,{error:'Only group moderators can review pending posts.'});
+        const post=(db.groupPosts||[]).find(item=>item.groupId===group.id&&item.id===m[2]&&item.status==='pending');
+        if(!post)return json(res,404,{error:'Pending group post not found.'});
+        const action=String(input.action||'');
+        if(!['approve','reject'].includes(action))return json(res,400,{error:'Choose approve or reject.'});
+        post.status=action==='approve'?'published':'hidden';post.reviewedBy=user.id;post.reviewedAt=now();post.updatedAt=now();
+        recordGroupAudit(group,'group_post_'+post.status,'post',post.id);await saveStore();
+        return json(res,200,{post:await publicGroupPost(post)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/requests$/);
       if(method==='GET'&&m){
