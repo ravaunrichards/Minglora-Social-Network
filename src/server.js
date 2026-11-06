@@ -23,7 +23,7 @@ import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-b
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
-import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
+import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, listCreatorLeagueMatchChat, sendCreatorLeagueMatchChatMessage, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
@@ -3221,6 +3221,38 @@ async function route(req, res) {
         const matches=listCreatorLeagueMatches(db,db.users,user.id);
         await saveStore();
         return json(res,200,{matches});
+      }
+      const matchChatRoute=p.match(/^\/api\/leagues\/matches\/([^/]+)\/chat$/);
+      if(matchChatRoute&&['GET','POST'].includes(method)){
+        const match=(db.creatorLeagueMatches||[]).find(item=>item.id===matchChatRoute[1]);
+        if(!match)return json(res,404,{error:'League Match not found.'});
+        const participantIds=[match.challengerId,match.opponentId];
+        const isParticipant=participantIds.includes(user.id);
+        if(participantIds.filter(id=>id!==user.id).some(id=>blockedBetween(user.id,id)))return json(res,404,{error:'League Match not found.'});
+        const sessions=[match.challengerSessionId,match.opponentSessionId].map(id=>(db.liveSessions||[]).find(item=>item.id===id));
+        const canViewSession=session=>Boolean(session&&session.status==='live'&&(
+          session.hostId===user.id||session.visibility==='public'||
+          (session.visibility==='friends'&&isFriend(user.id,session.hostId))
+        ));
+        const bothSessionsLive=sessions.length===2&&sessions.every(session=>session&&session.status==='live');
+        const canViewBothLiveRooms=bothSessionsLive&&sessions.every(canViewSession);
+        if(method==='GET'){
+          const canRead=isParticipant&&(match.status==='live'||match.status==='completed')||
+            (!isParticipant&&match.status==='live'&&canViewBothLiveRooms);
+          if(!canRead)return json(res,404,{error:'Match chat is not available to this account.'});
+          return json(res,200,listCreatorLeagueMatchChat(db,db.users,match.id,user.id));
+        }
+        if(match.status!=='live'||!bothSessionsLive)return json(res,409,{error:'Match chat is closed because this match is no longer live.'});
+        if(!isParticipant&&!canViewBothLiveRooms)return json(res,404,{error:'Match chat is not available to this account.'});
+        try{
+          const message=sendCreatorLeagueMatchChatMessage(db,match,user.id,{
+            body:String(input.body||''),powerupId:String(input.powerupId||'')
+          });
+          await saveStore();
+          return json(res,201,{message});
+        }catch(error){
+          return json(res,error.status||400,{error:error.message||'The match-chat message could not be sent.'});
+        }
       }
       if(method==='POST'&&p==='/api/leagues/matches'){
         const ownSessionId=String(input.ownSessionId||'');
