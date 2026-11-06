@@ -6020,6 +6020,7 @@ function renderMessengerPanel(){
   panel.innerHTML=
     '<header class="messenger-panel-header"><div class="messenger-panel-heading"><h2>Chats</h2><span>Stay connected on Minglora</span></div><div class="messenger-panel-actions">'+
     '<button type="button" class="messenger-panel-icon" data-messenger-new title="New message" aria-label="New message">'+messenger3dIcon('create')+'</button>'+
+    '<button type="button" class="messenger-panel-icon" data-messenger-new-group title="Create group chat" aria-label="Create group chat">'+messenger3dIcon('groups')+'</button>'+
     '<button type="button" class="messenger-panel-icon" data-messenger-see title="See in Messenger" aria-label="See in Messenger">'+messenger3dIcon('external-link')+'</button>'+
     '<button type="button" class="messenger-panel-icon" data-messenger-options title="Messenger options" aria-label="Messenger options" aria-expanded="'+(state.messengerOptionsOpen?'true':'false')+'">'+messenger3dIcon('more')+'</button>'+
     '<button type="button" class="messenger-panel-icon messenger-panel-close" data-messenger-close title="Close chats" aria-label="Close chats">'+messenger3dIcon('close')+'</button></div></header>'+
@@ -6046,6 +6047,7 @@ function renderMessengerPanel(){
   const search=$('#messenger-search-input');if(search)search.value=state.messengerSearch||'';
   panel.querySelectorAll('[data-messenger-filter]').forEach(button=>button.onclick=()=>{state.messengerFilter=button.dataset.messengerFilter;state.messengerPanelSection='chats';state.messengerComposeMode=false;renderMessengerPanel();});
   panel.querySelector('[data-messenger-new]')?.addEventListener('click',()=>{state.messengerComposeMode=true;state.messengerPanelSection='chats';state.messengerSearch='';state.messengerComposeUsers=null;renderMessengerPanel();$('#messenger-search-input')?.focus();});
+  panel.querySelector('[data-messenger-new-group]')?.addEventListener('click',()=>{state.messengerComposeMode=false;state.messengerPanelSection='create-group';state.messengerSearch='';state.messengerComposeUsers=null;renderMessengerPanelList();});
   panel.querySelectorAll('[data-messenger-see]').forEach(button=>button.onclick=()=>{closeMessengerPanel();activateNav('messages');});
   panel.querySelector('[data-messenger-options]')?.addEventListener('click',()=>{state.messengerOptionsOpen=!state.messengerOptionsOpen;renderMessengerPanel();});
   panel.querySelector('[data-messenger-close]')?.addEventListener('click',closeMessengerPanel);
@@ -6059,6 +6061,39 @@ async function renderMessengerPanelList(){
   const query=String(state.messengerSearch||'').trim().toLowerCase(),prefs=messengerPreferences();
   const archived=new Set(Array.isArray(prefs.messengerArchivedConversationIds)?prefs.messengerArchivedConversationIds:[]);
   const restricted=new Set(Array.isArray(prefs.messengerRestrictedUserIds)?prefs.messengerRestrictedUserIds:[]);
+  if(state.messengerPanelSection==='create-group'){
+    if(!Array.isArray(state.messengerComposeUsers)){
+      if(state.messengerComposeLoading)return;
+      state.messengerComposeLoading=true;
+      list.innerHTML='<div class="messenger-empty-state"><span>'+messenger3dIcon('groups')+'</span><strong>Loading members</strong><p>Choose people to add to your Messenger group.</p></div>';
+      try{state.messengerComposeUsers=(await api('/users')).users||[];}
+      catch(error){list.innerHTML='<div class="messenger-empty-state"><strong>Members could not load</strong><p>'+esc(error.message)+'</p></div>';}
+      finally{state.messengerComposeLoading=false;}
+      if(!Array.isArray(state.messengerComposeUsers))return;
+    }
+    const members=state.messengerComposeUsers.filter(member=>member.id!==state.user?.id&&(!query||(String(member.name||'')+' '+String(member.username||'')).toLowerCase().includes(query))).slice(0,40);
+    list.innerHTML='<div class="messenger-group-create-head"><button type="button" data-messenger-create-back>'+messenger3dIcon('arrow-left')+' Back</button><strong>New group chat</strong><small>Add people and start a shared conversation.</small></div>'+
+      '<form class="messenger-group-create-form" id="messenger-group-create-form"><label>Group name<input name="name" maxlength="80" required placeholder="Name this group"></label><label>Description (optional)<input name="description" maxlength="500" placeholder="What is this group for?"></label><div class="messenger-group-member-heading"><strong>Add members</strong><span>'+members.length+' shown</span></div><div class="messenger-group-member-picker">'+
+      (members.map(member=>'<label class="messenger-group-member-option"><input type="checkbox" name="memberIds" value="'+esc(member.id)+'"><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span></label>').join('')||'<p class="muted">No members match this search.</p>')+
+      '</div><button class="primary full" type="submit">Create group chat</button><p class="auth-error" role="status"></p></form>';
+    list.querySelector('[data-messenger-create-back]')?.addEventListener('click',()=>{state.messengerPanelSection='chats';renderMessengerPanelList();});
+    list.querySelector('#messenger-group-create-form')?.addEventListener('submit',async event=>{
+      event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=form.querySelector('.auth-error');
+      const memberIds=[...form.querySelectorAll('input[name="memberIds"]:checked')].map(input=>input.value);
+      button.disabled=true;status.textContent='';
+      try{
+        const result=await api('/message-groups',{method:'POST',body:JSON.stringify({name:form.elements.name.value,description:form.elements.description.value,memberIds})});
+        state.conversations=(await api('/messages')).conversations||[];
+        paintMessengerBadge(state.conversations);
+        state.messengerPanelSection='chats';state.messengerFilter='groups';state.messengerSearch='';
+        renderMessengerPanelList();
+        const conversation=state.conversations.find(item=>item.groupId===result.group?.id);
+        if(conversation)openMessageWindow(conversation.user,{groupId:conversation.groupId});
+        toast('Group chat created.');
+      }catch(error){status.textContent=error.message;button.disabled=false;}
+    });
+    return;
+  }
   if(state.messengerComposeMode){
     if(!Array.isArray(state.messengerComposeUsers)){
       if(state.messengerComposeLoading)return;
@@ -6093,21 +6128,24 @@ async function renderMessengerPanelList(){
   if(query)rows=rows.filter(item=>(String(item.user?.name||'')+' '+String(item.user?.username||'')+' '+String(item.messages?.at(-1)?.text||'')).toLowerCase().includes(query));
   const heading=state.messengerFilter==='groups'?'Group chats':state.messengerFilter==='communities'?'Community chats':state.messengerFilter==='unread'?'Unread chats':'Your conversations';
   const rowsHtml=rows.map(conversation=>messengerConversationRow(conversation,'chats')).join('');
-  const emptyMessage=state.messengerFilter==='groups'?'Group conversations will appear here when group messaging is available.':state.messengerFilter==='communities'?'Community conversations will appear here when community messaging is available.':state.messengerFilter==='unread'?'You have no unread conversations.':'Your recent conversations will appear here. Start a chat with the new message button.';
+  const emptyMessage=state.messengerFilter==='groups'?'Create a group chat to start a shared conversation.':state.messengerFilter==='communities'?'Community conversations will appear here when available.':state.messengerFilter==='unread'?'You have no unread conversations.':'Your recent conversations will appear here. Start a chat with the new message button.';
   list.innerHTML='<div class="messenger-list-heading"><strong>'+heading+'</strong><span>'+rows.length+'</span></div>'+(rowsHtml||'<div class="messenger-empty-state"><span>'+messenger3dIcon(state.messengerFilter==='groups'?'groups':state.messengerFilter==='communities'?'pages':'messages')+'</span><strong>'+(state.messengerFilter==='unread'?'All caught up':'No chats to show')+'</strong><p>'+emptyMessage+'</p>'+(state.messengerFilter==='groups'||state.messengerFilter==='communities'?'<button type="button" data-messenger-browse-groups>Browse groups</button>':'')+'</div>');
   list.querySelector('[data-messenger-browse-groups]')?.addEventListener('click',()=>{closeMessengerPanel();activateNav('groups');});
   bindMessengerConversationRows(list,'chats');
 }
 function messengerConversationRow(conversation,section){
-  const member=conversation.user||{},last=conversation.messages?.at(-1);
-  const preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':last?.stickerId?'Sticker':'Start chatting');
+  const member=conversation.user||{},last=conversation.messages?.at(-1),isGroup=Boolean(conversation.groupId||member.isGroup);
+  let preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':last?.stickerId?'Sticker':'Start chatting');
+  if(isGroup&&last?.author?.name)preview=last.author.name+': '+preview;
   const unread=Number(conversation.unreadCount)||0,archived=section==='archived',restricted=section==='restricted';
-  const action=archived?'<button type="button" class="messenger-chat-row-action" data-messenger-unarchive="'+esc(member.id)+'" title="Restore chat" aria-label="Restore chat">'+messenger3dIcon('restore')+'</button>':restricted?'<button type="button" class="messenger-chat-row-action" data-messenger-unrestrict="'+esc(member.id)+'" title="Unrestrict account" aria-label="Unrestrict account">'+messenger3dIcon('unlock')+'</button>':'<button type="button" class="messenger-chat-row-action" data-messenger-archive="'+esc(member.id)+'" title="Archive chat" aria-label="Archive chat">'+messenger3dIcon('archive')+'</button><button type="button" class="messenger-chat-row-action" data-messenger-restrict="'+esc(member.id)+'" title="Restrict account" aria-label="Restrict account">'+messenger3dIcon('lock')+'</button>';
-  return '<article class="messenger-chat-row" data-messenger-open="'+esc(member.id)+'" tabindex="0" role="button" aria-label="Open chat with '+esc(member.name||'Minglora member')+'"><img class="messenger-chat-avatar" src="'+avatar(member)+'" alt=""><span class="messenger-chat-copy"><strong>'+esc(member.name||'Minglora member')+'</strong><small>'+esc(preview)+'</small></span>'+(unread?'<span class="messenger-chat-unread">'+(unread>99?'99+':unread)+'</span>':'')+'<span class="messenger-chat-row-actions">'+action+'</span></article>';
+  const online=!isGroup&&state.messengerPresence?.[member.id]===true;
+  const action=archived?'<button type="button" class="messenger-chat-row-action" data-messenger-unarchive="'+esc(member.id)+'" title="Restore chat" aria-label="Restore chat">'+messenger3dIcon('restore')+'</button>':restricted?'<button type="button" class="messenger-chat-row-action" data-messenger-unrestrict="'+esc(member.id)+'" title="Unrestrict account" aria-label="Unrestrict account">'+messenger3dIcon('unlock')+'</button>':'<button type="button" class="messenger-chat-row-action" data-messenger-archive="'+esc(member.id)+'" title="Archive chat" aria-label="Archive chat">'+messenger3dIcon('archive')+'</button>'+(isGroup?'':'<button type="button" class="messenger-chat-row-action" data-messenger-restrict="'+esc(member.id)+'" title="Restrict account" aria-label="Restrict account">'+messenger3dIcon('lock')+'</button>');
+  const avatarHtml=isGroup?'<span class="messenger-chat-avatar messenger-group-avatar">'+messenger3dIcon('groups')+'</span>':'<img class="messenger-chat-avatar" src="'+avatar(member)+'" alt="">';
+  return '<article class="messenger-chat-row '+(isGroup?'is-group-row':'')+'" data-messenger-open="'+esc(member.id)+'" tabindex="0" role="button" aria-label="Open chat with '+esc(member.name||'Minglora member')+'">'+avatarHtml+(online?'<i class="messenger-chat-online-dot" aria-label="Active now"></i>':'')+'<span class="messenger-chat-copy"><strong>'+esc(member.name||'Minglora member')+'</strong><small>'+esc(isGroup?(conversation.group?.memberCount||0)+' members':preview)+'</small></span>'+(unread?'<span class="messenger-chat-unread">'+(unread>99?'99+':unread)+'</span>':'')+'<span class="messenger-chat-row-actions">'+action+'</span></article>';
 }
 function bindMessengerConversationRows(list,section){
   list.querySelectorAll('[data-messenger-open]').forEach(row=>{
-    const open=()=>{const conversation=state.conversations.find(item=>item.user.id===row.dataset.messengerOpen);if(conversation)openMessageWindow(conversation.user);};
+    const open=()=>{const conversation=state.conversations.find(item=>item.user.id===row.dataset.messengerOpen);if(conversation)openMessageWindow(conversation.user,{groupId:conversation.groupId});};
     row.onclick=event=>{if(event.target.closest('button'))return;open();};
     row.onkeydown=event=>{if((event.key==='Enter'||event.key===' ')&&!event.target.closest('button')){event.preventDefault();open();}};
   });
