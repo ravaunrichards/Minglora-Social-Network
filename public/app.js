@@ -6301,7 +6301,7 @@ async function renderNotifications(){
     }else if(item.type==='meetwave_invite'){
       actions='<button type="button" class="secondary" data-notice-meetwave="'+esc(item.id)+'">Open MeetWave</button>';
     }else if(actor?.id){
-      actions='<button type="button" class="secondary" data-notice-profile="'+esc(item.id)+'" data-actor-id="'+esc(actor.id)+'">View profile</button>';
+      actions='<button type="button" class="secondary" data-notice-profile="'+esc(item.id)+'" data-actor-id="'+esc(actor.id)+'"'+(item.type==='profile_view'?' data-profile-view-actor="'+esc(actor.id)+'"':'')+'>View profile</button>';
     }
     return '<article class="notification-card '+(item.read?'is-read':'is-unread')+'" data-notification-card="'+esc(item.id)+'" data-search="'+esc([item.text,actor?.name,item.type].filter(Boolean).join(' ').toLowerCase())+'">'+
       '<div class="notification-person">'+actorMarkup+verified+'</div>'+
