@@ -47,5 +47,6 @@ test("promotional wallet, cash reserve and cash-backed gift activity stay separa
 test("verified PayPal events remain the source of payout completion status", () => {
   assert.match(server, /verify-webhook-signature/);
   assert.match(server, /economy_payout_webhook/);
-  assert.match(runtime, /PAYMENT\.PAYOUTS/);
+  assert.match(server, /PAYMENT\.PAYOUTS-ITEM\.SUCCEEDED/);
+  assert.match(server, /PAYMENT\.PAYOUTS-ITEM\.FAILED/);
 });
