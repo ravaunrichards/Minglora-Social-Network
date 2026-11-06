@@ -158,6 +158,140 @@ GRANT SELECT ON public.group_moderation_actions, public.group_audit_logs TO auth
 REVOKE INSERT, UPDATE, DELETE ON public.group_rules, public.group_invitations FROM anon, authenticated;
 
 
+
+-- Membership requests and announcements are durable records, not fabricated counters.
+CREATE TABLE IF NOT EXISTS public.group_membership_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES public.social_groups(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','declined','cancelled')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  reviewed_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reviewed_at timestamptz,
+  UNIQUE (group_id,user_id,id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS group_membership_requests_pending_uq
+  ON public.group_membership_requests(group_id,user_id) WHERE status='pending';
+CREATE INDEX IF NOT EXISTS group_membership_requests_review_idx
+  ON public.group_membership_requests(group_id,created_at) WHERE status='pending';
+ALTER TABLE public.group_membership_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS minglora_group_requests_read_requester_or_staff ON public.group_membership_requests;
+CREATE POLICY minglora_group_requests_read_requester_or_staff ON public.group_membership_requests
+FOR SELECT TO authenticated
+USING (
+  user_id=(select auth.uid())
+  OR EXISTS (
+    SELECT 1 FROM public.social_groups g
+    WHERE g.id=group_membership_requests.group_id AND g.owner_id=(select auth.uid())
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.group_memberships gm
+    WHERE gm.group_id=group_membership_requests.group_id AND gm.user_id=(select auth.uid())
+      AND gm.status='active' AND gm.role IN ('admin','moderator')
+  )
+);
+DROP POLICY IF EXISTS minglora_group_requests_create_self ON public.group_membership_requests;
+CREATE POLICY minglora_group_requests_create_self ON public.group_membership_requests
+FOR INSERT TO authenticated
+WITH CHECK (
+  user_id=(select auth.uid()) AND status='pending'
+  AND EXISTS (
+    SELECT 1 FROM public.social_groups g
+    WHERE g.id=group_membership_requests.group_id AND g.status='active'
+      AND g.visibility IN ('public','private')
+  )
+);
+DROP POLICY IF EXISTS minglora_group_requests_cancel_self ON public.group_membership_requests;
+CREATE POLICY minglora_group_requests_cancel_self ON public.group_membership_requests
+FOR UPDATE TO authenticated
+USING (user_id=(select auth.uid()))
+WITH CHECK (user_id=(select auth.uid()) AND status IN ('pending','cancelled'));
+
+CREATE TABLE IF NOT EXISTS public.group_announcements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES public.social_groups(id) ON DELETE CASCADE,
+  author_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  title text NOT NULL CHECK (length(title) BETWEEN 3 AND 140),
+  body text NOT NULL CHECK (length(body) BETWEEN 1 AND 3000),
+  status text NOT NULL DEFAULT 'published' CHECK (status IN ('published','hidden','deleted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS group_announcements_feed_idx
+  ON public.group_announcements(group_id,created_at DESC) WHERE status='published';
+ALTER TABLE public.group_announcements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS minglora_group_announcements_read ON public.group_announcements;
+CREATE POLICY minglora_group_announcements_read ON public.group_announcements
+FOR SELECT TO anon, authenticated
+USING (
+  status='published' AND EXISTS (
+    SELECT 1 FROM public.social_groups g WHERE g.id=group_announcements.group_id AND (
+      (g.visibility='public' AND g.status='active')
+      OR g.owner_id=(select auth.uid())
+      OR private.is_minglora_group_member(g.id)
+    )
+  )
+);
+GRANT SELECT ON public.group_announcements TO anon, authenticated;
+
+-- Group post approval adds a pending state to the existing post workflow.
+DO $
+DECLARE c record;
+BEGIN
+  FOR c IN
+    SELECT conname FROM pg_constraint
+    WHERE conrelid='public.group_posts'::regclass AND contype='c'
+      AND pg_get_constraintdef(oid) ILIKE '%status%'
+  LOOP
+    EXECUTE format('ALTER TABLE public.group_posts DROP CONSTRAINT %I', c.conname);
+  END LOOP;
+END $;
+ALTER TABLE public.group_posts
+  ADD CONSTRAINT group_posts_status_check
+  CHECK (status IN ('published','pending','hidden','deleted'));
+
+-- Moderators may maintain community rules through the server's authorized API.
+DROP POLICY IF EXISTS minglora_group_rules_insert_staff ON public.group_rules;
+CREATE POLICY minglora_group_rules_insert_staff ON public.group_rules
+FOR INSERT TO authenticated
+WITH CHECK (
+  created_by=(select auth.uid()) AND EXISTS (
+    SELECT 1 FROM public.social_groups g WHERE g.id=group_rules.group_id AND (
+      g.owner_id=(select auth.uid())
+      OR EXISTS (SELECT 1 FROM public.group_memberships gm WHERE gm.group_id=g.id
+        AND gm.user_id=(select auth.uid()) AND gm.status='active' AND gm.role IN ('admin','moderator'))
+    )
+  )
+);
+DROP POLICY IF EXISTS minglora_group_rules_update_staff ON public.group_rules;
+CREATE POLICY minglora_group_rules_update_staff ON public.group_rules
+FOR UPDATE TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM public.social_groups g WHERE g.id=group_rules.group_id AND (
+    g.owner_id=(select auth.uid())
+    OR EXISTS (SELECT 1 FROM public.group_memberships gm WHERE gm.group_id=g.id
+      AND gm.user_id=(select auth.uid()) AND gm.status='active' AND gm.role IN ('admin','moderator'))
+  )
+))
+WITH CHECK (EXISTS (
+  SELECT 1 FROM public.social_groups g WHERE g.id=group_rules.group_id AND (
+    g.owner_id=(select auth.uid())
+    OR EXISTS (SELECT 1 FROM public.group_memberships gm WHERE gm.group_id=g.id
+      AND gm.user_id=(select auth.uid()) AND gm.status='active' AND gm.role IN ('admin','moderator'))
+  )
+));
+DROP POLICY IF EXISTS minglora_group_rules_delete_staff ON public.group_rules;
+CREATE POLICY minglora_group_rules_delete_staff ON public.group_rules
+FOR DELETE TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM public.social_groups g WHERE g.id=group_rules.group_id AND (
+    g.owner_id=(select auth.uid())
+    OR EXISTS (SELECT 1 FROM public.group_memberships gm WHERE gm.group_id=g.id
+      AND gm.user_id=(select auth.uid()) AND gm.status='active' AND gm.role IN ('admin','moderator'))
+  )
+));
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.group_rules TO authenticated;
+
 -- Private, member-only group chat. There are no seeded messages.
 CREATE TABLE IF NOT EXISTS public.group_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
