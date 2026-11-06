@@ -1,7 +1,7 @@
 (() => {
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
-    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false },
+    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
     preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
@@ -221,7 +221,14 @@
               <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
-              <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send LIVE, incoming call and new message alerts to this device when the browser or installed web app is in the background.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send enabled notification categories to this device when the browser or installed web app is in the background. Enable this device from the Notifications page too.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
+              <div class="settings-subsection-heading"><strong>Choose what you are notified about</strong><small>Each category can be switched off independently. Changes apply to in-app and device push delivery.</small></div>
+              <label class="settings-toggle"><span><strong>Voice &amp; video calls</strong><small>Incoming one-to-one and group call invitations.</small></span><input type="checkbox" name="notificationCalls" ${settings.notifications.calls !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Minglora LIVE</strong><small>When followed creators go LIVE and LIVE moderator updates.</small></span><input type="checkbox" name="notificationLive" ${settings.notifications.live !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Gifts &amp; Fan Club</strong><small>Gifts received and Fan Club membership activity.</small></span><input type="checkbox" name="notificationGifts" ${settings.notifications.gifts !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>MeetWave invitations</strong><small>Invitations to your MeetWave rooms.</small></span><input type="checkbox" name="notificationMeetWave" ${settings.notifications.meetWave !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>League matches</strong><small>Challenges and accepted match invitations.</small></span><input type="checkbox" name="notificationLeagues" ${settings.notifications.leagues !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Account &amp; platform updates</strong><small>Important account, verification and platform notices.</small></span><input type="checkbox" name="notificationAccount" ${settings.notifications.account !== false ? 'checked' : ''}></label>
               <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
               <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
               <div class="settings-activity-centre">
@@ -691,7 +698,13 @@
             messages: formData.has('notificationMessages'),
             interactions: formData.has('notificationInteractions'),
             push: formData.has('notificationPush'),
-            profileViews: formData.has('notificationProfileViews')
+            profileViews: formData.has('notificationProfileViews'),
+            calls: formData.has('notificationCalls'),
+            live: formData.has('notificationLive'),
+            gifts: formData.has('notificationGifts'),
+            meetWave: formData.has('notificationMeetWave'),
+            leagues: formData.has('notificationLeagues'),
+            account: formData.has('notificationAccount')
           },
           preferences: {
             theme: formData.get('theme'),
