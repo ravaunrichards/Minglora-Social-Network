@@ -24,12 +24,18 @@ const verifiedProfileBadge = member => member?.verificationBadge==='blue'
 const platformAdminProfileBadge = member => member?.platformBadge==='admin'
   ? '<span class="platform-admin-profile-badge" role="img" aria-label="Minglora platform administrator" title="Minglora platform administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8 21 5.2v6.5c0 5.4-3.6 9.1-9 11.5-5.4-2.4-9-6.1-9-11.5V5.2L12 1.8Z"></path><path d="m8.3 12.2 2.3 2.3 5.2-5.3"></path></svg><span>Admin</span></span>'
   : '';
+const creatorLeagueProfileBadge = member => {
+  const league=String(member?.creatorLeague?.leagueClass||'').trim().toUpperCase();
+  if(!/^(D[1-5]|C[1-5]|B[1-5]|A[1-3])$/.test(league))return '';
+  return '<span class="creator-league-profile-badge" role="img" aria-label="Creator League '+league+'" title="Creator League · '+league+'"><span aria-hidden="true">🏆</span> '+league+'</span>';
+};
 const gifterProfileBadge = member => {
   const identity=member?.newGifterIdentity?.active
     ? '<span class="gp-new-gifter-identity" role="status" aria-label="New Gifter identity active for one week" title="New Gifter · expires '+esc(member.newGifterIdentity.expiresAt)+'">NEW GIFTER</span>'
     : '';
+  const leagueBadge=creatorLeagueProfileBadge(member);
   const badge=member?.gifterBadge;
-  if(!badge?.level)return identity;
+  if(!badge?.level)return identity+leagueBadge;
   const level=Math.max(1,Math.min(50,Math.floor(Number(badge.level)||1)));
   const tier=Math.max(1,Math.min(10,Math.ceil(level/5)));
   const title=esc(badge.badgeName||('Gifter LV '+level));
@@ -38,7 +44,8 @@ const gifterProfileBadge = member => {
     : '<span class="gp-inline-badge gp-tier-'+tier+'" role="img" aria-label="'+title+'" title="'+title+'"><strong>'+level+'</strong></span>';
   return identity+artwork+
     (badge.adminAwarded?'<span class="gp-admin-awarded-marker" title="Admin-awarded gifter badge; no Coin spending was added">ADMIN AWARDED</span>':'')+
-    (badge.liveEntranceUnlocked?'<span class="gp-live-entry-badge" role="img" aria-label="LV 25 LIVE entrance unlocked" title="LV 25 LIVE entrance unlocked">LIVE ENTRY</span>':'');
+    (badge.liveEntranceUnlocked?'<span class="gp-live-entry-badge" role="img" aria-label="LV 25 LIVE entrance unlocked" title="LV 25 LIVE entrance unlocked">LIVE ENTRY</span>':'')+
+    leagueBadge;
 };
 window.addEventListener('minglora:gifter-badge-updated',event=>{
   if(state.user){
@@ -634,7 +641,7 @@ function peopleCard(p){
       '<span class="person-cover-caption">MINGLORA MEMBER</span></button>'+
     '<div class="person-card-content">'+
       '<div class="person-identity"><div class="person-avatar-wrap'+(story?' has-story':'')+'"><button type="button" data-profile="'+esc(p.id)+'" aria-label="View '+esc(p.name)+'’s profile"><img class="avatar" src="'+avatar(p)+'" alt=""></button></div>'+
-      '<div class="person-title-group"><h3>'+esc(p.name)+'</h3><span>@'+esc(p.username)+' '+verifiedProfileBadge(p)+'</span></div>'+
+      '<div class="person-title-group"><h3>'+esc(p.name)+'</h3><span>@'+esc(p.username)+' '+verifiedProfileBadge(p)+gifterProfileBadge(p)+'</span></div>'+
       (liveSession?'<span class="person-live-mini"><i></i> LIVE</span>':'')+'</div>'+
       '<p class="person-bio">'+(p.bio?esc(p.bio):'<span>No bio added yet.</span>')+'</p>'+
       '<div class="person-stat-row"><span><strong>'+followerCount+'</strong><small>Followers</small></span><span><strong>'+friendCount+'</strong><small>Friends</small></span><span><strong>'+postCount+'</strong><small>Posts</small></span></div>'+
