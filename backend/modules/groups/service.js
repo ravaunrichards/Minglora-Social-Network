@@ -35,7 +35,7 @@ export function canDiscoverGroup(group) {
 
 export function canRequestGroupMembership(group, userId) {
   if (!group || !userId || getGroupRole(group, userId) || group.status !== 'active') return false;
-  return group.visibility === 'public' || (group.visibility === 'private' && group.discoverable !== false);
+  return group.visibility === 'public' || (group.visibility === 'private' && group.joinApproval !== false && group.discoverable !== false);
 }
 
 export function canPublishGroupPost(group, userId) {
