@@ -601,3 +601,28 @@
 .admin-live-pro-form button:disabled,.admin-live-pro-grant-row button:disabled{opacity:.55;cursor:wait}
 @media(max-width:760px){.admin-live-pro-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.admin-live-pro-search-row{display:grid;grid-template-columns:1fr}.admin-live-pro-search-row button{width:100%}.admin-live-pro-grant-row{align-items:flex-start;flex-direction:column}.admin-live-pro-grant-row button{width:100%}}
+
+
+/* Owner-only read-only gift revenue report inside Admin Settings. */
+.admin-gift-earnings-report{scroll-margin-top:24px;display:grid;gap:14px}
+.admin-gift-earnings-heading{align-items:flex-start}
+.admin-gift-earnings-heading h3{margin:0;font-size:16px}
+.admin-gift-earnings-heading p{margin:5px 0 0;color:var(--muted-text,#777);font-size:.88rem;line-height:1.5}
+.admin-gift-earnings-status,.admin-gift-earnings-footnote{margin:0;color:var(--muted-text,#777);font-size:.82rem;line-height:1.5;overflow-wrap:anywhere}
+.admin-gift-earnings-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;min-width:0}
+.admin-gift-earnings-metric{display:grid;gap:6px;min-width:0;padding:13px;border:1px solid var(--border-color,rgba(127,127,127,.2));border-radius:11px;background:var(--surface,transparent)}
+.admin-gift-earnings-metric small,.admin-gift-earnings-creator-values small{color:var(--muted-text,#777);font-size:.79rem;line-height:1.35}
+.admin-gift-earnings-metric strong{font-size:clamp(1.05rem,2.2vw,1.35rem);line-height:1.25;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.admin-gift-earnings-list-wrap{display:grid;gap:10px;min-width:0}
+.admin-gift-earnings-list-wrap h4{margin:0;font-size:14px}
+.admin-gift-earnings-creators{display:grid;gap:10px;min-width:0}
+.admin-gift-earnings-creator{display:grid;gap:11px;min-width:0;padding:13px;border:1px solid var(--border-color,rgba(127,127,127,.2));border-radius:11px;background:var(--surface,transparent)}
+.admin-gift-earnings-creator-heading{display:grid;gap:3px;min-width:0}
+.admin-gift-earnings-creator-heading strong{overflow-wrap:anywhere;font-size:.95rem}
+.admin-gift-earnings-creator-heading small{color:var(--muted-text,#777);font-size:.8rem;overflow-wrap:anywhere}
+.admin-gift-earnings-creator-values{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr));gap:9px}
+.admin-gift-earnings-creator-values>div{display:grid;gap:4px;min-width:0}
+.admin-gift-earnings-creator-values strong{font-size:.95rem;line-height:1.25;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.admin-gift-earnings-empty{margin:0;color:var(--muted-text,#777);font-size:.88rem}
+#admin-gift-earnings-refresh:disabled{opacity:.6;cursor:wait}
+@media(max-width:560px){.admin-gift-earnings-heading{display:grid;grid-template-columns:1fr}.admin-gift-earnings-heading button{width:100%}.admin-gift-earnings-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-gift-earnings-creator-values{grid-template-columns:repeat(2,minmax(0,1fr))}}
