@@ -208,16 +208,26 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/messages` | Current account's established direct conversations, history and unread counts |
+| GET | `/api/messages` | Current account's authorized direct and group conversations, message history and unread/read-state summaries |
+| GET | `/api/messages/search?q=...&conversationId=...` | Search real messages in accessible conversations or one selected direct/group conversation |
+| GET | `/api/messages/shared?conversationId=...` | Authorized shared photos, videos, audio, files and links for a direct or group conversation |
 | GET | `/api/messages/gifs?q=...` | Search Tenor GIFs through Minglora's server (requires private `TENOR_API_KEY`) |
-| POST | `/api/messages` | Send text, up to five authorized attachments, a Minglora sticker or verified Tenor GIF |
-| POST | `/api/messages/:peerId/read` | Mark incoming messages from the selected conversation member as read; returns the number updated |
+| POST | `/api/messages` | Send direct messages or group messages (include `groupId` for group chat), with supported attachments, stickers or GIFs |
+| POST | `/api/messages/:peerId/read` | Mark incoming direct messages from the selected member as read |
+| POST | `/api/message-groups/:id/read` | Mark incoming group messages as read for the signed-in group member |
+| PATCH | `/api/messages/:messageId` | Edit the sender's eligible text message |
+| DELETE | `/api/messages/:messageId` | Delete for me, or unsend for everyone when requested by the sender |
+| POST | `/api/messages/:messageId/reactions` | Toggle a supported reaction on an accessible message |
+| GET/POST | `/api/message-groups` | List accessible groups or create a private group of up to 50 members |
+| PATCH/POST/DELETE | `/api/message-groups/:id...` | Update group details, manage members, leave and read group messages |
 | GET | `/api/notifications` | Current account's enabled in-app notifications, actor summaries, unread count and category counts |
 | POST | `/api/notifications/:id/read` | Mark one notification owned by the current account as read |
 | DELETE | `/api/notifications/:id` | Delete one notification owned by the current account |
 | POST | `/api/notifications/read` | Mark all current account notifications as read |
 | POST | `/api/notifications/clear` | Clear all read notifications when `readOnly:true`, or clear all current account notifications when `readOnly:false` |
 | GET | `/api/search?q=...` | Search accounts, posts, groups and active Pages; blocked accounts/Pages are filtered |
+
+**Realtime:** clients connect to the same-origin WebSocket path `/api/messages/realtime` using the signed Minglora session cookie. It sends authenticated presence, typing and post-commit message/read/update/delete/group-change signals. Message contents and private attachment URLs continue to load through the authorized HTTP API. A 30-second API refresh is retained as a backstop while connected; clients fall back to five-second refresh and bounded reconnect when the WebSocket is unavailable. The current runtime is single-instance; multi-instance delivery is not claimed.
 
 ## General behavior
 
