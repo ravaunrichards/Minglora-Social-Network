@@ -102,7 +102,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.social_groups g
     WHERE g.id=target_group_id AND g.owner_id=(select auth.uid())
@@ -113,7 +113,7 @@ AS $
       AND gm.status='active'
       AND gm.role IN ('owner','admin','moderator','event_manager')
   );
-$;
+$$;
 REVOKE ALL ON FUNCTION private.can_manage_minglora_group_events(uuid)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION private.can_manage_minglora_group_events(uuid)
@@ -123,8 +123,7 @@ DROP POLICY IF EXISTS minglora_events_read ON public.events;
 CREATE POLICY minglora_events_read ON public.events
 FOR SELECT TO authenticated
 USING (
-  (group_id IS NULL AND visibility='public')
-  OR creator_id=(select auth.uid())
+  (group_id IS NULL AND (visibility='public' OR creator_id=(select auth.uid())))
   OR EXISTS (
     SELECT 1 FROM public.social_groups g
     WHERE g.id=events.group_id AND g.status='active'
@@ -148,11 +147,11 @@ DROP POLICY IF EXISTS minglora_events_update_self ON public.events;
 CREATE POLICY minglora_events_update_self ON public.events
 FOR UPDATE TO authenticated
 USING (
-  creator_id=(select auth.uid())
+  (group_id IS NULL AND creator_id=(select auth.uid()))
   OR (group_id IS NOT NULL AND private.can_manage_minglora_group_events(group_id))
 )
 WITH CHECK (
-  creator_id=(select auth.uid())
+  (group_id IS NULL AND creator_id=(select auth.uid()))
   OR (group_id IS NOT NULL AND private.can_manage_minglora_group_events(group_id))
 );
 
@@ -160,7 +159,7 @@ DROP POLICY IF EXISTS minglora_events_delete_self ON public.events;
 CREATE POLICY minglora_events_delete_self ON public.events
 FOR DELETE TO authenticated
 USING (
-  creator_id=(select auth.uid())
+  (group_id IS NULL AND creator_id=(select auth.uid()))
   OR (group_id IS NOT NULL AND private.can_manage_minglora_group_events(group_id))
 );
 
@@ -172,8 +171,7 @@ WITH CHECK (
   AND EXISTS (
     SELECT 1 FROM public.events e
     WHERE e.id=event_id AND (
-      e.creator_id=(select auth.uid())
-      OR (e.group_id IS NULL AND e.visibility='public')
+      (e.group_id IS NULL AND (e.creator_id=(select auth.uid()) OR e.visibility='public'))
       OR EXISTS (
         SELECT 1 FROM public.social_groups g
         WHERE g.id=e.group_id AND g.status='active'
