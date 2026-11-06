@@ -3506,7 +3506,7 @@ async function route(req, res) {
         const follows=db.follows||[];
         const activityAt=new Map();
         for(const post of db.posts||[]){
-          if(post.status==='hidden'||blockedBetween(user.id,post.userId))continue;
+          if(post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfileAudience(user.id,post.userId,post.audience||'public')||friendPostsMuted(user.id,post.userId))continue;
           const timestamp=Date.parse(post.createdAt)||0;
           if(timestamp>(activityAt.get(post.userId)||0))activityAt.set(post.userId,timestamp);
         }
@@ -3525,7 +3525,7 @@ async function route(req, res) {
             .map(edge=>edge.followerId)
             .filter(id=>!blockedBetween(user.id,id)))];
           const memberPosts=(db.posts||[])
-            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!blockedBetween(user.id,post.userId))
+            .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId))
             .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
           const recentPosts=await Promise.all(memberPosts.slice(0,2).map(publicDiscoveryPost));
           const storyRecord=(db.stories||[])
