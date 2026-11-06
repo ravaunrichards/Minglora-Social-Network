@@ -375,9 +375,27 @@ export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
   // LIVE Gift or first visit to League Arena.
   const knownProfileIds = new Set(db.creatorLeagueProfiles.map(profile => profile.userId));
   let profilesCreated = 0;
+  const seasonKeyForNewProfiles = creatorLeagueSeasonKey(now);
+  const initializedAt = now.toISOString();
   for (const user of db.users || []) {
     if (!user?.id || knownProfileIds.has(user.id)) continue;
-    ensureCreatorLeagueProfile(db, user.id, user.country || user.region || "GLOBAL", now);
+    db.creatorLeagueProfiles.push({
+      userId: user.id,
+      region: String(user.country || user.region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
+      leagueClass: "D5",
+      fragments: 0,
+      leagueShields: 0,
+      lifetimeGiftPoints: 0,
+      seasonPoints: 0,
+      seasonKey: seasonKeyForNewProfiles,
+      matchRankIndex: 0,
+      matchRankPoints: 0,
+      matchWins: 0,
+      matchLosses: 0,
+      matchDraws: 0,
+      createdAt: initializedAt,
+      updatedAt: initializedAt
+    });
     knownProfileIds.add(user.id);
     profilesCreated += 1;
   }
