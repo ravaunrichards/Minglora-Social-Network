@@ -196,6 +196,7 @@ function bindPaletteSwitcher(){
 let toastTimer;
 let messageRefreshKnownIncomingIds=new Set(),messageRefreshKnownIncomingPrimed=false,messengerMessageSoundContext=null;
 let browserNotificationTimer=null;
+let notificationFilter='all',notificationSearch='';
 let browserNotificationSeen=new Set();
 let browserNotificationPrimed=false;
 let webPushSubscriptionActive=false;
@@ -6234,28 +6235,172 @@ async function openMingloraCall(call,liveKit){
     else await api('/calls/'+encodeURIComponent(call.id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});
   }
 }
+function notificationCategoryFor(item){
+  const type=item?.type||'';
+  if(['friend','reaction','comment','follow','profile_view'].includes(type))return 'social';
+  if(type==='message')return 'messages';
+  if(type==='call')return 'calls';
+  if(['live','live_moderator'].includes(type))return 'live';
+  if(['gift','fan_club'].includes(type))return 'gifts';
+  if(type==='meetwave_invite')return 'meetWave';
+  if(type==='league_match')return 'leagues';
+  return 'other';
+}
+function notificationCategoryLabel(category){
+  return ({social:'Social',messages:'Messages',calls:'Calls',live:'Minglora LIVE',gifts:'Gifts & Fan Club',meetWave:'MeetWave',leagues:'League matches',other:'Account & other'})[category]||'Notification';
+}
+function notificationCategoryIcon(item){
+  return ({friend:'♧',reaction:'♡',comment:'▤',follow:'＋',profile_view:'◉',message:'✉',call:'☎',live:'●',live_moderator:'◆',gift:'🎁',fan_club:'★',meetwave_invite:'◈',league_match:'🏆'})[item?.type]||'◆';
+}
+function notificationMatchesFilter(item,filter){
+  return filter==='all'||(filter==='unread'?!item.read:notificationCategoryFor(item)===filter);
+}
+async function markNotificationInCenter(id){
+  await api('/notifications/'+encodeURIComponent(id)+'/read',{method:'POST',body:'{}'});
+  const item=state.notifications.find(notification=>notification.id===id);
+  if(item){item.read=true;item.readAt=new Date().toISOString();}
+}
 async function renderNotifications(){
-  state.notifications=(await api('/notifications')).notifications;
-  const rows=state.notifications.map(n=>{
-    const icon=n.type==='message'?'▤':n.type==='profile_view'?'◉':n.type==='friend'?'♧':n.type==='call'?'📞':n.type==='live'?'🔴':n.type==='reaction'?'♡':'♢';
-    let actions='';
-    if(n.type==='call'&&n.callId)actions='<div class="notice-actions"><button class="primary" type="button" data-answer-call="'+esc(n.callId)+'">Answer</button><button class="secondary" type="button" data-decline-call="'+esc(n.callId)+'">Decline</button></div>';
-    else if(n.type==='live'&&n.liveSessionId)actions='<div class="notice-actions"><button class="primary" type="button" data-watch-notified-live="'+esc(n.liveSessionId)+'">Watch LIVE</button></div>';
-    else if(n.type==='message'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-message-actor="'+esc(n.actor.id)+'">Open message</button></div>';
-    else if(n.type==='profile_view'&&n.actor?.id)actions='<div class="notice-actions"><button class="secondary" type="button" data-profile-view-actor="'+esc(n.actor.id)+'">View profile</button></div>';
-    return '<article class="notice-item '+(n.read?'':'unread')+'"><div class="notice-icon">'+icon+'</div><div class="notice-content"><p>'+esc(n.text)+'</p><small>'+timeAgo(n.createdAt)+'</small>'+actions+'</div></article>';
+  const response=await api('/notifications');
+  state.notifications=Array.isArray(response.notifications)?response.notifications:[];
+  const notifications=state.notifications;
+  const unreadCount=notifications.filter(item=>!item.read).length;
+  const readCount=notifications.length-unreadCount;
+  const categoryCounts=response.categoryCounts||{};
+  const filters=[
+    ['all','All'],['unread','Unread'],['social','Social'],['messages','Messages'],
+    ['calls','Calls'],['live','LIVE'],['gifts','Gifts'],['meetWave','MeetWave'],
+    ['leagues','Leagues'],['other','Other']
+  ];
+  if(!filters.some(([key])=>key===notificationFilter))notificationFilter='all';
+  const filterButtons=filters.map(([key,label])=>{
+    const count=Number(categoryCounts[key]??(key==='all'?notifications.length:key==='unread'?unreadCount:notifications.filter(item=>notificationMatchesFilter(item,key)).length));
+    return '<button type="button" class="notification-filter '+(notificationFilter===key?'active':'')+'" data-notice-filter="'+key+'" aria-pressed="'+(notificationFilter===key?'true':'false')+'"><span>'+label+'</span><b>'+count+'</b></button>';
   }).join('');
-  setContent('<div class="page-heading"><div><h1>Notifications</h1><p class="muted">Receive LIVE, call and message alerts, including when Minglora is in the background.</p></div><div class="notice-actions"><button class="secondary" id="enable-browser-alerts">Enable device push</button><button class="text-button" id="mark-read">Mark all read</button></div></div><section class="card">'+(rows||'<div class="empty-state"><div class="empty-icon">♢</div><h3>All quiet for now</h3><p>Your notifications will show up here.</p></div>')+'</section>');
+  const searchTerm=notificationSearch.trim().toLowerCase();
+  const filtered=notifications.filter(item=>notificationMatchesFilter(item,notificationFilter)&&(!searchTerm||String(item.text||'').toLowerCase().includes(searchTerm)||String(item.actor?.name||'').toLowerCase().includes(searchTerm)||String(item.type||'').toLowerCase().includes(searchTerm)));
+  const rows=filtered.map(item=>{
+    const category=notificationCategoryFor(item);
+    const actor=item.actor;
+    const actorMarkup=actor
+      ? '<img class="notification-avatar-image" src="'+esc(avatar(actor))+'" alt="'+esc(actor.name||'Minglora member')+'">'
+      : '<span class="notification-avatar-fallback" aria-hidden="true">'+notificationCategoryIcon(item)+'</span>';
+    const verified=actor?.verificationBadge==='blue'?'<span class="notification-verified" title="Minglora Verified" aria-label="Minglora Verified">✓</span>':'';
+    let actions='';
+    if(item.type==='call'&&item.callId){
+      actions='<button type="button" class="primary" data-notice-answer="'+esc(item.id)+'" data-call-id="'+esc(item.callId)+'">Answer</button><button type="button" class="secondary" data-notice-decline="'+esc(item.id)+'" data-call-id="'+esc(item.callId)+'">Decline</button>';
+    }else if(item.type==='live'&&item.liveSessionId){
+      actions='<button type="button" class="secondary" data-notice-watch="'+esc(item.id)+'" data-live-id="'+esc(item.liveSessionId)+'">Watch LIVE</button>';
+    }else if(item.type==='message'&&actor?.id){
+      actions='<button type="button" class="secondary" data-notice-message="'+esc(item.id)+'" data-actor-id="'+esc(actor.id)+'">Open Messenger</button>';
+    }else if(item.type==='league_match'){
+      actions='<button type="button" class="secondary" data-notice-leagues="'+esc(item.id)+'">View matches</button>';
+    }else if(item.type==='gift'||item.type==='fan_club'){
+      actions='<button type="button" class="secondary" data-notice-gifts="'+esc(item.id)+'">Open Gifts</button>';
+    }else if(item.type==='meetwave_invite'){
+      actions='<button type="button" class="secondary" data-notice-meetwave="'+esc(item.id)+'">Open MeetWave</button>';
+    }else if(actor?.id){
+      actions='<button type="button" class="secondary" data-notice-profile="'+esc(item.id)+'" data-actor-id="'+esc(actor.id)+'">View profile</button>';
+    }
+    return '<article class="notification-card '+(item.read?'is-read':'is-unread')+'" data-notification-card="'+esc(item.id)+'" data-search="'+esc([item.text,actor?.name,item.type].filter(Boolean).join(' ').toLowerCase())+'">'+
+      '<div class="notification-person">'+actorMarkup+verified+'</div>'+
+      '<div class="notification-main"><div class="notification-meta"><span class="notification-category">'+notificationCategoryLabel(category)+'</span><time>'+esc(timeAgo(item.createdAt))+'</time></div>'+
+      '<p class="notification-copy">'+esc(item.text||'You have a new Minglora notification.')+'</p>'+
+      '<div class="notification-state"><span class="notification-state-dot"></span>'+ (item.read?'Read':'Unread') +'</div>'+
+      (actions?'<div class="notification-actions">'+actions+'</div>':'')+
+      '</div><div class="notification-tools">'+
+      (item.read?'':'<button type="button" class="notification-tool" data-notice-read="'+esc(item.id)+'" aria-label="Mark notification as read" title="Mark as read">✓</button>')+
+      '<button type="button" class="notification-tool delete" data-notice-delete="'+esc(item.id)+'" aria-label="Delete notification" title="Delete notification">×</button></div></article>';
+  }).join('');
+  const emptyMessage=notifications.length?'No notifications match this filter.':'You are all caught up. New activity will appear here when it happens.';
+  setContent('<section class="notification-center">'+
+    '<header class="notification-center-header"><div><span class="notification-eyebrow">YOUR ACTIVITY</span><h1>Notifications</h1><p>Stay on top of conversations, community activity, calls, LIVE, gifts and MeetWave.</p></div>'+
+    '<div class="notification-header-count"><strong>'+unreadCount+'</strong><span>unread</span></div></header>'+
+    '<section class="notification-summary"><div><strong>'+notifications.length+'</strong><span>Total notifications</span></div><div><strong>'+unreadCount+'</strong><span>Unread</span></div><div><strong>'+readCount+'</strong><span>Read</span></div></section>'+
+    '<section class="notification-toolbar"><div class="notification-toolbar-heading"><h2>Notification inbox</h2><div class="notification-toolbar-actions">'+
+    '<button type="button" class="secondary" id="notification-settings">Settings</button><button type="button" class="secondary" id="enable-browser-alerts">Enable device push</button></div></div>'+
+    '<div class="notification-filter-list" role="group" aria-label="Filter notifications">'+filterButtons+'</div>'+
+    '<div class="notification-search-row"><label class="notification-search"><span aria-hidden="true">⌕</span><input id="notification-search" type="search" value="'+esc(notificationSearch)+'" placeholder="Search notifications" aria-label="Search notifications"></label>'+
+    '<div class="notification-bulk-actions"><button type="button" class="text-button" id="mark-read" '+(unreadCount?'':'disabled')+'>Mark all read</button><button type="button" class="text-button" id="clear-read-notifications" '+(readCount?'':'disabled')+'>Clear read</button><button type="button" class="text-button danger-text" id="clear-all-notifications" '+(notifications.length?'':'disabled')+'>Clear all</button></div></div></section>'+
+    '<section class="notification-list" aria-label="Notification list">'+(rows||'<div class="notification-empty"><div class="notification-empty-icon">♢</div><h3>'+emptyMessage+'</h3><p>Choose another category or check back when something new happens.</p></div>')+
+    '<p id="notification-search-empty" class="notification-search-empty" hidden>No notifications match your search.</p></section></section>');
+  document.querySelectorAll('[data-notice-filter]').forEach(button=>button.addEventListener('click',()=>{notificationFilter=button.dataset.noticeFilter;renderNotifications();}));
+  const searchInput=$('#notification-search');
+  searchInput?.addEventListener('input',()=>{
+    notificationSearch=searchInput.value;
+    const term=notificationSearch.trim().toLowerCase();
+    let visible=0;
+    document.querySelectorAll('[data-notification-card]').forEach(card=>{
+      card.hidden=!!term&&!String(card.dataset.search||'').includes(term);
+      if(!card.hidden)visible++;
+    });
+    const empty=$('#notification-search-empty');
+    if(empty)empty.hidden=visible>0||!term;
+  });
   $('#enable-browser-alerts')?.addEventListener('click',enableMingloraPush);
-  document.querySelectorAll('[data-answer-call]').forEach(button=>button.onclick=()=>answerMingloraCall(button.dataset.answerCall));
-  document.querySelectorAll('[data-decline-call]').forEach(button=>button.onclick=()=>declineMingloraCall(button.dataset.declineCall));
-  document.querySelectorAll('[data-message-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.messageActor);if(item?.actor)openMessageWindow(item.actor);});
-  document.querySelectorAll('[data-profile-view-actor]').forEach(button=>button.onclick=()=>{const item=state.notifications.find(notification=>notification.actor?.id===button.dataset.profileViewActor);if(item?.actor)openProfile(item.actor.id);});
-  document.querySelectorAll('[data-watch-notified-live]').forEach(button=>button.onclick=async()=>{
-    try{const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.watchNotifiedLive);if(!session){toast('This LIVE session has ended.');return;}await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');}
+  $('#notification-settings')?.addEventListener('click',()=>window.MingloraSettings?.open?.());
+  document.querySelectorAll('[data-notice-read]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await markNotificationInCenter(button.dataset.noticeRead);await updateNotificationDot();await renderNotifications();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-notice-delete]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await api('/notifications/'+encodeURIComponent(button.dataset.noticeDelete),{method:'DELETE',body:'{}'});await updateNotificationDot();await renderNotifications();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-notice-answer]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await markNotificationInCenter(button.dataset.noticeAnswer);await updateNotificationDot();await answerMingloraCall(button.dataset.callId);}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-notice-decline]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await markNotificationInCenter(button.dataset.noticeDecline);await declineMingloraCall(button.dataset.callId);await updateNotificationDot();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-notice-watch]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await markNotificationInCenter(button.dataset.noticeWatch);const data=await api('/live/sessions');const session=(data.sessions||[]).find(item=>item.id===button.dataset.liveId);if(!session){toast('This LIVE session has ended.');await renderNotifications();return;}await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');await updateNotificationDot();}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  document.querySelectorAll('[data-notice-message]').forEach(button=>button.addEventListener('click',async()=>{
+    const item=notifications.find(value=>value.id===button.dataset.noticeMessage);
+    if(!item?.actor)return;
+    try{await markNotificationInCenter(item.id);await updateNotificationDot();await openMessageWindow(item.actor);}
+    catch(error){toast(error.message);}
+  }));
+  document.querySelectorAll('[data-notice-profile]').forEach(button=>button.addEventListener('click',async()=>{
+    const item=notifications.find(value=>value.id===button.dataset.noticeProfile);
+    if(!item?.actor?.id)return;
+    try{await markNotificationInCenter(item.id);await updateNotificationDot();await openProfile(item.actor.id);}
+    catch(error){toast(error.message);}
+  }));
+  document.querySelectorAll('[data-notice-gifts]').forEach(button=>button.addEventListener('click',async()=>{
+    try{await markNotificationInCenter(button.dataset.noticeGifts);await updateNotificationDot();activateNav('gifts');}
+    catch(error){toast(error.message);}
+  }));
+  document.querySelectorAll('[data-notice-leagues]').forEach(button=>button.addEventListener('click',async()=>{
+    try{await markNotificationInCenter(button.dataset.noticeLeagues);await updateNotificationDot();activateNav('leagues');}
+    catch(error){toast(error.message);}
+  }));
+  document.querySelectorAll('[data-notice-meetwave]').forEach(button=>button.addEventListener('click',async()=>{
+    try{await markNotificationInCenter(button.dataset.noticeMeetwave);await updateNotificationDot();activateNav('meetwave');}
+    catch(error){toast(error.message);}
+  }));
+  $('#mark-read')?.addEventListener('click',async()=>{
+    try{await api('/notifications/read',{method:'POST',body:'{}'});toast('All notifications marked as read.');await updateNotificationDot();await renderNotifications();}
     catch(error){toast(error.message);}
   });
-  $('#mark-read').onclick=async()=>{await api('/notifications/read',{method:'POST',body:'{}'});toast('Notifications marked as read.');renderNotifications();updateNotificationDot();};
+  $('#clear-read-notifications')?.addEventListener('click',async()=>{
+    try{const result=await api('/notifications/clear',{method:'POST',body:JSON.stringify({readOnly:true})});toast(result.removed+' read notifications cleared.');await updateNotificationDot();await renderNotifications();}
+    catch(error){toast(error.message);}
+  });
+  $('#clear-all-notifications')?.addEventListener('click',async()=>{
+    if(!window.confirm('Delete all notifications from your inbox? This cannot be undone.'))return;
+    try{const result=await api('/notifications/clear',{method:'POST',body:JSON.stringify({readOnly:false})});toast(result.removed+' notifications deleted.');await updateNotificationDot();await renderNotifications();}
+    catch(error){toast(error.message);}
+  });
 }
 async function pollBrowserNotifications(){
   if(!state.user)return;
@@ -6269,8 +6414,8 @@ async function pollBrowserNotifications(){
       const fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
-        if(webPushSubscriptionActive||!['live','message','profile_view'].includes(item.type)||!('Notification' in window)||Notification.permission!=='granted')continue;
-        const title=item.type==='live'?'Minglora LIVE':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':'New Minglora message';
+        if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
+        const title=item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
         const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
         notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
       }
@@ -6282,7 +6427,7 @@ function startBrowserNotificationPolling(){
   if(browserNotificationTimer)clearInterval(browserNotificationTimer);
   browserNotificationPrimed=false;browserNotificationSeen=new Set();
   pollBrowserNotifications();
-  browserNotificationTimer=setInterval(pollBrowserNotifications,12000);
+  browserNotificationTimer=setInterval(pollBrowserNotifications,6000);
 }
 async function updateNotificationDot(){try{const n=(await api('/notifications')).notifications;$('#notification-dot').classList.toggle('hidden',!n.some(x=>!x.read));void updateMessengerBadge();}catch{}}
 async function renderSearch(q){
