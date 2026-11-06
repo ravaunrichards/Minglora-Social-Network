@@ -29,7 +29,7 @@ Before enabling production withdrawals, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_S
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
 - Public Pages with unique handles, Page follows, Page details, owner publishing with device-uploaded media and deletion
 - Text and uploaded photo/video Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
-- Direct one-to-one messaging with uploaded media/documents, browser-recorded voice notes, a curated sticker pack, Tenor GIF search/send when configured, emoji composer, compact Messenger-style chat popups, unread counts and read receipts; active windows refresh every five seconds (polling, not WebSocket delivery)
+- Advanced Messenger with direct and private group chats (up to 50 members), uploaded media/documents, browser-recorded voice notes, stickers, Tenor GIF search/send when configured, emoji composer, message replies/reactions/edit/delete/unsend, group read states, per-conversation message search and shared-media browsing; authenticated WebSocket signals carry typing/presence/message updates with a 30-second refresh backstop and five-second polling fallback
 - In-app notifications for supported actions, with persisted account-level notification controls
 - Dedicated Settings & Privacy hub with server-persisted privacy and notification preferences, password/email change requests, TOTP MFA, session revocation, blocked members and downloadable account export
 - Basic substring search across people, posts, groups and Pages
@@ -122,7 +122,7 @@ All application API endpoints use the `/api` prefix.
 - `GET /api/groups`, `POST /api/groups`, group detail and discussion routes under `/api/groups/:id`
 - `GET /api/pages`, `POST /api/pages`, Page detail/follow/post routes under `/api/pages/:id`
 - `GET /api/stories`, `POST /api/stories`, `POST /api/stories/:id/view`, `DELETE /api/stories/:id`
-- `GET /api/messages`, `POST /api/messages`
+- `GET /api/messages`, `GET /api/messages/search`, `GET /api/messages/shared`, `POST /api/messages`, group management under `/api/message-groups`, and authenticated realtime WebSocket at `/api/messages/realtime`
 - `GET /api/notifications`, `GET /api/search?q=...`
 - `GET/PATCH /api/settings`, `POST /api/media/upload/prepare`, `POST /api/media/upload/complete`, `GET /api/account/export`
 - `/api/security/*` password, email, MFA and session controls; `/api/reports/*`, `/api/moderation/*` and `/api/support/*` reporting, review and support workflows
@@ -137,7 +137,7 @@ Hosted persistence now uses Supabase's PostgreSQL database through the Supabase 
 
 The single-row JSONB compatibility adapter is durable but does not provide normalized relational transactions or multi-instance concurrency. Minglora's Supabase relational schema and hardening migrations 005–014 are installed. Application routes still need to move to the normalized tables before the system can be considered a high-concurrency social-network data layer.
 
-Before opening public registration at scale, continue the route-by-route privacy/accessibility audit, configure and test database backups/restore, move login throttling to a distributed rate limiter, add malware/media scanning and appeals policy automation, complete observability and a security review. Device-based media upload, Story photo/video, member reporting, the moderator queue and support tickets are implemented. Automated video transcoding, fully real-time messaging, short-form video playback and Ads remain unfinished. LIVE guest requests, co-host moderation, recording/egress and verified LiveKit webhooks also remain unfinished.
+Before opening public registration at scale, continue the route-by-route privacy/accessibility audit, configure and test database backups/restore, move login throttling to a distributed rate limiter, add malware/media scanning and appeals policy automation, complete observability and a security review. Device-based media upload, Story photo/video, member reporting, the moderator queue and support tickets are implemented. Automated video transcoding, multi-instance Messenger fan-out/normalized transactional message repositories, end-to-end encrypted and disappearing messages, short-form video playback and Ads remain unfinished. Messenger's authenticated WebSocket signals and same-process multi-device presence are implemented; the current single-instance JSONB compatibility adapter is not a horizontally scalable realtime architecture. LIVE guest requests, co-host moderation, recording/egress and verified LiveKit webhooks also remain unfinished.
 
 ## Supabase Auth integration
 
