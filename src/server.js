@@ -1287,6 +1287,90 @@ async function route(req, res) {
         });
         return json(res,200,report);
       }
+      if(method==='PUT'&&p==='/api/admin/platform-payout-account'){
+        const adminEmail=normalizeEmail(user?.email||'');
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(!user||user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can change the platform PayPal destination.'});
+        }
+        const paypalEmail=String(input.paypalEmail||'').trim().toLowerCase();
+        const paypalEmailPattern=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}$/i;
+        if(paypalEmail.length>127||!paypalEmailPattern.test(paypalEmail)){
+          return json(res,400,{error:'Enter a valid PayPal receiving email address (127 characters or fewer).'});
+        }
+        const account=await requestSupabaseState('economy_admin_platform_payout_account_set',{
+          adminUserId:user.id,adminEmail,paypalEmail
+        });
+        return json(res,200,account);
+      }
+
+      if(method==='POST'&&p==='/api/admin/platform-payouts'){
+        const adminEmail=normalizeEmail(user?.email||'');
+        const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
+        if(!user||user.id!==creatorHubAdminId||adminEmail!=='creatorhubcreatornetwork@gmail.com'||
+           user.role!=='platform_owner'||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can withdraw Minglora platform earnings.'});
+        }
+        const amountMinor=Number(input.amountMinor);
+        if(!Number.isSafeInteger(amountMinor)||amountMinor<100||amountMinor>2000000){
+          return json(res,400,{error:'Enter a withdrawal from USD 1.00 to USD 20,000.00 per PayPal payout.'});
+        }
+        const requestId=uid();
+        const reservation=await requestSupabaseState('economy_admin_platform_payout_request',{
+          adminUserId:user.id,adminEmail,amountMinor,requestId
+        });
+        const payoutId=String(reservation?.payout?.payoutId||'');
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!uuidPattern.test(payoutId)){
+          return json(res,503,{error:'Minglora reserved the withdrawal but did not return its payout reference. Do not submit it again; contact the owner administrator for reconciliation.'});
+        }
+        try{
+          const payout=await paypalRequest('/v1/payments/payouts','POST',{
+            sender_batch_header:{
+              sender_batch_id:'MGLPLT'+payoutId.replace(/-/g,'').slice(0,24),
+              email_subject:'Your Minglora platform share withdrawal',
+              email_message:'Minglora has submitted your platform share withdrawal to PayPal.'
+            },
+            items:[{
+              recipient_type:'EMAIL',
+              amount:{value:(amountMinor/100).toFixed(2),currency:'USD'},
+              receiver:String(reservation.payout.paypalEmail||''),
+              note:'Minglora platform earnings · 50% platform share',
+              sender_item_id:payoutId.replace(/-/g,'').slice(0,30)
+            }]
+          },'minglora-platform-payout-'+payoutId);
+          const batchId=String(payout.batch_header?.payout_batch_id||'');
+          if(!batchId){
+            throw Object.assign(new Error('PayPal did not return a payout batch reference. The amount remains reserved until this submission is reconciled; do not retry it.'),{status:503,code:'PLATFORM_PAYOUT_BATCH_UNCONFIRMED'});
+          }
+          await requestSupabaseState('economy_admin_platform_payout_update',{
+            adminUserId:user.id,adminEmail,payoutId,status:'processing',paypalBatchId:batchId
+          });
+          return json(res,202,{
+            ok:true,payoutId,batchId,status:'processing',amountMinor,currency:'USD',
+            paypalEmail:reservation.payout.paypalEmail
+          });
+        }catch(error){
+          if(error?.paypalNoSubmission===true){
+            try{
+              await requestSupabaseState('economy_admin_platform_payout_update',{
+                adminUserId:user.id,adminEmail,payoutId,status:'failed',
+                failureCode:error.code||'PAYPAL_REJECTED',
+                failureMessage:String(error.message||'PayPal rejected the withdrawal.').slice(0,500)
+              });
+            }catch(releaseError){
+              console.error('[Minglora platform payouts] PayPal rejected withdrawal but reservation release failed.',{
+                payoutId,providerCode:error.code||null,
+                releaseMessage:String(releaseError?.message||releaseError).slice(0,160)
+              });
+              throw Object.assign(new Error('PayPal rejected the withdrawal, but Minglora could not release its reservation. Do not retry; contact the owner administrator.'),{status:503,code:'PLATFORM_PAYOUT_RESERVATION_RELEASE_FAILED'});
+            }
+            throw Object.assign(new Error('PayPal did not submit this withdrawal. Minglora marked it Failed and released the reserved amount. Check the receiving PayPal email and Payouts permission before trying again.'),{status:502,code:'PAYPAL_PLATFORM_PAYOUT_REJECTED'});
+          }
+          throw error;
+        }
+      }
 
       const canManageLivePro = () => isDesignatedCreatorHubAdmin(user) && isModerator(user,req) && hasActiveReviewerSession(user);
       const liveProGrantFor = memberId => (db.liveProGrants || []).find(grant =>
