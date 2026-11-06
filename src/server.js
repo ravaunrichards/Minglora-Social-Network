@@ -1317,7 +1317,7 @@ async function route(req, res) {
           return json(res,400,{error:'Enter a withdrawal from USD 1.00 to USD 20,000.00 per PayPal payout.'});
         }
         const requestId=String(input.requestId||'').trim();
-        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         if(!uuidPattern.test(requestId)){
           return json(res,400,{error:'A valid unique withdrawal request reference is required. Retry from the withdrawal form.'});
         }
