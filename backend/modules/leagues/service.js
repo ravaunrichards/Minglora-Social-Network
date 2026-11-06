@@ -322,7 +322,11 @@ export function settleCreatorLeagueDay(db, dayKey, now = new Date()) {
   for (const score of db.creatorLeagueDailyScores.filter(item => item.dayKey === dayKey && Number(item.points) > 0)) {
     points.set(score.userId, (points.get(score.userId) || 0) + Number(score.points));
   }
-  const profiles = [...points.keys()].map(id => db.creatorLeagueProfiles.find(profile => profile.userId === id)).filter(Boolean);
+  // Every enrolled creator in the same region/class is part of that day's
+  // standings. A creator who receives no eligible LIVE Gifts scores zero;
+  // omitting zero-score creators can prevent a gifting creator from advancing
+  // simply because they are the only member who received Gifts that day.
+  const profiles = db.creatorLeagueProfiles.filter(profile => profile?.userId);
   const buckets = new Map();
   for (const profile of profiles) {
     const key = (profile.region || "GLOBAL") + ":" + profile.leagueClass;

@@ -109,6 +109,37 @@ test("daily regional placements award promotion fragments and keep D5 as the flo
   assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-bottom").leagueClass, "D5");
 });
 
+test("daily placements rank all enrolled creators, so the sole gifter can earn a promotion fragment", () => {
+  const db = blankDb();
+  const start = new Date("2026-11-02T12:00:00.000Z");
+  const creatorIds = ["gifted-creator", "zero-1", "zero-2", "zero-3", "zero-4", "zero-5", "zero-6"];
+  creatorIds.forEach(id => ensureCreatorLeagueProfile(db, id, "JAMAICA", start));
+
+  for (let offset = 0; offset < 4; offset += 1) {
+    const day = new Date(start.getTime() + offset * 86400000);
+    const dayKey = day.toISOString().slice(0, 10);
+    recordLiveGiftForLeagues(db, {
+      giftId: "gifted-creator-gift-" + offset,
+      recipientId: "gifted-creator",
+      region: "JAMAICA",
+      coinAmount: 500,
+      now: day
+    });
+
+    const placement = settleCreatorLeagueDay(db, dayKey, new Date(day.getTime() + 86400000));
+    assert.equal(placement.activeCreators, 7);
+    assert.equal(placement.placementsProcessed, 1);
+  }
+
+  const giftedCreator = db.creatorLeagueProfiles.find(item => item.userId === "gifted-creator");
+  assert.equal(giftedCreator.lifetimeGiftPoints, 2000);
+  assert.equal(giftedCreator.leagueClass, "D4");
+  assert.equal(giftedCreator.leagueShields, 1);
+  for (const id of creatorIds.slice(1)) {
+    assert.equal(db.creatorLeagueProfiles.find(item => item.userId === id).leagueClass, "D5");
+  }
+});
+
 test("match completion awards match rating only once", () => {
   const db = blankDb();
   const now = new Date("2026-11-04T12:00:00.000Z");
