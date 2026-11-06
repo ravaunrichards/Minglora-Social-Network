@@ -5573,7 +5573,7 @@ function startMessengerRealtime(){
       if(win)updateMessageWindowPresence(win);
       return;
     }
-    if(['message:new','message:updated','message:deleted','message:read','message:group-updated','message:group-removed'].includes(message.type)){
+    if(['message:new','message:updated','message:deleted','message:expired','message:read','message:group-updated','message:group-removed','conversation:settings'].includes(message.type)){
       if(message.type==='message:group-removed'){
         state.messageWindows=state.messageWindows.filter(item=>item.groupId!==message.groupId);
         renderMessageWindows();
@@ -5771,7 +5771,7 @@ function renderMessageContent(messages=[]){
     const receipt=mine?(message.groupId?(message.readState?.readCount+' of '+message.readState?.total+' seen'):(message.read?'Seen':'Sent')):'';
     const reply=message.replyToId?messages.find(item=>item.id===message.replyToId):null;
     const replyHtml=reply?'<div class="message-reply-preview"><strong>'+esc(reply.author?.name||'Replying to a message')+'</strong><span>'+esc(reply.unsent?'Message unavailable':reply.text||((reply.attachments||[]).length?'Attachment':'Message'))+'</span></div>':'';
-    const expiryLabel=message.expiresAt?'<small class="message-expiry-label" title="This message will be removed automatically">Disappears '+esc(timeAgo(message.expiresAt))+'</small>':'';
+    const expiryLabel=message.expiresAt?'<small class="message-expiry-label" title="This message will be removed automatically">Expires '+esc(new Date(message.expiresAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}))+'</small>':'';
     const content=message.unsent?'<p class="message-unsent-label">This message was unsent.</p>':(message.stickerId?'<div class="message-window-sticker">'+esc(message.text||'')+'</div>':(message.text?'<p>'+esc(message.text)+'</p>':''));
     const gif=message.unsent?'':(message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'');
     const attachments=message.unsent?'':messageAttachmentHtml(message.attachments);
@@ -5784,7 +5784,7 @@ function renderMessageContent(messages=[]){
     '</div></details>';
     const counts={};Object.values(message.reactions||{}).forEach(value=>{counts[value]=(counts[value]||0)+1;});
     const reactionHtml='<div class="message-reaction-row">'+['👍','❤️','😂','😮','😢','🙏'].map(reaction=>'<button type="button" class="message-reaction-button '+(message.reactions?.[state.user.id]===reaction?'is-selected':'')+'" data-message-react="'+esc(message.id)+'" data-reaction="'+reaction+'" aria-label="React '+reaction+'">'+reaction+(counts[reaction]?' <small>'+counts[reaction]+'</small>':'')+'</button>').join('')+'</div>';
-    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+content+gif+attachments+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
+    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+content+gif+attachments+expiryLabel+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
   }).join('');
 }
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
