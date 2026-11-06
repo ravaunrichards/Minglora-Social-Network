@@ -13,7 +13,7 @@ const COLLECTIONS = [
   'users', 'posts', 'friendships', 'follows', 'blocks', 'savedPosts', 'savedPostCollections', 'mediaAssets',
   'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
-  'pageFollows', 'pagePosts', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
+  'pageFollows', 'pagePosts', 'pageViews', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
     'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
     'liveFanClubMemberships', 'liveFanClubEvents',
@@ -143,6 +143,7 @@ function stripLegacyDemoData(state) {
   state.pageRoles = (state.pageRoles || []).filter(r => !demoUsers.has(r.userId) && !removedPageIds.has(r.pageId));
   state.pageFollows = (state.pageFollows || []).filter(f => !demoUsers.has(f.userId) && !removedPageIds.has(f.pageId));
   state.pagePosts = (state.pagePosts || []).filter(p => !demoUsers.has(p.publishedBy) && !removedPageIds.has(p.pageId));
+  state.pageViews = (state.pageViews || []).filter(view => !demoUsers.has(view.viewerId) && !removedPageIds.has(view.pageId));
   state.messages = (state.messages || []).filter(m => !demoUsers.has(m.from) && !demoUsers.has(m.to));
   state.messageConversationHides = (state.messageConversationHides || []).filter(item => !demoUsers.has(item.userId) && !demoUsers.has(item.peerId));
   state.notifications = (state.notifications || []).filter(n => !demoUsers.has(n.userId) && !demoUsers.has(n.actorId));
