@@ -4019,7 +4019,9 @@ async function route(req, res) {
         ensureGroupRoles(group);
         let record=group.memberships.find(item=>item.userId===targetId);
         if(!record){record={userId:targetId,role,status,joinedAt:now()};group.memberships.push(record);}
+        const wasActive=record.status==='active';
         record.role=role;record.status=status;record.updatedAt=now();
+        if(status==='active'&&!wasActive)record.joinedAt=now();
         if(status==='active'&&!group.members.includes(targetId))group.members.push(targetId);
         if(status!=='active')group.members=group.members.filter(id=>id!==targetId);
         return record;
@@ -4072,7 +4074,6 @@ async function route(req, res) {
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});
         ensureGroupRoles(group);
         if(!canPublishGroupPost(group,user.id))return json(res,403,{error:'Join this group before posting.'});
-        if(group.postApproval&& !canModerateGroup(group,user.id))return json(res,403,{error:'This group requires an administrator to approve posts.'});
         const validation=validatePostInput({text:input.text,mediaIds:input.mediaIds,imageUrl:input.imageUrl});
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='group'&&asset.status==='uploaded'));
@@ -4211,6 +4212,7 @@ async function route(req, res) {
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         const invitation=db.groupInvitations.find(item=>item.id===m[2]&&item.groupId===group.id&&item.inviteeId===user.id&&item.status==='pending');
         if(!invitation)return json(res,404,{error:'Invitation not found.'});
+        if(blockedBetween(user.id,invitation.inviterId))return json(res,403,{error:'This invitation is no longer available.'});
         const action=String(input.action||'');
         if(!['accept','decline'].includes(action))return json(res,400,{error:'Choose accept or decline.'});
         invitation.status=action==='accept'?'accepted':'declined';invitation.respondedAt=now();
@@ -4299,7 +4301,7 @@ async function route(req, res) {
       if(method==='GET'&&m){
         const group=db.groups.find(g=>g.id===m[1]);if(!group)return json(res,404,{error:'Group not found.'});ensureGroupRoles(group);
         if(!canViewGroup(group,user.id)||(!getGroupRole(group,user.id)&&group.visibility!=='public'))return json(res,404,{error:'Group events are private.'});
-        const events=db.groupEvents.filter(event=>event.groupId===group.id).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)).map(event=>({...event,rsvpCounts:{going:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='going').length,interested:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='interested').length},myResponse:db.groupEventRsvps.find(r=>r.eventId===event.id&&r.userId===user.id)?.response||null}));
+        const events=db.groupEvents.filter(event=>event.groupId===group.id&&event.status!=='cancelled'&&Date.parse(event.startsAt)>=Date.now()).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)).map(event=>({...event,rsvpCounts:{going:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='going').length,interested:db.groupEventRsvps.filter(r=>r.eventId===event.id&&r.response==='interested').length},myResponse:db.groupEventRsvps.find(r=>r.eventId===event.id&&r.userId===user.id)?.response||null}));
         return json(res,200,{events});
       }
       if(method==='POST'&&m){
