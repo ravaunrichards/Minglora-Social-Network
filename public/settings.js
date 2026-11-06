@@ -143,8 +143,38 @@
       };
       applyPreferences(settings);
       window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: settings }));
+      const visibilitySummary = ({ public: 'Public', friends: 'Friends only', private: 'Private' })[settings.privacy.profileVisibility] || 'Custom';
+      const mfaSummary = mfaResult.available ? (mfaResult.enabled ? 'Enabled' : 'Not enabled') : 'Unavailable';
       main.innerHTML = `
         <div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
+        <section class="settings-search-tools" aria-label="Find settings">
+          <label class="settings-search-label" for="settings-search">Search all settings</label>
+          <input id="settings-search" type="search" autocomplete="off" placeholder="Search privacy, password, notifications, devices…" aria-describedby="settings-search-status">
+          <p id="settings-search-status" class="settings-search-status" role="status" aria-live="polite">Search across all eight settings categories.</p>
+          <p id="settings-search-no-results" class="settings-search-no-results" role="status" hidden>No settings matched that search. Try another word.</p>
+        </section>
+        <section class="settings-overview-grid" aria-label="Privacy and security overview">
+          <article class="settings-overview-card">
+            <span>PROFILE VISIBILITY</span><strong>${escapeHtml(visibilitySummary)}</strong>
+            <small>Who can view your profile</small>
+            <button type="button" data-settings-jump="visibility">Review visibility</button>
+          </article>
+          <article class="settings-overview-card">
+            <span>TWO-FACTOR SIGN-IN</span><strong>${escapeHtml(mfaSummary)}</strong>
+            <small>Authenticator app protection</small>
+            <button type="button" data-settings-jump="logon">Review security</button>
+          </article>
+          <article class="settings-overview-card">
+            <span>ACTIVE DEVICES</span><strong>${sessions.length.toLocaleString()}</strong>
+            <small>Signed-in sessions on your account</small>
+            <button type="button" data-settings-jump="logon">Manage devices</button>
+          </article>
+          <article class="settings-overview-card">
+            <span>BLOCKED ACCOUNTS</span><strong>${blockedUsers.length.toLocaleString()}</strong>
+            <small>Members you have blocked</small>
+            <button type="button" data-settings-jump="interactions">Manage blocks</button>
+          </article>
+        </section>
         <form id="settings-form" class="settings-panels">
             <div class="settings-category-intro">
               <p>Choose a category to find its settings. Existing Minglora controls are kept in their original sections and saved together.</p>
@@ -152,7 +182,7 @@
                 <button type="button" class="settings-category-tab active" aria-pressed="true" data-settings-category-button="activity" data-category-description="Notifications and profile-view activity."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#activity"></use></svg><span>Activity</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="account" data-category-description="Your account information, personal data and account actions."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile"></use></svg><span>Account</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="visibility" data-category-description="Profile privacy and audience choices."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#privacy"></use></svg><span>Visibility</span></button>
-                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Blocking and voice/video call preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Comments, Messenger presence and sounds, blocking, and voice/video call preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="content-display" data-category-description="Appearance, themes, feed order and display preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg><span>Content &amp; Display</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="cache-cellular" data-category-description="Lite mode, browser storage and temporary cached images."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore"></use></svg><span>Cache &amp; Cellular</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="support-about" data-category-description="Support requests, help and platform information."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#external-link"></use></svg><span>Support &amp; About</span></button>
@@ -207,6 +237,11 @@
               <label class="settings-field"><span><strong>Who can comment on your posts?</strong><small>This is checked by the server when someone submits a comment.</small></span>
                 <select name="commentAudience"><option value="everyone" ${(settings.privacy.commentAudience||'everyone')==='everyone'?'selected':''}>Everyone</option><option value="friends" ${settings.privacy.commentAudience==='friends'?'selected':''}>Friends only</option><option value="nobody" ${settings.privacy.commentAudience==='nobody'?'selected':''}>Nobody else</option></select>
               </label>
+              <div class="settings-subsection-heading"><strong>Messenger behaviour</strong><small>These preferences sync with the Messenger options menu on your signed-in devices.</small></div>
+              <label class="settings-toggle"><span><strong>Show active status</strong><small>Let other members see when you are active in Minglora.</small></span><input type="checkbox" name="messengerActiveStatus" ${settings.preferences.messengerActiveStatus !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Incoming-call sounds</strong><small>Play a sound when someone calls you.</small></span><input type="checkbox" name="messengerIncomingCallSounds" ${settings.preferences.messengerIncomingCallSounds !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Message sounds</strong><small>Play a sound when a new message arrives.</small></span><input type="checkbox" name="messengerMessageSounds" ${settings.preferences.messengerMessageSounds !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Automatically open new chats</strong><small>Open a chat window when a new message arrives.</small></span><input type="checkbox" name="messengerAutoOpenNewMessages" ${settings.preferences.messengerAutoOpenNewMessages ? 'checked' : ''}></label>
               <p class="settings-note">Mention controls, content reuse permissions and viewer download permissions will be connected when those specific publishing workflows expose enforceable audience checks. No inactive switches are shown here.</p>
             </section>
             <section class="settings-card" id="settings-blocking" data-settings-category="interactions">
@@ -597,19 +632,57 @@
       }));
       const categoryTabs=[...document.querySelectorAll('[data-settings-category-button]')];
       const categorizedSections=[...settingsForm.querySelectorAll('[data-settings-category]')];
+      const settingsSearch=document.querySelector('#settings-search');
+      const settingsSearchStatus=document.querySelector('#settings-search-status');
+      const settingsSearchNoResults=document.querySelector('#settings-search-no-results');
+      const settingsDescription=document.querySelector('#settings-category-description');
+      let activeSettingsCategory='activity';
+      function applySettingsSearch() {
+        const query=String(settingsSearch?.value||'').trim().toLocaleLowerCase();
+        if(!query){
+          for(const tab of categoryTabs)tab.hidden=false;
+          for(const section of categorizedSections)section.hidden=section.dataset.settingsCategory!==activeSettingsCategory;
+          if(settingsSearchStatus)settingsSearchStatus.textContent='Search across all eight settings categories.';
+          if(settingsSearchNoResults)settingsSearchNoResults.hidden=true;
+          const selected=categoryTabs.find(tab=>tab.dataset.settingsCategoryButton===activeSettingsCategory);
+          if(settingsDescription&&selected)settingsDescription.textContent=selected.dataset.categoryDescription||'';
+          return;
+        }
+        const matches=categorizedSections.filter(section=>section.textContent.toLocaleLowerCase().includes(query));
+        const matchingCategories=new Set(matches.map(section=>section.dataset.settingsCategory));
+        for(const tab of categoryTabs){
+          const visible=matchingCategories.has(tab.dataset.settingsCategoryButton);
+          tab.hidden=!visible;
+          tab.classList.remove('active');
+          tab.setAttribute('aria-pressed','false');
+        }
+        for(const section of categorizedSections)section.hidden=!matches.includes(section);
+        if(settingsSearchStatus)settingsSearchStatus.textContent=matches.length
+          ? matches.length+' matching setting section'+(matches.length===1?'':'s')+' across '+matchingCategories.size+' categor'+(matchingCategories.size===1?'y':'ies')+'.'
+          : 'No matching settings found.';
+        if(settingsSearchNoResults)settingsSearchNoResults.hidden=matches.length>0;
+        if(settingsDescription)settingsDescription.textContent=matches.length
+          ? 'Search results from every settings category.'
+          : 'No matching settings found. Clear the search or try another term.';
+      }
       function activateSettingsCategory(category) {
         const selected=categoryTabs.find(tab=>tab.dataset.settingsCategoryButton===category);
         if(!selected)return;
+        activeSettingsCategory=category;
+        if(settingsSearch)settingsSearch.value='';
         for(const tab of categoryTabs){
           const active=tab===selected;
           tab.classList.toggle('active',active);
           tab.setAttribute('aria-pressed',active?'true':'false');
         }
-        for(const section of categorizedSections)section.hidden=section.dataset.settingsCategory!==category;
-        const description=document.querySelector('#settings-category-description');
-        if(description)description.textContent=selected.dataset.categoryDescription||'';
+        applySettingsSearch();
       }
       categoryTabs.forEach(tab=>tab.addEventListener('click',()=>activateSettingsCategory(tab.dataset.settingsCategoryButton)));
+      document.querySelectorAll('[data-settings-jump]').forEach(button=>button.addEventListener('click',()=>activateSettingsCategory(button.dataset.settingsJump)));
+      settingsSearch?.addEventListener('input',applySettingsSearch);
+      settingsSearch?.addEventListener('keydown',event=>{
+        if(event.key==='Escape'&&settingsSearch.value){settingsSearch.value='';applySettingsSearch();}
+      });
       activateSettingsCategory('activity');
 
       async function refreshStorageSummary(){
@@ -700,7 +773,11 @@
             feedSort: formData.get('feedSort'),
             reducedMotion: formData.has('reducedMotion'),
             liteMode: formData.has('liteMode'),
-            displayCurrency: formData.get('displayCurrency') || 'USD'
+            displayCurrency: formData.get('displayCurrency') || 'USD',
+            messengerIncomingCallSounds: formData.has('messengerIncomingCallSounds'),
+            messengerMessageSounds: formData.has('messengerMessageSounds'),
+            messengerAutoOpenNewMessages: formData.has('messengerAutoOpenNewMessages'),
+            messengerActiveStatus: formData.has('messengerActiveStatus')
           }
         };
       }
