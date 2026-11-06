@@ -3213,6 +3213,15 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/leagues/overview'){
         await syncRefundedGiftActivity();
         const overview=getCreatorLeagueOverview(db,user);
+        overview.activeMatches=overview.activeMatches.filter(match=>{
+          const participantIds=[match.challengerId,match.opponentId];
+          if(participantIds.filter(id=>id!==user.id).some(id=>blockedBetween(user.id,id)))return false;
+          if(participantIds.includes(user.id))return true;
+          const sessions=[match.challengerSessionId,match.opponentSessionId].map(id=>(db.liveSessions||[]).find(item=>item.id===id));
+          return sessions.length===2&&sessions.every(session=>session&&session.status==='live'&&(
+            session.visibility==='public'||(session.visibility==='friends'&&isFriend(user.id,session.hostId))
+          ));
+        });
         await saveStore();
         return json(res,200,{viewerId:user.id,...overview});
       }
