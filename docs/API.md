@@ -212,8 +212,11 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 | GET | `/api/messages/gifs?q=...` | Search Tenor GIFs through Minglora's server (requires private `TENOR_API_KEY`) |
 | POST | `/api/messages` | Send text, up to five authorized attachments, a Minglora sticker or verified Tenor GIF |
 | POST | `/api/messages/:peerId/read` | Mark incoming messages from the selected conversation member as read; returns the number updated |
-| GET | `/api/notifications` | Current account's notifications |
+| GET | `/api/notifications` | Current account's enabled in-app notifications, actor summaries, unread count and category counts |
+| POST | `/api/notifications/:id/read` | Mark one notification owned by the current account as read |
+| DELETE | `/api/notifications/:id` | Delete one notification owned by the current account |
 | POST | `/api/notifications/read` | Mark all current account notifications as read |
+| POST | `/api/notifications/clear` | Clear all read notifications when `readOnly:true`, or clear all current account notifications when `readOnly:false` |
 | GET | `/api/search?q=...` | Search accounts, posts, groups and active Pages; blocked accounts/Pages are filtered |
 
 ## General behavior

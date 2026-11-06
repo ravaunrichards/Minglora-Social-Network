@@ -30,7 +30,7 @@ Before enabling production withdrawals, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_S
 - Public Pages with unique handles, Page follows, Page details, owner publishing with device-uploaded media and deletion
 - Text and uploaded photo/video Stories with public/friends/followers/private audiences, 24-hour expiry and actual viewer tracking
 - Direct one-to-one messaging with uploaded media/documents, browser-recorded voice notes, a curated sticker pack, Tenor GIF search/send when configured, emoji composer, compact Messenger-style chat popups, unread counts and read receipts; active windows refresh every five seconds (polling, not WebSocket delivery)
-- In-app notifications for supported actions, with persisted account-level notification controls
+- Advanced account-backed notification centre with social, message, call, LIVE, gift/Fan Club, MeetWave, league and account categories; category filters/counts and search; unread badge; per-item read/delete; separate clear-read/clear-all actions; account notification preferences; and configured per-device Web Push. Foreground inbox refresh currently polls every six seconds (not Supabase Realtime).
 - Dedicated Settings & Privacy hub with server-persisted privacy and notification preferences, password/email change requests, TOTP MFA, session revocation, blocked members and downloadable account export
 - Basic substring search across people, posts, groups and Pages
 - Member reports, moderator review queue and supported moderation actions (moderator access requires an explicit ID allow-list)

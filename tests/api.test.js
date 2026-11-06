@@ -249,11 +249,12 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(defaultSettings.body.settings.privacy.profileVisibility, 'public');
   assert.equal(defaultSettings.body.settings.notifications.inApp, true);
   assert.equal(defaultSettings.body.settings.notifications.push, true);
+  for (const key of ['calls','live','gifts','meetWave','leagues','account']) assert.equal(defaultSettings.body.settings.notifications[key], true, key+' notifications default to enabled');
   const savedSettings = await request('/api/settings', {
     method: 'PATCH',
     body: JSON.stringify({
       privacy: { profileVisibility: 'friends', allowFriendRequests: false, messageAudience: 'friends' },
-      notifications: { inApp: true, messages: false },
+      notifications: { inApp: true, messages: false, calls: false, gifts: false, meetWave: false },
       preferences: { theme: 'dark', feedSort: 'oldest', reducedMotion: true }
     })
   });
@@ -263,6 +264,11 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const reloadedSettings = await request('/api/settings');
   assert.equal(reloadedSettings.body.settings.privacy.allowFriendRequests, false);
   assert.equal(reloadedSettings.body.settings.notifications.messages, false);
+  assert.equal(reloadedSettings.body.settings.notifications.calls, false);
+  assert.equal(reloadedSettings.body.settings.notifications.gifts, false);
+  assert.equal(reloadedSettings.body.settings.notifications.meetWave, false);
+  assert.equal(reloadedSettings.body.settings.notifications.live, true);
+  assert.equal(reloadedSettings.body.settings.notifications.account, true);
   assert.equal(reloadedSettings.body.settings.privacy.meetWaveAudience, 'everyone');
   const meetWavePrivacyUpdate = await request('/api/settings', {
     method: 'PATCH', body: JSON.stringify({ privacy: { meetWaveAudience: 'nobody' } })
@@ -658,6 +664,38 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(reciprocalFollow.status, 200);
   assert.equal(reciprocalFollow.body.following, true);
   assert.equal(reciprocalFollow.body.friends, true);
+
+  // Notification Centre: event categories, unread counts, per-item ownership, and cleanup.
+  cookie = secondCookie;
+  const secondUserNotifications = await request('/api/notifications');
+  assert.equal(secondUserNotifications.status, 200);
+  assert.ok(Array.isArray(secondUserNotifications.body.notifications));
+  assert.ok(secondUserNotifications.body.categoryCounts.social >= 1);
+  const friendshipNotice = secondUserNotifications.body.notifications.find(item => item.type === 'friend');
+  assert.ok(friendshipNotice, 'mutual follows create a friendship notification');
+  assert.ok(friendshipNotice.actor?.id === firstUserId, 'notification actor details are safely included');
+  assert.ok(secondUserNotifications.body.unreadCount >= 1);
+  cookie = firstCookie;
+  const cannotDeleteAnotherMembersNotification = await request('/api/notifications/' + encodeURIComponent(friendshipNotice.id), { method: 'DELETE', body: '{}' });
+  assert.equal(cannotDeleteAnotherMembersNotification.status, 404, 'members cannot delete another account notification');
+  cookie = secondCookie;
+  const markOneNotificationRead = await request('/api/notifications/' + encodeURIComponent(friendshipNotice.id) + '/read', { method: 'POST', body: '{}' });
+  assert.equal(markOneNotificationRead.status, 200);
+  const oneReadInbox = await request('/api/notifications');
+  assert.equal(oneReadInbox.body.notifications.find(item => item.id === friendshipNotice.id).read, true);
+  const clearReadNotifications = await request('/api/notifications/clear', { method: 'POST', body: JSON.stringify({ readOnly: true }) });
+  assert.equal(clearReadNotifications.status, 200);
+  assert.ok(clearReadNotifications.body.removed >= 1, 'read notifications can be cleared separately');
+  const inboxAfterReadClear = await request('/api/notifications');
+  assert.equal(inboxAfterReadClear.body.notifications.some(item => item.id === friendshipNotice.id), false);
+  const markAllNotificationsRead = await request('/api/notifications/read', { method: 'POST', body: '{}' });
+  assert.equal(markAllNotificationsRead.status, 200, 'bulk mark-read route remains distinct from per-item read');
+  const allReadInbox = await request('/api/notifications');
+  assert.equal(allReadInbox.body.unreadCount, 0);
+  const clearAllNotifications = await request('/api/notifications/clear', { method: 'POST', body: JSON.stringify({ readOnly: false }) });
+  assert.equal(clearAllNotifications.status, 200);
+  assert.ok(clearAllNotifications.body.removed >= 0);
+  assert.equal((await request('/api/notifications')).body.notifications.length, 0);
 
   cookie = firstCookie;
   const rejectReadBeforeConversation = await request('/api/messages/' + secondUserId + '/read', { method: 'POST', body: '{}' });

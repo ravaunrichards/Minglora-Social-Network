@@ -1,5 +1,7 @@
 # Notifications
 
-**Current:** basic in-app notification records exist; preferences and reliable external delivery are incomplete.
+**Current implementation:** persisted account-owned in-app notifications; typed event routing; per-category delivery preferences; safe actor profiles; blocked-member filtering; unread counts; category counts; per-item read/delete; clear-read and clear-all actions; configured Web Push delivery; and a responsive inbox with category filters and search. The foreground inbox checks for new notifications every six seconds while active. This polling is not an instant server-push or Supabase Realtime subscription.
 
-**Ownership:** typed events, recipient authorization, unread state, preferences, retries, deduplication and retention. Do not trust arbitrary client-supplied actor names or notification text.
+**Event groups:** social activity, messages, calls, LIVE and moderator updates, gifts and Fan Club updates, MeetWave invitations, league matches, and account/platform notices. Events not yet produced by an existing workflow must not be fabricated to fill categories.
+
+**Ownership and safeguards:** the server determines recipient, actor, event type and text; every read/delete/clear operation is scoped to the signed-in account; blocked actors are excluded; active call cleanup remains in place. Web Push subscriptions are per device and stale endpoints are removed. Email delivery, digest scheduling, quiet hours, delivery retries/outbox guarantees, deduplication and Supabase Realtime fan-out remain unfinished. Never trust arbitrary client-supplied actor names or notification text.
