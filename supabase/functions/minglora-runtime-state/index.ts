@@ -1601,7 +1601,7 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.from("creator_subscriptions").insert({
       id: localId, creator_id: creatorId, subscriber_id: subscriberId, tier_id: tierResult.data.id,
       status: "incomplete", currency: tierResult.data.currency, amount_minor: tierResult.data.price_minor,
-      provider: "paypal", platform_share_bps: 5000, creator_share_bps: 5000
+      provider: "paypal", platform_share_bps: 3000, creator_share_bps: 7000
     }).select("id,creator_id,subscriber_id,tier_id,status,currency,amount_minor").single();
     if (error) return fail(error, "Minglora could not create the subscription checkout record.");
     return json(201, { subscription: data, tier: tierResult.data });
@@ -1698,7 +1698,7 @@ Deno.serve(async (req: Request) => {
         !Number.isSafeInteger(subscriberOnlyVideoCount) || subscriberOnlyVideoCount < 0) {
       return json(400, { error: "Invalid monthly creator performance review." });
     }
-    const eligible = followerCount >= 10000 && qualifyingVideoViews >= 1000000 && subscriberOnlyVideoCount >= 3;
+    const eligible = followerCount >= 10000 && qualifyingVideoViews >= 100000 && subscriberOnlyVideoCount >= 3;
     const { error: reviewError } = await admin.from("subscription_creator_performance_reviews").upsert({
       creator_id: creatorId, month_start: monthStart, follower_count: followerCount,
       qualifying_video_views: qualifyingVideoViews, subscriber_only_video_count: subscriberOnlyVideoCount,
@@ -1710,7 +1710,7 @@ Deno.serve(async (req: Request) => {
       .update({ performance_bonus_bps: eligible ? 2000 : 0, performance_bonus_month: monthStart, updated_at: new Date().toISOString() })
       .eq("creator_id", creatorId).select("creator_id,performance_bonus_bps,performance_bonus_month").maybeSingle();
     if (settingsError || !settings) return json(503, { error: "Creator subscription bonus settings could not be updated." });
-    return json(200, { eligible, creatorShareBps: eligible ? 7000 : 5000, platformShareBps: eligible ? 3000 : 5000, review: settings });
+    return json(200, { eligible, creatorShareBps: eligible ? 9000 : 7000, platformShareBps: eligible ? 1000 : 3000, baseCreatorShareBps: 7000, maximumCreatorShareBps: 9000, review: settings });
   }
 
   if (action === "subscription_paypal_webhook") {
@@ -1823,7 +1823,7 @@ Deno.serve(async (req: Request) => {
       })();
       const performanceBonusBps = creatorSettings?.performance_bonus_month === previousMonth &&
         Number(creatorSettings?.performance_bonus_bps) === 2000 ? 2000 : 0;
-      const creatorShareBps = 5000 + performanceBonusBps;
+      const creatorShareBps = 7000 + performanceBonusBps;
       const platformShareBps = 10000 - creatorShareBps;
       const creatorMinor = Math.floor(netMinor * creatorShareBps / 10000);
       const platformMinor = netMinor - creatorMinor;
@@ -1861,9 +1861,9 @@ Deno.serve(async (req: Request) => {
       const { data: originalPayment, error: originalPaymentError } = await originalPaymentQuery
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (originalPaymentError) return json(503, { error: "Original subscription payment share could not be checked." });
-      const creatorShareBps = Number(originalPayment?.creator_share_bps || subscription.creator_share_bps || 5000);
+      const creatorShareBps = Number(originalPayment?.creator_share_bps || subscription.creator_share_bps || 7000);
       const platformShareBps = 10000 - creatorShareBps;
-      const performanceBonusBps = Number(originalPayment?.performance_bonus_bps || Math.max(0, creatorShareBps - 5000));
+      const performanceBonusBps = Number(originalPayment?.performance_bonus_bps || Math.max(0, creatorShareBps - 7000));
       const originalGrossMinor = Math.max(1, Number(originalPayment?.gross_minor || amountMinor));
       const originalFeeMinor = Math.max(0, Number(originalPayment?.provider_fee_minor || 0));
       const refundFeeMinor = Math.min(amountMinor, Math.floor(amountMinor * originalFeeMinor / originalGrossMinor));
