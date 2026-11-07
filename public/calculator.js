@@ -362,8 +362,10 @@
   function handleAction(action) {
     if (action === 'angle') {
       state.angle = state.angle === 'DEG' ? 'RAD' : 'DEG';
-      const button = document.querySelector('[data-calc-action="angle"]');
-      if (button) button.textContent = state.angle;
+      document.querySelectorAll('[data-calc-action="angle"]').forEach(button => button.textContent = state.angle);
+      document.querySelectorAll('[data-calc-angle-label]').forEach(label => label.textContent = state.angle);
+      const note = document.querySelector('.ml-calc-footnote');
+      if (note) note.textContent = 'Calculations stay on this device. Scientific trigonometry uses ' + state.angle + ' mode.';
       updateDisplay();
       return;
     }
@@ -379,7 +381,12 @@
       return;
     }
     if (action === 'MC') state.memory = 0;
-    if (action === 'MR') insert(String(state.memory));
+    if (action === 'MR') {
+      const last = state.expression.slice(-1);
+      if (last === ')' || /(?:pi|e|\d)$/i.test(state.expression)) state.expression += '*';
+      state.expression += String(state.memory);
+      updateDisplay();
+    }
     if (action === 'MS') {
       try { state.memory = currentValue(); } catch (error) { showError(error.message); }
     }
