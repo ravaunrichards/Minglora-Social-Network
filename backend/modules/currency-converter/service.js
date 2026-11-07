@@ -51,7 +51,7 @@ export function parseIsoCurrencyXml(xml) {
     currencies.set(code, {
       code,
       name,
-      numericCode: /^\\d{3}$/.test(numericCode) ? numericCode : null,
+      numericCode: /^\d{3}$/.test(numericCode) ? numericCode : null,
       minorUnit,
       entities: entity ? [entity] : [],
       activeIso4217: true
@@ -76,7 +76,7 @@ export function parseFallbackCurrencyDirectory(payload) {
         code,
         name: String(row.name || code),
         symbol: String(row.symbol || code),
-        numericCode: /^\\d{3}$/.test(String(row.iso_numeric || '')) ? String(row.iso_numeric) : null,
+        numericCode: /^\d{3}$/.test(String(row.iso_numeric || '')) ? String(row.iso_numeric) : null,
         minorUnit: Number.isInteger(minor) && minor >= 0 && minor <= 4 ? minor : 2,
         entities: Array.isArray(row.countries) ? row.countries.map(String) : [],
         activeIso4217: true
@@ -195,7 +195,7 @@ export function createCurrencyConverterService({
       const payload = await response.json();
       const rate = Number(payload?.rate);
       if (payload?.base?.toUpperCase() !== base || payload?.quote?.toUpperCase() !== quote ||
-          !Number.isFinite(rate) || rate <= 0 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(payload.date || ''))) {
+          !Number.isFinite(rate) || rate <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(String(payload.date || ''))) {
         throw new Error('The exchange-rate provider returned an invalid rate response.');
       }
       const value = {
