@@ -319,7 +319,7 @@
       state.stale = false;
       state.error = '';
       saveState();
-      updateRateText();
+      render();
       void loadRate();
     }));
 
