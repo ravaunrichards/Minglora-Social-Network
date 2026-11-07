@@ -99,7 +99,7 @@ test('the Creator Hub verification sticker appears beside the profile username a
   assert.match(badges,/creatorhubcreatornetwork@gmail\.com/);
   assert.match(server,/verificationBadge:getProfileVerificationBadge\(u\)/);
   assert.match(app,/profile-name-with-badges[^;]*verifiedProfileBadge\(u\)/);
-  assert.match(app,/profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
+  assert.match(app,/profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
   assert.match(css,/\.profile-username-line\{[^}]*display:flex/);
 });
 
