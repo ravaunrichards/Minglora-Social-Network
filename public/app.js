@@ -8724,6 +8724,8 @@ function renderMoreHub(){
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
       {label:'Notifications',detail:'See your recent activity',action:'notifications',icon:messenger3dIcon('activity','mobile-hub-icon')},
+      {label:'App Metrics',detail:'Your real account activity and profile totals',action:'app-metrics',icon:messenger3dIcon('activity','mobile-hub-icon')},
+      {label:'Lock Screen',detail:'Protect this device with your private PIN',action:'app-lock',icon:messenger3dIcon('lock','mobile-hub-icon')},
       {label:'Settings & privacy',detail:'Account, safety and preferences',action:'settings',icon:messenger3dIcon('settings','mobile-hub-icon')},
       {label:'Appearance & themes',detail:'Change the Minglora look',action:'themes',icon:messenger3dIcon('palette','mobile-hub-icon')}
     ]}
@@ -8741,6 +8743,8 @@ function renderMoreHub(){
     else if(action==='notifications')renderNotifications();
     else if(action==='settings')window.MingloraSettings?.open?.();
     else if(action==='themes')openPaletteSwitcher();
+    else if(action==='app-lock')window.MingloraAppLock?.open?.();
+    else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
   }));
 }
 async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
