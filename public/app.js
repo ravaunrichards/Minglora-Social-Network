@@ -1123,11 +1123,7 @@ function activateLiveToolsPanel(name){
     button.classList.toggle('active',active);
     button.setAttribute('aria-pressed',String(active));
   });
-  if(name==='chat'){
-    const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
-    const body=$('#live-chat-panel-body');
-    if(chat&&body)body.append(chat);
-  }else restoreLiveChatToStage();
+  restoreLiveChatToStage();
 }
 
 
@@ -2467,7 +2463,6 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
   const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Full Screen expands the host stage across each device; viewers follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
-  const liveChatTools="";
   const liveTopGiftersTools="<section id='live-top-gifters-panel' class='live-tools-card live-top-gifters-panel' data-live-tools-panel='top-gifters'><div class='live-panel-title'><strong>Top Gifters</strong><small>Ranked by confirmed Coins sent in this LIVE</small></div><div id='live-top-gifters-list' class='live-top-gifters-list'><p class='muted'>Loading this room’s gifter ranking…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
