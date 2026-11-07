@@ -4574,7 +4574,7 @@ async function route(req, res) {
         const gallery=getGiftGallery(db,target);
         const entries=gallery.entries.map(entry=>{
           const leader=entry.leadingGifterId?db.users.find(member=>member.id===entry.leadingGifterId):null;
-          return {...entry,leadingGifter:leader?safeUser(leader,user.id):null};
+          return {...entry,leadingGifter:leader?{...safeUser(leader,user.id),gifterBadge:getGifterBadgeSummary(db,leader.id)}:null};
         });
         const response={...gallery,entries};
         if(user.id===target.id){
