@@ -3116,7 +3116,7 @@ activeLivePinnedComment=null;
         const label=LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Grid';
         if(status)status.textContent=label+' layout is now live for everyone.';
       }catch(error){
-        applyLiveScreenLayout(session.liveLayout||'grid');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        applyLiveScreenLayout(session.liveLayout||'full-screen');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
         if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE layout could not be changed.');
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
