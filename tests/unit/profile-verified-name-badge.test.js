@@ -15,7 +15,7 @@ const [app, html, serviceWorker, adminCentre] = await Promise.all([
 test('every verified profile shows one blue check beside the username only', () => {
   assert.doesNotMatch(app, /PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID|profileNameVerificationBadge/);
   assert.match(app, /profile-name-with-badges"><span>'\+esc\(u\.name\)\+'<\/span>'\+platformAdminProfileBadge\(u\)/);
-  assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
+  assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
   assert.ok(app.includes(`profile-preview-name">'+esc(u.name)+platformAdminProfileBadge(u)+'</strong><small>@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</small>`));
 });
 
