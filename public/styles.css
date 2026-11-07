@@ -6826,3 +6826,39 @@ button.live-ranking-row{cursor:pointer}
 }
 .profile-account-menu.is-top-layer[hidden]{display:none!important}
 
+
+
+/* Profile editing opens as a viewport-level dialog, never as content appended to the page. */
+body.profile-dialog-open{overflow:hidden}
+.profile-editor-backdrop{
+  z-index:2700;
+  padding:clamp(12px,3vw,24px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.profile-editor-backdrop .profile-inline-editor{
+  width:min(100%,900px);
+  max-height:calc(100dvh - 32px);
+  margin:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  border-radius:16px;
+  background:var(--surface,#fff);
+}
+.profile-editor-backdrop .about-section-inline-editor{width:min(100%,760px)}
+.profile-editor-backdrop .profile-inline-editor .modal-head{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--surface,#fff);
+}
+@supports not (height:100dvh){
+  .profile-editor-backdrop .profile-inline-editor{max-height:calc(100vh - 32px)}
+}
+@media(max-width:600px){
+  .profile-editor-backdrop{padding:10px;align-items:center}
+  .profile-editor-backdrop .profile-inline-editor{max-height:calc(100dvh - 20px);border-radius:14px}
+  @supports not (height:100dvh){
+    .profile-editor-backdrop .profile-inline-editor{max-height:calc(100vh - 20px)}
+  }
+}
