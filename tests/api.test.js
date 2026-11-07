@@ -398,6 +398,18 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(publicStory.status, 201);
   assert.ok(Date.parse(publicStory.body.story.expiresAt) > Date.now());
+  const editedStory = await request(`/api/stories/${publicStory.body.story.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ text: 'Updated story from the integration test', audience: 'public' })
+  });
+  assert.equal(editedStory.status, 200);
+  assert.equal(editedStory.body.story.text, 'Updated story from the integration test');
+  assert.equal(editedStory.body.story.audience, 'public');
+  const invalidStoryAudience = await request(`/api/stories/${publicStory.body.story.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ audience: 'members-only' })
+  });
+  assert.equal(invalidStoryAudience.status, 400);
   const friendsStory = await request('/api/stories', {
     method: 'POST',
     body: JSON.stringify({ text: 'Friends-only story from the integration test', audience: 'friends' })
@@ -719,6 +731,11 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(publicStoryView.status, 200);
   assert.equal(publicStoryView.body.story.viewCount, 1);
   assert.equal(publicStoryView.body.story.viewedByMe, true);
+  const editOtherStory = await request(`/api/stories/${publicStory.body.story.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ text: 'Not allowed' })
+  });
+  assert.equal(editOtherStory.status, 403);
   const deleteOtherStory = await request(`/api/stories/${publicStory.body.story.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(deleteOtherStory.status, 403);
   cookie = firstCookie;
