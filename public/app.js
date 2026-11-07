@@ -916,11 +916,8 @@ function bindPeople(root=document){
     if(session)openLiveRoom(session,'viewer').catch(error=>toast(error.message));
   }));
 }
-let peopleDiscoveryRefreshTimer=null;
 let peopleDiscoveryRefreshBusy=false;
-function stopPeopleDiscoveryRefresh(){
-  if(peopleDiscoveryRefreshTimer){clearInterval(peopleDiscoveryRefreshTimer);peopleDiscoveryRefreshTimer=null;}
-}
+function stopPeopleDiscoveryRefresh(){}
 async function refreshPeopleDiscovery(){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
   if(!$('#people-discovery-grid'))return;
@@ -934,27 +931,14 @@ async function refreshPeopleDiscovery(){
     state.discoveryLiveSessions=liveResult.sessions||[];
     const grid=$('#people-discovery-grid');
     if(grid){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
-  }catch(error){console.warn('People discovery refresh failed:',error.message);}
-  finally{peopleDiscoveryRefreshBusy=false;}
-}
-async function refreshPeopleDiscoveryLiveSessions(){
-  if(state.view!=='friends'||document.visibilityState!=='visible'||!$('#people-discovery-grid'))return;
-  try{
-    const result=await api('/live/sessions');
-    state.discoveryLiveSessions=(result.sessions||[]).filter(session=>
-      session.status==='live'&&session.viewerCountVerified===true
-    );
-  }catch(error){
-    console.warn('Friends LIVE preview could not be verified; hiding cached LIVE indicators.',error?.message||error);
-    state.discoveryLiveSessions=[];
+  }catch(error){toast('People could not be refreshed: '+error.message);}
+  finally{
+    peopleDiscoveryRefreshBusy=false;
+    const button=$('#people-discovery-refresh');
+    if(button){button.disabled=false;button.textContent='↻ Refresh';}
   }
-  const grid=$('#people-discovery-grid');
-  if(grid){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
 }
-function startPeopleDiscoveryRefresh(){
-  stopPeopleDiscoveryRefresh();
-  peopleDiscoveryRefreshTimer=setInterval(()=>void refreshPeopleDiscoveryLiveSessions(),5000);
-}
+
 async function renderFriends(){
   activateSilent('friends');stopPeopleDiscoveryRefresh();
   await loadPeopleDiscovery();
@@ -965,12 +949,16 @@ async function renderFriends(){
   state.discoveryLiveSessions=liveResult.sessions||[];
   const friends=result.friends||[];
   setContent('<div class="page-heading"><div><h1>Friends</h1><p class="muted">Discover members through the moments they choose to share.</p></div></div>'+
-    '<div class="feed-header"><h2>People you may know</h2><span class="people-refresh-note">Live member previews</span></div>'+
+    '<div class="feed-header"><h2>People you may know</h2><button type="button" class="secondary" id="people-discovery-refresh">↻ Refresh</button></div>'+
     '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
     '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
     (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" data-profile="'+esc(member.id)+'" alt="View '+esc(member.name)+'’s profile" src="'+avatar(member)+'"><div class="person-meta"><strong data-profile="'+esc(member.id)+'">'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
   bindPeople(document);
-  startPeopleDiscoveryRefresh();
+  $('#people-discovery-refresh')?.addEventListener('click',()=>{
+    const button=$('#people-discovery-refresh');
+    if(button){button.disabled=true;button.textContent='Refreshing…';}
+    void refreshPeopleDiscovery();
+  });
 }
 let activeCallRoom=null;
 let activeCallOverlay=null;
@@ -1110,7 +1098,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   ];
   const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#creator'></use></svg>")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
   const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<button type='button' class='secondary live-directory-refresh-button' id='live-directory-refresh'>↻ Refresh LIVE</button><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
@@ -1227,24 +1215,21 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   bindLiveDiscoveryBoards(sessions);
 }
 async function refreshLiveDirectorySessions(){
-  if(state.view!=='live'||activeLiveRoom){stopLiveDirectoryRefresh();return;}
+  if(state.view!=='live'||activeLiveRoom)return false;
   try{
     const data=await api('/live/sessions');
     const sessions=(data.sessions||[]).filter(session=>
       session.status==='live'&&session.viewerCountVerified===true
     );
     const container=$('.live-room-grid');
-    if(!container)return;
+    if(!container)return false;
     container.innerHTML=sessions.length?sessions.map(liveSessionCardMarkup).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     bindLiveDirectoryCards(sessions);
     bindLiveDiscoveryBoards(sessions);
+    return true;
   }catch(error){
-    const container=$('.live-room-grid');
-    if(container)container.innerHTML="<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE listings are being rechecked</h3><p>Unverified or cached broadcasts are hidden while Minglora reconnects.</p></section>";
-    const discovery=$('#live-discovery-content');
-    if(discovery)discovery.innerHTML="<p class='muted'>LIVE listings could not be verified. Reconnecting…</p>";
-    bindLiveDirectoryCards([]);
-    console.warn('[Minglora LIVE] Cached directory cards were cleared because active sessions could not be verified.',error?.message||error);
+    toast('LIVE directory could not be refreshed: '+error.message);
+    return false;
   }
 }
 async function renderLive(){
@@ -1270,7 +1255,12 @@ async function renderLive(){
   const livePro=results[4].status==="fulfilled"?results[4].value:{hasAccess:false};
   renderLiveDirectory(sessions,status,catalog,wallet,livePro);
   $("#live-pro-open")?.addEventListener("click",()=>activateNav("live-pro"));
-  liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,5000);
+  const refreshButton=$("#live-directory-refresh");
+  if(refreshButton)refreshButton.onclick=async()=>{
+    refreshButton.disabled=true;refreshButton.textContent="Refreshing…";
+    try{if(await refreshLiveDirectorySessions())toast("LIVE directory updated.");}
+    finally{refreshButton.disabled=false;refreshButton.textContent="↻ Refresh LIVE";}
+  };
 }
 
 async function renderLiveProStudio(){
