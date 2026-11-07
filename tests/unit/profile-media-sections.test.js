@@ -76,8 +76,8 @@ test('profile tabs include a right-aligned three-dot overflow menu with requeste
   assert.match(app, /profileVisibility:next/);
   assert.match(css, /\.profile-tabs-overflow\{[^}]*align-items:center/);
   assert.match(css, /\.profile-overflow-trigger\{[^}]*align-self:center/);
-  const appAsset=html.match(/app\.js\\?v=[^\"']+/)?.[0]||'';
-  const styleAsset=html.match(/styles\.css\\?v=[^\"']+/)?.[0]||'';
+  const appAsset=html.match(/app\.js\?v=[^\"']+/)?.[0]||'';
+  const styleAsset=html.match(/styles\.css\?v=[^\"']+/)?.[0]||'';
   const cacheName=sw.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset&&sw.includes('/'+appAsset));
   assert.ok(styleAsset&&sw.includes('/'+styleAsset));
