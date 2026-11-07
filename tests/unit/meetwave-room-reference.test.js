@@ -121,7 +121,7 @@ test('Legacy placement rules cannot stack guest tiles in panel or spotlight layo
 });
 
 
-test('MeetWave regular, full-screen and panel grids fit all nine seats without stage scrolling or oversized host tiles',()=>{
+test('MeetWave regular, full-screen and panel grids fit all eleven seats without stage scrolling or oversized host tiles',()=>{
   const fit=css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides:'));
   assert.ok(fit.includes('overflow:hidden!important'));
   assert.ok(fit.includes('height:min(60dvh,calc(100dvh - 260px),680px)!important'));
