@@ -1200,7 +1200,107 @@ async function route(req, res) {
         status: succeeded ? 'paid' : 'failed'
       });
     }
+    const subscriptionEventTypes = new Set([
+      'BILLING.SUBSCRIPTION.CREATED', 'BILLING.SUBSCRIPTION.ACTIVATED', 'BILLING.SUBSCRIPTION.UPDATED',
+      'BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.EXPIRED',
+      'BILLING.SUBSCRIPTION.SUSPENDED', 'BILLING.SUBSCRIPTION.PAYMENT.FAILED',
+      'PAYMENT.SALE.COMPLETED', 'PAYMENT.SALE.REFUNDED', 'PAYMENT.SALE.REVERSED'
+    ]);
+    if (subscriptionEventTypes.has(eventType)) {
+      const subscriptionId = String(resource.id || resource.billing_agreement_id || '');
+      if (!subscriptionId) return json(res, 202, { received: true, matched: false });
+      try {
+        const subscriptionDetails = await paypalRequest(
+          '/v1/billing/subscriptions/' + encodeURIComponent(subscriptionId), 'GET', undefined
+        );
+        let transactionDetails = null;
+        if (eventType === 'PAYMENT.SALE.COMPLETED') {
+          const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const endTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+          transactionDetails = await paypalRequest(
+            '/v1/billing/subscriptions/' + encodeURIComponent(subscriptionId) +
+              '/transactions?start_time=' + encodeURIComponent(startTime) +
+              '&end_time=' + encodeURIComponent(endTime),
+            'GET',
+            undefined
+          );
+        }
+        await requestSupabaseState('subscription_paypal_webhook', {
+          event, subscriptionDetails, transactionDetails
+        });
+      } catch (error) {
+        console.error('[Minglora subscriptions] PayPal event reconciliation failed; webhook retry is required.', {
+          eventType,
+          message: String(error?.message || error).slice(0, 180)
+        });
+        return json(res, 503, { error: 'Minglora could not reconcile this PayPal subscription event yet. PayPal should retry it.' });
+      }
+    }
     return json(res, 200, { received: true });
+  }
+
+  if (method === 'GET' && p === '/api/subscriptions/return') {
+    const user = sessionUser(req);
+    const localSubscriptionId = String(url.searchParams.get('local_subscription_id') || '');
+    const paypalSubscriptionId = String(url.searchParams.get('subscription_id') || url.searchParams.get('ba_token') || '');
+    const redirect = new URL('/', appOrigin(req));
+    const finish = (status, creatorId = '') => {
+      redirect.searchParams.set('subscription', status);
+      if (creatorId) redirect.searchParams.set('creatorId', creatorId);
+      res.writeHead(303, { Location: redirect.toString(), 'Cache-Control': 'no-store' });
+      res.end();
+    };
+    if (!user?.id) return finish('login');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(localSubscriptionId) ||
+        !/^I-[A-Z0-9]+$/i.test(paypalSubscriptionId)) return finish('pending');
+    try {
+      const mine = await requestSupabaseState('subscription_my', { userId: user.id });
+      const local = (mine.subscriptions || []).find(item =>
+        item.id === localSubscriptionId && item.subscriber_id === user.id
+      );
+      if (!local || local.provider_subscription_id !== paypalSubscriptionId) return finish('pending');
+      const provider = await paypalRequest(
+        '/v1/billing/subscriptions/' + encodeURIComponent(paypalSubscriptionId), 'GET', undefined
+      );
+      if (provider.id !== paypalSubscriptionId || provider.custom_id !== localSubscriptionId ||
+          String(provider.status || '').toUpperCase() !== 'ACTIVE') {
+        return finish('pending', local.creator_id);
+      }
+      const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const endTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const transactions = await paypalRequest(
+        '/v1/billing/subscriptions/' + encodeURIComponent(paypalSubscriptionId) +
+          '/transactions?start_time=' + encodeURIComponent(startTime) +
+          '&end_time=' + encodeURIComponent(endTime),
+        'GET',
+        undefined
+      );
+      const completedSale = (transactions.transactions || []).find(item =>
+        String(item.status || '').toUpperCase() === 'COMPLETED' && item.id &&
+        (item.amount_with_breakdown?.gross_amount || item.amount)
+      );
+      const gross = completedSale?.amount_with_breakdown?.gross_amount || completedSale?.amount;
+      if (!completedSale || !gross?.value || !gross?.currency_code) return finish('pending', local.creator_id);
+      const event = {
+        id: 'MINGLORA_RETURN_' + String(completedSale.id),
+        event_type: 'PAYMENT.SALE.COMPLETED',
+        resource: {
+          id: String(completedSale.id),
+          billing_agreement_id: paypalSubscriptionId,
+          amount: { currency: gross.currency_code, total: gross.value },
+          create_time: completedSale.time || new Date().toISOString()
+        }
+      };
+      const result = await requestSupabaseState('subscription_paypal_webhook', {
+        event, subscriptionDetails: provider, transactionDetails: transactions
+      });
+      return finish(result?.processed ? 'success' : 'pending', local.creator_id);
+    } catch (error) {
+      console.warn('[Minglora subscriptions] Return confirmation is pending webhook reconciliation.', {
+        message: String(error?.message || error).slice(0, 180)
+      });
+      return finish('pending');
+    }
   }
 
   if (p.startsWith('/api/')) {
@@ -2819,6 +2919,162 @@ async function route(req, res) {
         const wallet=await requestSupabaseState('economy_wallet',{userId:user.id});
         return json(res,200,{ok:true,settlement:settlement.settlement,wallet});
       }
+      if (method === 'GET' && p === '/api/subscriptions/mine') {
+        if (!user?.id) return json(res, 401, { error: 'Sign in to view your subscriptions.' });
+        return json(res, 200, await requestSupabaseState('subscription_my', { userId: user.id }));
+      }
+      const subscriptionCreatorMatch = p.match(/^\\/api\\/subscriptions\\/creator\\/([0-9a-f-]{36})$/i);
+      if (method === 'GET' && subscriptionCreatorMatch) {
+        if (!user?.id) return json(res, 401, { error: 'Sign in to view creator subscriptions.' });
+        const creatorId = subscriptionCreatorMatch[1];
+        const result = await requestSupabaseState('subscription_creator_get', {
+          userId: creatorId, viewerId: user.id
+        });
+        const settings = result.settings ? {
+          application_status: result.settings.application_status,
+          subscriptions_enabled: result.settings.subscriptions_enabled === true,
+          subscriber_badge_enabled: result.settings.subscriber_badge_enabled !== false,
+          subscriber_chat_enabled: result.settings.subscriber_chat_enabled === true,
+          subscriber_only_live_enabled: result.settings.subscriber_only_live_enabled !== false,
+          rejection_reason: result.settings.rejection_reason || null
+        } : null;
+        const tier = result.tier ? {
+          id: result.tier.id, name: result.tier.name, description: result.tier.description,
+          currency: result.tier.currency, price_minor: result.tier.price_minor,
+          billing_interval: result.tier.billing_interval, benefits: result.tier.benefits || []
+        } : null;
+        return json(res, 200, {
+          settings, tier, activeSubscribers: Number(result.activeSubscribers || 0),
+          viewerSubscription: result.viewerSubscription || null
+        });
+      }
+      if (method === 'POST' && p === '/api/subscriptions/apply') {
+        if (!user?.id) return json(res, 401, { error: 'Sign in to apply for creator subscriptions.' });
+        const applicationNote = String(input.applicationNote || '').trim();
+        if (applicationNote.length > 1200) return json(res, 400, { error: 'Your application note must be 1,200 characters or fewer.' });
+        const result = await requestSupabaseState('subscription_apply', {
+          userId: user.id, applicationNote
+        });
+        return json(res, 200, result);
+      }
+      if (method === 'POST' && p === '/api/subscriptions/tier') {
+        if (!user?.id) return json(res, 401, { error: 'Sign in to set up creator subscriptions.' });
+        const priceMinor = Number(input.priceMinor);
+        const currency = 'USD';
+        const name = String(input.name || 'Monthly membership').trim();
+        const description = String(input.description || '').trim();
+        const benefits = Array.isArray(input.benefits)
+          ? input.benefits.map(item => String(item || '').trim()).filter(Boolean).slice(0, 8)
+          : [];
+        if (!Number.isSafeInteger(priceMinor) || priceMinor < 299 || priceMinor > 9999 ||
+            name.length < 2 || name.length > 48 || description.length > 500 ||
+            benefits.some(item => item.length > 100)) {
+          return json(res, 400, { error: 'Set a monthly price from US$2.99 to US$99.99, a title, and up to eight short benefits.' });
+        }
+        const creatorState = await requestSupabaseState('subscription_creator_get', { userId: user.id, viewerId: user.id });
+        if (creatorState.settings?.application_status !== 'approved') {
+          return json(res, 403, { error: 'Minglora approval is required before you can publish a subscription tier.' });
+        }
+        const suffix = uid();
+        const product = await paypalRequest('/v1/catalogs/products', 'POST', {
+          name: 'Minglora Creator Subscription · ' + name,
+          description: (description || 'Monthly creator subscription on Minglora.').slice(0, 256),
+          type: 'SERVICE'
+        }, 'minglora-sub-product-' + suffix);
+        if (!/^PROD-[A-Z0-9]+$/i.test(String(product.id || ''))) {
+          return json(res, 502, { error: 'PayPal did not return a valid subscription product reference.' });
+        }
+        const plan = await paypalRequest('/v1/billing/plans', 'POST', {
+          product_id: product.id,
+          name: ('Minglora · ' + name).slice(0, 127),
+          description: (description || 'Monthly creator subscription on Minglora.').slice(0, 127),
+          status: 'ACTIVE',
+          billing_cycles: [{
+            frequency: { interval_unit: 'MONTH', interval_count: 1 },
+            tenure_type: 'REGULAR',
+            sequence: 1,
+            total_cycles: 0,
+            pricing_scheme: { fixed_price: { value: (priceMinor / 100).toFixed(2), currency_code: currency } }
+          }],
+          payment_preferences: {
+            auto_bill_outstanding: true,
+            setup_fee_failure_action: 'CANCEL',
+            payment_failure_threshold: 3
+          }
+        }, 'minglora-sub-plan-' + suffix);
+        if (!/^P-[A-Z0-9]+$/i.test(String(plan.id || ''))) {
+          return json(res, 502, { error: 'PayPal did not return a valid monthly billing plan.' });
+        }
+        const saved = await requestSupabaseState('subscription_tier_store', {
+          creatorId: user.id, paypalProductId: product.id, paypalPlanId: plan.id,
+          priceMinor, currency, name, description, benefits
+        });
+        return json(res, 200, { ...saved, paypalPlanCreated: true });
+      }
+      if (method === 'POST' && p === '/api/subscriptions/enable') {
+        if (!user?.id) return json(res, 401, { error: 'Sign in to manage subscriptions.' });
+        const result = await requestSupabaseState('subscription_enable', {
+          creatorId: user.id, enabled: input.enabled === true
+        });
+        return json(res, 200, result);
+      }
+      if (method === 'POST' && p === '/api/subscriptions/checkout') {
+        if (!user?.id) return json(res, 401, { error: 'Sign in before subscribing.' });
+        const creatorId = String(input.creatorId || '');
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creatorId) ||
+            creatorId === user.id) return json(res, 400, { error: 'Choose a valid creator to subscribe to.' });
+        const localSubscriptionId = uid();
+        const prepared = await requestSupabaseState('subscription_checkout_prepare', {
+          subscriberId: user.id, creatorId, subscriptionId: localSubscriptionId
+        });
+        const paypalSubscription = await paypalRequest('/v1/billing/subscriptions', 'POST', {
+          plan_id: prepared.tier.paypal_plan_id,
+          custom_id: localSubscriptionId,
+          application_context: {
+            brand_name: 'Minglora',
+            locale: 'en-US',
+            user_action: 'SUBSCRIBE_NOW',
+            shipping_preference: 'NO_SHIPPING',
+            return_url: new URL('/api/subscriptions/return?local_subscription_id=' + encodeURIComponent(localSubscriptionId), appOrigin(req)).toString(),
+            cancel_url: new URL('/?subscription=cancelled&creatorId=' + encodeURIComponent(creatorId), appOrigin(req)).toString()
+          }
+        }, 'minglora-subscribe-' + localSubscriptionId);
+        const approvalUrl = (paypalSubscription.links || []).find(link =>
+          ['approve', 'payer-action'].includes(String(link.rel || '').toLowerCase())
+        )?.href;
+        if (!paypalSubscription.id || !approvalUrl) {
+          return json(res, 502, { error: 'PayPal did not return a subscription approval link. No subscription was confirmed.' });
+        }
+        try {
+          await requestSupabaseState('subscription_checkout_attach', {
+            subscriberId: user.id, subscriptionId: localSubscriptionId,
+            paypalSubscriptionId: paypalSubscription.id
+          });
+        } catch (error) {
+          await paypalRequest('/v1/billing/subscriptions/' + encodeURIComponent(paypalSubscription.id) + '/cancel', 'POST', {
+            reason: 'Minglora could not link this checkout to the member account.'
+          }).catch(() => {});
+          throw error;
+        }
+        return json(res, 201, { ok: true, approvalUrl, subscriptionId: localSubscriptionId });
+      }
+      const subscriptionCancelMatch = p.match(/^\\/api\\/subscriptions\\/([^/]+)\\/cancel$/);
+      if (method === 'POST' && subscriptionCancelMatch) {
+        if (!user?.id) return json(res, 401, { error: 'Sign in to manage your subscriptions.' });
+        const subscriptionId = decodeURIComponent(subscriptionCancelMatch[1]);
+        const lookup = await requestSupabaseState('subscription_cancel_lookup', {
+          userId: user.id, subscriptionId
+        });
+        if (!lookup.subscription?.provider_subscription_id) return json(res, 404, { error: 'Subscription not found.' });
+        await paypalRequest('/v1/billing/subscriptions/' + encodeURIComponent(lookup.subscription.provider_subscription_id) + '/cancel', 'POST', {
+          reason: 'Member cancelled this subscription through Minglora.'
+        });
+        const saved = await requestSupabaseState('subscription_cancel_mark', {
+          userId: user.id, subscriptionId
+        });
+        return json(res, 200, { ok: true, subscription: saved.subscription });
+      }
+
       if(method==='GET'&&p==='/api/creator/earnings'){
         if(!user?.id)return json(res,401,{error:'Sign in to view your creator earnings.'});
         const result=await requestSupabaseState('economy_creator_earnings',{creatorId:user.id});
