@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - feature/live-mutual-gifting
+      - feature/live-mutual-gifting-current
     paths:
       - "src/server.js"
       - "public/app.js"
