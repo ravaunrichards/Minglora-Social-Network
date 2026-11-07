@@ -71,6 +71,7 @@ Deno.serve(async (req: Request) => {
 
   const action = input.action;
   const supportedActions = [
+    "internal_activity_feed",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -96,6 +97,60 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "internal_activity_feed") {
+    const requestedLimit = Math.floor(Number(input.limit || 50));
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
+    const afterId = Math.max(0, Math.floor(Number(input.afterId || 0)));
+    let eventQuery = admin
+      .from("minglora_internal_activity")
+      .select("id,occurred_at,event_type,source_table,operation,record_id,actor_id,collections")
+      .order("id", { ascending: afterId > 0 })
+      .limit(limit);
+    if (afterId > 0) eventQuery = eventQuery.gt("id", afterId);
+    const { data: events, error: eventError } = await eventQuery;
+    if (eventError) return json(503, { error: "Minglora's internal activity journal is unavailable." });
+
+    const { data: runtime, error: runtimeError } = await admin
+      .from("minglora_runtime_state")
+      .select("state,revision,updated_at")
+      .eq("state_key", "primary")
+      .maybeSingle();
+    if (runtimeError || !runtime) return json(503, { error: "Minglora runtime health could not be read." });
+
+    const state = runtime.state || {};
+    const activeByStatus = (items: any[], active: string[]) => (Array.isArray(items) ? items : [])
+      .filter((item: any) => active.includes(String(item?.status || "").toLowerCase())).length;
+    const sessions = Array.isArray(state.sessions) ? state.sessions : [];
+    const activeSessions = sessions.filter((item: any) => {
+      const expiry = Date.parse(String(item?.expiresAt || item?.expires_at || ""));
+      return Number.isFinite(expiry) && expiry > Date.now();
+    }).length;
+    const liveBroadcastQuery = await admin
+      .from("live_broadcasts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "live");
+    if (liveBroadcastQuery.error) return json(503, { error: "Minglora LIVE status could not be checked." });
+
+    const cursor = (events || []).reduce((max: number, event: any) => Math.max(max, Number(event.id) || 0), afterId);
+    return json(200, {
+      events: events || [],
+      cursor,
+      snapshot: {
+        revision: Number(runtime.revision || 0),
+        updatedAt: runtime.updated_at || null,
+        syncedAt: new Date().toISOString(),
+        registeredMembers: Array.isArray(state.users) ? state.users.length : 0,
+        activeSessions,
+        activeCalls: activeByStatus(state.calls, ["ringing", "active", "connected", "in_progress"]),
+        activeLiveSessions: activeByStatus(state.liveSessions, ["live", "active", "broadcasting"]),
+        activeDatabaseBroadcasts: Number(liveBroadcastQuery.count || 0),
+        activeMeetings: Array.isArray(state.meetWaveRooms) ? state.meetWaveRooms.filter((item: any) =>
+          !["ended", "completed", "closed", "cancelled", "expired"].includes(String(item?.status || "").toLowerCase())
+        ).length : 0
+      }
+    });
+  }
 
   if (action === "economy_refunded_gift_ids") {
     const { data: refundRows, error: refundError } = await admin
