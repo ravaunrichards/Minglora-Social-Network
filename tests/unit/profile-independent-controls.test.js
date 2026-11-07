@@ -69,10 +69,10 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(html,/app\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
-  assert.match(worker,/minglora-shell-v131-live-top-gifters-1/);
+  assert.match(html,/app\.js\?v=20261107-top-gifters-2/);
+  assert.match(worker,/minglora-shell-v132-live-top-gifters-2/);
   assert.match(worker,/styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(worker,/app\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
+  assert.match(worker,/app\.js\?v=20261107-top-gifters-2/);
 });
 
 test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{
