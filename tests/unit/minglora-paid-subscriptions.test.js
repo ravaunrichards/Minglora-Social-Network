@@ -55,7 +55,7 @@ test('subscriber-only posts and LIVE are enforced by server access checks', asyn
   assert.match(app, /Subscribers only · Paid members/);
 });
 
-test('Minglora uses a 50% base share and a reviewed 20-point bonus after PayPal fees', async () => {
+test('Minglora uses a 70% base share and a reviewed 20-point bonus up to 90% after PayPal fees', async () => {
   const [edge, splitMigration, feeMigration] = await Promise.all([
     read('../../supabase/functions/minglora-runtime-state/index.ts'),
     read('../../supabase/migrations/20261106120000_minglora_tiktok_style_subscription_performance_share.sql'),
@@ -63,14 +63,14 @@ test('Minglora uses a 50% base share and a reviewed 20-point bonus after PayPal 
   ]);
   assert.match(edge, /subscription_bonus_review/);
   assert.match(edge, /followerCount >= 10000/);
-  assert.match(edge, /qualifyingVideoViews >= 1000000/);
+  assert.match(edge, /qualifyingVideoViews >= 100000/);
   assert.match(edge, /subscriberOnlyVideoCount >= 3/);
-  assert.match(edge, /creatorShareBps = 5000 \+ performanceBonusBps/);
+  assert.match(edge, /creatorShareBps = 7000 \+ performanceBonusBps/);
   assert.match(edge, /creatorMinor = Math\.floor\(netMinor \* creatorShareBps \/ 10000\)/);
   assert.match(edge, /provider_fee_minor: providerFeeMinor/);
   assert.match(edge, /originalPayment\?\.creator_share_bps/);
-  assert.match(splitMigration, /creator_share_bps IN \(5000,7000\)/);
-  assert.match(splitMigration, /platform_share_bps IN \(3000,5000\)/);
+  assert.match(splitMigration, /creator_share_bps IN \(5000,7000,9000\)/);
+  assert.match(splitMigration, /platform_share_bps IN \(1000,3000,5000\)/);
   assert.match(feeMigration, /provider_fee_minor integer NOT NULL DEFAULT 0/);
   assert.match(feeMigration, /creator_minor \+ platform_minor \+ provider_fee_minor = gross_minor/);
 });
