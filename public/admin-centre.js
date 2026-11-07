@@ -124,6 +124,7 @@
           firstLoad = false;
           cursor = Number(result.cursor || 0);
         } else if (events.length) {
+          list.querySelector('.admin-internal-activity-empty')?.remove();
           events.forEach(event => {
             cursor = Math.max(cursor, Number(event.id || 0));
             list.insertAdjacentHTML('afterbegin', eventMarkup(event));
