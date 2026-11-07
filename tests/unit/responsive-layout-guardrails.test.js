@@ -30,12 +30,14 @@ test('shared content containers can shrink without pushing the page out of align
   assert.ok(ruleFor(css, '.profile-tabs-list').includes('overflow-x:auto'));
 });
 
-test('phone navigation remains in page flow and respects device safe areas', async () => {
+test('phone bottom navigation is pinned safely without covering page content', async () => {
   const mobile = await read('public/mobile-layout.css');
+  const profileNavigation = await read('public/mobile-profile-navigation.css');
   assert.ok(mobile.includes('body{padding-bottom:env(safe-area-inset-bottom)!important}'));
-  assert.ok(mobile.includes('.mobile-nav{position:static!important'));
-  assert.ok(mobile.includes('calc(8px + env(safe-area-inset-bottom))'));
-  assert.doesNotMatch(mobile,/\.mobile-nav\{position:fixed/);
+  assert.ok(profileNavigation.includes('position:fixed!important'));
+  assert.ok(profileNavigation.includes('bottom:0!important'));
+  assert.ok(profileNavigation.includes('padding-bottom:calc(76px + env(safe-area-inset-bottom))'));
+  assert.ok(profileNavigation.includes('calc(7px + env(safe-area-inset-bottom))'));
 });
 
 test('desktop navigation is centred in the available lane between search and notifications', async () => {
