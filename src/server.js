@@ -3592,6 +3592,7 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/discovery/people'){
         await pruneExpiredStories();
         const follows=db.follows||[];
+        const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
         const activityAt=new Map();
         for(const post of db.posts||[]){
           if(post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfileAudience(user.id,post.userId,post.audience||'public')||friendPostsMuted(user.id,post.userId))continue;
@@ -3604,7 +3605,7 @@ async function route(req, res) {
           if(timestamp>(activityAt.get(story.userId)||0))activityAt.set(story.userId,timestamp);
         }
         const candidates=db.users
-          .filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
+          .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
           .sort((first,second)=>Math.max(activityAt.get(second.id)||0,Date.parse(second.createdAt)||0)-Math.max(activityAt.get(first.id)||0,Date.parse(first.createdAt)||0))
           .slice(0,24);
         const users=await Promise.all(candidates.map(async member=>{
@@ -3639,7 +3640,28 @@ async function route(req, res) {
         }));
         return json(res,200,{users});
       }
-      if(method==='GET'&&p==='/api/users')return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+      const discoveryDismissalMatch=p.match(/^\/api\/discovery\/people\/([^/]+)\/dismiss$/);
+      if((method==='POST'||method==='DELETE')&&discoveryDismissalMatch){
+        let dismissedUserId;
+        try{dismissedUserId=decodeURIComponent(discoveryDismissalMatch[1]);}
+        catch{return json(res,400,{error:'Choose a valid member.'});}
+        const target=db.users.find(member=>member.id===dismissedUserId);
+        if(!target||target.id===user.id||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Member suggestion not found.'});
+        db.dismissedPeopleSuggestions ||= [];
+        if(method==='POST'){
+          const existing=db.dismissedPeopleSuggestions.some(item=>item.userId===user.id&&item.dismissedUserId===target.id);
+          if(!existing){db.dismissedPeopleSuggestions.push({id:uid(),userId:user.id,dismissedUserId:target.id,createdAt:now()});await saveStore();}
+          return json(res,200,{ok:true,dismissed:true});
+        }
+        const before=db.dismissedPeopleSuggestions.length;
+        db.dismissedPeopleSuggestions=db.dismissedPeopleSuggestions.filter(item=>!(item.userId===user.id&&item.dismissedUserId===target.id));
+        if(db.dismissedPeopleSuggestions.length!==before)await saveStore();
+        return json(res,200,{ok:true,dismissed:false});
+      }
+      if(method==='GET'&&p==='/api/users'){
+        const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
+        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+      }
 
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
       if(method==='GET'&&m){
