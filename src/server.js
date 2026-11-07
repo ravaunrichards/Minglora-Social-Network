@@ -3131,10 +3131,19 @@ async function route(req, res) {
       }
       if (method === 'POST' && p === '/api/subscriptions/enable') {
         if (!user?.id) return json(res, 401, { error: 'Sign in to manage subscriptions.' });
-        const result = await requestSupabaseState('subscription_enable', {
-          creatorId: user.id, enabled: input.enabled === true
-        });
-        return json(res, 200, result);
+        const update={creatorId:user.id};
+        if(typeof input.enabled==='boolean')update.enabled=input.enabled;
+        for(const [inputKey] of [
+          ['subscriberBadgeEnabled'],['subscriberChatEnabled'],['subscriberOnlyLiveEnabled']
+        ]){
+          if(input[inputKey]!==undefined){
+            if(typeof input[inputKey]!=='boolean')return json(res,400,{error:'Subscriber experience settings must be enabled or disabled.'});
+            update[inputKey]=input[inputKey];
+          }
+        }
+        if(Object.keys(update).length===1)return json(res,400,{error:'Choose a subscription setting to update.'});
+        const result=await requestSupabaseState('subscription_enable',update);
+        return json(res,200,result);
       }
       if (method === 'POST' && p === '/api/subscriptions/checkout') {
         if (!user?.id) return json(res, 401, { error: 'Sign in before subscribing.' });
@@ -3142,21 +3151,36 @@ async function route(req, res) {
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creatorId) ||
             creatorId === user.id) return json(res, 400, { error: 'Choose a valid creator to subscribe to.' });
         const localSubscriptionId = uid();
-        const prepared = await requestSupabaseState('subscription_checkout_prepare', {
-          subscriberId: user.id, creatorId, subscriptionId: localSubscriptionId
+        let prepared = await requestSupabaseState('subscription_checkout_prepare', {
+          subscriberId:user.id,creatorId,subscriptionId:localSubscriptionId
         });
-        const paypalSubscription = await paypalRequest('/v1/billing/subscriptions', 'POST', {
-          plan_id: prepared.tier.paypal_plan_id,
-          custom_id: localSubscriptionId,
-          application_context: {
-            brand_name: 'Minglora',
-            locale: 'en-US',
-            user_action: 'SUBSCRIBE_NOW',
-            shipping_preference: 'NO_SHIPPING',
-            return_url: new URL('/api/subscriptions/return?local_subscription_id=' + encodeURIComponent(localSubscriptionId), appOrigin(req)).toString(),
-            cancel_url: new URL('/?subscription=cancelled&creatorId=' + encodeURIComponent(creatorId), appOrigin(req)).toString()
+        let checkoutId=String(prepared.subscription?.id||localSubscriptionId);
+        let paypalSubscription;
+        let resumed=false;
+        if(prepared.resume===true&&prepared.subscription?.provider_subscription_id){
+          const existingPaypalId=String(prepared.subscription.provider_subscription_id);
+          paypalSubscription=await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(existingPaypalId),'GET',undefined);
+          if(paypalSubscription.id!==existingPaypalId||paypalSubscription.custom_id!==checkoutId){
+            return json(res,502,{error:'Minglora could not verify the pending PayPal subscription. No new payment was created.'});
           }
-        }, 'minglora-subscribe-' + localSubscriptionId);
+          if(String(paypalSubscription.status||'').toUpperCase()!=='APPROVAL_PENDING'){
+            return json(res,409,{error:'PayPal has already processed or closed this approval. Refresh your profile while Minglora reconciles its payment status.'});
+          }
+          resumed=true;
+        }else{
+          paypalSubscription=await paypalRequest('/v1/billing/subscriptions','POST',{
+            plan_id:prepared.tier.paypal_plan_id,
+            custom_id:checkoutId,
+            application_context:{
+              brand_name:'Minglora',
+              locale:'en-US',
+              user_action:'SUBSCRIBE_NOW',
+              shipping_preference:'NO_SHIPPING',
+              return_url:new URL('/api/subscriptions/return?local_subscription_id='+encodeURIComponent(checkoutId),appOrigin(req)).toString(),
+              cancel_url:new URL('/?subscription=cancelled&creatorId='+encodeURIComponent(creatorId),appOrigin(req)).toString()
+            }
+          },'minglora-subscribe-'+checkoutId);
+        }
         const approvalUrl = (paypalSubscription.links || []).find(link =>
           ['approve', 'payer-action'].includes(String(link.rel || '').toLowerCase())
         )?.href;
@@ -3164,9 +3188,8 @@ async function route(req, res) {
           return json(res, 502, { error: 'PayPal did not return a subscription approval link. No subscription was confirmed.' });
         }
         try {
-          await requestSupabaseState('subscription_checkout_attach', {
-            subscriberId: user.id, subscriptionId: localSubscriptionId,
-            paypalSubscriptionId: paypalSubscription.id
+          if(!resumed)await requestSupabaseState('subscription_checkout_attach',{
+            subscriberId:user.id,subscriptionId:checkoutId,paypalSubscriptionId:paypalSubscription.id
           });
         } catch (error) {
           await paypalRequest('/v1/billing/subscriptions/' + encodeURIComponent(paypalSubscription.id) + '/cancel', 'POST', {
@@ -3174,7 +3197,7 @@ async function route(req, res) {
           }).catch(() => {});
           throw error;
         }
-        return json(res, 201, { ok: true, approvalUrl, subscriptionId: localSubscriptionId });
+        return json(res, 201, { ok: true, approvalUrl, subscriptionId: checkoutId, resumed });
       }
       const subscriptionCancelMatch = p.match(/^\/api\/subscriptions\/([^/]+)\/cancel$/);
       if (method === 'POST' && subscriptionCancelMatch) {
@@ -4351,17 +4374,17 @@ async function route(req, res) {
         const listAudience=getUserSettings(target).privacy[listPrivacyKey]||'public';
         if(!canViewProfileAudience(user.id,target.id,listAudience))return json(res,404,{error:'This relationship list is not available.'});
         if(relationshipType==='subscribers'){
-          const subscriptions=listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id);
-          const seen=new Set(),users=[];
-          for(const subscription of subscriptions){
-            const id=subscription.subscriberId;
-            if(!id||seen.has(id))continue;
-            seen.add(id);
+          const subscriberIds=isSupabasePersistence()
+            ?(await requestSupabaseState('subscription_subscribers_list',{creatorId:target.id})).subscriberIds
+            :listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).map(item=>item.subscriberId);
+          const uniqueSubscriberIds=[...new Set((Array.isArray(subscriberIds)?subscriberIds:[]).map(String).filter(Boolean))];
+          const users=[];
+          for(const id of uniqueSubscriberIds){
             const member=db.users.find(item=>item.id===id);
             if(!member||blockedBetween(user.id,member.id)||!canViewProfile(user.id,member))continue;
             users.push(safeUser(member,user.id));
           }
-          return json(res,200,{users,count:users.length,totalCount:subscriptions.length,relationship:relationshipType});
+          return json(res,200,{users,count:users.length,totalCount:uniqueSubscriberIds.length,relationship:relationshipType});
         }
         const sourceField=relationshipType==='followers'?'followedId':'followerId';
         const resultField=relationshipType==='followers'?'followerId':'followedId';
@@ -4823,6 +4846,11 @@ async function route(req, res) {
         const profileVideos=profileMedia.filter(media=>media.mediaType==='video');
         const profileFriends=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
           .map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)).map(member=>safeUser(member,user.id));
+        const profileSubscriberIds=isSupabasePersistence()
+          ?(await requestSupabaseState('subscription_subscribers_list',{creatorId:target.id})).subscriberIds
+          :listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).map(item=>item.subscriberId);
+        const subscribersCount=[...new Set((Array.isArray(profileSubscriberIds)?profileSubscriberIds:[]).map(String).filter(Boolean))]
+          .filter(subscriberId=>!blockedBetween(user.id,subscriberId)).length;
 
         return json(res,200,{
           user:safeUser(target,user.id),
@@ -4839,7 +4867,7 @@ async function route(req, res) {
           followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
           followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
           friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
-          subscribersCount:listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).filter(subscription=>!blockedBetween(user.id,subscription.subscriberId)).length,
+          subscribersCount,
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
         });
