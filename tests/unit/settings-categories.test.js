@@ -17,6 +17,7 @@ const categories={
   interactions:['settings-blocking','settings-calls'],
   'content-display':['settings-preferences'],
   'cache-cellular':['settings-cache'],
+  'device-access':['settings-device-access'],
   'support-about':['settings-help'],
   logon:['settings-security','settings-signout']
 };
@@ -27,7 +28,7 @@ test('Settings & privacy provides each requested category exactly once',()=>{
     const marker='data-settings-category-button="'+category+'"';
     assert.equal(settings.split(marker).length-1,1,'category '+category+' must appear once');
   }
-  assert.equal((settings.match(/data-settings-category-button=/g)||[]).length,8);
+  assert.equal((settings.match(/data-settings-category-button=/g)||[]).length,9);
 });
 
 test('Existing settings sections are retained and assigned to one category without duplicate IDs',()=>{
