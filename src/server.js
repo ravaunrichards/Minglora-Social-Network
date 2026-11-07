@@ -2495,9 +2495,7 @@ async function route(req, res) {
       }
       if (liveSpeakerRequestsMatch && method === 'POST') {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerRequestsMatch[1] && item.status === 'live');
-        if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
-        const allowed = session.visibility === 'public' || (session.visibility === 'friends' && isFriend(user.id, session.hostId));
-        if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
+        if (!(await canViewLiveSession(session,user.id)) || session.hostId === user.id) return json(res, 404, { error: 'LIVE session not found.' });
         if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         if (session.liveSettings?.allowGuestRequests === false) return json(res, 403, { error: 'The host is not accepting guest speaker requests right now.' });
         if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled co-host and guest stage requests for this LIVE.' });
@@ -2521,7 +2519,7 @@ async function route(req, res) {
       const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerStatusMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'LIVE session not found.' });
         const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === user.id) || null;
         return json(res, 200, { request });
       }
@@ -2573,12 +2571,7 @@ async function route(req, res) {
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
-        const friendAccess = isFriend(user.id, session.hostId);
-        const allowed = session.hostId === user.id ||
-          session.visibility === 'public' ||
-          (session.visibility === 'friends' && friendAccess);
-        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'Live session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
@@ -2601,10 +2594,7 @@ async function route(req, res) {
       const liveConnectedMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/connected$/);
       if (method === 'POST' && liveConnectedMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveConnectedMatch[1] && item.status === 'live');
-        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
-        const canView = session.hostId === user.id || session.visibility === 'public' ||
-          (session.visibility === 'friends' && isFriend(user.id, session.hostId));
-        if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
+        if (!(await canViewLiveSession(session,user.id))) return json(res, 404, { error: 'LIVE session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
