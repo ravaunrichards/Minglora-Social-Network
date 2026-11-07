@@ -12,7 +12,7 @@ test('the final phone experience stylesheet loads after feature skins and is she
   assert.ok(finalPhone > appLock && appLock >= 0, 'phone overrides must load after the feature and app-lock styles');
   assert.match(html, /name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/);
   assert.ok(worker.includes("'/phone-experience.css?v=20261107-phone-experience-1'"), 'the phone stylesheet is pre-cached');
-  assert.match(worker, /CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1'/);
+  assert.ok(/^const CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1';$/m.test(worker));
 });
 
 test('phone navigation remains reachable and reserves safe-area space instead of covering content', async () => {
