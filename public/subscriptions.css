@@ -1,0 +1,119 @@
+/* Minglora creator subscriptions — compact, responsive and accessible. */
+.subscription-panel,.subscription-policy-panel,.subscriptions-page{min-width:0}
+.subscription-panel{display:grid;gap:18px}
+.subscription-status-line{display:flex;align-items:center;gap:9px;color:var(--muted,#64748b);font-size:.78rem;font-weight:700;letter-spacing:.06em}
+.subscription-status-dot{width:9px;height:9px;border-radius:50%;background:#d97706;box-shadow:0 0 0 4px #d9770618}
+.subscription-status-dot.pending{background:#2563eb;box-shadow:0 0 0 4px #2563eb18}
+.subscription-status{display:inline-flex;align-items:center;border-radius:999px;padding:7px 11px;background:var(--surface-soft,#f1f5f9);font-size:.76rem;font-weight:700;white-space:nowrap}
+.subscription-status.enabled{color:#137547;background:#e9f8ef}
+.subscription-panel-heading,.subscription-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.subscription-panel-heading h3,.subscription-policy-panel h3{margin:0 0 5px}
+.subscription-panel-heading p,.subscription-toggle-row small{display:block;color:var(--muted,#64748b);font-size:.88rem;line-height:1.5;margin:0}
+.subscription-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.subscription-overview-grid .creator-metric{min-width:0}
+.subscription-form{display:grid;gap:14px;max-width:720px}
+.subscription-form label{display:grid;gap:7px;font-weight:650;font-size:.9rem}
+.subscription-form input,.subscription-form textarea{box-sizing:border-box;width:100%;min-width:0;padding:12px 13px;border:1px solid var(--border,#dbe2ea);border-radius:12px;background:var(--surface,#fff);color:var(--text,inherit);font:inherit}
+.subscription-form textarea{resize:vertical;min-height:84px}
+.subscription-form button{justify-self:start;max-width:100%}
+.subscription-form .creator-inline-status{margin:0;color:var(--muted,#64748b);font-size:.82rem;line-height:1.45}
+.subscription-toggle-row{border-top:1px solid var(--border,#e2e8f0);padding-top:16px}
+.subscription-toggle-row>div{min-width:0}
+.subscription-toggle-row strong{display:block;margin-bottom:4px}
+.subscription-switch{position:relative;display:inline-flex;flex:0 0 auto;width:48px;height:28px}
+.subscription-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.subscription-switch span{width:48px;height:28px;border-radius:999px;background:#94a3b8;transition:background .18s;cursor:pointer}
+.subscription-switch span:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #0003;transition:transform .18s}
+.subscription-switch input:checked+span{background:#16834a}
+.subscription-switch input:checked+span:after{transform:translateX(20px)}
+.subscription-switch input:focus-visible+span{outline:3px solid #2563eb;outline-offset:3px}
+.subscription-policy-panel ul{margin:10px 0 0;padding-left:20px;color:var(--muted,#64748b);line-height:1.7}
+.profile-subscribe-button{border-color:var(--brand,#1769e0);color:var(--brand,#1769e0);font-weight:750}
+.subscriptions-page{display:grid;gap:16px}
+.subscriptions-page-heading h1{margin:4px 0}
+.subscriptions-page-heading p{margin:0;color:var(--muted,#64748b)}
+.subscription-member-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:16px;background:var(--surface,#fff);min-width:0}
+.subscription-member-copy{display:grid;gap:5px;min-width:0}
+.subscription-member-copy strong{overflow-wrap:anywhere}
+.subscription-member-copy small,.subscription-member-status{color:var(--muted,#64748b);font-size:.83rem;line-height:1.4}
+.subscription-member-status{font-weight:700;text-transform:capitalize}
+.subscription-member-card button{flex:0 0 auto}
+@media(max-width:700px){
+ .subscription-overview-grid{grid-template-columns:1fr 1fr;gap:9px}
+ .subscription-overview-grid .creator-metric:last-child{grid-column:1/-1}
+ .subscription-panel-heading,.subscription-toggle-row{align-items:flex-start}
+ .subscription-panel-heading{flex-direction:column}
+ .subscription-member-card{align-items:flex-start;flex-direction:column}
+ .subscription-member-card button{width:100%}
+ .subscription-form button{width:100%}
+}
+
+.subscription-form select{box-sizing:border-box;width:100%;min-width:0;padding:12px 13px;border:1px solid var(--border,#dbe2ea);border-radius:12px;background:var(--surface,#fff);color:var(--text,inherit);font:inherit}
+.subscription-subscriber-row,.subscription-admin-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 14px;padding:13px 0;border-top:1px solid var(--border,#e2e8f0)}
+.subscription-subscriber-row strong,.subscription-admin-row strong{min-width:0;overflow-wrap:anywhere}
+.subscription-subscriber-row span,.subscription-subscriber-row small,.subscription-admin-row small{color:var(--muted,#64748b);font-size:.82rem}
+.subscription-subscriber-row small{grid-column:1/-1}
+.subscription-admin-row{grid-template-columns:minmax(0,1fr) minmax(180px,260px) auto;align-items:center}
+.subscription-admin-row>div:first-child{display:grid;gap:5px;min-width:0}
+.subscription-admin-reason{display:grid;gap:6px;font-size:.8rem;color:var(--muted,#64748b)}
+.subscription-admin-reason input{min-width:0;width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--border,#dbe2ea);border-radius:10px;font:inherit}
+.subscription-admin-actions{display:flex;gap:8px;flex-wrap:wrap}
+.subscription-admin-actions button{white-space:nowrap}
+.live-subscriber-option{display:flex!important;align-items:flex-start;gap:10px;padding:12px 13px;border:1px solid var(--border,#dbe2ea);border-radius:12px;background:var(--surface-soft,#f8fafc)}
+.live-subscriber-option input{width:18px;height:18px;flex:0 0 auto;margin:2px 0 0;accent-color:var(--brand,#1769e0)}
+.live-subscriber-option span{display:grid;gap:4px}
+.live-subscriber-option strong{font-size:.9rem}
+.live-subscriber-option small{font-size:.8rem;color:var(--muted,#64748b);line-height:1.45}
+.subscriber-live-pill{background:#ede9fe;color:#6d28d9}
+@media(max-width:700px){
+ .subscription-admin-row{grid-template-columns:minmax(0,1fr);align-items:stretch}
+ .subscription-admin-actions{display:grid;grid-template-columns:1fr 1fr}
+ .subscription-admin-actions button{width:100%}
+ .subscription-subscriber-row{grid-template-columns:minmax(0,1fr) auto}
+}
+
+
+/* Minglora profile subscription action: keep every action reachable in one horizontal row. */
+.profile-info{min-width:0}
+.profile-actions{
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:8px;
+  min-width:0;
+  max-width:100%;
+}
+.profile-actions>*{flex:0 0 auto;white-space:nowrap}
+.profile-subscribe-button{
+  border-color:var(--brand,#1769e0);
+  color:var(--brand,#1769e0);
+  font-weight:750;
+  background:var(--surface,#fff);
+}
+@media(max-width:760px){
+  .profile-info>.profile-actions{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    padding:3px 0 8px;
+    scroll-snap-type:x proximity;
+  }
+  .profile-info>.profile-actions>*{scroll-snap-align:start}
+}
+.subscription-bonus-review-panel{display:grid;gap:12px}
+.subscription-bonus-review-panel>small{color:var(--muted,#64748b);line-height:1.5}
+.subscription-checkout-note{color:var(--muted,#64748b);font-size:.85rem;line-height:1.5}
+.creator-subscription-backdrop{z-index:10020}
+.creator-subscription-modal{width:min(620px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto}
+.creator-subscription-modal .modal-body{display:grid;gap:14px}
+.creator-subscription-modal .subscriber-subscription-tier{min-width:0;border:1px solid var(--border,#dbe2ea);border-radius:16px;padding:16px;background:var(--surface,#fff)}
+.creator-subscription-modal .subscriber-subscription-tier ul{margin:10px 0 0;padding-left:20px;line-height:1.65}
+.creator-subscription-modal .subscriber-subscription-tier p{overflow-wrap:anywhere}
+.creator-subscription-modal .modal-close{flex:0 0 auto}
+@media(max-width:700px){
+  .creator-subscription-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+  .subscription-form button{width:100%}
+}
