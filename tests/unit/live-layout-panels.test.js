@@ -140,10 +140,10 @@ test('LIVE gift animations use server-confirmed gift ledger events, not client m
   assert.ok(server.includes("broadcastLiveKitData(session.roomName,{type:'minglora.live.gift',version:1,event:liveGiftEvent},'minglora-live-gift')"), 'server must broadcast only its confirmed gift ledger event');
 });
 test('Every Full Screen LIVE control icon has its expected working event handler', () => {
-  for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-settings-toggle','live-share-toggle','live-leave']) {
+  for (const id of ['live-mic-toggle','live-camera-toggle','live-camera-flip','live-screen-share-toggle','live-guests-toggle','live-audio-toggle','live-chat-toggle','live-gifts-toggle','live-cohost-toggle','live-share-toggle','live-fullscreen-toggle','live-leave']) {
     assert.ok(app.includes('liveControlButton("'+id+'"'), 'missing control '+id);
   }
-  for (const handler of ['micControl?.addEventListener("click"','cameraControl?.addEventListener("click"','flipCameraControl?.addEventListener("click"','screenShareControl?.addEventListener("click"','roomAudioControl?.addEventListener("click"','$("#live-chat-toggle")?.addEventListener','$("#live-guests-toggle")?.addEventListener','$("#live-gifts-toggle")?.addEventListener','$("#live-settings-toggle")?.addEventListener','$("#live-share-toggle")?.addEventListener','$("#live-leave")?.addEventListener']) {
+  for (const handler of ['micControl?.addEventListener("click"','cameraControl?.addEventListener("click"','flipCameraControl?.addEventListener("click"','screenShareControl?.addEventListener("click"','roomAudioControl?.addEventListener("click"','$("#live-chat-toggle")?.addEventListener','$("#live-guests-toggle")?.addEventListener','$("#live-gifts-toggle")?.addEventListener','$("#live-cohost-toggle")?.addEventListener','$("#live-share-toggle")?.addEventListener','liveFullscreenControl?.addEventListener("click"','$("#live-leave")?.addEventListener']) {
     assert.ok(app.includes(handler), 'missing working control handler: '+handler);
   }
   assert.match(app, /typeof navigator\.mediaDevices\?\.getDisplayMedia!=="function"/);

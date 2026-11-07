@@ -97,7 +97,7 @@ test('Opening another LIVE room clears a previous participant-presence retry', (
 test('Minglora LIVE presents compact accessible icon controls with working room actions', () => {
   assert.match(app, /function liveControlIcon\(/);
   assert.match(app, /class='live-player-controls live-icon-controls'/);
-  assert.match(app, /Manage multi-guest stage/);
+  assert.match(app, /Manage Multi-Guest seats/);
   assert.match(app, /Switch front\/back camera/);
   assert.match(app, /restartTrack\(\{facingMode:nextFacing\}\)/);
   assert.match(app, /navigator\.share/);

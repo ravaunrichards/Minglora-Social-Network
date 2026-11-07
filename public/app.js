@@ -2263,21 +2263,26 @@ function updateLiveControlButton(button,icon,label,caption,pressed){
   button.title=label;
   if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
 }
+let activeLiveToolsTrigger=null;
 function openLiveToolsPanel(focusSelector){
   const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer"),shell=$("#live-player-shell");
-  if(!backdrop||!drawer){toast("LIVE settings are not available in this room.");return;}
+  if(!backdrop||!drawer){toast("LIVE tools are not available in this room.");return;}
+  const candidate=document.activeElement;
+  if(candidate&&candidate!==document.body&&candidate.id!=="live-tools-close"&&!drawer.contains(candidate)){
+    activeLiveToolsTrigger=candidate;
+  }
   const fullScreen=Boolean(shell?.classList.contains('live-full-screen-active'));
   if(fullScreen){
     moveLiveToolsToFullscreenSidebar();
     setLiveFullscreenPanel('tools');
     backdrop.setAttribute("aria-modal","false");
-    setLiveSettingsControlState(true);
+    activeLiveToolsTrigger?.setAttribute("aria-expanded","true");
     setLiveChatControlState(false,'Open LIVE chat','Chat');
   }else{
     backdrop.setAttribute("aria-modal","true");
     backdrop.classList.remove("hidden");
     backdrop.setAttribute("aria-hidden","false");
-    $("#live-settings-toggle")?.setAttribute("aria-expanded","true");
+    activeLiveToolsTrigger?.setAttribute("aria-expanded","true");
     document.body.classList.add("live-tools-open");
   }
   backdrop.classList.remove("hidden");
@@ -2295,7 +2300,6 @@ function closeLiveToolsPanel(options={}){
   const fullScreen=Boolean(shell?.classList.contains('live-full-screen-active'));
   if(fullScreen){
     backdrop.setAttribute("aria-modal","false");
-    setLiveSettingsControlState(false);
     if(options.returnTo==='chat'){
       setLiveFullscreenPanel('chat');
       const wideLayout=Boolean(window.matchMedia?.('(min-width:760px)').matches);
@@ -2307,10 +2311,12 @@ function closeLiveToolsPanel(options={}){
   }else{
     backdrop.setAttribute("aria-modal","true");
     restoreLiveChatToStage();
-    $("#live-settings-toggle")?.setAttribute("aria-expanded","false");
     document.body.classList.remove("live-tools-open");
   }
-  $("#live-settings-toggle")?.focus();
+  const trigger=activeLiveToolsTrigger;
+  activeLiveToolsTrigger=null;
+  trigger?.setAttribute("aria-expanded","false");
+  if(trigger?.isConnected)trigger.focus();
 }
 function focusLiveRoomPanel(selector){
   const target=$(selector);
