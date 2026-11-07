@@ -13,24 +13,47 @@ const leagues = read('public/leagues.js');
 const gifter = read('public/gifter-progression.js');
 const admin = read('public/admin-centre.js');
 const html = read('public/index.html');
+const adminHtml = read('public/admin-centre.html');
 const serviceWorker = read('public/sw.js');
 
-test('Minglora refresh controls remain visible, connected and user initiated', () => {
-  assert.match(app, /id="feed-refresh"/);
-  assert.match(app, /id="people-discovery-refresh"/);
-  assert.match(app, /id='live-directory-refresh'/);
-  assert.match(meetWave, /id="mw-lobby-refresh"/);
-  assert.match(meetWave, /refreshButton\.onclick=async\(\)=>\{/);
-  assert.doesNotMatch(meetWave, /lobbyPoller=window\.setInterval/);
-  assert.match(leagues, /id='league-refresh-button'/);
-  assert.match(leagues, /refreshButton\.onclick = \(\) => \{ void refreshScores\(true\); \}/);
-  assert.doesNotMatch(leagues, /refreshTimer\s*=\s*window\.setInterval/);
-  assert.match(gifter, /id='gp-refresh-button'/);
-  assert.match(gifter, /refreshButton\.onclick = \(\) => \{ void refreshOverview\(\); \}/);
-  assert.doesNotMatch(gifter, /setInterval\s*\(/);
-  assert.match(admin, /id="admin-gift-earnings-refresh"/);
-  assert.match(admin, /earningsRefreshButton\.onclick = \(\) => \{ void loadAdminGiftEarnings\(panel\); \}/);
-  assert.doesNotMatch(admin, /mingloraWithdrawalTimer|mingloraWithdrawalAutoRefresh/);
+test('Minglora screens do not expose manual Refresh buttons', () => {
+  assert.doesNotMatch(app, /id=['"](?:feed-refresh|people-discovery-refresh|live-directory-refresh)['"]/);
+  assert.doesNotMatch(meetWave, /id=['"]mw-lobby-refresh['"]/);
+  assert.doesNotMatch(leagues, /id=['"]league-refresh-button['"]/);
+  assert.doesNotMatch(gifter, /id=['"]gp-refresh-button['"]/);
+  assert.doesNotMatch(admin, /id=['"]admin-gift-earnings-refresh['"]/);
+});
+
+test('Feed, Friends and LIVE quietly sync in the background without replacing active interactions', () => {
+  assert.match(app, /feedAutoSyncTimer=window\.setInterval\(\(\)=>void syncFeedAutomatically\(\),30000\)/);
+  assert.match(app, /peopleDiscoveryRefreshTimer=window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
+  assert.match(app, /liveDirectoryRefreshTimer=window\.setInterval\(\(\)=>void refreshLiveDirectorySessions\(\{quiet:true\}\),15000\)/);
+  assert.match(app, /focused&&list\.contains\(focused\)/);
+  assert.match(app, /focused&&grid\.contains\(focused\)/);
+  assert.match(app, /document\.visibilityState!=='visible'/);
+});
+
+test('MeetWave lobby syncs automatically but never refreshes an active meeting page', () => {
+  assert.match(meetWave, /lobbyPoller=window\.setInterval\(\(\)=>\{/);
+  assert.match(meetWave, /refreshLobby\(\{quiet:true\}\)/);
+  assert.match(meetWave, /state\.view==='meetwave'&&!activeRoom/);
+  assert.doesNotMatch(meetWave, /id=['"]mw-lobby-refresh['"]/);
+});
+
+test('League and Gifter progression use non-disruptive automatic data updates', () => {
+  assert.match(leagues, /autoSyncTimer = window\.setInterval\(\(\) => void refreshScores\(\), 20000\)/);
+  assert.match(leagues, /if \(focused && current\.contains\(focused\)\) continue/);
+  assert.match(gifter, /autoSyncTimer = window\.setInterval\(\(\) => void refreshOverview\(\), 30000\)/);
+  assert.match(gifter, /if \(focused && main\.contains\(focused\)\) return/);
+  assert.doesNotMatch(leagues, /id=['"]league-refresh-button['"]/);
+  assert.doesNotMatch(gifter, /id=['"]gp-refresh-button['"]/);
+});
+
+test('Admin earnings and withdrawal records update automatically without a manual refresh button', () => {
+  assert.match(admin, /panel\._mingloraCreatorEarningsTimer = window\.setInterval/);
+  assert.match(admin, /loadAdminGiftEarnings\(panel, \{ quiet:true \}\)/);
+  assert.match(admin, /\}, 30000\)/);
+  assert.doesNotMatch(admin, /id=['"]admin-gift-earnings-refresh['"]/);
 });
 
 test('retry actions remain available for failed content loads', () => {
@@ -38,29 +61,29 @@ test('retry actions remain available for failed content loads', () => {
   assert.match(app, /id="gift-gallery-retry"/);
 });
 
-test('manual-refresh assets are versioned and cached consistently', () => {
-  const manualAssets = [
+test('automatic-update assets are versioned consistently in HTML and the service-worker shell', () => {
+  const assets = [
     '/styles.css?v=20261106-pinch-zoom-photo-crop-1',
-    '/meetwave.css?v=20261107-standalone-room-reference-1',
-    '/meetwave.js?v=20261107-standalone-room-reference-1',
-    '/leagues.js?v=20261106-user-controlled-refresh-1',
-    '/gifter-progression.css?v=20261106-user-controlled-refresh-1',
-    '/gifter-progression.js?v=20261106-user-controlled-refresh-1',
-    '/app.js?v=20261106-pinch-zoom-photo-crop-1',
-    '/admin-centre.js?v=20261106-user-controlled-refresh-1'
+    '/meetwave.css?v=20261107-auto-sync-no-refresh-1',
+    '/meetwave.js?v=20261106-auto-sync-no-refresh-1',
+    '/leagues.js?v=20261106-auto-sync-no-refresh-1',
+    '/gifter-progression.css?v=20261107-auto-sync-no-refresh-1',
+    '/gifter-progression.js?v=20261106-auto-sync-no-refresh-1',
+    '/app.js?v=20261106-auto-sync-no-refresh-1',
+    '/admin-centre.js?v=20261106-auto-sync-no-refresh-1'
   ];
-  for (const asset of manualAssets) {
-    assert.ok(html.includes(asset), 'HTML requests ' + asset);
+  for (const asset of assets) {
+    assert.ok(html.includes(asset), 'Minglora HTML requests ' + asset);
     assert.ok(serviceWorker.includes(asset), 'service worker caches ' + asset);
   }
-  assert.match(serviceWorker, /minglora-shell-v113-pinch-zoom-photo-crop-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261106-auto-sync-no-refresh-1/);
+  assert.match(serviceWorker, /minglora-shell-v119-auto-sync-no-refresh-1/);
 });
 
-test('service-worker registration stays non-forcing while using the refreshed worker URL', () => {
+test('service-worker registration does not force an active page reload', () => {
   assert.equal(
-    (app.match(/navigator\.serviceWorker\.register\('\/sw\.js\?v=20261106-user-controlled-refresh-1/g) || []).length,
-    2,
-    'both service-worker registrations use the user-controlled refresh version'
+    (app.match(/navigator\.serviceWorker\.register\('\/sw\.js\?v=20261107-auto-sync-no-refresh-1/g) || []).length,
+    2
   );
   assert.match(app, /updateViaCache:'none'/);
   assert.doesNotMatch(app, /await registration\.update\(\)/);
