@@ -19,7 +19,7 @@
 .ml-calc-screen-footer button{border:0;border-radius:5px;padding:3px 8px;background:#5f774d;color:#f5ffe9;font:800 .6rem ui-monospace,monospace;cursor:pointer}
 .ml-calc-memory-keys,.ml-calc-clear-keys{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:13px}
 .ml-calc-clear-keys{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:10px}
-.ml-calc-memory-keys button,.ml-calc-clear-keys button,.ml-calc-keypad button,.ml-calc-scientific button{min-width:0;min-height:43px;border:1px solid #bac4cf;border-radius:10px;background:linear-gradient(180deg,#fff,#e4e9ef);color:#28384b;box-shadow:0 3px 0 #aeb8c3,0 4px 7px #16253b12;font:800 .9rem/1.1 inherit;font-family:inherit;cursor:pointer;touch-action:manipulation;transition:transform .08s,box-shadow .08s,filter .08s}
+.ml-calc-memory-keys button,.ml-calc-clear-keys button,.ml-calc-keypad button,.ml-calc-scientific button{min-width:0;min-height:43px;border:1px solid #bac4cf;border-radius:10px;background:linear-gradient(180deg,#fff,#e4e9ef);color:#28384b;box-shadow:0 3px 0 #aeb8c3,0 4px 7px #16253b12;font:800 .9rem/1.1 system-ui,sans-serif;cursor:pointer;touch-action:manipulation;transition:transform .08s,box-shadow .08s,filter .08s}
 .ml-calc-memory-keys button{min-height:32px;border-radius:8px;font-size:.69rem;color:#4c5b6b}
 .ml-calc-clear-keys button{min-height:37px;font-size:.78rem}
 .ml-calc-clear-keys .ml-calc-clear-all{background:linear-gradient(180deg,#f8b8b8,#e98c8c);border-color:#da8383;color:#682121;box-shadow:0 3px 0 #b96d6d}
