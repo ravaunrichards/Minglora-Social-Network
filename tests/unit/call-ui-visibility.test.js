@@ -100,3 +100,16 @@ test('ringing call status is readable without depending on LiveKit provider pres
   assert.match(route,/participantStatus:participant\.status/);
   assert.match(route,/expireRingingCall/);
 });
+
+test('call notifications return to the current app window and load the latest call bundle',()=>{
+  const appAsset=html.match(/src="(\/app\\.js\\?v=[^"]+)"/)?.[1]||'';
+  assert.equal(appAsset,'/app.js?v=20261107-real-phone-calls-1');
+  assert.ok(worker.includes("'"+appAsset+"'"),'the service worker precaches the current call-enabled app bundle');
+  assert.match(worker,/CACHE_NAME='minglora-shell-v145-phone-call-ui-3'/);
+  const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
+  const clickEnd=worker.indexOf("\\n});",clickStart);
+  const clickHandler=worker.slice(clickStart,clickEnd);
+  assert.match(clickHandler,/const existing=windows\\.find/);
+  assert.ok(clickHandler.indexOf('existing.navigate(target)')<clickHandler.indexOf("self.clients.openWindow(target)"));
+  assert.match(clickHandler,/existing\\.focus\\(\\)/);
+});
