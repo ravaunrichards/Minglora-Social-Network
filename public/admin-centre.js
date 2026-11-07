@@ -1470,6 +1470,7 @@
     const banForm = panel.querySelector('#admin-user-ban-form');
     const banButton = panel.querySelector('#admin-user-ban-submit');
     const unbanButton = panel.querySelector('#admin-user-unban-button');
+    const unbanControls = panel.querySelector('.admin-user-unban-controls');
     if (!selection || !summary || !status || !banForm || !unbanButton) return;
     if (!member) {
       selection.hidden = true;
@@ -1484,6 +1485,7 @@
     status.className = 'admin-user-status admin-user-status--' + escapeText(member.status || 'unknown');
     const ownerProtected = Boolean(member.isOwner);
     banForm.hidden = ownerProtected || member.status === 'banned';
+    if (unbanControls) unbanControls.hidden = ownerProtected || member.status !== 'banned';
     unbanButton.hidden = ownerProtected || member.status !== 'banned';
     if (banButton) banButton.disabled = ownerProtected || member.status === 'banned';
     const reason = panel.querySelector('#admin-user-ban-reason');
