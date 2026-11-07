@@ -42,3 +42,13 @@ test('account dropdown and add-account dialog have desktop and phone layouts',()
   assert.match(css,/\.account-access-modal/);
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.profile-account-menu\{position:fixed/);
 });
+
+test('Creator account switcher escapes header stacking and stays above every application overlay',()=>{
+  assert.match(app,/function mountAccountSwitcherTopLayer\(\)/);
+  assert.match(app,/document\.body\.appendChild\(panel\)/);
+  assert.match(app,/positionAccountSwitcherTopLayer\(\)/);
+  assert.match(app,/zIndex='2147483647'/);
+  assert.match(app,/!panel\?\.contains\(event\.target\)/);
+  assert.match(app,/anchor\.appendChild\(panel\)/);
+  assert.match(css,/\.profile-account-menu\.is-top-layer\{[\s\S]*?z-index:2147483647!important/);
+});
