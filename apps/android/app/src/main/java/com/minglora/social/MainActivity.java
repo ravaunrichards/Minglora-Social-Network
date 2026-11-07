@@ -16,6 +16,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
@@ -52,12 +53,15 @@ public final class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 4101;
     private static final int WEB_PERMISSION_REQUEST = 4102;
     private static final int INSTALL_SOURCES_REQUEST = 4103;
+    private static final int GEOLOCATION_PERMISSION_REQUEST = 4104;
 
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
     private PermissionRequest pendingWebPermissionRequest;
+    private GeolocationPermissions.Callback pendingGeolocationCallback;
+    private String pendingGeolocationOrigin;
     private boolean updateDialogVisible;
 
     @Override
@@ -83,6 +87,7 @@ public final class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(true);
+        settings.setGeolocationEnabled(true);
         settings.setSupportMultipleWindows(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -141,6 +146,21 @@ public final class MainActivity extends Activity {
             public void onPermissionRequestCanceled(PermissionRequest request) {
                 if (pendingWebPermissionRequest == request) pendingWebPermissionRequest = null;
             }
+
+            @Override
+            public void onGeolocationPermissionsShowPrompt(
+                    String origin, GeolocationPermissions.Callback callback) {
+                runOnUiThread(() -> handleGeolocationPermissionRequest(origin, callback));
+            }
+
+            @Override
+            public void onGeolocationPermissionsHidePrompt() {
+                if (pendingGeolocationCallback != null) {
+                    pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
+                    pendingGeolocationCallback = null;
+                    pendingGeolocationOrigin = null;
+                }
+            }
         });
 
         setContentView(webView);
@@ -160,6 +180,31 @@ public final class MainActivity extends Activity {
         } catch (ActivityNotFoundException error) {
             Toast.makeText(this, "No app is available to open this link.", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void handleGeolocationPermissionRequest(
+            String origin, GeolocationPermissions.Callback callback) {
+        Uri uri = Uri.parse(origin == null ? "" : origin);
+        if (!"https".equalsIgnoreCase(uri.getScheme()) ||
+                !APP_HOST.equalsIgnoreCase(uri.getHost()) ||
+                pendingGeolocationCallback != null) {
+            callback.invoke(origin, false, false);
+            return;
+        }
+        boolean hasCoarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean hasFine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+        if (hasCoarse || hasFine) {
+            callback.invoke(origin, true, false);
+            return;
+        }
+        pendingGeolocationOrigin = origin;
+        pendingGeolocationCallback = callback;
+        requestPermissions(new String[] {
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        }, GEOLOCATION_PERMISSION_REQUEST);
     }
 
     private void handleWebPermissionRequest(PermissionRequest request) {
@@ -192,6 +237,18 @@ public final class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == GEOLOCATION_PERMISSION_REQUEST) {
+            GeolocationPermissions.Callback callback = pendingGeolocationCallback;
+            String origin = pendingGeolocationOrigin;
+            pendingGeolocationCallback = null;
+            pendingGeolocationOrigin = null;
+            boolean coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+            boolean fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+            if (callback != null) callback.invoke(origin, coarseGranted || fineGranted, false);
+            return;
+        }
         if (requestCode != WEB_PERMISSION_REQUEST || pendingWebPermissionRequest == null) return;
         PermissionRequest request = pendingWebPermissionRequest;
         pendingWebPermissionRequest = null;
@@ -402,6 +459,11 @@ public final class MainActivity extends Activity {
         if (pendingWebPermissionRequest != null) {
             pendingWebPermissionRequest.deny();
             pendingWebPermissionRequest = null;
+        }
+        if (pendingGeolocationCallback != null) {
+            pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
+            pendingGeolocationCallback = null;
+            pendingGeolocationOrigin = null;
         }
         updateExecutor.shutdownNow();
         if (webView != null) {
