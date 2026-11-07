@@ -54,9 +54,9 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(!css.includes('.mobile-nav [data-logout]'), 'no detached phone logout styling remains');
   assert.match(css, /\.settings-signout-card/);
   assert.match(css, /\.settings-logout-button/);
-  assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\\d+-[a-z0-9-]+'/);
-  const currentStylesheet = html.match(/href="(\\/styles\\.css\\?v=[^"]+)"/)?.[1];
-  const currentAppScript = html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1];
+  assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-[a-z0-9-]+'/);
+  const currentStylesheet = html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1];
+  const currentAppScript = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
   assert.ok(currentStylesheet && serviceWorker.includes(currentStylesheet), 'the active stylesheet must be cached using the current HTML version');
   assert.ok(currentAppScript && serviceWorker.includes(currentAppScript), 'the active app bundle must be cached using the current HTML version');
   assert.ok(serviceWorker.includes('settings.js?v=20261106-refresh-controls-removed-1'));
