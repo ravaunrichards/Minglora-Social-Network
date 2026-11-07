@@ -232,7 +232,7 @@
                   '<div class="mcc-currency-slot">' + pickerMarkup('to') + '</div>' +
                   '<p class="mcc-amount-caption">' + escapeHtml(toCurrency?.name || state.to) + '</p></div>' +
               '</div>' +
-              '<div class="mcc-rate-panel"><div class="mcc-rate-heading"><span>Exchange rate</span><button type="button" class="mcc-icon-button" data-mcc-refresh title="Refresh exchange rate" aria-label="Refresh exchange rate" ' + (state.loading ? 'disabled' : '') + '>↻</button></div>' +
+              '<div class="mcc-rate-panel"><div class="mcc-rate-heading"><span>Exchange rate</span></div>' +
                 '<strong id="mcc-rate-text">' + escapeHtml(rateText) + '</strong>' +
                 (inverseText ? '<small>' + escapeHtml(inverseText) + '</small>' : '') +
                 '<div class="mcc-rate-meta">' + (state.loading ? 'Contacting the reference-rate provider…' :
@@ -291,12 +291,12 @@
       : '<p class="mcc-muted mcc-directory-empty">No matching active currency was found.</p>';
   }
 
-  async function loadRate({refresh = false} = {}) {
+  async function loadRate() {
     state.loading = true;
     state.error = '';
     render();
     try {
-      const payload = await api('/currency/rate?base=' + encodeURIComponent(state.from) + '&quote=' + encodeURIComponent(state.to) + (refresh ? '&refresh=1' : ''));
+      const payload = await api('/currency/rate?base=' + encodeURIComponent(state.from) + '&quote=' + encodeURIComponent(state.to) + '');
       state.rate = Number(payload.rate);
       state.rateDate = String(payload.date || '');
       state.provider = String(payload.provider || 'Reference-rate provider');
@@ -409,8 +409,7 @@
       const currentOutput = state.amount !== '' && Number.isFinite(state.rate) ? Number(state.amount) * state.rate : '';
       selectPair(state.to, state.from, currentOutput === '' ? '' : String(currentOutput));
     });
-    root.querySelector('[data-mcc-refresh]')?.addEventListener('click', () => void loadRate({ refresh: true }));
-    root.querySelector('[data-mcc-favorite]')?.addEventListener('click', toggleFavorite);
+        root.querySelector('[data-mcc-favorite]')?.addEventListener('click', toggleFavorite);
     root.querySelector('[data-mcc-save-history]')?.addEventListener('click', recordHistory);
     root.querySelector('[data-mcc-copy]')?.addEventListener('click', async () => {
       const amount = Number(state.amount) * state.rate;
