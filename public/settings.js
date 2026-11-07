@@ -57,7 +57,7 @@
   async function api(path, options = {}) {
     const response = await fetch('/api' + path, {
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers: { 'Content-Type': 'application/json', ...(window.MingloraDeviceContextHeaders?.() || {}), ...(options.headers || {}) },
       ...options
     });
     const payload = await response.json().catch(() => ({}));
@@ -155,6 +155,7 @@
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Blocking and voice/video call preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="content-display" data-category-description="Appearance, themes, feed order and display preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg><span>Content &amp; Display</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="cache-cellular" data-category-description="Lite mode, browser storage and temporary cached images."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore"></use></svg><span>Cache &amp; Cellular</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="device-access" data-category-description="Camera, microphone, location, screen sharing, notifications and device time zone."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings"></use></svg><span>Device Access</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="support-about" data-category-description="Support requests, help and platform information."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#external-link"></use></svg><span>Support &amp; About</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="logon" data-category-description="Password, sign-in security, active sessions and logout."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#lock"></use></svg><span>Logon</span></button>
               </div>
@@ -289,6 +290,24 @@
               </div>
               <div class="settings-cache-actions"><button type="button" class="secondary" id="settings-clear-image-cache">Clear cached images</button><span class="settings-note" id="settings-cache-status" role="status" aria-live="polite">This removes temporary browser-cached images only. It does not delete your Minglora posts, account data or files saved to your device.</span></div>
               <p class="settings-note">Downloaded files saved by your phone or computer are managed by that device. Minglora will not delete personal device downloads from this browser setting.</p>
+            </section>
+            <section class="settings-card" id="settings-device-access" data-settings-category="device-access">
+              ${sectionHeading('Device access &amp; time zone')}
+              <p class="settings-note">Minglora checks what this phone, tablet or computer supports. Protected resources are requested only when you press a control or use the feature that needs them. Minglora cannot bypass your browser or operating-system permissions.</p>
+              <div class="settings-storage-summary">
+                <div><small>Detected device time zone</small><strong id="settings-device-timezone">Detecting…</strong></div>
+                <div><small>Device / browser</small><strong id="settings-device-platform">Detecting…</strong></div>
+              </div>
+              <div class="settings-device-access-grid">
+                <article class="settings-device-access-card"><div><strong>Camera</strong><small id="device-access-camera-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="camera">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Microphone</strong><small id="device-access-microphone-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="microphone">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Location</strong><small id="device-access-location-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="location">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Screen sharing</strong><small id="device-access-screen-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="screen">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Notifications</strong><small id="device-access-notifications-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="notifications">Allow notifications</button></article>
+                <article class="settings-device-access-card"><div><strong>Photos &amp; files</strong><small id="device-access-files-status">Available through the device file picker when you choose an upload.</small></div><span class="settings-device-access-note">Choose files when uploading</span></article>
+                <article class="settings-device-access-card"><div><strong>Device storage</strong><small id="device-access-storage-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="storage">Check storage</button></article>
+              </div>
+              <p class="settings-note" id="settings-device-access-feedback" role="status" aria-live="polite">Camera and microphone streams are closed immediately after an access check. Location coordinates are not saved or sent by this check.</p>
             </section>
             <section class="settings-card" id="settings-data" data-settings-category="account">
               ${sectionHeading('Your information')}
@@ -616,6 +635,79 @@
       }
       categoryTabs.forEach(tab=>tab.addEventListener('click',()=>activateSettingsCategory(tab.dataset.settingsCategoryButton)));
       activateSettingsCategory('activity');
+
+      const setDeviceAccessStatus=(resource,message)=>{
+        const label=document.querySelector('#device-access-'+resource+'-status');
+        if(label)label.textContent=message;
+      };
+      const permissionLabel=state=>state==='granted'?'Allowed':state==='denied'?'Blocked in browser settings':state==='prompt'?'Ask when this feature is used':'Permission status unavailable';
+      async function queryDevicePermission(name){
+        try{
+          if(!navigator.permissions?.query)return 'unavailable';
+          return (await navigator.permissions.query({name})).state;
+        }catch{return 'unavailable';}
+      }
+      async function refreshDeviceAccess(){
+        const zoneLabel=document.querySelector('#settings-device-timezone');
+        const platformLabel=document.querySelector('#settings-device-platform');
+        try{
+          const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time zone unavailable';
+          if(zoneLabel)zoneLabel.textContent=zone;
+        }catch{if(zoneLabel)zoneLabel.textContent='Unavailable in this browser';}
+        if(platformLabel)platformLabel.textContent=String(navigator.userAgentData?.platform||navigator.platform||'Web browser');
+        const [camera,microphone,location]=await Promise.all([
+          queryDevicePermission('camera'),queryDevicePermission('microphone'),queryDevicePermission('geolocation')
+        ]);
+        setDeviceAccessStatus('camera',navigator.mediaDevices?.getUserMedia?permissionLabel(camera):'Camera API not supported');
+        setDeviceAccessStatus('microphone',navigator.mediaDevices?.getUserMedia?permissionLabel(microphone):'Microphone API not supported');
+        setDeviceAccessStatus('location',navigator.geolocation?permissionLabel(location):'Location API not supported');
+        setDeviceAccessStatus('screen',navigator.mediaDevices?.getDisplayMedia?'Available when you start screen sharing':'Screen sharing is not supported here');
+        setDeviceAccessStatus('notifications',!('Notification' in window)?'Notifications are not supported here':Notification.permission==='granted'?'Allowed':Notification.permission==='denied'?'Blocked in browser settings':'Not yet allowed');
+        setDeviceAccessStatus('storage',navigator.storage?.estimate?'Available':'Storage estimate is not supported here');
+      }
+      async function requestDeviceAccess(resource){
+        const feedback=document.querySelector('#settings-device-access-feedback');
+        if(feedback)feedback.textContent='Waiting for your device permission…';
+        if(resource==='camera'||resource==='microphone'){
+          if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera or microphone capture.');
+          const constraints=resource==='camera'?{video:true}:{audio:true};
+          const stream=await navigator.mediaDevices.getUserMedia(constraints);
+          stream.getTracks().forEach(track=>track.stop());
+          if(feedback)feedback.textContent=resource==='camera'?'Camera access is available. The camera stream was closed after the check.':'Microphone access is available. The audio stream was closed after the check.';
+        }else if(resource==='location'){
+          if(!navigator.geolocation)throw new Error('This browser does not support device location.');
+          await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(()=>resolve(),error=>reject(error),{enableHighAccuracy:false,timeout:12000,maximumAge:60000}));
+          if(feedback)feedback.textContent='Location permission is available. This check did not save or send your coordinates.';
+        }else if(resource==='screen'){
+          if(!navigator.mediaDevices?.getDisplayMedia)throw new Error('Screen sharing is not supported by this browser or device.');
+          const stream=await navigator.mediaDevices.getDisplayMedia({video:true});
+          stream.getTracks().forEach(track=>track.stop());
+          if(feedback)feedback.textContent='Screen sharing permission is available. The preview stream was stopped after the check.';
+        }else if(resource==='notifications'){
+          if(!('Notification' in window))throw new Error('This browser does not support notifications.');
+          const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+          if(permission!=='granted')throw new Error('Notifications were not allowed. Check this device’s browser or app settings.');
+          if(feedback)feedback.textContent='Notifications are allowed on this device. Turn on Minglora push in the Notifications settings to subscribe this device.';
+        }else if(resource==='storage'){
+          const estimate=await navigator.storage?.estimate?.();
+          if(!estimate)throw new Error('This browser does not expose storage estimates.');
+          const used=Number(estimate.usage||0),quota=Number(estimate.quota||0);
+          const format=bytes=>bytes<1024?bytes+' B':bytes<1048576?(bytes/1024).toFixed(1)+' KB':(bytes/1048576).toFixed(1)+' MB';
+          if(feedback)feedback.textContent='Device storage available to Minglora: '+format(used)+' used'+(quota?' of '+format(quota):'')+'.';
+        }
+        await refreshDeviceAccess();
+      }
+      document.querySelectorAll('[data-device-access-request]').forEach(button=>button.addEventListener('click',async()=>{
+        const resource=button.dataset.deviceAccessRequest;
+        button.disabled=true;
+        try{await requestDeviceAccess(resource);}
+        catch(error){
+          const status=document.querySelector('#settings-device-access-feedback');
+          if(status)status.textContent=error.message||'The device did not grant this permission.';
+          await refreshDeviceAccess();
+        }finally{button.disabled=false;}
+      }));
+      refreshDeviceAccess();
 
       async function refreshStorageSummary(){
         const usedLabel=document.querySelector('#settings-storage-used');
