@@ -2,7 +2,6 @@
   "use strict";
 
   const state = { overview: null, selectedLevel: 1 };
-  let refreshTimer = null;
   let refreshInFlight = false;
   let viewGeneration = 0;
 
@@ -11,8 +10,6 @@
   }
 
   function onNavigateAway() {
-    if (refreshTimer) clearInterval(refreshTimer);
-    refreshTimer = null;
     viewGeneration += 1;
   }
 
@@ -26,6 +23,10 @@
   async function refreshOverview() {
     if (refreshInFlight || !isGifterViewActive() || document.visibilityState !== "visible") return;
     refreshInFlight = true;
+    const refreshButton = document.getElementById("gp-refresh-button");
+    const refreshStatus = document.getElementById("gp-refresh-status");
+    if (refreshButton) { refreshButton.disabled = true; refreshButton.textContent = "Refreshing…"; }
+    if (refreshStatus) refreshStatus.textContent = "Checking confirmed gift activity…";
     const generation = viewGeneration;
     try {
       const overview = await requestOverview();
@@ -38,22 +39,16 @@
       bindPage(overview);
       publishBadge(overview);
     } catch (error) {
-      console.warn("[Minglora Gifter Progression] Live refresh failed:", error?.message || error);
+      console.warn("[Minglora Gifter Progression] Manual refresh failed:", error?.message || error);
+      const status = document.getElementById("gp-refresh-status");
+      if (status) status.textContent = "Refresh failed. Try again when you are ready.";
     } finally {
       refreshInFlight = false;
+      const button = document.getElementById("gp-refresh-button");
+      if (button) { button.disabled = false; button.textContent = "↻ Refresh"; }
     }
   }
 
-  function startRefresh() {
-    if (refreshTimer) clearInterval(refreshTimer);
-    refreshTimer = setInterval(() => {
-      if (!isGifterViewActive()) {
-        onNavigateAway();
-        return;
-      }
-      void refreshOverview();
-    }, 5000);
-  }
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[char]));
@@ -171,7 +166,7 @@
     return "<div class='gp-page'>" +
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
-      "<button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></header>" +
+      "<div class='gp-heading-actions'><button type='button' class='gp-refresh-button' id='gp-refresh-button'>↻ Refresh</button><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button><small id='gp-refresh-status' role='status' aria-live='polite'>Refresh only when you choose.</small></div></header>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       currentBadgeMarkup +
@@ -205,6 +200,8 @@
   }
 
   function bindPage(data) {
+    const refreshButton = document.getElementById("gp-refresh-button");
+    if (refreshButton) refreshButton.onclick = () => { void refreshOverview(); };
     document.getElementById("gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
     document.getElementById("gp-level-grid")?.addEventListener("click", event => {
       const button = event.target.closest("[data-gp-level]");
@@ -234,9 +231,8 @@
     main.innerHTML = renderMarkup(overview);
     bindPage(overview);
     publishBadge(overview);
-    startRefresh();
   }
 
-  // Do not refresh or replace this screen when the tab becomes visible or reconnects.
+  // This screen refreshes only when the member chooses to tap Refresh.
   window.MingloraGifterProgression = { render, onNavigateAway };
 })();
