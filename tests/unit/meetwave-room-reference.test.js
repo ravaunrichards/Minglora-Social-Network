@@ -92,10 +92,10 @@ test('Screen sharing uses a separate stage outside the nine participant seats', 
 });
 
 test('MeetWave scripts and styles share the current browser cache version', () => {
-  const current = '20261107-meetwave-equal-seats-11';
+  const current = '20261107-meetwave-guest-requests-12';
   assert.ok(html.includes('/meetwave.css?v='+current));
   assert.ok(html.includes('/meetwave.js?v='+current));
-  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v154-subscriptions-1'"));
+  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v156-meetwave-guest-requests-12'"));
   assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
   assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
 });
@@ -134,12 +134,13 @@ test('Every host and guest seat keeps equal dimensions across all layouts, inclu
   assert.ok(finalFit.includes('grid-row:auto!important'));
 });
 
-test('MeetWave Guest Spotlight selector is live, selectable, and can return focus to host', () => {
-  assert.ok(js.includes('id="mw-spotlight-select"'));
-  assert.ok(js.includes("$('#mw-spotlight-select')?.addEventListener('change'"));
-  assert.ok(js.includes('function renderSpotlightOptions()'));
-  assert.ok(js.includes('id="mw-spotlight-host"'));
-  assert.ok(js.includes("applySpotlightSelection(identity)"));
+test('Active guest focus is selectable in every layout', () => {
+  assert.ok(js.includes('function setSpeakerFocus(speakers=[])'));
+  assert.ok(js.includes('applySpotlightSelection(activeIdentity)'));
+  assert.ok(js.includes('setSpeakerFocus([{identity:tile.dataset.identity}])'));
+  assert.ok(css.includes('.mw-meeting #mw-grid .mw-video-tile.is-focused'));
+  assert.ok(!js.includes('id="mw-spotlight-select"'));
+  assert.ok(!js.includes('id="mw-spotlight-host"'));
 });
 
 test('MeetWave uses the nine-participant limit when checking LiveKit capacity', () => {
@@ -176,4 +177,31 @@ test('All nine total seats fit and spotlight has a visible focus treatment', () 
   assert.ok(finalFit.includes('grid-row:auto!important'));
   assert.ok(finalFit.includes('border:2px solid #72e0cb!important'));
   assert.ok(finalFit.includes('filter:brightness(1.1)'));
+});
+
+test('MeetWave layout choices display only their horizontal name labels', () => {
+  for (const label of ['Full Screen','Fluid Panel','Fluid Grid','Fixed Grid','Fixed Panel','Spotlight','Roundtable 1','Roundtable 2']) {
+    assert.ok(js.includes('>'+label+'</button>'), label+' is name-only');
+  }
+  assert.ok(!js.includes('8 guests ·'));
+  assert.ok(!js.includes('mw-spotlight-tools'));
+  assert.ok(css.includes('flex-direction:row!important'));
+  assert.ok(css.includes('.mw-layout-options button small{display:none!important}'));
+});
+test('Public viewers request a guest seat and the host can approve or decline', () => {
+  assert.ok(js.includes("endpoint(id)+'/guest-requests'"));
+  assert.ok(js.includes('watchPendingGuestJoin(id)'));
+  assert.ok(js.includes('function refreshGuestRequests()'));
+  assert.ok(js.includes('data-guest-request-action'));
+  assert.ok(server.includes('/guest-requests'));
+  assert.ok(server.includes("request.status='accepted'"));
+  assert.ok(server.includes("request.status='declined'"));
+  assert.ok(server.includes('wait for the host to approve you before joining'));
+  assert.ok(server.includes('db.meetWaveGuestRequests=(db.meetWaveGuestRequests||[]).filter'));
+});
+test('MeetWave host power glyph is centered and fits inside the red button', () => {
+  assert.ok(css.includes('place-items:center!important'));
+  assert.ok(css.includes('width:30px!important;height:30px!important'));
+  assert.ok(css.includes('overflow:hidden!important'));
+  assert.ok(css.includes('background:linear-gradient(155deg,#f24b62,#c92340)!important'));
 });
