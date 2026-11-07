@@ -71,7 +71,7 @@ export function parseFallbackCurrencyDirectory(payload) {
       const code = normalizeCurrencyCode(row.iso_code);
       if (!code || code === 'XXX' || seen.has(code)) return null;
       seen.add(code);
-      const minor = Number(row.minor_unit);
+      const minor = Number(row.minor_unit ?? (code ? new Intl.NumberFormat('en', { style: 'currency', currency: code }).resolvedOptions().maximumFractionDigits : 2));
       return {
         code,
         name: String(row.name || code),
