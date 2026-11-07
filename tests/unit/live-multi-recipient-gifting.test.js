@@ -17,17 +17,19 @@ test("LIVE gift recipient list is derived from connected LiveKit participants", 
   assert.match(server, /recipientId!==String\(session\.hostId\)&&!recipientParticipant/);
 });
 
-test("hosts, guests and viewers can choose another connected room participant", () => {
+test("viewers can gift hosts or guests and hosts and guests can gift each other", () => {
   assert.match(app, /id='live-gift-recipient'/);
   assert.match(app, /loadLiveGiftRecipients\(session\)/);
   assert.doesNotMatch(app, /if\(!gift\|\|liveGiftSending\|\|role==="host"\|\|!giftsEnabled\)return/);
   assert.match(app, /recipientUserId/);
   assert.match(server, /recipientUserId:recipientId/);
+  assert.match(server, /!\['guest','cohost'\]\.includes\(String\(recipientParticipant\.role\|\|''\)\)/);
   assert.match(runtime, /p_recipient_id: recipientUserId/);
 });
 
 test("the database credits the selected recipient and preserves source-backed earnings", () => {
   assert.match(migration, /p_recipient_id uuid/);
+  assert.match(migration, /lp\.role IN \('guest','cohost'\)/);
   assert.match(migration, /lp\.status='connected'/);
   assert.match(migration, /receiver_id,[\s\S]*?creator_share_minor/);
   assert.match(migration, /p_recipient_id,gift\.code/);
