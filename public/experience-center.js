@@ -17,7 +17,7 @@
   };
   const THEMES = [
     ['minglora','Minglora Default','#1769e0','#f1f3f7','#172033'],
-    ['chl-night','CHL Night','#c41450','#0b0b12','#f4f4f8'],
+    ['chl-night','Minglora Night','#c41450','#0b0b12','#f4f4f8'],
     ['chl-ocean','Ocean Studio','#006c7d','#071923','#eefaff'],
     ['chl-violet','Violet Creator','#7735a9','#100b1d','#f8f1ff'],
     ['chl-emerald','Emerald Studio','#087447','#071711','#effff4'],
@@ -25,7 +25,7 @@
     ['chl-light','Light Professional','#a3124a','#f4f6fb','#182033']
   ];
   const STYLE_VARIANTS = [
-    ['default','Creator Hub Live Default','#ff2d6f','#0b0b12','#f4f4f8'],
+    ['default','Minglora LIVE Default','#ff2d6f','#0b0b12','#f4f4f8'],
     ['minimal','Minimal','#1769e8','#f5f6fa','#171923'],
     ['flat','Flat Design','#1769e8','#f5f6fa','#171923'],
     ['swiss','Swiss Modern','#145ee8','#f5f6fa','#171923'],
@@ -65,8 +65,8 @@
   function applyStyle(p){
     const root=document.body;
     root.dataset.mingloraStyle=p.style;
-    if(p.chlStyle&&p.chlStyle!=='default')document.documentElement.dataset.chlStyle=p.chlStyle;
-    else delete document.documentElement.dataset.chlStyle;
+    if(p.chlStyle&&p.chlStyle!=='default')document.documentElement.dataset.mingloraVariant=p.chlStyle;
+    else delete document.documentElement.dataset.mingloraVariant;
     root.dataset.mingloraTypography=p.typography;
     root.dataset.mingloraSurfaces=p.surfaces;
     root.dataset.mingloraDensity=p.density;
@@ -215,16 +215,16 @@
     return '<span class="mexp-range"><input type="range" data-exp-field="'+name+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+value+'"><output data-exp-output="'+name+'">'+value+'</output></span>';
   }
   function themeCards(){
-    return '<div class="mexp-theme-grid">'+THEMES.map(t=>'<button type="button" class="mexp-theme-card" data-exp-theme="'+t[0]+'" aria-pressed="'+(current.style===t[0]?'true':'false')+'"><span class="mexp-theme-swatch" style="--swatch-accent:'+t[2]+';--swatch-bg:'+t[3]+';--swatch-text:'+t[4]+'"></span><strong>'+t[1]+'</strong><small>'+(t[0].startsWith('chl-')?'Imported Creator Hub Live style':'Minglora native style')+'</small></button>').join('')+'</div>';
+    return '<div class="mexp-theme-grid">'+THEMES.map(t=>'<button type="button" class="mexp-theme-card" data-exp-theme="'+t[0]+'" aria-pressed="'+(current.style===t[0]?'true':'false')+'"><span class="mexp-theme-swatch" style="--swatch-accent:'+t[2]+';--swatch-bg:'+t[3]+';--swatch-text:'+t[4]+'"></span><strong>'+t[1]+'</strong><small>'+(t[0].startsWith('chl-')?'Minglora palette':'Minglora palette')+'</small></button>').join('')+'</div>';
   }
   function styleVariantCards(){
-    return '<div class="mexp-theme-grid mexp-variant-grid">'+STYLE_VARIANTS.map(t=>'<button type="button" class="mexp-theme-card mexp-variant-card" data-exp-chl-style="'+t[0]+'" aria-pressed="'+(current.chlStyle===t[0]?'true':'false')+'"><span class="mexp-theme-swatch" style="--swatch-accent:'+t[2]+';--swatch-bg:'+t[3]+';--swatch-text:'+t[4]+'"></span><strong>'+t[1]+'</strong><small>Creator Hub Live design style</small></button>').join('')+'</div>';
+    return '<div class="mexp-theme-grid mexp-variant-grid">'+STYLE_VARIANTS.map(t=>'<button type="button" class="mexp-theme-card mexp-variant-card" data-exp-design-style="'+t[0]+'" aria-pressed="'+(current.chlStyle===t[0]?'true':'false')+'"><span class="mexp-theme-swatch" style="--swatch-accent:'+t[2]+';--swatch-bg:'+t[3]+';--swatch-text:'+t[4]+'"></span><strong>'+t[1]+'</strong><small>Minglora design style</small></button>').join('')+'</div>';
   }
   function refreshStyleChoices(){
     const area=$('#settings-experience');
     if(!area)return;
     area.querySelectorAll('[data-exp-theme]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.expTheme===current.style?'true':'false'));
-    area.querySelectorAll('[data-exp-chl-style]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.expChlStyle===current.chlStyle?'true':'false'));
+    area.querySelectorAll('[data-exp-design-style]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.expDesignStyle===current.chlStyle?'true':'false'));
   }
   function markup(){
     const unitOptions=[['seconds','Seconds'],['minutes','Minutes'],['hours','Hours']];
@@ -232,7 +232,7 @@
     return '<section class="settings-card mexp-card" id="settings-experience" data-settings-category="experience" hidden>'+
       '<div class="mexp-heading"><div><span class="mexp-eyebrow">MINGLORA CONTROL CENTER</span><h2>Personalization, Display &amp; Device Experience</h2><p>Choose your look, manage in-app experience settings and inspect device capabilities. Device-only controls are clearly identified.</p></div><button class="secondary" type="button" data-exp-reset>Restore defaults</button></div>'+
       '<div class="mexp-subnav"><a href="#mexp-styles">Styles</a><a href="#mexp-wallpaper">Wallpaper</a><a href="#mexp-saver">Screen saver</a><a href="#mexp-sound">Sound</a><a href="#mexp-display">Display</a><a href="#mexp-device">Device</a></div>'+
-      '<section class="mexp-section" id="mexp-styles"><h3>Style library &amp; appearance</h3><p>Choose a Creator Hub Live color palette and combine it with any of the 18 compatible design styles. Preview changes instantly and save them to your Minglora account.</p>'+themeCards()+'<h4>Creator Hub Live design styles</h4>'+styleVariantCards()+
+      '<section class="mexp-section" id="mexp-styles"><h3>Style library &amp; appearance</h3><p>Choose a Minglora color palette and combine it with any of the 18 compatible design styles. Preview changes instantly and save them to your Minglora account.</p>'+themeCards()+'<h4>Minglora design styles</h4>'+styleVariantCards()+
       field('Typography','typography',select('typography',[['system','System'],['studio','Studio'],['readable','Readable']],current.typography),'Readable uses a larger type scale and more generous line spacing.')+
       field('Surface shape','surfaces',select('surfaces',[['standard','Standard'],['soft','Soft rounded'],['sharp','Clean edges']],current.surfaces))+
       field('Display density','density',select('density',[['comfortable','Comfortable'],['compact','Compact']],current.density))+
@@ -425,10 +425,10 @@
     area?.addEventListener('click',async event=>{
       const button=event.target.closest('button');if(!button)return;
       if(button.hasAttribute('data-exp-theme')){const theme=button.dataset.expTheme;current={...collect(),style:theme};apply(current);area.querySelectorAll('[data-exp-theme]').forEach(x=>x.setAttribute('aria-pressed',x===button?'true':'false'));queueSave();}
-      if(button.hasAttribute('data-exp-chl-style')){
-        current={...collect(),chlStyle:button.dataset.expChlStyle};
+      if(button.hasAttribute('data-exp-design-style')){
+        current={...collect(),chlStyle:button.dataset.expDesignStyle};
         apply(current);
-        area.querySelectorAll('[data-exp-chl-style]').forEach(x=>x.setAttribute('aria-pressed',x===button?'true':'false'));
+        area.querySelectorAll('[data-exp-design-style]').forEach(x=>x.setAttribute('aria-pressed',x===button?'true':'false'));
         queueSave();
       }
       if(button.hasAttribute('data-exp-reset')){
