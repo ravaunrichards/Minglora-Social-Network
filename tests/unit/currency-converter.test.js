@@ -44,7 +44,7 @@ test('parses provider fallback but excludes crypto and duplicate codes', () => {
 });
 
 test('converts arbitrary decimal amounts without truncating input', () => {
-  assert.equal(convertCurrencyAmount(12.345, 158.5), 1956.6675);
+  assert.equal(convertCurrencyAmount(12.345, 158.5), 1956.6825);
   assert.equal(convertCurrencyAmount(0, 1.25), 0);
   assert.throws(() => convertCurrencyAmount(-1, 2), /zero or greater/);
   assert.throws(() => convertCurrencyAmount(2, 0), /positive finite number/);
