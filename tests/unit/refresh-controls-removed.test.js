@@ -72,7 +72,7 @@ test('automatic-update assets are versioned consistently in HTML and the service
   const paths=['/styles.css','/meetwave.css','/meetwave.js','/leagues.js','/gifter-progression.css','/gifter-progression.js','/app.js','/admin-centre.js'];
   for(const path of paths){
     const attribute=path.endsWith('.css')?'href':'src';
-    const escapedPath=path.replaceAll('/','\/').replaceAll('.','\.'); const asset=html.match(new RegExp(attribute+'="('+escapedPath+'\?v=[^"]+)"'))?.[1]||'';
+    const asset=[...html.matchAll(new RegExp(attribute+'="([^"]+)"','g'))].map(match=>match[1]).find(value=>value.startsWith(path+'?v='))||'';
     assert.ok(asset,'HTML declares '+path);
     assert.ok(serviceWorker.includes("'"+asset+"'"),'service worker caches '+asset);
   }
