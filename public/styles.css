@@ -6563,3 +6563,9 @@ button.live-ranking-row{cursor:pointer}
 .person-card-secondary-actions .person-block-link:hover{color:var(--danger,#c43d4b);text-decoration:underline}
 .person-card-secondary-actions button:disabled,.person-dismiss-mini:disabled{opacity:.55;cursor:wait}
 .person-dismiss-mini{min-width:28px;padding-inline:7px;font-weight:800}
+
+
+/* Multi-recipient LIVE gifting */
+.live-gift-recipient-field{display:grid;gap:6px;margin:10px 0;font-size:13px;font-weight:650;color:var(--text,#f7f7fb)}
+.live-gift-recipient-field select{width:100%;min-width:0;min-height:42px;padding:9px 12px;border:1px solid var(--border,rgba(255,255,255,.16));border-radius:10px;background:var(--surface,#171923);color:inherit;font:inherit}
+.live-gift-recipient-field select:disabled{opacity:.65;cursor:not-allowed}
