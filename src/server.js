@@ -548,6 +548,72 @@ async function cleanupPersistedCalls(){
     return {ended:0,expired:0,verified:false};
   }
 }
+function meetWaveCleanupQueue(){
+  if(!Array.isArray(db.meetWaveProviderCleanupQueue))db.meetWaveProviderCleanupQueue=[];
+  return db.meetWaveProviderCleanupQueue;
+}
+function removeMeetWaveCleanupEntry(roomId){
+  const queue=meetWaveCleanupQueue();
+  const before=queue.length;
+  db.meetWaveProviderCleanupQueue=queue.filter(item=>String(item.roomId)!==String(roomId));
+  return before!==db.meetWaveProviderCleanupQueue.length;
+}
+function rememberMeetWaveProviderCleanup(roomId,roomName,reason,error){
+  if(!roomName)return;
+  const queue=meetWaveCleanupQueue();
+  let item=queue.find(entry=>String(entry.roomId)===String(roomId));
+  const timestamp=now();
+  if(!item){
+    item={roomId:String(roomId),roomName:String(roomName),reason:String(reason||'ended'),attempts:0,createdAt:timestamp,nextAttemptAt:new Date(Date.now()+15000).toISOString()};
+    queue.push(item);
+  }else{
+    item.roomName=String(roomName);
+    item.reason=String(reason||item.reason||'ended');
+    item.nextAttemptAt=new Date(Date.now()+15000).toISOString();
+  }
+  item.lastError=String(error?.message||'LiveKit room cleanup failed').slice(0,180);
+  item.lastErrorAt=timestamp;
+}
+let meetWaveProviderCleanupRunning=false;
+async function retryMeetWaveProviderCleanupQueue(){
+  if(meetWaveProviderCleanupRunning)return {retried:0,remaining:meetWaveCleanupQueue().length};
+  meetWaveProviderCleanupRunning=true;
+  let changed=false,retried=0,cleared=0;
+  try{
+    const queue=meetWaveCleanupQueue();
+    for(const item of [...queue]){
+      if(!item?.roomName)continue;
+      const dueAt=Date.parse(String(item.nextAttemptAt||''));
+      if(Number.isFinite(dueAt)&&dueAt>Date.now())continue;
+      retried++;
+      try{
+        await deleteLiveKitRoom(item.roomName);
+        removeMeetWaveCleanupEntry(item.roomId);
+        cleared++;
+        changed=true;
+      }catch(error){
+        const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+        if(status===404){
+          removeMeetWaveCleanupEntry(item.roomId);
+          cleared++;
+          changed=true;
+          continue;
+        }
+        item.attempts=Math.max(0,Number(item.attempts)||0)+1;
+        const delay=Math.min(300000,15000*(2**Math.min(item.attempts,4)));
+        item.nextAttemptAt=new Date(Date.now()+delay).toISOString();
+        item.lastError=String(error?.message||'LiveKit room cleanup failed').slice(0,180);
+        item.lastErrorAt=now();
+        changed=true;
+        console.warn('[Minglora MeetWave] Provider cleanup retry remains pending.',{roomId:item.roomId,attempts:item.attempts,status});
+      }
+    }
+    if(changed)await saveStore();
+    return {retried,cleared,remaining:meetWaveCleanupQueue().length};
+  }finally{
+    meetWaveProviderCleanupRunning=false;
+  }
+}
 async function endAndClearMeetWaveRoom(room,reason='ended'){
   if(!room?.id)return {ended:false,cleared:false};
   const roomId=String(room.id),roomName=String(room.roomName||'');
@@ -555,17 +621,25 @@ async function endAndClearMeetWaveRoom(room,reason='ended'){
   const endedAt=room.endedAt;
   (db.meetWaveAttendance||[]).filter(item=>item.roomId===roomId&&!item.leftAt).forEach(item=>{item.status='left';item.leftAt=endedAt;});
   await saveStore();
-  let providerDeleted=false,providerMissing=false,providerCleanupFailed=false;
+  let providerDeleted=false,providerMissing=false,providerCleanupPending=false;
   if(roomName){
-    try{await deleteLiveKitRoom(roomName);providerDeleted=true;}
-    catch(error){
+    try{
+      await deleteLiveKitRoom(roomName);
+      providerDeleted=true;
+      removeMeetWaveCleanupEntry(roomId);
+    }catch(error){
       const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
-      if(status===404)providerMissing=true;
-      else{
-        providerCleanupFailed=true;
-        console.warn('[Minglora MeetWave] Provider room cleanup will need retry.',{roomId,reason,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
+      if(status===404){
+        providerMissing=true;
+        removeMeetWaveCleanupEntry(roomId);
+      }else{
+        providerCleanupPending=true;
+        rememberMeetWaveProviderCleanup(roomId,roomName,reason,error);
+        console.warn('[Minglora MeetWave] Provider room cleanup queued for retry.',{roomId,reason,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
       }
     }
+  }else{
+    removeMeetWaveCleanupEntry(roomId);
   }
   db.meetWaveRooms=(db.meetWaveRooms||[]).filter(item=>String(item.id)!==roomId);
   db.meetWaveAttendance=(db.meetWaveAttendance||[]).filter(item=>String(item.roomId)!==roomId);
@@ -573,7 +647,7 @@ async function endAndClearMeetWaveRoom(room,reason='ended'){
   db.meetWaveMessages=(db.meetWaveMessages||[]).filter(item=>String(item.roomId)!==roomId);
   db.notifications=(db.notifications||[]).filter(item=>!(item.type==='meetwave_invite'&&String(item.roomId||'')===roomId));
   await saveStore();
-  return {ended:true,cleared:true,roomId,providerDeleted,providerMissing,providerCleanupFailed};
+  return {ended:true,cleared:true,roomId,providerDeleted,providerMissing,providerCleanupPending,providerCleanupQueued:providerCleanupPending};
 }
 
 async function purgeAllMeetWaveRoomsAtStartup(){
@@ -581,13 +655,19 @@ async function purgeAllMeetWaveRoomsAtStartup(){
   let providerDeleted=0,providerMissing=0,providerCleanupFailed=0;
   for(const room of rooms){
     if(!room?.roomName)continue;
-    try{await deleteLiveKitRoom(room.roomName);providerDeleted++;}
-    catch(error){
+    try{
+      await deleteLiveKitRoom(room.roomName);
+      providerDeleted++;
+      removeMeetWaveCleanupEntry(room.id);
+    }catch(error){
       const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
-      if(status===404)providerMissing++;
-      else{
+      if(status===404){
+        providerMissing++;
+        removeMeetWaveCleanupEntry(room.id);
+      }else{
         providerCleanupFailed++;
-        console.warn('[Minglora MeetWave] Startup room cleanup will need retry.',{roomId:room.id,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
+        rememberMeetWaveProviderCleanup(room.id,room.roomName,'startup-purge',error);
+        console.warn('[Minglora MeetWave] Startup room cleanup queued for retry.',{roomId:room.id,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
       }
     }
   }
@@ -597,7 +677,7 @@ async function purgeAllMeetWaveRoomsAtStartup(){
   db.meetWaveMessages=[];
   db.notifications=(db.notifications||[]).filter(item=>item.type!=='meetwave_invite');
   await saveStore();
-  return {clearedRooms:rooms.length,providerDeleted,providerMissing,providerCleanupFailed,verified:true};
+  return {clearedRooms:rooms.length,providerDeleted,providerMissing,providerCleanupFailed,providerCleanupQueued:meetWaveCleanupQueue().length,verified:true};
 }
 
 let meetWaveRoomSweepRunning=false;
@@ -605,6 +685,7 @@ async function sweepInactiveMeetWaveRooms(){
   if(meetWaveRoomSweepRunning)return;
   meetWaveRoomSweepRunning=true;
   try{
+    await retryMeetWaveProviderCleanupQueue();
     for(const room of [...(db.meetWaveRooms||[])]){
       if(!room?.id)continue;
       if(room.status==='ended'){
