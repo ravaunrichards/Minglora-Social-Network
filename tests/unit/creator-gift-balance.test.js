@@ -53,9 +53,11 @@ test('gift send confirmation explains why ordinary promotional Coins do not crea
   assert.match(app, /ordinary promotional Coins \(no cash earnings\)/);
 });
 
-test('the app bundle and service-worker cache are refreshed for the gift balance interface', () => {
-  assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(worker, /minglora-shell-v93-flow-layout-safety-1-single-username-verification-1-creator-gift-balance-1/);
+test('the gift balance interface is included in the active app shell cache', () => {
+  const appAsset=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]||'';
+  assert.ok(appAsset,'HTML loads the app bundle');
+  assert.ok(worker.includes("'"+appAsset+"'"),'service worker caches the active app bundle');
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
 });
 
 test('creator earnings are private to the signed-in creator and do not disclose Minglora share fields', () => {
