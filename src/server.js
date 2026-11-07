@@ -1206,6 +1206,17 @@ async function route(req, res) {
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
+    if(user){
+      const deviceTimeZone=String(req.headers['x-minglora-time-zone']||'').trim();
+      if(deviceTimeZone&&deviceTimeZone.length<=100&&deviceTimeZone!==user.deviceTimeZone){
+        try{
+          new Intl.DateTimeFormat('en-US',{timeZone:deviceTimeZone}).format(new Date());
+          user.deviceTimeZone=deviceTimeZone;
+          user.deviceTimeZoneUpdatedAt=now();
+          await saveStore().catch(error=>console.warn('[Minglora] Device time-zone preference could not be saved:',String(error?.message||error).slice(0,160)));
+        }catch{}
+      }
+    }
     if (user) await syncRefundedGiftActivity();
     try {
       if (method==='POST' && p==='/api/auth/register') {
