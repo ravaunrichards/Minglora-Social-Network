@@ -26,7 +26,7 @@ test('the admin verification control explicitly describes one username check', (
 });
 
 test('the app keeps its current asset URL and refreshes the service-worker cache',()=>{
-  const appAsset=html.match(/app\.js\\?v=[^"']+/)?.[0]||'';
+  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
   const cacheName=serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset&&serviceWorker.includes('/'+appAsset));
   assert.ok(serviceWorker.includes("cache:'no-cache'"));
