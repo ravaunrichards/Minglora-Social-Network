@@ -188,33 +188,38 @@
 @media(max-width:900px){.profile-header-card.profile-layout-standard ~ #profile-tab-panel .profile-body--established{grid-template-columns:minmax(0,1fr)!important}}
 
 
-/* Visitor profile actions: keep every relationship and safety action in one horizontal row. */
+/* Visitor profile actions: responsive, readable, and touch-friendly. */
 .profile-header-card--viewer .profile-actions{
-  grid-column:1 / -1!important;
-  grid-row:2!important;
-  display:flex!important;
-  flex-flow:row nowrap!important;
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,132px),1fr))!important;
   align-items:stretch!important;
-  justify-content:stretch!important;
-  gap:clamp(2px,.9vw,6px)!important;
+  gap:8px!important;
+  flex:1 1 100%!important;
   width:100%!important;
   min-width:0!important;
-  margin:0!important;
+  margin:5px 0 0!important;
+  order:3;
   overflow:visible!important;
+  position:relative;
+  z-index:1;
 }
 .profile-header-card--viewer .profile-actions .profile-edit{
   display:inline-flex!important;
-  flex:1 1 0!important;
-  width:auto!important;
+  width:100%!important;
   min-width:0!important;
   max-width:none!important;
-  min-height:40px!important;
-  padding:7px 3px!important;
+  min-height:44px!important;
+  box-sizing:border-box!important;
+  padding:9px 10px!important;
   align-items:center!important;
   justify-content:center!important;
-  font-size:clamp(7px,2.25vw,12px)!important;
-  line-height:1.15!important;
-  white-space:nowrap!important;
-  overflow:visible!important;
+  font-size:clamp(11px,2.7vw,13px)!important;
+  line-height:1.25!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
   text-align:center!important;
+}
+.profile-header-card--viewer .profile-actions .profile-edit:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--blue) 48%,transparent)!important;
+  outline-offset:2px!important;
 }
