@@ -63,10 +63,10 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 });
 
 test('the refreshed shell and service worker load the pinch-to-zoom crop editor and styles',()=>{
-  assert.match(html,/styles\.css\?v=20261107-top-gifters-2/);
+  assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
   assert.match(html,/app\.js\?v=20261107-top-gifters-2/);
   assert.match(worker,/minglora-shell-v132-live-top-gifters-2/);
-  assert.match(worker,/styles\.css\?v=20261107-top-gifters-2/);
+  assert.match(worker,/styles\.css\?v=20261107-top-gifters-1/);
   assert.match(worker,/app\.js\?v=20261107-top-gifters-2/);
 });
 
