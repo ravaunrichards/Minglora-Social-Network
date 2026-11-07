@@ -371,4 +371,35 @@
 
 
 
+<symbol id="currency-exchange" viewBox="0 0 64 64">
+    <ellipse cx="23" cy="46" rx="17" ry="7" fill="#082d69" opacity=".22"/>
+    <ellipse cx="43" cy="50" rx="14" ry="6" fill="#073e58" opacity=".2"/>
+    <path d="M9 22q0-6 7-9l13-4q7-2 10 5v22q0 5-6 7l-13 5q-11 3-11-8z" fill="url(#gold-side)" transform="translate(1 3)"/>
+    <path d="M9 18q0-6 7-9l13-4q7-2 10 5v22q0 5-6 7l-13 5q-11 3-11-8z" fill="url(#gold-front)" stroke="#fff0b8" stroke-width="1.2"/>
+    <path d="m13 15 16-5q5-1 7 3v5l-23 8z" fill="#fff8d9" opacity=".55"/>
+    <path d="M20 19v14m-4-5 4 5 4-8" fill="none" stroke="#8c5210" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M34 29q0-5 6-8l10-4q7-2 9 4v18q0 4-5 6l-12 4q-8 2-8-5z" fill="url(#teal-side)" transform="translate(0 3)"/>
+    <path d="M34 25q0-5 6-8l10-4q7-2 9 4v18q0 4-5 6l-12 4q-8 2-8-5z" fill="url(#teal-front)" stroke="#d6fff8" stroke-width="1.2"/>
+    <path d="m38 22 11-4q5-2 8 2v4l-19 7z" fill="#fff" opacity=".42"/>
+    <path d="M48 22v15m-4-5 4 5 4-5" fill="none" stroke="#064f59" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M17 47h16q7 0 9-6M47 42H33q-7 0-9 6" fill="none" stroke="url(#blue-side)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M17 44h16q7 0 9-6M47 39H33q-7 0-9 6" fill="none" stroke="#f7fcff" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M27 35 23 43l-7-4M37 48l5-8 7 4" fill="none" stroke="url(#silver-front)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+<symbol id="currency-quick" viewBox="0 0 64 64">
+    <ellipse cx="21" cy="49" rx="17" ry="6" fill="#082d69" opacity=".22"/>
+    <ellipse cx="44" cy="50" rx="14" ry="5" fill="#073e58" opacity=".2"/>
+    <path d="M7 22q0-8 12-11t18 1v22q0 7-14 9T7 39z" fill="#a65d12" transform="translate(1 3)"/>
+    <path d="M7 18q0-8 12-11t18 1v22q0 7-14 9T7 35z" fill="#f4b52d" stroke="#fff0b8" stroke-width="1.2"/>
+    <ellipse cx="22" cy="18" rx="15" ry="8" fill="#ffe08a" stroke="#fff4cc" stroke-width="1.1"/>
+    <ellipse cx="22" cy="18" rx="9" ry="4.5" fill="#d88b19"/>
+    <path d="M19 13v10m-4-5h8m-8 4h8" fill="none" stroke="#fff4cc" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M35 29q0-7 11-9t13 2v18q0 6-12 8t-12-5z" fill="#075c68" transform="translate(0 3)"/>
+    <path d="M35 25q0-7 11-9t13 2v18q0 6-12 8t-12-5z" fill="#18b8a6" stroke="#d6fff8" stroke-width="1.2"/>
+    <ellipse cx="47" cy="24" rx="12" ry="6.5" fill="#84eadb" stroke="#e1fffa" stroke-width="1"/>
+    <ellipse cx="47" cy="24" rx="7" ry="3.5" fill="#078a86"/>
+    <path d="M43 20h8m-4-3v14m-4-4 4 4 4-4" fill="none" stroke="#f2fffd" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10 44q8 8 19 4 5-2 6-7M54 14q-8-8-19-4-5 2-6 7" fill="none" stroke="#276fbd" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="m28 37 7 4-1 8M36 8l-7 3 1 8" fill="none" stroke="#f7fcff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
 </svg>

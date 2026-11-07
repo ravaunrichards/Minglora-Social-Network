@@ -6577,3 +6577,23 @@ button.live-ranking-row{cursor:pointer}
   .settings-device-access-card{align-items:flex-start}
   .settings-device-access-card button{max-width:132px;white-space:normal}
 }
+
+
+/* Recharge tabs stay in one horizontal row on mobile and desktop. */
+.recharge-tabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain}
+.recharge-tabs::-webkit-scrollbar,.recharge-currency-mode-tabs::-webkit-scrollbar{display:none}
+.recharge-tabs button{flex:0 0 auto;white-space:nowrap}
+.recharge-currency-tab-icon{width:24px;height:24px;vertical-align:middle;margin-right:7px;filter:drop-shadow(0 2px 2px rgba(15,35,70,.2))}
+.recharge-currency-section{display:grid;gap:14px;min-width:0}
+.recharge-currency-heading h2{margin:4px 0;font-size:1.35rem}
+.recharge-currency-heading p{margin:0}
+.recharge-currency-mode-tabs{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);white-space:nowrap}
+.recharge-currency-mode-tabs button{flex:0 0 auto;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:800;padding:11px 14px;cursor:pointer;border-bottom:3px solid transparent}
+.recharge-currency-mode-tabs button.active{color:var(--blue);border-bottom-color:var(--blue)}
+.recharge-currency-embed{min-width:0;width:100%}
+@media(max-width:650px){
+  .recharge-tabs{gap:0}
+  .recharge-tabs button{padding:12px 11px;font-size:12px}
+  .recharge-currency-mode-tabs button{padding:11px 12px;font-size:12px}
+  .recharge-currency-section{gap:11px}
+}
