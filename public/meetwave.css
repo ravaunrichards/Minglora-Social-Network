@@ -2003,3 +2003,303 @@
 .mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button{position:relative!important;display:grid!important;place-items:center!important;flex:0 0 46px!important;width:46px!important;min-width:46px!important;max-width:46px!important;height:46px!important;min-height:46px!important;max-height:46px!important;margin:0 4px 0 auto!important;padding:0!important;overflow:hidden!important;border:1px solid rgba(255,255,255,.72)!important;border-radius:50%!important;background:linear-gradient(155deg,#f24b62,#c92340)!important;box-shadow:0 5px 18px rgba(0,0,0,.36)!important}
 .mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button .live-control-icon{position:absolute!important;inset:0!important;display:grid!important;place-items:center!important;width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;margin:auto!important;padding:0!important;flex:none!important;border:0!important;background:transparent!important}
 .mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button svg{display:block!important;width:30px!important;height:30px!important;max-width:30px!important;max-height:30px!important}
+
+/* MeetWave nine-preset LIVE-style fit: every preset keeps all 9 seat elements visible.
+   This is scoped only to MeetWave; Minglora LIVE sizing and rules are untouched. */
+.mw-meeting #mw-grid.live-guest-layout{
+  display:grid!important;
+  grid-auto-flow:row dense!important;
+  grid-auto-rows:minmax(0,1fr)!important;
+  align-content:stretch!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  gap:7px!important;
+  padding:7px!important;
+  overflow:visible!important;
+  max-height:none!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.live-guest-layout-heading{
+  display:flex!important;
+  grid-column:1/-1!important;
+  grid-row:1!important;
+  order:0!important;
+  min-width:0!important;
+  min-height:22px!important;
+  height:auto!important;
+  margin:0!important;
+  padding:4px 8px!important;
+  gap:6px 10px!important;
+  overflow:visible!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.live-guest-seat,
+.mw-meeting #mw-grid.live-guest-layout>.mw-empty-seat{
+  display:flex!important;
+  position:relative!important;
+  visibility:visible!important;
+  opacity:1!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:5px!important;
+  aspect-ratio:auto!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  transform:none!important;
+  align-self:stretch!important;
+  justify-self:stretch!important;
+  overflow:hidden!important;
+  border-radius:11px!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.mw-empty-seat{
+  display:grid!important;
+  place-items:center!important;
+  align-content:center!important;
+  justify-content:center!important;
+  gap:3px!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.mw-empty-seat .live-guest-seat-plus{
+  display:grid!important;
+  place-items:center!important;
+  width:22px!important;
+  height:22px!important;
+  margin:0 auto!important;
+  font-size:17px!important;
+  line-height:1!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.mw-empty-seat strong{
+  display:block!important;
+  max-width:100%!important;
+  font-size:clamp(8px,1vw,11px)!important;
+  line-height:1.15!important;
+  overflow-wrap:anywhere!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.mw-empty-seat small{
+  display:block!important;
+  max-width:100%!important;
+  font-size:clamp(7px,.85vw,9px)!important;
+  line-height:1.1!important;
+  overflow-wrap:anywhere!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.live-guest-seat .live-guest-seat-meta{
+  display:block!important;
+  right:4px!important;
+  bottom:4px!important;
+  left:4px!important;
+  min-width:0!important;
+  max-width:calc(100% - 8px)!important;
+  padding:4px 6px!important;
+  border-radius:7px!important;
+  overflow:hidden!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.live-guest-seat .live-guest-seat-meta strong{
+  display:block!important;
+  max-width:100%!important;
+  font-size:clamp(8px,1vw,11px)!important;
+  line-height:1.1!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+  text-overflow:ellipsis!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.live-guest-seat .live-guest-seat-meta small{
+  display:block!important;
+  font-size:clamp(7px,.8vw,9px)!important;
+  line-height:1.1!important;
+}
+.mw-meeting #mw-grid.live-guest-layout>.live-guest-seat .live-guest-seat-tag{
+  display:inline-flex!important;
+  position:absolute!important;
+  top:4px!important;
+  left:5px!important;
+  bottom:auto!important;
+  max-width:calc(100% - 10px)!important;
+  padding:3px 5px!important;
+  font-size:clamp(7px,.8vw,9px)!important;
+  line-height:1!important;
+  z-index:6!important;
+}
+
+/* Full Screen: prominent host row plus two complete 4-seat guest rows. */
+.mw-meeting #mw-grid[data-layout="full-screen"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px minmax(0,1.5fr) repeat(2,minmax(0,.72fr))!important;
+  min-height:clamp(420px,58vh,720px)!important;
+}
+.mw-meeting #mw-grid[data-layout="full-screen"]>.live-guest-layout-heading{grid-row:1!important}
+.mw-meeting #mw-grid[data-layout="full-screen"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;
+  grid-row:2!important;
+}
+
+/* Fluid Panel: large host panel on the left; eight compact guest panels on the right and lower row. */
+.mw-meeting #mw-grid[data-layout="fluid-panel"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+.mw-meeting #mw-grid[data-layout="fluid-panel"]>.live-guest-seat.is-host{
+  grid-column:1/3!important;
+  grid-row:2/4!important;
+}
+
+/* Fluid Grid adapts its columns to the available width without clipping the last seat. */
+.mw-meeting #mw-grid[data-layout="fluid-grid"]{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,105px),1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+
+/* Fixed Grid: an exact 3 by 3 participant grid. */
+.mw-meeting #mw-grid[data-layout="fixed-grid"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+
+/* Fixed Panel: a full-width host panel with the eight guests in a 2 by 4 panel matrix. */
+.mw-meeting #mw-grid[data-layout="fixed-panel"]{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:24px minmax(0,1.15fr) repeat(4,minmax(0,.8fr))!important;
+}
+.mw-meeting #mw-grid[data-layout="fixed-panel"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;
+  grid-row:2!important;
+}
+
+/* Side by Side: host stays in the left panel while all 8 guest tiles fill the right panel. */
+.mw-meeting #mw-grid[data-layout="side-by-side"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(4,minmax(0,1fr))!important;
+}
+.mw-meeting #mw-grid[data-layout="side-by-side"]>.live-guest-seat.is-host{
+  grid-column:1/3!important;
+  grid-row:2/6!important;
+}
+
+/* Spotlight: all seats remain equal-size; the selected speaker is lit, not enlarged or hidden. */
+.mw-meeting #mw-grid[data-layout="spotlight"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+.mw-meeting #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-spotlight{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  outline:2px solid #69e5c9!important;
+  outline-offset:-3px!important;
+  border:2px solid #72e0cb!important;
+  box-shadow:0 0 0 2px rgba(114,224,203,.2),0 0 24px rgba(77,213,189,.44),inset 0 0 16px rgba(77,213,189,.12)!important;
+  filter:brightness(1.08)!important;
+  z-index:2!important;
+}
+
+/* Roundtable 1: 3 by 3 seats with the host at the centre. */
+.mw-meeting #mw-grid[data-layout="roundtable-1"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+.mw-meeting #mw-grid[data-layout="roundtable-1"]>.live-guest-seat.is-host{
+  grid-column:2!important;
+  grid-row:3!important;
+}
+
+/* Roundtable 2: host centred in a double panel, all eight guest positions remain visible around it. */
+.mw-meeting #mw-grid[data-layout="roundtable-2"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+.mw-meeting #mw-grid[data-layout="roundtable-2"]>.live-guest-seat.is-host{
+  grid-column:2/4!important;
+  grid-row:2/4!important;
+}
+
+/* Keep the existing MeetWave sidebar visible without an internal scroll area. */
+.mw-meeting .mw-support-column.live-fullscreen-chat-slot{
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+.mw-meeting .mw-support-column>.mw-participants-panel,
+.mw-meeting .mw-support-column>.mw-chat-panel,
+.mw-meeting .mw-support-column>.mw-layout-panel,
+.mw-meeting .mw-support-column>.mw-settings-panel{
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+.mw-meeting .mw-support-column>.mw-layout-panel{padding:9px!important}
+.mw-meeting .mw-support-column .mw-layout-options{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:5px!important;
+  overflow:visible!important;
+}
+.mw-meeting .mw-support-column .mw-layout-options button{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:0!important;
+  min-height:36px!important;
+  height:36px!important;
+  max-height:36px!important;
+  padding:4px 5px!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  font-size:clamp(9px,1vw,11px)!important;
+  line-height:1!important;
+}
+.mw-meeting .mw-support-column .mw-layout-options button small{display:none!important}
+.mw-meeting .mw-support-column .mw-layout-options button b{display:block!important;white-space:nowrap!important}
+.mw-meeting .mw-participants-panel .mw-participant-list{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:5px!important;
+  min-width:0!important;
+  overflow:visible!important;
+}
+.mw-meeting .mw-status{overflow-wrap:anywhere}
+
+/* Narrow viewports keep every participant in the grid: no hidden tail seats. */
+@media(max-width:760px){
+  .mw-meeting #mw-grid.live-guest-layout{gap:5px!important;padding:5px!important}
+  .mw-meeting #mw-grid[data-layout="full-screen"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px minmax(0,1.35fr) repeat(3,minmax(0,.72fr))!important;
+  }
+  .mw-meeting #mw-grid[data-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
+  .mw-meeting #mw-grid[data-layout="fluid-panel"],
+  .mw-meeting #mw-grid[data-layout="side-by-side"]{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
+  }
+  .mw-meeting #mw-grid[data-layout="fluid-panel"]>.live-guest-seat.is-host,
+  .mw-meeting #mw-grid[data-layout="side-by-side"]>.live-guest-seat.is-host{
+    grid-column:1/3!important;grid-row:2/6!important
+  }
+  .mw-meeting #mw-grid[data-layout="fluid-grid"],
+  .mw-meeting #mw-grid[data-layout="fixed-grid"],
+  .mw-meeting #mw-grid[data-layout="spotlight"],
+  .mw-meeting #mw-grid[data-layout="roundtable-1"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+  }
+  .mw-meeting #mw-grid[data-layout="fixed-panel"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:22px minmax(0,1.1fr) repeat(4,minmax(0,.78fr))!important;
+  }
+  .mw-meeting #mw-grid[data-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
+  .mw-meeting #mw-grid[data-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:3!important}
+  .mw-meeting #mw-grid[data-layout="roundtable-2"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+  }
+  .mw-meeting #mw-grid[data-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:auto!important;grid-row:auto!important}
+  .mw-meeting #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-spotlight{grid-column:auto!important;grid-row:auto!important}
+  .mw-meeting #mw-grid .mw-video-tile{min-height:0!important}
+}
