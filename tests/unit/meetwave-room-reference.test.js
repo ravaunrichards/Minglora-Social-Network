@@ -60,7 +60,7 @@ test('Host uses the LIVE circular power control; attendees retain Leave', () => 
 });
 
 test('MeetWave layout controls fit as a complete grid without a separate scroll area', () => {
-  const fit = css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides.'));
+  const fit = css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides:'));
   assert.ok(css.includes('minmax(250px,280px)'));
   assert.ok(fit.includes('overflow:visible!important'),'layout panel does not create its own scroll container');
   assert.ok(fit.includes('max-height:none!important'),'layout panel is not artificially shortened');
@@ -120,7 +120,7 @@ test('Legacy placement rules cannot stack guest tiles in panel or spotlight layo
 
 
 test('MeetWave regular, full-screen and panel grids fit all nine seats without stage scrolling or oversized host tiles',()=>{
-  const fit=css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides.'));
+  const fit=css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides:'));
   assert.ok(fit.includes('overflow:hidden!important'));
   assert.ok(fit.includes('height:min(60dvh,calc(100dvh - 260px),680px)!important'));
   assert.ok(fit.includes('gap:clamp(7px,.9vw,11px)!important'));
