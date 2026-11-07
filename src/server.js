@@ -5425,7 +5425,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           .filter(item=>item.room);
         return json(res,200,{invitations});
       }
-      const guestRequestDecisionMatch=p.match(new RegExp('^/api/meetwave/rooms/([^/]+)/guest-requests/([^/]+)/(accept|decline)p.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
+      const meetWaveInvitationMatch=p.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
       if(meetWaveInvitationMatch&&method==='POST'){
         requireAuth(user);
         const invitation=(db.meetWaveInvitations||[]).find(item=>item.id===meetWaveInvitationMatch[1]&&item.userId===user.id);
@@ -6585,7 +6585,7 @@ server.listen(PORT,'0.0.0.0',async()=>{
         await saveStore();
         return json(res,200,{request:{id:request.id,status:request.status,userId:request.userId}});
       }
-      const guestRequestRoomMatch=p.match(new RegExp('^/api/meetwave/rooms/([^/]+)/guest-requestsp.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
+      const meetWaveInvitationMatch=p.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
       if(meetWaveInvitationMatch&&method==='POST'){
         requireAuth(user);
         const invitation=(db.meetWaveInvitations||[]).find(item=>item.id===meetWaveInvitationMatch[1]&&item.userId===user.id);
