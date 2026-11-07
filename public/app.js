@@ -560,7 +560,7 @@ function postCard(post,options={}){
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
     </div>
     ${savedControls}
-    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><strong>${esc(c.author?.name||'Member')}</strong><small class="comment-author-username">@${esc(c.author?.username||'')} ${verifiedProfileBadge(c.author)}${gifterProfileBadge(c.author)}</small>${esc(c.text)}${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
+    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}</strong><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')} ${verifiedProfileBadge(c.author)}${gifterProfileBadge(c.author)}</small>${esc(c.text)}${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
 }
@@ -586,7 +586,7 @@ function bindFeed(){
   $('#post-text')?.addEventListener('click',()=>openComposer());
   $('#post-photo')?.addEventListener('click',()=>openComposer(true));
   $('#post-feeling')?.addEventListener('click',()=>openComposer());
-  document.querySelectorAll('[data-profile]').forEach(el=>el.addEventListener('click',()=>el.dataset.profile&&openProfile(el.dataset.profile)));
+  bindProfileLinks(document);
   document.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
     try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:'like'})});await refreshVisiblePosts();}
     catch(e){toast(e.message);}
@@ -852,7 +852,7 @@ function peopleCard(p){
       '<span class="person-cover-caption">MINGLORA MEMBER</span></button>'+
     '<div class="person-card-content">'+
       '<div class="person-identity"><div class="person-avatar-wrap'+(story?' has-story':'')+'"><button type="button" data-profile="'+esc(p.id)+'" aria-label="View '+esc(p.name)+'’s profile"><img class="avatar" src="'+avatar(p)+'" alt=""></button></div>'+
-      '<div class="person-title-group"><h3>'+esc(p.name)+'</h3><span>@'+esc(p.username)+' '+verifiedProfileBadge(p)+gifterProfileBadge(p)+'</span></div>'+
+      '<div class="person-title-group" data-profile="'+esc(p.id)+'" role="link" tabindex="0" aria-label="Open '+esc(p.name)+'’s profile" style="cursor:pointer"><h3>'+esc(p.name)+'</h3><span>@'+esc(p.username)+' '+verifiedProfileBadge(p)+gifterProfileBadge(p)+'</span></div>'+
       (liveSession?'<span class="person-live-mini"><i></i> LIVE</span>':'')+'</div>'+
       '<p class="person-bio">'+(p.bio?esc(p.bio):'<span>No bio added yet.</span>')+'</p>'+
       '<div class="person-stat-row"><span><strong>'+followerCount+'</strong><small>Followers</small></span><span><strong>'+friendCount+'</strong><small>Friends</small></span><span><strong>'+postCount+'</strong><small>Posts</small></span></div>'+
@@ -884,7 +884,7 @@ function bindPeople(root=document){
       toast('Member blocked.');await renderFriends();await renderSidebar();
     }catch(e){toast(e.message);}
   }));
-  root.querySelectorAll('[data-profile]').forEach(el=>el.addEventListener('click',()=>openProfile(el.dataset.profile)));
+  bindProfileLinks(root);
   root.querySelectorAll('[data-open-profile-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openProfileStory)));
   root.querySelectorAll('[data-watch-live]').forEach(el=>el.addEventListener('click',()=>{
     const session=(state.discoveryLiveSessions||[]).find(item=>item.id===el.dataset.watchLive);
@@ -926,7 +926,7 @@ async function renderFriends(){
     '<div class="feed-header"><h2>People you may know</h2><span class="people-refresh-note">Live member previews</span></div>'+
     '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
     '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
-    (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="person-meta"><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
+    (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" data-profile="'+esc(member.id)+'" alt="View '+esc(member.name)+'’s profile" src="'+avatar(member)+'"><div class="person-meta"><strong data-profile="'+esc(member.id)+'">'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
   bindPeople(document);
   startPeopleDiscoveryRefresh();
 }
@@ -4250,10 +4250,10 @@ async function renderConnections(profileId,kind){
   try{
     const results=await Promise.all([api('/users/'+encodeURIComponent(profileId)+'/'+kind),api('/users/'+encodeURIComponent(profileId))]);
     const data=results[0],profile=results[1],users=data.users||[];
-    const rows=users.map(member=>'<div class="settings-blocked-person connection-row"><img src="'+avatar(member)+'" alt=""><div><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><button class="secondary" type="button" data-profile="'+esc(member.id)+'">View profile</button></div>').join('');
+    const rows=users.map(member=>'<div class="settings-blocked-person connection-row"><img data-profile="'+esc(member.id)+'" src="'+avatar(member)+'" alt="View '+esc(member.name)+'’s profile"><div><strong data-profile="'+esc(member.id)+'" role="link" tabindex="0">'+esc(member.name)+'</strong><small data-profile="'+esc(member.id)+'" role="link" tabindex="0">@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><button class="secondary" type="button" data-profile="'+esc(member.id)+'">View profile</button></div>').join('');
     setContent('<div class="page-heading"><div><h1>'+({followers:'Followers',following:'Following',friends:'Friends',subscribers:'Subscribers'})[kind]+'</h1><p class="muted">'+esc(profile.user.name)+' · '+data.count+' '+kind+'</p></div><button class="secondary" id="connections-back">Back to profile</button></div><section class="card">'+(rows||'<div class="empty-state"><h3>No '+kind+' yet</h3><p>'+(kind==='subscribers'?'Active subscribers will appear here when members subscribe.':'This list will appear when members connect.')+'</p></div>')+'</section>');
     $('#connections-back')?.addEventListener('click',()=>openProfile(profileId));
-    document.querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.profile)));
+    bindProfileLinks($('#main-content'));
   }catch(error){toast(error.message);if(state.profile)renderProfile(state.profile);}
 }
 
@@ -7440,7 +7440,7 @@ async function renderNotifications(){
     const category=notificationCategoryFor(item);
     const actor=item.actor;
     const actorMarkup=actor
-      ? '<img class="notification-avatar-image" src="'+esc(avatar(actor))+'" alt="'+esc(actor.name||'Minglora member')+'">'
+      ? '<img class="notification-avatar-image" data-profile="'+esc(actor.id||'')+'" src="'+esc(avatar(actor))+'" alt="Open '+esc(actor.name||'Minglora member')+'’s profile">'
       : '<span class="notification-avatar-fallback" aria-hidden="true">'+notificationCategoryIcon(item)+'</span>';
     const verified=actor?.verificationBadge==='blue'?'<span class="notification-verified" title="Minglora Verified" aria-label="Minglora Verified">✓</span>':'';
     let actions='';
@@ -7481,6 +7481,7 @@ async function renderNotifications(){
     '<div class="notification-bulk-actions"><button type="button" class="text-button" id="mark-read" '+(unreadCount?'':'disabled')+'>Mark all read</button><button type="button" class="text-button" id="clear-read-notifications" '+(readCount?'':'disabled')+'>Clear read</button><button type="button" class="text-button danger-text" id="clear-all-notifications" '+(notifications.length?'':'disabled')+'>Clear all</button></div></div></section>'+
     '<section class="notification-list" aria-label="Notification list">'+(rows||'<div class="notification-empty"><div class="notification-empty-icon">♢</div><h3>'+emptyMessage+'</h3><p>Choose another category or check back when something new happens.</p></div>')+
     '<p id="notification-search-empty" class="notification-search-empty" hidden>No notifications match your search.</p></section></section>');
+  bindProfileLinks($('#main-content'));
   document.querySelectorAll('[data-notice-filter]').forEach(button=>button.addEventListener('click',()=>{notificationFilter=button.dataset.noticeFilter;renderNotifications();}));
   const searchInput=$('#notification-search');
   searchInput?.addEventListener('input',()=>{
@@ -7601,7 +7602,7 @@ async function renderSearch(q){
   state.searchResults=data;
   const people=data.users||[],posts=data.posts||[],groups=data.groups||[],pages=data.pages||[];
   const section=(title,count,content)=>count?'<section class="card search-category"><header class="search-category-heading"><h2>'+esc(title)+'</h2><span>'+count+'</span></header>'+content+'</section>':'';
-  const peopleHtml=people.length?'<div class="suggested-list">'+people.map(member=>'<div class="person-row"><img class="avatar" src="'+avatar(member)+'" alt=""><div class="person-meta"><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><button class="mini-btn" data-profile="'+esc(member.id)+'">View</button></div>').join('')+'</div>':'';
+  const peopleHtml=people.length?'<div class="suggested-list">'+people.map(member=>'<div class="person-row"><img class="avatar" data-profile="'+esc(member.id)+'" alt="View '+esc(member.name)+'’s profile" src="'+avatar(member)+'"><div class="person-meta"><strong data-profile="'+esc(member.id)+'">'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><button class="mini-btn" data-profile="'+esc(member.id)+'">View</button></div>').join('')+'</div>':'';
   const postsHtml=posts.map(post=>postCard(post)).join('');
   const groupsHtml=groups.length?'<div class="search-result-list">'+groups.map(group=>'<article class="search-result-row"><div class="search-result-symbol">◉</div><div class="search-result-copy"><strong>'+esc(group.name)+'</strong><small>'+esc(group.description||'Community')+' · '+Number(group.memberCount||0)+' members</small></div><button class="mini-btn" data-open-group="'+esc(group.id)+'">Open</button></article>').join('')+'</div>':'';
   const pagesHtml=pages.length?'<div class="search-result-list">'+pages.map(page=>'<article class="search-result-row"><div class="page-card-mark">'+esc(String(page.title||'P').slice(0,1).toUpperCase())+'</div><div class="search-result-copy"><strong>'+esc(page.title)+'</strong><small>@'+esc(page.handle)+' · '+Number(page.followerCount||0)+' followers</small></div><button class="mini-btn" data-open-page="'+esc(page.id)+'">Open</button></article>').join('')+'</div>':'';
@@ -7689,7 +7690,32 @@ function bindNavigation(){
   };
   document.querySelectorAll('[data-logout]').forEach(button=>button.addEventListener('click',logout));
 }
-async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><img class="avatar" src="${avatar(p)}" alt=""><div class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></div><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
+async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><button type="button" class="sidebar-profile-target" data-profile="${esc(p.id)}" aria-label="Open ${esc(p.name)}’s profile" style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;border:0;padding:0;background:transparent;text-align:left;color:inherit;cursor:pointer"><img class="avatar" src="${avatar(p)}" alt=""><span class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></span></button><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';bindProfileLinks($('#suggested-people'));$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
+function bindProfileLinks(root=document){
+  if(!root?.querySelectorAll)return;
+  root.querySelectorAll('[data-profile]').forEach(element=>{
+    if(element.dataset.profileLinkBound==='true')return;
+    element.dataset.profileLinkBound='true';
+    const nativeControl=element.matches('button,a,input,select,textarea');
+    if(!nativeControl){
+      element.setAttribute('role','link');
+      element.setAttribute('tabindex','0');
+    }
+    const open=()=>{
+      const profileId=String(element.dataset.profile||'').trim();
+      if(profileId)void openProfile(profileId);
+    };
+    element.addEventListener('click',open);
+    if(!nativeControl){
+      element.addEventListener('keydown',event=>{
+        if(event.key==='Enter'||event.key===' '){
+          event.preventDefault();
+          open();
+        }
+      });
+    }
+  });
+}
 async function enterMingloraApp(user,showWelcome=false){
   state.user=user;showApp();bindNavigation();initializeBrowserNavigation();
   const params=new URLSearchParams(window.location.search);
