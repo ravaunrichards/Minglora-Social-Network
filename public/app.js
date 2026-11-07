@@ -1063,6 +1063,7 @@ let liveMicrophoneEnabled=true;
 let liveAudioMuted=false;
 let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
+let activeLiveDevicePreferences=null;
 let liveGiftCatalogue=[];
 let liveGiftEventsTimer=null;
 let liveGiftEventsBusy=false;
@@ -1391,9 +1392,12 @@ function attachLiveTrack(track,participant,local,publication){
     const tile=document.createElement("div");
     tile.className=screenShare?"live-screen-share-tile":"live-video-tile"+(local?" local":"");
     tile.dataset.participant=identity;
-    const element=track.attach();element.autoplay=true;element.playsInline=true;element.className="live-video-element";if(local)element.muted=true;
+    const preferences=activeLiveDevicePreferences||{};
+    const element=track.attach();element.autoplay=true;element.playsInline=true;element.className="live-video-element";
+    element.style.objectFit=preferences.videoFit==="contain"?"contain":"cover";
+    if(local){element.muted=true;element.style.transform=preferences.mirrorSelf===false?"":"scaleX(-1)";}
     tile.append(element);
-    if(!local||screenShare){const name=document.createElement("span");name.className=screenShare?"live-screen-share-name":"live-video-name";name.textContent=screenShare?"Screen shared by "+(participant?.name||participant?.identity||"Host"):(participant?.name||participant?.identity||"Guest");tile.append(name);}
+    if((!local||screenShare)&&preferences.showNames!==false){const name=document.createElement("span");name.className=screenShare?"live-screen-share-name":"live-video-name";name.textContent=screenShare?"Screen shared by "+(participant?.name||participant?.identity||"Host"):(participant?.name||participant?.identity||"Guest");tile.append(name);}
     target.append(tile);
     if(screenShare)$("#live-video-stage")?.classList.add("has-live-screen-share");
     else seat?.classList.add("has-video");
@@ -2979,11 +2983,13 @@ activeLivePinnedComment=null;
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
     });
     const liveDevicePreferences={echoCancellation:true,noiseSuppression:liveSettings.noiseSuppression!==false,autoGainControl:true,videoFit:"cover",mirrorSelf:true,showNames:true};
+    activeLiveDevicePreferences=liveDevicePreferences;
     const noiseSuppressionControl=$("#live-noise-suppression");
     if(noiseSuppressionControl)noiseSuppressionControl.checked=liveDevicePreferences.noiseSuppression;
     const applyLiveDeviceVisualSettings=()=>{
       document.querySelectorAll("#live-guest-layout .live-video-tile,#live-screen-share-stage .live-video-tile").forEach(tile=>{
         tile.classList.toggle("live-device-names-hidden",!liveDevicePreferences.showNames);
+        tile.closest(".live-guest-seat")?.classList.toggle("live-device-names-hidden",!liveDevicePreferences.showNames);
         const video=tile.querySelector("video");
         if(video){
           video.style.objectFit=liveDevicePreferences.videoFit;
@@ -3138,11 +3144,15 @@ activeLivePinnedComment=null;
       }
       document.removeEventListener("fullscreenchange",liveFullscreenChangeListener);
       if(document.fullscreenElement===livePlayerShell&&document.exitFullscreen)await document.exitFullscreen().catch(()=>{});
+      activeLiveDevicePreferences=null;
       closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
+      document.removeEventListener("fullscreenchange",liveFullscreenChangeListener);
+      if(document.fullscreenElement===livePlayerShell&&document.exitFullscreen)await document.exitFullscreen().catch(()=>{});
+      activeLiveDevicePreferences=null;
       closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
