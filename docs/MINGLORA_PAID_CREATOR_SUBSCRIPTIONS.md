@@ -20,10 +20,10 @@ Visitor profile actions remain on one horizontal row in this order: Follow, Subs
 - Moderators can approve/reject creator applications and record monthly performance-bonus reviews.
 
 ## Revenue sharing
-- International base share: 50% of the net settled receipt to the creator and 50% to Minglora.
+- Creator base share: 70% of the net settled receipt to the creator and 30% to Minglora. This is calculated only after actual provider processing fees and applicable transaction tax are removed.
 - Net settled receipt is the gross PayPal charge less the actual provider processing fee. The ledger records gross, provider fee, net creator share, platform share and the percentage used.
-- Verified monthly performance bonus: an additional 20 percentage points to the creator, for a maximum 70% creator / 30% Minglora split of the net receipt.
-- The initial Minglora eligibility review target is at least 10,000 followers, 1,000,000 qualifying video views in the reviewed month, and 3 subscriber-only videos. A moderator must review and record the metrics. No creator can self-award the bonus.
+- A moderator-verified monthly performance bonus adds 20 percentage points to the creator, for a maximum 90% creator / 10% Minglora split of the net receipt.
+- The initial Minglora eligibility review target is at least 10,000 followers, 100,000 qualifying video views in the reviewed month, and 3 subscriber-only videos. A moderator must review and record the metrics. No creator can self-award the bonus.
 - Each settled renewal captures the applied split in the ledger. Refund/reversal entries reverse the original share and proportional provider fee rather than recalculating using a later rate.
 
 ## Security and release gates
