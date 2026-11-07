@@ -105,10 +105,10 @@ test('the Creator Hub verification sticker appears beside the profile username a
 test('admin profile management includes its own Edit Cover action and uses the existing cover upload flow',()=>{
   const adminMarkup=app.slice(app.indexOf('const adminToolsMarkup'),app.indexOf('const profileActionMarkup'));
   assert.match(adminMarkup,/id="profile-edit-admin-cover"/);
-  assert.match(adminMarkup,/<span>Edit Cover<\\/span>/);
-  assert.match(app,/\\$\\('#profile-edit-admin-cover'\\)\\?\\.addEventListener\\('click',\\(\\)=>openEditProfile\\(u,'cover'\\)\\)/);
-  assert.match(app,/\\+\\(isMe&&!isAdminProfile\\?'<div class="profile-media-action-row">/);
-  assert.match(app,/function openEditProfile\\(u,mediaOnly=null\\)/);
-  assert.match(app,/uploadProfileImage\\('cover',edited/);
-  assert.match(fs.readFileSync(path.join(root,'public/admin-profile-layout.css'),'utf8'),/grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)/);
+  assert.match(adminMarkup,/<span>Edit Cover<\/span>/);
+  assert.match(app,/\$\('#profile-edit-admin-cover'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u,'cover'\)\)/);
+  assert.match(app,/\+\(isMe&&!isAdminProfile\?'<div class="profile-media-action-row">/);
+  assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
+  assert.match(app,/uploadProfileImage\('cover',edited/);
+  assert.match(fs.readFileSync(path.join(root,'public/admin-profile-layout.css'),'utf8'),/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 });
