@@ -24,3 +24,15 @@ test('phone layout preserves two landscape video tiles and side-by-side People a
   assert.match(css, /\.mw-support-column\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(css, /@media\(max-width:430px\)[\s\S]*?\.mw-video-grid\s*\{[^}]*grid-template-columns:1fr/);
 });
+
+test('MeetWave mirrors LIVE with a bottom control rail and panel toggles', () => {
+  assert.match(js, /class="mw-controls live-player-controls live-icon-controls"/);
+  assert.match(js, /id="mw-people-toggle"/);
+  assert.match(js, /id="mw-chat-toggle"/);
+  assert.match(js, /function toggleSupportPanel\(name\)/);
+  assert.match(js, /setRoomControlState\('mw-mic'/);
+  assert.match(js, /setRoomControlState\('mw-camera'/);
+  assert.match(css, /\.mw-controls\.live-player-controls\.live-icon-controls\{[\s\S]*?position:fixed/);
+  assert.match(css, /\.mw-support-column\[hidden\]\{display:none!important\}/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*?bottom:calc\(66px \+ env\(safe-area-inset-bottom\)\)/);
+});
