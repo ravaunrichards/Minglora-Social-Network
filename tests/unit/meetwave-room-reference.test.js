@@ -109,5 +109,12 @@ test('Spotlight allows selecting any guest and returning focus to host', () => {
   assert.ok(js.includes("applySpotlightSelection(tile.dataset.identity)"));
   assert.ok(js.includes("applySpotlightSelection(hostTile?.dataset.identity||activeRoom?.ownerId||state.user.id)"));
   assert.ok(js.includes("activeLayout==='spotlight'"));
-  assert.ok(css.includes('.mw-screen-stage[data-screen-layout="spotlight"] #mw-grid>.live-guest-seat.is-spotlight'));
+  assert.ok(css.includes('#mw-screen-stage[data-screen-layout="spotlight"] #mw-grid>.live-guest-seat.is-spotlight'));
+});
+
+test('Legacy placement rules cannot stack guest tiles in panel or spotlight layouts', () => {
+  assert.ok(css.includes('#mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid>.live-guest-seat.is-guest'));
+  assert.ok(css.includes('#mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid>.live-guest-seat.is-host'));
+  assert.ok(css.includes('#mw-screen-stage[data-screen-layout="spotlight"] #mw-grid>.live-guest-seat.is-spotlight'));
+  assert.ok(css.includes('#mw-screen-stage.has-screen-share #mw-grid'));
 });
