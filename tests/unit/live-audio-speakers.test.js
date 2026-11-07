@@ -125,9 +125,14 @@ const AUDIO_LIVE_LAYOUTS = [
   'side-by-side','spotlight','roundtable-1','roundtable-2'
 ];
 
-test('Audio LIVE defines rounded speaker grids for all nine screen layouts', () => {
+test('Audio LIVE defines a real rounded grid template for each of the nine presets', () => {
   for (const layout of AUDIO_LIVE_LAYOUTS) {
-    assert.match(fit, new RegExp('\\.audio-guest-layout\\[data-live-layout="' + layout + '"\\]'));
+    const selectorIndex = fit.indexOf(`data-live-layout="${layout}"`);
+    assert.ok(selectorIndex >= 0, layout + ' selector must exist');
+    const ruleEnd = fit.indexOf('}', selectorIndex);
+    const rule = fit.slice(selectorIndex, ruleEnd);
+    assert.match(rule, /grid-template-columns:[^;]+!important/, layout + ' columns must override compact grid');
+    assert.match(rule, /grid-template-rows:[^;]+!important/, layout + ' rows must override compact grid');
   }
   assert.match(fit, /grid-auto-flow:row dense!important/);
   assert.match(fit, /border-radius:18px!important/);
