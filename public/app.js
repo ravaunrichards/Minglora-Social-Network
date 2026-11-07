@@ -1064,6 +1064,7 @@ let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
 let liveGiftCatalogue=[];
 let liveGiftEventsTimer=null;
+let liveGiftRecipientsTimer=null;
 let liveGiftEventsBusy=false;
 let liveGiftEventsLastSeenAt='';
 const liveGiftSeenEventIds=new Set();
@@ -1447,6 +1448,7 @@ async function syncLiveParticipantPresence(session){
 function stopLiveSpeakerRefresh(){if(liveSpeakerRefreshTimer){clearInterval(liveSpeakerRefreshTimer);liveSpeakerRefreshTimer=null;}}
 function stopLiveGiftEvents(){
   if(liveGiftEventsTimer){clearInterval(liveGiftEventsTimer);liveGiftEventsTimer=null;}
+  if(liveGiftRecipientsTimer){clearInterval(liveGiftRecipientsTimer);liveGiftRecipientsTimer=null;}
   liveGiftEventsBusy=false;
   liveGiftEventsLastSeenAt='';
   liveGiftSeenEventIds.clear();
@@ -2377,19 +2379,19 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat"),
-    liveControlButton("live-gifts-toggle","gift",role==="host"?"Preview LIVE gift catalogue":giftsEnabled?"Open LIVE gifts":"View LIVE gift availability","Gift"),
+    liveControlButton("live-gifts-toggle","gift",giftsEnabled?"Open LIVE gifts":"View LIVE gift availability","Gift"),
     liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
-  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Browse, preview and quickly send from the complete Minglora gift collection")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
+  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+"Choose any other connected host, guest or co-host in this LIVE."+"</small></div><span id='live-wallet-balance'>"+"Loading Coins…"+"</span></div><label class='live-gift-recipient-field'>Send gift to<select id='live-gift-recipient'><option value=''>Loading LIVE participants…</option></select></label><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
     (!giftsEnabled?"<p class='live-gift-disabled-note' role='status'>"+(liveSettings.practiceMode?"Gifts are unavailable in Practice Mode.":"The host has turned off gifts for this LIVE.")+" The catalogue remains visible, but gifts cannot be sent.</p>":"")+
     "<div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' data-live-gift-scope='favorites' aria-pressed='false'>★ Favorites</button><button type='button' data-live-gift-scope='recent' aria-pressed='false'>Recently Sent</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note' hidden>Team Gifts are unlocked when you join this host’s Fan Club.</p>"+
     "<div class='live-gift-browser-tools'><label class='live-gift-search-wrap'><span>Find any gift</span><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search by gift name, category or Coins…' aria-label='Search every gift by name, category or coin price'></label><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>Premium first · highest price</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label></div>"+
     "<div id='live-gift-categories' class='live-gift-category-row' role='group' aria-label='Gift categories'><button type='button' class='active' data-live-gift-category='all' aria-pressed='true'>All categories</button></div>"+
     "<section id='live-gift-selected-preview' class='live-gift-selected-preview' hidden><div id='live-gift-preview-art' class='live-gift-preview-art' aria-label='Selected gift preview'></div><div class='live-gift-preview-copy'><span class='live-gift-preview-eyebrow'>Selected gift</span><strong id='live-gift-preview-name'>Choose a gift</strong><small id='live-gift-preview-price'></small><small id='live-gift-preview-note'>Preview the animation and sound before sending.</small><div class='live-gift-preview-actions'><button type='button' class='secondary' id='live-gift-preview-sound' disabled>▶ Preview animation &amp; sound</button><button type='button' class='primary' id='live-gift-send-selected' disabled>Quick send selected gift</button></div></div></section>"+
     "<div class='live-gift-results-heading'><strong id='live-gift-count'>Loading gifts…</strong><small>Tap a gift to preview it. Your favourites and recent gifts stay easy to reach.</small></div><div id='live-gift-grid' class='live-gift-grid'><p class='muted'>Loading original Minglora gifts…</p></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button>"+
-    (role==="host"?"<p class='live-gift-host-note'>This is a read-only preview. Viewers and approved guests can send gifts when LIVE gifts are enabled.</p>":"<button class='text-button' id='live-recharge'>Recharge Minglora Coins</button>")+
+    "<p class='live-gift-host-note'>Viewers can gift the host or approved stage guests. Hosts and stage guests can gift one another.</p><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button>"+
     "</section>";
   const liveFanClubTools="<section id='live-fan-club-panel' class='live-tools-card live-fan-club-panel' data-live-tools-panel='fanclub'><div class='live-panel-title'><strong>♥ Fan Club & Team Gifts</strong><small>Join this creator’s Fan Club with the 1-Coin Heart Me gift. Earn Fan Points by watching, chatting and gifting.</small></div>"+
     (role==='host'?"<div id='live-fan-club-status' class='live-fan-club-status'><strong>Creator Fan Club</strong><small>Members can unlock Team Gifts and Fan badges.</small></div>":"<div id='live-fan-club-status' class='live-fan-club-status'><small>Checking your Fan Club membership…</small></div><button type='button' id='live-fan-club-join-panel' class='live-fan-club-join-panel'>♥ Join for 1 Coin</button><button type='button' id='live-team-gifts-open' class='secondary'>Open Team Gifts</button>")+
@@ -3016,7 +3018,7 @@ activeLivePinnedComment=null;
       const liveGiftSendSelected=$("#live-gift-send-selected");
       const liveGiftCount=$("#live-gift-count");
       const liveGiftPreferenceKey="minglora:live-gift-access:v1:"+String(state.user?.id||"member");
-      let liveGiftVisible=48,liveGiftQuery="",liveGiftSort="high",liveGiftCategory="all",liveGiftCatalogueError=null,liveGiftSelectedCode="",liveGiftSending=false;
+      let liveGiftVisible=48,liveGiftQuery="",liveGiftSort="high",liveGiftCategory="all",liveGiftCatalogueError=null,liveGiftSelectedCode="",liveGiftSending=false,liveGiftRecipients=[];
       let liveGiftFavorites=new Set(),liveGiftRecent=[];
       try{
         const stored=JSON.parse(localStorage.getItem(liveGiftPreferenceKey)||"{}");
@@ -3029,6 +3031,30 @@ activeLivePinnedComment=null;
       const liveGiftCategoryNames={flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
       const liveGiftCategoryName=key=>liveGiftCategoryNames[String(key||"").toLowerCase()]||String(key||"More gifts").replace(/[_-]+/g," ").replace(/\b\w/g,char=>char.toUpperCase());
       const liveGiftByCode=code=>liveGiftCatalogue.find(item=>String(item.code)===String(code))||null;
+      async function loadLiveGiftRecipients(liveSession,silent=false){
+        const select=$("#live-gift-recipient");if(!select)return;
+        const previousRecipient=String(select.value||"");
+        try{
+          const result=await api("/live/sessions/"+encodeURIComponent(liveSession.id)+"/gift-recipients");
+          liveGiftRecipients=Array.isArray(result.recipients)?result.recipients:[];
+          const labels={host:"Host",guest:"Guest",cohost:"Co-host"};
+          select.innerHTML=liveGiftRecipients.length
+            ?liveGiftRecipients.map(member=>"<option value='"+esc(member.id)+"'>"+esc(member.name||member.username||"Minglora member")+" · "+esc(labels[member.role]||"Guest")+"</option>").join("")
+            :"<option value=''>No other connected participants</option>";
+          select.disabled=!liveGiftRecipients.length;
+          if(liveGiftRecipients.length){
+            const preferred=liveGiftRecipients.find(member=>String(member.id)===previousRecipient)
+              ||liveGiftRecipients.find(member=>member.role==="host")||liveGiftRecipients[0];
+            select.value=preferred.id;
+          }
+        }catch(error){
+          if(!silent){
+            select.innerHTML="<option value=''>Recipient list unavailable · retry</option>";
+            select.disabled=true;toast(error.message||"Could not load LIVE gift recipients.");
+          }
+        }
+        updateLiveGiftPreview();
+      }
       const drawLiveGiftCategories=()=>{
         if(!liveGiftCategories)return;
         let base=liveGiftCatalogue.filter(item=>{
@@ -3060,7 +3086,7 @@ activeLivePinnedComment=null;
         if(liveGiftPreviewPrice)liveGiftPreviewPrice.textContent=Number(gift.coin_price||0).toLocaleString()+" Coins · "+liveGiftCategoryName(gift.category);
         if(liveGiftPreviewNote){
           const locked=role!=="host"&&MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code)&&!liveFanClubState?.isMember;
-          liveGiftPreviewNote.textContent=role==="host"?"Read-only host preview · viewers send this gift.":!giftsEnabled?"Gifting is disabled for this broadcast.":locked?"Join this host’s Fan Club to unlock this Team Gift.":"Preview the animation and sound, then send it to the LIVE host.";
+          liveGiftPreviewNote.textContent=!giftsEnabled?"Gifting is disabled for this broadcast.":locked?"Join this host’s Fan Club to unlock this Team Gift.":"Preview the animation and sound, then send it to the selected LIVE participant.";
         }
         if(liveGiftPreviewArt){
           const fallback=gift.image_url?"<img class='live-gift-preview-fallback' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"' hidden>":"";
@@ -3076,8 +3102,9 @@ activeLivePinnedComment=null;
         const isTeamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
         const locked=role!=="host"&&isTeamGift&&!liveFanClubState?.isMember;
         if(liveGiftSendSelected){
-          liveGiftSendSelected.disabled=role==="host"||!giftsEnabled||locked||liveGiftSending;
-          liveGiftSendSelected.textContent=role==="host"?"Viewer-only preview":locked?"Join Fan Club to unlock":!giftsEnabled?"Gifting unavailable":"Quick send · "+Number(gift.coin_price||0).toLocaleString()+" Coins";
+          const selectedRecipient=liveGiftRecipients.find(member=>String(member.id)===String($("#live-gift-recipient")?.value||""));
+          liveGiftSendSelected.disabled=!giftsEnabled||locked||liveGiftSending||!selectedRecipient;
+          liveGiftSendSelected.textContent=locked?"Join Fan Club to unlock":!giftsEnabled?"Gifting unavailable":!selectedRecipient?"Choose recipient":"Send to "+String(selectedRecipient.name||selectedRecipient.username||"participant")+" · "+Number(gift.coin_price||0).toLocaleString()+" Coins";
         }
       };
       const drawLiveGiftGrid=()=>{
@@ -3132,8 +3159,8 @@ activeLivePinnedComment=null;
         liveGiftCatalogueError=null;
         const results=await Promise.allSettled([
           api("/coins/catalog"),
-          role!=="host"?api("/coins/wallet"):Promise.resolve({wallet:null}),
-          role!=="host"?api("/coins/promotional-gift-wallet"):Promise.resolve({wallet:null})
+          api("/coins/wallet"),
+          api("/coins/promotional-gift-wallet")
         ]);
         if(results[0].status!=="fulfilled"){
           liveGiftCatalogueError=results[0].reason?.message||"The gift catalogue is temporarily unavailable.";
@@ -3180,18 +3207,22 @@ activeLivePinnedComment=null;
         const gift=liveGiftByCode(liveGiftSelectedCode);if(!gift)return;
         window.MingloraGiftFX?.preview(gift);
       });
+      $("#live-gift-recipient")?.addEventListener("change",updateLiveGiftPreview);
       liveGiftSendSelected?.addEventListener("click",async()=>{
         const gift=liveGiftByCode(liveGiftSelectedCode);
-        if(!gift||liveGiftSending||role==="host"||!giftsEnabled)return;
+        if(!gift||liveGiftSending||!giftsEnabled)return;
         const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
-        if(teamGift&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
+        if(teamGift&&role!=="host"&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
+        const recipientUserId=String($("#live-gift-recipient")?.value||"");
+        const selectedRecipient=liveGiftRecipients.find(member=>String(member.id)===recipientUserId);
+        if(!recipientUserId||!selectedRecipient){toast("Choose a connected LIVE participant to receive this gift.");return;}
         liveGiftSending=true;window.MingloraGiftFX?.prime();updateLiveGiftPreview();
         if(liveGiftSendSelected){liveGiftSendSelected.disabled=true;liveGiftSendSelected.textContent="Sending gift…";}
         try{
           const fundingSource=String($("#live-gift-funding-source")?.value||"cash");
           const sent=fundingSource==="cash"
-            ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code})})
-            :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code,fundingSource})});
+            ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code,recipientUserId})})
+            :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code,recipientUserId,fundingSource})});
           const resultGift=sent.gift||{};
           const transactionId=sent.event?.id||sent.giftEventId||resultGift.giftTransactionId||resultGift.transactionId||resultGift.transaction_id||resultGift.id;
           presentLiveGiftEvent(sent.event||{
@@ -3205,7 +3236,7 @@ activeLivePinnedComment=null;
             modelUrl:String(resultGift.modelUrl||resultGift.model_url||gift.model_url||""),
             createdAt:new Date().toISOString(),
             sender:{id:state.user?.id,name:state.user?.name,username:state.user?.username},
-            recipient:{id:session.hostId,name:session.host?.name||"LIVE host",username:session.host?.username||""}
+            recipient:{id:selectedRecipient.id,name:selectedRecipient.name||selectedRecipient.username||"LIVE participant",username:selectedRecipient.username||""}
           });
           liveGiftRecent=[gift.code,...liveGiftRecent.filter(code=>code!==gift.code)].slice(0,40);saveLiveGiftPreferences();
           const giftFundingNotice=resultGift.fundingSource==="promo"?" · ordinary promotional Coins (no cash earnings)":resultGift.fundingSource==="admin_promotional"?" · cash-reserved Admin Promotional gift":"";
@@ -3222,6 +3253,9 @@ activeLivePinnedComment=null;
         finally{liveGiftSending=false;updateLiveGiftPreview();}
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
+      await loadLiveGiftRecipients(session);
+      if(liveGiftRecipientsTimer)clearInterval(liveGiftRecipientsTimer);
+      liveGiftRecipientsTimer=setInterval(()=>void loadLiveGiftRecipients(session,true),5000);
       await loadLiveGiftCatalogue();
       startLiveGiftEvents(session);
     }
