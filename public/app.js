@@ -1165,7 +1165,8 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
       "<label class='live-preflight-field live-preflight-wide'><span>About me / live description</span><textarea name='aboutMe' rows='2' maxlength='500' placeholder='Tell viewers what this LIVE is about (optional)'></textarea></label>"+
     "</div>"+
     "<div class='live-preflight-section'><div class='live-preflight-section-title'><strong>Broadcast controls</strong><small>Compact controls · change any setting before you start</small></div><div class='live-preflight-switches'>"+
-      "<label class='live-preflight-toggle'><input type='checkbox' name='practiceMode'><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#lock'></use></svg></span><span><strong>Practice mode</strong><small>Private test room; no public alert or paid gifts</small></span></label>"+
+      "<label class='live-preflight-toggle'><input type='checkbox' name='subscriberOnly'><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#coins'></use></svg></span><span><strong>Subscribers-only LIVE</strong><small>Only members with an active paid subscription can enter</small></span></label>"+
+      ""<label class='live-preflight-toggle'><input type='checkbox' name='practiceMode'><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#lock'></use></svg></span><span><strong>Practice mode</strong><small>Private test room; no public alert or paid gifts</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='noiseSuppression' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#sound'></use></svg></span><span><strong>Noise suppression</strong><small>Reduce background noise in your microphone</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='optimizeForStability' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore'></use></svg></span><span><strong>Optimize for stability</strong><small>Adaptive video and bandwidth-saving publishing</small></span></label>"+
       "<label class='live-preflight-toggle'><input type='checkbox' name='markViewers' checked><span class='live-preflight-switch'></span><span class='live-preflight-label-icon'><svg class='live-preflight-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile'></use></svg></span><span><strong>Show viewer count</strong><small>Display the verified LIVE audience count</small></span></label>"+
@@ -1261,7 +1262,8 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
         visibility:values.get("visibility")||"public",
         liveMode,
         broadcastType:liveMode==="audio_only"?"audio_only":"video_audio",
-        liveSettings
+        liveSettings,
+        subscriberOnly:values.has("subscriberOnly")
       })});
       await openLiveRoom(result.session,"host",result.liveKit);
     }catch(error){toast(error.message);button.disabled=false;}
@@ -3957,7 +3959,7 @@ async function renderCreatorSection(section){
     tierForm?.addEventListener("submit",async event=>{
       event.preventDefault();const button=document.getElementById("subscription-tier-save"),status=document.getElementById("subscription-tier-status");
       const values=new FormData(tierForm),price=Number(values.get("price")),priceMinor=Math.round(price*100);
-      if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||false){toast("Use a monthly amount from $1.00 to $10,000.00.");return;}
+      if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000){toast("Use a monthly amount from $1.00 to $10,000.00.");return;}
       button.disabled=true;if(status)status.textContent="Creating your monthly plan with PayPal…";
       try{
         await api("/subscriptions/tier",{method:"POST",body:JSON.stringify({
@@ -3988,7 +3990,7 @@ async function renderCreatorSection(section){
       event.preventDefault();
       const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=document.getElementById("subscription-bonus-review-status"),values=new FormData(form);
       const monthStart=String(values.get("monthStart")||"");
-      if(!/^\\d{4}-\\d{2}-01$/.test(monthStart)){toast("Choose the first day of the month being reviewed.");return;}
+      if(!/^\d{4}-\d{2}-01$/.test(monthStart))oast("Choose the first day of the month being reviewed.");return;}
       button.disabled=true;
       try{
         const result=await api("/subscriptions/admin/bonus-review",{method:"POST",body:JSON.stringify({
