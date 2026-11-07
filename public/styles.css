@@ -6689,3 +6689,16 @@ button.live-ranking-row{cursor:pointer}
 .live-top-gifter-empty small{margin-top:5px;color:var(--muted,#9aa2b2);font-size:10px}
 .minglora-gifter-profile{flex:none;padding:5px 8px;border:1px solid var(--border,rgba(150,160,180,.2));border-radius:999px;background:transparent;color:var(--text,#fff);font-size:10px;font-weight:800;cursor:pointer}
 @media(max-width:420px){.live-top-gifter-row{gap:5px}.live-top-gifter-title{max-width:68px;padding:3px;font-size:6px}.live-top-gifter-row>img{width:30px;height:30px}.live-top-gifter-coins{min-width:42px;font-size:9px}}
+
+
+/* TikTok-style weekly Title Gifter ranking inside each profile Gift Gallery tile. */
+.gift-gallery-ranked-supporters{display:grid;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border,#e5e7eb)}
+.gift-gallery-ranked-supporters>strong{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#687386)}
+.gift-gallery-ranked-row{display:flex;align-items:center;gap:9px;min-width:0;padding:7px 9px;border-radius:12px;background:var(--surface-soft,#f5f6f8)}
+.gift-gallery-ranked-row>img{width:30px;height:30px;flex:0 0 30px;object-fit:cover;border-radius:50%}
+.gift-gallery-ranked-position{font-size:12px;font-weight:800;min-width:24px;color:var(--muted,#687386)}
+.gift-gallery-ranked-row>span:nth-of-type(2){display:grid;gap:2px;min-width:0;flex:1}
+.gift-gallery-ranked-row>span:nth-of-type(2)>strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gift-gallery-ranked-row>span:nth-of-type(2)>small,.gift-gallery-ranked-level{font-size:11px;color:var(--muted,#687386)}
+.gift-gallery-ranked-level{white-space:nowrap}
+@media(max-width:520px){.gift-gallery-ranked-level{display:none}.gift-gallery-ranked-row{gap:7px;padding:6px}}
