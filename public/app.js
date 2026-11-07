@@ -7780,7 +7780,7 @@ async function showIncomingCallOverlay(call){
  overlay.querySelector('#call-decline-incoming').onclick=async()=>{overlay.querySelector('#call-decline-incoming').disabled=true;await declineMingloraCall(call.id);};
  overlay.querySelector('#call-enable-ringtone').onclick=async()=>{primeCallAudio();const ok=await startIncomingRingtone();if(ok)overlay.querySelector('#call-enable-ringtone').classList.add('hidden');};
  if(state.settings?.preferences?.messengerIncomingCallSounds!==false&&!await startIncomingRingtone())overlay.querySelector('#call-enable-ringtone').classList.remove('hidden');
- incomingCallStatusTimer=setInterval(async()=>{if(overlay.dataset.answering==='true')return;try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch{if(overlay.dataset.answering!=='true')closeIncomingCallOverlay();}},1600);
+ incomingCallStatusTimer=setInterval(async()=>{if(overlay.dataset.answering==='true')return;try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch(error){if([401,403,404].includes(Number(error?.status)))closeIncomingCallOverlay();else{const status=overlay.querySelector('.call-ringing-status');if(status)status.textContent='Reconnecting to your call…';}}},1600);
 }
 async function clearStaleMingloraCallNotifications(activeCallIds=[]){
  try{
