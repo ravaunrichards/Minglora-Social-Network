@@ -92,12 +92,12 @@ test('Screen sharing uses a separate stage outside the nine participant seats', 
 });
 
 test('MeetWave scripts and styles share the current browser cache version', () => {
-  const cssAsset=html.match(/href="(\\/meetwave\\.css\\?v=[^"]+)"/)?.[1]||'';
-  const jsAsset=html.match(/src="(\\/meetwave\\.js\\?v=[^"]+)"/)?.[1]||'';
+  const cssAsset=html.match(/href="(\/meetwave\.css\?v=[^"]+)"/)?.[1]||'';
+  const jsAsset=html.match(/src="(\/meetwave\.js\?v=[^"]+)"/)?.[1]||'';
   assert.ok(cssAsset&&jsAsset,'HTML loads current MeetWave assets');
   assert.ok(serviceWorker.includes("'"+cssAsset+"'"));
   assert.ok(serviceWorker.includes("'"+jsAsset+"'"));
-  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\d+-/);
 });
 
 test('All eight layouts place the host and guest seats inside the same grid stage', () => {
