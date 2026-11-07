@@ -124,7 +124,7 @@ test('call screens stay mounted and offer a live retry when media setup fails',(
   const end=app.indexOf('function notificationCategoryFor',start);
   const source=app.slice(start,end);
   assert.ok(start>=0&&end>start);
-  assert.ok(source.indexOf('document.body.append(overlay)')<source.indexOf("if(!client?.Room||!client?.RoomEvent)"));
+  assert.ok(source.indexOf('mountMingloraCallOverlay(overlay)')<source.indexOf("if(!client?.Room||!client?.RoomEvent)"));
   assert.match(source,/id="call-retry"/);
   assert.match(source,/showReconnect\(/);
   assert.match(source,/\/join/);
@@ -136,4 +136,31 @@ test('Android WebView allows asynchronous incoming and remote call audio',()=>{
   assert.match(android,/setMediaPlaybackRequiresUserGesture\(false\)/);
   assert.match(android,/RESOURCE_AUDIO_CAPTURE/);
   assert.match(android,/RESOURCE_VIDEO_CAPTURE/);
+});
+
+test('incoming, outgoing and active call screens use the native modal top layer',()=>{
+  assert.match(app,/function mountMingloraCallOverlay\(overlay\)[\s\S]*?overlay\.showModal\(\)/);
+  assert.match(app,/async function showIncomingCallOverlay\(call\)[\s\S]*?document\.createElement\('dialog'\)[\s\S]*?mountMingloraCallOverlay\(overlay\)/);
+  assert.match(app,/function showOutgoingCallOverlay\(member,call\)[\s\S]*?document\.createElement\('dialog'\)[\s\S]*?mountMingloraCallOverlay\(overlay\)/);
+  const start=app.indexOf('async function openMingloraCall(');
+  const end=app.indexOf('function notificationCategoryFor',start);
+  const source=app.slice(start,end);
+  assert.match(source,/document\.createElement\('dialog'\)/);
+  assert.match(source,/mountMingloraCallOverlay\(overlay\)/);
+  assert.match(css,/dialog\.call-overlay\[open\]\{visibility:visible!important;opacity:1!important\}/);
+  assert.match(css,/dialog\.call-overlay::backdrop\{background:transparent!important/);
+});
+
+test('ringing UI is mounted before ringtone loading and exposes receiver answer and decline',()=>{
+  const start=app.indexOf('async function showIncomingCallOverlay(');
+  const end=app.indexOf('async function clearStaleMingloraCallNotifications',start);
+  const source=app.slice(start,end);
+  assert.ok(source.indexOf('mountMingloraCallOverlay(overlay)')<source.indexOf('await startIncomingRingtone(call)'));
+  assert.match(source,/id="call-answer-incoming"/);
+  assert.match(source,/id="call-decline-incoming"/);
+  const outgoingStart=app.indexOf('function showOutgoingCallOverlay(');
+  const outgoingEnd=app.indexOf('async function waitForCallAnswer',outgoingStart);
+  const outgoing=app.slice(outgoingStart,outgoingEnd);
+  assert.ok(outgoing.indexOf('mountMingloraCallOverlay(overlay)')>=0);
+  assert.match(outgoing,/id="call-cancel-outgoing"/);
 });
