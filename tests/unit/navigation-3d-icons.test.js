@@ -82,7 +82,10 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v117-bottom-profile-navigation-1/);
-  assert.match(serviceWorker, /mobile-profile-navigation\\.css\\?v=20261106-horizontal-profile-navigation-1/);
-assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
+  const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const activeStyles=html.match(/href="(\\/styles\\.css\\?v=[^"]+)"/)?.[1]||'';
+  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(activeStyles&&serviceWorker.includes("'"+activeStyles+"'"),'active stylesheet is cached');
+  assert.match(serviceWorker,/mobile-profile-navigation\\.css\\?v=20261106-horizontal-profile-navigation-1/);
+  assert.match(serviceWorker,/\\/assets\\/icons\\/navigation-3d\\.svg/);
 });
