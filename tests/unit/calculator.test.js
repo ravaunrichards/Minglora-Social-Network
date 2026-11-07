@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import '../public/calculator.js';
+import '../../public/calculator.js';
 
 const calculator = globalThis.MingloraCalculator;
 
@@ -31,9 +31,9 @@ test('calculator rejects invalid expressions and division by zero', () => {
 
 test('wallet includes Calculator immediately after Currency Converter and loads its module', async () => {
   const fs = await import('node:fs');
-  const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
-  const app = fs.readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  const worker = fs.readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
+  const html = fs.readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
+  const app = fs.readFileSync(new URL('../../public/app.js', import.meta.url), 'utf8');
+  const worker = fs.readFileSync(new URL('../../public/sw.js', import.meta.url), 'utf8');
   const tabsStart = app.indexOf("const tabs=\"<nav class='recharge-tabs'");
   const tabsEnd = app.indexOf('const bindTabs=', tabsStart);
   assert.ok(tabsStart >= 0 && tabsEnd > tabsStart);
