@@ -1983,3 +1983,23 @@
   .mw-meeting #mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight{grid-column:auto!important;grid-row:auto!important;min-height:96px!important}
   .mw-meeting .mw-support-column .mw-layout-options{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+/* MeetWave name-only preset buttons, all-layout guest focus, approval queue and centered power control. */
+.mw-meeting .mw-support-column .mw-layout-options{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;align-content:start!important}
+.mw-meeting .mw-support-column .mw-layout-options button{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:38px!important;height:38px!important;max-height:38px!important;padding:5px 7px!important;white-space:nowrap!important;overflow:hidden!important;text-align:center!important;font-size:10px!important;line-height:1!important}
+.mw-meeting .mw-support-column .mw-layout-options button b{display:block!important;font-size:inherit!important;font-weight:750!important;line-height:1!important;white-space:nowrap!important}
+.mw-meeting .mw-support-column .mw-layout-options button small{display:none!important}
+.mw-meeting #mw-grid .mw-video-tile.is-spotlight,.mw-meeting #mw-grid .mw-video-tile.is-focused{border:2px solid #72e0cb!important;box-shadow:0 0 0 2px rgba(114,224,203,.2),0 0 22px rgba(77,213,189,.42),inset 0 0 16px rgba(77,213,189,.1)!important;filter:brightness(1.08)!important;z-index:1}
+.mw-meeting .mw-guest-requests-card{margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.12)}
+.mw-meeting .mw-guest-requests-card>header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.mw-meeting .mw-guest-requests-card>header span{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:#263d50;color:#b6f5e7;font-size:11px;font-weight:800}
+.mw-meeting .mw-guest-request-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.mw-meeting .mw-guest-request-item>span{display:grid;gap:2px;min-width:0}
+.mw-meeting .mw-guest-request-item>span b{font-size:12px;overflow-wrap:anywhere}
+.mw-meeting .mw-guest-request-item>span small,.mw-meeting .mw-empty-guest-requests{font-size:10px;color:#aebbd0}
+.mw-meeting .mw-guest-request-item>div{display:flex;gap:5px;flex:0 0 auto}
+.mw-meeting .mw-guest-request-item button{min-height:30px;padding:5px 9px;border:0;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer}
+.mw-meeting .mw-guest-request-accept{background:#1c9c7b;color:#fff}
+.mw-meeting .mw-guest-request-decline{background:#3b2630;color:#ffc1cb}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button{position:relative!important;display:grid!important;place-items:center!important;flex:0 0 46px!important;width:46px!important;min-width:46px!important;max-width:46px!important;height:46px!important;min-height:46px!important;max-height:46px!important;margin:0 4px 0 auto!important;padding:0!important;overflow:hidden!important;border:1px solid rgba(255,255,255,.72)!important;border-radius:50%!important;background:linear-gradient(155deg,#f24b62,#c92340)!important;box-shadow:0 5px 18px rgba(0,0,0,.36)!important}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button .live-control-icon{position:absolute!important;inset:0!important;display:grid!important;place-items:center!important;width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;margin:auto!important;padding:0!important;flex:none!important;border:0!important;background:transparent!important}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button svg{display:block!important;width:30px!important;height:30px!important;max-width:30px!important;max-height:30px!important}
