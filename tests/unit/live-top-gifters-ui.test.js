@@ -60,7 +60,7 @@ test("profile Gift Gallery ranks each gift's weekly supporters and lets visitors
   assert.ok(galleryStart >= 0 && galleryEnd > galleryStart, "profile Gift Gallery loader exists");
   const gallery = app.slice(galleryStart, galleryEnd);
   assert.match(gallery, /entry\.topGifters/);
-  assert.match(gallery, /TITLE GIFTER/);
+  assert.match(gallery, /TOP GIFTER/);
   assert.match(gallery, /Other top gifters/);
   assert.match(gallery, /data-gift-gallery-gifter-profile/);
   assert.match(gallery, /openProfile\(id\)/);
