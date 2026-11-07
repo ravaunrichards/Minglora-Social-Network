@@ -2923,7 +2923,7 @@ async function route(req, res) {
         if (!user?.id) return json(res, 401, { error: 'Sign in to view your subscriptions.' });
         return json(res, 200, await requestSupabaseState('subscription_my', { userId: user.id }));
       }
-      const subscriptionCreatorMatch = p.match(/^\\/api\\/subscriptions\\/creator\\/([0-9a-f-]{36})$/i);
+      const subscriptionCreatorMatch = p.match(/^\/api\/subscriptions\/creator\/([0-9a-f-]{36})$/i);
       if (method === 'GET' && subscriptionCreatorMatch) {
         if (!user?.id) return json(res, 401, { error: 'Sign in to view creator subscriptions.' });
         const creatorId = subscriptionCreatorMatch[1];
@@ -3058,7 +3058,7 @@ async function route(req, res) {
         }
         return json(res, 201, { ok: true, approvalUrl, subscriptionId: localSubscriptionId });
       }
-      const subscriptionCancelMatch = p.match(/^\\/api\\/subscriptions\\/([^/]+)\\/cancel$/);
+      const subscriptionCancelMatch = p.match(/^\/api\/subscriptions\/([^/]+)\/cancel$/);
       if (method === 'POST' && subscriptionCancelMatch) {
         if (!user?.id) return json(res, 401, { error: 'Sign in to manage your subscriptions.' });
         const subscriptionId = decodeURIComponent(subscriptionCancelMatch[1]);
