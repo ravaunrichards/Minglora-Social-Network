@@ -2341,3 +2341,60 @@
   .mw-meeting #mw-screen-stage[data-screen-layout="roundtable-1"] #mw-grid[data-layout="roundtable-1"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:22px repeat(3,minmax(0,1fr))!important}
   .mw-meeting #mw-screen-stage[data-screen-layout="roundtable-2"] #mw-grid[data-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:auto!important;grid-row:auto!important}
 }
+
+/* Full Screen normal-window fit: same complete guest tray without browser/device fullscreen.
+   Explicit seat coordinates keep Guest Seats 5–8 inside the visible stage. */
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"]{
+  height:min(66dvh,calc(100dvh - 210px),760px)!important;
+  min-height:min(420px,calc(100dvh - 210px))!important;
+  max-height:min(760px,calc(100dvh - 210px))!important;
+  overflow:hidden!important;
+}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]{
+  position:absolute!important;inset:0!important;display:grid!important;
+  width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px minmax(0,1.08fr) repeat(2,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;grid-auto-rows:minmax(0,1fr)!important;
+  gap:clamp(5px,.75vw,9px)!important;padding:clamp(6px,.8vw,10px)!important;
+  align-content:stretch!important;align-items:stretch!important;justify-items:stretch!important;
+}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="1"]{grid-column:1!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="2"]{grid-column:2!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="3"]{grid-column:3!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="4"]{grid-column:4!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="5"]{grid-column:1!important;grid-row:4!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="6"]{grid-column:2!important;grid-row:4!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="7"]{grid-column:3!important;grid-row:4!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="8"]{grid-column:4!important;grid-row:4!important}
+@media(max-width:760px){
+  .mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"]{
+    height:min(64dvh,calc(100dvh - 190px),560px)!important;
+    min-height:min(300px,calc(100dvh - 190px))!important;
+    max-height:min(560px,calc(100dvh - 190px))!important;
+  }
+  .mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px minmax(0,1.08fr) repeat(3,minmax(0,.82fr))!important;
+    gap:5px!important;padding:6px!important;
+  }
+  .mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
+  .mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
+  .mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="1"]{grid-column:1!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="2"]{grid-column:2!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="3"]{grid-column:3!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="4"]{grid-column:1!important;grid-row:4!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="5"]{grid-column:2!important;grid-row:4!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="6"]{grid-column:3!important;grid-row:4!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="7"]{grid-column:1!important;grid-row:5!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]>.live-guest-seat[data-seat-index="8"]{grid-column:2!important;grid-row:5!important}
+}
+@media(max-width:420px){
+  .mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"]{
+    height:min(62dvh,calc(100dvh - 180px),500px)!important;
+    min-height:min(270px,calc(100dvh - 180px))!important;
+    max-height:min(500px,calc(100dvh - 180px))!important;
+  }
+}
