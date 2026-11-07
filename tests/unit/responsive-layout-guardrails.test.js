@@ -88,10 +88,10 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
   const assets=[
-    html.match(/href="(\\/styles\\.css\\?v=[^"]+)"/)?.[1],
-    html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]
+    html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\d+-/);
   for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
 
