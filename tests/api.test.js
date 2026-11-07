@@ -1098,6 +1098,23 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(suggestedMember.postsCount, 1);
   assert.equal(memberDiscovery.body.users.some(item => item.id === registration.body.user.id), false, 'friends-only profiles remain hidden from non-friends');
 
+  const dismissMemberSuggestion = await request('/api/discovery/people/' + encodeURIComponent(suggestedMember.id) + '/dismiss', { method: 'POST', body: '{}' });
+  assert.equal(dismissMemberSuggestion.status, 200);
+  assert.equal(dismissMemberSuggestion.body.dismissed, true);
+  const discoveryAfterDismissal = await request('/api/discovery/people');
+  assert.equal(discoveryAfterDismissal.body.users.some(item => item.id === suggestedMember.id), false, 'dismissed member no longer appears in People You May Know');
+  const sidebarPeopleAfterDismissal = await request('/api/users');
+  assert.equal(sidebarPeopleAfterDismissal.body.users.some(item => item.id === suggestedMember.id), false, 'dismissed member is also hidden from sidebar suggestions');
+  const stillAccessibleProfile = await request('/api/users/' + encodeURIComponent(suggestedMember.id));
+  assert.equal(stillAccessibleProfile.status, 200, 'dismissing a suggestion does not block the member profile');
+  const restoreMemberSuggestion = await request('/api/discovery/people/' + encodeURIComponent(suggestedMember.id) + '/dismiss', { method: 'DELETE', body: '{}' });
+  assert.equal(restoreMemberSuggestion.status, 200);
+  assert.equal(restoreMemberSuggestion.body.dismissed, false);
+  const discoveryAfterRestore = await request('/api/discovery/people');
+  assert.ok(discoveryAfterRestore.body.users.some(item => item.id === suggestedMember.id), 'restoring a suggestion makes the member eligible for discovery again');
+  const dismissAgain = await request('/api/discovery/people/' + encodeURIComponent(suggestedMember.id) + '/dismiss', { method: 'POST', body: '{}' });
+  assert.equal(dismissAgain.status, 200);
+
   const logout = await request('/api/auth/logout', { method: 'POST', body: '{}' });
   assert.equal(logout.status, 200);
   cookie = '';
