@@ -10,7 +10,7 @@ import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
-import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
+import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput, MEETWAVE_PARTICIPANT_LIMIT } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
 import { createCurrencyConverterService, normalizeCurrencyCode } from '../backend/modules/currency-converter/service.js';
@@ -748,7 +748,7 @@ function meetWaveRoomView(room,viewerId){
     id:room.id,title:room.title,description:room.description||'',mode:room.mode,
     visibility:room.visibility,scheduledAt:room.scheduledAt||null,status:room.status,
     createdAt:room.createdAt,startedAt:room.startedAt||null,endedAt:room.endedAt||null,
-    participantLimit:11,ownerId:room.ownerId,
+    participantLimit:MEETWAVE_PARTICIPANT_LIMIT,ownerId:room.ownerId,
     owner:safeUser(owner,viewerId),isHost:room.ownerId===viewerId
   };
 }
@@ -5318,7 +5318,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='GET'&&p==='/api/meetwave/status'){
         requireAuth(user);
         const health=await verifyLiveKitConnection();
-        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,error:health.error||null,maxParticipants:11});
+        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,error:health.error||null,maxParticipants:MEETWAVE_PARTICIPANT_LIMIT});
       }
       if(method==='GET'&&p==='/api/meetwave/rooms'){
         requireAuth(user);
@@ -5358,7 +5358,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           ownerId:user.id,title:validation.value.title,description:validation.value.description,
           mode:validation.value.mode,visibility:validation.value.visibility,
           scheduledAt:validation.value.scheduledAt,status:validation.value.mode==='scheduled'?'scheduled':'ready',
-          participantLimit:11,createdAt:now(),startedAt:null,endedAt:null
+          participantLimit:MEETWAVE_PARTICIPANT_LIMIT,createdAt:now(),startedAt:null,endedAt:null
         };
         db.meetWaveRooms.unshift(room);
         await saveStore();
@@ -5434,9 +5434,9 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
           let participants=[],liveKit;
           try{
-            const liveKitRoom=await ensureLiveKitRoom(room.roomName,11);
+            const liveKitRoom=await ensureLiveKitRoom(room.roomName,MEETWAVE_PARTICIPANT_LIMIT);
             participants=await listLiveKitParticipants(room.roomName);
-            const roomParticipantLimit=Math.max(2,Number(liveKitRoom?.maxParticipants)||11);
+            const roomParticipantLimit=Math.min(MEETWAVE_PARTICIPANT_LIMIT,Math.max(2,Number(liveKitRoom?.maxParticipants)||MEETWAVE_PARTICIPANT_LIMIT));
             if(participants.length>=roomParticipantLimit&&!participants.some(participant=>participant.identity===user.id)){
               const guestLimit=roomParticipantLimit-1;
               return json(res,409,{error:'This MeetWave room is full. The current limit is '+roomParticipantLimit+' participants: one host and up to '+guestLimit+' guests.'});
