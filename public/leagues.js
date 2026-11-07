@@ -1,7 +1,6 @@
 (() => {
   "use strict";
   const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
-  let refreshTimer = null;
   let refreshController = null;
   let refreshInFlight = false;
   let viewGeneration = 0;
@@ -180,11 +179,18 @@
   function updateRefreshStatus() {
     const status = $("#league-refresh-status");
     if (!status) return;
-    status.textContent = state.refreshError
-      ? "Live scores could not update. Minglora will retry automatically."
-      : state.lastUpdatedAt
-        ? "Live updates · Last updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
-        : "Live scores update automatically";
+    status.textContent = state.refreshing
+      ? "Refreshing live scores…"
+      : state.refreshError
+        ? "Refresh failed. Tap Refresh to try again."
+        : state.lastUpdatedAt
+          ? "Last updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+          : "Tap Refresh whenever you want the latest scores.";
+    const button = $("#league-refresh-button");
+    if (button) {
+      button.disabled = state.refreshing;
+      button.textContent = state.refreshing ? "Refreshing…" : "↻ Refresh";
+    }
   }
   function isLeagueViewActive() {
     return Boolean($("#main-content") && document.querySelector("[data-view='leagues'].active"));
@@ -305,13 +311,15 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
-      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p><small id='league-refresh-status' aria-live='polite'>Live scores update automatically</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
+      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p><small id='league-refresh-status' aria-live='polite'>Tap Refresh whenever you want the latest scores.</small><button type='button' class='secondary league-refresh-button' id='league-refresh-button'>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
   }
   function bindActions() {
+    const refreshButton = $("#league-refresh-button");
+    if (refreshButton) refreshButton.onclick = () => { void refreshScores(true); };
     const form = $("#league-challenge-form");
     if (form) {
       const giftMode = form.querySelector("[name='giftMode']");
@@ -381,8 +389,6 @@
     updateRefreshStatus();
   }
   function onNavigateAway() {
-    if (refreshTimer) clearInterval(refreshTimer);
-    refreshTimer = null;
     viewGeneration += 1;
     refreshToken += 1;
     refreshInFlight = false;
@@ -390,7 +396,7 @@
     refreshController = null;
     state.refreshing = false;
   }
-  async function refreshScores() {
+  async function refreshScores(force = false) {
     const main = $("#main-content");
     if (!main || !isLeagueViewActive()) { onNavigateAway(); return; }
     if (document.visibilityState !== "visible") return;
@@ -478,8 +484,7 @@
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
     updateRefreshStatus();
-    refreshTimer = window.setInterval(() => { void refreshScores(); }, 15000);
   }
-  // The League refreshes its live data automatically while its screen is open.
+  // League data is fetched on entry and only refreshed again when the member taps Refresh.
   window.MingloraLeagues = { render, onNavigateAway };
 })();
