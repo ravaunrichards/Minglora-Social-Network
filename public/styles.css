@@ -6644,3 +6644,26 @@ button.live-ranking-row{cursor:pointer}
   .creator-subscription-count{min-width:96px;padding:10px}
   .creator-subscription-manager,.creator-subscription-application,.creator-subscription-list{padding:15px}
 }
+
+
+/* LIVE Top Gifters: earned gifter levels plus live leaderboard titles. */
+.live-discovery-tabs [data-live-discovery="top-gifters"]{border-color:rgba(255,185,83,.34)}
+.minglora-gifter-periods{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 12px}
+.minglora-gifter-periods button{min-height:30px;padding:5px 12px;border:1px solid var(--border,rgba(150,160,180,.2));border-radius:999px;background:transparent;color:var(--muted,#9aa2b2);font-size:11px;font-weight:800;cursor:pointer}
+.minglora-gifter-periods button.is-active{border-color:rgba(255,185,83,.58);background:rgba(255,185,83,.13);color:var(--text,#fff)}
+.minglora-gifter-list{display:grid;gap:0}
+.minglora-gifter-row{display:flex;align-items:center;gap:9px;min-width:0;min-height:64px;padding:8px 4px;border-bottom:1px solid var(--border,rgba(150,160,180,.15))}
+.minglora-gifter-rank{width:25px;flex:none;color:#ffbd65;font-size:13px;font-weight:950;text-align:center}
+.minglora-gifter-row img,.minglora-gifter-avatar{width:38px;height:38px;flex:none;border-radius:50%;object-fit:cover}
+.minglora-gifter-avatar{display:grid;place-items:center;background:var(--soft,#edf1f7);color:var(--text,#283347);font-weight:900}
+.minglora-gifter-person{display:grid;gap:2px;flex:1;min-width:0}
+.minglora-gifter-person>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.minglora-gifter-person>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted,#9aa2b2);font-size:10px}
+.minglora-gifter-earned{color:#e6bd72!important;font-weight:750}
+.minglora-gifter-title{flex:none;max-width:102px;padding:4px 6px;border:1px solid rgba(255,185,83,.28);border-radius:7px;background:rgba(255,185,83,.09);color:#eac47e;font-size:8px;font-weight:950;letter-spacing:.03em;text-align:center}
+.minglora-gifter-coins{flex:none;min-width:66px;color:var(--text,#fff);font-size:12px;font-variant-numeric:tabular-nums;text-align:right}
+.minglora-gifter-coins small{display:block;color:var(--muted,#9aa2b2);font-size:9px;font-weight:600}
+.minglora-gifter-empty{padding:22px 8px;text-align:center}
+.minglora-gifter-empty strong{font-size:13px}
+.minglora-gifter-empty p{margin:5px 0 0;color:var(--muted,#9aa2b2);font-size:11px}
+@media(max-width:480px){.minglora-gifter-row{gap:6px}.minglora-gifter-row img,.minglora-gifter-avatar{width:33px;height:33px}.minglora-gifter-title{max-width:78px;padding:4px;font-size:7px}.minglora-gifter-coins{min-width:54px;font-size:10px}}
