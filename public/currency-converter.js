@@ -175,7 +175,7 @@
           const needle = state.search.trim().toLowerCase();
           if (!needle) return true;
           return [item.code, item.name, item.symbol, ...(item.entities || [])].join(' ').toLowerCase().includes(needle);
-        }).slice(0, 120).map(currencyOption).join('') +
+        }).slice(0, 250).map(currencyOption).join('') +
         '</div></div>' : '') +
       '</div>';
   }
@@ -189,6 +189,7 @@
     const numericAmount = state.amount === '' ? NaN : Number(state.amount);
     const hasAmount = Number.isFinite(numericAmount) && numericAmount >= 0;
     const outputAmount = hasRate && hasAmount ? numericAmount * state.rate : NaN;
+    const hasConvertedAmount = Number.isFinite(outputAmount);
     const rateText = hasRate
       ? '1 ' + state.from + ' = ' + new Intl.NumberFormat(undefined, { maximumSignificantDigits: 9 }).format(state.rate) + ' ' + state.to
       : state.loading ? 'Retrieving reference rate…' : state.error ? 'Rate unavailable' : 'Choose currencies to see the rate';
@@ -196,7 +197,7 @@
       ? '1 ' + state.to + ' = ' + new Intl.NumberFormat(undefined, { maximumSignificantDigits: 9 }).format(1 / state.rate) + ' ' + state.from
       : '';
     const favorite = state.favorites.some(item => item.from === state.from && item.to === state.to);
-    const amountOut = hasRate && hasAmount ? formatInputAmount(outputAmount, state.to) : '';
+    const amountOut = hasConvertedAmount ? formatInputAmount(outputAmount, state.to) : '';
     const favoritesMarkup = state.favorites.length
       ? state.favorites.map(item => '<button type="button" class="mcc-pair-chip" data-mcc-pair="' + escapeHtml(item.from) + ':' + escapeHtml(item.to) + '">' +
           '<span>' + escapeHtml(item.from) + '</span><span class="mcc-chip-arrow">→</span><span>' + escapeHtml(item.to) + '</span></button>').join('')
@@ -237,9 +238,9 @@
                   state.rateDate ? 'Rate date: ' + escapeHtml(state.rateDate) + (state.rateStale ? ' · cached rate' : '') :
                   state.error ? escapeHtml(state.error) : 'Rates refresh as providers publish new data.') + '</div>' +
               '</div>' +
-              '<div class="mcc-actions"><button type="button" class="mcc-primary-action" data-mcc-copy ' + (!hasRate || !hasAmount ? 'disabled' : '') + '>Copy converted amount</button>' +
+              '<div class="mcc-actions"><button type="button" class="mcc-primary-action" data-mcc-copy ' + (!hasConvertedAmount ? 'disabled' : '') + '>Copy converted amount</button>' +
                 '<button type="button" class="mcc-secondary-action" data-mcc-favorite>' + (favorite ? '★ Saved pair' : '☆ Save pair') + '</button>' +
-                '<button type="button" class="mcc-secondary-action" data-mcc-save-history ' + (!hasRate || !hasAmount ? 'disabled' : '') + '>Save conversion</button></div>' +
+                '<button type="button" class="mcc-secondary-action" data-mcc-save-history ' + (!hasConvertedAmount ? 'disabled' : '') + '>Save conversion</button></div>' +
               '<p class="mcc-disclaimer">Indicative reference rates only. Your bank, card provider or transfer service may use a different rate and charge fees. This tool does not exchange, send or withdraw money.</p>' +
             '</section>' +
             '<section class="mcc-support-card"><div class="mcc-section-title"><div><h2>Favorite pairs</h2><p>Quick access to your common conversions.</p></div><span>' + state.favorites.length + '/12</span></div>' +
@@ -315,6 +316,7 @@
     const amount = Number(state.amount);
     if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(state.rate)) return;
     const value = amount * state.rate;
+    if (!Number.isFinite(value)) return;
     const item = {
       from: state.from,
       to: state.to,
@@ -348,6 +350,10 @@
     state.from = from;
     state.to = to;
     state.amount = String(amount ?? '');
+    state.rate = null;
+    state.rateDate = '';
+    state.rateStale = false;
+    state.error = '';
     state.picker = '';
     state.search = '';
     saveLocalState();
@@ -374,7 +380,7 @@
         const needle = state.search.trim().toLowerCase();
         const matches = state.currencies.filter(item =>
           [item.code, item.name, item.symbol, ...(item.entities || [])].join(' ').toLowerCase().includes(needle)
-        ).slice(0, 120);
+        ).slice(0, 250);
         list.innerHTML = matches.length ? matches.map(currencyOption).join('') : '<p class="mcc-muted mcc-directory-empty">No matching active currency was found.</p>';
       }
     }));
