@@ -76,6 +76,26 @@ test('profile overflow and administrator controls are wired to their feature han
   assert.ok(profile.includes("openProfilePrivacySettings()"));
 });
 
+test('profile post cards reuse the working feed action bindings inside profile tabs',()=>{
+  const tabStart=app.indexOf('const showTab=nextTab=>{');
+  const tabEnd=app.indexOf("document.querySelectorAll('.profile-tabs [data-profile-tab]')",tabStart);
+  assert.ok(tabStart>=0&&tabEnd>tabStart);
+  const tabRender=app.slice(tabStart,tabEnd);
+  assert.ok(tabRender.includes('panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe)'));
+  assert.ok(tabRender.includes('bindFeed(panel)'),'profile tabs must receive the same real post-action bindings as the feed');
+  const binderStart=app.indexOf('function bindFeed(root=document)');
+  const binderEnd=app.indexOf('\nfunction ',binderStart+10);
+  const binder=app.slice(binderStart,binderEnd);
+  for(const handler of [
+    "root.querySelectorAll('[data-react]')",
+    "root.querySelectorAll('[data-comment-form]')",
+    "root.querySelectorAll('[data-toggle-save]')",
+    "root.querySelectorAll('[data-share]')",
+    "root.querySelectorAll('[data-post-menu]')"
+  ])assert.ok(binder.includes(handler),'Missing feed interaction binding '+handler);
+  assert.ok(binder.includes('bindProfileLinks(root)'),'profile links in post cards must remain navigable');
+});
+
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
