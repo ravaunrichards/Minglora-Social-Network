@@ -42,6 +42,15 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   const alice=await register('Minglora Profile Owner','profileowner','profile-owner@example.test');
   const bob=await register('Minglora Profile Viewer','profileviewer','profile-viewer@example.test');
   const creator=await register('Creator Hub Creator Network','creatorhubcreatornetwork','CreatorHubCreatorNetwork@Gmail.Com');
+  assert.equal(alice.user.profileLayout,'advanced','new profiles should use the advanced layout by default');
+  const savedProfileLayout=await request(alice.cookie,'/api/settings',{method:'PATCH',body:JSON.stringify({preferences:{profileLayout:'creator'}})});
+  assert.equal(savedProfileLayout.status,200,JSON.stringify(savedProfileLayout.body));
+  assert.equal(savedProfileLayout.body.settings.preferences.profileLayout,'creator');
+  const publicProfileLayout=await request(bob.cookie,'/api/users/'+alice.id);
+  assert.equal(publicProfileLayout.body.user.profileLayout,'creator','the chosen presentation should be visible on the public profile');
+  const invalidProfileLayout=await request(alice.cookie,'/api/settings',{method:'PATCH',body:JSON.stringify({preferences:{profileLayout:'unlocked-admin'}})});
+  assert.equal(invalidProfileLayout.status,400,'unsupported profile layouts must be rejected');
+
   assert.notEqual(creator.user.verificationBadge,'blue','an email address alone must not grant a profile verification sticker');
   assert.equal(creator.user.platformBadge,null,'verification must not grant a platform Admin badge');
 
