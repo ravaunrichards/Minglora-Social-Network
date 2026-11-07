@@ -72,18 +72,18 @@ test('automatic-update assets are versioned consistently in HTML and the service
   const paths=['/styles.css','/meetwave.css','/meetwave.js','/leagues.js','/gifter-progression.css','/gifter-progression.js','/app.js','/admin-centre.js'];
   for(const path of paths){
     const attribute=path.endsWith('.css')?'href':'src';
-    const asset=html.match(new RegExp(attribute+'="('+path.replace(/[.*+?^{}()|[\\]\\]/g,'\\\\$&')+'\\\\?v=[^"]+)"'))?.[1]||'';
+    const asset=[...html.matchAll(new RegExp(attribute+'="([^"]+)"','g'))].map(match=>match[1]).find(value=>value.startsWith(path+'?v='))||'';
     assert.ok(asset,'HTML declares '+path);
     assert.ok(serviceWorker.includes("'"+asset+"'"),'service worker caches '+asset);
   }
-  const adminAsset=adminHtml.match(/src="(\\/admin-centre\\.js\\?v=[^"]+)"/)?.[1]||'';
+  const adminAsset=adminHtml.match(/src="(\/admin-centre\.js\?v=[^"]+)"/)?.[1]||'';
   assert.ok(adminAsset&&serviceWorker.includes("'"+adminAsset+"'"));
-  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\d+-/);
 });
 
 test('service-worker registration does not force an active page reload', () => {
-  assert.equal((app.match(/navigator\\.serviceWorker\\.register\\('/\\/sw\\.js\\?v=/g)||[]).length,1);
+  assert.equal((app.match(/navigator\.serviceWorker\.register\('\/sw\.js\?v=/g)||[]).length,1);
   assert.match(app,/updateViaCache:'none'/);
-  assert.doesNotMatch(app,/await registration\\.update\\(\\)/);
-  assert.doesNotMatch(serviceWorker,/self\\.skipWaiting\\(\\)|self\\.clients\\.claim\\(\\)/);
+  assert.doesNotMatch(app,/await registration\.update\(\)/);
+  assert.doesNotMatch(serviceWorker,/self\.skipWaiting\(\)|self\.clients\.claim\(\)/);
 });

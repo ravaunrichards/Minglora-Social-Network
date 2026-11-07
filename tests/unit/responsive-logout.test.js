@@ -13,8 +13,8 @@ const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const mobileCss = fs.readFileSync(path.join(root, 'public/mobile-layout.css'), 'utf8');
 
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
-  assert.match(html,/href="\\/styles\\.css\\?v=[^"]+"/);
-  assert.match(html,/src="\\/app\\.js\\?v=[^"]+"/);
+  assert.match(html,/href="\/styles\.css\?v=[^"]+"/);
+  assert.match(html,/src="\/app\.js\?v=[^"]+"/);
   assert.ok(html.includes('src="/settings.js?v=20261106-refresh-controls-removed-1"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
 

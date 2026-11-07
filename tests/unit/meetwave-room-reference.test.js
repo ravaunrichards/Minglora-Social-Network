@@ -92,12 +92,12 @@ test('Screen sharing uses a separate stage outside the nine participant seats', 
 });
 
 test('MeetWave scripts and styles share the current browser cache version', () => {
-  const cssAsset=html.match(/href="(\\/meetwave\\.css\\?v=[^"]+)"/)?.[1]||'';
-  const jsAsset=html.match(/src="(\\/meetwave\\.js\\?v=[^"]+)"/)?.[1]||'';
+  const cssAsset=html.match(/href="(\/meetwave\.css\?v=[^"]+)"/)?.[1]||'';
+  const jsAsset=html.match(/src="(\/meetwave\.js\?v=[^"]+)"/)?.[1]||'';
   assert.ok(cssAsset&&jsAsset,'HTML loads current MeetWave assets');
   assert.ok(serviceWorker.includes("'"+cssAsset+"'"));
   assert.ok(serviceWorker.includes("'"+jsAsset+"'"));
-  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\d+-/);
 });
 
 test('All eight layouts place the host and guest seats inside the same grid stage', () => {
@@ -114,7 +114,7 @@ test('Spotlight lights the selected guest while keeping the other guest seats vi
   assert.ok(js.includes("setSpeakerFocus([{identity:tile.dataset.identity}])"));
   assert.ok(js.includes("const activeIdentity=speakers[0]?.identity||spotlightIdentity||activeRoom?.ownerId||state.user.id"));
   assert.ok(js.includes("target.classList.add('is-focused')"));
-  assert.ok(js.includes("activeLayout==='spotlight'"));
+  assert.ok(js.includes("activeLayout=layout")&&js.includes("applySpotlightSelection(spotlightIdentity)"));
   assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
   assert.ok(finalFit.includes('box-shadow:0 0 0 2px rgba(114,224,203,.2),0 0 28px rgba(77,213,189,.48)'));
   assert.ok(finalFit.includes('.mw-video-tile:not(.is-spotlight){display:grid!important}'));
