@@ -8,7 +8,8 @@ import {
   getGifterProgressionOverview,
   getGifterBadgeSummary,
   getNewGifterIdentity,
-  refundGifterGift
+  refundGifterGift,
+  getLiveGifterLeaderboard
 } from "../../backend/modules/gifter-progression/service.js";
 
 test("gifter levels use the fixed cumulative coin thresholds from the reference chart", () => {
@@ -256,4 +257,58 @@ test("refunded gifts are excluded from Gifter XP, badges, history, NEW GIFTER, a
   assert.equal(getGifterBadgeSummary(db, "sender"), null);
   assert.equal(getNewGifterIdentity(db, "sender", new Date("2026-11-05T21:00:00.000Z")), null);
   assert.equal(refundGifterGift(db, "gift-refund-2").reason, "already_refunded");
+});
+
+
+test("LIVE Top Gifters rankings use confirmed LIVE Coins, period windows, broadcast scope and earned titles", () => {
+  const db = {
+    users: [
+      { id: "host", username: "host", name: "Host" },
+      { id: "one", username: "one", name: "First gifter" },
+      { id: "two", username: "two", name: "Second gifter" },
+      { id: "member", username: "member", name: "Member-only sender" }
+    ],
+    gifterProgressionLedger: []
+  };
+  const now = new Date("2026-11-07T17:00:00.000Z");
+  recordGifterGift(db, {
+    giftId: "live-one-a", senderId: "one", recipientId: "host",
+    giftCode: "crown", coinAmount: 100, contextType: "live",
+    broadcastId: "room-a", now: new Date("2026-11-07T16:00:00.000Z")
+  });
+  recordGifterGift(db, {
+    giftId: "live-two-a", senderId: "two", recipientId: "host",
+    giftCode: "rose", coinAmount: 40, contextType: "live",
+    broadcastId: "room-a", now: new Date("2026-11-07T16:10:00.000Z")
+  });
+  recordGifterGift(db, {
+    giftId: "live-one-b", senderId: "one", recipientId: "host",
+    giftCode: "crown", coinAmount: 50, contextType: "live",
+    broadcastId: "room-b", now: new Date("2026-11-07T16:20:00.000Z")
+  });
+  recordGifterGift(db, {
+    giftId: "member-only", senderId: "member", recipientId: "host",
+    giftCode: "rose", coinAmount: 900, contextType: "member",
+    now: new Date("2026-11-07T16:30:00.000Z")
+  });
+  recordGifterGift(db, {
+    giftId: "live-old", senderId: "two", recipientId: "host",
+    giftCode: "rose", coinAmount: 500, contextType: "live",
+    broadcastId: "room-a", now: new Date("2026-10-20T16:00:00.000Z")
+  });
+
+  const room = getLiveGifterLeaderboard(db, { broadcastId: "room-a", now, limit: 10 });
+  assert.deepEqual(room.map(item => [item.userId, item.points]), [["two", 540], ["one", 100]]);
+  assert.equal(room[0].title, "TOP GIFTER");
+  assert.equal(room[1].title, "TOP 3 GIFTER");
+
+  const daily = getLiveGifterLeaderboard(db, { period: "daily", now, timeZone: "America/Jamaica" });
+  assert.deepEqual(daily.map(item => [item.userId, item.points]), [["one", 150], ["two", 40]]);
+  assert.equal(daily[0].title, "TOP GIFTER");
+
+  const weekly = getLiveGifterLeaderboard(db, { period: "weekly", now, timeZone: "America/Jamaica" });
+  assert.deepEqual(weekly.map(item => item.userId), ["one", "two"]);
+  const allTime = getLiveGifterLeaderboard(db, { period: "all_time", now, timeZone: "America/Jamaica" });
+  assert.deepEqual(allTime.map(item => [item.userId, item.points]), [["two", 540], ["one", 150]]);
+  assert.equal(allTime.some(item => item.userId === "member"), false);
 });
