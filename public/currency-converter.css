@@ -44,9 +44,7 @@
 .mcc-rate-panel>strong{display:block;font-size:15px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .mcc-rate-panel>small{display:block;margin-top:4px;color:var(--muted,#697586);font-size:11px}
 .mcc-rate-meta{margin-top:8px;color:var(--muted,#697586);font-size:11px;line-height:1.45}
-.mcc-icon-button{width:29px;height:29px;border:1px solid var(--border,#e4e8ef);border-radius:9px;background:var(--card,#fff);color:var(--text,#17202b);font-size:20px;cursor:pointer}
-.mcc-icon-button:disabled{opacity:.45;cursor:wait}
-.mcc-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+ .mcc-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
 .mcc-primary-action,.mcc-secondary-action{min-height:40px;border-radius:11px;padding:0 14px;font-size:12px;font-weight:750;cursor:pointer}
 .mcc-primary-action{border:1px solid #176b50;background:#147c59;color:#fff}
 .mcc-primary-action:hover{background:#0e684a}
