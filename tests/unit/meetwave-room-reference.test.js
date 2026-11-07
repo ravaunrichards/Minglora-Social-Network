@@ -49,14 +49,26 @@ test('MeetWave automatic-sync assets bypass stale browser and service-worker cac
   assert.ok(serviceWorker.includes('/meetwave.js?v=' + jsVersion));
 });
 
-test('MeetWave has eight selectable meeting layouts', () => {
-  for (const layout of ['gallery-2','gallery-3','gallery-4','speaker','spotlight','sidebar','filmstrip','presentation']) {
-    assert.ok(js.includes('data-mw-layout=\"'+layout+'\"'));
-    assert.ok(css.includes('data-layout=\"'+layout+'\"'));
+test('MeetWave has exactly nine local-screen layout choices', () => {
+  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  for (const layout of layouts) {
+    assert.ok(js.includes('data-mw-layout=\\\"'+layout+'\\\"'), layout+' choice is present');
+    assert.ok(css.includes('data-layout=\\\"'+layout+'\\\"'), layout+' has a screen arrangement');
   }
-  assert.match(js, /function applyMeetingLayout\(layout\)/);
+  assert.match(js, /function applyMeetingLayout\\(layout\\)/);
+  assert.match(js, /changes only your local screen arrangement/);
+  assert.doesNotMatch(js, /data-mw-layout=\\\"(?:gallery-2|gallery-3|gallery-4|speaker|sidebar|filmstrip|presentation)\\\"/);
 });
 
+test('MeetWave layout and settings live inside the accessible side panel, not floating overlays', () => {
+  assert.match(js, /id=\\\"mw-panel-layouts-tab\\\"/);
+  assert.match(js, /id=\\\"mw-layout-picker\\\"[\\s\\S]*?id=\\\"mw-settings-panel\\\"/);
+  assert.match(js, /const panels=\\{chat:[\\s\\S]*?layouts:[\\s\\S]*?settings:/);
+  assert.match(css, /\\.mw-support-column\\.live-fullscreen-chat-slot[\\s\\S]*?display:flex/);
+  assert.match(css, /\\.mw-support-column>\\.mw-layout-picker[\\s\\S]*?position:static!important/);
+  assert.match(css, /\\.mw-support-column>\\.mw-settings-panel[\\s\\S]*?position:static!important/);
+  assert.match(css, /live-full-screen-active/);
+});
 test('MeetWave settings cover devices and appearance while retaining visible room chat', () => {
   for (const id of ['mw-settings-panel','mw-audio-input','mw-audio-output','mw-video-input','mw-echo-cancellation','mw-noise-suppression','mw-auto-gain','mw-video-fit','mw-mirror-self','mw-show-names','mw-chat-panel']) assert.ok(js.includes('id=\"'+id+'\"'));
   assert.match(js, /function switchMeetingDevice\(kind,deviceId\)/);
