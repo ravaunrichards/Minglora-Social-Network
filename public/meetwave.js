@@ -40,7 +40,7 @@
     });
   }
   function lobbyMarkup(){
-    return '<section class="mw-page"><header class="mw-hero"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Make room for <em>real connection.</em></h1><p>Meet, collaborate, teach, study and connect — all inside Minglora.</p><div class="mw-hero-chips"><span>Live video &amp; audio</span><span>Screen sharing</span><span>Meeting chat</span><span>Up to 8 people</span></div></div><div class="mw-hero-orb"><div class="mw-orb-ring"></div><div class="mw-orb-core"><svg class="mw-brand-icon" viewBox="0 0 64 64" role="img" aria-label="MeetWave"><use href="/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2#meetwave"></use></svg></div></div></header><div class="mw-actions-grid"><button class="mw-action-card" data-new="instant"><b>▶ Start instant meeting</b><small>Create a room and meet now</small></button><button class="mw-action-card" data-new="scheduled"><b>▦ Schedule a meeting</b><small>Pick a time and invite people</small></button><button class="mw-action-card" data-new="personal"><b>⌂ Personal meeting room</b><small>Keep a reusable room link</small></button></div><section class="mw-join-panel"><div><span class="mw-eyebrow">ROOM CODE</span><h2>Join a meeting</h2></div><form id="mw-code-form" class="mw-join-form"><input id="mw-code" placeholder="MW-12AB34CD" required aria-label="Meeting code"><button class="mw-primary">Join</button></form></section><section class="mw-section"><div class="mw-section-heading"><h2>Rooms you can access</h2><div class="mw-lobby-refresh-actions"><p class="mw-section-note">Refresh rooms and invitations whenever you choose.</p><button type="button" class="mw-secondary" id="mw-lobby-refresh">↻ Refresh</button></div></div><div id="mw-rooms" class="mw-room-grid"><div class="mw-empty">Loading rooms…</div></div></section><section class="mw-section"><h2>Meeting invitations</h2><div id="mw-invites" class="mw-invite-list"><div class="mw-empty">Loading invitations…</div></div></section><p id="mw-status" class="mw-status">MeetWave uses Minglora accounts and meeting services.</p></section>';
+    return '<section class="mw-page"><header class="mw-hero"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Make room for <em>real connection.</em></h1><p>Meet, collaborate, teach, study and connect — all inside Minglora.</p><div class="mw-hero-chips"><span>Live video &amp; audio</span><span>Screen sharing</span><span>Meeting chat</span><span>Up to 8 people</span></div></div><div class="mw-hero-orb"><div class="mw-orb-ring"></div><div class="mw-orb-core"><svg class="mw-brand-icon" viewBox="0 0 64 64" role="img" aria-label="MeetWave"><use href="/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2#meetwave"></use></svg></div></div></header><div class="mw-actions-grid"><button class="mw-action-card" data-new="instant"><b>▶ Start instant meeting</b><small>Create a room and meet now</small></button><button class="mw-action-card" data-new="scheduled"><b>▦ Schedule a meeting</b><small>Pick a time and invite people</small></button><button class="mw-action-card" data-new="personal"><b>⌂ Personal meeting room</b><small>Keep a reusable room link</small></button></div><section class="mw-join-panel"><div><span class="mw-eyebrow">ROOM CODE</span><h2>Join a meeting</h2></div><form id="mw-code-form" class="mw-join-form"><input id="mw-code" placeholder="MW-12AB34CD" required aria-label="Meeting code"><button class="mw-primary">Join</button></form></section><section class="mw-section"><div class="mw-section-heading"><h2>Rooms you can access</h2><p class="mw-section-note">Rooms and invitations update automatically.</p></div><div id="mw-rooms" class="mw-room-grid"><div class="mw-empty">Loading rooms…</div></div></section><section class="mw-section"><h2>Meeting invitations</h2><div id="mw-invites" class="mw-invite-list"><div class="mw-empty">Loading invitations…</div></div></section><p id="mw-status" class="mw-status">MeetWave uses Minglora accounts and meeting services.</p></section>';
   }
   function roomCard(room){
     const date=room.scheduledAt?new Date(room.scheduledAt).toLocaleString():'Ready now';
@@ -48,14 +48,16 @@
     const presence=room.participantCountVerified?(room.status==='active'?room.participantCount+' in room':'Not started'):'Live count unavailable';
     return '<article class="mw-room-card"><div class="mw-room-card-top"><span class="mw-room-badge">'+esc(room.mode)+'</span><span class="mw-privacy">'+esc(visibility)+'</span></div><h3>'+esc(room.title)+'</h3><p>'+esc(room.description||'Minglora meeting room')+'</p><div class="mw-room-meta"><span>Host: '+esc(room.owner?.name||'Minglora member')+'</span><span>'+esc(date)+'</span><span>'+esc(presence)+'</span></div><div class="mw-room-code-row"><code>'+esc(room.id)+'</code><button class="mw-text-button" data-copy="'+esc(room.id)+'">Copy link</button></div><div class="mw-room-actions"><button class="mw-primary" data-join="'+esc(room.id)+'">'+(room.isHost?'Start meeting':'Join room')+'</button>'+(room.isHost?'<button class="mw-secondary" data-invite="'+esc(room.id)+'">Invite</button>':'')+'</div></article>';
   }
-  async function refreshLobby(){
+  async function refreshLobby({quiet=false}={}){
     if(lobbyRefreshBusy)return;
+    const active=document.activeElement;
+    if(quiet&&((active&&($('#mw-rooms')?.contains(active)||$('#mw-invites')?.contains(active)))||active?.id==='mw-code'))return;
     lobbyRefreshBusy=true;
     try{
     const [rooms,invitations,provider]=await Promise.all([api('/meetwave/rooms'),api('/meetwave/invitations'),api('/meetwave/status')]);
     $('#mw-rooms').innerHTML=rooms.rooms.length?rooms.rooms.map(roomCard).join(''):'<div class="mw-empty">No rooms yet. Create a MeetWave room to begin.</div>';
     $('#mw-invites').innerHTML=invitations.invitations.length?invitations.invitations.map(item=>'<article class="mw-invite-card"><b>'+esc(item.room.title)+'</b><span>'+esc(item.room.id)+'</span><button class="mw-primary" data-accept="'+esc(item.id)+'">Accept</button><button class="mw-secondary" data-decline="'+esc(item.id)+'">Decline</button></article>').join(''):'<div class="mw-empty">No pending invitations.</div>';
-    note(provider.configured&&provider.connected?'MeetWave is connected and ready.':provider.configured?'LiveKit is unreachable. Check the Minglora provider connection.':'MeetWave requires Minglora LiveKit credentials.',!provider.connected);
+    if(!quiet)note(provider.configured&&provider.connected?'MeetWave is connected and ready.':provider.configured?'LiveKit is unreachable. Check the Minglora provider connection.':'MeetWave requires Minglora LiveKit credentials.',!provider.connected);
     document.querySelectorAll('[data-join]').forEach(button=>button.onclick=()=>joinRoom(button.dataset.join));
     document.querySelectorAll('[data-copy]').forEach(button=>button.onclick=()=>copyInvite(button.dataset.copy));
     document.querySelectorAll('[data-invite]').forEach(button=>button.onclick=()=>inviteMembers(button.dataset.invite));
@@ -65,14 +67,6 @@
   }
   async function respondInvite(id,action){try{await api('/meetwave/invitations/'+encodeURIComponent(id)+'/'+action,{method:'POST',body:'{}'});await refreshLobby();}catch(error){note(error.message,true);}}
   function bindLobby(){
-    const refreshButton=$('#mw-lobby-refresh');
-    if(refreshButton)refreshButton.onclick=async()=>{
-      if(lobbyRefreshBusy)return;
-      refreshButton.disabled=true;refreshButton.textContent='Refreshing…';
-      try{await refreshLobby();note('Rooms and invitations updated.');}
-      catch(error){note(error.message,true);}
-      finally{refreshButton.disabled=false;refreshButton.textContent='↻ Refresh';}
-    };
     document.querySelectorAll('[data-new]').forEach(button=>button.onclick=()=>createRoom(button.dataset.new));
     $('#mw-code-form').onsubmit=event=>{event.preventDefault();joinRoom($('#mw-code').value.trim().toUpperCase());};
   }
@@ -263,6 +257,9 @@
     lobbyPoller=null;
     setContent(lobbyMarkup());bindLobby();
     try{await refreshLobby();}catch(error){note(error.message,true);}
+    if(!activeRoom)lobbyPoller=window.setInterval(()=>{
+      if(state.view==='meetwave'&&!activeRoom)void refreshLobby({quiet:true}).catch(error=>console.warn('[Minglora MeetWave] Automatic lobby sync failed:',error?.message||error));
+    },20000);
     const roomId=new URLSearchParams(location.search).get('meetwave');
     if(roomId){history.replaceState(null,'',location.pathname+location.hash);try{await joinRoom(roomId);}catch(error){note(error.message,true);}}
   }
