@@ -69,6 +69,7 @@ test('HTML and service worker load and cache both converter modes and 3D artwork
   for (const asset of [
     'currency-converter.css',
     'quick-currency.css',
+    'calculator.css',
     'currency-converter.js',
     'quick-currency.js',
   'calculator.js'
