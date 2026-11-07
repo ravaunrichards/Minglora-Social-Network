@@ -150,6 +150,153 @@
     schedule(0);
   }
 
+  function initializeAdminMemberManagement(panel) {
+    const search = panel.querySelector('#admin-member-search');
+    const statusFilter = panel.querySelector('#admin-member-status-filter');
+    const results = panel.querySelector('#admin-member-results');
+    const resultStatus = panel.querySelector('#admin-member-search-status');
+    const actionForm = panel.querySelector('#admin-member-action-form');
+    const selectedLabel = panel.querySelector('#admin-member-selected-label');
+    const actionStatus = panel.querySelector('#admin-member-action-status');
+    const actionSelect = panel.querySelector('#admin-member-action');
+    const durationSelect = panel.querySelector('#admin-member-duration');
+    const actionButton = panel.querySelector('#admin-member-action-submit');
+    const auditList = panel.querySelector('#admin-audit-log-list');
+    let selectedMember = null;
+
+    const displayDate = value => {
+      if (!value) return 'Not available';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? 'Not available' : date.toLocaleString();
+    };
+    const memberLabel = member => (member.name || 'Minglora member') +
+      (member.username ? ' · @' + member.username : '');
+    const renderMembers = members => {
+      if (!results) return;
+      results.innerHTML = members.length ? members.map(member => {
+        const role = String(member.role || 'member');
+        const protectedRole = ['platform_owner','admin','moderator'].includes(role);
+        const status = String(member.status || 'active');
+        const statusText = status === 'suspended' && member.suspendedUntil
+          ? 'Suspended until ' + displayDate(member.suspendedUntil)
+          : status.charAt(0).toUpperCase() + status.slice(1);
+        return '<article class="admin-member-result-card">' +
+          '<div class="admin-member-result-main"><div><strong>' + escapeText(member.name || 'Minglora member') +
+          '</strong><small>' + escapeText(member.username ? '@' + member.username : member.id) +
+          ' · ' + escapeText(role.replace(/_/g,' ')) + '</small></div>' +
+          '<span class="admin-member-status-pill" data-status="' + escapeText(status) + '">' + escapeText(statusText) + '</span></div>' +
+          '<div class="admin-member-result-details"><span>' + escapeText(member.email || 'No email on record') +
+          '</span><span>' + escapeText(member.phoneNumber || 'No phone on record') +
+          '</span><span>Joined ' + escapeText(displayDate(member.createdAt)) +
+          '</span><span>Last active ' + escapeText(displayDate(member.lastSeenAt)) + '</span></div>' +
+          '<button type="button" class="secondary" data-admin-select-member="' + escapeText(member.id) +
+          '"' + (protectedRole ? ' disabled' : '') + '>' + (protectedRole ? 'Protected administrator' : 'Select account') +
+          '</button></article>';
+      }).join('') : '<p class="settings-empty">No registered member accounts matched this search.</p>';
+      results.querySelectorAll('[data-admin-select-member]').forEach(button => {
+        button.addEventListener('click', () => {
+          selectedMember = members.find(member => member.id === button.dataset.adminSelectMember) || null;
+          if (selectedLabel) selectedLabel.textContent = selectedMember
+            ? memberLabel(selectedMember) + ' · ' + (selectedMember.email || selectedMember.id)
+            : 'No account selected';
+          if (actionStatus) actionStatus.textContent = selectedMember
+            ? 'Selected account status: ' + (selectedMember.status || 'active') + '. Choose an action and record the reason.'
+            : '';
+          actionForm?.scrollIntoView({behavior:'smooth',block:'nearest'});
+        });
+      });
+    };
+
+    const loadMembers = async () => {
+      if (!results) return;
+      results.textContent = 'Searching registered Minglora accounts…';
+      if (resultStatus) resultStatus.textContent = 'Loading member records from the server…';
+      try {
+        const query = String(search?.value || '').trim();
+        const status = String(statusFilter?.value || 'all');
+        const response = await adminCentreApi('/admin/members?search=' + encodeURIComponent(query) +
+          '&status=' + encodeURIComponent(status));
+        const members = Array.isArray(response.members) ? response.members : [];
+        renderMembers(members);
+        if (resultStatus) resultStatus.textContent = response.total + ' matching account(s). Showing up to 100 records.';
+      } catch (error) {
+        results.textContent = error.message || 'Member accounts could not be loaded.';
+        if (resultStatus) resultStatus.textContent = 'Member search failed.';
+      }
+    };
+
+    const loadAuditLog = async () => {
+      if (!auditList) return;
+      auditList.textContent = 'Loading administrator audit history…';
+      try {
+        const response = await adminCentreApi('/admin/audit-log?limit=50');
+        const records = Array.isArray(response.records) ? response.records : [];
+        auditList.innerHTML = records.length ? records.map(record => {
+          const action = String(record.action || record.event || 'Admin activity').replace(/^admin\.account\./,'').replace(/[._]/g,' ');
+          return '<article class="admin-audit-row"><div><strong>' + escapeText(action) +
+            '</strong><small>' + escapeText(record.actor?.name || 'Administrator') +
+            ' · ' + escapeText(record.target?.username ? '@' + record.target.username : record.targetId || 'Platform') +
+            '</small></div><time>' + escapeText(displayDate(record.createdAt)) + '</time>' +
+            '<p>' + escapeText(record.reason || 'No reason was recorded.') +
+            (record.previousStatus || record.newStatus ? ' · ' + escapeText(record.previousStatus || 'unknown') +
+              ' → ' + escapeText(record.newStatus || 'unknown') : '') + '</p></article>';
+        }).join('') : '<p class="settings-empty">No administrator actions have been recorded yet.</p>';
+      } catch (error) {
+        auditList.textContent = error.message || 'Audit history could not be loaded.';
+      }
+    };
+
+    panel.querySelector('#admin-member-search-button')?.addEventListener('click', loadMembers);
+    search?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); loadMembers(); }
+    });
+    statusFilter?.addEventListener('change', loadMembers);
+    actionSelect?.addEventListener('change', () => {
+      if (durationSelect) durationSelect.disabled = actionSelect.value !== 'suspend';
+    });
+    actionForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!selectedMember) {
+        if (actionStatus) actionStatus.textContent = 'Select a member account first.';
+        return;
+      }
+      const action = String(actionSelect?.value || '');
+      const reason = String(panel.querySelector('#admin-member-reason')?.value || '').trim();
+      const duration = String(durationSelect?.value || '24h');
+      if (reason.length < 8 || reason.length > 500) {
+        if (actionStatus) actionStatus.textContent = 'Enter a reason between 8 and 500 characters.';
+        return;
+      }
+      const actionLabel = action === 'ban' ? 'permanently ban' : action === 'unban' ? 'restore' : 'suspend';
+      const durationLabel = action === 'suspend' ? ' for ' + duration : '';
+      if (!window.confirm('Are you sure you want to ' + actionLabel + ' ' + memberLabel(selectedMember) +
+          durationLabel + '? This will sign out all their devices and record the action.')) return;
+      if (actionButton) actionButton.disabled = true;
+      if (actionStatus) actionStatus.textContent = 'Applying account action…';
+      try {
+        const response = await adminCentreApi('/admin/members/' + encodeURIComponent(selectedMember.id) + '/status', {
+          method:'POST',
+          body:JSON.stringify({action,duration,reason})
+        });
+        if (actionStatus) actionStatus.textContent = '@' + (response.member?.username || 'member') +
+          ' account is now ' + (response.member?.status || 'updated') + '. All previous sessions were revoked.';
+        const reasonInput = panel.querySelector('#admin-member-reason');
+        if (reasonInput) reasonInput.value = '';
+        selectedMember = null;
+        if (selectedLabel) selectedLabel.textContent = 'No account selected';
+        await loadMembers();
+        await loadAuditLog();
+      } catch (error) {
+        if (actionStatus) actionStatus.textContent = error.message || 'The account action could not be completed.';
+      } finally {
+        if (actionButton) actionButton.disabled = false;
+      }
+    });
+    panel.querySelector('#admin-audit-log-refresh')?.addEventListener('click', loadAuditLog);
+    void loadMembers();
+    void loadAuditLog();
+  }
+
   function addControlCentrePanel() {
     const root = document.querySelector('#admin-centre-root');
     if (!root || root.querySelector('#admin-control-centre')) return;
@@ -172,7 +319,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-member-management">Members</a><a href="#admin-audit-log">Audit log</a><a href="#admin-internal-operations">Internal operations</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -356,6 +503,33 @@
         <p class="admin-control-centre-note">Open Admin Settings below to configure or verify your authenticator.</p>
       `}
     `;
+    if (unlocked) {
+      panel.insertAdjacentHTML('beforeend',
+        '<section class="admin-control-centre-section admin-member-management" id="admin-member-management" aria-labelledby="admin-member-management-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-member-management-title">Member management</h3><p>Search registered accounts by name, username, email, phone number or account ID. Every restriction revokes existing sessions.</p></div></div>' +
+          '<div class="admin-member-search-controls"><input id="admin-member-search" type="search" maxlength="80" autocomplete="off" placeholder="Search name, @username, email, phone or ID" aria-label="Search member accounts">' +
+            '<select id="admin-member-status-filter" aria-label="Filter accounts by status"><option value="all">All accounts</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option><option value="deactivated">Deactivated</option></select>' +
+            '<button type="button" class="secondary" id="admin-member-search-button">Search</button></div>' +
+          '<p id="admin-member-search-status" aria-live="polite">Loading registered member accounts…</p>' +
+          '<div id="admin-member-results" class="admin-member-results" aria-live="polite">Loading accounts…</div>' +
+          '<form id="admin-member-action-form" class="admin-member-action-form">' +
+            '<h4>Account action</h4><p id="admin-member-selected-label">No account selected</p>' +
+            '<label for="admin-member-action">Choose action</label><select id="admin-member-action" name="action"><option value="suspend">Temporarily suspend</option><option value="ban">Permanently ban</option><option value="unban">Unban / restore account</option></select>' +
+            '<label for="admin-member-duration">Suspension duration</label><select id="admin-member-duration" name="duration"><option value="1h">1 hour</option><option value="24h" selected>24 hours</option><option value="7d">7 days</option><option value="30d">30 days</option><option value="permanent">Permanent suspension</option></select>' +
+            '<label for="admin-member-reason">Reason (required)</label><textarea id="admin-member-reason" name="reason" rows="3" maxlength="500" minlength="8" required placeholder="Explain the policy reason for this action"></textarea>' +
+            '<button type="submit" class="primary" id="admin-member-action-submit">Apply account action</button><p id="admin-member-action-status" role="status" aria-live="polite">Select an account to manage it.</p>' +
+          '</form>' +
+          '<p class="admin-member-safety-note">Administrator accounts are protected from member-level restrictions. Permanent bans and suspensions require a reason. Members must sign in again after an unban; old sessions are not restored.</p>' +
+        '</section>' +
+        '<section class="admin-control-centre-section admin-audit-log" id="admin-audit-log" aria-labelledby="admin-audit-log-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-audit-log-title">Administrator audit log</h3><p>Recent account and moderation actions, including the operator, affected account, reason and time.</p></div>' +
+            '<button type="button" class="secondary" id="admin-audit-log-refresh">Refresh history</button></div>' +
+          '<div id="admin-audit-log-list" class="admin-audit-log-list" aria-live="polite">Loading audit history…</div>' +
+        '</section>'
+      );
+      initializeAdminMemberManagement(panel);
+    }
+
     if (unlocked) {
       panel.insertAdjacentHTML('beforeend',
         '<section class="admin-control-centre-section" id="moderation-workspace" aria-labelledby="admin-moderation-title">' +
