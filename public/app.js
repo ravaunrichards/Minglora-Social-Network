@@ -1258,7 +1258,7 @@ function attachLiveTrack(track,participant,local,publication){
     const screenShare=isLiveScreenSharePublication(publication);
     const layout=$("#live-guest-layout");
     const seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
-    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-guest-seat-media")||$("#live-video-stage"));
+    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-guest-seat-media")||(activeLiveScreenLayout==="full-screen"?null:$("#live-video-stage")));
     if(!target)return;
     const tile=document.createElement("div");
     tile.className=screenShare?"live-screen-share-tile":"live-video-tile"+(local?" local":"");
@@ -1578,12 +1578,17 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
   const hostIdentity=String(hostParticipant?.identity||session?.hostId||"minglora-host");
   const hostName=hostParticipant?.name||session?.host?.name||(role==="host"?state.user?.name:"Minglora host")||"Minglora host";
+  const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!root.closest(".live-audio-stage");
   const guests=[];
-  if(role==="guest"&&local)guests.push(local);
+  if(role==="guest"&&local&&participantHasLiveAudio(local))guests.push(local);
   for(const person of remotes){
     if(person.identity===session?.hostId||!participantHasLiveAudio(person))continue;
     if(!guests.some(item=>item.identity===person.identity))guests.push(person);
   }
+  root.classList.toggle("live-host-only-layout",fullScreenHostOnly);
+  root.classList.toggle("has-active-guests",fullScreenHostOnly&&guests.length>0);
+  root.classList.toggle("has-many-guests",fullScreenHostOnly&&guests.length>4);
+  root.dataset.activeGuestCount=String(guests.length);
   const specs=[{
     key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
   }];
@@ -1591,7 +1596,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     key:"guest:"+String(person.identity||index),identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
     person,isHost:false
   }));
-  while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
+  if(!fullScreenHostOnly)while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
   const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
   const header=document.createElement("div");
   header.className="live-guest-layout-heading";
@@ -1608,7 +1613,6 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     const seat=previous.get(spec.key)||document.createElement("article");
     const media=seat.querySelector(".live-guest-seat-media")||document.createElement("div");
     const identity=String(spec.identity||"");
-    const isLocal=Boolean(spec.person&&spec.person===local);
     const connected=Boolean(spec.person&&participantHasLiveAudio(spec.person));
     const muted=Boolean(spec.person&&Array.from(spec.person.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted));
     const speaking=Boolean(identity&&activeSpeakerIds.has(identity));
@@ -1625,7 +1629,8 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     media.className="live-guest-seat-media";seat.append(media);
     return seat;
   });
-  root.replaceChildren(header,...nodes);
+  if(fullScreenHostOnly)root.replaceChildren(...nodes);
+  else root.replaceChildren(header,...nodes);
 }
 
 function renderLiveViewerPanel(room,role,session){
@@ -2446,7 +2451,7 @@ activeLivePinnedComment=null;
     if(topic==="minglora-live-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.layout"&&packet.version===1){
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
       const nextLayout=normalizeLiveScreenLayout(packet.layout);
-      session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);
+      session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
       return;
     }
     if(topic==="minglora-live-reaction"){
@@ -2475,7 +2480,7 @@ activeLivePinnedComment=null;
     }
   });
   const refreshSpeakerRoster=()=>{renderLiveSpeakerRoster(room,role,session,activeLiveSpeakerIds);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);renderLiveViewerPanel(room,role,session);};
-  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachLiveTrack(track,participant,false,publication);refreshSpeakerRoster();});
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{refreshSpeakerRoster();attachLiveTrack(track,participant,false,publication);refreshSpeakerRoster();});
   room.on(client.RoomEvent.TrackUnsubscribed,track=>{track.detach().forEach(element=>{element.closest?.(".live-video-tile,.live-screen-share-tile")?.remove();element.remove();});const stage=$("#live-video-stage");if(stage&&!$("#live-screen-share-stage")?.querySelector(".live-screen-share-tile"))stage.classList.remove("has-live-screen-share");refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantConnected,()=>{updatePresence();refreshSpeakerRoster();});
   room.on(client.RoomEvent.ParticipantDisconnected,()=>{updatePresence();refreshSpeakerRoster();});
@@ -2756,13 +2761,13 @@ activeLivePinnedComment=null;
       const status=$("#live-layout-status");
       try{
         await api("/live/sessions/"+encodeURIComponent(session.id)+"/layout",{method:"PATCH",body:JSON.stringify({layout:nextLayout})});
-        session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);
+        session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
         const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.layout",version:1,layout:nextLayout}));
         await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-layout"});
         const label=LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Grid';
         if(status)status.textContent=label+' layout is now live for everyone.';
       }catch(error){
-        applyLiveScreenLayout(session.liveLayout||'grid');
+        applyLiveScreenLayout(session.liveLayout||'grid');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
         if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE layout could not be changed.');
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
