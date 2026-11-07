@@ -5459,7 +5459,7 @@ async function loadProfileGiftGallery(panel,profileData){
       const otherGifters=rankedGifters.filter(gifter=>!gifter.isTitleGifter);
       const rankedMarkup=otherGifters.length?'<div class="gift-gallery-ranked-supporters"><strong>Other top gifters</strong>'+otherGifters.map(gifter=>{
         const person=gifter.user||gifter;
-        return '<div class="gift-gallery-ranked-row"><span class="gift-gallery-ranked-position">#'+Number(gifter.rank||0)+'</span><img src="'+avatar(person)+'" alt=""><span><strong>'+esc(person.name||person.username||'Minglora member')+'</strong><small>'+Number(gifter.giftCount||0).toLocaleString()+' sent · '+Number(gifter.totalCoins||0).toLocaleString()+' Coins</small></span>'+(gifter.gifterBadge?'<small class="gift-gallery-ranked-level">'+esc(gifter.gifterBadge.badgeName||gifter.gifterBadge.tier+' Gifter')+'</small>':'')+'</div>';
+        return '<div class="gift-gallery-ranked-row"><span class="gift-gallery-ranked-position">#'+Number(gifter.rank||0)+'</span><img src="'+avatar(person)+'" alt=""><span><strong>'+esc(person.name||person.username||'Minglora member')+'</strong><small>'+Number(gifter.giftCount||0).toLocaleString()+' sent · '+Number(gifter.totalCoins||0).toLocaleString()+' Coins</small></span>'+(gifter.gifterBadge?'<small class="gift-gallery-ranked-level">'+esc(gifter.gifterBadge.badgeName||gifter.gifterBadge.tier+' Gifter')+'</small>':'')+'<button type="button" data-gift-gallery-gifter-profile="'+esc(person.id||gifter.userId||'')+'" aria-label="View '+esc(person.name||person.username||'gifter')+' profile">Profile</button></div>';
       }).join('')+'</div>':'';
       return '<article class="gift-gallery-tile '+(entry.lit?'is-lit':'')+'">'+
         '<div class="gift-gallery-tile-top">'+(image?'<img class="gift-gallery-art" src="'+esc(image)+'" alt="'+esc(entry.giftName)+'" loading="lazy">':'<span class="gift-gallery-emoji" aria-hidden="true">'+esc(entry.emoji||'🎁')+'</span>')+
@@ -5467,7 +5467,7 @@ async function loadProfileGiftGallery(panel,profileData){
         '<div class="gift-gallery-tile-copy"><strong>'+esc(entry.giftName)+'</strong><small>'+Number(entry.giftCount||0).toLocaleString()+' received · '+Number(entry.totalCoins||0).toLocaleString()+' Coins</small>'+
         '<div class="gift-gallery-progress-label"><span>Leading gifter progress</span><strong>'+progress.toLocaleString()+' / '+target.toLocaleString()+'</strong></div>'+
         '<div class="gift-gallery-progress"><span style="width:'+percent+'%"></span></div>'+
-        (leader?'<div class="gift-gallery-leader"><img src="'+avatar(leader)+'" alt=""><span><strong>'+esc(leader.name||leader.username||'Minglora member')+'</strong><small>Weekly leader for this gift · '+Number(entry.titleGifterGiftCount||progress).toLocaleString()+' sent</small>'+(leader.gifterBadge?'<small class="gift-gallery-earned-title">'+esc(leader.gifterBadge.badgeName||leader.gifterBadge.tier+' Gifter')+'</small>':'')+'</span><b>TITLE GIFTER</b></div>':'<p class="muted gift-gallery-no-leader">No visible Title Gifter yet</p>')+
+        (leader?'<div class="gift-gallery-leader"><img src="'+avatar(leader)+'" alt=""><span><strong>'+esc(leader.name||leader.username||'Minglora member')+'</strong><small>Weekly leader for this gift · '+Number(entry.titleGifterGiftCount||progress).toLocaleString()+' sent</small>'+(leader.gifterBadge?'<small class="gift-gallery-earned-title">'+esc(leader.gifterBadge.badgeName||leader.gifterBadge.tier+' Gifter')+'</small>':'')+'</span><b>TITLE GIFTER</b><button type="button" data-gift-gallery-gifter-profile="'+esc(leader.id||'')+'" aria-label="View '+esc(leader.name||leader.username||'Title Gifter')+' profile">Profile</button></div>':'<p class="muted gift-gallery-no-leader">No visible Title Gifter yet</p>')+
         rankedMarkup+
         (isOwner?'<form class="gift-gallery-goal-form" data-gift-gallery-goal="'+esc(entry.giftCode)+'"><label>Gift target<input name="targetCount" type="number" min="1" max="10000" step="1" value="'+target+'"></label><button type="submit" class="secondary">Save goal</button></form>':'')+
         '</div></article>';
@@ -5491,6 +5491,7 @@ async function loadProfileGiftGallery(panel,profileData){
         toast('Gift Gallery settings saved.');
       }catch(error){toast(error.message);button.disabled=false;}
     });
+    root.querySelectorAll('[data-gift-gallery-gifter-profile]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.giftGalleryGifterProfile;if(id)void openProfile(id);}));
     root.querySelectorAll('[data-gift-gallery-goal]').forEach(form=>form.addEventListener('submit',async event=>{
       event.preventDefault();
       const button=form.querySelector('[type="submit"]');
