@@ -117,3 +117,21 @@
   .creator-subscription-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
   .subscription-form button{width:100%}
 }
+
+
+.profile-actions .profile-followers-action{
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0 9px;
+  border:1px solid var(--border,#dbe2ea);
+  border-radius:12px;
+  background:var(--surface,#fff);
+  color:var(--text,inherit);
+  cursor:pointer;
+  scroll-snap-align:start;
+}
+.profile-actions .profile-followers-action strong{font-size:.94rem;font-weight:800}
+.profile-actions .profile-followers-action span{font-size:.76rem;color:var(--muted,#64748b)}
