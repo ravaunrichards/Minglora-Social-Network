@@ -31,3 +31,18 @@
 .creator-subscription-features .creator-toggle-row span{display:grid;gap:3px;min-width:0}
 .creator-subscription-features .creator-toggle-row small{color:var(--muted);font-size:12px;line-height:1.4}
 .creator-subscription-features .creator-toggle-row input{width:18px;height:18px;flex:none;accent-color:var(--blue)}
+
+/* Subscription plan confirmation sheet */
+.creator-subscription-checkout-backdrop{z-index:3100}
+.creator-subscription-checkout{width:min(100%,480px);max-height:min(88vh,720px)}
+.creator-subscription-checkout .modal-body{display:grid;gap:15px;padding:18px 20px 20px}
+.creator-plan-choice{padding:17px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.creator-plan-choice-label{color:var(--blue);font-size:10px;font-weight:900;letter-spacing:1.2px}
+.creator-plan-choice h3{margin:7px 0 9px;font-size:20px}
+.creator-plan-choice-price{display:block;color:var(--ink);font-size:30px;font-weight:900;letter-spacing:-.7px}
+.creator-plan-choice-price small{font-size:13px;font-weight:650;color:var(--muted);letter-spacing:0}
+.creator-plan-choice p{color:var(--muted);font-size:13px;line-height:1.5}
+.creator-plan-choice ul{display:grid;gap:7px;margin:12px 0;padding-left:19px;color:var(--ink);font-size:13px}
+.creator-plan-choice-note{margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:11px!important}
+.creator-subscription-checkout .modal-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+@media(max-width:520px){.creator-subscription-checkout .modal-body{padding:14px}.creator-subscription-checkout .modal-actions{display:grid;grid-template-columns:1fr 1fr}.creator-subscription-checkout .modal-actions button{min-width:0}}
