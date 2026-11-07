@@ -1,7 +1,7 @@
 (() => {
   const $ = (selector, root=document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let activeRoom = null, roomClient = null, poller = null, screenOn = false, chatBusy = false, messageIds = new Set();
+  let activeRoom = null, roomClient = null, poller = null, screenOn = false, chatBusy = false, messageIds = new Set(), activeRole = 'participant', speakerLayout = false;
   const endpoint = id => '/meetwave/rooms/' + encodeURIComponent(id);
   const note = (message, error=false) => { const target=$('#mw-status')||$('#mw-room-status'); if(target){target.textContent=message;target.classList.toggle('is-error',error);} };
   function lobbyMarkup(){
@@ -85,12 +85,51 @@
     catch(error){note(error.message,true);}
   }
   function meetingMarkup(room,role){
-    return '<section class="mw-meeting"><header class="mw-meeting-head"><div><span class="mw-eyebrow">MEETWAVE ROOM</span><h1>'+esc(room.title)+'</h1><small>Room '+esc(room.id)+'</small></div><b id="mw-count">Connecting…</b></header><div class="mw-meeting-layout"><section class="mw-stage-column"><div id="mw-grid" class="mw-video-grid"><div class="mw-video-tile" id="mw-local"><div class="mw-video-placeholder">'+esc(state.user.name)+'</div><span class="mw-name-tag">You</span></div></div><div class="mw-controls"><button id="mw-mic">🎙<small>Mute</small></button><button id="mw-camera">▣<small>Camera</small></button><button id="mw-screen">▤<small>Share screen</small></button><button id="mw-copy">↗<small>Invite</small></button><button id="mw-leave" class="mw-leave">☎<small>Leave</small></button>'+(role==='host'?'<button id="mw-end" class="mw-end">■<small>End room</small></button>':'')+'</div><div id="mw-audio"></div></section><aside class="mw-chat-panel"><b>Meeting chat</b><div id="mw-messages" class="mw-chat-messages"></div><form id="mw-chat-form" class="mw-chat-form"><input id="mw-chat-input" maxlength="1000" placeholder="Message…" required><button>Send</button></form></aside></div><p id="mw-room-status" class="mw-status">Connecting to meeting…</p></section>';
+    const host=role==='host';
+    return '<section class="mw-meeting"><header class="mw-meeting-head"><div><span class="mw-eyebrow">MINGLORA MEETWAVE · SECURE ROOM</span><h1>'+esc(room.title)+'</h1><small>Room '+esc(room.id)+' · '+(host?'Host':'Participant')+'</small></div><b id="mw-count">Connecting…</b></header><div class="mw-meeting-layout"><section class="mw-stage-column"><div id="mw-grid" class="mw-video-grid" data-layout="grid"><div class="mw-video-tile is-focused" id="mw-local" data-identity="'+esc(state.user.id)+'"><div class="mw-video-placeholder">'+esc(state.user.name)+'</div><span class="mw-name-tag">You</span></div></div><div class="mw-controls"><button id="mw-mic">🎙<small>Mute</small></button><button id="mw-camera">▣<small>Camera off</small></button><button id="mw-screen">▤<small>Share screen</small></button><button id="mw-layout">▦<small>Grid view</small></button><button id="mw-fullscreen">⛶<small>Full screen</small></button><button id="mw-copy">↗<small>Invite</small></button><button id="mw-leave" class="mw-leave">☎<small>Leave</small></button>'+(host?'<button id="mw-end" class="mw-end">■<small>End room</small></button>':'')+'</div><div id="mw-audio"></div></section><aside class="mw-participants-panel"><header><b>People</b><span id="mw-participant-count">1</span></header><div id="mw-participants" class="mw-participant-list"></div>'+(host?'<button type="button" id="mw-room-invite" class="mw-secondary mw-panel-invite">Invite members</button>':'')+'</aside><aside class="mw-chat-panel"><b>Meeting chat</b><div id="mw-messages" class="mw-chat-messages"></div><form id="mw-chat-form" class="mw-chat-form"><input id="mw-chat-input" maxlength="1000" placeholder="Message…" required><button>Send</button></form></aside></div><p id="mw-room-status" class="mw-status">Connecting to meeting…</p></section>';
   }
-  function updateCount(){if(roomClient)$('#mw-count').textContent=(1+roomClient.remoteParticipants.size)+' / 8 participants';}
+  function updateCount(){
+    if(!roomClient)return;
+    const count=1+roomClient.remoteParticipants.size;
+    $('#mw-count').textContent=count+' / 8 participants';
+    renderParticipants();
+  }
+  function renderParticipants(){
+    if(!roomClient||!$('#mw-participants'))return;
+    const people=[{identity:state.user.id,name:state.user.name,isLocal:true},...Array.from(roomClient.remoteParticipants.values()).map(participant=>({identity:participant.identity,name:participant.name||participant.identity,isLocal:false}))];
+    $('#mw-participant-count').textContent=String(people.length);
+    $('#mw-participants').innerHTML=people.map(person=>'<div class="mw-participant-item"><span class="mw-participant-avatar">'+esc((person.name||'?').trim().charAt(0).toUpperCase())+'</span><span class="mw-participant-name"><b>'+esc(person.name)+'</b><small>'+(person.isLocal?'You · '+(activeRole==='host'?'Host':'You'):(activeRoom?.ownerId===person.identity?'Host':'In meeting'))+'</small></span>'+(activeRole==='host'&&!person.isLocal?'<button type="button" class="mw-remove-person" data-remove-participant="'+esc(person.identity)+'" aria-label="Remove '+esc(person.name)+'">Remove</button>':'')+'</div>').join('');
+    document.querySelectorAll('[data-remove-participant]').forEach(button=>button.onclick=()=>removeParticipant(button.dataset.removeParticipant));
+    $('#mw-room-invite')?.addEventListener('click',()=>inviteMembers(activeRoom.id),{once:true});
+  }
+  async function removeParticipant(identity){
+    if(!activeRoom||activeRole!=='host'||!identity||identity===state.user.id)return;
+    try{
+      await api(endpoint(activeRoom.id)+'/participants/'+encodeURIComponent(identity)+'/remove',{method:'POST',body:'{}'});
+      note('Participant removed from this meeting.');
+    }catch(error){note(error.message,true);}
+  }
+  function setSpeakerFocus(speakers=[]){
+    const identity=speakers[0]?.identity||state.user.id;
+    document.querySelectorAll('.mw-video-tile').forEach(tile=>tile.classList.toggle('is-focused',tile.dataset.identity===identity));
+  }
+  function toggleMeetingLayout(){
+    speakerLayout=!speakerLayout;
+    const grid=$('#mw-grid');
+    grid.dataset.layout=speakerLayout?'speaker':'grid';
+    $('#mw-layout small').textContent=speakerLayout?'Speaker view':'Grid view';
+  }
+  async function toggleMeetingFullscreen(){
+    const stage=$('.mw-stage-column');
+    try{
+      if(document.fullscreenElement)await document.exitFullscreen();
+      else if(stage?.requestFullscreen)await stage.requestFullscreen();
+      else note('Full-screen mode is not supported by this browser.',true);
+    }catch(error){note(error.message,true);}
+  }
   function addTile(participant){
     const id='mw-tile-'+participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_');let element=$('#'+CSS.escape(id));
-    if(!element){element=document.createElement('div');element.id=id;element.className='mw-video-tile';element.innerHTML='<div class="mw-video-placeholder">'+esc(participant.name||participant.identity)+'</div><span class="mw-name-tag">'+esc(participant.name||participant.identity)+'</span>';$('#mw-grid').append(element);}
+    if(!element){element=document.createElement('div');element.id=id;element.dataset.identity=participant.identity;element.className='mw-video-tile';element.innerHTML='<div class="mw-video-placeholder">'+esc(participant.name||participant.identity)+'</div><span class="mw-name-tag">'+esc(participant.name||participant.identity)+'</span>';$('#mw-grid').append(element);}
     return element;
   }
   function attachTrack(track,participant){
@@ -107,12 +146,13 @@
     if(!client?.Room)throw new Error('MeetWave media client failed to load. Refresh Minglora before joining.');
     const info=await api(endpoint(id));
     const result=await api(endpoint(id)+'/join',{method:'POST',body:'{}'});
-    activeRoom=info.room;setContent(meetingMarkup(activeRoom,result.role));messageIds=new Set();screenOn=false;
+    activeRoom=info.room;activeRole=result.role||'participant';speakerLayout=false;setContent(meetingMarkup(activeRoom,activeRole));messageIds=new Set();screenOn=false;
     roomClient=new client.Room({adaptiveStream:true,dynacast:true});
     roomClient.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachTrack(track,participant);updateCount();});
     roomClient.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
-    roomClient.on(client.RoomEvent.ParticipantConnected,updateCount);
+    roomClient.on(client.RoomEvent.ParticipantConnected,()=>updateCount());
     roomClient.on(client.RoomEvent.ParticipantDisconnected,participant=>{$('#mw-tile-'+participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_'))?.remove();updateCount();});
+    if(client.RoomEvent.ActiveSpeakersChanged)roomClient.on(client.RoomEvent.ActiveSpeakersChanged,speakers=>setSpeakerFocus(speakers));
     try{await roomClient.connect(result.liveKit.url,result.liveKit.token);}
     catch(error){await disconnect();activeRoom=null;await api(endpoint(id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});throw error;}
     try{
@@ -127,10 +167,11 @@
     for(const participant of roomClient.remoteParticipants.values()){
       for(const publication of participant.trackPublications.values())if(publication.track)attachTrack(publication.track,participant);
     }
-    updateCount();
-    $('#mw-mic').onclick=()=>roomClient.localParticipant.setMicrophoneEnabled(!roomClient.localParticipant.isMicrophoneEnabled);
-    $('#mw-camera').onclick=()=>roomClient.localParticipant.setCameraEnabled(!roomClient.localParticipant.isCameraEnabled);
-    $('#mw-screen').onclick=()=>{screenOn=!screenOn;roomClient.localParticipant.setScreenShareEnabled(screenOn).catch(error=>{screenOn=false;note(error.message,true);});};
+    updateCount();setSpeakerFocus([]);
+    $('#mw-mic').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isMicrophoneEnabled;await roomClient.localParticipant.setMicrophoneEnabled(enabled);$('#mw-mic small').textContent=enabled?'Mute':'Unmute';}catch(error){note(error.message,true);}};
+    $('#mw-camera').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isCameraEnabled;await roomClient.localParticipant.setCameraEnabled(enabled);$('#mw-camera small').textContent=enabled?'Camera on':'Camera off';}catch(error){note(error.message,true);}};
+    $('#mw-screen').onclick=async()=>{try{screenOn=!screenOn;await roomClient.localParticipant.setScreenShareEnabled(screenOn);$('#mw-screen small').textContent=screenOn?'Stop sharing':'Share screen';}catch(error){screenOn=false;$('#mw-screen small').textContent='Share screen';note(error.message,true);}};
+    $('#mw-layout').onclick=toggleMeetingLayout;$('#mw-fullscreen').onclick=toggleMeetingFullscreen;
     $('#mw-copy').onclick=()=>copyInvite(activeRoom.id);$('#mw-leave').onclick=()=>leaveRoom(false);$('#mw-end')?.addEventListener('click',()=>leaveRoom(true));
     $('#mw-chat-form').onsubmit=async event=>{event.preventDefault();const input=$('#mw-chat-input');try{await api(endpoint(activeRoom.id)+'/messages',{method:'POST',body:JSON.stringify({text:input.value})});input.value='';await refreshChat();}catch(error){note(error.message,true);}};
     await refreshChat();poller=setInterval(refreshChat,3500);
