@@ -19,7 +19,7 @@ test('desktop primary navigation remains unchanged and mobile navigation stays f
   const mobileEnd=html.indexOf('</div>',mobileStart);
   assert.notEqual(mobileStart,-1,'Mobile navigation exists');
   const mobile=html.slice(mobileStart,mobileEnd);
-  const expectedMobile=['feed','for-you','live','messages','more'];
+  const expectedMobile=['feed','profile','live','messages','more'];
   assert.deepEqual([...mobile.matchAll(/data-view="([^"]+)"/g)].map(match=>match[1]),expectedMobile);
   assert.ok(!html.includes('id="mobile-more-menu"'),'The old cramped floating More menu is removed');
   assert.ok(!html.includes('id="mobile-more-btn"'),'The obsolete More dropdown trigger is removed');
@@ -44,8 +44,8 @@ test('the More page provides direct access to secondary features and account too
   assert.ok(app.includes("else if(action==='themes')openPaletteSwitcher()"),'Theme controls open from More');
 });
 
-test('profile navigation keeps the primary row to six sections and leaves secondary sections in More',()=>{
-  assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
+test('profile navigation keeps all seven requested sections available',()=>{
+  assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['badges','Badges'],['more','More']].map(([key,label])=>"));
   assert.ok(app.includes("if(tab==='more')return '<section class=\"card profile-more-menu\""));
   for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Photo albums','Manage sections']){
     assert.ok(app.includes(section),section+' remains represented in the profile More section');
@@ -54,5 +54,13 @@ test('profile navigation keeps the primary row to six sections and leaves second
 
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
   assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
-  assert.ok(html.includes('/app.js?v=20261105-roomwide-live-gifts-1'));
+  assert.ok(html.includes('/app.js?v=20261106-horizontal-profile-navigation-1'));
+  assert.ok(html.includes('/mobile-profile-navigation.css?v=20261106-horizontal-profile-navigation-1'));
+});
+
+test('phone profile counts stay horizontal and the bottom Profile destination opens the signed-in profile',()=>{
+  const css=fs.readFileSync(path.join(root,'public/mobile-profile-navigation.css'),'utf8');
+  assert.ok(css.includes('grid-template-columns:repeat(6,minmax(0,1fr))'));
+  assert.ok(css.includes('overflow-x:auto'));
+  assert.ok(app.includes("if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}"));
 });
