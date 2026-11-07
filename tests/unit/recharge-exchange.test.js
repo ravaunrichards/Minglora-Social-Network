@@ -104,12 +104,17 @@ test('the Earnings tab shows server-backed lifetime, available, pending, paid an
   assert.match(earningsUi, /item\.status\|\|"available"/);
 });
 
-test('the Recharge app and service worker use matching updated cache versions', () => {
-  assert.match(html, /styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(html, /app\.js\?v=20261107-top-gifters-2/);
-  assert.match(worker, /minglora-shell-v132-live-top-gifters-2/);
-  assert.match(worker, /\/styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(worker, /\/app\.js\?v=20261107-top-gifters-2/);
+test('the Recharge app and service worker use matching current cache versions', () => {
+  const styleAsset = html.match(/styles\.css\?v=[^"']+/)?.[0] || '';
+  const appAsset = html.match(/app\.js\?v=[^"']+/)?.[0] || '';
+  const cacheName = worker.match(/CACHE_NAME='([^']+)'/)?.[1] || '';
+  assert.ok(styleAsset && worker.includes("'/"+styleAsset+"'"), 'service worker caches the current stylesheet URL');
+  assert.ok(appAsset && worker.includes("'/"+appAsset+"'"), 'service worker caches the current application script URL');
+  assert.match(cacheName, /^minglora-shell-v\d+-/);
   assert.match(css, /\.recharge-package-grid/);
   assert.match(css, /\.recharge-exchange-metrics/);
+  assert.ok(html.includes('calculator.css?v=20261107-wallet-calculator-1'));
+  assert.ok(worker.includes('/calculator.css?v=20261107-wallet-calculator-1'));
+  assert.ok(html.includes('calculator.js?v=20261107-wallet-calculator-1'));
+  assert.ok(worker.includes('/calculator.js?v=20261107-wallet-calculator-1'));
 });
