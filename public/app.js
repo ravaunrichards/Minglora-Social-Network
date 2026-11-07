@@ -8353,6 +8353,7 @@ function openAccountAccessDialog(initialMode='login'){
       if(field)field.required=mode==='register'&&field.name!=='phoneNumber';
     });
     const password=form.elements.password;
+    password.minLength=mode==='register'?10:0;
     password.autocomplete=mode==='register'?'new-password':'current-password';
     password.placeholder=mode==='register'?'At least 10 characters':'Your password';
     overlay.querySelector('#account-access-title').textContent=mode==='register'?'Create another account':'Add an account';
