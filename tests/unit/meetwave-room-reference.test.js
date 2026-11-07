@@ -40,11 +40,11 @@ test('MeetWave room dock stays attached and meeting chat remains in the room', (
 });
 
 test('MeetWave automatic-sync assets bypass stale browser and service-worker caches', () => {
-  const cssVersion = '20261107-meetwave-full-room-1';
+  const cssVersion = '20261107-meetwave-live-shell-1';
   const jsVersion = '20261107-meetwave-full-room-1';
   assert.ok(html.includes('/meetwave.css?v=' + cssVersion));
   assert.ok(html.includes('/meetwave.js?v=' + jsVersion));
-  assert.match(serviceWorker, new RegExp('minglora-shell-v120-meetwave-full-room-1'));
+  assert.match(serviceWorker, new RegExp('minglora-shell-v121-meetwave-live-shell-1'));
   assert.ok(serviceWorker.includes('/meetwave.css?v=' + cssVersion));
   assert.ok(serviceWorker.includes('/meetwave.js?v=' + jsVersion));
 });
