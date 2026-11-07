@@ -69,6 +69,10 @@ export function parseFallbackCurrencyDirectory(payload) {
     .filter(row => row && row.type === 'currency')
     .map(row => {
       const code = normalizeCurrencyCode(row.iso_code);
+      const endDate = String(row.end_date || '').trim();
+      const startDate = String(row.start_date || '').trim();
+      if ((endDate && Number.isFinite(Date.parse(endDate)) && Date.parse(endDate) < Date.now()) ||
+          (startDate && Number.isFinite(Date.parse(startDate)) && Date.parse(startDate) > Date.now())) return null;
       if (!code || code === 'XXX' || seen.has(code)) return null;
       seen.add(code);
       const minor = Number(row.minor_unit ?? (code ? new Intl.NumberFormat('en', { style: 'currency', currency: code }).resolvedOptions().maximumFractionDigits : 2));
