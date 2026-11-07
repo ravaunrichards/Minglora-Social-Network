@@ -52,7 +52,12 @@
     root.style.setProperty('--minglora-custom-accent',p.customAccentColor);
     root.style.setProperty('--minglora-custom-background',p.customBackgroundColor);
     root.style.setProperty('--minglora-font-scale',String(p.fontScale/100));
+    root.dataset.mingloraAvatarFrame=p.avatarFrame;
     root.classList.toggle('mexp-data-saver',p.dataSaverEnabled===true);
+    root.style.fontSize=p.fontScale+'%';
+    root.style.zoom=String(p.screenZoom/100);
+    root.style.setProperty('--mexp-wallpaper-opacity',String(p.wallpaperOpacity/100));
+    root.style.setProperty('--mexp-wallpaper-blur',p.wallpaperBlur+'px');
     if(p.inAppBrightness!==100)root.style.filter='brightness('+Math.max(.5,Math.min(1.2,p.inAppBrightness/100))+')';
     else root.style.removeProperty('filter');
     const meta=$('meta[name="theme-color"]');
@@ -64,16 +69,20 @@
   }
   function applyWallpaper(p){
     const body=document.body;
-    body.style.backgroundSize=fitToCss(p.wallpaperFit);
-    body.style.backgroundPosition='center center';
-    body.style.backgroundRepeat=p.wallpaperFit==='tile'?'repeat':'no-repeat';
-    body.style.backgroundAttachment='fixed';
     if(wallpaperVideo){wallpaperVideo.pause();wallpaperVideo.remove();wallpaperVideo=null;}
-    if(p.wallpaperType==='color')body.style.backgroundImage='none';
-    else if(p.wallpaperType==='gradient')body.style.backgroundImage=p.wallpaperGradient;
-    else if(p.wallpaperType==='image'&&wallpaperUrl)body.style.backgroundImage='url("'+wallpaperUrl.replace(/["\\]/g,'')+'")';
-    else if(p.wallpaperType==='video'&&wallpaperUrl){
-      body.style.backgroundImage='none';
+    const supported=['color','gradient'].includes(p.wallpaperType)||(p.wallpaperType==='image'&&!!wallpaperUrl)||(p.wallpaperType==='video'&&!!wallpaperUrl);
+    body.classList.toggle('mexp-wallpaper-active',supported);
+    body.style.setProperty('--mexp-wallpaper-size',fitToCss(p.wallpaperFit));
+    body.style.setProperty('--mexp-wallpaper-repeat',p.wallpaperFit==='tile'?'repeat':'no-repeat');
+    body.style.setProperty('--mexp-wallpaper-opacity',String(p.wallpaperOpacity/100));
+    body.style.setProperty('--mexp-wallpaper-blur',p.wallpaperBlur+'px');
+    body.style.setProperty('--mexp-wallpaper-color',p.wallpaperColor);
+    let background='none';
+    if(p.wallpaperType==='color')background='linear-gradient('+p.wallpaperColor+','+p.wallpaperColor+')';
+    else if(p.wallpaperType==='gradient')background=p.wallpaperGradient;
+    else if(p.wallpaperType==='image'&&wallpaperUrl)background='url("'+wallpaperUrl.replace(/["\\]/g,'')+'")';
+    body.style.setProperty('--mexp-wallpaper-background',background);
+    if(p.wallpaperType==='video'&&wallpaperUrl){
       wallpaperVideo=document.createElement('video');
       wallpaperVideo.className='mexp-wallpaper-video';
       wallpaperVideo.src=wallpaperUrl;
@@ -81,9 +90,7 @@
       wallpaperVideo.setAttribute('aria-hidden','true');
       document.body.prepend(wallpaperVideo);
       wallpaperVideo.play().catch(()=>{});
-    } else body.style.backgroundImage='none';
-    if(p.wallpaperType==='color')body.style.backgroundColor=p.wallpaperColor;
-    else body.style.backgroundColor='var(--bg)';
+    }
   }
   function apply(p){
     current={...DEFAULTS,...p};
@@ -321,7 +328,8 @@
     screenSaverOverlay.setAttribute('role','dialog');screenSaverOverlay.setAttribute('aria-label','Minglora screen saver');
     const title=current.screenSaverEffect==='text'?'<h2>'+esc(current.screenSaverText||'Minglora')+'</h2>':(current.screenSaverEffect==='clock'?'<h2>'+new Date().toLocaleTimeString()+'</h2>':'');
     const dots=Array.from({length:18},(_,i)=>'<i style="--i:'+i+'"></i>').join('');
-    screenSaverOverlay.innerHTML='<div class="mexp-saver-art">'+dots+title+'</div><span class="mexp-saver-dismiss">Touch or press any key to return</span>';
+    if(current.screenSaverEffect==='photos'&&wallpaperUrl)screenSaverOverlay.style.backgroundImage='linear-gradient(#050813aa,#050813aa),url("'+wallpaperUrl.replace(/["\\]/g,'')+'")';
+    screenSaverOverlay.innerHTML='<div class="mexp-saver-art">'+dots+title+(current.screenSaverEffect==='photos'&&!wallpaperUrl?'<h2>Choose a local wallpaper photo first</h2>':'')+'</div><span class="mexp-saver-dismiss">Touch or press any key to return</span>';
     screenSaverOverlay.addEventListener('pointerdown',dismissScreenSaver,{once:true});
     document.addEventListener('keydown',dismissScreenSaver,{once:true});
     document.body.appendChild(screenSaverOverlay);
@@ -382,7 +390,7 @@
     });
     area?.addEventListener('click',async event=>{
       const button=event.target.closest('button');if(!button)return;
-      if(button.hasAttribute('data-exp-theme')){const theme=button.dataset.expTheme;const selectEl=$('[data-exp-field="style"]',area);if(selectEl){selectEl.value=theme;current=collect();apply(current);queueSave();}area.querySelectorAll('[data-exp-theme]').forEach(x=>x.setAttribute('aria-pressed',x===button?'true':'false'));}
+      if(button.hasAttribute('data-exp-theme')){const theme=button.dataset.expTheme;current={...collect(),style:theme};apply(current);area.querySelectorAll('[data-exp-theme]').forEach(x=>x.setAttribute('aria-pressed',x===button?'true':'false'));queueSave();}
       if(button.hasAttribute('data-exp-reset')){
         if(!window.confirm('Restore all Minglora Experience Center settings to their defaults?'))return;
         current={...DEFAULTS};area.querySelectorAll('[data-exp-field]').forEach(el=>{if(el.type==='checkbox')el.checked=!!current[el.dataset.expField];else if(el.type!=='file')el.value=current[el.dataset.expField]??'';});
