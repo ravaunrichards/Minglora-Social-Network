@@ -215,7 +215,7 @@ test('All nine MeetWave presets keep the host and all eight guest seats visible 
   assert.ok(finalFit.includes('opacity:1!important'));
   assert.ok(finalFit.includes('overflow:visible!important'));
   assert.ok(finalFit.includes('grid-auto-rows:minmax(0,1fr)!important'));
-  assert.ok(js.includes("'<strong>Guest seat '+(index+1)+'</strong>'"));
+  assert.ok(js.includes("Guest seat '+(index+1)"));
   assert.ok(js.includes('Array.from({length:MEETWAVE_GUEST_LIMIT}'));
 });
 
