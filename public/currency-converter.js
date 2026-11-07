@@ -82,7 +82,7 @@
       'SRI LANKA': 'LK', 'VIET NAM': 'VN', 'EGYPT': 'EG', 'MOROCCO': 'MA',
       'ZAMBIA': 'ZM', 'ZIMBABWE': 'ZW', 'UGANDA': 'UG', 'TANZANIA': 'TZ'
     };
-    const region = countryCodes[entity] || code.slice(0, 2);
+    const region = countryCodes[entity] || '';
     if (!/^[A-Z]{2}$/.test(region)) return '🌐';
     return String.fromCodePoint(...[...region].map(char => 127397 + char.charCodeAt(0)));
   }
