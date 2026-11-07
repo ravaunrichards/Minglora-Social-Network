@@ -5499,7 +5499,7 @@ function renderProfile(data){
     // Keep Subscribe visible on every visitor profile. The checkout route remains
     // connected; the server validates creator approval and the active billing tier.
     profileSubscribeButton.textContent=subscriptionLabel;
-    profileSubscribeButton.disabled=!subscriptionEnabled||subscriptionAlreadyExists;
+    profileSubscribeButton.disabled=subscriptionAlreadyExists;
     profileSubscribeButton.dataset.subscriptionEnabled=subscriptionEnabled?'true':'false';
     profileSubscribeButton.setAttribute('aria-label',subscriptionLabel);
     if(!subscriptionEnabled&&!subscriptionAlreadyExists){
