@@ -281,6 +281,8 @@ body:has(#live-player-shell) #live-video-stage .live-video-element{
 }
 body:has(#live-player-shell) #live-guest-layout .live-device-names-hidden .live-guest-seat-meta,
 body:has(#live-player-shell) #live-guest-layout .live-device-names-hidden .live-guest-seat-tag{display:none!important}
+body:has(#live-player-shell) .live-device-names-hidden .live-video-name,
+body:has(#live-player-shell) .live-device-names-hidden .live-screen-share-name{display:none!important}
 body:has(#live-player-shell) #live-audio-root{display:none!important}
 body:has(#live-player-shell) .live-player-controls.live-icon-controls{
   position:relative!important;
