@@ -3585,6 +3585,7 @@ function creatorStudioChrome(section,content){
     ["analytics","Analytics","explore","Measure real activity"],
     ["pages","Pages & channels","pages","Manage your Pages"],
     ["monetization","Monetization","coins","Earnings and payouts"],
+    ["subscriptions","Subscriptions","coins","Monthly memberships and subscribers"],
     ["settings","Studio settings","settings","Creator preferences"]
   ];
   const nav=sections.map(([id,label,icon,description])=>"<button type='button' class='creator-studio-nav-item live-format-card "+(id===section?"active":"")+"' data-creator-section='"+id+"' aria-current='"+(id===section?"page":"false")+"'><span class='live-format-icon "+(["audience","analytics"].includes(id)?"audio":"")+"'>"+creatorIcon(icon)+"</span><span class='creator-tab-copy'><strong>"+label+"</strong><small>"+description+"</small></span></button>").join("");
@@ -3803,6 +3804,115 @@ async function creatorSettingsMarkup(){
     "<p class='creator-settings-note'>LIVE room design remains managed in the separate LIVE experience. Creator Studio does not duplicate broadcast-room controls.</p></section>"+
     "<div class='creator-settings-savebar'><p class='creator-inline-status' id='creator-settings-status' role='status'>Unsaved changes stay on this form until you save.</p><button type='submit' class='primary' id='creator-settings-save'>Save settings</button></div></form>";
 }
+function subscriptionMoneyLabel(minor,currency='USD'){
+  const amount=Number(minor||0)/100;
+  try{return new Intl.NumberFormat(undefined,{style:'currency',currency:String(currency||'USD')}).format(amount);}
+  catch{return String(currency||'USD')+' '+amount.toFixed(2);}
+}
+function creatorSubscriptionAdminMarkup(){
+  const role=state.user?.platformRole;
+  if(!["platform_owner","admin","moderator"].includes(role))return "";
+  const data=state.creatorStudio?.subscriptionData||{},applications=data.applications||[];
+  if(data.adminError){
+    return "<section class='creator-studio-panel subscription-admin-panel'><h3>Creator application review</h3><p class='creator-inline-status'>"+esc(data.adminError)+"</p></section>";
+  }
+  const rows=applications.length?applications.map(item=>
+    "<article class='subscription-admin-row'><div><strong>@"+esc(item.username||"member")+"</strong><small>"+esc(item.application_note||"No application note supplied.")+"</small><small>Submitted "+esc(item.created_at?new Date(item.created_at).toLocaleString():"date unavailable")+"</small></div><label class='subscription-admin-reason'>Review note<input type='text' maxlength='1000' data-subscription-reason='"+esc(item.creator_id)+"' placeholder='Optional reason'></label><div class='subscription-admin-actions'><button type='button' class='primary' data-subscription-review='approved' data-subscription-creator='"+esc(item.creator_id)+"'>Approve</button><button type='button' class='secondary' data-subscription-review='rejected' data-subscription-creator='"+esc(item.creator_id)+"'>Reject</button></div></article>"
+  ).join(""):"<p class='muted'>No creator applications are waiting for review.</p>";
+  return "<section class='creator-studio-panel subscription-admin-panel'><div class='subscription-panel-heading'><div><span class='creator-eyebrow'>MINGLORA MODERATION</span><h3>Creator application review</h3><p>Only platform moderators can approve, reject or suspend creator monetization.</p></div><span class='subscription-status'>"+applications.length+" pending</span></div>"+rows+"</section>";
+}
+function creatorSubscriptionsMarkup(){
+  const data=state.creatorStudio?.subscriptionData||{};
+  const settings=data.settings||null,tier=data.tier||null,status=settings?.application_status||'not_applied';
+  const enabled=Boolean(settings?.subscriptions_enabled);
+  if(state.creatorStudio?.subscriptionError){
+    return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>PayPal monthly memberships for your community.</p></div></div><div class='creator-studio-panel'>"+creatorEmpty("Subscriptions unavailable",esc(state.creatorStudio.subscriptionError),"coins")+"</div>";
+  }
+  if(status!=="approved"){
+    let title="Apply to offer subscriptions",description="Any eligible Minglora member can apply. Minglora reviews your application before paid memberships can be enabled.";
+    if(status==="pending"){title="Application under review";description="Your application has been submitted. You can keep using Creator Studio while Minglora reviews it.";}
+    if(status==="rejected"){title="Application not approved";description=String(settings?.rejection_reason||"You may update your information and submit a new application.");}
+    if(status==="suspended"){title="Subscriptions suspended";description=String(settings?.rejection_reason||"This creator account is currently suspended from subscriptions. Contact Minglora support for a review.");}
+    const form=(status==="not_applied"||status==="rejected")
+      ?"<form id='subscription-apply-form' class='subscription-form'><label for='subscription-application-note'>Tell us about the content and benefits you plan to offer</label><textarea id='subscription-application-note' name='applicationNote' maxlength='1200' rows='4' placeholder='Describe your creator content and membership benefits…'>"+esc(settings?.application_note||"")+"</textarea><button class='primary' type='submit'>Submit application</button><p class='creator-inline-status' id='subscription-application-status' role='status'></p></form>"
+      :"";
+    return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>PayPal monthly memberships for your community.</p></div></div><section class='creator-studio-panel subscription-panel'><div class='subscription-status-line'><span class='subscription-status-dot "+(status==="pending"?"pending":"")+"'></span><strong>"+esc(status.replace(/_/g," ").toUpperCase())+"</strong></div><h3>"+esc(title)+"</h3><p>"+esc(description)+"</p>"+form+"</section>"+creatorSubscriptionAdminMarkup();
+  }
+  const benefitValues=Array.isArray(tier?.benefits)?tier.benefits.join("\n"):"";
+  const amount=tier?Number(tier.price_minor)/100:5;
+  const subscribers=Number(data.activeSubscribers||0);
+  const creatorRows=(data.mySubscriptions?.subscriptions||[]).filter(item=>item.creator_id===state.user?.id&&["active","past_due"].includes(item.status));
+  const memberMap=new Map((data.mySubscriptions?.members||[]).map(member=>[member.id,member]));
+  const subscriberRows=creatorRows.length?creatorRows.map(item=>{
+    const member=memberMap.get(item.subscriber_id)||{};
+    const name=member.username?"@"+member.username:"Minglora member";
+    return "<article class='subscription-subscriber-row'><strong>"+esc(name)+"</strong><span>"+esc(String(item.status).replace(/_/g," "))+"</span><small>"+esc(item.current_period_end?("Paid through "+new Date(item.current_period_end).toLocaleDateString()):"Payment period not confirmed")+"</small></article>";
+  }).join(""):"<p class='muted'>Your active subscriber list will appear here after members complete their first PayPal payment.</p>";
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>RECURRING MEMBERSHIPS</span><h2>Subscriptions</h2><p>Offer a monthly membership through PayPal. No card details are stored by Minglora.</p></div><span class='creator-finance-lock'>50% of net revenue · up to 20% performance bonus</span></div>"+
+    "<div class='subscription-overview-grid'><article class='creator-metric'><strong>"+subscribers.toLocaleString()+"</strong><small>Active subscribers</small></article><article class='creator-metric'><strong>"+(tier?subscriptionMoneyLabel(tier.price_minor,tier.currency):"Not set")+"</strong><small>Monthly membership price</small></article><article class='creator-metric'><strong>50% + up to 20%</strong><small>Creator base share + performance bonus</small></article></div>"+
+    "<section class='creator-studio-panel subscription-panel'><div class='subscription-panel-heading'><div><h3>Membership offer</h3><p>One monthly membership per creator. Changes to the price apply to new subscriptions; existing PayPal agreements keep their current plan.</p></div><span class='subscription-status "+(enabled?"enabled":"")+"'>"+(enabled?"Accepting subscribers":"Not accepting subscribers")+"</span></div>"+
+    "<form id='subscription-tier-form' class='subscription-form'><label>Membership name<input name='name' maxlength='48' required value='"+esc(tier?.name||"Monthly membership")+"'></label><label>Description<textarea name='description' maxlength='500' rows='3' placeholder='What members get…'>"+esc(tier?.description||"")+"</textarea></label><label>Monthly price (USD)<input name='price' type='number' min='1.00' max='10000.00' step='0.01' required value='"+amount.toFixed(2)+"'></label><label>Member benefits (one per line)<textarea name='benefits' maxlength='900' rows='4' placeholder='Subscriber-only posts&#10;Subscriber-only LIVE&#10;Special member badge'>"+esc(benefitValues)+"</textarea></label><button class='primary' type='submit' id='subscription-tier-save'>Save PayPal membership</button><p class='creator-inline-status' id='subscription-tier-status' role='status'>PayPal bills monthly. Members approve the recurring payment in PayPal.</p></form>"+
+    "<div class='subscription-toggle-row'><div><strong>Accept new subscriptions</strong><small>Turning this off stops new checkouts. Existing paid subscriptions are not silently canceled.</small></div><label class='subscription-switch'><input id='subscription-enabled-toggle' type='checkbox' "+(enabled?"checked":"")+"><span></span></label></div></section>"+
+    "<section class='creator-studio-panel subscription-policy-panel'><h3>Membership rules</h3><ul><li>Members subscribe through PayPal and manage recurring billing securely there.</li><li>Only PayPal-confirmed payments activate membership access.</li><li>Subscribers keep access through the paid period when they cancel.</li><li>Creators receive 50% of net subscription revenue after verified PayPal processing fees and applicable tax. Eligible creators may earn a further 20 percentage points in a reviewed performance bonus.</li></ul></section>"+
+    "<section class='creator-studio-panel subscription-subscriber-panel'><div class='subscription-panel-heading'><div><h3>Your subscribers</h3><p>Members with a current paid period on your creator membership.</p></div><span class='subscription-status'>"+creatorRows.length+" members</span></div>"+subscriberRows+"</section>"+creatorSubscriptionAdminMarkup();
+}
+function bindCreatorSubscriptionActions(){
+  const applyForm=document.getElementById("subscription-apply-form");
+  applyForm?.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=applyForm.querySelector("button[type='submit']");
+    const status=document.getElementById("subscription-application-status");
+    button.disabled=true;if(status)status.textContent="Submitting your application…";
+    try{await api("/subscriptions/apply",{method:"POST",body:JSON.stringify({applicationNote:applyForm.applicationNote.value})});toast("Creator subscription application submitted.");await renderCreatorSection("subscriptions");}
+    catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+  });
+  const tierForm=document.getElementById("subscription-tier-form");
+  tierForm?.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=document.getElementById("subscription-tier-save"),status=document.getElementById("subscription-tier-status");
+    const values=new FormData(tierForm),price=Number(values.get("price")),priceMinor=Math.round(price*100);
+    if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000){toast("Enter a monthly USD price from $1.00 to $10,000.00.");return;}
+    button.disabled=true;if(status)status.textContent="Creating your monthly PayPal plan…";
+    try{
+      await api("/subscriptions/tier",{method:"POST",body:JSON.stringify({
+        name:String(values.get("name")||""),description:String(values.get("description")||""),
+        priceMinor,benefits:String(values.get("benefits")||"").split("\n").map(item=>item.trim()).filter(Boolean)
+      })});
+      toast("Your PayPal monthly membership was saved.");await renderCreatorSection("subscriptions");
+    }catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+  });
+  document.getElementById("subscription-enabled-toggle")?.addEventListener("change",async event=>{
+    const toggle=event.currentTarget;toggle.disabled=true;
+    try{await api("/subscriptions/settings",{method:"PUT",body:JSON.stringify({enabled:toggle.checked})});toast(toggle.checked?"New subscriptions are enabled.":"New subscriptions are paused.");await renderCreatorSection("subscriptions");}
+    catch(error){toast(error.message);toggle.checked=!toggle.checked;toggle.disabled=false;}
+  });
+  document.querySelectorAll("[data-subscription-review]").forEach(button=>button.addEventListener("click",async()=>{
+    const creatorId=button.dataset.subscriptionCreator,status=button.dataset.subscriptionReview;
+    const reason=document.querySelector("[data-subscription-reason='"+creatorId+"']")?.value||"";
+    if(!window.confirm(status==="approved"?"Approve this creator for paid subscriptions?":"Reject this creator application?"))return;
+    button.disabled=true;
+    try{await api("/subscriptions/admin/review",{method:"POST",body:JSON.stringify({creatorId,status,reason})});toast(status==="approved"?"Creator approved for paid subscriptions.":"Creator application rejected.");await renderCreatorSection("subscriptions");}
+    catch(error){toast(error.message);button.disabled=false;}
+  }));
+  const bonusForm=document.getElementById("subscription-bonus-review-form");
+  bonusForm?.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=bonusForm.querySelector("button[type='submit']"),status=document.getElementById("subscription-bonus-review-status"),values=new FormData(bonusForm);
+    button.disabled=true;if(status)status.textContent="Saving the monthly performance review…";
+    try{
+      const result=await api("/subscriptions/admin/bonus-review",{method:"POST",body:JSON.stringify({
+        creatorId:values.get("creatorId"),monthStart:values.get("monthStart"),
+        followerCount:Number(values.get("followerCount")),
+        qualifyingVideoViews:Number(values.get("qualifyingVideoViews")),
+        subscriberOnlyVideoCount:Number(values.get("subscriberOnlyVideoCount")),
+        reviewerNote:values.get("reviewerNote")
+      })});
+      if(status)status.textContent=result.eligible?"Approved: 20 percentage-point bonus added to the 50% base for this month.":"Reviewed: performance bonus not awarded; base share remains 50% of net.";
+      toast(result.eligible?"Creator performance bonus approved.":"Performance review saved.");
+      await renderCreatorSection("subscriptions");
+    }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+  });
+}
 async function renderCreatorSection(section){
   const s=state.creatorStudio;
   if(!s)return;
@@ -3840,6 +3950,18 @@ async function renderCreatorSection(section){
     try{s.earnings=await api("/creator/earnings");s.earningsError=null;}
     catch(error){s.earnings=null;s.earningsError=error.message;}
     content=creatorMonetizationMarkup();
+  }else if(section==="subscriptions"){
+    try{
+      s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));
+      s.subscriptionData.mySubscriptions=await api("/subscriptions/mine");
+      s.subscriptionData.adminError=null;
+      if(["platform_owner","admin","moderator"].includes(state.user?.platformRole)){
+        try{s.subscriptionData.applications=(await api("/subscriptions/admin/applications")).applications||[];}
+        catch(error){s.subscriptionData.adminError=error.message;}
+      }
+      s.subscriptionError=null;
+    }catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
+    content=creatorSubscriptionsMarkup();
   }else if(section==="settings"){
     try{content=await creatorSettingsMarkup();}
     catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
@@ -3855,6 +3977,7 @@ async function renderCreatorSection(section){
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
   document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
   $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
+  if(section==="subscriptions")bindCreatorSubscriptionActions();
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
   }
@@ -4332,7 +4455,34 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profileTargetId!==String(id))state.profileTab='posts';state.profileTargetId=String(id);persistCurrentView();try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+async function openProfileSubscriptionPicker(creator,offer){
+  if(!creator?.id||!offer)return;
+  const existing=offer.mySubscription||null,tier=offer.tier||null;
+  const modal=document.createElement("div");modal.className="modal-backdrop creator-subscription-backdrop";
+  const active=existing&&["active","past_due"].includes(existing.status);
+  const benefits=Array.isArray(tier?.benefits)?tier.benefits.filter(Boolean):[];
+  modal.innerHTML="<section class='modal creator-subscription-modal subscriber-subscription-modal' role='dialog' aria-modal='true' aria-labelledby='profile-subscription-title'>"+
+    "<div class='modal-head'><div><span class='creator-eyebrow'>MINGLORA CREATOR MEMBERSHIP</span><h2 id='profile-subscription-title'>Subscribe to "+esc(creator.name)+"</h2></div><button type='button' class='modal-close' data-subscription-modal-close aria-label='Close'>×</button></div>"+
+    (active?"<div class='modal-body'><p>You already have an active membership with this creator. Manage its renewal in My Subscriptions.</p><button type='button' class='primary full' data-open-my-subscriptions>Manage subscription</button></div>":
+    !offer.available||!tier?"<div class='modal-body'><p>This creator is not accepting new subscriptions right now.</p></div>":
+    "<div class='modal-body'><article class='subscriber-subscription-tier'><div class='subscriber-subscription-tier-head'><div><h3>"+esc(tier.name||"Monthly membership")+"</h3><p>"+subscriptionMoneyLabel(tier.priceMinor,tier.currency)+" / month</p></div></div><p>"+esc(tier.description||"Monthly support for this creator on Minglora.")+"</p>"+(benefits.length?"<ul>"+benefits.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"")+"</article><p class='subscription-checkout-note'>Recurring billing is handled by PayPal. Minglora activates paid access only after PayPal confirms a successful payment.</p><p class='creator-inline-status' id='profile-subscription-status' role='status'></p><button type='button' class='primary full' id='profile-subscription-checkout'>Continue with PayPal</button></div>")+
+    "</section>";
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  modal.querySelector("[data-subscription-modal-close]")?.addEventListener("click",close);
+  modal.addEventListener("click",event=>{if(event.target===modal)close();});
+  modal.querySelector("[data-open-my-subscriptions]")?.addEventListener("click",()=>{close();activateNav("subscriptions");});
+  modal.querySelector("#profile-subscription-checkout")?.addEventListener("click",async event=>{
+    const button=event.currentTarget,status=modal.querySelector("#profile-subscription-status");
+    button.disabled=true;if(status)status.textContent="Preparing your secure PayPal checkout…";
+    try{
+      const result=await api("/subscriptions/checkout",{method:"POST",body:JSON.stringify({creatorId:creator.id})});
+      if(!result.approveUrl)throw new Error("PayPal did not provide an approval link.");
+      window.location.assign(result.approveUrl);
+    }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
+  });
+}
+async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profileTargetId!==String(id))state.profileTab='posts';state.profileTargetId=String(id);persistCurrentView();try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];data.subscriptionOffer=data.user.id===state.user?.id?null:await api('/subscriptions/creator/'+encodeURIComponent(id)).catch(()=>null);state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 window.addEventListener('minglora:open-profile',event=>{const userId=event.detail?.userId;if(state.user&&userId)void openProfile(String(userId));});
 
@@ -5125,7 +5275,7 @@ function renderProfile(data){
   startCreatorLeagueProfileRefresh(u.id);
   const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
-    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
+    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button>'+((data.subscriptionOffer&&(data.subscriptionOffer.available||data.subscriptionOffer.mySubscription))?'<button class="secondary profile-edit profile-subscribe-button" id="profile-subscribe" type="button">'+(data.subscriptionOffer.mySubscription&&["active","past_due"].includes(data.subscriptionOffer.mySubscription.status)?"Subscribed":"Subscribe") +'</button>':'')+'<button class="secondary profile-edit" id="profile-message">Message</button>'<button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const profileThought=data.profileStatus||u.profileThought||null;
   const isAdminProfile=Boolean(isMe&&(u.platformBadge==='admin'||['platform_owner','admin','moderator'].includes(u.platformRole)));
@@ -5184,6 +5334,7 @@ function renderProfile(data){
     try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
     catch(error){toast(error.message);}
   });
+  $('#profile-subscribe')?.addEventListener('click',()=>openProfileSubscriptionPicker(u,data.subscriptionOffer));
   $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
   document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
@@ -7904,6 +8055,7 @@ function renderMoreHub(){
     ]},
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
+      {label:'My Subscriptions',detail:'Manage monthly creator memberships',view:'subscriptions',icon:'<span class="mobile-hub-emoji" aria-hidden="true">★</span>'},
       {label:'Notifications',detail:'See your recent activity',action:'notifications',icon:messenger3dIcon('activity','mobile-hub-icon')},
       {label:'Settings & privacy',detail:'Account, safety and preferences',action:'settings',icon:messenger3dIcon('settings','mobile-hub-icon')},
       {label:'Appearance & themes',detail:'Change the Minglora look',action:'themes',icon:messenger3dIcon('palette','mobile-hub-icon')}
@@ -7924,7 +8076,33 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderSubscriptions(){
+  activateSilent("subscriptions");
+  setContent("<section class='card'><h1>My Subscriptions</h1><p>Loading your memberships…</p></section>");
+  try{
+    const data=await api("/subscriptions/mine"),rows=(data.subscriptions||[]).filter(item=>item.subscriber_id===state.user.id);
+    const tiers=new Map((data.tiers||[]).map(item=>[item.id,item]));
+    const members=new Map((data.members||[]).map(item=>[item.id,item]));
+    const cards=rows.map(item=>{
+      const tier=tiers.get(item.tier_id)||{},creator=members.get(item.creator_id)||{};
+      const active=["active","past_due"].includes(item.status)&&(!item.current_period_end||Date.parse(item.current_period_end)>Date.now());
+      const date=item.current_period_end?new Date(item.current_period_end).toLocaleDateString():"Not confirmed";
+      const status=item.cancel_at_period_end?"Canceled · access through paid period":item.status.replace(/_/g," ");
+      return "<article class='subscription-member-card'><div class='subscription-member-copy'><strong>@"+esc(creator.username||"creator")+"</strong><small>"+esc(tier.name||"Creator membership")+" · "+subscriptionMoneyLabel(item.amount_minor,item.currency)+" / month</small><span class='subscription-member-status'>"+esc(status)+"</span><small>"+(item.cancel_at_period_end?"Access ends ":"Next billing period ends ")+esc(date)+"</small></div>"+(active&&!item.cancel_at_period_end?"<button type='button' class='secondary' data-cancel-subscription='"+esc(item.id)+"'>Cancel</button>":"")+"</article>";
+    }).join("");
+    setContent("<section class='subscriptions-page'><header class='subscriptions-page-heading'><div><span class='creator-eyebrow'>YOUR MEMBERSHIPS</span><h1>My Subscriptions</h1><p>Manage your creator memberships and recurring PayPal payments.</p></div></header>"+(cards||"<div class='creator-studio-panel'>"+creatorEmpty("No subscriptions yet","When you subscribe to a Minglora creator, your membership and renewal details will appear here.","coins")+"</div>")+"</section>");
+    document.querySelectorAll("[data-cancel-subscription]").forEach(button=>button.addEventListener("click",async()=>{
+      if(!window.confirm("Cancel this PayPal subscription? You will keep access through the paid period."))return;
+      button.disabled=true;
+      try{await api("/subscriptions/cancel",{method:"POST",body:JSON.stringify({subscriptionId:button.dataset.cancelSubscription})});toast("Your PayPal subscription is canceled for the next renewal. Access continues through the paid period.");await renderSubscriptions();}
+      catch(error){toast(error.message);button.disabled=false;}
+    }));
+  }catch(error){
+    setContent("<section class='card'><h1>My Subscriptions</h1><p>"+esc(error.message||"Subscriptions could not be loaded.")+"</p><button class='primary' id='retry-subscriptions'>Try again</button></section>");
+    document.getElementById("retry-subscriptions")?.addEventListener("click",renderSubscriptions);
+  }
+}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='subscriptions')await renderSubscriptions();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
