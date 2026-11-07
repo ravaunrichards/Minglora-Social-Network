@@ -393,7 +393,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261107-auto-sync-no-refresh-1',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261107-account-switcher-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     // The browser checks for worker updates normally; new versions must not take over this open page.
     if(!state.user)return;
