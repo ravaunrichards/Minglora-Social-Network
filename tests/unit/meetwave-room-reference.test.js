@@ -112,7 +112,8 @@ test('All eight layouts place the host and guest seats inside the same grid stag
 test('Spotlight lights the selected guest while keeping the other guest seats visible', () => {
   assert.ok(js.includes('id="mw-spotlight-host"'));
   assert.ok(js.includes("applySpotlightSelection(tile.dataset.identity)"));
-  assert.ok(js.includes("applySpotlightSelection(hostTile?.dataset.identity||activeRoom?.ownerId||state.user.id)"));
+  assert.ok(js.includes("const identity=hostTile?.dataset.identity||activeRoom?.ownerId||state.user.id;"));
+  assert.ok(js.includes('applySpotlightSelection(identity);setSpeakerFocus([{identity}])'));
   assert.ok(js.includes("activeLayout==='spotlight'"));
   assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
   assert.ok(finalFit.includes('box-shadow:0 0 0 2px rgba(114,224,203,.18),0 0 28px rgba(77,213,189,.4)'));
