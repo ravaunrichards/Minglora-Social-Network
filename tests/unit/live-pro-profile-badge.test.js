@@ -40,5 +40,5 @@ test('the updated app and badge stylesheet are referenced by the service-worker 
   assert.equal(badgeStylesheet, 'profile-badges.css?v=20261107-live-pro-profile-badge-1');
   assert.ok(serviceWorker.includes('/' + appAsset));
   assert.ok(serviceWorker.includes('/' + badgeStylesheet));
-  assert.equal(cacheName, 'minglora-shell-v165-live-pro-profile-badge-1');
+  assert.equal(cacheName, 'minglora-shell-v165-self-updating-1-live-pro-profile-badge-1');
 });
