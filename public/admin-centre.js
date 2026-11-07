@@ -376,6 +376,7 @@
         <div class="admin-control-centre-section-heading admin-gift-earnings-heading">
           <div><h3 id="admin-gift-earnings-title">LIVE gift revenue &amp; creator earnings</h3>
             <p>Read-only financial reporting from the verified gift earnings ledger. This does not move or change any wallet funds.</p></div>
+          <button type="button" class="secondary" id="admin-gift-earnings-refresh">↻ Refresh report</button>
         </div>
         <p id="admin-gift-earnings-status" class="admin-gift-earnings-status" role="status" aria-live="polite">Loading actual gift earnings…</p>
         <div id="admin-gift-earnings-metrics" class="admin-gift-earnings-metrics"></div>
@@ -528,6 +529,8 @@
           if (submit) submit.disabled = false;
         }
       });
+      const earningsRefreshButton = panel.querySelector('#admin-gift-earnings-refresh');
+      if (earningsRefreshButton) earningsRefreshButton.onclick = () => { void loadAdminGiftEarnings(panel); };
       void loadAdminGiftEarnings(panel);
     }
 
@@ -1251,7 +1254,7 @@
         const lastUpdate = panel._mingloraReportAsOf
           ? ' Last successful report: ' + new Date(panel._mingloraReportAsOf).toLocaleString() + '.'
           : '';
-        status.textContent = 'Automatic refresh could not reach the latest withdrawal and promotional records. The last successful report remains displayed.' +
+        status.textContent = 'Manual refresh could not reach the latest withdrawal and promotional records. The last successful report remains displayed.' +
           lastUpdate + ' ' + (error.message || '');
       } else {
         metrics.innerHTML = '';
@@ -1261,17 +1264,6 @@
       }
     } finally {
       if (refresh && !quiet) refresh.disabled = false;
-    }
-    if (!panel.dataset.mingloraWithdrawalAutoRefresh) {
-      panel.dataset.mingloraWithdrawalAutoRefresh = 'true';
-      panel._mingloraWithdrawalTimer = window.setInterval(() => {
-        if (!panel.isConnected) {
-          window.clearInterval(panel._mingloraWithdrawalTimer);
-          panel._mingloraWithdrawalTimer = null;
-          return;
-        }
-        if (document.visibilityState === 'visible') void loadAdminGiftEarnings(panel, {quiet:true});
-      }, 15000);
     }
   }
 
