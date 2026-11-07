@@ -167,7 +167,7 @@
               '<div class="qcc-input-wrap"><span>' + escapeHtml(sourceSymbol) + '</span><input id="qcc-from-amount" data-qcc-amount="from" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="30" value="' + escapeHtml(state.fromAmount) + '" placeholder="1.00" aria-label="Amount in ' + escapeHtml(state.from) + '"></div>' +
               '<p class="qcc-currency-name">' + escapeHtml(fromCurrency?.name || state.from) + '</p>' +
             '</section>' +
-            '<button type="button" class="qcc-swap" data-qcc-swap aria-label="Rotate or swap currencies" title="Swap currencies"><span aria-hidden="true">⇄</span><small>SWAP</small></button>' +
+            '<button type="button" class="qcc-swap" data-qcc-swap aria-label="Rotate currencies" title="Rotate currencies"><span aria-hidden="true">⇄</span><small>ROTATE</small></button>' +
             '<section class="qcc-side qcc-side-to" aria-label="Second currency">' +
               '<div class="qcc-side-heading"><span class="qcc-side-label">YOU GET</span><span class="qcc-code-pill">' + escapeHtml(state.to) + '</span></div>' +
               '<label class="qcc-currency-label" for="qcc-to-select">To currency</label>' +
