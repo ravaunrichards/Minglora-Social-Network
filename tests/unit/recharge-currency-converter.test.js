@@ -22,7 +22,7 @@ test('Recharge presents four horizontal destinations in the requested order', ()
   const end = app.indexOf('const bindTabs=', start);
   assert.ok(start >= 0 && end > start, 'Recharge tab markup exists');
   const markup = app.slice(start, end);
-  const labels = ['Recharge', 'Earnings', 'Exchange', 'Currency Converter'];
+  const labels = ['Recharge', 'Earnings', 'Exchange', 'Currency Converter', 'Calculator'];
   let last = -1;
   for (const label of labels) {
     const index = markup.indexOf('>' + label + '</button>');
@@ -70,7 +70,8 @@ test('HTML and service worker load and cache both converter modes and 3D artwork
     'currency-converter.css',
     'quick-currency.css',
     'currency-converter.js',
-    'quick-currency.js'
+    'quick-currency.js',
+  'calculator.js'
   ]) {
     assert.ok(html.includes(asset), 'index includes ' + asset);
     assert.ok(worker.includes(asset), 'service worker precaches ' + asset);
