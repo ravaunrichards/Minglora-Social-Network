@@ -120,7 +120,8 @@ export function validateExperienceSettingsPatch(current, patch) {
     }
     next[key] = value;
   }
-  if (next.screenSaverWaitUnit === 'hours' && next.screenSaverWaitValue > 24) {
+  const waitMultiplier = next.screenSaverWaitUnit === 'hours' ? 3600 : next.screenSaverWaitUnit === 'minutes' ? 60 : 1;
+  if (next.screenSaverWaitValue * waitMultiplier > 24 * 60 * 60) {
     return { valid: false, error: 'Screen saver wait cannot exceed 24 hours.' };
   }
   return { valid: true, settings: next };
