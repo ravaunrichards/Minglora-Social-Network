@@ -11,6 +11,8 @@ const app = read('public/app.js');
 const meetWave = read('public/meetwave.js');
 const leagues = read('public/leagues.js');
 const gifter = read('public/gifter-progression.js');
+const quickCurrency = read('public/quick-currency.js');
+const fullCurrency = read('public/currency-converter.js');
 const admin = read('public/admin-centre.js');
 const html = read('public/index.html');
 const adminHtml = read('public/admin-centre.html');
@@ -22,6 +24,11 @@ test('Minglora screens do not expose manual Refresh buttons', () => {
   assert.doesNotMatch(leagues, /id=['"]league-refresh-button['"]/);
   assert.doesNotMatch(gifter, /id=['"]gp-refresh-button['"]/);
   assert.doesNotMatch(admin, /id=['"]admin-gift-earnings-refresh['"]/);
+});
+
+test('Recharge currency tools do not expose manual refresh buttons', () => {
+  assert.doesNotMatch(quickCurrency, /data-qcc-refresh|aria-label="Refresh exchange rate"|title="Refresh rate"|↻ Refresh/);
+  assert.doesNotMatch(fullCurrency, /data-mcc-refresh|aria-label="Refresh exchange rate"|title="Refresh exchange rate"/);
 });
 
 test('Feed, Friends and LIVE quietly sync in the background without replacing active interactions', () => {
