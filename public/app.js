@@ -3990,7 +3990,7 @@ async function renderCreatorSection(section){
       event.preventDefault();
       const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=document.getElementById("subscription-bonus-review-status"),values=new FormData(form);
       const monthStart=String(values.get("monthStart")||"");
-      if(!/^\d{4}-\d{2}-01$/.test(monthStart))oast("Choose the first day of the month being reviewed.");return;}
+      if(!/^\d{4}-\d{2}-01$/.test(monthStart)){toast("Choose the first day of the month being reviewed.");return;}
       button.disabled=true;
       try{
         const result=await api("/subscriptions/admin/bonus-review",{method:"POST",body:JSON.stringify({
