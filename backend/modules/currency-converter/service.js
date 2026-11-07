@@ -167,7 +167,7 @@ export function createCurrencyConverterService({
     }
   }
 
-  async function getRate(baseInput, quoteInput) {
+  async function getRate(baseInput, quoteInput, { refresh = false } = {}) {
     const base = normalizeCurrencyCode(baseInput);
     const quote = normalizeCurrencyCode(quoteInput);
     if (!base || !quote) {
@@ -189,7 +189,7 @@ export function createCurrencyConverterService({
     const key = base + ':' + quote;
     const timestamp = now();
     const cached = rateCache.get(key);
-    if (cached && cached.expiresAt > timestamp) return cached.value;
+    if (!refresh && cached && cached.expiresAt > timestamp) return cached.value;
     try {
       const response = await safeFetch(FRANKFURTER_API_BASE + '/rate/' + base.toLowerCase() + '/' + quote.toLowerCase());
       const payload = await response.json();
