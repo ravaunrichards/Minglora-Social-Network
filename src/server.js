@@ -1644,6 +1644,7 @@ async function route(req, res) {
         };
         const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         const resource=p==='/api/menstrual-health'?'':p.slice('/api/menstrual-health/'.length);
+        const requireTrackerEnabled=async()=>{const rows=await rest('menstrual_tracker_profiles','select=enabled&limit=1');if(!rows?.[0]?.enabled)throw Object.assign(new Error('Enable your private tracker before adding or changing health records.'),{status:403});};
         try{
           if(method==='GET'&&!resource){
             const profiles=await rest('menstrual_tracker_profiles','select=*&limit=1'),profile=Array.isArray(profiles)?profiles[0]||null:null;
@@ -1676,11 +1677,13 @@ async function route(req, res) {
             return json(res,200,{ok:true,profile:Array.isArray(result)?result[0]||null:result});
           }
           if(method==='POST'&&resource==='cycles'){
+            await requireTrackerEnabled();
             const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeCycleInput(input||{});
             const result=await rest('menstrual_cycles','',{method:'POST',prefer:'return=representation',payload:{...normalized,user_id:user.id}});
             return json(res,201,{cycle:Array.isArray(result)?result[0]:result});
           }
           if(method==='PATCH'&&resource.startsWith('cycles/')){
+            await requireTrackerEnabled();
             const id=resource.slice(7);if(!uuid.test(id))return json(res,400,{error:'Choose a valid period record.'});
             const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeCycleInput(input||{},true);
             normalized.updated_at=new Date().toISOString();
@@ -1693,11 +1696,13 @@ async function route(req, res) {
             await rest('menstrual_cycles','id=eq.'+encodeURIComponent(id),{method:'DELETE'});return json(res,200,{ok:true});
           }
           if(method==='POST'&&resource==='daily-logs'){
+            await requireTrackerEnabled();
             const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeDailyLogInput(input||{});
             const result=await rest('menstrual_daily_logs','on_conflict=user_id,entry_date',{method:'POST',prefer:'resolution=merge-duplicates,return=representation',payload:{...normalized,user_id:user.id,updated_at:new Date().toISOString()}});
             return json(res,200,{log:Array.isArray(result)?result[0]:result});
           }
           if(method==='POST'&&resource==='journal'){
+            await requireTrackerEnabled();
             const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeJournalInput(input||{});
             const result=await rest('menstrual_journal_entries','',{method:'POST',prefer:'return=representation',payload:{...normalized,user_id:user.id}});
             return json(res,201,{entry:Array.isArray(result)?result[0]:result});
@@ -1707,6 +1712,7 @@ async function route(req, res) {
             await rest('menstrual_journal_entries','id=eq.'+encodeURIComponent(id),{method:'DELETE'});return json(res,200,{ok:true});
           }
           if(method==='POST'&&resource==='reminders'){
+            await requireTrackerEnabled();
             const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeReminderInput(input||{});
             const result=await rest('menstrual_reminders','on_conflict=user_id,reminder_type',{method:'POST',prefer:'resolution=merge-duplicates,return=representation',payload:{...normalized,user_id:user.id,updated_at:new Date().toISOString()}});
             return json(res,200,{reminder:Array.isArray(result)?result[0]:result});
