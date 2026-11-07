@@ -4560,7 +4560,7 @@ function profileIntroOverviewMarkup(data,isMe){
   const currentWork=workEntries.find(item=>item&&Object.values(item).some(value=>value&&value!==false));
   const latestEducation=educationEntries.find(item=>item&&Object.values(item).some(value=>value&&value!==false));
   const location=[personal.currentCity||u.location,personal.country].filter(Boolean).map(value=>String(value).trim()).filter(Boolean);
-  const bio=String(u.bio||sections.intro?.bio||'').trim();
+  const bio=String(u.bio||(isMe?sections.intro?.bio:'')||'').trim();
   const workText=currentWork?[currentWork.position||currentWork.company,currentWork.position&&currentWork.company?'at '+currentWork.company:(!currentWork.position&&currentWork.company?'': '')].filter(Boolean).join(' '):'';
   const educationText=latestEducation?[latestEducation.degree,latestEducation.fieldOfStudy,latestEducation.school].filter(Boolean).join(' · '):'';
   const interests=[...(sections.hobbies?.items||[]),...(sections.interests?.items||[])].map(value=>String(value||'').trim()).filter(Boolean).filter((value,index,all)=>all.indexOf(value)===index).slice(0,8);
@@ -4580,8 +4580,8 @@ function profileIntroOverviewMarkup(data,isMe){
       ['Profile picture',Boolean(u.avatar),'edit'],
       ['Cover photo',Boolean(u.cover),'edit'],
       ['Introduction',Boolean(bio),'edit'],
-      ['Work history',Boolean(workEntries.length),'about'],
-      ['Education',Boolean(educationEntries.length),'about'],
+      ['Work history',Boolean(currentWork),'about'],
+      ['Education',Boolean(latestEducation),'about'],
       ['Interests',Boolean(interests.length),'about'],
       ['Links',Boolean(links.length),'about']
     ];
@@ -4593,7 +4593,7 @@ function profileIntroOverviewMarkup(data,isMe){
       '<div class="profile-completion-heading"><div><span>PROFILE SETUP</span><strong>'+(percent===100?'Your profile is complete':complete+' of '+checks.length+' details added')+'</strong></div><b>'+percent+'%</b></div>'+
       '<div class="profile-completion-track" role="progressbar" aria-label="Profile completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+percent+'"><span style="width:'+percent+'%"></span></div>'+
       '<div class="profile-completion-footer"><span>'+(next?'Next: add '+next[0].toLowerCase():'All profile essentials are filled in')+'</span>'+
-      (next?'<button type="button" class="text-button" '+(action==='about'?'data-profile-tab="about"':'id="edit-about-inline"')+'>'+(action==='about'?'Add details':'Edit profile')+'</button>':'')+
+      (next?'<button type="button" class="text-button" '+(action==='about'?'data-profile-tab="about"':'id="edit-profile-completion"')+'>'+(action==='about'?'Add details':'Edit profile')+'</button>':'')+
       '</div></section>';
   }
   return '<div class="profile-established-overview">'+creator+
@@ -5082,6 +5082,7 @@ function bindProfileTabActions(panel){
   panel.querySelectorAll('[data-open-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openGroup)));
 
   panel.querySelector('#edit-about-inline')?.addEventListener('click',()=>openEditProfile(state.profile.user));
+  panel.querySelector('#edit-profile-completion')?.addEventListener('click',()=>openEditProfile(state.profile.user));
   panel.querySelectorAll('[data-edit-about-section]').forEach(button=>button.addEventListener('click',()=>openAboutSectionEditor(button.dataset.editAboutSection,state.profile.user)));
   panel.querySelector('#profile-composer')?.addEventListener('click',()=>openComposer());
   panel.querySelector('#profile-upload-photo')?.addEventListener('click',()=>openProfilePhotoComposer(state.profile.user.id));
