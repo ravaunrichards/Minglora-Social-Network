@@ -37,5 +37,7 @@ jobs:
         run: |
           node --check public/app.js
           node --check src/server.js
+          node --check tests/unit/live-multi-recipient-gifting.test.js
+          node --check tests/unit/live-layout-panels.test.js
       - name: Test mutual LIVE gifts
-        run: node --test tests/unit/live-multi-recipient-gifting.test.js
+        run: node --test tests/unit/live-multi-recipient-gifting.test.js tests/unit/live-layout-panels.test.js
