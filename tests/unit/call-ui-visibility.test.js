@@ -17,7 +17,7 @@ test('phone call stylesheet loads after global layout overrides and is precached
   assert.ok(html.includes(styleTag),'the phone call stylesheet is loaded');
   assert.ok(html.indexOf(styleTag)>html.indexOf('mobile-profile-navigation.css'),'the call styles override later page layout rules');
   assert.ok(worker.includes("'/call-ui.css?v=20261107-phone-call-ui-2'"),'the service worker precaches call styles');
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\d+-phone-call-ui-1'/);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-phone-call-ui-2'/);
 });
 
 test('incoming and outgoing ringing cards stay visible above the app shell',()=>{
