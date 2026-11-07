@@ -469,6 +469,7 @@ body:has(#live-player-shell) #live-tools-backdrop{
   -webkit-backdrop-filter:blur(4px)!important;
   overflow:hidden!important;
 }
+body:has(#live-player-shell) #live-tools-backdrop.hidden{display:none!important}
 body:has(#live-player-shell) #live-tools-drawer{
   display:flex!important;
   flex-direction:column!important;
