@@ -2985,7 +2985,7 @@ activeLivePinnedComment=null;
           return;
         }
         if(!liveGiftCatalogue.length){
-          giftGrid.innerHTML="<div class='live-gift-empty'><strong>No gifts are available right now</strong><p>Minglora could not find any published gifts in the live catalogue.</p><button type='button' class='secondary' id='live-gift-retry'>Refresh gift catalogue</button></div>";
+          giftGrid.innerHTML="<div class='live-gift-empty'><strong>No gifts are available right now</strong><p>Minglora could not find any published gifts in the live catalogue.</p></div>";
           liveGiftMore&&(liveGiftMore.hidden=true);
           liveGiftCount&&(liveGiftCount.textContent="0 gifts");
           giftGrid.querySelector("#live-gift-retry")?.addEventListener("click",()=>void loadLiveGiftCatalogue());
@@ -3644,14 +3644,14 @@ function creatorAudienceMarkup(){
   const s=state.creatorStudio,p=s.profile||{};
   const followers=s.followers||[],following=s.following||[];
   const rows=(items,error)=>error?creatorEmpty('Audience list unavailable',error,'friends'):items.length?items.map(person=>"<article class='creator-audience-row'><img src='"+avatar(person)+"' alt=''><span><strong>"+esc(person.name||"Minglora member")+"</strong><small>@"+esc(person.username||"member")+"</small></span><button type='button' class='secondary' data-creator-view-profile='"+esc(person.id)+"'>View profile</button></article>").join(""):creatorEmpty("No members to show","This list is empty. Minglora does not add sample users or follower records.","friends");
-  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h2>Audience</h2><p>Real follower and following relationships from your Minglora account.</p></div><button type='button' class='secondary' id='creator-refresh-audience'>↻ Refresh audience</button></div>"+
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h2>Audience</h2><p>Real follower and following relationships from your Minglora account.</p></div></div>"+
     "<div class='creator-audience-summary'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Members following your profile","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Profiles you follow","profile")+"</div>"+
     "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers,s.audienceError)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following,s.followingError)+"</div></section></div>";
 }
 function creatorAnalyticsMarkup(){
   const s=state.creatorStudio,p=s.profile||{};
   const posts=Array.isArray(p.posts)?p.posts:[];
-  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Only metrics returned by Minglora’s existing profile insights API are displayed here.</p></div><button type='button' class='secondary' id='creator-refresh-analytics'>↻ Refresh</button></div>"+
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Only metrics returned by Minglora’s existing profile insights API are displayed here.</p></div></div>"+
     "<div class='creator-analytics-source'><span>✓</span><div><strong>Account-backed profile insights</strong><small>Counts below are returned by Minglora. Profile viewer history lives in Notification Settings; no estimated or sample view metrics are shown here.</small></div></div>"+
     "<div class='creator-analytics-grid'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")+creatorMetric("Published posts",creatorNumber(posts.length),"Personal posts visible on your profile","saved")+"</div>"+
     "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Follower count, following count and published posts.</span></p><p><b>Not yet available</b><span>Per-post impressions, watch time, retention, completion, audience demographics, conversion funnels and time-series charts.</span></p></div></section>";
@@ -3886,13 +3886,8 @@ async function renderCreatorSection(section){
   }
   if(section==="audience"){
     document.querySelectorAll("[data-creator-view-profile]").forEach(button=>button.addEventListener("click",()=>openProfile(button.dataset.creatorViewProfile)));
-    $("#creator-refresh-audience")?.addEventListener("click",()=>renderCreatorSection("audience"));
   }
   if(section==="analytics"){
-    $("#creator-refresh-analytics")?.addEventListener("click",async()=>{
-      try{s.profile=await api("/users/"+encodeURIComponent(state.user.id));await renderCreatorSection("analytics");}
-      catch(error){toast(error.message);}
-    });
   }
   if(section==="monetization"){
     $("#creator-payout-account-form")?.addEventListener("submit",async event=>{
