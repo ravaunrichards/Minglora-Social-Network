@@ -16,7 +16,7 @@ test('LIVE client, compact room stylesheet and service-worker cache are versione
   const asset = '20261107-live-layout-1';
   assert.ok(html.includes('/app.js?v=' + asset), 'HTML must request the updated LIVE client');
   assert.ok(html.includes('/live-room-compact.css?v=' + asset), 'HTML must request the compact room layout');
-  assert.ok(worker.includes('minglora-shell-v155-live-compact-1'), 'service worker must activate a new cache');
+  assert.ok(worker.includes('minglora-shell-v156-live-compact-1'), 'service worker must activate a new cache');
   assert.ok(worker.includes('/app.js?v=' + asset), 'precache must include the updated client');
   assert.ok(worker.includes('/live-room-compact.css?v=' + asset), 'precache must include the compact room stylesheet');
 });
