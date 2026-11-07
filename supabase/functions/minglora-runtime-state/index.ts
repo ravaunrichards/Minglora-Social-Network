@@ -103,6 +103,17 @@ Deno.serve(async (req: Request) => {
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
 
+  const payPalMoneyMinor = (money: any, expectedCurrency: string): number | null => {
+    if (!money || typeof money !== "object") return null;
+    const moneyCurrency = String(money.currency_code || money.currency || "").toUpperCase();
+    const rawAmount = money.value ?? money.total;
+    if (moneyCurrency !== expectedCurrency || rawAmount === undefined || rawAmount === null) return null;
+    const amount = Number(rawAmount);
+    if (!Number.isFinite(amount) || amount < 0) return null;
+    const minor = Math.round(amount * 100);
+    return Number.isSafeInteger(minor) ? minor : null;
+  };
+
   if (action === "internal_activity_feed") {
     const requestedLimit = Math.floor(Number(input.limit || 50));
     const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
@@ -1698,7 +1709,7 @@ Deno.serve(async (req: Request) => {
         !Number.isSafeInteger(subscriberOnlyVideoCount) || subscriberOnlyVideoCount < 0) {
       return json(400, { error: "Invalid monthly creator performance review." });
     }
-    const eligible = followerCount >= 10000 && qualifyingVideoViews >= 1000000 && subscriberOnlyVideoCount >= 3;
+    const eligible = followerCount >= 10000 && qualifyingVideoViews >= 100000 && subscriberOnlyVideoCount >= 3;
     const { error: reviewError } = await admin.from("subscription_creator_performance_reviews").upsert({
       creator_id: creatorId, month_start: monthStart, follower_count: followerCount,
       qualifying_video_views: qualifyingVideoViews, subscriber_only_video_count: subscriberOnlyVideoCount,
@@ -1796,6 +1807,38 @@ Deno.serve(async (req: Request) => {
         await admin.from("subscription_payment_events").update({ processing_error: "PayPal recurring payment amount or currency did not match the creator tier." }).eq("id", paymentEvent.id);
         return json(409, { error: "PayPal recurring payment does not match the saved subscription price. Reconciliation is required." });
       }
+
+      // Use the matching completed PayPal billing transaction, not the browser or
+      // webhook gross alone, to obtain the real provider fee and any reported tax.
+      const providerTransactions = Array.isArray(transactionDetails?.transactions) ? transactionDetails.transactions : [];
+      const completedSale = providerTransactions.find((item: any) =>
+        String(item?.id || "") === transactionId && String(item?.status || "").toUpperCase() === "COMPLETED"
+      );
+      const breakdown = completedSale?.amount_with_breakdown || null;
+      const breakdownGrossMinor = payPalMoneyMinor(breakdown?.gross_amount, currency);
+      const feeNode = breakdown?.fee_amount ?? null;
+      const netAfterProviderFeeMinor = breakdown?.net_amount
+        ? payPalMoneyMinor(breakdown.net_amount, currency)
+        : null;
+      let providerFeeMinor: number | null = feeNode
+        ? payPalMoneyMinor(feeNode, currency)
+        : null;
+      if (!feeNode && netAfterProviderFeeMinor !== null && breakdownGrossMinor !== null) {
+        providerFeeMinor = breakdownGrossMinor - netAfterProviderFeeMinor;
+      }
+      const taxNode = breakdown?.tax_amount ?? null;
+      const taxMinor = taxNode ? payPalMoneyMinor(taxNode, currency) : 0;
+      if (!completedSale || breakdownGrossMinor !== amountMinor ||
+          providerFeeMinor === null || taxMinor === null ||
+          (netAfterProviderFeeMinor !== null && amountMinor - providerFeeMinor !== netAfterProviderFeeMinor) ||
+          providerFeeMinor < 0 || taxMinor < 0 || providerFeeMinor + taxMinor >= amountMinor) {
+        await admin.from("subscription_payment_events").update({
+          processing_error: "Matching PayPal fee and tax breakdown is not yet available or does not reconcile to the settled sale."
+        }).eq("id", paymentEvent.id);
+        return json(503, { error: "Minglora is waiting for PayPal's matching completed transaction fee and tax breakdown. No estimated fee was used." });
+      }
+      const netMinor = amountMinor - providerFeeMinor - taxMinor;
+
       const { data: creatorSettings, error: settingsError } = await admin.from("subscription_creator_settings")
         .select("performance_bonus_bps,performance_bonus_month")
         .eq("creator_id", subscription.creator_id).maybeSingle();
@@ -1808,8 +1851,9 @@ Deno.serve(async (req: Request) => {
         Number(creatorSettings?.performance_bonus_bps) === 2000 ? 2000 : 0;
       const creatorShareBps = 5000 + performanceBonusBps;
       const platformShareBps = 10000 - creatorShareBps;
-      const creatorMinor = Math.floor(amountMinor * creatorShareBps / 10000);
-      const platformMinor = amountMinor - creatorMinor;
+      const creatorMinor = Math.floor(netMinor * creatorShareBps / 10000);
+      const platformMinor = netMinor - creatorMinor;
+
       const { error: subscriptionShareError } = await admin.from("creator_subscriptions").update({
         creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps
       }).eq("id", subscription.id);
@@ -1820,48 +1864,87 @@ Deno.serve(async (req: Request) => {
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
         currency, gross_minor: amountMinor, creator_minor: creatorMinor, platform_minor: platformMinor,
         creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
-        performance_bonus_bps: performanceBonusBps, entry_type: "payment"
+        performance_bonus_bps: performanceBonusBps,
+        provider_fee_minor: providerFeeMinor, processing_fee_minor: providerFeeMinor,
+        tax_minor: taxMinor, net_minor: netMinor,
+        fee_reconciled: true, fee_reconciled_at: new Date().toISOString(),
+        entry_type: "payment"
       }, { onConflict: "provider_transaction_id", ignoreDuplicates: true });
       if (ledgerError) return fail(ledgerError, "PayPal payment was received but Minglora could not write the earnings ledger.");
       patch.status = "active";
-      patch.current_period_start = resource.create_time || new Date().toISOString();
+      patch.current_period_start = resource.create_time || completedSale.time || new Date().toISOString();
       patch.current_period_end = periodEnd;
     } else if (eventType === "PAYMENT.SALE.REFUNDED" || eventType === "PAYMENT.SALE.REVERSED") {
       const amountNode = resource?.amount || {};
       const amountValue = Number(amountNode.total ?? amountNode.value);
       const amountMinor = Math.round(amountValue * 100);
-      const currency = String(amountNode.currency || amountNode.currency_code || subscription.currency).toUpperCase();
+      const currency = String(amountNode.currency || amountNode.currency_code || "").toUpperCase();
       const refundId = String(resource.id || eventId);
-      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || currency !== subscription.currency) {
-        await admin.from("subscription_payment_events").update({ processing_error: "PayPal refund or reversal amount requires manual reconciliation." }).eq("id", paymentEvent.id);
-        return json(409, { error: "PayPal refund or reversal requires manual reconciliation." });
-      }
       const originalSaleId = String(resource.sale_id || resource.related_ids?.sale_id || "");
-      let originalPaymentQuery = admin.from("subscription_earnings_ledger")
-        .select("creator_share_bps,platform_share_bps,performance_bonus_bps")
-        .eq("subscription_id", subscription.id).eq("entry_type", "payment");
-      if (originalSaleId) originalPaymentQuery = originalPaymentQuery.eq("provider_transaction_id", originalSaleId);
-      const { data: originalPayment, error: originalPaymentError } = await originalPaymentQuery
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (originalPaymentError) return json(503, { error: "Original subscription payment share could not be checked." });
-      const creatorShareBps = Number(originalPayment?.creator_share_bps || subscription.creator_share_bps || 5000);
-      const platformShareBps = 10000 - creatorShareBps;
-      const performanceBonusBps = Number(originalPayment?.performance_bonus_bps || Math.max(0, creatorShareBps - 5000));
-      const creatorRefund = Math.floor(amountMinor * creatorShareBps / 10000);
-      const platformRefund = amountMinor - creatorRefund;
+      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || currency !== subscription.currency ||
+          refundId.length < 5 || !originalSaleId) {
+        await admin.from("subscription_payment_events").update({ processing_error: "PayPal refund does not identify a valid original sale and amount." }).eq("id", paymentEvent.id);
+        return json(409, { error: "PayPal refund or reversal is missing its original sale reference or valid amount. Manual reconciliation is required." });
+      }
+      const { data: originalPayment, error: originalPaymentError } = await admin.from("subscription_earnings_ledger")
+        .select("gross_minor,net_minor,creator_minor,platform_minor,creator_share_bps,platform_share_bps,performance_bonus_bps,processing_fee_minor,tax_minor,fee_reconciled,created_at")
+        .eq("subscription_id", subscription.id).eq("provider_transaction_id", originalSaleId)
+        .eq("entry_type", "payment").maybeSingle();
+      if (originalPaymentError) return json(503, { error: "Original subscription payment could not be checked." });
+      if (!originalPayment || originalPayment.fee_reconciled !== true) {
+        await admin.from("subscription_payment_events").update({ processing_error: "The original subscription sale is missing fee reconciliation." }).eq("id", paymentEvent.id);
+        return json(409, { error: "The original subscription sale is not fee-reconciled. This refund needs manual reconciliation." });
+      }
+      const { data: priorRefunds, error: priorRefundError } = await admin.from("subscription_earnings_ledger")
+        .select("gross_minor").eq("parent_provider_transaction_id", originalSaleId).eq("entry_type", "refund");
+      if (priorRefundError) return json(503, { error: "Previous partial subscription refunds could not be checked." });
+      const refundedBeforeMinor = (priorRefunds || []).reduce((total: number, item: any) => total + Number(item.gross_minor || 0), 0);
+      const originalGrossMinor = Number(originalPayment.gross_minor);
+      const refundedAfterMinor = refundedBeforeMinor + amountMinor;
+      if (!Number.isSafeInteger(originalGrossMinor) || originalGrossMinor <= 0 || amountMinor > originalGrossMinor - refundedBeforeMinor) {
+        await admin.from("subscription_payment_events").update({ processing_error: "Cumulative refund exceeds the original settled sale." }).eq("id", paymentEvent.id);
+        return json(409, { error: "Cumulative PayPal refunds cannot exceed the original settled subscription payment." });
+      }
+      const cumulativeShare = (total: number, cumulativeGross: number) =>
+        Math.round(total * cumulativeGross / originalGrossMinor);
+      const originalFeeMinor = Number(originalPayment.processing_fee_minor || 0);
+      const originalTaxMinor = Number(originalPayment.tax_minor || 0);
+      const feeReversalMinor = cumulativeShare(originalFeeMinor, refundedAfterMinor) - cumulativeShare(originalFeeMinor, refundedBeforeMinor);
+      const taxReversalMinor = cumulativeShare(originalTaxMinor, refundedAfterMinor) - cumulativeShare(originalTaxMinor, refundedBeforeMinor);
+      const refundNetMinor = amountMinor - feeReversalMinor - taxReversalMinor;
+      const creatorRefund = cumulativeShare(Number(originalPayment.creator_minor), refundedAfterMinor) -
+        cumulativeShare(Number(originalPayment.creator_minor), refundedBeforeMinor);
+      const platformRefund = refundNetMinor - creatorRefund;
+      const creatorShareBps = Number(originalPayment.creator_share_bps);
+      const platformShareBps = Number(originalPayment.platform_share_bps);
+      const performanceBonusBps = Number(originalPayment.performance_bonus_bps || 0);
+      if ([refundNetMinor,creatorRefund,platformRefund].some(value=>!Number.isSafeInteger(value)||value<0) ||
+          creatorRefund+platformRefund!==refundNetMinor ||
+          creatorShareBps+platformShareBps!==10000) {
+        await admin.from("subscription_payment_events").update({ processing_error: "Calculated refund allocation failed validation." }).eq("id", paymentEvent.id);
+        return json(409, { error: "PayPal refund allocation failed validation and requires manual reconciliation." });
+      }
       const { error: refundError } = await admin.from("subscription_earnings_ledger").insert({
         subscription_id: subscription.id, payment_event_id: paymentEvent.id,
-        provider_transaction_id: refundId,
+        provider_transaction_id: refundId, parent_provider_transaction_id: originalSaleId,
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
         currency, gross_minor: amountMinor, creator_minor: creatorRefund, platform_minor: platformRefund,
         creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
-        performance_bonus_bps: performanceBonusBps, entry_type: "refund"
+        performance_bonus_bps: performanceBonusBps,
+        provider_fee_minor: feeReversalMinor, processing_fee_minor: feeReversalMinor,
+        tax_minor: taxReversalMinor, net_minor: refundNetMinor, fee_reconciled: false,
+        entry_type: "refund"
       });
       if (refundError && refundError.code !== "23505") return fail(refundError, "PayPal refund was received but Minglora could not reconcile the earnings ledger.");
-      // A refunded or reversed settled charge no longer grants paid access.
-      // A later successful recurring sale can reactivate the membership.
-      patch.status = "refunded";
-      patch.current_period_end = new Date().toISOString();
+      const originalPeriodStart = Date.parse(String(originalPayment.created_at || ""));
+      const currentPeriodStart = Date.parse(String(subscription.current_period_start || ""));
+      const refundIsCurrentPeriod = !Number.isFinite(currentPeriodStart) || !Number.isFinite(originalPeriodStart) ||
+        originalPeriodStart >= currentPeriodStart;
+      if (eventType === "PAYMENT.SALE.REVERSED" ||
+          (refundedAfterMinor >= originalGrossMinor && refundIsCurrentPeriod)) {
+        patch.status = "refunded";
+        patch.current_period_end = new Date().toISOString();
+      }
     }
 
     const { error: updateError } = await admin.from("creator_subscriptions").update(patch).eq("id", subscription.id);
