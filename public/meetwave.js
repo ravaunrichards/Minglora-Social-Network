@@ -98,9 +98,8 @@
     if(!roomClient||!$('#mw-participants'))return;
     const people=[{identity:state.user.id,name:state.user.name,isLocal:true},...Array.from(roomClient.remoteParticipants.values()).map(participant=>({identity:participant.identity,name:participant.name||participant.identity,isLocal:false}))];
     $('#mw-participant-count').textContent=String(people.length);
-    $('#mw-participants').innerHTML=people.map(person=>'<div class="mw-participant-item"><span class="mw-participant-avatar">'+esc((person.name||'?').trim().charAt(0).toUpperCase())+'</span><span class="mw-participant-name"><b>'+esc(person.name)+'</b><small>'+(person.isLocal?'You · '+(activeRole==='host'?'Host':'You'):(activeRoom?.ownerId===person.identity?'Host':'In meeting'))+'</small></span>'+(activeRole==='host'&&!person.isLocal?'<button type="button" class="mw-remove-person" data-remove-participant="'+esc(person.identity)+'" aria-label="Remove '+esc(person.name)+'">Remove</button>':'')+'</div>').join('');
+    $('#mw-participants').innerHTML=people.map(person=>'<div class="mw-participant-item"><span class="mw-participant-avatar">'+esc((person.name||'?').trim().charAt(0).toUpperCase())+'</span><span class="mw-participant-name"><b>'+esc(person.name)+'</b><small>'+(person.isLocal?(activeRole==='host'?'You · Host':'You · Participant'):(activeRoom?.ownerId===person.identity?'Host':'In meeting'))+'</small></span>'+(activeRole==='host'&&!person.isLocal?'<button type="button" class="mw-remove-person" data-remove-participant="'+esc(person.identity)+'" aria-label="Remove '+esc(person.name)+'">Remove</button>':'')+'</div>').join('');
     document.querySelectorAll('[data-remove-participant]').forEach(button=>button.onclick=()=>removeParticipant(button.dataset.removeParticipant));
-    $('#mw-room-invite')?.addEventListener('click',()=>inviteMembers(activeRoom.id),{once:true});
   }
   async function removeParticipant(identity){
     if(!activeRoom||activeRole!=='host'||!identity||identity===state.user.id)return;
@@ -172,6 +171,7 @@
     $('#mw-camera').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isCameraEnabled;await roomClient.localParticipant.setCameraEnabled(enabled);$('#mw-camera small').textContent=enabled?'Camera on':'Camera off';}catch(error){note(error.message,true);}};
     $('#mw-screen').onclick=async()=>{try{screenOn=!screenOn;await roomClient.localParticipant.setScreenShareEnabled(screenOn);$('#mw-screen small').textContent=screenOn?'Stop sharing':'Share screen';}catch(error){screenOn=false;$('#mw-screen small').textContent='Share screen';note(error.message,true);}};
     $('#mw-layout').onclick=toggleMeetingLayout;$('#mw-fullscreen').onclick=toggleMeetingFullscreen;
+    $('#mw-room-invite')?.addEventListener('click',()=>inviteMembers(activeRoom.id));
     $('#mw-copy').onclick=()=>copyInvite(activeRoom.id);$('#mw-leave').onclick=()=>leaveRoom(false);$('#mw-end')?.addEventListener('click',()=>leaveRoom(true));
     $('#mw-chat-form').onsubmit=async event=>{event.preventDefault();const input=$('#mw-chat-input');try{await api(endpoint(activeRoom.id)+'/messages',{method:'POST',body:JSON.stringify({text:input.value})});input.value='';await refreshChat();}catch(error){note(error.message,true);}};
     await refreshChat();poller=setInterval(refreshChat,3500);
