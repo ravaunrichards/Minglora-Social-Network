@@ -68,10 +68,10 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(html,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(html,/app\.js\?v=20261105-roomwide-live-gifts-1/);
+  assert.match(html,/app\.js\?v=20261106-admin-cover-management-1/);
   assert.match(worker,/minglora-shell-v93-flow-layout-safety-1/);
   assert.match(worker,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(worker,/app\.js\?v=20261105-roomwide-live-gifts-1/);
+  assert.match(worker,/app\.js\?v=20261106-admin-cover-management-1/);
 });
 
 test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{
@@ -100,4 +100,15 @@ test('the Creator Hub verification sticker appears beside the profile username a
   assert.match(app,/profile-name-with-badges[^;]*verifiedProfileBadge\(u\)/);
   assert.match(app,/profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)\+gifterProfileBadge\(u\)/);
   assert.match(css,/\.profile-username-line\{[^}]*display:flex/);
+});
+
+test('admin profile management includes its own Edit Cover action and uses the existing cover upload flow',()=>{
+  const adminMarkup=app.slice(app.indexOf('const adminToolsMarkup'),app.indexOf('const profileActionMarkup'));
+  assert.match(adminMarkup,/id="profile-edit-admin-cover"/);
+  assert.match(adminMarkup,/<span>Edit Cover<\\/span>/);
+  assert.match(app,/\\$\\('#profile-edit-admin-cover'\\)\\?\\.addEventListener\\('click',\\(\\)=>openEditProfile\\(u,'cover'\\)\\)/);
+  assert.match(app,/\\+\\(isMe&&!isAdminProfile\\?'<div class="profile-media-action-row">/);
+  assert.match(app,/function openEditProfile\\(u,mediaOnly=null\\)/);
+  assert.match(app,/uploadProfileImage\\('cover',edited/);
+  assert.match(fs.readFileSync(path.join(root,'public/admin-profile-layout.css'),'utf8'),/grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)/);
 });
