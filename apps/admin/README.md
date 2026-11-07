@@ -1,3 +1,12 @@
-# Admin client boundary
+# Minglora Admin Control Centre
 
-The internal administration UI is not implemented. It must cover safety reports, moderation queues, audited account/content actions and operational health. Every privileged action must be authorized by the server, use least-privilege roles, and create an audit record; hiding a button is not authorization.
+The private admin workspace is implemented in `public/admin-centre.html`, `public/admin-centre.js` and `public/admin-centre.css`.
+
+Owner-only controls include:
+- MFA-protected account search and Supabase Auth ban/unban actions.
+- Account ban duration, moderation reason and restoration of the pre-ban status.
+- A dedicated audit history for account bans and restores, searchable by reason, user ID and action type.
+- Audit entries showing the acting administrator, affected account, timestamp, ban duration, expiry and reported session-revocation outcome.
+- Existing live internal activity journal, moderation reports, support inbox, and operational controls.
+
+Account-management and audit APIs check the designated owner identity and MFA-verified session on the server. The audit-history query returns selected audit metadata and profile labels only; it does not expose passwords, access tokens, private messages or payment credentials.
