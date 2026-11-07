@@ -11,11 +11,12 @@ test('the final layout stylesheet loads after every feature stylesheet', async (
   ]);
   const mobileLink = html.indexOf('mobile-layout.css?v=20261105-flow-navigation-1');
   const safetyLink = html.indexOf('layout-safety.css?v=20261105-page-flow-contract-2');
+  const liveLink = html.indexOf('live-room-compact.css?v=20261107-live-layout-1');
   const lastFeatureLink = html.indexOf('gifter-badge-3d.css?v=20261105-gifter-badge-3d-1');
-  assert.ok(lastFeatureLink >= 0 && mobileLink > lastFeatureLink && safetyLink > mobileLink);
+  assert.ok(lastFeatureLink >= 0 && mobileLink > lastFeatureLink && safetyLink > mobileLink && liveLink > safetyLink);
   assert.ok(sw.includes("layout-safety.css?v=20261105-page-flow-contract-2"));
-  assert.match(sw,/CACHE_NAME='minglora-shell-v\\d+-/);
-  assert.doesNotMatch(safety, /position\\s*:\\s*(?:fixed|sticky)/i);
+  assert.match(sw,/CACHE_NAME='minglora-shell-v\d+-/);
+  assert.doesNotMatch(safety, /position\s*:\s*(?:fixed|sticky)/i);
 });
 
 test('shared navigation and workspace bars stay in normal page flow', async () => {

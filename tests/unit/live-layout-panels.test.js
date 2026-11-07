@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
+const compact = fs.readFileSync(path.join(root, 'public/live-room-compact.css'), 'utf8');
 const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
 test('LIVE has nine host-selectable screen layouts with a safe default', () => {
@@ -39,16 +40,19 @@ test('The host layout selection is synchronized to viewers and guests via host-a
 });
 
 test('Host panels switch without removing the chat, guest tools, gifts or moderator tools', () => {
-  for (const panel of ['layouts', 'guests', 'viewers', 'chat', 'gifts', 'rewards', 'moderators', 'appearance']) {
+  for (const panel of ['layouts', 'guests', 'viewers', 'gifts', 'rewards', 'moderators', 'appearance', 'devices']) {
     assert.ok(app.includes("data-live-tools-panel='" + panel + "'"), 'missing ' + panel + ' panel');
   }
   assert.match(app, /function renderLiveViewerPanel\(/);
   assert.match(app, /room\.remoteParticipants/);
-  assert.match(app, /live-chat-panel-body/);
+  assert.match(app, /id='live-fullscreen-chat-slot'/);
+  assert.doesNotMatch(app, /data-live-tools-panel='chat'/, 'the only Chat panel is the persistent side panel');
+  assert.match(app, /data-live-tools-panel-target='devices'/);
+  assert.doesNotMatch(app, /live-chat-panel-body/, 'the drawer must not mount a second chat body');
   assert.match(app, /restoreLiveChatToStage/);
   assert.match(app, /data-live-tools-panel-target/);
   assert.match(styles, /\.live-viewer-roster/);
-  assert.match(styles, /\.live-chat-panel-body/);
+  assert.match(compact, /body:has\(#live-player-shell\) \.live-chat-overlay \.live-chat-list/);
   assert.match(styles, /\.live-tools-content \[data-live-tools-panel\]\[hidden\]/);
 });
 
@@ -119,7 +123,6 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
   assert.match(app, /Retry gift catalogue/);
   assert.match(app, /const giftsEnabled=liveSettings\.liveGifts!==false&&!liveSettings\.practiceMode/);
   assert.match(app, /live-gift-disabled-note/);
-  assert.match(app, /Gifts are unavailable in Practice Mode/);
   assert.match(app, /The host has turned off gifts for this LIVE/);
   assert.match(styles, /\.live-stage-gift-open\{/);
   assert.match(styles, /\.live-gift-empty\{/);

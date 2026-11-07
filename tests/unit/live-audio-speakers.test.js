@@ -76,7 +76,7 @@ test('Audio LIVE roster appears before speech and reflects microphone publicatio
   assert.match(app,/refreshSpeakerRoster\(\);\s*try\{/);
   assert.match(app,/for\(let attempt=0;attempt<5&&!microphonePublished;attempt\+\+\)/);
   assert.match(app,/micControl\?\.addEventListener\("click",async\(\)=>\{/);
-  assert.match(app,/await room\.localParticipant\.setMicrophoneEnabled\(nextEnabled\)/);
+  assert.match(app,/await room\.localParticipant\.setMicrophoneEnabled\(nextEnabled,nextEnabled\?captureOptions:undefined\)/);
   assert.match(app,/updateLiveControlButton\(micControl,nextEnabled\?"mic":"mic-off"/);
   assert.match(app,/refreshSpeakerRoster\(\)/);
 });
