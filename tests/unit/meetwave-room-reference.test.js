@@ -114,7 +114,7 @@ test('Spotlight lights the selected guest while keeping the other guest seats vi
   assert.ok(js.includes("setSpeakerFocus([{identity:tile.dataset.identity}])"));
   assert.ok(js.includes("const activeIdentity=speakers[0]?.identity||spotlightIdentity||activeRoom?.ownerId||state.user.id"));
   assert.ok(js.includes("target.classList.add('is-focused')"));
-  assert.ok(js.includes("activeLayout==='spotlight'"));
+  assert.ok(js.includes("activeLayout=layout")&&js.includes("applySpotlightSelection(spotlightIdentity)"));
   assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
   assert.ok(finalFit.includes('box-shadow:0 0 0 2px rgba(114,224,203,.2),0 0 28px rgba(77,213,189,.48)'));
   assert.ok(finalFit.includes('.mw-video-tile:not(.is-spotlight){display:grid!important}'));
