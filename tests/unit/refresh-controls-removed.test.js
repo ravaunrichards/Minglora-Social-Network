@@ -40,20 +40,20 @@ test('retry actions remain available for failed content loads', () => {
 
 test('manual-refresh assets are versioned and cached consistently', () => {
   const manualAssets = [
-    '/styles.css?v=20261105-live-layout-expand-1-live-fullscreen-organized-sidepanel-2-profile-mobile-edit-actions-1-advanced-notifications-1',
+    '/styles.css?v=20261106-pinch-zoom-photo-crop-1',
     '/meetwave.css?v=20261106-user-controlled-refresh-1',
     '/meetwave.js?v=20261106-user-controlled-refresh-1',
     '/leagues.js?v=20261106-user-controlled-refresh-1',
     '/gifter-progression.css?v=20261106-user-controlled-refresh-1',
     '/gifter-progression.js?v=20261106-user-controlled-refresh-1',
-    '/app.js?v=20261106-user-controlled-refresh-1',
+    '/app.js?v=20261106-pinch-zoom-photo-crop-1',
     '/admin-centre.js?v=20261106-user-controlled-refresh-1'
   ];
   for (const asset of manualAssets) {
     assert.ok(html.includes(asset), 'HTML requests ' + asset);
     assert.ok(serviceWorker.includes(asset), 'service worker caches ' + asset);
   }
-  assert.match(serviceWorker, /minglora-shell-v112-user-controlled-refresh-1/);
+  assert.match(serviceWorker, /minglora-shell-v113-pinch-zoom-photo-crop-1/);
 });
 
 test('service-worker registration stays non-forcing while using the refreshed worker URL', () => {
