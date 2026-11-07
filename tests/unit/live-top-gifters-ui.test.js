@@ -23,7 +23,10 @@ test("LIVE room Top Gifters ranks broadcast-scoped confirmed LIVE gifts and refr
   assert.match(server, /topGifters/);
   assert.match(app, /data-live-tools-panel-target='top-gifters'/);
   assert.match(app, /data-live-tools-panel='top-gifters'/);
-  assert.match(app, /renderLiveTopGifters\(result\.topGifters,session\)/);
+  assert.match(app, /renderLiveTopGifters\(result\.topGifters,session,result\.weeklyTitleGifters\)/);
+  assert.match(server, /weeklyTitleGifters/);
+  assert.match(app, /Weekly Gift Gallery · Top Gifters/);
+  assert.match(app, /data-live-weekly-title-profile/);
   assert.match(app, /openLiveProfilePreview\(userId,session\|\|activeLiveSession\)/);
 });
 
@@ -39,12 +42,15 @@ test("platform Top Gifters offers period filters, earned rank titles and working
 
 test("Top Gifters assets are versioned and included in the PWA shell", () => {
   assert.match(html, /top-gifters\.js\?v=20261107-live-top-gifters-1/);
-  assert.match(html, /app\.js\?v=20261107-profile-title-gifters-2/);
-  assert.match(html, /styles\.css\?v=20261107-profile-title-gifters-1/);
-  assert.match(sw, /minglora-shell-v134-profile-title-gifters-2/);
+  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||"";
+  const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||"";
+  assert.ok(appAsset&&sw.includes("/"+appAsset),"service worker caches the current HTML app script");
+  assert.ok(styleAsset&&sw.includes("/"+styleAsset),"service worker caches the current HTML stylesheet");
+  assert.match(sw, /minglora-shell-v\d+-[^']+/);
   assert.match(sw, /top-gifters\.js\?v=20261107-live-top-gifters-1/);
   assert.match(css, /\.live-top-gifters-list/);
   assert.match(css, /\.minglora-gifter-profile/);
+  assert.match(css, /\.live-weekly-title-gifters/);
 });
 
 
