@@ -416,4 +416,17 @@
     </g>
     <g fill="#2d5e94"><circle cx="21.5" cy="31" r="1"/><circle cx="32" cy="31" r="1"/><circle cx="42.5" cy="31" r="1"/><circle cx="21.5" cy="41" r="1"/><circle cx="32" cy="41" r="1"/><circle cx="42.5" cy="41" r="1"/><circle cx="21.5" cy="51" r="1"/><circle cx="32" cy="51" r="1"/><circle cx="42.5" cy="51" r="1"/></g>
   </symbol>
+  <symbol id="calendar" viewBox="0 0 64 64">
+    <ellipse cx="32" cy="57" rx="22" ry="4" fill="#0b2445" opacity=".2"/>
+    <path d="M9 15q0-6 6-6h34q6 0 6 6v38q0 6-6 6H15q-6 0-6-6z" fill="url(#blue-side)" transform="translate(1 2)"/>
+    <rect x="8" y="8" width="47" height="48" rx="8" fill="url(#silver-front)" stroke="#dcecff" stroke-width="1.4"/>
+    <path d="M8 16q0-8 8-8h31q8 0 8 8v8H8z" fill="url(#blue-front)"/>
+    <path d="M14 13h35" stroke="#fff" stroke-opacity=".65" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M20 5v12M43 5v12" stroke="url(#gold-side)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M20 4v11M43 4v11" stroke="url(#gold-front)" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M16 29h6m6 0h6m6 0h6M16 38h6m6 0h6m6 0h6M16 47h6m6 0h6" stroke="#7898bc" stroke-width="3.2" stroke-linecap="round"/>
+    <rect x="36" y="35" width="12" height="12" rx="4" fill="url(#teal-front)" stroke="#e1fffa" stroke-width="1"/>
+    <path d="m39 41 2.2 2.2 4.5-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M13 20h37" stroke="#fff" stroke-opacity=".75" stroke-width="1.2"/>
+  </symbol>
 </svg>
