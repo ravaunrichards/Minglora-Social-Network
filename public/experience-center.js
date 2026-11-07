@@ -10,7 +10,7 @@
     osdClock:true, osdDate:true, osdNotifications:false, osdBattery:true, osdPosition:'top-right', osdOpacity:85,
     soundMode:'sound', vibrateOnRing:true, voiceCallSound:true, videoCallSound:true, messageSound:true, notificationSound:true,
     ringtoneVolume:80, mediaVolume:80, notificationVolume:80, systemVolume:80,
-    dndEnabled:false, dndStart:'22:00', dndEnd:'07:00', dndAllowedCalls:'favorites',
+    dndEnabled:false, dndStart:'22:00', dndEnd:'07:00', dndAllowedCalls:'none',
     notificationSort:'newest', lockScreenNotifications:'content',
     fontScale:100, screenZoom:100, screenTimeoutSeconds:60, inAppBrightness:100,
     showBatteryPercentage:true, dataSaverEnabled:false, parentalControlsEnabled:false
@@ -226,7 +226,7 @@
       field('Wait time unit','screenSaverWaitUnit',select('screenSaverWaitUnit',unitOptions,current.screenSaverWaitUnit))+
       field('Screen saver text','screenSaverText','<input type="text" data-exp-field="screenSaverText" maxlength="120" value="'+esc(current.screenSaverText)+'">','Used by the Custom text effect.')+
       '<div class="mexp-actions"><button type="button" class="secondary" data-exp-test-saver>Preview screen saver now</button></div>'+
-      '<h4>On-screen display (OSD)</h4>'+
+      '<h4>On-screen display (OSD) preview</h4>'+
       toggle('Show clock','osdClock',current.osdClock)+toggle('Show date','osdDate',current.osdDate)+toggle('Show notification preview','osdNotifications',current.osdNotifications)+toggle('Show battery percentage when available','osdBattery',current.osdBattery)+
       field('OSD position','osdPosition',select('osdPosition',[['top-left','Top left'],['top-right','Top right'],['bottom-left','Bottom left'],['bottom-right','Bottom right'],['center','Center']],current.osdPosition))+
       field('OSD opacity','osdOpacity',range('osdOpacity',current.osdOpacity,0,100,5))+
@@ -235,25 +235,25 @@
       field('Sound mode','soundMode',select('soundMode',[['sound','Sound'],['vibrate','Vibrate'],['mute','Mute']],current.soundMode))+
       toggle('Vibrate when ringing','vibrateOnRing',current.vibrateOnRing)+toggle('Voice-call sound','voiceCallSound',current.voiceCallSound)+toggle('Video-call sound','videoCallSound',current.videoCallSound)+toggle('Message sound','messageSound',current.messageSound)+toggle('Notification sound','notificationSound',current.notificationSound)+
       field('Ringtone preview volume','ringtoneVolume',range('ringtoneVolume',current.ringtoneVolume,0,100,5),'Controls the Minglora sound test only; system-wide device volume remains controlled by the phone.')+
-      field('Media preview volume','mediaVolume',range('mediaVolume',current.mediaVolume,0,100,5))+
-      field('Notification preview volume','notificationVolume',range('notificationVolume',current.notificationVolume,0,100,5))+
-      field('System preview volume','systemVolume',range('systemVolume',current.systemVolume,0,100,5))+
+      field('Media test volume','mediaVolume',range('mediaVolume',current.mediaVolume,0,100,5))+
+      field('Notification test volume','notificationVolume',range('notificationVolume',current.notificationVolume,0,100,5))+
+      field('System-alert test volume','systemVolume',range('systemVolume',current.systemVolume,0,100,5),'This controls the Minglora browser test tone, not Android or iOS system volume.')+
       '<div class="mexp-actions"><button type="button" class="secondary" data-exp-test-sound>Test sound</button><button type="button" class="secondary" data-exp-test-vibration>Test vibration</button><button type="button" class="secondary" data-exp-manage-ringtone>Manage incoming-call ringtone</button></div>'+
       toggle('Enable Do Not Disturb','dndEnabled',current.dndEnabled,'Minglora quiet mode; this does not override the phone’s system Do Not Disturb settings.')+
       field('Quiet start','dndStart','<input type="time" data-exp-field="dndStart" value="'+current.dndStart+'">')+
       field('Quiet end','dndEnd','<input type="time" data-exp-field="dndEnd" value="'+current.dndEnd+'">')+
-      field('Allow calls from','dndAllowedCalls',select('dndAllowedCalls',[['everyone','Everyone'],['contacts','Contacts'],['favorites','Favorites'],['none','Nobody']],current.dndAllowedCalls))+
-      '<p class="mexp-note">Minglora custom incoming-call ringtone is currently managed in Interactions. Separate voice/video ringtone files and OS-wide volume/vibration require additional native media/device integration.</p></section>'+
+      field('Allow calls from','dndAllowedCalls',select('dndAllowedCalls',[['everyone','Everyone'],['none','Nobody']],current.dndAllowedCalls),'Contacts and Favorites filtering is not enabled in this web client, so only enforceable choices are shown.')+
+      '<p class="mexp-note">Minglora custom incoming-call ringtone is currently managed in Interactions. Minglora can request vibration where supported. Android/iOS system volume, Do Not Disturb and notification channel behavior remain controlled by device settings.</p></section>'+
       '<section class="mexp-section" id="mexp-display"><h3>Display, notifications &amp; accessibility</h3>'+
       field('Font size','fontScale',range('fontScale',current.fontScale,85,150,5))+
       field('Screen zoom','screenZoom',range('screenZoom',current.screenZoom,85,150,5))+
       field('In-app brightness','inAppBrightness',range('inAppBrightness',current.inAppBrightness,50,120,5),'A visual app adjustment; does not change the phone’s physical display brightness.')+
-      field('Minglora inactivity timeout','screenTimeoutSeconds',select('screenTimeoutSeconds',timeoutOptions,current.screenTimeoutSeconds))+
+      field('Preferred device screen timeout','screenTimeoutSeconds',select('screenTimeoutSeconds',timeoutOptions,current.screenTimeoutSeconds))+
       toggle('Show battery percentage where supported','showBatteryPercentage',current.showBatteryPercentage)+
       toggle('Data saver for Minglora visuals','dataSaverEnabled',current.dataSaverEnabled,'Reduces decorative motion and media-heavy effects where compatible.')+
       field('Notification sorting','notificationSort',select('notificationSort',[['newest','Newest first'],['oldest','Oldest first'],['unread','Unread first'],['priority','Priority first'],['people','People first'],['category','Category']],current.notificationSort))+
       field('Lock-screen notification privacy','lockScreenNotifications',select('lockScreenNotifications',[['content','Show content'],['hide-content','Hide content'],['icon-only','Notification only'],['hidden','Hide notifications']],current.lockScreenNotifications),'This stores your preference. Actual device lock-screen notification visibility is controlled by Android/iOS settings.')+
-      '<p class="mexp-note">Minglora can scale its own content and run its own inactivity screen saver. Actual device screen timeout, adaptive brightness, font engine and hardware brightness are controlled by the operating system.</p></section>'+
+      '<p class="mexp-note">Minglora can scale its own content and run its own inactivity screen saver. The timeout value is a saved reference only; changing Android/iOS display timeout, adaptive brightness, font engine or hardware brightness requires the operating system settings.</p></section>'+
       '<section class="mexp-section" id="mexp-device"><h3>Battery, connections &amp; device integrations</h3>'+
       '<div class="mexp-metrics"><article><small>Battery level</small><strong id="mexp-battery-level">Checking…</strong><span id="mexp-battery-status">Reading device data</span></article><article><small>Charging estimate</small><strong id="mexp-battery-charge">Checking…</strong><span>Shown only when the device provides an estimate</span></article><article><small>Remaining estimate</small><strong id="mexp-battery-remaining">Checking…</strong><span>Shown only when the device provides an estimate</span></article><article><small>Network</small><strong id="mexp-network-type">Checking…</strong><span id="mexp-network-details">Browser-reported connection information</span></article></div>'+
       '<div class="mexp-device-grid">'+
