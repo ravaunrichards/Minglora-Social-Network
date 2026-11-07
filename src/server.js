@@ -3557,7 +3557,21 @@ async function route(req, res) {
             ...item,user:safeUser(member,user.id)
           }:null;
         }).filter(Boolean);
-        return json(res,200,{events,topGifters});
+        const creator=db.users.find(member=>member.id===session.hostId);
+        const weeklyTitleGifters=creator?getGiftGallery(db,creator).entries.map(entry=>{
+          const leader=(entry.topGifters||[])[0];
+          const member=leader?db.users.find(candidate=>candidate.id===leader.userId):null;
+          if(!leader||!member||blockedBetween(user.id,member.id))return null;
+          return {
+            giftCode:entry.giftCode,
+            giftName:entry.giftName,
+            giftCount:leader.giftCount,
+            coinsSent:leader.totalCoins,
+            user:safeUser(member,user.id),
+            gifterBadge:getGifterBadgeSummary(db,member.id)
+          };
+        }).filter(Boolean):[];
+        return json(res,200,{events,topGifters,weeklyTitleGifters});
       }
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
