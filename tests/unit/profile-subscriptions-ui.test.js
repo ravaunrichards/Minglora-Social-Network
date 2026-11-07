@@ -55,3 +55,20 @@ test('net-revenue subscription styling loads and profile action row stays horizo
   assert.match(css, /\.profile-info>\.profile-actions\s*\{[^}]*overflow-x:auto/s);
   assert.match(css, /\.profile-actions \.profile-followers-action/);
 });
+
+test('all creators can publish and accept paid subscriptions without manual approval', async () => {
+  const edge = await readFileSync(new URL('../../supabase/functions/minglora-runtime-state/index.ts', import.meta.url), 'utf8');
+  assert.match(app, /status=settings\?\.application_status\|\|'approved'/);
+  assert.match(app, /status==="suspended"/);
+  assert.doesNotMatch(server, /application_status!=='approved'/);
+  assert.doesNotMatch(edge, /application_status !== "approved"/);
+  assert.match(edge, /application_status === "suspended"/);
+  assert.match(edge, /application_status: "approved"/);
+  assert.match(server, /application_status==='suspended'/);
+});
+
+test('Subscribe action is blue before checkout and red for active or past-due membership', () => {
+  assert.match(app, /profile-subscribe-button.*is-subscribed/s);
+  assert.match(css, /\.profile-subscribe-button\s*\{[^}]*background:var\(--brand/s);
+  assert.match(css, /\.profile-subscribe-button\.is-subscribed\s*\{[^}]*background:#dc2626/s);
+});
