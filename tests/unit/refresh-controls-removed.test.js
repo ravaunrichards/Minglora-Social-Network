@@ -18,15 +18,20 @@ const serviceWorker = read('public/sw.js');
 test('Minglora screens do not render manual refresh-only controls', () => {
   assert.doesNotMatch(app, /id=['"](?:refresh-live|live-pro-history-refresh|creator-refresh-audience|creator-refresh-analytics)['"]/);
   assert.doesNotMatch(meetWave, /id=['"]mw-refresh['"]/);
-  assert.doesNotMatch(leagues, /data-league-refresh|Tap Refresh/);
+  assert.doesNotMatch(leagues, /data-league-refresh/);
   assert.doesNotMatch(settings, /id=['"](?:settings-refresh-activity|refresh-moderation|refresh-support-inbox)['"]/);
-  assert.doesNotMatch(admin, /id=['"]admin-[^'"]*refresh/);
+  assert.match(meetWave, /id="mw-lobby-refresh"/);
+  assert.match(meetWave, /refreshButton\.onclick=async\(\)=>\{/);
+  assert.match(leagues, /id='league-refresh-button'/);
+  assert.match(leagues, /refreshButton\.onclick = \(\) => \{ void refreshScores\(true\); \}/);
+  assert.match(admin, /id="admin-gift-earnings-refresh"/);
+  assert.match(admin, /earningsRefreshButton\.onclick = \(\) => \{ void loadAdminGiftEarnings\(panel\); \}/);
 });
 
-test('MeetWave and League Arena update their data automatically', () => {
+test('MeetWave lobby updates automatically and League refresh is connected to real data', () => {
   assert.match(meetWave, /lobbyPoller=window\.setInterval\(\(\)=>\{/);
   assert.match(meetWave, /\},15000\);/);
-  assert.match(leagues, /refreshTimer = window\.setInterval\(\(\) => \{ void refreshScores\(\); \}, 15000\);/);
+  assert.match(leagues, /refreshButton\.onclick = \(\) => \{ void refreshScores\(true\); \}/);
 });
 
 test('real retry actions remain available for failed content loads', () => {
@@ -35,8 +40,10 @@ test('real retry actions remain available for failed content loads', () => {
 });
 
 test('the app shell and service worker request the cleaned screen assets', () => {
+  const appAsset = html.match(/<script src="(\/app\.js\?v=[^"]+)"/)?.[1];
+  assert.ok(appAsset, 'HTML requests a versioned app.js');
+  assert.ok(serviceWorker.includes(appAsset), 'service worker caches the same app.js URL');
   for (const asset of [
-    '/app.js?v=20261106-refresh-controls-removed-1',
     '/leagues.js?v=20261106-league-auto-update-1',
     '/settings.js?v=20261106-refresh-controls-removed-1',
     '/admin-centre.js?v=20261106-refresh-controls-removed-1',
