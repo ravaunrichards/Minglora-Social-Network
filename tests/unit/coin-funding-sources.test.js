@@ -93,13 +93,17 @@ test('wallet and private admin settings show source balances and marketing-budge
   assert.match(admin, /Do not record pending or expected funds/);
   assert.match(adminCss, /\.admin-marketing-budget/);
   assert.match(adminCss, /\.admin-marketing-budget-summary/);
-  assert.match(html, /admin-centre\.js\?v=20261105-marketing-budget-1/);
+  const adminScript=html.match(/src="(\/admin-centre\.js\?v=[^"]+)"/)?.[1]||'';
+  assert.ok(adminScript&&worker.includes("'"+adminScript+"'"),'active admin script is cached');
 });
 
-test('the PWA shell cache includes the wallet, admin controls and the updated UI versions', () => {
-  assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(worker, /minglora-shell-v93-flow-layout-safety-1/);
-  assert.match(worker, /admin-centre\.css\?v=20261105-admin-badge-verification-1-promotional-cash-reserve-1/);
-  assert.match(worker, /admin-centre\.js\?v=20261105-marketing-budget-1/);
+test('the PWA shell caches the current wallet and private admin assets', () => {
+  const assets=[
+    html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
+    html.match(/href="(\/admin-centre\.css\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/admin-centre\.js\?v=[^"]+)"/)?.[1]
+  ].filter(Boolean);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
