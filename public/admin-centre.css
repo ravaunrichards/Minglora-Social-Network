@@ -713,3 +713,197 @@
  .admin-internal-activity-row time{grid-column:2}
  .admin-internal-activity-list-heading{flex-direction:column;gap:4px}
 }
+
+
+/* Owner-only account management and ban controls. */
+.admin-user-management{
+  display:grid;
+  gap:14px;
+  min-width:0;
+}
+.admin-user-management-search{
+  display:grid;
+  grid-template-columns:minmax(220px,1.5fr) minmax(150px,.7fr) auto;
+  align-items:end;
+  gap:10px;
+  min-width:0;
+}
+.admin-user-management-search label,
+.admin-user-ban-controls label{
+  display:block;
+  margin:0 0 6px;
+  color:var(--text,inherit);
+  font-size:12px;
+  font-weight:750;
+}
+.admin-user-management-search input,
+.admin-user-management-search select,
+.admin-user-ban-controls select,
+.admin-user-ban-controls textarea{
+  width:100%;
+  min-width:0;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid var(--line,rgba(127,127,127,.24));
+  border-radius:10px;
+  background:var(--surface,#fff);
+  color:var(--text,inherit);
+  font:inherit;
+}
+.admin-user-management-search button{min-height:44px;white-space:nowrap}
+.admin-user-management-status{
+  margin:0;
+  color:var(--muted,#687386);
+  font-size:12px;
+  line-height:1.5;
+}
+.admin-user-management-results{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));
+  gap:9px;
+  min-width:0;
+}
+.admin-user-result{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-width:0;
+  padding:11px;
+  border:1px solid var(--line,rgba(127,127,127,.2));
+  border-radius:12px;
+  background:var(--surface,rgba(127,127,127,.035));
+  color:var(--text,inherit);
+  text-align:left;
+  cursor:pointer;
+}
+.admin-user-result:hover,
+.admin-user-result.is-selected{
+  border-color:var(--accent,#1769e0);
+  background:var(--accent-soft,rgba(23,105,224,.08));
+}
+.admin-user-result-avatar{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  overflow:hidden;
+  border-radius:50%;
+  background:var(--surface-muted,rgba(127,127,127,.12));
+}
+.admin-user-result-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.admin-user-avatar-fallback{
+  font-weight:850;
+  font-size:16px;
+}
+.admin-user-result-copy{
+  display:grid;
+  gap:3px;
+  flex:1 1 auto;
+  min-width:0;
+}
+.admin-user-result-copy strong,
+.admin-user-result-copy small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.admin-user-result-copy strong{font-size:13px}
+.admin-user-result-copy small{
+  color:var(--muted,#687386);
+  font-size:11px;
+}
+.admin-user-status{
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  padding:5px 8px;
+  border:1px solid var(--line,rgba(127,127,127,.2));
+  border-radius:999px;
+  background:var(--surface-muted,rgba(127,127,127,.08));
+  color:var(--text,inherit);
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.admin-user-status--active{color:#167344;background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.25)}
+.admin-user-status--banned{color:#b42318;background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.28)}
+.admin-user-status--suspended{color:#9a6700;background:rgba(202,138,4,.09);border-color:rgba(202,138,4,.28)}
+.admin-user-status--deactivated{color:var(--muted,#687386)}
+.admin-user-selection{
+  display:grid;
+  gap:14px;
+  min-width:0;
+  padding:15px;
+  border:1px solid var(--line,rgba(127,127,127,.24));
+  border-radius:14px;
+  background:var(--surface-muted,rgba(127,127,127,.035));
+}
+.admin-user-selection[hidden]{display:none!important}
+.admin-user-selection-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  min-width:0;
+}
+.admin-user-selection-heading h4{
+  margin:0 0 8px;
+  font-size:14px;
+}
+#admin-user-selected-summary{
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+#admin-user-selected-summary strong{font-size:15px}
+#admin-user-selected-summary span,
+#admin-user-selected-summary small{
+  overflow-wrap:anywhere;
+  color:var(--muted,#687386);
+  font-size:12px;
+}
+.admin-user-ban-controls{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.admin-user-ban-controls form,
+.admin-user-unban-controls{
+  display:grid;
+  align-content:start;
+  gap:9px;
+  min-width:0;
+}
+.admin-user-ban-controls textarea{
+  min-height:84px;
+  resize:vertical;
+}
+.admin-user-ban-controls button{min-height:42px}
+.admin-user-unban-controls[hidden],
+.admin-user-ban-controls form[hidden],
+.admin-user-ban-controls button[hidden]{display:none!important}
+.admin-user-safety-note{
+  margin:0;
+  padding:10px 12px;
+  border-left:3px solid var(--accent,#1769e0);
+  border-radius:0 8px 8px 0;
+  background:var(--surface,#fff);
+  color:var(--muted,#687386);
+  font-size:11px;
+  line-height:1.55;
+}
+@media(max-width:700px){
+  .admin-user-management-search{grid-template-columns:minmax(0,1fr)}
+  .admin-user-management-results{grid-template-columns:minmax(0,1fr)}
+  .admin-user-ban-controls{grid-template-columns:minmax(0,1fr)}
+  .admin-user-selection-heading{align-items:flex-start;flex-wrap:wrap}
+  .admin-user-result{flex-wrap:wrap}
+  .admin-user-result-copy{min-width:calc(100% - 68px)}
+  .admin-user-status{margin-left:52px}
+}
