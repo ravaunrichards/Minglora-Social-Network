@@ -113,7 +113,7 @@ test('visitor profile actions stay in one horizontal row and preserve subscripti
   assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
   assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
   assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
-  assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionStatus==='active'"),'subscription state is wired to the active color');
+  assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionAlreadyExists?'true':'false'")&&profile.includes("['active','past_due'].includes(subscriptionStatus)"),'active subscription state is wired to the button color');
   assert.ok(profileCss.includes('display:flex!important'),'visitor actions use a horizontal flex row');
   assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'visitor actions never wrap into vertical rows');
   assert.ok(profileCss.includes('overflow-x:auto!important'),'narrow screens scroll horizontally to reach every action');
