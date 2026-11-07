@@ -172,7 +172,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-user-management">User management</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -202,6 +202,60 @@
             <strong>Member support inbox</strong><small>Review support tickets and respond to members.</small>
           </button>
         </div>
+        <section class="admin-user-management admin-control-centre-section" id="admin-user-management" aria-labelledby="admin-user-management-title">
+          <div class="admin-control-centre-section-heading">
+            <div><h3 id="admin-user-management-title">User management &amp; account bans</h3>
+              <p>Search Minglora accounts by name, @username, email or user ID. Select one account to review its status and manage access.</p></div>
+            <span class="admin-control-centre-status">Owner-only</span>
+          </div>
+          <div class="admin-user-management-search">
+            <label for="admin-user-search">Find any member account</label>
+            <input id="admin-user-search" type="search" maxlength="120" autocomplete="off" placeholder="Name, @username, email address or user ID">
+            <label for="admin-user-status-filter">Account status</label>
+            <select id="admin-user-status-filter">
+              <option value="all">All accounts</option>
+              <option value="active">Active</option>
+              <option value="banned">Banned</option>
+              <option value="suspended">Suspended</option>
+              <option value="deactivated">Deactivated</option>
+            </select>
+            <button type="button" class="primary" id="admin-user-search-button">Search accounts</button>
+          </div>
+          <p id="admin-user-management-status" class="admin-user-management-status" role="status" aria-live="polite">Loading member accounts…</p>
+          <div id="admin-user-management-results" class="admin-user-management-results" aria-live="polite">
+            <p class="settings-empty">Loading member accounts…</p>
+          </div>
+          <section id="admin-user-selection" class="admin-user-selection" aria-labelledby="admin-user-selection-title" hidden>
+            <div class="admin-user-selection-heading">
+              <div><h4 id="admin-user-selection-title">Selected account</h4>
+                <div id="admin-user-selected-summary"></div></div>
+              <span id="admin-user-selected-status" class="admin-user-status">Select an account</span>
+            </div>
+            <div class="admin-user-ban-controls">
+              <form id="admin-user-ban-form">
+                <label for="admin-user-ban-duration">Ban duration</label>
+                <select id="admin-user-ban-duration" name="duration" required>
+                  <option value="1h">1 hour</option>
+                  <option value="24h">24 hours</option>
+                  <option value="7d">7 days</option>
+                  <option value="30d">30 days</option>
+                  <option value="90d">90 days</option>
+                  <option value="876000h">Permanent — 100 years</option>
+                </select>
+                <label for="admin-user-ban-reason">Reason for ban</label>
+                <textarea id="admin-user-ban-reason" name="reason" rows="3" maxlength="500" required placeholder="Explain the policy violation or account-safety reason"></textarea>
+                <button type="submit" class="primary" id="admin-user-ban-submit">Ban selected account</button>
+              </form>
+              <div class="admin-user-unban-controls">
+                <label for="admin-user-unban-note">Unban review note (optional)</label>
+                <textarea id="admin-user-unban-note" rows="3" maxlength="500" placeholder="Reason for restoring access"></textarea>
+                <button type="button" class="secondary" id="admin-user-unban-button">Unban selected account</button>
+              </div>
+            </div>
+            <p id="admin-user-action-status" class="admin-user-management-status" role="status" aria-live="polite"></p>
+            <p class="admin-user-safety-note">Bans do not delete an account or its posts, photos, messages or other content. Minglora revokes saved app sessions and blocks app access; already-issued Supabase access tokens can remain valid for direct database requests until their expiry, even after refresh tokens are revoked.</p>
+          </section>
+        </section>
         <section class="admin-marketing-budget admin-badge-controls" id="admin-badge-controls" aria-labelledby="admin-badge-controls-title">
           <div class="admin-marketing-budget-heading">
             <div>
@@ -1141,7 +1195,11 @@
       } finally { button.disabled = false; }
     });
     loadAdminSecuritySettings(panel);
-    if (unlocked) { loadAdminModerationQueue(panel); loadAdminSupportInbox(panel); }
+    if (unlocked) {
+      initializeAdminUserManagement(panel);
+      loadAdminModerationQueue(panel);
+      loadAdminSupportInbox(panel);
+    }
   }
 
   async function adminCentreApi(path, options = {}) {
@@ -1399,6 +1457,165 @@
         status.textContent = 'Financial report unavailable.';
       }
     }
+  }
+
+  function adminUserStatusLabel(status) {
+    return ({active:'Active',banned:'Banned',suspended:'Suspended',deactivated:'Deactivated'})[status] || 'Unknown';
+  }
+
+  function renderAdminUserSelection(panel, member) {
+    const selection = panel.querySelector('#admin-user-selection');
+    const summary = panel.querySelector('#admin-user-selected-summary');
+    const status = panel.querySelector('#admin-user-selected-status');
+    const banForm = panel.querySelector('#admin-user-ban-form');
+    const banButton = panel.querySelector('#admin-user-ban-submit');
+    const unbanButton = panel.querySelector('#admin-user-unban-button');
+    if (!selection || !summary || !status || !banForm || !unbanButton) return;
+    if (!member) {
+      selection.hidden = true;
+      return;
+    }
+    selection.hidden = false;
+    const username = member.username ? '@' + member.username : 'Username unavailable';
+    summary.innerHTML = '<strong>' + escapeText(member.displayName || 'Minglora member') + '</strong>' +
+      '<span>' + escapeText(username) + '</span><span>' + escapeText(member.email || 'No email on record') + '</span>' +
+      '<small>User ID: ' + escapeText(member.id) + '</small>';
+    status.textContent = adminUserStatusLabel(member.status);
+    status.className = 'admin-user-status admin-user-status--' + escapeText(member.status || 'unknown');
+    const ownerProtected = Boolean(member.isOwner);
+    banForm.hidden = ownerProtected || member.status === 'banned';
+    unbanButton.hidden = ownerProtected || member.status !== 'banned';
+    if (banButton) banButton.disabled = ownerProtected || member.status === 'banned';
+    const reason = panel.querySelector('#admin-user-ban-reason');
+    if (reason) reason.required = !ownerProtected && member.status !== 'banned';
+  }
+
+  async function loadAdminManagedUsers(panel) {
+    const searchInput = panel.querySelector('#admin-user-search');
+    const statusFilter = panel.querySelector('#admin-user-status-filter');
+    const results = panel.querySelector('#admin-user-management-results');
+    const status = panel.querySelector('#admin-user-management-status');
+    if (!searchInput || !statusFilter || !results || !status) return;
+    const search = String(searchInput.value || '').trim();
+    const filter = String(statusFilter.value || 'all');
+    status.textContent = 'Searching Minglora accounts…';
+    results.innerHTML = '<p class="settings-empty">Loading matching accounts…</p>';
+    try {
+      const query = new URLSearchParams({search,status:filter});
+      const response = await adminCentreApi('/admin/users?' + query.toString());
+      const members = Array.isArray(response.users) ? response.users : [];
+      panel._mingloraAdminUsers = members;
+      const selectedId = panel._mingloraSelectedAdminUser?.id;
+      const updatedSelected = members.find(member => member.id === selectedId);
+      if (updatedSelected) panel._mingloraSelectedAdminUser = updatedSelected;
+      results.innerHTML = members.map(member => {
+        const selected = member.id === panel._mingloraSelectedAdminUser?.id;
+        const username = member.username ? '@' + member.username : 'Username unavailable';
+        const avatar = member.avatarUrl
+          ? '<img src="' + escapeText(member.avatarUrl) + '" alt="" loading="lazy">'
+          : '<span class="admin-user-avatar-fallback">' + escapeText((member.displayName || 'M').slice(0,1).toUpperCase()) + '</span>';
+        return '<button type="button" class="admin-user-result' + (selected ? ' is-selected' : '') +
+          '" data-admin-user-select="' + escapeText(member.id) + '">' +
+          '<span class="admin-user-result-avatar">' + avatar + '</span>' +
+          '<span class="admin-user-result-copy"><strong>' + escapeText(member.displayName || 'Minglora member') +
+          '</strong><small>' + escapeText(username) + ' · ' + escapeText(member.email || 'No email') + '</small></span>' +
+          '<span class="admin-user-status admin-user-status--' + escapeText(member.status || 'unknown') + '">' +
+          escapeText(adminUserStatusLabel(member.status)) + '</span></button>';
+      }).join('') || '<p class="settings-empty">No matching Minglora accounts were found.</p>';
+      if (updatedSelected) renderAdminUserSelection(panel, updatedSelected);
+      status.textContent = members.length + ' account' + (members.length === 1 ? '' : 's') +
+        ' shown. Select an account to manage its access.';
+    } catch (error) {
+      results.innerHTML = '<p class="settings-empty">' + escapeText(error.message || 'Accounts could not be loaded.') + '</p>';
+      status.textContent = 'Account search unavailable.';
+    }
+  }
+
+  async function runAdminAccountAction(panel, operation) {
+    const member = panel._mingloraSelectedAdminUser;
+    const actionStatus = panel.querySelector('#admin-user-action-status');
+    if (!member || !member.id || member.isOwner) return;
+    const reasonField = panel.querySelector(operation === 'ban' ? '#admin-user-ban-reason' : '#admin-user-unban-note');
+    const reason = String(reasonField?.value || '').trim();
+    const duration = String(panel.querySelector('#admin-user-ban-duration')?.value || '7d');
+    if (operation === 'ban' && reason.length < 3) {
+      if (actionStatus) actionStatus.textContent = 'Enter a reason of at least 3 characters before applying a ban.';
+      return;
+    }
+    const permanent = operation === 'ban' && duration === '876000h';
+    const confirmation = operation === 'ban'
+      ? 'Ban ' + (member.username ? '@' + member.username : member.displayName) + ' for ' +
+        (permanent ? '100 years (permanent)' : duration) + '? This will end their saved Minglora sessions.'
+      : 'Unban ' + (member.username ? '@' + member.username : member.displayName) + ' and restore the account status recorded before the ban?';
+    if (!window.confirm(confirmation)) return;
+    const buttons = [
+      panel.querySelector('#admin-user-ban-submit'),
+      panel.querySelector('#admin-user-unban-button')
+    ].filter(Boolean);
+    buttons.forEach(button => { button.disabled = true; });
+    if (actionStatus) actionStatus.textContent = operation === 'ban' ? 'Applying account ban…' : 'Removing account ban…';
+    try {
+      const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id) + '/' + operation, {
+        method:'POST',
+        body:JSON.stringify({duration,reason})
+      });
+      const nextStatus = String(result.status || (operation === 'ban' ? 'banned' : 'active'));
+      member.status = nextStatus;
+      member.bannedUntil = result.bannedUntil || null;
+      panel._mingloraSelectedAdminUser = member;
+      if (actionStatus) {
+        let message = operation === 'ban' ? 'Account banned successfully.' : 'Account unbanned successfully.';
+        if (operation === 'ban' && !result.sessionRevoked) {
+          message += ' No live Supabase session token was available to confirm global refresh-token revocation; Minglora app sessions were still closed.';
+        }
+        if (!result.auditRecorded) message += ' Warning: the action was applied, but the audit record could not be confirmed.';
+        actionStatus.textContent = message;
+      }
+      if (reasonField) reasonField.value = '';
+      renderAdminUserSelection(panel, member);
+      await loadAdminManagedUsers(panel);
+    } catch (error) {
+      if (actionStatus) actionStatus.textContent = error.message || 'The account action could not be completed.';
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+      renderAdminUserSelection(panel, panel._mingloraSelectedAdminUser);
+    }
+  }
+
+  function initializeAdminUserManagement(panel) {
+    const searchInput = panel.querySelector('#admin-user-search');
+    const searchButton = panel.querySelector('#admin-user-search-button');
+    const statusFilter = panel.querySelector('#admin-user-status-filter');
+    const results = panel.querySelector('#admin-user-management-results');
+    const banForm = panel.querySelector('#admin-user-ban-form');
+    const unbanButton = panel.querySelector('#admin-user-unban-button');
+    if (!searchInput || !searchButton || !statusFilter || !results || !banForm || !unbanButton) return;
+    const search = () => loadAdminManagedUsers(panel);
+    searchButton.addEventListener('click', search);
+    statusFilter.addEventListener('change', search);
+    searchInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        search();
+      }
+    });
+    results.addEventListener('click', event => {
+      const button = event.target.closest('[data-admin-user-select]');
+      if (!button) return;
+      const member = (panel._mingloraAdminUsers || []).find(item => item.id === button.dataset.adminUserSelect);
+      if (!member) return;
+      panel._mingloraSelectedAdminUser = member;
+      results.querySelectorAll('[data-admin-user-select]').forEach(item => item.classList.toggle('is-selected', item === button));
+      renderAdminUserSelection(panel, member);
+    });
+    banForm.addEventListener('submit', event => {
+      event.preventDefault();
+      void runAdminAccountAction(panel, 'ban');
+    });
+    unbanButton.addEventListener('click', () => {
+      void runAdminAccountAction(panel, 'unban');
+    });
+    void loadAdminManagedUsers(panel);
   }
 
   async function loadAdminModerationQueue(panel) {
