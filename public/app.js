@@ -1492,15 +1492,19 @@ function presentLiveGiftEvent(event){
   if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
   return true;
 }
-function renderLiveTopGifters(items,session){
+function renderLiveTopGifters(items,session,weeklyTitleGifters=[]){
   const root=$("#live-top-gifters-list");
   if(!root)return;
   const rows=Array.isArray(items)?items.slice(0,10):[];
-  if(!rows.length){
-    root.innerHTML="<div class='live-top-gifter-empty'><strong>No Top Gifters yet</strong><small>Confirmed LIVE gifts will appear here as people support this broadcast.</small></div>";
-    return;
-  }
-  root.innerHTML=rows.map((item,index)=>{
+  const weekly=Array.isArray(weeklyTitleGifters)?weeklyTitleGifters:[];
+  const weeklyMarkup="<section class='live-weekly-title-gifters'><div class='live-weekly-title-heading'><strong>Weekly Gift Gallery · Top Gifters</strong><small>One title holder for each gift type this creator received this week</small></div>"+
+    (weekly.length?weekly.map(item=>{
+      const member=item.user||{};
+      const userId=String(member.id||"");
+      const earned=item.gifterBadge?.badgeName||"";
+      return "<article class='live-weekly-title-row'><img src='"+esc(avatar(member))+"' alt='' loading='lazy'><span><strong>"+esc(member.name||member.username||"Minglora member")+"</strong><small>Top Gifter · "+esc(item.giftName||item.giftCode||"Gift")+" · "+Number(item.giftCount||0).toLocaleString()+" sent</small>"+(earned?"<small class='live-top-gifter-earned'>"+esc(earned)+"</small>":"")+"</span><b>TOP GIFTER</b><button type='button' class='text-button' data-live-weekly-title-profile='"+esc(userId)+"'>Profile</button></article>";
+    }).join(""):"<p class='live-top-gifter-empty'>No weekly gift titles have been earned yet.</p>")+"</section>";
+  const rowsMarkup=rows.length?rows.map((item,index)=>{
     const member=item.user||{};
     const userId=String(member.id||item.userId||"");
     const position=Number(item.position||index+1);
@@ -1508,9 +1512,10 @@ function renderLiveTopGifters(items,session){
     const earned=item.gifterBadge?.badgeName||item.badgeName||"";
     const avatarUrl=avatar(member);
     return "<article class='live-top-gifter-row "+(position===1?"is-first":"")+"'><span class='live-top-gifter-rank'>#"+position+"</span><img src='"+esc(avatarUrl)+"' alt='' loading='lazy'><span class='live-top-gifter-person'><strong>"+esc(member.name||item.name||member.username||item.username||"Minglora member")+"</strong><small>@"+esc(member.username||item.username||"member")+"</small>"+(earned?"<small class='live-top-gifter-earned'>"+esc(earned)+"</small>":"")+"</span><span class='live-top-gifter-title'>"+esc(rankTitle)+"</span><strong class='live-top-gifter-coins'>"+Number(item.coinsSent??item.points??0).toLocaleString()+"<small>Coins</small></strong><button type='button' class='text-button' data-live-top-gifter-profile='"+esc(userId)+"'>Profile</button></article>";
-  }).join("");
-  root.querySelectorAll("[data-live-top-gifter-profile]").forEach(button=>button.addEventListener("click",()=>{
-    const userId=button.dataset.liveTopGifterProfile;
+  }).join(""):"<div class='live-top-gifter-empty'><strong>No Top Gifters yet</strong><small>Confirmed LIVE gifts will appear here as people support this broadcast.</small></div>";
+  root.innerHTML=weeklyMarkup+"<section class='live-broadcast-top-gifters'><strong class='live-weekly-title-heading'>This LIVE · Top Gifters</strong>"+rowsMarkup+"</section>";
+  root.querySelectorAll("[data-live-top-gifter-profile],[data-live-weekly-title-profile]").forEach(button=>button.addEventListener("click",()=>{
+    const userId=button.dataset.liveTopGifterProfile||button.dataset.liveWeeklyTitleProfile;
     if(userId)openLiveProfilePreview(userId,session||activeLiveSession);
   }));
 }
@@ -1522,7 +1527,7 @@ async function refreshLiveGiftEvents(session){
     const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/gifts?since='+encodeURIComponent(since));
     const events=Array.isArray(result.events)?result.events:[];
     for(const event of events)presentLiveGiftEvent(event);
-    renderLiveTopGifters(result.topGifters,session);
+    renderLiveTopGifters(result.topGifters,session,result.weeklyTitleGifters);
   }catch(error){
     console.warn('[Minglora LIVE] Confirmed gift activity could not be refreshed.',error?.message||error);
   }finally{liveGiftEventsBusy=false;}
