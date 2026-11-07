@@ -465,13 +465,39 @@ function ensureLocalUser(authUser, fallback = {}) {
       user.verificationStatus=verificationStatus;
     }
   }
+  const bannedUntil=String(authUser.banned_until||'').trim();
+  const activeProviderBan=Boolean(bannedUntil&&Date.parse(bannedUntil)>Date.now());
+  if(activeProviderBan){
+    user.status='banned';
+    user.bannedUntil=bannedUntil;
+  }else{
+    user.bannedUntil=null;
+    if(user.status==='banned'){
+      const restored=String(metadata.pre_ban_account_status||'active').toLowerCase();
+      user.status=['active','suspended','deactivated'].includes(restored)?restored:'active';
+    }
+  }
   return user;
+}
+function isAccountBlocked(account){
+  if(!account)return false;
+  if(account.status==='banned'){
+    const expiry=Date.parse(String(account.bannedUntil||''));
+    if(Number.isFinite(expiry)&&expiry<=Date.now()){
+      account.status='active';
+      account.bannedUntil=null;
+      void saveStore().catch(()=>{});
+      return false;
+    }
+    return true;
+  }
+  return ['suspended','deactivated'].includes(account.status);
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
   const account=session?db.users.find(item=>item.id===session.userId)||null:null;
   if(session?.authInvalidatedAt&&AUTH_PROVIDER==='supabase')return null;
-  return ['suspended','deactivated'].includes(account?.status)?null:account;
+  return isAccountBlocked(account)?null:account;
 }
 const sessionAuth=createSessionAuthManager({
   openSession:openSessionAuth,sealSession:sealSessionAuth,
@@ -1369,7 +1395,7 @@ async function route(req, res) {
       const targetSession=(db.sessions||[]).find(session=>session.id===targetId&&session.deviceId===deviceId&&new Date(session.expiresAt)>new Date());
       if(!targetSession||(targetSession.authInvalidatedAt&&AUTH_PROVIDER==='supabase'))return json(res,404,{error:'That saved account is no longer available on this device. Sign in again to add it.'});
       const targetUser=db.users.find(account=>account.id===targetSession.userId);
-      if(!targetUser||['suspended','deactivated'].includes(targetUser.status))return json(res,403,{error:'This account cannot be opened. Contact Minglora support for help.'});
+      if(!targetUser||isAccountBlocked(targetUser))return json(res,403,{error:'This account cannot be opened. Contact Minglora support for help.'});
       if(AUTH_PROVIDER==='supabase'&&targetSession.authSealed){
         const auth=await sessionAuth(targetSession);
         if(!auth?.access_token)return json(res,401,{error:'This account session has expired. Add the account again to continue.'});
@@ -1512,7 +1538,7 @@ async function route(req, res) {
         if(!verifiedUser?.id||!verifiedUser?.email)return json(res,401,{error:'Supabase could not validate this sign-in link. Request a new one.'});
         if(!verifiedUser.email_confirmed_at)return json(res,403,{error:'Confirm your email address before signing in with a magic link.'});
         const account=ensureLocalUser(verifiedUser);
-        if(account.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        if(isAccountBlocked(account))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
         const authenticated={
           user:verifiedUser,access_token:accessToken,refresh_token:refreshToken,
           expires_in:Number.isFinite(expiresIn)&&expiresIn>0&&expiresIn<=86400?expiresIn:3600,
@@ -1567,7 +1593,7 @@ async function route(req, res) {
             }
           }
           const signedInUser=ensureLocalUser(authenticated.user);
-          if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+          if(isAccountBlocked(signedInUser))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
           let verifiedTotp=null;
           if(accessToken){
@@ -1589,7 +1615,7 @@ async function route(req, res) {
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
-        if(found.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        if(isAccountBlocked(found))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -1904,6 +1930,77 @@ async function route(req, res) {
           canAccess,
           setupRequired: designatedCreatorHubAdmin && !canAccess,
           mfaVerified: canAccess
+        });
+      }
+
+      if(method==='GET'&&p==='/api/admin/users'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can manage member accounts.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account-wide ban controls require Minglora Supabase Auth.'});
+        const search=String(url.searchParams.get('search')||'').trim().slice(0,120);
+        const status=String(url.searchParams.get('status')||'all').toLowerCase();
+        if(!['all','active','banned','suspended','deactivated'].includes(status))return json(res,400,{error:'Choose a valid account status filter.'});
+        const result=await requestSupabaseState('admin_users_list',{actorUserId:user.id,search,status});
+        return json(res,200,{users:Array.isArray(result.users)?result.users:[],count:Number(result.count||0),status});
+      }
+      const adminAccountActionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/(ban|unban)$/i);
+      if(method==='POST'&&adminAccountActionMatch){
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can manage member accounts.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account-wide ban controls require Minglora Supabase Auth.'});
+        const targetId=String(adminAccountActionMatch[1]||'').toLowerCase();
+        const operation=String(adminAccountActionMatch[2]||'').toLowerCase();
+        if(targetId===CREATOR_HUB_ADMIN_USER_ID)return json(res,403,{error:'The platform owner account is protected from bans.'});
+        const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!uuidPattern.test(targetId))return json(res,400,{error:'Choose a valid member account.'});
+        const duration=String(input.duration||'');
+        const reason=String(input.reason||'').trim().slice(0,500);
+        const allowedDurations=new Set(['1h','24h','7d','30d','90d','876000h']);
+        if(operation==='ban'&&(!allowedDurations.has(duration)||reason.length<3)){
+          return json(res,400,{error:'Choose a ban duration and enter a reason of at least 3 characters.'});
+        }
+        if(operation==='unban'&&reason.length>500)return json(res,400,{error:'The moderation note is too long.'});
+        let targetJwt=null;
+        if(operation==='ban'){
+          const targetSessions=(db.sessions||[]).filter(item=>item.userId===targetId&&item.authSealed);
+          for(const savedSession of targetSessions){
+            try{
+              const targetAuth=await sessionAuth(savedSession);
+              if(targetAuth?.access_token){targetJwt=targetAuth.access_token;break;}
+            }catch{}
+          }
+        }
+        const result=await requestSupabaseState('admin_user_set_ban',{
+          actorUserId:user.id,userId:targetId,operation,duration:operation==='ban'?duration:'none',
+          reason,targetJwt
+        });
+        const target=db.users.find(item=>item.id===targetId);
+        if(target){
+          if(operation==='ban'){
+            target.status='banned';
+            target.bannedUntil=result.bannedUntil||null;
+            target.banReason=reason;
+          }else{
+            const restored=String(result.status||'active').toLowerCase();
+            target.status=['active','suspended','deactivated'].includes(restored)?restored:'active';
+            target.bannedUntil=null;
+            delete target.banReason;
+          }
+        }
+        if(operation==='ban'){
+          db.sessions=(db.sessions||[]).filter(item=>item.userId!==targetId);
+          db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==targetId);
+        }
+        await saveStore();
+        return json(res,200,{
+          ok:true,operation,status:result.status||operation,
+          bannedUntil:result.bannedUntil||null,
+          sessionRevoked:Boolean(result.sessionRevoked),
+          auditRecorded:Boolean(result.auditRecorded),
+          message:result.message||'Account status updated.'
         });
       }
 
