@@ -2754,7 +2754,12 @@ activeLivePinnedComment=null;
     micControl?.addEventListener("click",async()=>{
       const nextEnabled=!liveMicrophoneEnabled;micControl.disabled=true;
       try{
-        await room.localParticipant.setMicrophoneEnabled(nextEnabled);
+        const captureOptions=activeLiveDevicePreferences?{
+          echoCancellation:activeLiveDevicePreferences.echoCancellation,
+          noiseSuppression:activeLiveDevicePreferences.noiseSuppression,
+          autoGainControl:activeLiveDevicePreferences.autoGainControl
+        }:undefined;
+        await room.localParticipant.setMicrophoneEnabled(nextEnabled,nextEnabled?captureOptions:undefined);
         liveMicrophoneEnabled=nextEnabled;
         updateLiveControlButton(micControl,nextEnabled?"mic":"mic-off",nextEnabled?"Mute microphone":"Unmute microphone",nextEnabled?"Mute":"Unmute",nextEnabled);
         refreshSpeakerRoster();
