@@ -28,6 +28,7 @@ test('Quick Currency provides two editable amount fields and reversible currency
   assert.ok(client.includes("api('/currency/currencies')"));
   assert.ok(client.includes("api('/currency/rate?base='"));
   assert.ok(client.includes('state.lastEdited'));
+  assert.ok(client.includes('saveState();\n      render();\n      void loadRate();'), 'currency selection must refresh symbols, labels and currency codes');
 });
 
 test('Quick Currency stylesheet, script, icon and offline shell are wired', () => {
