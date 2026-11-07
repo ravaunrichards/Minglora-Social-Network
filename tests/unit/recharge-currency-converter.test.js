@@ -57,8 +57,8 @@ test('Embedded converter modules mount inside the Recharge tab, not over the who
 
 test('Currency API uses active ISO currency directory and reference-rate service endpoints', () => {
   assert.match(server, /createCurrencyConverterService\(\)/);
-  assert.match(server, /p==='/api/currency/currencies'/);
-  assert.match(server, /p==='/api/currency/rate'/);
+  assert.ok(server.includes("p==='/api/currency/currencies'"));
+  assert.ok(server.includes("p==='/api/currency/rate'"));
   assert.match(server, /currencyConverterService\.getCurrencyDirectory\(\)/);
   assert.match(server, /currencyConverterService\.getRate\(base,quote/);
   assert.match(server, /normalizeCurrencyCode\(/);
@@ -76,6 +76,9 @@ test('HTML and service worker load and cache both converter modes and 3D artwork
     assert.ok(worker.includes(asset), 'service worker precaches ' + asset);
   }
   assert.match(worker, /minglora-shell-v127-recharge-currency-tab-1/);
+  const appRef = html.match(/<script src="([^"]*app\\.js\\?v=[^"]+)" defer><\\/script>/)?.[1];
+  assert.ok(appRef, 'app script URL is versioned');
+  assert.ok(worker.includes("'" + appRef + "'"), 'service worker caches the current app script URL');
   assert.match(icon, /<symbol id="currency-exchange"/);
   assert.match(icon, /<symbol id="currency-quick"/);
   assert.ok(app.includes('#currency-exchange'));
