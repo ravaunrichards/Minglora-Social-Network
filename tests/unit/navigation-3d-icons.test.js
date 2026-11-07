@@ -39,13 +39,14 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   assert.ok(navStart >= 0 && navEnd > navStart, 'mobile navigation exists');
   for (const [view, icon] of [
     ['feed', 'home'],
-    ['for-you', 'explore'],
+    ['profile', 'profile'],
     ['live', 'live'],
     ['messages', 'messages'],
   ]) {
     assert.ok(nav.includes('data-view="' + view + '"'), view + ' is a primary destination');
     assert.ok(nav.includes(useIcon(icon)), view + ' uses the shared 3D artwork');
   }
+  assert.ok(!nav.includes('data-view="friends"'), 'Friends is not a bottom-bar destination');
   assert.ok(nav.includes('data-view="more"'), 'More is the fifth primary destination');
   assert.ok(nav.includes('id="mobile-more-nav"'), 'More is a proper navigation item');
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
@@ -81,7 +82,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  assert.match(serviceWorker, /minglora-shell-v93-flow-layout-safety-1/);
-  assert.match(serviceWorker, /styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
+  assert.match(serviceWorker, /minglora-shell-v117-bottom-profile-navigation-1/);
+  assert.match(serviceWorker, /mobile-profile-navigation\\.css\\?v=20261106-horizontal-profile-navigation-1/);
+assert.match(serviceWorker, /\/assets\/icons\/navigation-3d\.svg/);
 });
