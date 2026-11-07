@@ -4913,7 +4913,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
             await ensureLiveKitRoom(room.roomName,9);
             participants=await listLiveKitParticipants(room.roomName);
             if(participants.length>=(9)&&!participants.some(participant=>participant.identity===user.id)){
-              return json(res,409,{error:'This MeetWave room is full. The current limit is eight participants.'});
+              return json(res,409,{error:'This MeetWave room is full. The limit is nine participants: one host and up to eight guests.'});
             }
             liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
           }catch(error){
