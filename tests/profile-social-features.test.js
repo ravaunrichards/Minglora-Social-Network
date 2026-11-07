@@ -68,6 +68,7 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   const checkIn=await request(alice.cookie,'/api/check-ins',{method:'POST',body:JSON.stringify({place:'Spanish Town',note:'Profile feature integration test',visibility:'followers'})});
   assert.equal(checkIn.status,201,JSON.stringify(checkIn.body));assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,0);
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/follow',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/users/'+bob.id+'/follow',{method:'POST',body:'{}'})).status,200,'mutual follows should create the reciprocal connection');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).body.status.text,'Building on Minglora');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought.text,'Building on Minglora');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,1);
@@ -109,6 +110,13 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   assert.ok((await request(alice.cookie,'/api/users/'+alice.id+'/activity')).body.activity.some(item=>item.action==='profile_thought_deleted'));
 
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/block',{method:'POST',body:'{}'})).status,200);
+  const blockedProfile=await request(bob.cookie,'/api/users/'+alice.id);
+  assert.equal(blockedProfile.status,404,'a blocked account must not expose its profile');
+  assert.equal(blockedProfile.body.error,'User not found.','the blocked viewer gets the same neutral not-found response');
+  assert.equal((await request(alice.cookie,'/api/users/'+bob.id)).status,404,'blocking must prevent profile access in both directions');
+  const blockedOwnerFollowing=await request(bob.cookie,'/api/users/'+bob.id+'/following');
+  assert.equal(blockedOwnerFollowing.status,200);
+  assert.equal(blockedOwnerFollowing.body.users.some(member=>member.id===alice.id),false,'blocking removes the follow edge from the owner’s Following list');
   const blockedRsvp=await request(bob.cookie,'/api/events/'+event.body.event.id+'/rsvp',{method:'POST',body:JSON.stringify({status:'going'})});
   assert.equal(blockedRsvp.status,404,'Blocked members cannot view or RSVP to a public event.');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).status,404);
@@ -123,4 +131,18 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   assert.equal(archive.body.stories.some(item=>item.id===story.body.story.id),true,'expired Stories are retained in the private Story archive');
   const afterExpiry=await request(alice.cookie,'/api/users/'+alice.id+'/highlights');
   assert.equal(afterExpiry.body.highlights.some(item=>item.title==='Community moments'),true,'Highlights continue to resolve archived Stories');
+
+  await stopServer();
+  const bannedDb=JSON.parse(fs.readFileSync(dbPath,'utf8'));
+  const bannedCreator=bannedDb.users.find(item=>item.id===creator.id);
+  assert.ok(bannedCreator,'the test creator should remain in the persisted user store');
+  bannedCreator.status='banned';
+  bannedCreator.bannedUntil=null;
+  fs.writeFileSync(dbPath,JSON.stringify(bannedDb,null,2));
+  await startServer();
+  const bannedProfile=await request(bob.cookie,'/api/users/'+creator.id);
+  assert.equal(bannedProfile.status,404,'banned users must not have public profiles');
+  assert.equal(bannedProfile.body.error,'User not found.','banned and blocked profiles share the same neutral response');
+  const bannedFollowers=await request(bob.cookie,'/api/users/'+creator.id+'/followers');
+  assert.equal(bannedFollowers.status,404,'relationship lists for banned profiles must also be hidden');
 });
