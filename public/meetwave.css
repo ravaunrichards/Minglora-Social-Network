@@ -130,3 +130,181 @@
   .mw-controls{gap:5px}
   .mw-controls button{min-height:50px}
 }
+
+
+/* Faithful standalone MeetWave room geometry.
+   Base: full video stage + 300px chat column, two 16:10 video tiles. */
+.mw-meeting{
+  width:100%;
+  max-width:1250px;
+  min-width:0;
+  margin:0 auto;
+  padding:30px 0 20px;
+  display:block;
+}
+.mw-meeting-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:22px;
+}
+.mw-meeting-head h1{font-size:25px;line-height:1.2;margin:7px 0 0}
+.mw-meeting-head small{display:block;color:var(--muted);font-size:11px;margin-top:5px}
+.mw-meeting-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 300px!important;
+  width:100%;
+  min-width:0;
+  gap:16px!important;
+  align-items:stretch;
+}
+.mw-stage-column{
+  min-width:0;
+  width:100%;
+  padding:12px;
+  border-radius:15px;
+  background:#10182b;
+}
+.mw-video-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px!important;
+  width:100%;
+  min-width:0;
+  min-height:0!important;
+  align-content:start;
+}
+.mw-video-tile{
+  position:relative;
+  width:100%;
+  min-width:0;
+  aspect-ratio:16/10!important;
+  min-height:160px!important;
+  border-radius:15px;
+  overflow:hidden;
+}
+.mw-video-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mw-controls{
+  display:flex!important;
+  justify-content:center;
+  align-items:center;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  padding:20px 0 0!important;
+}
+.mw-controls button{
+  min-width:75px!important;
+  min-height:0!important;
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:7px!important;
+  padding:12px 14px!important;
+  border:1px solid #ffffff12;
+  border-radius:12px;
+  background:#202840;
+  color:#f1f4ff;
+  cursor:pointer;
+}
+.mw-controls button small{font-size:11px}
+.mw-support-column{
+  display:grid;
+  grid-template-rows:auto minmax(390px,1fr);
+  align-content:start;
+  gap:12px;
+  min-width:0;
+}
+.mw-participants-panel{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:140px;
+  max-height:190px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  border-radius:15px;
+  background:var(--card);
+}
+.mw-participant-list{min-height:0;overflow:auto}
+.mw-chat-panel{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:390px!important;
+  max-height:580px;
+  border:1px solid var(--border);
+  border-radius:15px;
+  background:var(--card);
+  overflow:hidden;
+}
+.mw-chat-messages{flex:1;min-height:0;overflow:auto}
+.mw-chat-form{min-width:0}
+.mw-chat-form input{min-width:0;flex:1 1 auto}
+
+@media(max-width:800px){
+  .mw-meeting{padding:20px 0 14px}
+  .mw-meeting-head{
+    align-items:center;
+    flex-direction:row;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .mw-meeting-head>div{min-width:0;flex:1 1 auto}
+  .mw-meeting-head h1{font-size:clamp(20px,5vw,25px);overflow-wrap:anywhere}
+  .mw-meeting-count{white-space:nowrap}
+  .mw-meeting-layout{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+  .mw-stage-column{grid-column:1/-1;padding:10px}
+  .mw-video-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+    min-height:0!important;
+  }
+  .mw-video-tile{aspect-ratio:16/10!important;min-height:120px!important}
+  .mw-video-grid[data-layout="speaker"]{
+    grid-template-columns:minmax(0,1fr)!important;
+    min-height:0!important;
+  }
+  .mw-video-grid[data-layout="speaker"] .mw-video-tile{
+    aspect-ratio:16/9!important;
+    min-height:clamp(180px,52vw,320px)!important;
+  }
+  .mw-controls{gap:7px!important;padding:14px 0 0!important}
+  .mw-controls button{
+    min-width:65px!important;
+    flex:1 1 65px;
+    padding:10px 8px!important;
+  }
+  .mw-support-column{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:minmax(220px,auto);
+    gap:10px;
+  }
+  .mw-participants-panel,.mw-chat-panel{
+    height:280px;
+    min-height:220px!important;
+    max-height:320px;
+  }
+  .mw-participants-panel>header,.mw-chat-panel>b{padding:11px}
+  .mw-participant-list,.mw-chat-messages{min-height:0;overflow:auto}
+  .mw-participant-item{gap:6px;padding:7px 5px}
+  .mw-participant-avatar{width:26px;height:26px}
+  .mw-participant-name b{font-size:10px}
+  .mw-remove-person{padding:4px 2px}
+  .mw-chat-form{gap:5px;padding:7px}
+  .mw-chat-form input{width:auto!important;min-width:0!important;font-size:13px;padding:8px}
+  .mw-chat-form button{min-width:38px;padding:0 8px}
+}
+@media(max-width:430px){
+  .mw-meeting{padding-top:14px}
+  .mw-meeting-layout{gap:8px!important}
+  .mw-video-tile{min-height:108px!important}
+  .mw-support-column{gap:7px}
+  .mw-participants-panel,.mw-chat-panel{height:230px;min-height:190px!important}
+  .mw-participants-panel>header,.mw-chat-panel>b{padding:9px}
+  .mw-chat-form input{padding:7px 5px}
+  .mw-controls{gap:5px!important}
+  .mw-controls button{min-width:58px!important;min-height:48px!important;padding:8px 4px!important}
+  .mw-controls button small{font-size:10px}
+}
