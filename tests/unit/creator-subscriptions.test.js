@@ -13,11 +13,12 @@ test('only distinct, currently active creator subscribers are counted', () => {
     { id: 'sub-expired', creatorId: 'creator', subscriberId: 'member-c', status: 'active', currentPeriodEnd: past },
     { id: 'sub-cancelled', creatorId: 'creator', subscriberId: 'member-d', status: 'cancelled', currentPeriodEnd: future },
     { id: 'sub-past-due', creatorId: 'creator', subscriberId: 'member-e', status: 'past_due', currentPeriodEnd: future },
+    { id: 'sub-past-due-expired', creatorId: 'creator', subscriberId: 'member-g', status: 'past_due', currentPeriodEnd: past },
     { id: 'sub-other-creator', creatorId: 'another-creator', subscriberId: 'member-f', status: 'active', currentPeriodEnd: future }
   ];
 
   const active = listActiveCreatorSubscriptions(subscriptions, 'creator');
-  assert.deepEqual(active.map(item => item.subscriberId).sort(), ['member-a', 'member-b']);
+  assert.deepEqual(active.map(item => item.subscriberId).sort(), ['member-a', 'member-b', 'member-e']);
   assert.equal(active.find(item => item.subscriberId === 'member-a').id, 'sub-1-new');
 });
 
@@ -27,4 +28,6 @@ test('invalid, expired, self, and non-active subscription records are not counte
   assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'active', currentPeriodEnd: 'not-a-date' }), false);
   assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'active', currentPeriodEnd: past }), false);
   assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'active', currentPeriodEnd: future }), true);
+  assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'past_due', currentPeriodEnd: future }), true);
+  assert.equal(isActiveCreatorSubscription({ creatorId: 'creator', subscriberId: 'member', status: 'past_due', currentPeriodEnd: past }), false);
 });
