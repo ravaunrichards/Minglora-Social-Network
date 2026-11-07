@@ -6556,3 +6556,11 @@ button.live-ranking-row{cursor:pointer}
     min-height:58px;
   }
 }
+
+/* Member suggestion controls: dismissing a suggestion is separate from blocking. */
+.person-card-secondary-actions{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:7px;flex-wrap:wrap}
+.person-card-secondary-actions .person-dismiss-btn,.person-card-secondary-actions .person-block-link{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:9px;font-weight:700;cursor:pointer}
+.person-card-secondary-actions .person-dismiss-btn:hover{color:var(--blue);text-decoration:underline}
+.person-card-secondary-actions .person-block-link:hover{color:var(--danger,#c43d4b);text-decoration:underline}
+.person-card-secondary-actions button:disabled,.person-dismiss-mini:disabled{opacity:.55;cursor:wait}
+.person-dismiss-mini{min-width:28px;padding-inline:7px;font-weight:800}
