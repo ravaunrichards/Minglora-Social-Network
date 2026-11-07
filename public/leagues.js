@@ -5,6 +5,7 @@
   let refreshInFlight = false;
   let viewGeneration = 0;
   let refreshToken = 0;
+  let autoSyncTimer = null;
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -180,17 +181,12 @@
     const status = $("#league-refresh-status");
     if (!status) return;
     status.textContent = state.refreshing
-      ? "Refreshing live scores…"
+      ? "Updating live scores…"
       : state.refreshError
-        ? "Refresh failed. You can try again when ready."
+        ? "Connection interrupted. Minglora will retry automatically."
         : state.lastUpdatedAt
-          ? "Last updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
-          : "Refresh whenever you want the latest scores.";
-    const button = $("#league-refresh-button");
-    if (button) {
-      button.disabled = state.refreshing;
-      button.textContent = state.refreshing ? "Refreshing…" : "↻ Refresh";
-    }
+          ? "Updated automatically · " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+          : "Live scores update automatically.";
   }
   function isLeagueViewActive() {
     return Boolean($("#main-content") && document.querySelector("[data-view='leagues'].active"));
@@ -311,17 +307,16 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
-      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Tap Refresh whenever you want the latest scores.</small><button type='button' class='secondary league-action' id='league-refresh-button'>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
+      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Live scores update automatically.</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
   }
   function bindActions() {
-    const refreshButton = $("#league-refresh-button");
-    if (refreshButton) refreshButton.onclick = () => { void refreshScores(true); };
     const form = $("#league-challenge-form");
-    if (form) {
+    if (form && form.dataset.leagueChallengeBound !== "true") {
+      form.dataset.leagueChallengeBound = "true";
       const giftMode = form.querySelector("[name='giftMode']");
       const giftField = $("#league-specific-gift-field");
       giftMode.addEventListener("change", () => giftField.classList.toggle("hidden", giftMode.value !== "specific"));
@@ -340,16 +335,24 @@
         }
       });
     }
-    document.querySelectorAll("[data-match-accept]").forEach(button => button.addEventListener("click", async () => {
-      button.disabled = true;
-      try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchAccept) + "/accept", {method:"POST",body:"{}"}); toast("League Match accepted."); await render(); }
-      catch(error) { toast(error.message); button.disabled = false; }
-    }));
-    document.querySelectorAll("[data-match-support]").forEach(button => button.addEventListener("click", async () => {
-      button.disabled = true;
-      try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/support", {method:"POST",body:JSON.stringify({side:button.dataset.matchSupport})}); toast("Your match support was counted."); await render(); }
-      catch(error) { toast(error.message); button.disabled = false; }
-    }));
+    document.querySelectorAll("[data-match-accept]").forEach(button => {
+      if (button.dataset.leagueAcceptBound === "true") return;
+      button.dataset.leagueAcceptBound = "true";
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchAccept) + "/accept", {method:"POST",body:"{}"}); toast("League Match accepted."); await render(); }
+        catch(error) { toast(error.message); button.disabled = false; }
+      });
+    });
+    document.querySelectorAll("[data-match-support]").forEach(button => {
+      if (button.dataset.leagueSupportBound === "true") return;
+      button.dataset.leagueSupportBound = "true";
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        try { await request("/leagues/matches/" + encodeURIComponent(button.dataset.matchId) + "/support", {method:"POST",body:JSON.stringify({side:button.dataset.matchSupport})}); toast("Your match support was counted."); await render(); }
+        catch(error) { toast(error.message); button.disabled = false; }
+      });
+    });
     document.querySelectorAll("[data-powerup-select]").forEach(button => {
       if (button.dataset.previewSelectBound) return;
       button.dataset.previewSelectBound = "true";
@@ -359,12 +362,16 @@
         updatePowerupPreview();
       });
     });
-    document.querySelectorAll("[data-match-powerup-preview]").forEach(button => button.addEventListener("click", () => {
-      state.selectedPowerupId = button.dataset.matchPowerupPreview || "";
-      state.selectedMatchId = button.dataset.matchId || "";
-      updatePowerupPreview();
-      $("#league-powerup-preview-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
-    }));
+    document.querySelectorAll("[data-match-powerup-preview]").forEach(button => {
+      if (button.dataset.leaguePreviewBound === "true") return;
+      button.dataset.leaguePreviewBound = "true";
+      button.addEventListener("click", () => {
+        state.selectedPowerupId = button.dataset.matchPowerupPreview || "";
+        state.selectedMatchId = button.dataset.matchId || "";
+        updatePowerupPreview();
+        $("#league-powerup-preview-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
+      });
+    });
     const powerupModel = $("#league-powerup-selected-model");
     if (powerupModel && !powerupModel.dataset.previewEventsBound) {
       powerupModel.dataset.previewEventsBound = "true";
@@ -382,14 +389,20 @@
     }
     updatePowerupPreview();
 
-    document.querySelectorAll("[data-league-profile]").forEach(button => button.addEventListener("click", () => {
-      const userId = button.dataset.leagueProfile;
-      if (userId) window.dispatchEvent(new CustomEvent("minglora:open-profile", { detail: { userId } }));
-    }));
+    document.querySelectorAll("[data-league-profile]").forEach(button => {
+      if (button.dataset.leagueProfileBound === "true") return;
+      button.dataset.leagueProfileBound = "true";
+      button.addEventListener("click", () => {
+        const userId = button.dataset.leagueProfile;
+        if (userId) window.dispatchEvent(new CustomEvent("minglora:open-profile", { detail: { userId } }));
+      });
+    });
     updateRefreshStatus();
   }
   function onNavigateAway() {
     viewGeneration += 1;
+    if (autoSyncTimer !== null) window.clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
     refreshToken += 1;
     refreshInFlight = false;
     if (refreshController) refreshController.abort();
@@ -484,7 +497,8 @@
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
     updateRefreshStatus();
+    autoSyncTimer = window.setInterval(() => void refreshScores(), 20000);
   }
-  // League data is fetched on entry and only refreshed again when the member taps Refresh.
+  // League data updates automatically without a page reload or manual refresh control.
   window.MingloraLeagues = { render, onNavigateAway };
 })();
