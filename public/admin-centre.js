@@ -506,7 +506,7 @@
         <div class="admin-control-centre-section-heading admin-gift-earnings-heading">
           <div><h3 id="admin-gift-earnings-title">LIVE gift revenue &amp; creator earnings</h3>
             <p>Read-only financial reporting from the verified gift earnings ledger. This does not move or change any wallet funds.</p></div>
-          <button type="button" class="secondary" id="admin-gift-earnings-refresh">↻ Refresh report</button>
+          <span class="admin-control-centre-status">Updates automatically while this workspace is open</span>
         </div>
         <p id="admin-gift-earnings-status" class="admin-gift-earnings-status" role="status" aria-live="polite">Loading actual gift earnings…</p>
         <div id="admin-gift-earnings-metrics" class="admin-gift-earnings-metrics"></div>
@@ -544,7 +544,7 @@
         <section class="admin-withdrawal-tracker" id="admin-withdrawal-tracker" aria-labelledby="admin-withdrawal-tracker-title">
           <div class="admin-withdrawal-tracker-heading">
             <div><h4 id="admin-withdrawal-tracker-title">All creator/member withdrawal requests</h4>
-              <p>Every creator payout request, its PayPal batch reference and confirmed status. Use Refresh report whenever you want the latest withdrawal status.</p></div>
+              <p>Every creator payout request, its PayPal batch reference and confirmed status. This report stays synchronized automatically.</p></div>
             <span id="admin-withdrawal-tracker-updated" role="status" aria-live="polite">Loading status…</span>
           </div>
           <div id="admin-withdrawal-tracker-summary" class="admin-withdrawal-tracker-summary" aria-live="polite"></div>
@@ -660,9 +660,16 @@
           if (submit) submit.disabled = false;
         }
       });
-      const earningsRefreshButton = panel.querySelector('#admin-gift-earnings-refresh');
-      if (earningsRefreshButton) earningsRefreshButton.onclick = () => { void loadAdminGiftEarnings(panel); };
       void loadAdminGiftEarnings(panel);
+      if (panel._mingloraCreatorEarningsTimer) window.clearInterval(panel._mingloraCreatorEarningsTimer);
+      panel._mingloraCreatorEarningsTimer = window.setInterval(() => {
+        if (!panel.isConnected) {
+          window.clearInterval(panel._mingloraCreatorEarningsTimer);
+          panel._mingloraCreatorEarningsTimer = null;
+          return;
+        }
+        if (document.visibilityState === 'visible') void loadAdminGiftEarnings(panel, { quiet:true });
+      }, 30000);
     }
 
     panel.querySelectorAll('[data-admin-jump]').forEach(button => {
@@ -1205,7 +1212,6 @@
     const status = panel.querySelector('#admin-gift-earnings-status');
     const metrics = panel.querySelector('#admin-gift-earnings-metrics');
     const creators = panel.querySelector('#admin-gift-earnings-creators');
-    const refresh = panel.querySelector('#admin-gift-earnings-refresh');
     const platformSummary = panel.querySelector('#admin-platform-payout-summary');
     const platformAccountInput = panel.querySelector('#admin-platform-payout-email');
     const platformPayoutHistory = panel.querySelector('#admin-platform-payout-history');
@@ -1216,7 +1222,6 @@
     const promoFundLedgerTarget = panel.querySelector('#admin-promotional-fund-ledger');
     const promoBackedGiftsTarget = panel.querySelector('#admin-promotional-cash-backed-gifts');
     if (!status || !metrics || !creators) return;
-    if (refresh && !quiet) refresh.disabled = true;
     if (!quiet) status.textContent = 'Loading the verified creator earnings, withdrawals and promotional ledgers…';
     try {
       const report = await adminCentreApi('/admin/creator-earnings');
@@ -1385,7 +1390,7 @@
         const lastUpdate = panel._mingloraReportAsOf
           ? ' Last successful report: ' + new Date(panel._mingloraReportAsOf).toLocaleString() + '.'
           : '';
-        status.textContent = 'Manual refresh could not reach the latest withdrawal and promotional records. The last successful report remains displayed.' +
+        status.textContent = 'Automatic sync could not reach the latest withdrawal and promotional records. The last successful report remains displayed.' +
           lastUpdate + ' ' + (error.message || '');
       } else {
         metrics.innerHTML = '';
@@ -1393,8 +1398,6 @@
           (error.message || 'Try refreshing the report.');
         status.textContent = 'Financial report unavailable.';
       }
-    } finally {
-      if (refresh && !quiet) refresh.disabled = false;
     }
   }
 
