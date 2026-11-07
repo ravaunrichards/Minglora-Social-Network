@@ -1,0 +1,24 @@
+/* Minglora creator subscription interface and profile membership action. */
+.profile-header-card .profile-actions .profile-edit.profile-subscribe:not(:disabled){
+  background:linear-gradient(115deg,#171923 0%,#171923 58%,#ef2d62 100%)!important;
+  border:1px solid rgba(239,45,98,.72)!important;
+  color:#fff!important;
+  border-radius:999px!important;
+  box-shadow:0 5px 16px rgba(239,45,98,.18)!important;
+  font-weight:850!important;
+}
+.profile-header-card .profile-actions .profile-edit.profile-subscribe:not(:disabled):hover{
+  background:linear-gradient(115deg,#242735 0%,#242735 58%,#f33c70 100%)!important;
+  border-color:#f33c70!important;
+}
+.profile-header-card .profile-actions .profile-edit.profile-subscribe:disabled{
+  opacity:.82!important;
+  cursor:default!important;
+}
+.creator-subscription-features{display:grid;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.creator-subscription-features h4{margin:0;font-size:14px}
+.creator-subscription-features .creator-toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.creator-subscription-features .creator-toggle-row:last-child{border-bottom:0}
+.creator-subscription-features .creator-toggle-row span{display:grid;gap:3px;min-width:0}
+.creator-subscription-features .creator-toggle-row small{color:var(--muted);font-size:12px;line-height:1.4}
+.creator-subscription-features .creator-toggle-row input{width:18px;height:18px;flex:none;accent-color:var(--blue)}
