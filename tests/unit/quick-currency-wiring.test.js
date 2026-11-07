@@ -38,6 +38,6 @@ test('Quick Currency stylesheet, script, icon and offline shell are wired', () =
   assert.ok(html.includes('quick-currency.js?v='));
   assert.ok(worker.includes('quick-currency.css?v='));
   assert.ok(worker.includes('quick-currency.js?v='));
-  assert.ok(worker.includes('currency-quick'));
+  assert.ok(worker.includes('quick-currency-3d'));
   assert.ok(icon.includes('<symbol id="currency-quick"'));
 });
