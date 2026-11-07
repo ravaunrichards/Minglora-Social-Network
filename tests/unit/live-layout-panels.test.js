@@ -122,7 +122,8 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
   assert.match(app, /Retry gift catalogue/);
   assert.match(app, /const giftsEnabled=liveSettings\.liveGifts!==false&&!liveSettings\.practiceMode/);
   assert.match(app, /live-gift-disabled-note/);
-  assert.match(app, /Gifts are disabled for this broadcast/);
+  assert.match(app, /Gifts are unavailable in Practice Mode/);
+  assert.match(app, /The host has turned off gifts for this LIVE/);
   assert.match(styles, /\.live-stage-gift-open\{/);
   assert.match(styles, /\.live-gift-empty\{/);
 });
