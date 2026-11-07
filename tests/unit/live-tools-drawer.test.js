@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('public/app.js');
 const styles = read('public/styles.css');
+const compact = read('public/live-room-compact.css');
 
 test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settings drawer', () => {
   assert.match(app, /const rewardTools=!giftsEnabled\?"":.*live-reward-panel/s);
@@ -25,7 +26,9 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.match(styles, /\.live-video-column>\.live-stage-topbar/);
   assert.match(app, /class='live-chat-overlay'/);
   assert.ok(app.includes('stage?.insertAdjacentHTML("beforebegin",liveStageHud)'));
-  assert.ok(app.includes('stage?.insertAdjacentHTML("beforeend",liveChatOverlay)'));
+  assert.ok(app.includes('liveChatPanel?.insertAdjacentHTML("beforeend",liveChatOverlay)'));
+  assert.doesNotMatch(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
+  assert.match(compact, /\.live-fullscreen-chat-slot\{[\s\S]*flex-direction:column!important/);
   assert.match(roomMarkup, /liveToolsDrawer/);
 });
 
@@ -39,7 +42,7 @@ test('LIVE settings, guest and gift controls open one accessible drawer and rewa
   assert.doesNotMatch(app, /live-rewards-toggle/);
 });
 
-test('Guest tools, gifts and rewards share the drawer while TikTok-style chat overlays the video stage', () => {
+test('Guest tools, gifts and rewards share the drawer while TikTok-style chat stays in the right-side panel', () => {
   assert.match(app, /liveToolsNavigation/);
   assert.match(app, /speakerTools\+rewardTools\+liveGiftTools/);
   assert.match(app, /id='live-chat-list'/);
@@ -48,7 +51,11 @@ test('Guest tools, gifts and rewards share the drawer while TikTok-style chat ov
   assert.match(app, /class='live-chat-avatar'/);
   assert.match(app, /member\.avatar_url/);
   assert.ok(styles.includes(".live-chat-overlay"));
+  assert.match(app, /id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot'/);
+  assert.ok(app.includes('liveChatPanel?.insertAdjacentHTML("beforeend",liveChatOverlay)'));
+  assert.doesNotMatch(app, /data-live-tools-panel='chat'/, 'do not duplicate Chat inside the Tools drawer');
   assert.doesNotMatch(app, /live-reaction-bar/);
+  assert.match(compact, /\.live-fullscreen-chat-slot\{[\s\S]*height:100%!important/);
 });
 
 test('Room audio has a working mute/unmute control separate from microphone publishing', () => {
@@ -84,4 +91,30 @@ test('Host and approved guests can use camera controls in video LIVE rooms', () 
   assert.match(app, /await room\.localParticipant\.setCameraEnabled\(true\)/);
   assert.match(app, /cameraControl\.disabled=!\(\(role==="host"\|\|role==="guest"\)&&canUseCamera\)/);
   assert.match(app, /id='live-gift-panel'/);
+});
+
+test('MeetWave-style room controls absent from LIVE are active without duplicating existing controls', () => {
+  assert.match(app, /liveControlButton\("live-fullscreen-toggle","fullscreen"/);
+  assert.match(app, /liveFullscreenControl\?\.addEventListener\("click",async\(\)=>/);
+  assert.match(app, /livePlayerShell\?\.requestFullscreen/);
+  assert.match(app, /document\.removeEventListener\("fullscreenchange",liveFullscreenChangeListener\)/);
+  assert.match(app, /const liveDeviceSettings="<section id='live-device-settings-panel'/);
+  assert.match(app, /data-live-tools-panel-target='devices'/);
+  assert.match(app, /data-live-device-kind='audioinput'/);
+  assert.match(app, /data-live-device-kind='videoinput'/);
+  assert.match(app, /data-live-device-kind='audiooutput'/);
+  assert.match(app, /room\.switchActiveDevice\(kind,selected\)/);
+  assert.match(app, /setSinkId\(selected\)/);
+  assert.match(app, /setMicrophoneEnabled\(false\)/);
+  assert.match(app, /setMicrophoneEnabled\(true,\{/);
+  assert.match(compact, /\.live-device-settings-grid/);
+});
+
+test('LIVE room controls and layout are scoped so other Minglora pages are unchanged', () => {
+  assert.match(compact, /body:has\(#live-player-shell\)/);
+  assert.match(compact, /body:has\(#live-player-shell\) \.layout\{/);
+  assert.match(compact, /body:has\(#live-player-shell\) \.mobile-nav\{display:none!important\}/);
+  assert.match(compact, /body:has\(#live-player-shell\) #live-tools-backdrop\.hidden\{display:none!important\}/);
+  assert.match(compact, /@media\(max-width:760px\)/);
+  assert.match(compact, /@media\(max-height:700px\)/);
 });
