@@ -4360,6 +4360,20 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,200,{story:await publicStory(story,user.id,true)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)$/);
+      if(method==='PATCH'&&m){
+        await pruneExpiredStories();
+        const story=db.stories.find(x=>x.id===m[1]);
+        if(!story)return json(res,404,{error:'Story not found.'});
+        if(story.userId!==user.id)return json(res,403,{error:'Only the story author can edit this story.'});
+        const text=input.text===undefined?String(story.text||''):String(input.text||'').trim();
+        const audience=input.audience===undefined?String(story.audience||'public'):String(input.audience||'');
+        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
+        const mediaIds=Array.isArray(story.mediaIds)&&story.mediaIds.length?story.mediaIds:(story.mediaId?[story.mediaId]:[]);
+        if(!text&&!mediaIds.length&&!story.soundtrack)return json(res,400,{error:'A story must contain text, media or a sound.'});
+        story.text=text;story.audience=audience;story.updatedAt=now();
+        await saveStore();return json(res,200,{story:await publicStory(story,user.id,true)});
+      }
       if(method==='DELETE'&&m){
         await pruneExpiredStories();
         const story=db.stories.find(x=>x.id===m[1]);
