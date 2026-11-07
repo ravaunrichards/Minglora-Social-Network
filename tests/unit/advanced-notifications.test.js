@@ -64,13 +64,16 @@ test('Notification UI is responsive and uses content-flow layout rather than fix
   assert.doesNotMatch(app,/notification-center[^\n]*position:\s*fixed/i);
 });
 
-test('Web Push cache and delivery assets reference the advanced notification build',()=>{
-  assert.match(worker,/v99-advanced-notifications-1/);
+test('Web Push caches the active app shell and routes notifications to the current app',()=>{
+  const activeAssets=[
+    html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/settings\.js\?v=[^"]+)"/)?.[1]
+  ].filter(Boolean);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  for(const asset of activeAssets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
   assert.match(worker,/notificationclick/);
   assert.match(worker,/notificationId/);
-  assert.match(worker,/\/styles\.css\?v=[^'\"]*-advanced-notifications-1/);
-  assert.match(worker,/\/app\.js\?v=[^'\"]*-advanced-notifications-1/);
-  assert.match(worker,/\/settings\.js\?v=[^'\"]*-advanced-notifications-1/);
 });
 
 test('Notification changes are broadcast only to the authenticated recipient account realtime sockets',()=>{
