@@ -3228,6 +3228,33 @@ async function route(req, res) {
         await saveStore();
         return json(res, 200, { accepted: true, likeCount: session.likeCount });
       }
+      const liveGiftRecipientsMatch=p.match(/^\/api\/live\/sessions\/([^/]+)\/gift-recipients$/);
+      if(method==='GET'&&liveGiftRecipientsMatch){
+        const session=(db.liveSessions||[]).find(item=>item.id===liveGiftRecipientsMatch[1]&&item.status==='live');
+        if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available.'});
+        const friends=isFriend(user.id,session.hostId);
+        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
+        if(!canView)return json(res,404,{error:'LIVE session is not available.'});
+        let connected;
+        try{connected=await listLiveKitParticipants(session.roomName);}
+        catch{return json(res,503,{error:'Minglora could not refresh the LIVE recipient list.'});}
+        if(!connected.some(participant=>participant.identity===user.id)){
+          return json(res,409,{error:'Join this LIVE room before choosing a gift recipient.'});
+        }
+        const recipients=connected.filter(participant=>participant.identity!==user.id).map(participant=>{
+          const id=String(participant.identity||'');
+          const member=db.users.find(candidate=>String(candidate.id)===id);
+          if(!member)return null;
+          const liveParticipant=(db.liveParticipants||[]).find(item=>
+            item.sessionId===session.id&&String(item.userId)===id&&!item.leftAt&&
+            ['connected','accepted'].includes(String(item.status||''))
+          );
+          const role=id===String(session.hostId)?'host':String(liveParticipant?.role||'viewer');
+          if(id!==String(session.hostId)&&!['guest','cohost','viewer'].includes(role))return null;
+          return {id,name:String(member.name||member.username||'Minglora member'),username:String(member.username||''),role};
+        }).filter(Boolean);
+        return json(res,200,{recipients});
+      }
       let liveAction=p.match(/^\/api\/live\/sessions\/([^/]+)\/gifts$/);
       if(method==='GET'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
@@ -3239,24 +3266,21 @@ async function route(req, res) {
         const sinceMs=sinceValue?Date.parse(sinceValue):0;
         if(sinceValue&&!Number.isFinite(sinceMs))return json(res,400,{error:'Use a valid timestamp when checking LIVE gift activity.'});
         const events=(db.giftGalleryEvents||[])
-          .filter(event=>!event.refundedAt&&event.status!=='refunded'&&event.broadcastId===session.id&&event.creatorId===session.hostId&&
+          .filter(event=>!event.refundedAt&&event.status!=='refunded'&&event.broadcastId===session.id&&
             (!sinceValue||Date.parse(event.createdAt)>=sinceMs))
           .sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
           .slice(-60)
           .map(event=>{
             const sender=db.users.find(member=>member.id===event.senderId);
+            const recipientMember=db.users.find(member=>member.id===event.creatorId);
             return {
-              id:String(event.giftId||event.id||''),
-              giftCode:String(event.giftCode||''),
-              giftName:String(event.giftName||'Gift'),
-              coinAmount:Number(event.coinAmount||0),
-              emoji:String(event.emoji||'🎁'),
-              imageUrl:String(event.imageUrl||''),
-              modelUrl:String(event.modelUrl||''),
-              createdAt:String(event.createdAt||''),
-              broadcastId:String(event.broadcastId||session.id),
+              id:String(event.giftId||event.id||''),giftCode:String(event.giftCode||''),giftName:String(event.giftName||'Gift'),
+              coinAmount:Number(event.coinAmount||0),emoji:String(event.emoji||'🎁'),imageUrl:String(event.imageUrl||''),
+              modelUrl:String(event.modelUrl||''),createdAt:String(event.createdAt||''),broadcastId:String(event.broadcastId||session.id),
               sender:sender?safeUser(sender,user.id):{id:String(event.senderId||''),name:'Minglora member',username:'member'},
-              recipient:(()=>{const host=db.users.find(member=>member.id===session.hostId);return host?{id:host.id,name:host.name||'LIVE host',username:host.username||''}:{id:session.hostId,name:'LIVE host',username:''};})()
+              recipient:recipientMember
+                ?{id:recipientMember.id,name:recipientMember.name||recipientMember.username||'LIVE participant',username:recipientMember.username||''}
+                :{id:String(event.creatorId||session.hostId),name:'LIVE participant',username:''}
             };
           });
         return json(res,200,{events});
@@ -3264,87 +3288,95 @@ async function route(req, res) {
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
         if(session&&(session.liveSettings?.practiceMode||session.liveSettings?.liveGifts===false))return json(res,403,{error:'LIVE gifts are disabled for this broadcast.'});
-        if(!session||session.hostId===user.id||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available for gifting.'});
+        if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session is not available for gifting.'});
         const friends=isFriend(user.id,session.hostId);
         const canView=session.visibility==='public'||(session.visibility==='friends'&&friends)||session.hostId===user.id;
         if(!canView)return json(res,404,{error:'LIVE session is not available for gifting.'});
+        const recipientId=String(input.recipientUserId||(user.id===session.hostId?'':session.hostId)).trim();
+        if(!recipientId||recipientId===String(user.id))return json(res,400,{error:'Choose another LIVE participant to receive this gift.'});
         const requestedGiftCode=String(input.giftCode||'');
+        if(!/^[a-z0-9_-]{1,60}$/.test(requestedGiftCode))return json(res,400,{error:'Choose a valid Minglora gift.'});
         if(LIVE_FAN_CLUB_GIFT_CODES.includes(requestedGiftCode)){
           const fanMembership=getLiveFanClubMembership(db,session.hostId,user.id);
           if(fanMembership?.status!=='active')return json(res,403,{error:'Join this host’s Fan Club before sending Team Gifts.',code:'fan_club_required'});
         }
-        let hostIsPresent=false;
-        try {
-          const participants=await listLiveKitParticipants(session.roomName);
-          hostIsPresent=participants.some(participant=>participant.identity===session.hostId);
-        } catch {
-          return json(res,503,{error:'Minglora could not verify that the host is currently LIVE. Try again shortly.'});
+        let connected;
+        try{connected=await listLiveKitParticipants(session.roomName);}
+        catch{return json(res,503,{error:'Minglora could not verify the LIVE room participants. Try again.'});}
+        const presentIds=new Set(connected.map(participant=>String(participant.identity||'')));
+        if(!presentIds.has(String(session.hostId)))return json(res,409,{error:'This host is no longer LIVE. Refresh the LIVE directory.'});
+        if(!presentIds.has(String(user.id)))return json(res,409,{error:'Join the LIVE room before sending a gift.'});
+        if(!presentIds.has(recipientId))return json(res,409,{error:'That recipient is no longer connected to this LIVE. Refresh the recipient list.'});
+        const recipient=db.users.find(member=>String(member.id)===recipientId);
+        if(!recipient)return json(res,404,{error:'The selected LIVE recipient could not be found.'});
+        if(blockedBetween(user.id,recipientId))return json(res,403,{error:'Gifting is unavailable for this relationship.'});
+        const recipientParticipant=(db.liveParticipants||[]).find(item=>
+          item.sessionId===session.id&&String(item.userId)===recipientId&&!item.leftAt&&
+          ['connected','accepted'].includes(String(item.status||''))
+        );
+        if(recipientId!==String(session.hostId)&&!recipientParticipant){
+          return json(res,409,{error:'The selected participant is not an active LIVE guest or viewer.'});
         }
-        if(!hostIsPresent)return json(res,409,{error:'This host is no longer LIVE. Refresh the LIVE directory.'});
         const fundingSource=String(input.fundingSource||'cash');
         if(!['cash','admin_promotional'].includes(fundingSource))return json(res,400,{error:'Choose a supported Minglora gift wallet.'});
         const result=fundingSource==='admin_promotional'
-          ?await requestSupabaseState('economy_send_admin_promotional_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||''),recipientUsername:null})
-          :await requestSupabaseState('economy_send_gift',{senderId:user.id,broadcastId:session.id,giftCode:String(input.giftCode||'')});
+          ?await requestSupabaseState('economy_send_admin_promotional_gift',{
+            senderId:user.id,broadcastId:recipientId===String(session.hostId)?session.id:null,
+            recipientUsername:recipientId===String(session.hostId)?null:String(recipient.username||''),giftCode:requestedGiftCode
+          })
+          :await requestSupabaseState('economy_send_gift',{
+            senderId:user.id,broadcastId:session.id,giftCode:requestedGiftCode,recipientUserId:recipientId
+          });
         const confirmedGift=result.gift||{};
         const confirmedGiftId=confirmedGift.giftTransactionId||confirmedGift.id||confirmedGift.transactionId||confirmedGift.transaction_id;
         const confirmedCoinAmount=Number(confirmedGift.coinAmount??confirmedGift.coin_amount??confirmedGift.coins??0);
+        if(String(confirmedGift.receiverId||confirmedGift.receiver_id||recipientId)!==recipientId){
+          return json(res,502,{error:'Minglora could not confirm the selected gift recipient.'});
+        }
         const confirmedAt=new Date();
         if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
           try{
-            const recipient=db.users.find(member=>member.id===session.hostId);
-            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId:session.hostId,recipientUsername:recipient?.username||'',giftCode:String(input.giftCode||''),giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',now:confirmedAt});
-          }catch(error){console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
-          try{
-            recordLiveGiftForLeagues(db,{
-              giftId:confirmedGiftId,recipientId:session.hostId,broadcastId:session.id,
-              giftCode:String(input.giftCode||''),coinAmount:confirmedCoinAmount,
-              region:db.users.find(member=>member.id===session.hostId)?.country||'GLOBAL'
-            });
+            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId,recipientUsername:recipient.username||'',giftCode:requestedGiftCode,giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',now:confirmedAt});
           }catch(error){
-            console.error('[Minglora League] A confirmed LIVE Gift could not be added to League totals.',{giftId:String(confirmedGiftId),message:String(error?.message||'league update failed').slice(0,160)});
+            console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});
           }
-        }
-        if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
+          if(recipientId===String(session.hostId)){
+            try{
+              recordLiveGiftForLeagues(db,{giftId:confirmedGiftId,recipientId,broadcastId:session.id,giftCode:requestedGiftCode,coinAmount:confirmedCoinAmount,region:recipient.country||'GLOBAL'});
+            }catch(error){
+              console.error('[Minglora League] A confirmed host LIVE Gift could not be added to League totals.',{giftId:String(confirmedGiftId),message:String(error?.message||'league update failed').slice(0,160)});
+            }
+            awardLiveFanClubPoints(db,{hostId:session.hostId,fanId:user.id,source:'gift',points:confirmedCoinAmount,sourceId:String(confirmedGiftId),now:confirmedAt});
+          }
           try{
-            const creator=db.users.find(member=>member.id===session.hostId);
             recordGiftGalleryEvent(db,{
-              giftId:String(confirmedGiftId),creatorId:session.hostId,senderId:user.id,
-              broadcastId:session.id,giftCode:String(input.giftCode||''),coinAmount:confirmedCoinAmount,
+              giftId:String(confirmedGiftId),creatorId:recipientId,senderId:user.id,broadcastId:session.id,
+              giftCode:requestedGiftCode,coinAmount:confirmedCoinAmount,
               giftName:confirmedGift.giftName||confirmedGift.name||'',emoji:confirmedGift.emoji||'🎁',
               imageUrl:confirmedGift.imageUrl||confirmedGift.image_url||'',
               modelUrl:confirmedGift.modelUrl||confirmedGift.model_url||'',
-              timeZone:giftGalleryTimeZone(creator),now:confirmedAt
+              timeZone:giftGalleryTimeZone(recipient),now:confirmedAt
             });
           }catch(error){
-            console.error('[Minglora Gift Gallery] A confirmed LIVE Gift could not be added to the weekly gallery.',{giftId:String(confirmedGiftId),message:String(error?.message||'gallery update failed').slice(0,160)});
+            console.error('[Minglora Gift Gallery] A confirmed LIVE Gift could not be added to the recipient gallery.',{giftId:String(confirmedGiftId),recipientId,message:String(error?.message||'gallery update failed').slice(0,160)});
           }
         }
-        if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
-          awardLiveFanClubPoints(db,{hostId:session.hostId,fanId:user.id,source:'gift',points:confirmedCoinAmount,sourceId:String(confirmedGiftId),now:confirmedAt});
-        }
-        notify(session.hostId,user.id,'gift',user.name+' sent a LIVE gift.');
+        notify(recipientId,user.id,'gift',user.name+' sent you a LIVE gift.');
         await saveStore();
-        const liveGiftEvent=confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0?(()=>{
-          const creator=db.users.find(member=>member.id===session.hostId);
-          return {
-            id:String(confirmedGiftId),
-            broadcastId:String(session.id),
-            giftCode:String(confirmedGift.giftCode||input.giftCode||''),
-            giftName:String(confirmedGift.giftName||confirmedGift.name||input.giftCode||'Minglora Gift'),
-            coinAmount:confirmedCoinAmount,
-            emoji:String(confirmedGift.emoji||'🎁'),
-            imageUrl:String(confirmedGift.imageUrl||confirmedGift.image_url||''),
-            modelUrl:String(confirmedGift.modelUrl||confirmedGift.model_url||''),
-            createdAt:confirmedAt.toISOString(),
-            sender:{id:String(user.id),name:String(user.name||user.username||'Minglora member'),username:String(user.username||'')},
-            recipient:{id:String(session.hostId),name:String(creator?.name||'LIVE host'),username:String(creator?.username||'')}
-          };
-        })():null;
+        const liveGiftEvent=confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0?{
+          id:String(confirmedGiftId),broadcastId:String(session.id),
+          giftCode:String(confirmedGift.giftCode||requestedGiftCode),
+          giftName:String(confirmedGift.giftName||confirmedGift.name||requestedGiftCode||'Minglora Gift'),
+          coinAmount:confirmedCoinAmount,emoji:String(confirmedGift.emoji||'🎁'),
+          imageUrl:String(confirmedGift.imageUrl||confirmedGift.image_url||''),
+          modelUrl:String(confirmedGift.modelUrl||confirmedGift.model_url||''),
+          createdAt:confirmedAt.toISOString(),
+          sender:{id:String(user.id),name:String(user.name||user.username||'Minglora member'),username:String(user.username||'')},
+          recipient:{id:String(recipientId),name:String(recipient.name||recipient.username||'LIVE participant'),username:String(recipient.username||'')}
+        }:null;
         if(liveGiftEvent){
-          try{
-            await broadcastLiveKitData(session.roomName,{type:'minglora.live.gift',version:1,event:liveGiftEvent},'minglora-live-gift');
-          }catch(error){
+          try{await broadcastLiveKitData(session.roomName,{type:'minglora.live.gift',version:1,event:liveGiftEvent},'minglora-live-gift');}
+          catch(error){
             console.warn('[Minglora LIVE gifts] Room-wide gift broadcast failed; polling remains the recovery path.',{
               broadcastId:session.id,giftId:String(confirmedGiftId),message:String(error?.message||'broadcast failed').slice(0,180)
             });
