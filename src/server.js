@@ -13,6 +13,7 @@ import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normal
 import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
+import { createCurrencyConverterService, normalizeCurrencyCode } from '../backend/modules/currency-converter/service.js';
 import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired, getMessageConversationPeerId } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
@@ -46,6 +47,7 @@ const AUTH_PROVIDER = String(process.env.AUTH_PROVIDER || (process.env.NODE_ENV 
 if (!['supabase', 'legacy'].includes(AUTH_PROVIDER)) throw new Error('AUTH_PROVIDER must be supabase or legacy.');
 if (process.env.NODE_ENV === 'production' && AUTH_PROVIDER !== 'supabase') throw new Error('Production startup requires AUTH_PROVIDER=supabase. When Minglora Supabase credentials are missing, authentication routes fail closed with HTTP 503 instead of writing accounts to local storage.');
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp', '.gltf':'model/gltf+json; charset=utf-8', '.webmanifest':'application/manifest+json; charset=utf-8' };
+const currencyConverterService = createCurrencyConverterService();
 
 let refundedGiftSyncAt = 0;
 let refundedGiftSyncPromise = null;
@@ -2497,6 +2499,28 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/coins/wallet'){
         return json(res,200,await requestSupabaseState('economy_wallet',{userId:user.id}));
       }
+      if(method==='GET'&&p==='/api/currency/currencies'){
+        try{
+          const directory=await currencyConverterService.getCurrencyDirectory();
+          return json(res,200,directory,{'Cache-Control':'private, max-age=300'});
+        }catch(error){
+          console.error('[currency-converter] Currency directory unavailable:',error?.message||error);
+          return json(res,error.status||503,{error:'Minglora could not load the current ISO currency directory. Please try again.'});
+        }
+      }
+      if(method==='GET'&&p==='/api/currency/rate'){
+        const base=normalizeCurrencyCode(url.searchParams.get('base'));
+        const quote=normalizeCurrencyCode(url.searchParams.get('quote'));
+        if(!base||!quote)return json(res,400,{error:'Choose valid three-letter ISO currency codes.'});
+        try{
+          const rate=await currencyConverterService.getRate(base,quote,{refresh:url.searchParams.get('refresh')==='1'});
+          return json(res,200,rate,{'Cache-Control':'private, max-age=60'});
+        }catch(error){
+          if(error.status!==400)console.warn('[currency-converter] Reference rate unavailable:',error?.message||error);
+          return json(res,error.status||503,{error:error.message||'A reference exchange rate is not available right now.'});
+        }
+      }
+
       if(method==='POST'&&p==='/api/admin/coins/owner-issuance'){
         const adminEmail=normalizeEmail(user.email);
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
