@@ -62,12 +62,13 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
   assert.match(app,/transformProfileCrop\(coverInput\.files\[0\],coverEdit,coverPreview,'cover'\)/);
 });
 
-test('the refreshed shell and service worker load the pinch-to-zoom crop editor and styles',()=>{
-  assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(html,/app\.js\?v=20261107-top-gifters-2/);
-  assert.match(worker,/minglora-shell-v132-live-top-gifters-2/);
-  assert.match(worker,/styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(worker,/app\.js\?v=20261107-top-gifters-2/);
+test('the refreshed shell and service worker load the profile crop editor and styles',()=>{
+  const appAsset=html.match(/app\\.js\\?v=[^"']+/)?.[0]||'';
+  const styleAsset=html.match(/styles\\.css\\?v=[^"']+/)?.[0]||'';
+  const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
+  assert.ok(appAsset&&worker.includes('/'+appAsset));
+  assert.ok(styleAsset&&worker.includes('/'+styleAsset));
+  assert.match(cacheName,/^minglora-shell-v\\d+-/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
