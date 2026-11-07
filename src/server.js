@@ -1283,9 +1283,9 @@ async function route(req, res) {
           const name=String(input.name||'Monthly membership').trim();
           const description=String(input.description||'').trim();
           const benefits=Array.isArray(input.benefits)?input.benefits.map(value=>String(value).trim()).filter(Boolean).slice(0,8):[];
-          if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||
+          if(!Number.isSafeInteger(priceMinor)||priceMinor<299||priceMinor>9999||
             name.length<2||name.length>48||description.length>500||benefits.some(value=>value.length>100)){
-            return json(res,400,{error:'Set an even monthly price from USD 1.00 to USD 10,000.00, with a short title and benefits.'});
+            return json(res,400,{error:'Choose a monthly price from USD 2.99 to USD 99.99, with a short title and benefits.'});
           }
           const creator=await requestSupabaseState('subscription_creator_get',{userId:user.id});
           if(creator.settings?.application_status!=='approved')return json(res,403,{error:'Minglora must approve your creator application before you can create paid subscriptions.'});
