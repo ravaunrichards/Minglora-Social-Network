@@ -1,39 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
-<title id="title">Minglora gender-neutral 3D profile avatar</title>
-<desc id="desc">A gender-neutral, faceless, dimensional person icon with a smooth rounded head and shoulders on a luminous blue-violet background.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="768" viewBox="0 0 768 768" role="img" aria-labelledby="title desc">
+<title id="title">Minglora default member profile picture</title>
+<desc id="desc">A neutral white profile silhouette centered inside a light gray circular background and a thin white outer ring.</desc>
 <defs>
- <linearGradient id="bg" x1="110" y1="55" x2="908" y2="1005" gradientUnits="userSpaceOnUse"><stop stop-color="#0b2257"/><stop offset=".48" stop-color="#1769e0"/><stop offset="1" stop-color="#542b9a"/></linearGradient>
- <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="matrix(0 520 -520 0 510 390)" gradientUnits="userSpaceOnUse"><stop stop-color="#c2f5ff" stop-opacity=".78"/><stop offset=".52" stop-color="#7ad5ff" stop-opacity=".2"/><stop offset="1" stop-color="#7ad5ff" stop-opacity="0"/></radialGradient>
- <linearGradient id="head" x1="337" y1="252" x2="693" y2="691" gradientUnits="userSpaceOnUse"><stop stop-color="#f7fdff"/><stop offset=".3" stop-color="#d9f2ff"/><stop offset=".66" stop-color="#9cc9f5"/><stop offset="1" stop-color="#527fc8"/></linearGradient>
- <linearGradient id="headSide" x1="606" y1="340" x2="754" y2="656" gradientUnits="userSpaceOnUse"><stop stop-color="#9bc9ef" stop-opacity="0"/><stop offset="1" stop-color="#31599b" stop-opacity=".8"/></linearGradient>
- <linearGradient id="body" x1="268" y1="665" x2="761" y2="1040" gradientUnits="userSpaceOnUse"><stop stop-color="#e9faff"/><stop offset=".22" stop-color="#9be8ff"/><stop offset=".55" stop-color="#438fe8"/><stop offset="1" stop-color="#243d9c"/></linearGradient>
- <linearGradient id="bodySide" x1="530" y1="760" x2="885" y2="1030" gradientUnits="userSpaceOnUse"><stop stop-color="#4da9f0" stop-opacity="0"/><stop offset="1" stop-color="#1b2675" stop-opacity=".72"/></linearGradient>
- <linearGradient id="neck" x1="420" y1="570" x2="627" y2="780" gradientUnits="userSpaceOnUse"><stop stop-color="#edfaff"/><stop offset=".55" stop-color="#a7d9f5"/><stop offset="1" stop-color="#648fc9"/></linearGradient>
- <linearGradient id="glass" x1="235" y1="180" x2="800" y2="840" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
- <filter id="shadow" x="110" y="160" width="820" height="940" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="30"/></filter>
- <filter id="glow" x="0" y="0" width="1024" height="1024" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="18"/></filter>
+  <clipPath id="avatar-circle"><circle cx="384" cy="384" r="294"/></clipPath>
+  <filter id="soft-shadow" x="42" y="42" width="684" height="684" color-interpolation-filters="sRGB">
+    <feGaussianBlur stdDeviation="3"/>
+  </filter>
 </defs>
-<circle cx="512" cy="512" r="512" fill="url(#bg)"/>
-<circle cx="512" cy="410" r="505" fill="url(#halo)"/>
-<circle cx="512" cy="512" r="435" fill="none" stroke="#e5faff" stroke-opacity=".19" stroke-width="3"/>
-<circle cx="512" cy="512" r="382" fill="none" stroke="#e5faff" stroke-opacity=".13" stroke-width="2" stroke-dasharray="5 19"/>
-<g fill="#e7fbff"><circle cx="213" cy="338" r="7" opacity=".72"/><circle cx="819" cy="286" r="6" opacity=".72"/><circle cx="806" cy="713" r="8" opacity=".5"/><circle cx="248" cy="756" r="5" opacity=".62"/></g>
-<ellipse cx="518" cy="933" rx="300" ry="72" fill="#061843" opacity=".5" filter="url(#shadow)"/>
-<!-- Smooth, intentionally featureless head: no hair, facial or gender-coded details. -->
-<path d="M378 657c-3-37 13-75 42-96 27-20 57-29 92-29s65 9 92 29c29 21 45 59 42 96l-17 113H395l-17-113Z" fill="url(#neck)"/>
-<path d="M214 1024c18-171 112-280 278-319l20-5 20 5c166 39 260 148 278 319H214Z" fill="url(#body)"/>
-<path d="M512 700c-53 0-99-17-137-52 14 77 57 134 137 175 80-41 123-98 137-175-38 35-84 52-137 52Z" fill="#eafaff" opacity=".4"/>
-<path d="M512 195c-144 0-235 112-235 272v83c0 164 98 270 235 270s235-106 235-270v-83c0-160-91-272-235-272Z" fill="url(#head)"/>
-<path d="M512 195c-144 0-235 112-235 272v83c0 164 98 270 235 270V195Z" fill="#fff" opacity=".13"/>
-<path d="M512 195c144 0 235 112 235 272v83c0 164-98 270-235 270 130-63 178-167 178-315v-73c0-127-63-217-178-237Z" fill="url(#headSide)"/>
-<path d="M319 337c34-88 104-139 193-139 93 0 161 49 194 140-42-44-102-69-177-69-83 0-153 24-210 68Z" fill="#fff" opacity=".28"/>
-<path d="M296 445c7-147 87-242 216-242 129 0 209 95 216 242" fill="none" stroke="#f8fdff" stroke-opacity=".45" stroke-width="13" stroke-linecap="round"/>
-<path d="M342 758c-73 42-118 104-143 189 113-84 209-117 313-112 104-5 200 28 313 112-25-85-70-147-143-189-45 47-101 70-170 70s-125-23-170-70Z" fill="#dff8ff" opacity=".4"/>
-<path d="M214 1024c18-171 112-280 278-319v123c-91-3-167 25-226 80-28 30-48 68-59 116Z" fill="#fff" opacity=".12"/>
-<path d="M512 705c-69 0-127-23-170-70l-25 39c48 57 113 87 195 87s147-30 195-87l-25-39c-43 47-101 70-170 70Z" fill="url(#glass)" opacity=".45"/>
-<path d="M300 878c68-54 137-78 212-78s144 24 212 78" fill="none" stroke="#eafaff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
-<path d="M355 286c39-54 92-83 157-87" fill="none" stroke="#fff" stroke-opacity=".47" stroke-width="12" stroke-linecap="round"/>
-<path d="M679 340c27 48 39 105 39 171" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="9" stroke-linecap="round"/>
-<ellipse cx="390" cy="376" rx="82" ry="112" fill="#fff" opacity=".12" filter="url(#glow)"/>
-<path d="M512 820v151" stroke="#d8f7ff" stroke-opacity=".12" stroke-width="5"/>
+<rect width="768" height="768" fill="#fff"/>
+<circle cx="384" cy="384" r="318" fill="#000" opacity=".06" filter="url(#soft-shadow)"/>
+<circle cx="384" cy="384" r="315" fill="#fff" stroke="#eeeeee" stroke-width="3"/>
+<circle cx="384" cy="384" r="294" fill="#c6c6c6"/>
+<g clip-path="url(#avatar-circle)">
+  <circle cx="384" cy="365" r="110" fill="#f8f8f8"/>
+  <path d="M192 690c17-104 87-188 192-188s175 84 192 188v90H192v-90Z" fill="#f8f8f8"/>
+</g>
 </svg>
