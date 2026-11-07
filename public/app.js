@@ -1064,6 +1064,7 @@ let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
 let liveGiftCatalogue=[];
 let liveGiftEventsTimer=null;
+let liveGiftRecipientsTimer=null;
 let liveGiftEventsBusy=false;
 let liveGiftEventsLastSeenAt='';
 const liveGiftSeenEventIds=new Set();
@@ -1447,6 +1448,7 @@ async function syncLiveParticipantPresence(session){
 function stopLiveSpeakerRefresh(){if(liveSpeakerRefreshTimer){clearInterval(liveSpeakerRefreshTimer);liveSpeakerRefreshTimer=null;}}
 function stopLiveGiftEvents(){
   if(liveGiftEventsTimer){clearInterval(liveGiftEventsTimer);liveGiftEventsTimer=null;}
+  if(liveGiftRecipientsTimer){clearInterval(liveGiftRecipientsTimer);liveGiftRecipientsTimer=null;}
   liveGiftEventsBusy=false;
   liveGiftEventsLastSeenAt='';
   liveGiftSeenEventIds.clear();
@@ -2410,14 +2412,14 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
-  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Browse, preview and quickly send from the complete Minglora gift collection")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
+  const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>Send gifts to the host or any approved guest/co-host in this LIVE.</small></div><span id='live-wallet-balance'>Loading Coins…</span></div><label class='live-gift-recipient-field'>Send gift to<select id='live-gift-recipient'><option value=''>Loading LIVE participants…</option></select></label><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
     (!giftsEnabled?"<p class='live-gift-disabled-note' role='status'>"+(liveSettings.practiceMode?"Gifts are unavailable in Practice Mode.":"The host has turned off gifts for this LIVE.")+" The catalogue remains visible, but gifts cannot be sent.</p>":"")+
     "<div class='live-gift-scope-tabs' role='group' aria-label='Gift collection'><button type='button' data-live-gift-scope='all' class='active' aria-pressed='true'>All Gifts</button><button type='button' data-live-gift-scope='favorites' aria-pressed='false'>★ Favorites</button><button type='button' data-live-gift-scope='recent' aria-pressed='false'>Recently Sent</button><button type='button' id='live-gift-scope-team' data-live-gift-scope='team' aria-pressed='false'>♥ Team Gifts</button></div><p id='live-gift-team-note' class='live-gift-team-note' hidden>Team Gifts are unlocked when you join this host’s Fan Club.</p>"+
     "<div class='live-gift-browser-tools'><label class='live-gift-search-wrap'><span>Find any gift</span><input id='live-gift-search' class='live-gift-search' type='search' placeholder='Search by gift name, category or Coins…' aria-label='Search every gift by name, category or coin price'></label><label class='live-gift-sort-label'>Sort gifts <select id='live-gift-sort' aria-label='Sort LIVE gifts'><option value='high'>Premium first · highest price</option><option value='low'>Price: low to high</option><option value='name'>Name A–Z</option></select></label></div>"+
     "<div id='live-gift-categories' class='live-gift-category-row' role='group' aria-label='Gift categories'><button type='button' class='active' data-live-gift-category='all' aria-pressed='true'>All categories</button></div>"+
     "<section id='live-gift-selected-preview' class='live-gift-selected-preview' hidden><div id='live-gift-preview-art' class='live-gift-preview-art' aria-label='Selected gift preview'></div><div class='live-gift-preview-copy'><span class='live-gift-preview-eyebrow'>Selected gift</span><strong id='live-gift-preview-name'>Choose a gift</strong><small id='live-gift-preview-price'></small><small id='live-gift-preview-note'>Preview the animation and sound before sending.</small><div class='live-gift-preview-actions'><button type='button' class='secondary' id='live-gift-preview-sound' disabled>▶ Preview animation &amp; sound</button><button type='button' class='primary' id='live-gift-send-selected' disabled>Quick send selected gift</button></div></div></section>"+
     "<div class='live-gift-results-heading'><strong id='live-gift-count'>Loading gifts…</strong><small>Tap a gift to preview it. Your favourites and recent gifts stay easy to reach.</small></div><div id='live-gift-grid' class='live-gift-grid'><p class='muted'>Loading original Minglora gifts…</p></div><button class='secondary' type='button' id='live-gift-more' hidden>Show more gifts</button>"+
-    (role==="host"?"<p class='live-gift-host-note'>This is a read-only preview. Viewers and approved guests can send gifts when LIVE gifts are enabled.</p>":"<button class='text-button' id='live-recharge'>Recharge Minglora Coins</button>")+
+    "<p class='live-gift-host-note'>Viewers can gift the host and stage guests. Hosts and approved guests can gift one another.</p><button class='text-button' id='live-recharge'>Recharge Minglora Coins</button>"+
     "</section>";
   const liveFanClubTools="<section id='live-fan-club-panel' class='live-tools-card live-fan-club-panel' data-live-tools-panel='fanclub'><div class='live-panel-title'><strong>♥ Fan Club & Team Gifts</strong><small>Join this creator’s Fan Club with the 1-Coin Heart Me gift. Earn Fan Points by watching, chatting and gifting.</small></div>"+
     (role==='host'?"<div id='live-fan-club-status' class='live-fan-club-status'><strong>Creator Fan Club</strong><small>Members can unlock Team Gifts and Fan badges.</small></div>":"<div id='live-fan-club-status' class='live-fan-club-status'><small>Checking your Fan Club membership…</small></div><button type='button' id='live-fan-club-join-panel' class='live-fan-club-join-panel'>♥ Join for 1 Coin</button><button type='button' id='live-team-gifts-open' class='secondary'>Open Team Gifts</button>")+
@@ -3046,7 +3048,7 @@ activeLivePinnedComment=null;
       const liveGiftSendSelected=$("#live-gift-send-selected");
       const liveGiftCount=$("#live-gift-count");
       const liveGiftPreferenceKey="minglora:live-gift-access:v1:"+String(state.user?.id||"member");
-      let liveGiftVisible=48,liveGiftQuery="",liveGiftSort="high",liveGiftCategory="all",liveGiftCatalogueError=null,liveGiftSelectedCode="",liveGiftSending=false;
+      let liveGiftVisible=48,liveGiftQuery="",liveGiftSort="high",liveGiftCategory="all",liveGiftCatalogueError=null,liveGiftSelectedCode="",liveGiftSending=false,liveGiftRecipients=[];
       let liveGiftFavorites=new Set(),liveGiftRecent=[];
       try{
         const stored=JSON.parse(localStorage.getItem(liveGiftPreferenceKey)||"{}");
@@ -3059,6 +3061,32 @@ activeLivePinnedComment=null;
       const liveGiftCategoryNames={flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
       const liveGiftCategoryName=key=>liveGiftCategoryNames[String(key||"").toLowerCase()]||String(key||"More gifts").replace(/[_-]+/g," ").replace(/\b\w/g,char=>char.toUpperCase());
       const liveGiftByCode=code=>liveGiftCatalogue.find(item=>String(item.code)===String(code))||null;
+      async function loadLiveGiftRecipients(liveSession,silent=false){
+        const select=$("#live-gift-recipient");if(!select)return;
+        const previous=String(select.value||"");
+        try{
+          const result=await api("/live/sessions/"+encodeURIComponent(liveSession.id)+"/gift-recipients");
+          liveGiftRecipients=Array.isArray(result.recipients)?result.recipients:[];
+          const labels={host:"Host",guest:"Guest",cohost:"Co-host"};
+          select.innerHTML=liveGiftRecipients.length
+            ?liveGiftRecipients.map(member=>"<option value='"+esc(member.id)+"'>"+esc(member.name||member.username||"Minglora member")+" · "+esc(labels[member.role]||"Stage guest")+"</option>").join("")
+            :"<option value=''>No other connected host or guests</option>";
+          select.disabled=!liveGiftRecipients.length;
+          if(liveGiftRecipients.length){
+            const preferred=liveGiftRecipients.find(member=>String(member.id)===previous)
+              ||liveGiftRecipients.find(member=>member.role==="host")||liveGiftRecipients[0];
+            select.value=preferred.id;
+          }
+        }catch(error){
+          liveGiftRecipients=[];
+          if(!silent){
+            select.innerHTML="<option value=''>Recipient list unavailable · retry</option>";
+            select.disabled=true;
+            toast(error.message||"Could not load LIVE gift recipients.");
+          }
+        }
+        updateLiveGiftPreview();
+      }
       const drawLiveGiftCategories=()=>{
         if(!liveGiftCategories)return;
         let base=liveGiftCatalogue.filter(item=>{
@@ -3090,7 +3118,7 @@ activeLivePinnedComment=null;
         if(liveGiftPreviewPrice)liveGiftPreviewPrice.textContent=Number(gift.coin_price||0).toLocaleString()+" Coins · "+liveGiftCategoryName(gift.category);
         if(liveGiftPreviewNote){
           const locked=role!=="host"&&MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code)&&!liveFanClubState?.isMember;
-          liveGiftPreviewNote.textContent=role==="host"?"Read-only host preview · viewers send this gift.":!giftsEnabled?"Gifting is disabled for this broadcast.":locked?"Join this host’s Fan Club to unlock this Team Gift.":"Preview the animation and sound, then send it to the LIVE host.";
+          liveGiftPreviewNote.textContent=!giftsEnabled?"Gifting is disabled for this broadcast.":locked?"Join this host’s Fan Club to unlock this Team Gift.":"Preview the animation and sound, then send it to the selected LIVE participant.";
         }
         if(liveGiftPreviewArt){
           const fallback=gift.image_url?"<img class='live-gift-preview-fallback' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"' hidden>":"";
@@ -3106,8 +3134,9 @@ activeLivePinnedComment=null;
         const isTeamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
         const locked=role!=="host"&&isTeamGift&&!liveFanClubState?.isMember;
         if(liveGiftSendSelected){
-          liveGiftSendSelected.disabled=role==="host"||!giftsEnabled||locked||liveGiftSending;
-          liveGiftSendSelected.textContent=role==="host"?"Viewer-only preview":locked?"Join Fan Club to unlock":!giftsEnabled?"Gifting unavailable":"Quick send · "+Number(gift.coin_price||0).toLocaleString()+" Coins";
+          const selectedRecipient=liveGiftRecipients.find(member=>String(member.id)===String($("#live-gift-recipient")?.value||""));
+          liveGiftSendSelected.disabled=!giftsEnabled||locked||liveGiftSending||!selectedRecipient;
+          liveGiftSendSelected.textContent=locked?"Join Fan Club to unlock":!giftsEnabled?"Gifting unavailable":!selectedRecipient?"Choose recipient":"Send to "+String(selectedRecipient.name||selectedRecipient.username||"participant")+" · "+Number(gift.coin_price||0).toLocaleString()+" Coins";
         }
       };
       const drawLiveGiftGrid=()=>{
@@ -3210,18 +3239,22 @@ activeLivePinnedComment=null;
         const gift=liveGiftByCode(liveGiftSelectedCode);if(!gift)return;
         window.MingloraGiftFX?.preview(gift);
       });
+      $("#live-gift-recipient")?.addEventListener("change",updateLiveGiftPreview);
       liveGiftSendSelected?.addEventListener("click",async()=>{
         const gift=liveGiftByCode(liveGiftSelectedCode);
-        if(!gift||liveGiftSending||role==="host"||!giftsEnabled)return;
+        if(!gift||liveGiftSending||!giftsEnabled)return;
+        const recipientUserId=String($("#live-gift-recipient")?.value||"");
+        const selectedRecipient=liveGiftRecipients.find(member=>String(member.id)===recipientUserId);
+        if(!recipientUserId||!selectedRecipient){toast("Choose a connected host or stage guest to receive this gift.");return;}
         const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
-        if(teamGift&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
+        if(teamGift&&role!=="host"&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
         liveGiftSending=true;window.MingloraGiftFX?.prime();updateLiveGiftPreview();
         if(liveGiftSendSelected){liveGiftSendSelected.disabled=true;liveGiftSendSelected.textContent="Sending gift…";}
         try{
           const fundingSource=String($("#live-gift-funding-source")?.value||"cash");
           const sent=fundingSource==="cash"
-            ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code})})
-            :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code,fundingSource})});
+            ?await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code,recipientUserId})})
+            :await api("/live/sessions/"+encodeURIComponent(session.id)+"/gifts",{method:"POST",body:JSON.stringify({giftCode:gift.code,recipientUserId,fundingSource})});
           const resultGift=sent.gift||{};
           const transactionId=sent.event?.id||sent.giftEventId||resultGift.giftTransactionId||resultGift.transactionId||resultGift.transaction_id||resultGift.id;
           presentLiveGiftEvent(sent.event||{
@@ -3235,7 +3268,7 @@ activeLivePinnedComment=null;
             modelUrl:String(resultGift.modelUrl||resultGift.model_url||gift.model_url||""),
             createdAt:new Date().toISOString(),
             sender:{id:state.user?.id,name:state.user?.name,username:state.user?.username},
-            recipient:{id:session.hostId,name:session.host?.name||"LIVE host",username:session.host?.username||""}
+            recipient:{id:selectedRecipient.id,name:selectedRecipient.name||selectedRecipient.username||"LIVE participant",username:selectedRecipient.username||""}
           });
           liveGiftRecent=[gift.code,...liveGiftRecent.filter(code=>code!==gift.code)].slice(0,40);saveLiveGiftPreferences();
           const giftFundingNotice=resultGift.fundingSource==="promo"?" · ordinary promotional Coins (no cash earnings)":resultGift.fundingSource==="admin_promotional"?" · cash-reserved Admin Promotional gift":"";
@@ -3252,6 +3285,9 @@ activeLivePinnedComment=null;
         finally{liveGiftSending=false;updateLiveGiftPreview();}
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
+      await loadLiveGiftRecipients(session);
+      if(liveGiftRecipientsTimer)clearInterval(liveGiftRecipientsTimer);
+      liveGiftRecipientsTimer=setInterval(()=>void loadLiveGiftRecipients(session,true),5000);
       await loadLiveGiftCatalogue();
       startLiveGiftEvents(session);
     }
@@ -8188,12 +8224,188 @@ function renderMoreHub(){
   }));
 }
 async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+function closeAccountSwitcherMenu(){
+  const panel=$('#profile-account-menu'),trigger=$('#profile-menu');
+  if(panel)panel.hidden=true;
+  trigger?.setAttribute('aria-expanded','false');
+}
+async function renderAccountSwitcherMenu(){
+  const panel=$('#profile-account-menu');
+  if(!panel)return;
+  panel.innerHTML="<div class='account-switcher-loading'><span class='account-switcher-loader' aria-hidden='true'></span><span>Loading your saved accounts…</span></div>";
+  panel.hidden=false;
+  try{
+    const result=await api('/auth/accounts');
+    const accounts=Array.isArray(result.accounts)?result.accounts:[];
+    const rows=accounts.map(entry=>{
+      const member=entry.user||{},active=Boolean(entry.active);
+      const label=member.name||member.username||'Minglora member';
+      return "<div class='account-switcher-row'>"+
+        "<button type='button' class='account-switcher-account' data-account-switch='"+esc(entry.sessionId||'')+"' "+(active?"aria-current='true'":"")+">"+
+          "<img src='"+esc(avatar(member))+"' alt='' loading='lazy'>"+
+          "<span class='account-switcher-account-copy'><strong>"+esc(label)+"</strong><small>@"+esc(member.username||'member')+" · "+(active?'Current account':'Saved on this device')+"</small></span>"+
+          (active?"<span class='account-switcher-active'>Active</span>":"<span class='account-switcher-arrow' aria-hidden='true'>↗</span>")+
+        "</button>"+
+        (!active?"<button type='button' class='account-switcher-remove' data-account-remove='"+esc(entry.sessionId||'')+"' aria-label='Remove "+esc(label)+" from this device' title='Remove account from this device'>×</button>":"")+
+      "</div>";
+    }).join('');
+    panel.innerHTML=
+      "<div class='account-switcher-head'><div><strong>Switch account</strong><small>Choose a Minglora account on this device</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
+      "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No saved accounts were found.</p>")+"</div>"+
+      "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add an account</strong><small>Log in or create another Minglora account</small></span></button>"+
+      "<div class='account-switcher-foot'><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
+    panel.querySelector('[data-account-menu-close]')?.addEventListener('click',closeAccountSwitcherMenu);
+    panel.querySelector('[data-account-add]')?.addEventListener('click',()=>{closeAccountSwitcherMenu();openAccountAccessDialog('login');});
+    panel.querySelectorAll('[data-account-switch]').forEach(button=>button.addEventListener('click',async()=>{
+      const sessionId=button.dataset.accountSwitch;
+      if(!sessionId||button.disabled)return;
+      button.disabled=true;panel.querySelectorAll('button').forEach(item=>item.disabled=true);
+      try{
+        await api('/auth/switch',{method:'POST',body:JSON.stringify({sessionId})});
+        closeAccountSwitcherMenu();
+        window.location.reload();
+      }catch(error){toast(error.message);await renderAccountSwitcherMenu();}
+    }));
+    panel.querySelectorAll('[data-account-remove]').forEach(button=>button.addEventListener('click',async()=>{
+      const sessionId=button.dataset.accountRemove;
+      if(!sessionId||button.disabled)return;
+      button.disabled=true;
+      try{
+        await api('/auth/accounts/remove',{method:'POST',body:JSON.stringify({sessionId})});
+        toast('Account removed from this device. The Minglora account itself was not deleted.');
+        await renderAccountSwitcherMenu();
+      }catch(error){toast(error.message);button.disabled=false;}
+    }));
+    panel.querySelector('[data-account-logout-all]')?.addEventListener('click',async()=>{
+      if(!window.confirm('Log out of every Minglora account saved on this device? This will not delete any account.'))return;
+      const button=panel.querySelector('[data-account-logout-all]');
+      if(button)button.disabled=true;
+      try{
+        await api('/auth/logout-all',{method:'POST',body:'{}'});
+        activeMessageRecordings.forEach((recording,userId)=>cancelMessageVoiceRecording(userId));
+        try{sessionStorage.removeItem(lastViewStorageKey());}catch{}
+        state.user=null;messageRefreshKnownIncomingIds=new Set();messageRefreshKnownIncomingPrimed=false;
+        closeMessengerPanel();state.messageWindows=[];
+        messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();syncMessageRefreshPolling();
+        window.location.reload();
+      }catch(error){toast(error.message);if(button)button.disabled=false;}
+    });
+  }catch(error){
+    panel.innerHTML="<div class='account-switcher-head'><div><strong>Account centre</strong><small>Saved accounts could not be loaded</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div><p class='account-switcher-error'>"+esc(error.message||'Please try again later.')+"</p><button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add an account</strong><small>Log in or create another account</small></span></button>";
+    panel.querySelector('[data-account-menu-close]')?.addEventListener('click',closeAccountSwitcherMenu);
+    panel.querySelector('[data-account-add]')?.addEventListener('click',()=>{closeAccountSwitcherMenu();openAccountAccessDialog('login');});
+  }
+}
+function bindAccountSwitcherMenu(){
+  const anchor=$('.profile-menu-anchor'),trigger=$('#profile-menu'),panel=$('#profile-account-menu');
+  if(!anchor||!trigger||!panel||trigger.dataset.accountSwitcherBound==='true')return;
+  trigger.dataset.accountSwitcherBound='true';
+  trigger.type='button';
+  trigger.setAttribute('aria-haspopup','dialog');
+  trigger.setAttribute('aria-expanded','false');
+  trigger.setAttribute('aria-controls','profile-account-menu');
+  trigger.addEventListener('click',async event=>{
+    event.preventDefault();event.stopPropagation();
+    if(!panel.hidden){closeAccountSwitcherMenu();return;}
+    panel.hidden=false;trigger.setAttribute('aria-expanded','true');
+    await renderAccountSwitcherMenu();
+  });
+  if(!document.documentElement.dataset.accountSwitcherOutsideBound){
+    document.documentElement.dataset.accountSwitcherOutsideBound='true';
+    document.addEventListener('pointerdown',event=>{
+      if(!anchor.contains(event.target))closeAccountSwitcherMenu();
+    });
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){closeAccountSwitcherMenu();document.querySelector('.account-access-backdrop')?.remove();}
+    });
+  }
+}
+function openAccountAccessDialog(initialMode='login'){
+  document.querySelector('.account-access-backdrop')?.remove();
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop account-access-backdrop';
+  overlay.innerHTML=
+    "<section class='modal account-access-modal' role='dialog' aria-modal='true' aria-labelledby='account-access-title'>"+
+      "<div class='modal-head'><div><span class='eyebrow'>MINGLORA ACCOUNTS</span><h2 id='account-access-title'>Add an account</h2></div><button type='button' class='modal-close' data-account-access-close aria-label='Close'>×</button></div>"+
+      "<div class='account-access-tabs' role='tablist' aria-label='Account action'><button type='button' class='active' data-account-mode='login' role='tab' aria-selected='true'>Log in</button><button type='button' data-account-mode='register' role='tab' aria-selected='false'>Create account</button></div>"+
+      "<form class='modal-body account-access-form' id='account-access-form' novalidate>"+
+        "<p class='account-access-intro' id='account-access-intro'>Log in to add another account. Your current account stays saved on this device.</p>"+
+        "<label class='account-access-register-only' data-account-register-field>Your name<input name='name' autocomplete='name' minlength='2' maxlength='100' placeholder='Full name'></label>"+
+        "<label class='account-access-register-only' data-account-register-field>Username<input name='username' autocomplete='username' minlength='3' maxlength='30' pattern='[A-Za-z0-9_]+' placeholder='yourname'></label>"+
+        "<label>Email address<input name='email' type='email' autocomplete='username' required placeholder='you@example.com'></label>"+
+        "<label class='account-access-register-only' data-account-register-field>Contact phone (optional)<input name='phoneNumber' type='tel' inputmode='tel' autocomplete='tel' placeholder='+18765551234' pattern='[+][1-9][0-9]{7,14}'></label>"+
+        "<label>Password<input name='password' type='password' autocomplete='current-password' minlength='10' required placeholder='Your password'></label>"+
+        "<p class='auth-error account-access-error' id='account-access-error' role='alert'></p>"+
+        "<button type='submit' class='primary full account-access-submit'>Log in and add account</button>"+
+      "</form>"+
+      "<p class='account-access-security'>Your other signed-in accounts remain saved separately. Minglora never stores your password in this browser menu.</p>"+
+    "</section>";
+  document.body.append(overlay);
+  const form=overlay.querySelector('#account-access-form'),error=overlay.querySelector('#account-access-error'),submit=overlay.querySelector('.account-access-submit');
+  let mode='login';
+  const setMode=next=>{
+    mode=next==='register'?'register':'login';
+    overlay.querySelectorAll('[data-account-mode]').forEach(button=>{
+      const selected=button.dataset.accountMode===mode;
+      button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected));
+    });
+    overlay.querySelectorAll('[data-account-register-field]').forEach(label=>{
+      label.hidden=mode!=='register';
+      const field=label.querySelector('input');
+      if(field)field.required=mode==='register'&&field.name!=='phoneNumber';
+    });
+    const password=form.elements.password;
+    password.autocomplete=mode==='register'?'new-password':'current-password';
+    password.placeholder=mode==='register'?'At least 10 characters':'Your password';
+    overlay.querySelector('#account-access-title').textContent=mode==='register'?'Create another account':'Add an account';
+    overlay.querySelector('#account-access-intro').textContent=mode==='register'?'Create a new Minglora account. Your current account stays saved on this device.':'Log in to add another account. Your current account stays saved on this device.';
+    submit.textContent=mode==='register'?'Create account and add it':'Log in and add account';
+    error.textContent='';
+  };
+  overlay.querySelectorAll('[data-account-mode]').forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.accountMode)));
+  const close=()=>overlay.remove();
+  overlay.querySelector('[data-account-access-close]')?.addEventListener('click',close);
+  overlay.addEventListener('pointerdown',event=>{if(event.target===overlay)close();});
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(submit.disabled)return;
+    error.textContent='';submit.disabled=true;submit.setAttribute('aria-busy','true');
+    const values=new FormData(form),email=String(values.get('email')||'').trim(),password=String(values.get('password')||'');
+    try{
+      let result;
+      if(mode==='register'){
+        result=await api('/auth/register',{method:'POST',body:JSON.stringify({
+          name:String(values.get('name')||'').trim(),
+          username:String(values.get('username')||'').trim(),
+          email,phoneNumber:String(values.get('phoneNumber')||'').trim(),password
+        })});
+        if(result.confirmationRequired)throw new Error(result.message||'Check your email to finish creating this account.');
+      }else{
+        result=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+        if(result.mfaRequired){
+          overlay.remove();closeAccountSwitcherMenu();openMfaLogin(result.challengeId,true);return;
+        }
+      }
+      if(!result.user?.id)throw new Error('Minglora did not finish adding this account.');
+      if(result.mfaEnrollmentRequired){
+        const destination=new URL(window.location.href);destination.searchParams.set('mfa-setup','required');
+        window.history.replaceState(null,'',destination.pathname+destination.search);
+      }
+      overlay.remove();closeAccountSwitcherMenu();window.location.reload();
+    }catch(cause){
+      error.textContent=cause.message||'Minglora could not add this account. Please try again.';
+      submit.disabled=false;submit.removeAttribute('aria-busy');
+    }
+  });
+  setMode(initialMode);
+  window.setTimeout(()=>form.elements.email?.focus(),0);
+}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
   $('#home-brand').onclick=()=>activateNav('feed');
   $('#rail-profile').onclick=()=>openProfile(state.user.id);
-  $('#profile-menu').onclick=()=>openProfile(state.user.id);
+  bindAccountSwitcherMenu();
   $('#rail-notifications').onclick=()=>renderNotifications();
   $('#notifications-btn').onclick=()=>renderNotifications();
   $('#messenger-btn')?.addEventListener('click',toggleMessengerPanel);
@@ -8275,13 +8487,13 @@ async function enterMingloraApp(user,showWelcome=false){
   else await restoreLastView();
   if(showWelcome)toast('Welcome to Minglora!');
 }
-function openMfaLogin(challengeId){
+function openMfaLogin(challengeId,reloadAfterVerification=false){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="mfa-login-title"><div class="modal-head"><h2 id="mfa-login-title">Verify it is you</h2><button class="modal-close" aria-label="Close">×</button></div><form id="mfa-login-form" class="modal-body"><p>Enter the current code from your authenticator app to finish signing in.</p><div class="field"><label for="mfa-login-code">Authenticator code</label><input id="mfa-login-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required></div><p class="auth-error" id="mfa-login-error"></p><button type="submit" class="primary full">Verify and sign in</button></form></section>';
   document.body.append(modal);modal.querySelector('.modal-close').onclick=()=>modal.remove();
   modal.querySelector('form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.currentTarget.querySelector('button[type="submit"]'),error=modal.querySelector('#mfa-login-error');button.disabled=true;error.textContent='';
-    try{const values=new FormData(event.currentTarget),result=await api('/auth/mfa/login',{method:'POST',body:JSON.stringify({challengeId,code:values.get('code')})});modal.remove();await enterMingloraApp(result.user);}
+    try{const values=new FormData(event.currentTarget),result=await api('/auth/mfa/login',{method:'POST',body:JSON.stringify({challengeId,code:values.get('code')})});modal.remove();if(reloadAfterVerification)window.location.reload();else await enterMingloraApp(result.user);}
     catch(err){error.textContent=err.message;button.disabled=false;}
   });
 }
