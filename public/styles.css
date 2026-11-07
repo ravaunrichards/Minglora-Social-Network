@@ -6702,3 +6702,17 @@ button.live-ranking-row{cursor:pointer}
 .gift-gallery-ranked-row>span:nth-of-type(2)>small,.gift-gallery-ranked-level{font-size:11px;color:var(--muted,#687386)}
 .gift-gallery-ranked-level{white-space:nowrap}
 @media(max-width:520px){.gift-gallery-ranked-level{display:none}.gift-gallery-ranked-row{gap:7px;padding:6px}}
+
+
+/* Weekly per-gift Top Gifter title holders shown alongside the live broadcast leaderboard. */
+.live-weekly-title-gifters,.live-broadcast-top-gifters{display:grid;gap:9px}
+.live-weekly-title-gifters{padding:12px;border:1px solid var(--border,#e5e7eb);border-radius:14px;margin-bottom:12px}
+.live-weekly-title-heading{display:grid;gap:3px;font-size:13px;font-weight:800}
+.live-weekly-title-heading small{font-size:11px;font-weight:500;color:var(--muted,#687386)}
+.live-weekly-title-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px;border-radius:11px;background:var(--surface-soft,#f5f6f8)}
+.live-weekly-title-row>img{width:34px;height:34px;flex:0 0 34px;border-radius:50%;object-fit:cover}
+.live-weekly-title-row>span{display:grid;gap:2px;min-width:0;flex:1}
+.live-weekly-title-row>span>strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-weekly-title-row>span>small{font-size:10px;color:var(--muted,#687386)}
+.live-weekly-title-row>b{font-size:10px;white-space:nowrap;color:var(--accent,#1769e0)}
+.live-weekly-title-row>button,.gift-gallery-ranked-row>button,.gift-gallery-leader>button{padding:4px 7px;font-size:11px}
