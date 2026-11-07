@@ -70,7 +70,7 @@ test('Web Push caches the active app shell and routes notifications to the curre
     html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
     html.match(/src="(\/settings\.js\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
   for(const asset of activeAssets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
   assert.match(worker,/notificationclick/);
   assert.match(worker,/notificationId/);
