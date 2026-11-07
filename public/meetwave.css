@@ -1584,19 +1584,6 @@
   background:#193a39!important;color:#eafff9!important;font-size:10px!important;
   font-weight:850!important;cursor:pointer!important
 }
-.mw-meeting .mw-host-power-dock{
-  grid-column:1/-1!important;justify-self:stretch!important;
-  display:flex!important;align-items:center!important;justify-content:flex-end!important;
-  min-width:0!important;margin:3px 8px 3px 2px!important;padding:5px 8px!important;
-  border-top:1px solid rgba(255,255,255,.14)!important;
-  border-bottom:1px solid rgba(255,255,255,.14)!important;
-  box-sizing:border-box!important
-}
-.mw-meeting .mw-host-power-dock .live-host-power-button{
-  align-self:center!important;flex:0 0 44px!important;margin:0 3px 0 0!important;
-  width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
-  max-width:44px!important;max-height:44px!important
-}
 @media(max-width:780px){
   .mw-meeting #mw-grid.live-guest-layout{
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
@@ -1630,7 +1617,6 @@
 @media(max-width:420px){
   .mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta strong{font-size:7px!important}
   .mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta small{display:none!important}
-  .mw-meeting .mw-host-power-dock{margin-right:7px!important;padding-inline:7px!important}
 }
 
 /* Screen-share picture-in-picture holds all eleven seats in a compact 6x2 tray. */
@@ -1642,5 +1628,157 @@
   #mw-screen-stage.has-screen-share #mw-grid{
     grid-template-columns:repeat(6,minmax(0,1fr))!important;
     grid-template-rows:16px repeat(2,minmax(0,1fr))!important;
+  }
+}
+
+
+/* MeetWave correction: equal-size host and guest seats in every preset.
+   The heading occupies row one; all eleven participant seats share the grid. */
+.mw-meeting #mw-grid.live-guest-layout{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;grid-auto-rows:minmax(0,1fr)!important;
+  align-items:stretch!important;justify-items:stretch!important;
+  gap:clamp(7px,.9vw,11px)!important;
+}
+.mw-meeting #mw-grid .live-guest-layout-heading{
+  grid-column:1/-1!important;grid-row:1!important;
+  display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;
+  align-items:center!important;gap:10px!important;min-width:0!important
+}
+#mw-screen-stage[data-screen-layout="full-screen"] #mw-grid,
+#mw-screen-stage[data-screen-layout="fluid-grid"] #mw-grid,
+#mw-screen-stage[data-screen-layout="fixed-grid"] #mw-grid,
+#mw-screen-stage[data-screen-layout="spotlight"] #mw-grid,
+#mw-screen-stage[data-screen-layout="roundtable-2"] #mw-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(3,minmax(0,1fr))!important;
+}
+#mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid,
+#mw-screen-stage[data-screen-layout="fixed-panel"] #mw-grid,
+#mw-screen-stage[data-screen-layout="roundtable-1"] #mw-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(4,minmax(0,1fr))!important;
+}
+#mw-screen-stage[data-screen-layout="side-by-side"] #mw-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:24px repeat(6,minmax(0,1fr))!important;
+}
+#mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat,
+#mw-screen-stage[data-screen-layout] #mw-grid>.mw-empty-seat{
+  grid-column:auto!important;grid-row:auto!important;
+  width:auto!important;height:auto!important;min-width:0!important;min-height:0!important;
+  max-width:none!important;max-height:none!important;aspect-ratio:auto!important;
+  justify-self:stretch!important;align-self:stretch!important;
+}
+#mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-layout-heading{
+  grid-column:1/-1!important;grid-row:1!important
+}
+#mw-screen-stage[data-screen-layout="spotlight"] #mw-grid>.live-guest-seat.is-spotlight{
+  outline:2px solid #69e5c9!important;outline-offset:-3px!important;
+  box-shadow:inset 0 0 0 1px rgba(105,229,201,.2)!important;
+}
+#mw-screen-stage[data-screen-layout="roundtable-2"] #mw-grid>.live-guest-seat.is-host,
+#mw-screen-stage[data-screen-layout="roundtable-1"] #mw-grid>.live-guest-seat.is-host{
+  outline:2px solid rgba(105,229,201,.75)!important;outline-offset:-3px!important;
+  grid-column:auto!important;grid-row:auto!important
+}
+.mw-meeting #mw-grid .live-guest-seat.is-host .live-guest-seat-meta{
+  top:auto!important;right:5px!important;bottom:5px!important;left:5px!important;
+  text-align:left!important;z-index:5!important
+}
+.mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta{
+  position:absolute!important;right:5px!important;bottom:5px!important;left:5px!important;
+  display:block!important;min-width:0!important;padding:5px 7px!important;
+  border-radius:7px!important;background:rgba(5,10,19,.76)!important;
+  color:#fff!important;z-index:5!important
+}
+.mw-meeting #mw-grid .live-guest-seat .live-guest-seat-tag{
+  position:absolute!important;top:6px!important;left:7px!important;bottom:auto!important;
+  z-index:6!important;padding:4px 7px!important;border-radius:7px!important;
+  font-size:8px!important;font-weight:950!important;letter-spacing:.06em!important
+}
+.mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta strong{
+  display:block!important;max-width:100%!important;overflow:hidden!important;
+  text-overflow:ellipsis!important;white-space:nowrap!important
+}
+
+/* Restore the single original control bar. The existing Power off control
+   stays in that bar at the right with inset spacing; there is no second dock. */
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls{
+  position:relative!important;inset:auto!important;left:auto!important;right:auto!important;
+  top:auto!important;bottom:auto!important;transform:none!important;
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;justify-content:flex-start!important;
+  gap:clamp(6px,1vw,10px)!important;width:100%!important;max-width:100%!important;
+  min-width:0!important;min-height:72px!important;height:auto!important;max-height:none!important;
+  margin:4px 0 0!important;padding:7px 8px!important;box-sizing:border-box!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  border:1px solid rgba(255,255,255,.13)!important;border-radius:16px!important;
+  background:#0c111c!important;box-shadow:0 8px 24px rgba(0,0,0,.3)!important;
+  scrollbar-width:none!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls::-webkit-scrollbar{display:none!important}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-control-button{
+  display:flex!important;flex:0 0 46px!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;
+  width:46px!important;min-width:46px!important;max-width:46px!important;
+  min-height:58px!important;height:auto!important;margin:0!important;padding:0!important;
+  gap:4px!important;border:0!important;border-radius:10px!important;
+  background:transparent!important;white-space:nowrap!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-control-icon{
+  width:40px!important;height:40px!important;flex:0 0 40px!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-control-caption{
+  display:block!important;max-width:46px!important;font-size:8px!important;line-height:1.1!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button{
+  flex:0 0 44px!important;width:44px!important;min-width:44px!important;max-width:44px!important;
+  height:44px!important;min-height:44px!important;max-height:44px!important;
+  margin:0 6px 0 auto!important;padding:0!important;order:99!important;
+  border:1px solid rgba(255,255,255,.58)!important;border-radius:50%!important;
+  background:rgba(8,12,20,.88)!important;box-shadow:0 5px 18px rgba(0,0,0,.4)!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button .live-control-icon{
+  display:grid!important;place-items:center!important;flex:0 0 25px!important;
+  width:25px!important;height:25px!important;border:0!important;background:transparent!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button svg{
+  display:block!important;width:25px!important;height:25px!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button .live-control-caption{
+  display:none!important
+}
+@media(max-width:780px){
+  .mw-meeting #mw-grid.live-guest-layout{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
+    gap:6px!important;padding:7px!important
+  }
+  #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="fluid-grid"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="fixed-grid"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="spotlight"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="roundtable-2"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="fixed-panel"] #mw-grid,
+  #mw-screen-stage[data-screen-layout="roundtable-1"] #mw-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(4,minmax(0,1fr))!important
+  }
+  #mw-screen-stage[data-screen-layout="side-by-side"] #mw-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(6,minmax(0,1fr))!important
+  }
+  .mw-meeting .mw-controls.live-player-controls.live-icon-controls{
+    gap:4px!important;padding:6px!important
+  }
+  .mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-control-button{
+    flex-basis:42px!important;width:42px!important;min-width:42px!important;max-width:42px!important
+  }
+  .mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button{
+    flex-basis:42px!important;width:42px!important;min-width:42px!important;max-width:42px!important;
+    margin-right:5px!important
   }
 }
