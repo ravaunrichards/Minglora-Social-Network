@@ -1071,3 +1071,30 @@
 @media(max-width:980px){.mw-meeting-layout.live-player-layout{grid-template-columns:minmax(0,1fr) minmax(230px,260px)!important}#mw-screen-stage[data-screen-layout="fixed-grid"] #mw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#mw-screen-stage[data-screen-layout="roundtable-2"] #mw-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:780px){.mw-meeting-layout.live-player-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto!important}.mw-meeting .mw-support-column.live-fullscreen-chat-slot{width:100%!important;max-width:100%!important;height:auto!important;max-height:290px!important;min-height:0!important}.mw-meeting .mw-screen-stage{min-height:clamp(300px,46vh,520px)}.mw-meeting #mw-grid.live-guest-layout{min-height:300px;grid-auto-rows:minmax(76px,1fr)}.mw-meeting .mw-controls.live-player-controls.live-icon-controls{grid-template-columns:repeat(auto-fit,minmax(54px,1fr))!important}#mw-screen-stage[data-screen-layout="fixed-grid"] #mw-grid,#mw-screen-stage[data-screen-layout="roundtable-1"] #mw-grid,#mw-screen-stage[data-screen-layout="roundtable-2"] #mw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid,#mw-screen-stage[data-screen-layout="fixed-panel"] #mw-grid{grid-template-columns:minmax(0,1fr) minmax(88px,.42fr)}}
 @media(max-width:420px){.mw-meeting .live-fullscreen-side-tabs button{font-size:9px!important}.mw-meeting .mw-support-column .mw-layout-options{grid-template-columns:repeat(3,minmax(0,1fr))}.mw-meeting .mw-screen-stage{min-height:280px}.mw-meeting #mw-grid.live-guest-layout{min-height:280px;gap:5px;padding:6px}.mw-meeting #mw-grid .live-guest-seat{min-height:60px;padding:4px}.mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta strong{font-size:8px}.mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta small{font-size:7px}.mw-meeting #mw-grid .mw-empty-seat strong{font-size:8px}.mw-meeting #mw-grid .mw-empty-seat small{font-size:7px}.mw-meeting .mw-controls.live-player-controls.live-icon-controls{grid-template-columns:repeat(3,minmax(0,1fr))!important}#mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid,#mw-screen-stage[data-screen-layout="fixed-panel"] #mw-grid{grid-template-columns:minmax(0,1fr)!important}}
+
+/* Match Minglora LIVE Full Screen stage framing without entering device fullscreen. */
+.mw-meeting .mw-screen-stage.live-full-screen-layout{
+  width:min(100%,62.4dvh,608px)!important;max-width:100%!important;
+  min-height:0!important;max-height:min(78dvh,760px)!important;
+  aspect-ratio:4/5!important;margin-inline:auto!important;border-radius:18px!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button{
+  display:grid!important;place-items:center!important;flex:0 0 44px!important;
+  width:44px!important;min-width:44px!important;max-width:44px!important;
+  height:44px!important;min-height:44px!important;max-height:44px!important;
+  padding:0!important;border:1px solid rgba(255,255,255,.58)!important;
+  border-radius:50%!important;background:rgba(8,12,20,.88)!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.4)!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button .live-control-icon{
+  display:grid!important;place-items:center!important;flex:0 0 25px!important;
+  width:25px!important;height:25px!important;border:0!important;background:transparent!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button svg{
+  display:block!important;width:25px!important;height:25px!important
+}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button .live-control-caption{display:none!important}
+.mw-meeting .mw-controls.live-player-controls.live-icon-controls .live-host-power-button:hover{border-color:#ff6177!important;background:rgba(26,12,19,.96)!important}
+@media(max-height:520px){
+  .mw-meeting .mw-screen-stage.live-full-screen-layout{max-height:78dvh!important}
+}
