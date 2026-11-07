@@ -4884,6 +4884,11 @@ async function openProfile(id,openEditor=false){
     }).catch(error=>console.warn('Minglora profile supplements could not finish loading:',error?.message||error));
   }catch(error){
     if(generation!==profileLoadGeneration||state.profileTargetId!==profileId||state.view!=='profile')return;
+    if(error.status===404){
+      state.profile=null;
+      setContent('<section class="card empty-state profile-unavailable-state" role="status" aria-live="polite"><h3>User not found</h3><p>This account is unavailable.</p></section>');
+      return;
+    }
     if(cachedProfile){
       state.profile=cachedProfile;
       renderProfile(cachedProfile);
@@ -4907,7 +4912,14 @@ async function renderConnections(profileId,kind){
     setContent('<div class="page-heading"><div><h1>'+({followers:'Followers',following:'Following',friends:'Friends',subscribers:'Subscribers'})[kind]+'</h1><p class="muted">'+esc(profile.user.name)+' · '+data.count+' '+kind+'</p></div><button class="secondary" id="connections-back">Back to profile</button></div><section class="card">'+(rows||'<div class="empty-state"><h3>No '+kind+' yet</h3><p>'+(kind==='subscribers'?'Active subscribers will appear here when members subscribe.':'This list will appear when members connect.')+'</p></div>')+'</section>');
     $('#connections-back')?.addEventListener('click',()=>openProfile(profileId));
     bindProfileLinks($('#main-content'));
-  }catch(error){toast(error.message);if(state.profile)renderProfile(state.profile);}
+  }catch(error){
+    if(error.status===404){
+      state.profile=null;
+      setContent('<section class="card empty-state profile-unavailable-state" role="status" aria-live="polite"><h3>User not found</h3><p>This account is unavailable.</p></section>');
+      return;
+    }
+    toast(error.message);if(state.profile)renderProfile(state.profile);
+  }
 }
 
 function openImageViewer(url,label='Image'){
