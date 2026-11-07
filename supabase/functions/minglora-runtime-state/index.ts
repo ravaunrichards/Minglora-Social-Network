@@ -1544,7 +1544,7 @@ Deno.serve(async (req: Request) => {
     const { data: settings, error: settingsError } = await admin.from("subscription_creator_settings")
       .select("application_status").eq("creator_id", creatorId).maybeSingle();
     if (settingsError) return json(503, { error: "Creator approval status could not be checked." });
-    if (settings?.application_status !== "approved") return json(403, { error: "Minglora must approve this creator before a subscription price can be published." });
+    if (settings?.application_status === "suspended") return json(403, { error: "This creator account is suspended from subscriptions." });
     const { data: current, error: currentError } = await admin.from("subscription_tiers")
       .select("id").eq("creator_id", creatorId).eq("is_active", true).maybeSingle();
     if (currentError) return json(503, { error: "Current subscription tier could not be loaded." });
@@ -1571,7 +1571,7 @@ Deno.serve(async (req: Request) => {
       .select("application_status").eq("creator_id", creatorId).maybeSingle();
     if (settingsError) return json(503, { error: "Creator approval status could not be checked." });
     if (enabled) {
-      if (settings?.application_status !== "approved") return json(403, { error: "Minglora approval is required before subscriptions can be enabled." });
+      if (settings?.application_status === "suspended") return json(403, { error: "This creator account is suspended from subscriptions." });
       const { data: tier, error: tierError } = await admin.from("subscription_tiers").select("id,paypal_plan_id")
         .eq("creator_id", creatorId).eq("is_active", true).maybeSingle();
       if (tierError) return json(503, { error: "Subscription tier could not be checked." });
@@ -1579,7 +1579,7 @@ Deno.serve(async (req: Request) => {
     }
     const { data, error } = await admin.from("subscription_creator_settings").upsert({
       creator_id: creatorId, subscriptions_enabled: enabled,
-      application_status: settings?.application_status || "not_applied", updated_at: new Date().toISOString()
+      application_status: "approved", updated_at: new Date().toISOString()
     }, { onConflict: "creator_id" }).select("*").single();
     if (error) return fail(error, "Minglora could not update subscription availability.");
     return json(200, { settings: data });
@@ -1600,7 +1600,7 @@ Deno.serve(async (req: Request) => {
         .in("status", ["incomplete", "active", "past_due"]).limit(1).maybeSingle()
     ]);
     if (settingsResult.error || tierResult.error || existingResult.error) return json(503, { error: "Subscription checkout could not be prepared." });
-    if (settingsResult.data?.application_status !== "approved" || !settingsResult.data?.subscriptions_enabled || !tierResult.data?.paypal_plan_id) {
+    if (settingsResult.data?.application_status === "suspended" || !settingsResult.data?.subscriptions_enabled || !tierResult.data?.paypal_plan_id) {
       return json(409, { error: "This creator is not currently accepting subscriptions." });
     }
     const existing = existingResult.data;
@@ -1664,10 +1664,11 @@ Deno.serve(async (req: Request) => {
     if (error) return json(503, { error: "Subscriber access could not be checked." });
     const eligible = [...new Set((active || []).map((row: any) => row.creator_id))];
     if (!eligible.length) return json(200, { authorizedCreatorIds: [] });
-    const { data: approved, error: settingsError } = await admin.from("subscription_creator_settings")
-      .select("creator_id").in("creator_id", eligible).eq("application_status", "approved");
+    const { data: suspended, error: settingsError } = await admin.from("subscription_creator_settings")
+      .select("creator_id").in("creator_id", eligible).eq("application_status", "suspended");
     if (settingsError) return json(503, { error: "Creator subscription status could not be checked." });
-    return json(200, { authorizedCreatorIds: (approved || []).map((row: any) => row.creator_id) });
+    const suspendedIds = new Set((suspended || []).map((row: any) => row.creator_id));
+    return json(200, { authorizedCreatorIds: eligible.filter((creatorId: string) => !suspendedIds.has(creatorId)) });
   }
 
   if (action === "subscription_cancel_lookup") {
