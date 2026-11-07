@@ -51,3 +51,8 @@ export function normalizeMeetWaveMessage(value) {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
   return text.length > 0 && text.length <= 1000 ? text : '';
 }
+
+
+export function canManageMeetWaveParticipants(room, managerId, participantId) {
+  return Boolean(room && room.status !== 'ended' && room.ownerId === managerId && participantId && participantId !== managerId);
+}
