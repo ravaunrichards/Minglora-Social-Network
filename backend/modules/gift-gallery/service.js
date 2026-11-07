@@ -207,9 +207,12 @@ export function getGiftGallery(db, creator, at = new Date()) {
     }
     item.giftCount += 1;
     item.totalCoins += event.coinAmount;
-    const supporter = item.supporters.get(event.senderId) || { userId: event.senderId, giftCount: 0, totalCoins: 0, lastSentAt: "" };
+    const supporter = item.supporters.get(event.senderId) || {
+      userId: event.senderId, giftCount: 0, totalCoins: 0, firstSentAt: "", lastSentAt: ""
+    };
     supporter.giftCount += 1;
     supporter.totalCoins += event.coinAmount;
+    if (!supporter.firstSentAt || event.createdAt < supporter.firstSentAt) supporter.firstSentAt = event.createdAt;
     if (!supporter.lastSentAt || event.createdAt > supporter.lastSentAt) supporter.lastSentAt = event.createdAt;
     item.supporters.set(event.senderId, supporter);
   }
@@ -218,10 +221,15 @@ export function getGiftGallery(db, creator, at = new Date()) {
     const supporters = [...item.supporters.values()].sort((a, b) =>
       b.giftCount - a.giftCount ||
       b.totalCoins - a.totalCoins ||
-      a.lastSentAt.localeCompare(b.lastSentAt) ||
+      a.firstSentAt.localeCompare(b.firstSentAt) ||
       a.userId.localeCompare(b.userId)
     );
-    const leader = supporters[0] || null;
+    const rankedGifters = supporters.map((supporter, index) => ({
+      ...supporter,
+      rank: index + 1,
+      isTitleGifter: index === 0
+    }));
+    const leader = rankedGifters[0] || null;
     const targetCount = Number(settings.targets?.[item.giftCode]) || defaultGiftGalleryTarget(item.coinPrice);
     return {
       giftCode: item.giftCode,
@@ -232,10 +240,15 @@ export function getGiftGallery(db, creator, at = new Date()) {
       coinPrice: item.coinPrice,
       giftCount: item.giftCount,
       totalCoins: item.totalCoins,
-      supporterCount: supporters.length,
+      supporterCount: rankedGifters.length,
+      topGifters: rankedGifters,
+      titleGifterId: leader?.userId || null,
+      titleGifterGiftCount: leader?.giftCount || 0,
+      titleGifterCoins: leader?.totalCoins || 0,
       targetCount,
       leadingGifterId: leader?.userId || null,
       leadingGifterCount: leader?.giftCount || 0,
+      leadingGifterCoins: leader?.totalCoins || 0,
       lit: Boolean(leader && leader.giftCount >= targetCount)
     };
   }).sort((a, b) => b.coinPrice - a.coinPrice || b.giftCount - a.giftCount || a.giftName.localeCompare(b.giftName));
