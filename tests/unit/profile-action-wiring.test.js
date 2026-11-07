@@ -121,7 +121,8 @@ test('visitor profile actions stay in one horizontal row and preserve subscripti
   assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"),'Subscribe remains available unless a subscription already exists');
   assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
   assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
-  for(const label of ['Follow','Message','Voice call','Video call','Report','Block'])assert.ok(profile.includes('>'+label+'</button>'),'Missing visitor action '+label);
+  assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"),'Follow button and follow-state labels remain connected');
+  for(const label of ['Message','Voice call','Video call','Report','Block'])assert.ok(profile.includes('>'+label+'</button>'),'Missing visitor action '+label);
   assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe button remains in the visitor actions');
 });
 
