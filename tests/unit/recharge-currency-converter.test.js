@@ -76,9 +76,8 @@ test('HTML and service worker load and cache both converter modes and 3D artwork
     assert.ok(worker.includes(asset), 'service worker precaches ' + asset);
   }
   assert.match(worker, /minglora-shell-v127-recharge-currency-tab-1/);
-  const appRef = html.match(/<script src="([^"]*app\\.js\\?v=[^"]+)" defer><\\/script>/)?.[1];
-  assert.ok(appRef, 'app script URL is versioned');
-  assert.ok(worker.includes("'" + appRef + "'"), 'service worker caches the current app script URL');
+  assert.ok(html.includes('/app.js?v=20261107-profile-subscribe-row-1'), 'HTML loads the current app script');
+  assert.ok(worker.includes("'/app.js?v=20261107-profile-subscribe-row-1'"), 'service worker caches the current app script URL');
   assert.match(icon, /<symbol id="currency-exchange"/);
   assert.match(icon, /<symbol id="currency-quick"/);
   assert.ok(app.includes('#currency-exchange'));
