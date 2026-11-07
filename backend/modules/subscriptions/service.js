@@ -5,7 +5,7 @@ function timestamp(value) {
 }
 
 export function isActiveCreatorSubscription(subscription, at = new Date()) {
-  if (!subscription || String(subscription.status || '').toLowerCase() !== 'active') return false;
+  if (!subscription || !['active', 'past_due'].includes(String(subscription.status || '').toLowerCase())) return false;
   if (!subscription.creatorId || !subscription.subscriberId || subscription.creatorId === subscription.subscriberId) return false;
 
   const now = at instanceof Date ? at.getTime() : new Date(at).getTime();
