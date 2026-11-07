@@ -39,11 +39,12 @@ test('MeetWave mirrors LIVE with a bottom control rail and panel toggles', () =>
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?bottom:calc\(66px \+ env\(safe-area-inset-bottom\)\)/);
 });
 
-test('MeetWave bottom-control assets bypass stale browser and service-worker caches', () => {
-  const version = '20261107-meetwave-bottom-controls-1';
-  assert.ok(html.includes('/meetwave.css?v=' + version));
-  assert.ok(html.includes('/meetwave.js?v=' + version));
-  assert.match(serviceWorker, new RegExp('minglora-shell-v115-meetwave-bottom-controls-1'));
-  assert.ok(serviceWorker.includes('/meetwave.css?v=' + version));
-  assert.ok(serviceWorker.includes('/meetwave.js?v=' + version));
+test('MeetWave automatic-sync assets bypass stale browser and service-worker caches', () => {
+  const cssVersion = '20261107-auto-sync-no-refresh-1';
+  const jsVersion = '20261106-auto-sync-no-refresh-1';
+  assert.ok(html.includes('/meetwave.css?v=' + cssVersion));
+  assert.ok(html.includes('/meetwave.js?v=' + jsVersion));
+  assert.match(serviceWorker, new RegExp('minglora-shell-v119-auto-sync-no-refresh-1'));
+  assert.ok(serviceWorker.includes('/meetwave.css?v=' + cssVersion));
+  assert.ok(serviceWorker.includes('/meetwave.js?v=' + jsVersion));
 });
