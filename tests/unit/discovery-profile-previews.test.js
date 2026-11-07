@@ -34,16 +34,16 @@ test('People You May Know renders real member covers, stories, posts and verifie
   assert.doesNotMatch(app, /Connect and get to know each other\./);
 });
 
-test('Friends discovery refresh runs only after the member taps Refresh', async () => {
+test('Friends discovery updates quietly in the background while the screen is visible', async () => {
   const app = await read('public/app.js');
-  assert.match(app, /id="people-discovery-refresh"/);
-  assert.match(app, /refreshPeopleDiscovery\(\)/);
+  assert.match(app, /peopleDiscoveryRefreshTimer=window.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
   assert.match(app, /state\.view!=='friends'/);
+  assert.match(app, /document\.visibilityState!=='visible'/);
+  assert.match(app, /focused&&grid\.contains\(focused\)/);
   assert.match(app, /api\('\/live\/sessions'\)/);
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
-  assert.doesNotMatch(app, /peopleDiscoveryRefreshTimer=setInterval/);
+  assert.doesNotMatch(app, /id="people-discovery-refresh"/);
 });
-
 test('outside-profile cards provide dimensional responsive styling and respect reduced motion', async () => {
   const css = await read('public/styles.css');
   assert.match(css, /\.person-card--immersive/);
