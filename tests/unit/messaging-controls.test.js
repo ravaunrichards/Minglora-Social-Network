@@ -54,7 +54,8 @@ test('Messenger top-right control opens a right-side chats panel with filters, q
     read('../../src/server.js'),read('../../public/settings.js')
   ]);
   assert.ok(app.includes("$('#messenger-btn')?.addEventListener('click',toggleMessengerPanel)"));
-  assert.ok(app.includes("state.view==='messages'||state.messageWindows.length>0||state.messengerPanelOpen"));
+  assert.ok(app.includes("if(state.view==='messages')updateMessageInboxRows()"));
+  assert.ok(app.includes('if(state.messengerPanelOpen)renderMessengerPanelList()'));
   assert.ok(app.includes('if(state.messengerPanelOpen)renderMessengerPanelList()'));
   assert.ok(app.includes('data-messenger-new'));
   assert.ok(app.includes('data-messenger-see'));
