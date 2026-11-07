@@ -5364,7 +5364,7 @@ function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   startCreatorLeagueProfileRefresh(u.id);
   const subscriptionData=data.subscription||{},subscriptionTier=subscriptionData.tier||{},subscriptionSettings=subscriptionData.settings||{},viewerSubscription=subscriptionData.viewerSubscription||null;
-  const subscriptionEnabled=!isMe&&subscriptionSettings.application_status==='approved'&&subscriptionSettings.subscriptions_enabled===true&&subscriptionTier.id;
+  const subscriptionEnabled=!isMe&&subscriptionSettings.subscriptions_enabled===true&&Boolean(subscriptionTier.id);
   const subscriptionStatus=String(viewerSubscription?.status||'');
   const currentSubscriptionPeriodEnd=Date.parse(viewerSubscription?.current_period_end||'');
   const subscriptionAlreadyExists=['active','past_due'].includes(subscriptionStatus)&&Number.isFinite(currentSubscriptionPeriodEnd)&&currentSubscriptionPeriodEnd>Date.now();
@@ -5436,27 +5436,47 @@ function renderProfile(data){
     try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
     catch(error){toast(error.message);}
   });
-  $('#profile-subscribe')?.addEventListener('click',async event=>{
+  $('#profile-subscribe')?.addEventListener('click',event=>{
     const button=event.currentTarget;
     if(!button||button.disabled)return;
-    button.disabled=true;
-    button.setAttribute('aria-busy','true');
-    try{
-      const result=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:u.id})});
-      if(!result.approvalUrl)throw new Error('PayPal did not return an approval link. No subscription was confirmed.');
-      const approvalUrl=new URL(result.approvalUrl,window.location.origin);
-      const paypalHost=approvalUrl.hostname.toLowerCase();
-      if(approvalUrl.protocol!=='https:'||(paypalHost!=='paypal.com'&&!paypalHost.endsWith('.paypal.com'))){
-        throw new Error('Minglora received an invalid PayPal approval link. No subscription was confirmed.');
-
-      }
-      toast('Opening PayPal to approve your monthly subscription…');
-      window.location.assign(approvalUrl.href);
-    }catch(error){
-      toast(error.message||'Minglora could not start this subscription checkout.');
-      button.disabled=false;
-      button.removeAttribute('aria-busy');
+    if(!subscriptionEnabled||!subscriptionTier.id){
+      toast('This creator has not published a monthly subscription plan yet.');
+      return;
     }
+    const price=new Intl.NumberFormat(undefined,{style:'currency',currency:subscriptionCurrency}).format(subscriptionPriceMinor/100);
+    const benefits=Array.isArray(subscriptionTier.benefits)?subscriptionTier.benefits.filter(Boolean):[];
+    const modal=document.createElement('div');
+    modal.className='modal-backdrop creator-subscription-checkout-backdrop';
+    modal.innerHTML='<section class="modal creator-subscription-checkout" role="dialog" aria-modal="true" aria-labelledby="creator-subscription-checkout-title"><div class="modal-head"><div><span class="creator-eyebrow">CREATOR MEMBERSHIP</span><h2 id="creator-subscription-checkout-title">Choose this subscription</h2></div><button class="modal-close" type="button" aria-label="Close">×</button></div><div class="modal-body"><article class="creator-plan-choice"><span class="creator-plan-choice-label">MONTHLY PLAN</span><h3>'+esc(subscriptionTier.name||'Monthly membership')+'</h3><strong class="creator-plan-choice-price">'+esc(price)+'<small> / month</small></strong><p>'+esc(subscriptionTier.description||'Support this creator with a monthly membership.')+'</p>'+(benefits.length?'<ul>'+benefits.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+'<p class="creator-plan-choice-note">Recurring monthly billing through PayPal. Your membership becomes active after PayPal confirms your subscription.</p></article><p class="creator-inline-status" id="creator-subscription-checkout-status" role="status"></p><div class="modal-actions"><button class="secondary" type="button" data-subscription-dismiss>Not now</button><button class="primary" type="button" id="creator-subscription-confirm">Continue to PayPal</button></div></div></section>';
+    document.body.append(modal);
+    const close=()=>modal.remove();
+    modal.querySelectorAll('.modal-close,[data-subscription-dismiss]').forEach(control=>control.addEventListener('click',close));
+    modal.addEventListener('click',event=>{if(event.target===modal)close();});
+    const confirm=modal.querySelector('#creator-subscription-confirm');
+    const status=modal.querySelector('#creator-subscription-checkout-status');
+    confirm?.addEventListener('click',async()=>{
+      if(confirm.disabled)return;
+      confirm.disabled=true;
+      button.disabled=true;
+      button.setAttribute('aria-busy','true');
+      if(status)status.textContent='Preparing your secure monthly checkout…';
+      try{
+        const result=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:u.id})});
+        if(!result.approvalUrl)throw new Error('PayPal did not return an approval link. No subscription was confirmed.');
+        const approvalUrl=new URL(result.approvalUrl,window.location.origin);
+        const paypalHost=approvalUrl.hostname.toLowerCase();
+        if(approvalUrl.protocol!=='https:'||(paypalHost!=='paypal.com'&&!paypalHost.endsWith('.paypal.com'))){
+          throw new Error('Minglora received an invalid PayPal approval link. No subscription was confirmed.');
+        }
+        if(status)status.textContent='Opening PayPal…';
+        window.location.assign(approvalUrl.href);
+      }catch(error){
+        if(status)status.textContent=error.message||'Minglora could not start this subscription checkout.';
+        confirm.disabled=false;
+        button.disabled=false;
+        button.removeAttribute('aria-busy');
+      }
+    });
   });
   $('#profile-message')?.addEventListener('click',async event=>{
     const button=event.currentTarget;
