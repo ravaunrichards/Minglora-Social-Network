@@ -2491,9 +2491,14 @@ async function route(req, res) {
             console.warn('[Minglora LIVE] Subscriber-only directory access check failed closed.', String(error?.message || error).slice(0, 160));
           }
         }
-        const canView = session => session.hostId === user.id || session.visibility === 'public' ||
-          (session.visibility === 'friends' && isFriend(user.id, session.hostId)) ||
-          (session.visibility === 'subscribers' && authorizedSubscriberIds.has(session.hostId));
+        const canView = session => {
+          const invitedToGuestStage = (db.liveSpeakerRequests || []).some(item =>
+            item.sessionId === session.id && item.userId === user.id && ['invited', 'accepted', 'connected'].includes(item.status)
+          );
+          return session.hostId === user.id || invitedToGuestStage || session.visibility === 'public' ||
+            (session.visibility === 'friends' && isFriend(user.id, session.hostId)) ||
+            (session.visibility === 'subscribers' && authorizedSubscriberIds.has(session.hostId));
+        };
         const activeSessions = directoryCandidates
           .filter(session => canView(session))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -2907,12 +2912,13 @@ async function route(req, res) {
             }
           } catch { subscriberAccess = false; }
         }
-        const allowed = session.hostId === user.id || session.visibility === 'public' ||
-          (session.visibility === 'friends' && friendAccess) || subscriberAccess;
-        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
+        const invitedGuest = ['invited', 'accepted', 'connected'].includes(speakerRequest?.status);
+        const allowed = session.hostId === user.id || invitedGuest || session.visibility === 'public' ||
+          (session.visibility === 'friends' && friendAccess) || subscriberAccess;
+        if (!allowed) return json(res, 404, { error: 'Live session not found.' });
         const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
         if (role === 'guest' && session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         const publishSourceNames = getLivePublishSourceNames(session.liveMode, role, session.broadcastType, session.liveSettings || {});
