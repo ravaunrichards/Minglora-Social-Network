@@ -68,7 +68,8 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-avatar-edit-wrap\{[^}]*flex:0 0/);
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
-  assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
+  const currentStylesheet=html.match(/styles\.css\?v=[^"']+/)?.[0]||'';
+  assert.ok(currentStylesheet&&worker.includes('/'+currentStylesheet));
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
   const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||'';
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
