@@ -120,8 +120,8 @@ test('Spotlight lights the selected guest while keeping the other guest seats vi
   assert.ok(finalFit.includes('.mw-video-tile:not(.is-spotlight){display:grid!important}'));
 });
 
-test('Every non-spotlight guest tile has equal dimensions in grid and roundtable layouts', () => {
-  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','roundtable-1','roundtable-2']) {
+test('Every host and guest seat keeps equal dimensions across all layouts, including Spotlight', () => {
+  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','spotlight','roundtable-1','roundtable-2']) {
     assert.ok(css.includes('#mw-grid[data-layout="'+layout+'"]'), layout+' selector is present');
   }
   assert.ok(finalFit.includes('.mw-video-tile{'));
@@ -129,6 +129,9 @@ test('Every non-spotlight guest tile has equal dimensions in grid and roundtable
   assert.ok(finalFit.includes('height:100%!important'));
   assert.ok(finalFit.includes('min-width:0!important'));
   assert.ok(finalFit.includes('min-height:104px!important'));
+  assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
+  assert.ok(finalFit.includes('grid-column:auto!important'));
+  assert.ok(finalFit.includes('grid-row:auto!important'));
 });
 
 test('MeetWave Guest Spotlight selector is live, selectable, and can return focus to host', () => {
@@ -169,7 +172,8 @@ test('All nine total seats fit and spotlight has a visible focus treatment', () 
   assert.ok(js.includes('MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1'));
   assert.ok(js.includes('Array.from({length:MEETWAVE_GUEST_LIMIT}'));
   assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
-  assert.ok(finalFit.includes('grid-column:span 2!important'));
-  assert.ok(finalFit.includes('grid-row:span 2!important'));
+  assert.ok(finalFit.includes('grid-column:auto!important'));
+  assert.ok(finalFit.includes('grid-row:auto!important'));
   assert.ok(finalFit.includes('border:2px solid #72e0cb!important'));
+  assert.ok(finalFit.includes('filter:brightness(1.1)'));
 });
