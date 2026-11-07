@@ -1942,7 +1942,17 @@ async function route(req, res) {
         const status=String(url.searchParams.get('status')||'all').toLowerCase();
         if(!['all','active','banned','suspended','deactivated'].includes(status))return json(res,400,{error:'Choose a valid account status filter.'});
         const result=await requestSupabaseState('admin_users_list',{actorUserId:user.id,search,status});
-        return json(res,200,{users:Array.isArray(result.users)?result.users:[],count:Number(result.count||0),status});
+        const members=(Array.isArray(result.users)?result.users:[]).map(member=>{
+          const local=db.users.find(item=>item.id===member.id);
+          if(local){
+            if(member.status!=='banned'&&isAccountBlocked(local))member.status=local.status;
+            if(!member.username&&local.username)member.username=local.username;
+            if(!member.displayName&&local.name)member.displayName=local.name;
+            if(!member.avatarUrl&&local.avatar)member.avatarUrl=local.avatar;
+          }
+          return member;
+        }).filter(member=>status==='all'||member.status===status);
+        return json(res,200,{users:members,count:members.length,status});
       }
       const adminAccountActionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/(ban|unban)$/i);
       if(method==='POST'&&adminAccountActionMatch){
@@ -1975,7 +1985,7 @@ async function route(req, res) {
         }
         const result=await requestSupabaseState('admin_user_set_ban',{
           actorUserId:user.id,userId:targetId,operation,duration:operation==='ban'?duration:'none',
-          reason,targetJwt
+          previousAccountStatus:target?.status||'active',reason,targetJwt
         });
         const target=db.users.find(item=>item.id===targetId);
         if(target){
