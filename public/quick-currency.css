@@ -8,9 +8,7 @@
 .qcc-card{padding:23px}
 .qcc-card-top{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .qcc-card-top h2{margin:0 0 5px;font-size:18px;letter-spacing:-.025em}
-.qcc-refresh{flex:0 0 auto;border:1px solid var(--border,#e4e8ef);border-radius:11px;background:var(--surface,#fff);color:var(--text,#17202b);font:inherit;font-weight:700;font-size:12px;padding:9px 12px;cursor:pointer}
-.qcc-refresh:disabled{opacity:.55;cursor:wait}
-.qcc-search{display:grid;gap:6px;max-width:420px;margin:20px 0 15px;color:var(--muted,#697586);font-size:11px;font-weight:750}
+ .qcc-search{display:grid;gap:6px;max-width:420px;margin:20px 0 15px;color:var(--muted,#697586);font-size:11px;font-weight:750}
 .qcc-search input,.qcc-side select{width:100%;min-width:0;border:1px solid var(--border,#e4e8ef);border-radius:11px;background:var(--surface,#fff);color:var(--text,#17202b);font:inherit}
 .qcc-search input{padding:11px 12px;font-size:13px}
 .qcc-pair-grid{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:13px;align-items:center;margin:10px 0 18px}
@@ -31,7 +29,7 @@
 .qcc-swap span{font-size:29px;line-height:1;transition:transform .24s ease}
 .qcc-swap small{font-size:9px;font-weight:850;letter-spacing:.12em}
 .qcc-swap:hover span{transform:rotate(180deg)}
-.qcc-swap:focus-visible,.qcc-refresh:focus-visible,.qcc-side select:focus-visible,.qcc-search input:focus-visible,.qcc-input-wrap:focus-within{outline:3px solid color-mix(in srgb,var(--accent,#1769e0) 28%,transparent);outline-offset:2px}
+.qcc-swap:focus-visible,.qcc-side select:focus-visible,.qcc-search input:focus-visible,.qcc-input-wrap:focus-within{outline:3px solid color-mix(in srgb,var(--accent,#1769e0) 28%,transparent);outline-offset:2px}
 .qcc-rate-panel{padding:15px 17px;border:1px solid var(--border,#e4e8ef);border-radius:15px;background:var(--surface,#fff)}
 .qcc-rate-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:var(--muted,#697586);font-size:11px;font-weight:750}
 .qcc-rate-status{font-size:10px;font-weight:800}
@@ -52,5 +50,5 @@
 .qcc-spinner{width:26px;height:26px;border:3px solid var(--border,#e4e8ef);border-top-color:var(--accent,#1769e0);border-radius:50%;animation:qcc-spin .8s linear infinite}
 @keyframes qcc-spin{to{transform:rotate(360deg)}}
 .qcc-error button{border:0;border-radius:10px;padding:10px 16px;background:var(--accent,#1769e0);color:white;font-weight:750;cursor:pointer}
-@media(max-width:720px){.qcc-heading{align-items:flex-start;flex-direction:column;margin:4px 0 15px;gap:10px}.qcc-world-badge{align-self:flex-start}.qcc-card{padding:15px;border-radius:17px}.qcc-card-top{align-items:flex-start}.qcc-pair-grid{grid-template-columns:minmax(0,1fr);gap:8px}.qcc-side{min-height:0;padding:14px}.qcc-swap{justify-self:center;width:54px;height:47px;flex-direction:row;gap:6px;border-radius:13px}.qcc-swap span{font-size:25px;transform:rotate(90deg)}.qcc-swap:hover span{transform:rotate(270deg)}.qcc-swap small{font-size:8px}.qcc-side select{margin-bottom:12px}.qcc-amount-label{margin-top:0}.qcc-input-wrap input{font-size:25px}.qcc-equation-row{gap:10px;padding:14px 8px}.qcc-equation-row strong{font-size:12px}.qcc-refresh{padding:8px 9px;font-size:11px}}
+@media(max-width:720px){.qcc-heading{align-items:flex-start;flex-direction:column;margin:4px 0 15px;gap:10px}.qcc-world-badge{align-self:flex-start}.qcc-card{padding:15px;border-radius:17px}.qcc-card-top{align-items:flex-start}.qcc-pair-grid{grid-template-columns:minmax(0,1fr);gap:8px}.qcc-side{min-height:0;padding:14px}.qcc-swap{justify-self:center;width:54px;height:47px;flex-direction:row;gap:6px;border-radius:13px}.qcc-swap span{font-size:25px;transform:rotate(90deg)}.qcc-swap:hover span{transform:rotate(270deg)}.qcc-swap small{font-size:8px}.qcc-side select{margin-bottom:12px}.qcc-amount-label{margin-top:0}.qcc-input-wrap input{font-size:25px}.qcc-equation-row{gap:10px;padding:14px 8px}.qcc-equation-row strong{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.qcc-spinner{animation:none}.qcc-swap span{transition:none}.qcc-swap:hover span{transform:none}}
