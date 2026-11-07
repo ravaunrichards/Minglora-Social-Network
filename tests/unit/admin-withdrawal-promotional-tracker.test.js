@@ -19,17 +19,17 @@ test("owner earnings report includes every creator withdrawal with account and P
   assert.match(server, /hasActiveReviewerSession/);
 });
 
-test("admin withdrawal tracker renders status totals, filtering and user-controlled refresh", () => {
+test("admin withdrawal tracker renders status totals, filtering and automatic updates", () => {
   assert.match(admin, /All creator\/member withdrawal requests/);
   assert.match(admin, /admin-withdrawal-tracker-status/);
   assert.match(admin, /renderAdminWithdrawalTracker/);
-  assert.match(admin, /id="admin-gift-earnings-refresh"/);
-  assert.match(admin, /earningsRefreshButton\.onclick = \(\) => \{ void loadAdminGiftEarnings\(panel\); \}/);
-  assert.doesNotMatch(admin, /mingloraWithdrawalTimer|mingloraWithdrawalAutoRefresh/);
+  assert.match(admin, /panel\._mingloraCreatorEarningsTimer = window\.setInterval/);
+  assert.match(admin, /loadAdminGiftEarnings\(panel, \{ quiet:true \}\)/);
+  assert.match(admin, /\}, 30000\)/);
+  assert.doesNotMatch(admin, /id="admin-gift-earnings-refresh"/);
   assert.match(adminCss, /admin-withdrawal-tracker-row/);
-  assert.match(adminHtml, /admin-centre.js\?v=20261106-user-controlled-refresh-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261106-auto-sync-no-refresh-1/);
 });
-
 test("promotional wallet, cash reserve and cash-backed gift activity stay separately visible", () => {
   for (const marker of [
     "admin_promotional_gift_wallets",
