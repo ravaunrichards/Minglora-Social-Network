@@ -10,6 +10,7 @@ const app = read('public/app.js');
 const styles = read('public/styles.css');
 const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
+const fit = read('public/live-room-fit.css');
 
 test('Audio LIVE shows connected microphone publishers even when nobody is actively speaking', () => {
   assert.match(app, /function participantHasLiveAudio\(/);
@@ -105,4 +106,16 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
   assert.match(styles, /\.live-player-controls\.live-icon-controls/);
   assert.match(styles, /\.live-control-caption/);
   assert.doesNotMatch(app, /class='live-player-controls'><button id='live-mic-toggle'/);
+});
+
+
+test('Audio LIVE follows the Video LIVE panel grid without collapsing or clipping the speaker roster', () => {
+  assert.match(fit, /\.live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:42px minmax\(0,1fr\) 40px!important/);
+  assert.match(fit, /\.live-audio-stage \.audio-guest-layout\{[\s\S]*?grid-row:2!important/);
+  assert.match(fit, /\.live-audio-stage #live-speaker-list\{[\s\S]*?grid-row:3!important/);
+  assert.match(fit, /overflow-x:auto!important/);
+  assert.match(fit, /min-height:0!important/);
+  assert.match(app, /class='live-guest-layout audio-guest-layout'/);
+  assert.match(app, /function renderLiveGuestLayout\(/);
+  assert.match(app, /function renderLiveSpeakerRoster\(/);
 });
