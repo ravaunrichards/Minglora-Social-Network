@@ -14,7 +14,7 @@ const migration = read("supabase/migrations/20261106100000_minglora_live_multi_r
 test("LIVE gift recipient list is derived from connected LiveKit participants", () => {
   assert.match(server, /gift-recipients/);
   assert.match(server, /listLiveKitParticipants\(session\.roomName\)/);
-  assert.match(server, /recipientId!==String\(session\.hostId\)&&!recipientParticipant/);
+  assert.match(server, /recipientId!==String\(session\.hostId\)&&\(!recipientParticipant\|\|!\['guest','cohost'\]\.includes/);
 });
 
 test("viewers can gift hosts or guests and hosts and guests can gift each other", () => {
