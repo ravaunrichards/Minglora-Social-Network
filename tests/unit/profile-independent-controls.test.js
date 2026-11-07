@@ -79,13 +79,15 @@ test('profile media and story controls remain responsive and visible in refreshe
 });
 
 test('routine profile and About editing opens centered native dialogs without moving the page',()=>{
-  assert.match(app,/document\\.createElement\\('dialog'\\);modal\\.className='profile-inline-editor profile-editor-dialog'/);
-  assert.match(app,/document\\.createElement\\('dialog'\\);modal\\.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'/);
-  assert.match(app,/modal\\.showModal\\(\\)/);
-  assert.match(app,/modal\\.addEventListener\\('cancel'/);
-  assert.doesNotMatch(app,/profileHeader\\.insertAdjacentElement\\('afterend',modal\\)|profilePanel\\.append\\(modal\\)|modal\\.scrollIntoView\\(\\{behavior:'smooth',block:'start'\\}\\)/);
-  assert.match(css,/dialog\\.profile-editor-dialog\\{/);
-  assert.match(css,/dialog\\.profile-editor-dialog::backdrop/);
+  assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes('modal.showModal()'));
+  assert.ok(app.includes("modal.addEventListener('cancel'"));
+  assert.ok(!app.includes("profileHeader.insertAdjacentElement('afterend',modal)"));
+  assert.ok(!app.includes('profilePanel.append(modal)'));
+  assert.ok(!app.includes("modal.scrollIntoView({behavior:'smooth',block:'start'})"));
+  assert.ok(css.includes('dialog.profile-editor-dialog{'));
+  assert.ok(css.includes('dialog.profile-editor-dialog::backdrop'));
 });
 
 test('profile Likes total is supplied by the server from actual like reactions on visible profile posts',()=>{
