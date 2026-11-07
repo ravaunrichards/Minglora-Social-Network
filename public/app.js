@@ -366,6 +366,21 @@ let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedA
 let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
 window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
+function showSubscriptionReturnNotice(){
+  const params=new URLSearchParams(window.location.search),status=params.get('subscription');
+  if(!status)return;
+  const messages={
+    success:'Subscription payment confirmed. Your creator membership is active.',
+    pending:'PayPal approved the subscription. Minglora is reconciling the payment before opening subscriber access.',
+    cancelled:'Subscription checkout was cancelled. No membership was activated.',
+    login:'Sign in to complete your subscription checkout.'
+  };
+  if(messages[status])toast(messages[status]);
+  params.delete('subscription');params.delete('creatorId');
+  const query=params.toString();
+  window.history.replaceState({},'',window.location.pathname+(query?'?'+query:'')+window.location.hash);
+}
+window.addEventListener('DOMContentLoaded',showSubscriptionReturnNotice,{once:true});
 function showAuth(){ stopMessengerRealtime();$('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
 function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startMessengerRealtime();startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
 function primeCallAudio(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;if(!callToneContext)callToneContext=new C();if(callToneContext.state==='suspended')void callToneContext.resume();}catch{}}
@@ -3635,6 +3650,7 @@ function creatorStudioChrome(section,content){
     ["analytics","Analytics","explore","Measure real activity"],
     ["pages","Pages & channels","pages","Manage your Pages"],
     ["monetization","Monetization","coins","Earnings and payouts"],
+    ["subscriptions","Subscriptions","coins","Monthly memberships and subscriber activity"],
     ["settings","Studio settings","settings","Creator preferences"]
   ];
   const nav=sections.map(([id,label,icon,description])=>"<button type='button' class='creator-studio-nav-item live-format-card "+(id===section?"active":"")+"' data-creator-section='"+id+"' aria-current='"+(id===section?"page":"false")+"'><span class='live-format-icon "+(["audience","analytics"].includes(id)?"audio":"")+"'>"+creatorIcon(icon)+"</span><span class='creator-tab-copy'><strong>"+label+"</strong><small>"+description+"</small></span></button>").join("");
@@ -3853,6 +3869,44 @@ async function creatorSettingsMarkup(){
     "<p class='creator-settings-note'>LIVE room design remains managed in the separate LIVE experience. Creator Studio does not duplicate broadcast-room controls.</p></section>"+
     "<div class='creator-settings-savebar'><p class='creator-inline-status' id='creator-settings-status' role='status'>Unsaved changes stay on this form until you save.</p><button type='submit' class='primary' id='creator-settings-save'>Save settings</button></div></form>";
 }
+async function creatorSubscriptionsMarkup(){
+  const userId=state.user?.id;
+  if(!userId)throw new Error("Sign in to manage creator subscriptions.");
+  const [creatorResult,myResult]=await Promise.all([
+    api("/subscriptions/creator/"+encodeURIComponent(userId)),
+    api("/subscriptions/mine")
+  ]);
+  const settings=creatorResult.settings||{},tier=creatorResult.tier||{};
+  const applicationStatus=String(settings.application_status||"not_applied");
+  const mySubscriptions=Array.isArray(myResult.subscriptions)?myResult.subscriptions:[];
+  const tiers=new Map((myResult.tiers||[]).map(item=>[item.id,item]));
+  const members=new Map((myResult.members||[]).map(item=>[item.id,item]));
+  const incoming=mySubscriptions.filter(item=>item.creator_id===userId&&["active","past_due"].includes(item.status));
+  const outgoing=mySubscriptions.filter(item=>item.subscriber_id===userId&&["active","past_due"].includes(item.status));
+  const money=minor=>"$"+(Number(minor||0)/100).toFixed(2);
+  const applicationPanel=applicationStatus==="approved"
+    ? ""
+    : applicationStatus==="suspended"
+      ? "<section class='card creator-subscription-application'><span class='creator-eyebrow'>CREATOR SUBSCRIPTIONS</span><h3>Subscriptions are suspended</h3><p>Minglora has suspended subscription access for this creator account. Contact platform support for a review.</p></section>"
+      : applicationStatus==="pending"
+        ? "<section class='card creator-subscription-application'><span class='creator-eyebrow'>CREATOR SUBSCRIPTIONS</span><h3>Application under review</h3><p>Your creator subscription application has been submitted. Monthly memberships become available after Minglora approval.</p><span class='creator-subscription-status'>Pending review</span></section>"
+        : "<section class='card creator-subscription-application'><span class='creator-eyebrow'>CREATOR SUBSCRIPTIONS</span><h3>Apply to offer monthly subscriptions</h3><p>Let your audience support your creator work with a recurring monthly membership, subscriber benefits and subscriber-only experiences.</p><form id='creator-subscription-apply-form'><label for='creator-subscription-application-note'>Application note (optional)</label><textarea id='creator-subscription-application-note' name='applicationNote' maxlength='1200' rows='3' placeholder='Tell Minglora what you plan to offer subscribers.'></textarea><button type='submit' class='primary'>Submit creator application</button><p id='creator-subscription-application-status' class='creator-inline-status' role='status'></p></form></section>";
+  const manager=applicationStatus==="approved"
+    ? "<section class='card creator-subscription-manager'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>MONTHLY MEMBERSHIP</span><h3>Subscription offer</h3><p>Choose your monthly price and the benefits members receive. Pricing is in USD.</p></div><label class='creator-subscription-toggle'><input type='checkbox' id='creator-subscription-enabled' "+(settings.subscriptions_enabled===true?"checked":"")+" "+(!tier.id?"disabled":"")+"><span>Accept subscriptions</span></label></div><form id='creator-subscription-tier-form' class='creator-subscription-tier-form'><label for='creator-subscription-name'>Membership name</label><input id='creator-subscription-name' name='name' maxlength='48' required value='"+esc(tier.name||"Monthly membership")+"'><label for='creator-subscription-price'>Monthly price (USD)</label><input id='creator-subscription-price' name='price' type='number' min='2.99' max='99.99' step='0.01' required value='"+(tier.price_minor?(Number(tier.price_minor)/100).toFixed(2):"2.99")+"'><label for='creator-subscription-description'>What subscribers get</label><textarea id='creator-subscription-description' name='description' maxlength='500' rows='3' placeholder='Describe the value of your monthly membership.'>"+esc(tier.description||"")+"</textarea><label for='creator-subscription-benefits'>Subscriber benefits (one per line, up to eight)</label><textarea id='creator-subscription-benefits' name='benefits' maxlength='800' rows='4' placeholder='Subscriber badge\nSubscriber-only LIVE access\nExclusive creator updates'>"+esc((Array.isArray(tier.benefits)?tier.benefits:[]).join("\n"))+"</textarea><button type='submit' class='primary' id='creator-subscription-save-tier'>Save monthly subscription</button><p class='creator-inline-status' id='creator-subscription-tier-status' role='status'>"+(tier.id?"Current monthly offer: "+money(tier.price_minor)+".":"Save a price to create your monthly PayPal billing plan.")+"</p></form></section>"
+    : "";
+  const subscriberRows=incoming.map(item=>{
+    const member=members.get(item.subscriber_id)||{};
+    return "<div class='creator-subscription-row'><span class='creator-subscription-member'>@"+esc(member.username||"Minglora member")+"</span><span>"+esc(String(item.status||"active"))+"</span><strong>"+money(item.amount_minor)+" / month</strong></div>";
+  }).join("");
+  const ownRows=outgoing.map(item=>{
+    const creator=members.get(item.creator_id)||{};
+    const offer=tiers.get(item.tier_id)||{};
+    const canCancel=["active","past_due"].includes(item.status)&&!item.cancel_at_period_end;
+    return "<div class='creator-subscription-row'><span class='creator-subscription-member'>@"+esc(creator.username||"Creator")+"</span><span>"+esc(offer.name||"Monthly membership")+" · "+esc(item.status||"active")+(item.cancel_at_period_end?" · Ends at period end":"")+"</span><strong>"+money(item.amount_minor)+" / month</strong>"+(canCancel?"<button type='button' class='secondary' data-cancel-subscription='"+esc(item.id)+"'>Cancel renewal</button>":"")+"</div>";
+  }).join("");
+  return "<div class='creator-subscriptions-page'><div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CREATOR MONETIZATION</span><h2>Subscriptions</h2><p>Offer monthly memberships, manage subscriber access and see your active subscribers.</p></div><div class='creator-subscription-count'><strong>"+Number(creatorResult.activeSubscribers||0).toLocaleString()+"</strong><span>Active subscribers</span></div></div>"+applicationPanel+manager+"<section class='card creator-subscription-list'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Active subscribers</h3></div></div>"+(subscriberRows||"<p class='muted'>Your active subscribers will appear here after their first monthly payment is confirmed.</p>")+"</section><section class='card creator-subscription-list'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>MEMBERSHIPS YOU JOINED</span><h3>Your subscriptions</h3></div></div>"+(ownRows||"<p class='muted'>Monthly creator subscriptions you join will appear here.</p>")+"</section><p class='creator-subscription-policy'>Subscriptions use PayPal recurring monthly billing. Creator earnings are calculated on net revenue after reconciled provider fees and taxes: 70% creator share by default, with a qualifying performance tier of 90%. This is separate from LIVE gift revenue.</p></div>";
+}
+
 async function renderCreatorSection(section){
   const s=state.creatorStudio;
   if(!s)return;
@@ -3890,6 +3944,8 @@ async function renderCreatorSection(section){
     try{s.earnings=await api("/creator/earnings");s.earningsError=null;}
     catch(error){s.earnings=null;s.earningsError=error.message;}
     content=creatorMonetizationMarkup();
+  }else if(section==="subscriptions"){
+    content=await creatorSubscriptionsMarkup();
   }else if(section==="settings"){
     try{content=await creatorSettingsMarkup();}
     catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
@@ -3905,6 +3961,74 @@ async function renderCreatorSection(section){
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
   document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
   $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
+  if(section==="subscriptions"){
+    const applyForm=document.getElementById("creator-subscription-apply-form");
+    applyForm?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const button=applyForm.querySelector("button[type='submit']");
+      const status=document.getElementById("creator-subscription-application-status");
+      button.disabled=true;
+      try{
+        const applicationNote=String(new FormData(applyForm).get("applicationNote")||"").trim();
+        await api("/subscriptions/apply",{method:"POST",body:JSON.stringify({applicationNote})});
+        if(status)status.textContent="Application submitted. Minglora approval is required before you can publish a monthly offer.";
+        toast("Creator subscription application submitted.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){
+        if(status)status.textContent=error.message||"Application could not be submitted.";
+        toast(error.message||"Minglora could not submit the application.");
+        button.disabled=false;
+      }
+    });
+    const tierForm=document.getElementById("creator-subscription-tier-form");
+    tierForm?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const button=document.getElementById("creator-subscription-save-tier");
+      const status=document.getElementById("creator-subscription-tier-status");
+      const values=new FormData(tierForm),priceMinor=Math.round(Number(values.get("price"))*100);
+      const benefits=String(values.get("benefits")||"").split(/\\r?\\n/).map(value=>value.trim()).filter(Boolean).slice(0,8);
+      if(!Number.isSafeInteger(priceMinor)||priceMinor<299||priceMinor>9999){toast("Monthly price must be between US$2.99 and US$99.99.");return;}
+      button.disabled=true;
+      if(status)status.textContent="Creating your recurring monthly PayPal plan…";
+      try{
+        await api("/subscriptions/tier",{method:"POST",body:JSON.stringify({
+          name:String(values.get("name")||"").trim(),priceMinor,
+          description:String(values.get("description")||"").trim(),benefits
+        })});
+        toast("Your monthly subscription offer and PayPal plan were saved.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){
+        if(status)status.textContent=error.message||"The subscription offer could not be saved.";
+        toast(error.message||"Minglora could not save the subscription offer.");
+        button.disabled=false;
+      }
+    });
+    const enabledToggle=document.getElementById("creator-subscription-enabled");
+    enabledToggle?.addEventListener("change",async()=>{
+      enabledToggle.disabled=true;
+      try{
+        await api("/subscriptions/enable",{method:"POST",body:JSON.stringify({enabled:enabledToggle.checked})});
+        toast(enabledToggle.checked?"Your profile can now accept monthly subscriptions.":"New monthly subscriptions are disabled.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){
+        toast(error.message||"Subscription availability could not be updated.");
+        enabledToggle.disabled=false;
+      }
+    });
+    document.querySelectorAll("[data-cancel-subscription]").forEach(button=>button.addEventListener("click",async()=>{
+      const id=button.dataset.cancelSubscription;
+      if(!id||!window.confirm("Cancel this monthly subscription renewal? Access remains until the current paid period ends."))return;
+      button.disabled=true;
+      try{
+        await api("/subscriptions/"+encodeURIComponent(id)+"/cancel",{method:"POST",body:"{}"});
+        toast("PayPal renewal was cancelled. Access remains through the paid period.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){
+        toast(error.message||"The subscription could not be cancelled.");
+        button.disabled=false;
+      }
+    }));
+  }
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
   }
