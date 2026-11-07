@@ -47,7 +47,7 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
   assert.match(app, /id='live-fullscreen-chat-slot'/);
   assert.doesNotMatch(app, /data-live-tools-panel='chat'/, 'the only Chat panel is the persistent side panel');
   assert.match(app, /data-live-tools-panel-target='devices'/);
-  assert.match(app, /live-chat-panel-body/);
+  assert.doesNotMatch(app, /live-chat-panel-body/, 'the drawer must not mount a second chat body');
   assert.match(app, /restoreLiveChatToStage/);
   assert.match(app, /data-live-tools-panel-target/);
   assert.match(styles, /\.live-viewer-roster/);
