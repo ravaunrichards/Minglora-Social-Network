@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed",
-    "admin_users_list", "admin_user_set_ban",
+    "admin_users_list", "admin_user_set_ban", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -266,6 +266,53 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+
+  if (action === "admin_audit_log") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") return json(403, { error: "Only the designated Minglora owner can view administrator audit history." });
+    const requestedLimit = Math.floor(Number(input.limit || 50));
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
+    const search = String(input.search || "").trim().toLowerCase().slice(0, 100);
+    const actionFilter = String(input.actionFilter || "all").trim().toLowerCase();
+    const allowedFilters = new Set(["all", "account.ban", "account.unban"]);
+    if (!allowedFilters.has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
+    let auditQuery = admin.from("audit_log")
+      .select("id,actor_id,action,target_type,target_id,metadata,created_at")
+      .order("created_at", { ascending: false }).limit(search ? 500 : limit);
+    if (actionFilter !== "all") auditQuery = auditQuery.eq("action", actionFilter);
+    const { data: auditRows, error: auditError } = await auditQuery;
+    if (auditError) return json(503, { error: "Minglora administrator audit history is unavailable." });
+    const rows = (auditRows || []).filter((row: any) => {
+      if (!search) return true;
+      const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+      return [row.action,row.target_type,row.target_id,row.actor_id,metadata.reason,metadata.duration]
+        .some(value => String(value || "").toLowerCase().includes(search));
+    }).slice(0, limit);
+    const profileIds = [...new Set(rows.flatMap((row: any) =>
+      [String(row.actor_id || ""),String(row.target_id || "")].filter((value: string) => validUuid(value))
+    ))];
+    const profileById = new Map<string, any>();
+    if (profileIds.length) {
+      const { data: profiles, error: profileError } = await admin.from("profiles")
+        .select("id,username,display_name").in("id", profileIds);
+      if (profileError) return json(503, { error: "Minglora audit account labels could not be loaded." });
+      for (const profile of profiles || []) profileById.set(String(profile.id), profile);
+    }
+    const records = rows.map((row: any) => {
+      const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+      const actorId = String(row.actor_id || ""), targetId = String(row.target_id || "");
+      const actor = profileById.get(actorId), target = profileById.get(targetId);
+      return {
+        id:String(row.id || ""),action:String(row.action || "admin.activity"),
+        targetType:String(row.target_type || ""),targetId,createdAt:row.created_at || null,
+        actor:actor?{id:actorId,username:String(actor.username || ""),displayName:String(actor.display_name || "")}:{id:actorId,username:"",displayName:""},
+        target:target?{id:targetId,username:String(target.username || ""),displayName:String(target.display_name || "")}:{id:targetId,username:"",displayName:""},
+        metadata:{reason:String(metadata.reason || ""),duration:String(metadata.duration || ""),
+          bannedUntil:String(metadata.banned_until || ""),sessionsRevoked:Boolean(metadata.sessions_revoked)}
+      };
+    });
+    return json(200,{records,count:records.length,limit});
+  }
 
   const payPalMoneyMinor = (money: any, expectedCurrency: string): number | null => {
     if (!money || typeof money !== "object") return null;
