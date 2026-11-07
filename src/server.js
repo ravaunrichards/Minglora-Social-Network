@@ -673,6 +673,7 @@ async function endAndClearMeetWaveRoom(room,reason='ended'){
   db.meetWaveRooms=(db.meetWaveRooms||[]).filter(item=>String(item.id)!==roomId);
   db.meetWaveAttendance=(db.meetWaveAttendance||[]).filter(item=>String(item.roomId)!==roomId);
   db.meetWaveInvitations=(db.meetWaveInvitations||[]).filter(item=>String(item.roomId)!==roomId);
+  db.meetWaveGuestRequests=(db.meetWaveGuestRequests||[]).filter(item=>String(item.roomId)!==roomId);
   db.meetWaveMessages=(db.meetWaveMessages||[]).filter(item=>String(item.roomId)!==roomId);
   db.notifications=(db.notifications||[]).filter(item=>!(item.type==='meetwave_invite'&&String(item.roomId||'')===roomId));
   await saveStore();
@@ -5423,6 +5424,2337 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           .map(item=>({id:item.id,status:item.status,createdAt:item.createdAt,room:meetWaveRoomView((db.meetWaveRooms||[]).find(room=>room.id===item.roomId),user.id)}))
           .filter(item=>item.room);
         return json(res,200,{invitations});
+      }
+      const guestRequestDecisionMatch=p.match(new RegExp('^/api/meetwave/rooms/([^/]+)/guest-requests/([^/]+)/(accept|decline)p.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
+      if(meetWaveInvitationMatch&&method==='POST'){
+        requireAuth(user);
+        const invitation=(db.meetWaveInvitations||[]).find(item=>item.id===meetWaveInvitationMatch[1]&&item.userId===user.id);
+        if(!invitation||invitation.status!=='pending')return json(res,404,{error:'This MeetWave invitation is no longer pending.'});
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===invitation.roomId);
+        if(!room||room.status==='ended')return json(res,410,{error:'This meeting room has ended.'});
+        invitation.status=meetWaveInvitationMatch[2]==='accept'?'accepted':'declined';
+        invitation.respondedAt=now();
+        if(invitation.status==='accepted'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(attendance?.removedAt){attendance.removedAt=null;attendance.status='left';}
+        }
+        await saveStore();
+        return json(res,200,{invitation:{id:invitation.id,status:invitation.status},room:meetWaveRoomView(room,user.id)});
+      }
+      let meetWaveParticipantRemovalMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)\/participants\/([^/]+)\/remove$/);
+      if(meetWaveParticipantRemovalMatch&&method==='POST'){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveParticipantRemovalMatch[1]);
+        const participantId=meetWaveParticipantRemovalMatch[2];
+        if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(room.status==='ended')return json(res,410,{error:'This MeetWave meeting has ended.'});
+        if(!canManageMeetWaveParticipants(room,user.id,participantId))return json(res,403,{error:'Only the host can remove another participant from this meeting.'});
+        let removal;
+        try{removal=await removeLiveKitParticipant(room.roomName,participantId);}
+        catch(error){return json(res,503,{error:'Minglora could not update the LiveKit participant session. Try again.'});}
+        if(!removal.removed)return json(res,404,{error:'That member is no longer connected to this meeting.'});
+        const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===participantId&&!item.leftAt);
+        if(attendance){attendance.status='removed';attendance.leftAt=now();attendance.removedAt=attendance.leftAt;}
+        room.lastActivityAt=now();
+        await saveStore();
+        return json(res,200,{removed:true,participantId});
+      }
+      let meetWaveRoomMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)(?:\/(join|leave|messages|invitations))?$/);
+      if(meetWaveRoomMatch){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveRoomMatch[1]);
+        const action=meetWaveRoomMatch[2]||'';
+        if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(room.status==='ended')return json(res,410,{error:'This MeetWave meeting has ended.'});
+        if(blockedBetween(user.id,room.ownerId)&&room.ownerId!==user.id)return json(res,403,{error:'This meeting room is unavailable.'});
+        if(!canUserAccessMeetWaveRoom(room,user.id))return json(res,403,{error:'You do not have access to this MeetWave room.'});
+        if(method==='GET'&&!action){
+          let participants=[];
+          if(room.status==='active'){
+            if(!isLiveKitConfigured())return json(res,503,{error:'Minglora cannot verify this active meeting while LiveKit is unavailable.'});
+            try{participants=await listLiveKitParticipants(room.roomName);}
+            catch(error){return json(res,503,{error:'Minglora could not verify the live participant list for this room.'});}
+          }
+          return json(res,200,{room:meetWaveRoomView(room,user.id),participants,participantCount:participants.length,participantCountVerified:true});
+        }
+        if(method==='POST'&&action==='join'){
+          if(room.visibility==='public'&&room.ownerId!==user.id){
+            const acceptedInvite=(db.meetWaveInvitations||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='accepted');
+            const guestRequest=(db.meetWaveGuestRequests||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='accepted');
+            if(!acceptedInvite&&!guestRequest)return json(res,403,{error:'Request a guest seat and wait for the host to approve you before joining.'});
+          }
+          if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot connect because Minglora LiveKit is not configured.'});
+          const priorAttendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(priorAttendance?.status==='removed'&&priorAttendance.removedAt)return json(res,403,{error:'The host removed you from this meeting. Ask the host to invite you again.'});
+          const availability=meetWaveRoomJoinAvailability(room);
+          if(availability==='ended')return json(res,410,{error:'This meeting has ended.'});
+          if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
+          let participants=[],liveKit;
+          try{
+            const liveKitRoom=await ensureLiveKitRoom(room.roomName,MEETWAVE_PARTICIPANT_LIMIT);
+            participants=await listLiveKitParticipants(room.roomName);
+            const roomParticipantLimit=Math.min(MEETWAVE_PARTICIPANT_LIMIT,Math.max(2,Number(liveKitRoom?.maxParticipants)||MEETWAVE_PARTICIPANT_LIMIT));
+            if(participants.length>=roomParticipantLimit&&!participants.some(participant=>participant.identity===user.id)){
+              const guestLimit=roomParticipantLimit-1;
+              return json(res,409,{error:'This MeetWave room is full. The current limit is '+roomParticipantLimit+' participants: one host and up to '+guestLimit+' guests.'});
+            }
+            liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
+          }catch(error){
+            console.warn('[MeetWave] LiveKit join preparation failed.',{roomId:room.id,status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare the LiveKit meeting connection. Check the media service and try again.'});
+          }
+          db.meetWaveAttendance||=[];
+          let attendance=db.meetWaveAttendance.find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(!attendance){attendance={id:uid(),roomId:room.id,userId:user.id,role:room.ownerId===user.id?'host':'participant',status:'joined',joinedAt:now(),leftAt:null};db.meetWaveAttendance.push(attendance);}
+          else{attendance.role=room.ownerId===user.id?'host':'participant';attendance.status='joined';attendance.joinedAt=now();attendance.leftAt=null;}
+          room.status='active';room.startedAt=room.startedAt||now();room.lastActivityAt=now();
+          const approvedGuestRequest=(db.meetWaveGuestRequests||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='accepted');
+          if(approvedGuestRequest){approvedGuestRequest.status='joined';approvedGuestRequest.joinedAt=now();}
+          await saveStore();
+          return json(res,200,{room:meetWaveRoomView(room,user.id),role:attendance.role,liveKit:{...liveKit,role:attendance.role}});
+        }
+        if(method==='POST'&&action==='leave'){
+          if(room.ownerId===user.id){
+            const result=await endAndClearMeetWaveRoom(room,'host-left');
+            return json(res,200,{left:true,...result});
+          }
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&!item.leftAt);
+          if(!attendance)return json(res,200,{left:true});
+          attendance.status='left';attendance.leftAt=now();room.lastActivityAt=attendance.leftAt;await saveStore();
+          let remaining=[];
+          try{remaining=await listLiveKitParticipants(room.roomName);}
+          catch(error){
+            const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+            if(status!==404)return json(res,200,{left:true,cleanupPending:true});
+          }
+          if(!remaining.length){
+            const result=await endAndClearMeetWaveRoom(room,'last-participant-left');
+            return json(res,200,{left:true,...result});
+          }
+          return json(res,200,{left:true});
+        }
+        if(method==='POST'&&action==='invitations'){
+          if(room.ownerId!==user.id)return json(res,403,{error:'Only the room host can invite members.'});
+          const requestedIds=Array.isArray(input.userIds)?input.userIds.map(String):[];
+          const requestedUsernames=Array.isArray(input.usernames)?input.usernames.map(value=>normalizeUsername(String(value||''))).filter(Boolean):[];
+          const invitees=[...new Map([
+            ...requestedIds.map(id=>db.users.find(member=>member.id===id)).filter(Boolean),
+            ...requestedUsernames.map(username=>db.users.find(member=>normalizeUsername(member.username)===username)).filter(Boolean)
+          ].map(member=>[member.id,member])).values()];
+          if(!invitees.length||invitees.length>20)return json(res,400,{error:'Choose between one and twenty existing Minglora members to invite.'});
+          if(invitees.some(member=>member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          db.meetWaveInvitations||=[];
+          const sent=[];
+          for(const member of invitees){
+            const memberSettings=getUserSettings(member);
+            if(!canReceiveMeetWaveInvitation(memberSettings,{isFriend:isFriend(user.id,member.id)}))continue;
+            let invitation=db.meetWaveInvitations.find(item=>item.roomId===room.id&&item.userId===member.id);
+            const priorAttendance=db.meetWaveAttendance?.find(item=>item.roomId===room.id&&item.userId===member.id);
+            if(invitation&&invitation.status==='accepted'&&!priorAttendance?.removedAt)continue;
+            if(!invitation){invitation={id:uid(),roomId:room.id,userId:member.id,invitedBy:user.id,status:'pending',createdAt:now(),respondedAt:null};db.meetWaveInvitations.push(invitation);}
+            else{invitation.status='pending';invitation.invitedBy=user.id;invitation.createdAt=now();invitation.respondedAt=null;}
+            notify(member.id,user.id,'meetwave_invite',user.name+' invited you to a MeetWave room.',{roomId:room.id,roomTitle:room.title,invitationId:invitation.id});
+            sent.push({userId:member.id,username:member.username});
+          }
+          await saveStore();
+          return json(res,200,{sent,skipped:invitees.length-sent.length});
+        }
+        if((method==='GET'||method==='POST')&&action==='messages'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='joined'&&!item.leftAt);
+          if(room.ownerId!==user.id&&!attendance)return json(res,403,{error:'Join this meeting before accessing its chat.'});
+          if(method==='GET'){
+            const after=Date.parse(url.searchParams.get('after')||'');
+            const messages=(db.meetWaveMessages||[])
+              .filter(message=>message.roomId===room.id&&(!Number.isFinite(after)||new Date(message.createdAt).getTime()>after))
+              .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100)
+              .map(message=>({...message,author:safeUser(db.users.find(member=>member.id===message.userId),user.id)}));
+            return json(res,200,{messages});
+          }
+          const textValue=normalizeMeetWaveMessage(input.text);
+          if(!textValue)return json(res,400,{error:'Enter a chat message of up to 1,000 characters.'});
+          db.meetWaveMessages||=[];
+          const message={id:uid(),roomId:room.id,userId:user.id,text:textValue,createdAt:now()};
+          db.meetWaveMessages.push(message);room.lastActivityAt=message.createdAt;
+          await saveStore();
+          return json(res,201,{message:{...message,author:safeUser(user,user.id)}});
+        }
+        if(method==='DELETE'&&!action){
+          if(room.ownerId!==user.id)return json(res,403,{error:'Only the host can end this meeting for everyone.'});
+          const result=await endAndClearMeetWaveRoom(room,'ended-by-host');
+          return json(res,200,{...result});
+        }
+      }
+      if(method==='GET'&&p==='/api/calls/ringtone'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(!asset)return json(res,200,{ringtone:null});
+        const url=await resolveAssetUrl(asset);
+        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+      }
+      if(method==='POST'&&p==='/api/calls/ringtone'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='uploaded');
+        if(!asset)return json(res,404,{error:'The uploaded ringtone could not be found.'});
+        const validation=validateCallRingtoneUpload({mimeType:asset.mimeType,byteSize:asset.byteSize});
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(previous){previous.status='deleted';previous.deletedAt=now();}
+        asset.status='attached';asset.attachedTo='account:call-ringtone';asset.completedAt=asset.completedAt||now();
+        user.callRingtoneAssetId=asset.id;
+        await saveStore();
+        if(previous)void mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Previous ringtone cleanup failed.',{message:error.message}));
+        const url=await resolveAssetUrl(asset);
+        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+      }
+      if(method==='DELETE'&&p==='/api/calls/ringtone'){
+        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        user.callRingtoneAssetId=null;
+        if(previous){previous.status='deleted';previous.deletedAt=now();}
+        await saveStore();
+        if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Ringtone cleanup failed.',{message:error.message}));
+        return json(res,200,{ok:true,ringtone:null});
+      }
+      if(method==='GET'&&p==='/api/calls/incoming'){
+        // A ringing invitation is already persisted in Minglora's call ledger.
+        // Do not make its display depend on a LiveKit presence reconciliation:
+        // an unrelated provider hiccup must not hide the receiver's Answer screen.
+        const expiredCalls=[];
+        const stamp=now(),stampMs=Date.now();
+        for(const call of (db.calls||[])){
+          if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],stamp,stampMs))expiredCalls.push(call);
+        }
+        if(expiredCalls.length){
+          await saveStore();
+          expiredCalls.forEach(call=>void cleanupCallRoom(call,'ring-timeout'));
+        }
+        const incoming=(db.calls||[]).filter(call=>['ringing','active'].includes(call.status)&&!blockedBetween(user.id,call.createdBy))
+          .map(call=>{
+            const participant=(db.callParticipants||[]).find(item=>item.callId===call.id&&item.userId===user.id);
+            if(!participant||participant.status!=='invited')return null;
+            return {id:call.id,kind:call.kind,status:call.status,createdAt:call.createdAt,ringExpiresAt:call.ringExpiresAt,caller:safeUser(db.users.find(member=>member.id===call.createdBy))};
+          }).filter(Boolean);
+        return json(res,200,{calls:incoming});
+      }
+      const callStatusMatch=p.match(/^\/api\/calls\/([^/]+)\/status$/);
+      if(method==='GET'&&callStatusMatch){
+        // Ringing and participant state are already persisted. Status polling
+        // must remain available even when LiveKit presence cannot be refreshed.
+        const call=(db.calls||[]).find(item=>item.id===callStatusMatch[1]);
+        const participant=(db.callParticipants||[]).find(item=>item.callId===callStatusMatch[1]&&item.userId===user.id);
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now())){await saveStore();await cleanupCallRoom(call,'ring-timeout');}
+        return json(res,200,{call:{id:call.id,status:call.status,createdBy:call.createdBy,kind:call.kind,answeredAt:call.answeredAt,endedAt:call.endedAt},participantStatus:participant.status});
+      }
+      if(method==='POST'&&p==='/api/calls'){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        const recipientIds=[...new Set([String(input.to||''),...(Array.isArray(input.participantIds)?input.participantIds.map(String):[])].filter(Boolean))];
+        const kind=String(input.kind||'video');
+        if(!['audio','video'].includes(kind)||!recipientIds.length||recipientIds.length>CALL_MAX_PARTICIPANTS-1)return json(res,400,{error:'Choose audio or video and invite between one and seven other members.'});
+        const groupId=String(input.groupId||'').trim();
+        if(groupId){
+          if(!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          const activeGroupMembers=new Set(getActiveMessageGroupMembers(db,groupId));
+          if(recipientIds.some(id=>!activeGroupMembers.has(id)))return json(res,403,{error:'Group calls can only be started with current members of this Messenger group.'});
+        }
+        const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
+        if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
+        if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
+        const reservationIds=[...new Set([user.id,...recipientIds])];
+        if(reservationIds.some(id=>callCreationReservations.has(id)))return json(res,409,{error:'A call is already being started for one of these members. Finish or cancel it before starting another.'});
+        reservationIds.forEach(id=>callCreationReservations.add(id));
+        try{
+          await callSessionCleanupReady;
+          await reconcileCallPresenceForUsers(reservationIds,{force:true});
+          const busyIds=new Set((db.callParticipants||[]).filter(item=>isCallParticipantBusy((db.calls||[]).find(call=>call.id===item.callId),item)).map(item=>item.userId));
+          if(busyIds.has(user.id))return json(res,409,{error:'Finish your current Minglora call before starting another.'});
+          if(recipients.some(member=>busyIds.has(member.id)))return json(res,409,{error:'One or more members are already in another call.'});
+          const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
+          try{await ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS);}
+          catch(error){
+            console.warn('[Minglora calls] Could not provision LiveKit room.',{status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare the call room. Check the LiveKit connection and try again.'});
+          }
+          const createdAt=now();
+          const call={id,roomName,createdBy:user.id,kind,status:'ringing',createdAt,ringExpiresAt:new Date(Date.now()+CALL_RING_TIMEOUT_MS).toISOString(),answeredAt:null,endedAt:null};
+          db.calls||=[];db.callParticipants||=[];db.calls.unshift(call);
+          db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'calling',joinedAt:null,leftAt:null});
+          for(const recipient of recipients){
+            db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
+          }
+          try{await saveStore();}
+          catch(error){
+            db.calls=db.calls.filter(item=>item.id!==id);
+            db.callParticipants=db.callParticipants.filter(item=>item.callId!==id);
+            await cleanupCallRoom(call,'create-persistence-failed');
+            throw error;
+          }
+          return json(res,201,{call});
+        }catch(error){
+          if(Number(error?.status)===503)return json(res,503,{error:error.message||'Minglora could not verify call availability. Try again shortly.'});
+          throw error;
+        }finally{
+          reservationIds.forEach(id=>callCreationReservations.delete(id));
+        }
+      }
+      const callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end|decline|cancel)$/);
+      if(callMatch&&method==='POST'){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        let call=db.calls.find(item=>item.id===callMatch[1]);
+        let participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+        const action=callMatch[2];
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(action==='join'){
+          await callSessionCleanupReady;
+          try{await reconcileCallPresenceForUsers([user.id],{force:true});}
+          catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
+          call=db.calls.find(item=>item.id===callMatch[1]);
+          participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+          if(!call||!participant)return json(res,404,{error:'This call invitation is no longer active.'});
+          const busyElsewhere=(db.callParticipants||[]).some(item=>item.userId===user.id&&item.callId!==call.id&&isCallParticipantBusy((db.calls||[]).find(entry=>entry.id===item.callId),item));
+          if(busyElsewhere)return json(res,409,{error:'Finish your current Minglora call before answering another call.'});
+          if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now())){await saveStore();await cleanupCallRoom(call,'ring-timeout');}
+          if(['ended','cancelled','declined','missed'].includes(call.status)||!participant||['declined','missed','cancelled'].includes(participant.status)||(participant.status==='left'&&call.status!=='active'))return json(res,404,{error:'This call invitation is no longer active.'});
+          if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
+          if(participant.status==='calling'&&call.status==='ringing')return json(res,409,{error:'Waiting for the other member to answer.'});
+          if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer ringing.'});
+          let liveKit;
+          try{
+            await ensureLiveKitRoom(call.roomName,CALL_MAX_PARTICIPANTS);
+            liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:call.roomName,canPublish:true});
+          }catch(error){
+            console.warn('[Minglora calls] Could not prepare participant connection.',{callId:call.id,status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare your call connection. Check LiveKit and try again.'});
+          }
+          if(participant.status==='invited'&&call.status==='ringing'){call.status='active';call.answeredAt=now();call.answeredById=user.id;}
+          participant.status='joined';participant.joinedAt=now();participant.leftAt=null;
+          await saveStore();
+          const peerParticipant=(db.callParticipants||[]).find(item=>
+            item.callId===call.id&&item.userId!==user.id&&
+            !['declined','missed','cancelled','left'].includes(item.status)
+          );
+          const peerUser=peerParticipant?db.users.find(member=>member.id===peerParticipant.userId):null;
+          const peer=peerUser?safeUser(peerUser,user.id):null;
+          return json(res,200,{call,peer,liveKit:{...liveKit,role:participant.role}});
+        }
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(action==='decline'){
+          if(user.id===call.createdBy||participant.status!=='invited')return json(res,403,{error:'Only an invited recipient can decline this call.'});
+          if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer available.'});
+          participant.status='declined';participant.leftAt=now();
+          const stillInvited=(db.callParticipants||[]).some(item=>item.callId===call.id&&item.status==='invited');
+          const endedNow=!stillInvited&&call.status==='ringing';
+          if(endedNow){call.status='declined';call.endedAt=now();}
+          await saveStore();if(endedNow)await cleanupCallRoom(call,'declined');return json(res,200,{ok:true,call});
+        }
+        if(action==='cancel'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the caller can cancel this call.'});
+          if(['ended','cancelled','declined','missed'].includes(call.status))return json(res,200,{ok:true,call});
+          call.status='cancelled';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='invited').forEach(item=>{item.status='cancelled';item.leftAt=call.endedAt;});
+          await saveStore();await cleanupCallRoom(call,'cancelled');return json(res,200,{ok:true,call});
+        }
+        if(action==='invite'){
+          if(['ended','cancelled','declined','missed'].includes(call.status)||participant.status!=='joined')return json(res,409,{error:'Join the call before inviting more people.'});
+          const invitedIds=[...new Set((Array.isArray(input.userIds)?input.userIds:[]).map(String).filter(Boolean))];
+          if(!invitedIds.length||invitedIds.length>6)return json(res,400,{error:'Choose between one and six additional participants.'});
+          const current=countCallParticipants(db.callParticipants||[],call.id);
+          const alreadyParticipating=new Set((db.callParticipants||[]).filter(item=>item.callId===call.id&&isCallParticipantBusy(call,item)).map(item=>item.userId));
+          const newInviteIds=invitedIds.filter(id=>!alreadyParticipating.has(id));
+          if(current+newInviteIds.length>CALL_MAX_PARTICIPANTS)return json(res,409,{error:'Minglora group calls support up to eight participants.'});
+          const invited=newInviteIds.map(id=>db.users.find(member=>member.id===id));
+          if(invited.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          const newlyInvited=[];
+          for(const member of invited){
+            if((db.callParticipants||[]).some(item=>item.callId===call.id&&item.userId===member.id&&!['declined','left','missed','cancelled'].includes(item.status)))continue;
+            if(getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
+            db.callParticipants.push({id:uid(),callId:call.id,userId:member.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(member.id,user.id,'call',user.name+' invited you to a Minglora group call.',{callId:call.id,callKind:call.kind});
+            newlyInvited.push(safeUser(member));
+          }
+          await saveStore();return json(res,200,{invited:newlyInvited,count:newlyInvited.length});
+        }
+        if(action==='leave'){
+          participant.status='left';participant.leftAt=now();
+          const joined=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='joined');
+          const stillInvited=(db.callParticipants||[]).some(item=>item.callId===call.id&&item.status==='invited');
+          const endedNow=user.id===call.createdBy||(joined.length===0&&!stillInvited);
+          if(endedNow){
+            call.status='ended';call.endedAt=now();
+            (db.callParticipants||[]).filter(item=>item.callId===call.id&&['invited','calling','joined'].includes(item.status)).forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=item.leftAt||call.endedAt;});
+          }
+          await saveStore();if(endedNow)await cleanupCallRoom(call,'last-participant-left');return json(res,200,{ok:true,call});
+        }
+        if(action==='end'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the call creator can end this call for everyone.'});
+          call.status='ended';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=call.endedAt;});
+          await saveStore();await cleanupCallRoom(call,'ended-by-host');return json(res,200,{ok:true,call});
+        }
+      }
+      if(method==='GET'&&p==='/api/messages/search'){
+        const query=String(url.searchParams.get('q')||'').trim().toLocaleLowerCase().slice(0,120);
+        const conversationId=String(url.searchParams.get('conversationId')||'').trim().slice(0,140);
+        if(query.length<2)return json(res,400,{error:'Enter at least two characters to search messages.'});
+        const results=[];
+        const addResult=(message,conversation)=>{
+          if(!message||message.unsent||isMessageExpired(message)||(Array.isArray(message.deletedFor)&&message.deletedFor.includes(user.id)))return;
+          const value=String(message.text||'');
+          if(!value.toLocaleLowerCase().includes(query))return;
+          results.push({
+            id:message.id,
+            text:value.slice(0,500),
+            createdAt:message.createdAt,
+            author:safeUser(db.users.find(member=>member.id===message.from),user.id),
+            conversationId:conversation.conversationId,
+            groupId:conversation.groupId||null,
+            conversationName:conversation.name
+          });
+        };
+        if(conversationId.startsWith('group:')){
+          const groupId=conversationId.slice(6);
+          const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
+          for(const message of db.messageGroupMessages||[]){
+            if(message.groupId===groupId&&!blockedBetween(user.id,message.from)){
+              addResult(message,{conversationId:'group:'+groupId,groupId,name:group.name});
+            }
+          }
+        }else{
+          const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
+          const allowedPeers=peerId?[peerId]:[...new Set((db.messages||[])
+            .filter(item=>item.from===user.id||item.to===user.id)
+            .map(item=>item.from===user.id?item.to:item.from))];
+          for(const targetId of allowedPeers){
+            const peer=db.users.find(member=>member.id===targetId);
+            if(!peer||targetId===user.id||blockedBetween(user.id,targetId))continue;
+            const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===targetId);
+            for(const message of db.messages||[]){
+              if(!((message.from===user.id&&message.to===targetId)||(message.from===targetId&&message.to===user.id)))continue;
+              if(hide&&new Date(message.createdAt)<=new Date(hide.hiddenAt))continue;
+              addResult(message,{conversationId:targetId,name:peer.name});
+            }
+          }
+        }
+        results.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0));
+        return json(res,200,{results:results.slice(0,50),total:results.length});
+      }
+      if(method==='GET'&&p==='/api/messages/shared'){
+        let conversationId=String(url.searchParams.get('conversationId')||'').trim().slice(0,140);
+        if(!conversationId)return json(res,400,{error:'Choose a conversation to view shared items.'});
+        let messages=[];
+        if(conversationId.startsWith('group:')){
+          const groupId=conversationId.slice(6);
+          const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
+          messages=(db.messageGroupMessages||[]).filter(item=>item.groupId===groupId
+            &&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&!blockedBetween(user.id,item.from));
+        }else{
+          const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
+          const peer=db.users.find(member=>member.id===peerId);
+          const hasConversation=peer&&peerId!==user.id&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          if(!peer||!hasConversation||blockedBetween(user.id,peerId))return json(res,404,{error:'Conversation not found.'});
+          const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
+          messages=(db.messages||[]).filter(item=>
+            ((item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))
+            &&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&(!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
+          );
+        }
+        const items=[];
+        for(const message of messages){
+          const author=safeUser(db.users.find(member=>member.id===message.from),user.id);
+          for(const assetId of message.attachmentIds||[]){
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.status==='attached'&&item.slot==='message');
+            if(!asset)continue;
+            try{
+              const url=await resolveAssetUrl(asset);
+              const mediaType=String(asset.mediaType||'').toLowerCase();
+              const mimeType=String(asset.mimeType||'').toLowerCase();
+              const kind=mediaType==='image'||mimeType.startsWith('image/')?'photos'
+                :mediaType==='video'||mimeType.startsWith('video/')?'videos'
+                :mediaType==='audio'||mimeType.startsWith('audio/')?'audio':'files';
+              items.push({
+                id:'asset:'+asset.id,kind,messageId:message.id,createdAt:message.createdAt,
+                author,name:asset.originalName||asset.fileName||'Shared attachment',
+                mimeType:asset.mimeType||'',mediaType:asset.mediaType||kind,byteSize:Number(asset.byteSize||0),url
+              });
+            }catch{}
+          }
+          const links=[...new Set(String(message.text||'').match(/https?:\/\/[^\s<>"']+/gi)||[])];
+          for(const rawLink of links){
+            const clean=rawLink.replace(/[),.!?;:]+$/,'');
+            try{
+              const parsed=new URL(clean);
+              if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)continue;
+              items.push({
+                id:'link:'+message.id+':'+items.length,kind:'links',messageId:message.id,
+                createdAt:message.createdAt,author,name:parsed.hostname,url:parsed.toString(),
+                text:String(message.text||'').slice(0,240)
+              });
+            }catch{}
+          }
+        }
+        items.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0));
+        return json(res,200,{items:items.slice(0,250),total:items.length});
+      }
+      if(method==='GET'&&p==='/api/messages/gifs'){
+        const apiKey=String(process.env.TENOR_API_KEY||'').trim();
+        if(!apiKey)return json(res,503,{error:'GIF search is not configured yet. Add TENOR_API_KEY to Minglora’s private server environment.'});
+        const query=String(url.searchParams.get('q')||'').trim().slice(0,80);
+        if(!query)return json(res,400,{error:'Enter a word or phrase to search for GIFs.'});
+        const target=new URL('https://tenor.googleapis.com/v2/search');
+        target.searchParams.set('key',apiKey);target.searchParams.set('q',query);
+        target.searchParams.set('client_key','minglora');target.searchParams.set('limit','20');
+        target.searchParams.set('media_filter','gif,tinygif');target.searchParams.set('contentfilter','high');
+        let response;
+        try{response=await fetch(target,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});}
+        catch{return json(res,503,{error:'Minglora could not reach GIF search. Try again shortly.'});}
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok)return json(res,502,{error:'GIF search rejected its server credential. Check TENOR_API_KEY in Minglora’s private environment.'});
+        const gifs=(Array.isArray(payload.results)?payload.results:[]).map(item=>{
+          const formats=item.media_formats||{},gifUrl=safeTenorGifUrl(formats.gif?.url||formats.mediumgif?.url);
+          const previewUrl=safeTenorGifUrl(formats.tinygif?.url||formats.gif?.url);
+          return gifUrl?{id:String(item.id||''),title:String(item.content_description||item.title||'GIF').slice(0,100),url:gifUrl,previewUrl:previewUrl||gifUrl}:null;
+        }).filter(Boolean);
+        return json(res,200,{gifs});
+      }
+      if(method==='GET'&&p==='/api/messages/settings'){
+        const requested=String(url.searchParams.get('conversationId')||'').trim().slice(0,180);
+        if(!requested)return json(res,400,{error:'Choose a conversation to view its settings.'});
+        let key='',group=null,peerId='';
+        if(requested.startsWith('group:')){
+          const groupId=requested.slice(6);
+          group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          key=messageConversationKey({groupId});
+        }else{
+          peerId=requested.startsWith('direct:')?requested.slice(7):requested;
+          const peer=db.users.find(item=>item.id===peerId);
+          const hasConversation=Boolean(peer&&((db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))||(db.messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))));
+          if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+          key=messageConversationKey({userIds:[user.id,peerId]});
+        }
+        const row=(db.messageConversationSettings||[]).find(item=>item.conversationKey===key);
+        return json(res,200,{settings:{conversationId:requested,disappearingAfterSeconds:getMessageDisappearingSeconds(db,key),canManage:!group||canManageMessageGroup(db,group.id,user.id),updatedAt:row?.updatedAt||null}});
+      }
+      if(method==='PATCH'&&p==='/api/messages/settings'){
+        const requested=String(input.conversationId||'').trim().slice(0,180);
+        const seconds=normalizeMessageDisappearingSeconds(input.disappearingAfterSeconds);
+        if(!requested||seconds===null)return json(res,400,{error:'Choose a supported disappearing-message duration.'});
+        let key='',group=null,peerId='';
+        if(requested.startsWith('group:')){
+          const groupId=requested.slice(6);
+          group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only the group owner or an admin can change disappearing-message settings.'});
+          key=messageConversationKey({groupId});
+        }else{
+          peerId=requested.startsWith('direct:')?requested.slice(7):requested;
+          const peer=db.users.find(item=>item.id===peerId);
+          const hasConversation=Boolean(peer&&((db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))||(db.messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))));
+          if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+          key=messageConversationKey({userIds:[user.id,peerId]});
+        }
+        const updatedAt=now();
+        db.messageConversationSettings=db.messageConversationSettings||[];
+        let row=db.messageConversationSettings.find(item=>item.conversationKey===key);
+        if(!row){row={id:uid(),conversationKey:key,disappearingAfterSeconds:seconds,updatedBy:user.id,updatedAt};db.messageConversationSettings.push(row);}
+        else{row.disappearingAfterSeconds=seconds;row.updatedBy=user.id;row.updatedAt=updatedAt;}
+        await saveStore();
+        const recipients=group?getActiveMessageGroupMembers(db,group.id):[user.id,peerId];
+        messengerRealtime?.publish(recipients,{type:'conversation:settings',conversationId:key,disappearingAfterSeconds:seconds});
+        return json(res,200,{ok:true,settings:{conversationId:requested,disappearingAfterSeconds:seconds,canManage:true,updatedAt}});
+      }
+      if(method==='GET'&&p==='/api/messages'){
+        const messagePeers=(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from);
+        const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id));
+        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
+        const conversations=await Promise.all(peers.map(async id=>{
+          const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
+          const visibleMessages=(db.messages||[]).filter(item=>
+            ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
+            !isMessageExpired(item) && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
+            (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
+          ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+          const savedConversationSettings=(db.messageConversationSettings||[]).find(item=>item.conversationKey===messageConversationKey({userIds:[user.id,id]}));
+          if(!visibleMessages.length&&!savedConversationSettings)return null;
+          const messages=await Promise.all(visibleMessages.map(async item=>{
+            const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+              const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+              if(!asset)return null;
+              try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+            }));
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
+          }));
+          const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
+          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
+        }));
+        const groupRows = await Promise.all((db.messageGroups||[])
+          .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .filter(group=>getActiveMessageGroupMembers(db,group.id).every(memberId=>!blockedBetween(user.id,memberId)))
+          .map(async group=>{
+            const members=getActiveMessageGroupMembers(db,group.id);
+            const rawMessages=(db.messageGroupMessages||[]).filter(item=>
+              item.groupId===group.id&&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+              &&!blockedBetween(user.id,item.from)
+            ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+            const messages=await Promise.all(rawMessages.map(async item=>{
+              const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+                const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+                if(!asset)return null;
+                try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+              }));
+              return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id),readState:summarizeGroupReadState(item,members)};
+            }));
+            const unreadCount=rawMessages.filter(item=>item.from!==user.id&&!item.readBy?.[user.id]).length;
+            const memberRecords=(db.messageGroupMembers||[]).filter(item=>item.groupId===group.id&&item.status==='active');
+            const lastMessage=messages.at(-1);
+            return {
+              id:'group:'+group.id,kind:'group',groupId:group.id,
+              user:{id:'group:'+group.id,name:group.name,username:'group',avatar:group.avatar||'',isGroup:true},
+              group:{id:group.id,name:group.name,ownerId:group.ownerId,description:group.description||'',memberCount:members.length,members:memberRecords.map(item=>({id:item.userId,role:item.role,user:safeUser(db.users.find(member=>member.id===item.userId),user.id)})).filter(item=>item.user)},
+              messages,unreadCount,isRequest:false,messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({groupId:group.id}))},lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
+            };
+          }));
+        const all=[...conversations.filter(Boolean),...groupRows]
+          .sort((a,b)=>new Date(b.lastActivityAt||b.messages.at(-1)?.createdAt||0)-new Date(a.lastActivityAt||a.messages.at(-1)?.createdAt||0));
+        return json(res,200,{conversations:all});
+      }
+      if(method==='GET'&&p==='/api/message-groups'){
+        const groups=(db.messageGroups||[]).filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .map(group=>({...group,memberCount:getActiveMessageGroupMembers(db,group.id).length,role:(db.messageGroupMembers||[]).find(item=>item.groupId===group.id&&item.userId===user.id)?.role||'member'}));
+        return json(res,200,{groups});
+      }
+      if(method==='POST'&&p==='/api/message-groups'){
+        const name=normalizeMessageGroupName(input.name);
+        const description=String(input.description||'').trim().slice(0,500);
+        const memberIds=normalizeMessageGroupMemberIds(input.memberIds,user.id);
+        if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
+        if(memberIds.length<2)return json(res,400,{error:'Choose at least one other member for the group chat.'});
+        if(memberIds.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'Messenger groups support up to 50 members.'});
+        const members=memberIds.map(id=>db.users.find(item=>item.id===id));
+        if(members.some(member=>!member||['suspended','deactivated'].includes(member.status)||blockedBetween(user.id,member.id)))
+          return json(res,400,{error:'One or more selected members are unavailable for this group.'});
+        for(const member of members){
+          if(member.id===user.id)continue;
+          const settings=getUserSettings(member);
+          if(settings.privacy.messageAudience==='nobody'||(settings.privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))
+            return json(res,403,{error:'One or more members only accept new messages from confirmed friends.'});
+        }
+        const group={id:uid(),name,description,ownerId:user.id,status:'active',createdAt:now(),lastActivityAt:now()};
+        db.messageGroups.push(group);
+        for(const member of members)db.messageGroupMembers.push({id:uid(),groupId:group.id,userId:member.id,role:member.id===user.id?'owner':'member',status:'active',joinedAt:now(),addedBy:user.id});
+        for(const member of members)if(member.id!==user.id)notify(member.id,user.id,'message',user.name+' added you to the Messenger group '+name,{messageGroupId:group.id});
+        await saveStore();
+        return json(res,201,{group:{...group,memberCount:members.length},members:members.map(member=>safeUser(member,user.id))});
+      }
+      const messageGroupMatch=p.match(/^\/api\/message-groups\/([^/]+)(?:\/(members|leave|read))?(?:\/([^/]+))?$/);
+      if(messageGroupMatch){
+        const groupId=decodeURIComponent(messageGroupMatch[1]);
+        const action=messageGroupMatch[2]||'';
+        const extraId=messageGroupMatch[3]?decodeURIComponent(messageGroupMatch[3]):'';
+        const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+        if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+        if(method==='PATCH'&&!action){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can edit group details.'});
+          const name=normalizeMessageGroupName(input.name??group.name);
+          const description=String(input.description??(group.description||'')).trim().slice(0,500);
+          if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
+          group.name=name;group.description=description;group.updatedAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          return json(res,200,{group});
+        }
+        if(method==='POST'&&action==='members'){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can add members.'});
+          const memberIds=normalizeMessageGroupMemberIds(input.memberIds||[input.userId],null);
+          if(!memberIds.length||memberIds.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'Choose between one and 50 members to add.'});
+          const current=getActiveMessageGroupMembers(db,groupId);
+          const invitees=memberIds.filter(id=>!current.includes(id)).map(id=>db.users.find(item=>item.id===id));
+          if(invitees.length!==memberIds.length||current.length+invitees.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'One or more selected members are unavailable or the group is full.'});
+          if(invitees.some(member=>!member||blockedBetween(user.id,member.id)||blockedBetween(member.id,group.ownerId)))return json(res,400,{error:'One or more selected members are unavailable for this group.'});
+          for(const member of invitees){
+            const settings=getUserSettings(member);
+            if(settings.privacy.messageAudience==='nobody'||(settings.privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))return json(res,403,{error:'One or more members only accept new messages from confirmed friends.'});
+          }
+          for(const member of invitees){
+            db.messageGroupMembers.push({id:uid(),groupId,userId:member.id,role:'member',status:'active',joinedAt:now(),addedBy:user.id});
+            notify(member.id,user.id,'message',user.name+' added you to the Messenger group '+group.name,{messageGroupId:groupId});
+          }
+          group.lastActivityAt=now();await saveStore();
+          messengerRealtime?.publish([...current,...invitees.map(item=>item.id)],{type:'message:group-updated',groupId});
+          return json(res,201,{members:getActiveMessageGroupMembers(db,groupId)});
+        }
+        if(method==='DELETE'&&action==='members'&&extraId){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can remove members.'});
+          const target=(db.messageGroupMembers||[]).find(item=>item.groupId===groupId&&item.userId===extraId&&item.status==='active');
+          if(!target)return json(res,404,{error:'Active group member not found.'});
+          if(target.role==='owner'||extraId===group.ownerId)return json(res,403,{error:'The group owner cannot be removed. Transfer ownership first.'});
+          if(target.role==='admin'&&target.addedBy!==user.id&&user.id!==group.ownerId)return json(res,403,{error:'Only the group owner can remove another administrator.'});
+          target.status='removed';target.leftAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          messengerRealtime?.publish([extraId],{type:'message:group-removed',groupId});
+          return json(res,200,{ok:true});
+        }
+        if(method==='POST'&&action==='leave'){
+          if(user.id===group.ownerId)return json(res,403,{error:'The group owner must transfer ownership before leaving.'});
+          const membership=(db.messageGroupMembers||[]).find(item=>item.groupId===groupId&&item.userId===user.id&&item.status==='active');
+          if(!membership)return json(res,404,{error:'Active group membership not found.'});
+          membership.status='left';membership.leftAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          return json(res,200,{ok:true});
+        }
+        if(method==='POST'&&action==='read'){
+          const readAt=now();let updated=0;
+          for(const message of db.messageGroupMessages||[]){
+            if(message.groupId!==groupId||message.from===user.id)continue;
+            if(!message.readBy||typeof message.readBy!=='object')message.readBy={};
+            if(!message.readBy[user.id]){message.readBy[user.id]=readAt;updated++;}
+          }
+          if(updated)await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:read',conversationId:'group:'+groupId,groupId,userId:user.id});
+          return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
+        }
+      }
+      const messageActionMatch=p.match(/^\/api\/messages\/([^/]+)$/);
+      if(method==='DELETE'&&messageActionMatch){
+        let target;
+        try{target=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message or conversation identifier is invalid.'});}
+        if(!target)return json(res,400,{error:'The message or conversation identifier is invalid.'});
+        const message=db.messages.find(item=>item.id===target&&(item.from===user.id||item.to===user.id))||db.messageGroupMessages.find(item=>item.id===target&&canAccessMessageGroup(db,item.groupId,user.id));
+        if(message){
+          const scope=String(input.scope||'me');
+          if(scope==='everyone'){
+            if(message.from!==user.id)return json(res,403,{error:'Only the sender can unsend a message for everyone.'});
+            if(message.unsent)return json(res,200,{ok:true,unsent:true});
+            const attachmentIds=[...(message.attachmentIds||[])];
+            const attachmentAssets=attachmentIds.map(assetId=>(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='message'&&item.attachedTo==='message:'+message.id)).filter(Boolean);
+            message.unsent=true;
+            message.text='';
+            message.stickerId=null;
+            message.gifUrl=null;
+            message.attachmentIds=[];
+            message.unsentAt=now();
+            for(const assetId of attachmentIds){
+              const asset=attachmentAssets.find(item=>item.id===assetId);
+              if(asset){asset.status='deleted';asset.deletedAt=now();}
+            }
+            await saveStore();
+            await Promise.allSettled(attachmentAssets.map(asset=>mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path})));
+            if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:deleted',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+            else messengerRealtime?.publish([message.from,message.to],{type:'message:deleted',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+            return json(res,200,{ok:true,unsent:true});
+          }
+          if(scope!=='me')return json(res,400,{error:'Choose delete for me or unsend for everyone.'});
+          const deletedFor=new Set(Array.isArray(message.deletedFor)?message.deletedFor:[]);
+          deletedFor.add(user.id);
+          message.deletedFor=[...deletedFor];
+          await saveStore();
+          if(message.groupId)messengerRealtime?.publish([user.id],{type:'message:deleted',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+          else messengerRealtime?.publish([message.from,message.to],{type:'message:deleted',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+          return json(res,200,{ok:true,deletedForMe:true});
+        }
+        const peerId=target;
+        const peer=db.users.find(member=>member.id===peerId);
+        const hasConversation=peer&&db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+        if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+        const latest=db.messages.filter(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+        const hideAt=new Date(Date.now()-1).toISOString();
+        let hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
+        if(!hide){hide={userId:user.id,peerId,hiddenAt:hideAt};db.messageConversationHides.push(hide);}
+        else hide.hiddenAt=hideAt;
+        await saveStore();
+        return json(res,200,{ok:true,removed:true,hiddenBefore:latest?.createdAt||null});
+      }
+      if(method==='PATCH'&&messageActionMatch){
+        let messageId;
+        try{messageId=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message identifier is invalid.'});}
+        const message=db.messages.find(item=>item.id===messageId)||db.messageGroupMessages.find(item=>item.id===messageId);
+        if(!message||(message.from!==user.id&&message.to!==user.id&&!canAccessMessageGroup(db,message.groupId,user.id)))return json(res,404,{error:'Message not found.'});
+        if(message.from!==user.id)return json(res,403,{error:'Only the sender can edit this message.'});
+        if(message.unsent||message.stickerId||message.gifUrl)return json(res,409,{error:'This type of message cannot be edited.'});
+        const text=String(input.text||'').trim();
+        if(!text||text.length>3000)return json(res,400,{error:'Edited messages must contain 1–3000 characters.'});
+        message.text=text;
+        message.editedAt=now();
+        await saveStore();
+        if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:updated',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+        else messengerRealtime?.publish([message.from,message.to],{type:'message:updated',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+        return json(res,200,{ok:true,message:{id:message.id,text:message.text,editedAt:message.editedAt}});
+      }
+      const messageReactionMatch=p.match(/^\/api\/messages\/([^/]+)\/reactions$/);
+      if(method==='POST'&&messageReactionMatch){
+        const messageId=decodeURIComponent(messageReactionMatch[1]);
+        const message=db.messages.find(item=>item.id===messageId)||db.messageGroupMessages.find(item=>item.id===messageId&&canAccessMessageGroup(db,item.groupId,user.id));
+        if(!message||message.unsent)return json(res,404,{error:'Message not found.'});
+        if(message.groupId&&!canAccessMessageGroup(db,message.groupId,user.id))return json(res,404,{error:'Message not found.'});
+        if(!message.groupId&&message.from!==user.id&&message.to!==user.id)return json(res,404,{error:'Message not found.'});
+        const reaction=String(input.reaction||'');
+        if(!['👍','❤️','😂','😮','😢','🙏','🔥','🎉'].includes(reaction))return json(res,400,{error:'Choose a supported Messenger reaction.'});
+        message.reactions=message.reactions&&typeof message.reactions==='object'?message.reactions:{};
+        if(message.reactions[user.id]===reaction)delete message.reactions[user.id];else message.reactions[user.id]=reaction;
+        await saveStore();
+        const recipients=message.groupId?getActiveMessageGroupMembers(db,message.groupId):[message.from,message.to];
+        messengerRealtime?.publish(recipients,{type:'message:updated',conversationId:message.groupId?'group:'+message.groupId:(message.from===user.id?message.to:message.from),groupId:message.groupId||null,messageId});
+        return json(res,200,{ok:true,reactions:message.reactions});
+      }
+      const messageReadMatch=p.match(/^\/api\/messages\/([^/]+)\/read$/);
+      if(method==='POST'&&messageReadMatch){
+        let peerId;
+        try{peerId=decodeURIComponent(messageReadMatch[1]);}
+        catch{return json(res,400,{error:'The conversation member identifier is invalid.'});}
+        if(!peerId||peerId===user.id)return json(res,400,{error:'Choose another member to mark this conversation as read.'});
+        const peer=db.users.find(member=>member.id===peerId);
+        const hasConversation=db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+        if(!peer||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+        const readAt=now();
+        let updated=0;
+        for(const message of db.messages){
+          if(message.from===peerId&&message.to===user.id&&message.read!==true){
+            message.read=true;
+            message.readAt=readAt;
+            updated++;
+          }
+        }
+        if(updated)await saveStore();
+        if(updated)messengerRealtime?.publish([peerId,user.id],{type:'message:read',conversationId:peerId,userId:user.id});
+        return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
+      }
+      if(method==='POST'&&p==='/api/messages'&&input.groupId){
+        const groupId=String(input.groupId||'');
+        const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+        if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+        const memberIds=getActiveMessageGroupMembers(db,groupId);
+        if(memberIds.some(id=>blockedBetween(user.id,id)))return json(res,403,{error:'This group chat is unavailable because a member relationship is blocked.'});
+        const text=String(input.text||'').trim();
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
+        const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
+        const replyToId=String(input.replyToId||'').trim();
+        if(input.stickerId&&!stickerEmoji)return json(res,400,{error:'That Minglora sticker is not available.'});
+        if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
+        if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
+        if(text.length>MESSAGE_GROUP_MESSAGE_MAX_LENGTH||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Enter a message, attach a file, or select a sticker or GIF.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const replyTo=replyToId?(db.messageGroupMessages||[]).find(item=>item.id===replyToId&&item.groupId===groupId&&!item.unsent):null;
+        if(replyToId&&!replyTo)return json(res,404,{error:'The message you are replying to is no longer available.'});
+        const createdAt=now();
+        const disappearingAfterSeconds=getMessageDisappearingSeconds(db,messageConversationKey({groupId}));
+        const msg={id:uid(),groupId,from:user.id,to:'group:'+groupId,text:stickerEmoji||text,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,replyToId:replyTo?.id||null,readBy:{[user.id]:createdAt},createdAt,read:false,disappearingAfterSeconds,expiresAt:disappearingAfterSeconds?new Date(Date.parse(createdAt)+disappearingAfterSeconds*1000).toISOString():null};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messageGroupMessages.push(msg);group.lastActivityAt=createdAt;
+        for(const memberId of memberIds)if(memberId!==user.id)notify(memberId,user.id,'message',user.name+' sent a message in '+group.name,{messageGroupId:groupId});
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        messengerRealtime?.publish(memberIds,{type:'message:new',conversationId:'group:'+groupId,groupId,messageId:msg.id,senderId:user.id});
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
+      }
+      if(method==='POST'&&p==='/api/messages'){
+        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
+        const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
+        if(input.stickerId&&!stickerEmoji)return json(res,400,{error:'That Minglora sticker is not available.'});
+        if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
+        if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
+        if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message, attach a file, or select a sticker or GIF.'});
+        const recipientSettings=getUserSettings(recipient);
+        if((recipientSettings.preferences.messengerRestrictedUserIds||[]).includes(user.id))return json(res,403,{error:'This member has restricted messages from your account.'});
+        const audience=recipientSettings.privacy.messageAudience;
+        if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const messageText=stickerEmoji||text;
+        const createdAt=now();
+        const disappearingAfterSeconds=getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,to]}));
+        const msg={id:uid(),from:user.id,to,text:messageText,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,createdAt,read:false,disappearingAfterSeconds,expiresAt:disappearingAfterSeconds?new Date(Date.parse(createdAt)+disappearingAfterSeconds*1000).toISOString():null};
+        db.messageConversationHides=(db.messageConversationHides||[]).filter(item=>!(item.userId===user.id&&item.peerId===to));
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        messengerRealtime?.publish([user.id,to],{type:'message:new',conversationId:to,messageId:msg.id,senderId:user.id});
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user)}});
+      }
+      if(method==='GET'&&p==='/api/push/public-key'){
+        if(!configureWebPush())return json(res,503,{error:'Minglora device push is not configured yet.'});
+        return json(res,200,{publicKey:String(process.env.WEB_PUSH_PUBLIC_KEY).trim()});
+      }
+      if(method==='POST'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim(),p256dh=String(input.keys?.p256dh||''),auth=String(input.keys?.auth||'');
+        let parsed;
+        try{parsed=new URL(endpoint);}catch{return json(res,400,{error:'Choose a valid browser push subscription.'});}
+        if(parsed.protocol!=='https:'||endpoint.length>2048||p256dh.length<20||p256dh.length>256||auth.length<8||auth.length>128)return json(res,400,{error:'The browser push subscription is invalid.'});
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>item.endpoint!==endpoint);
+        db.pushSubscriptions.push({id:uid(),userId:user.id,endpoint,keys:{p256dh,auth},expirationTime:input.expirationTime||null,userAgent:String(req.headers['user-agent']||'').slice(0,240),createdAt:now(),updatedAt:now()});
+        await saveStore();
+        return json(res,201,{ok:true,subscriptions:(db.pushSubscriptions||[]).filter(item=>item.userId===user.id).length});
+      }
+      if(method==='DELETE'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim();
+        const before=(db.pushSubscriptions||[]).length;
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>!(item.userId===user.id&&item.endpoint===endpoint));
+        await saveStore();
+        return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
+      }
+      if(method==='GET'&&p==='/api/notifications'){
+        await syncRefundedGiftActivity();
+        const prefs=getUserSettings(user).notifications;
+        const activeCallIds=new Set((db.callParticipants||[]).filter(item=>item.userId===user.id&&item.status==='invited'&&['ringing','active'].includes((db.calls||[]).find(call=>call.id===item.callId)?.status)).map(item=>item.callId));
+        const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
+        if(db.notifications.length!==before)await saveStore();
+        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
+        const unreadCount=notifications.filter(item=>!item.read).length;
+        const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
+        return json(res,200,{notifications,unreadCount,categoryCounts});
+      }
+      const notificationReadMatch=p.startsWith('/api/notifications/')&&p.endsWith('/read')&&p.split('/').length===5?p.split('/').at(-2):null;
+      if(method==='POST'&&notificationReadMatch){
+        let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        const notification=(db.notifications||[]).find(item=>item.id===notificationId&&item.userId===user.id);
+        if(!notification)return json(res,404,{error:'Notification not found.'});
+        notification.read=true;notification.readAt=now();await saveStore();publishNotificationEvent(user.id,'notification:changed',notificationId);return json(res,200,{ok:true,notificationId});
+      }
+      if(method==='DELETE'&&p.startsWith('/api/notifications/')&&p.split('/').length===4){
+        let notificationId;try{notificationId=decodeURIComponent(p.split('/').at(-1));}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>!(item.id===notificationId&&item.userId===user.id));
+        if(db.notifications.length===before)return json(res,404,{error:'Notification not found.'});
+        await saveStore();publishNotificationEvent(user.id,'notification:changed',notificationId);return json(res,200,{ok:true,removed:1});
+      }
+      if(method==='POST'&&p==='/api/notifications/clear'){
+        const readOnly=input.readOnly===true;const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||(readOnly&&!item.read));
+        const removed=before-db.notifications.length;await saveStore();publishNotificationEvent(user.id,'notification:changed');return json(res,200,{ok:true,removed,readOnly});
+      }
+      if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>{n.read=true;n.readAt=now();});await saveStore();publishNotificationEvent(user.id,'notification:changed');return json(res,200,{ok:true});}
+      if(method==='GET'&&p==='/api/search'){
+        const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        const q=rawQuery.replace(/^@/,'').trim();
+        const empty={users:[],posts:[],groups:[],pages:[]};
+        if(!q)return json(res,200,empty);
+        const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
+        const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
+        const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
+        return json(res,200,{users,posts,groups,pages});
+      }
+      return json(res,404,{error:'API route not found.'});
+    } catch(e) {
+      if (process.env.NODE_ENV === 'test') return json(res, e.status || 500, { error: e.message, stack: e.stack });
+      const status = Number(e.status || 500);
+      if (status >= 500) {
+        console.error('[Minglora API error]', e);
+      } else {
+        // Expected authentication and validation rejections are client outcomes,
+        // not server faults; keep them out of the error-level incident stream.
+        console.info('[Minglora API client response]', JSON.stringify({
+          status,
+          route: p,
+          message: String(e.message || 'Request rejected').slice(0, 160)
+        }));
+      }
+      return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
+    }
+  }
+  if(p==='/assets/gifters-level-up.png'){
+    const assetFile=path.join(__dirname,'..','assets','Gifters Level Up.png');
+    fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
+    return;
+  }
+  const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
+  if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
+  fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
+}
+const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+const messengerRealtime=createMessengerRealtimeHub({
+  WebSocketServer,WebSocket,
+  getUserFromRequest:req=>sessionUser(req),
+  isOriginAllowed:(origin,req)=>isAllowedAppOrigin(origin,req),
+  getPeerIds:userId=>[
+    ...new Set([
+      ...(db.messages||[]).filter(item=>item.from===userId||item.to===userId).map(item=>item.from===userId?item.to:item.from),
+      ...(db.messageGroupMembers||[]).filter(item=>item.userId===userId&&item.status==='active').flatMap(item=>getActiveMessageGroupMembers(db,item.groupId))
+    ])
+  ].filter(id=>id&&id!==userId&&!blockedBetween(userId,id)),
+  getParticipantIds:(conversationId,senderId)=>{
+    if(String(conversationId).startsWith('group:')){
+      const groupId=String(conversationId).slice(6);
+      return canAccessMessageGroup(db,groupId,senderId)?getActiveMessageGroupMembers(db,groupId):[];
+    }
+    const peer=String(conversationId||'');
+    return peer&&peer!==senderId&&!blockedBetween(senderId,peer)?[peer]:[];
+  },
+  canMessage:(senderId,conversationId)=>{
+    if(String(conversationId).startsWith('group:')){
+      return canAccessMessageGroup(db,String(conversationId).slice(6),senderId);
+    }
+    const peer=String(conversationId||'');
+    if(!peer||peer===senderId||blockedBetween(senderId,peer))return false;
+    const recipient=db.users.find(item=>item.id===peer);
+    if(!recipient)return false;
+    const settings=getUserSettings(recipient);
+    if((settings.preferences.messengerRestrictedUserIds||[]).includes(senderId))return false;
+    const hasHistory=(db.messages||[]).some(item=>(item.from===senderId&&item.to===peer)||(item.from===peer&&item.to===senderId));
+    return hasHistory||settings.privacy.messageAudience==='everyone'||(settings.privacy.messageAudience==='friends'&&isFriend(senderId,peer));
+  },
+  isBlocked:blockedBetween,
+  isPresenceEnabled:userId=>{
+    const member=db.users.find(item=>item.id===userId);
+    return member?getUserSettings(member).preferences.messengerActiveStatus!==false:false;
+  }
+});
+server.on('upgrade',(req,socket,head)=>{
+  let pathname='';
+  try{pathname=new URL(req.url,'http://localhost').pathname;}catch{}
+  if(pathname!=='/api/messages/realtime'){socket.destroy();return;}
+  messengerRealtime.handleUpgrade(req,socket,head);
+});
+
+let messengerExpirySweepRunning=false;
+async function sweepExpiredMessengerMessages(){
+  if(messengerExpirySweepRunning)return;
+  messengerExpirySweepRunning=true;
+  try{
+    const at=Date.now();
+    const expired=[...(db.messages||[]),...(db.messageGroupMessages||[])].filter(item=>isMessageExpired(item,at));
+    if(!expired.length)return;
+    const removable=new Set();
+    let changed=false;
+    for(const message of expired){
+      const attachmentIds=Array.isArray(message.attachmentIds)?message.attachmentIds:[];
+      let pendingStorageCleanup=false;
+      for(const assetId of attachmentIds){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.slot==='message');
+        if(!asset||asset.status==='deleted')continue;
+        // Hide the object from the signed media gateway immediately, then retry
+        // physical storage deletion until the provider confirms it.
+        if(asset.status!=='expired'){asset.status='expired';asset.expiredAt=now();changed=true;}
+        try{
+          await mediaGateway('media_delete',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
+          asset.status='deleted';asset.deletedAt=now();changed=true;
+        }catch(error){
+          pendingStorageCleanup=true;
+          console.warn('[Minglora Messenger] Expired attachment cleanup will retry.',{assetId:asset.id,message:String(error?.message||'storage cleanup failed').slice(0,120)});
+        }
+      }
+      if(pendingStorageCleanup){
+        if(message.text){message.text='';changed=true;}
+        if(message.gifUrl){message.gifUrl=null;changed=true;}
+        if(message.stickerId){message.stickerId=null;changed=true;}
+        message.expiredCleanupPending=true;
+      }else removable.add(message.id);
+    }
+    if(removable.size){
+      db.messages=(db.messages||[]).filter(item=>!removable.has(item.id));
+      db.messageGroupMessages=(db.messageGroupMessages||[]).filter(item=>!removable.has(item.id));
+      changed=true;
+      for(const message of expired.filter(item=>removable.has(item.id))){
+        if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:expired',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+        else{
+          messengerRealtime?.publish([message.from],{type:'message:expired',conversationId:message.to,messageId:message.id});
+          messengerRealtime?.publish([message.to],{type:'message:expired',conversationId:message.from,messageId:message.id});
+        }
+      }
+    }
+    if(changed)await saveStore();
+  }catch(error){
+    console.warn('[Minglora Messenger] Disappearing-message cleanup retry pending.',{message:String(error?.message||'expiry cleanup failed').slice(0,160)});
+  }finally{messengerExpirySweepRunning=false;}
+}
+const messengerExpiryTimer=setInterval(()=>{void sweepExpiredMessengerMessages();},15000);
+messengerExpiryTimer.unref?.();
+void sweepExpiredMessengerMessages();
+
+let leagueSettlementInProgress=false;
+let lastCreatorLeagueReconciliationAt=0;
+const leagueSettlementTimer=setInterval(async()=>{
+  if(leagueSettlementInProgress)return;
+  leagueSettlementInProgress=true;
+  const currentTime=Date.now();
+  const due=(db.creatorLeagueMatches||[]).some(match=>
+    (match.status==='live'&&Date.parse(match.endsAt)<=currentTime)||
+    (match.status==='pending'&&Date.parse(match.expiresAt)<=currentTime)
+  );
+  const reconcileCreatorLeagues=currentTime-lastCreatorLeagueReconciliationAt>=60000;
+  try{
+    const scheduled=reconcileCreatorLeagues
+      ?settleScheduledCreatorLeagueDays(db,new Date(currentTime))
+      :{changed:false};
+    if(due)settleExpiredLeagueMatches(db,new Date(currentTime));
+    if(due||scheduled.changed)await saveStore();
+    if(reconcileCreatorLeagues)lastCreatorLeagueReconciliationAt=currentTime;
+  }catch(error){
+    console.error('[Minglora League settlement] Could not persist scheduled League state.',{message:String(error?.message||'settlement failed').slice(0,180)});
+  }finally{
+    leagueSettlementInProgress=false;
+  }
+},10000);
+leagueSettlementTimer.unref?.();
+
+let liveRewardSettlementLastWarning=0;
+const liveRewardSettlementTimer=setInterval(async()=>{
+  if(!isSupabasePersistence())return;
+  try{
+    await requestSupabaseState('economy_live_reward_settle',{});
+  }catch(error){
+    const at=Date.now();
+    if(at-liveRewardSettlementLastWarning>60000){
+      liveRewardSettlementLastWarning=at;
+      console.warn('[Minglora LIVE reward settlement] Retry pending.',{message:String(error?.message||'settlement unavailable').slice(0,180)});
+    }
+  }
+},15000);
+liveRewardSettlementTimer.unref?.();
+
+server.listen(PORT,'0.0.0.0',async()=>{
+  if(String(process.env.MEETWAVE_PURGE_ALL_ROOMS_ON_STARTUP||'').trim().toLowerCase()==='true'){
+    try{
+      const meetWaveCleanup=await purgeAllMeetWaveRoomsAtStartup();
+      console.info('[Minglora MeetWave full cleanup]',JSON.stringify(meetWaveCleanup));
+    }catch(error){
+      console.error('[Minglora MeetWave full cleanup] Failed.',{message:String(error?.message||error).slice(0,180)});
+    }
+  }
+  try {
+    if (isSupabasePersistence()) {
+      const retiredStreamBayCleanup = await requestSupabaseState('streambay_cleanup');
+      console.info('[Minglora retired StreamBay cleanup]', JSON.stringify(retiredStreamBayCleanup));
+    }
+  } catch (error) {
+    console.error('[Minglora retired StreamBay cleanup] Pending retry.', { message: error?.message || String(error) });
+  }
+  callSessionCleanupReady = cleanupPersistedCalls();
+  const callCleanup = await callSessionCleanupReady;
+  console.info('[Minglora calls cleanup]', JSON.stringify(callCleanup));
+  liveSessionCleanupReady = cleanupPersistedLiveSessions();
+  const liveCleanup = await liveSessionCleanupReady;
+  console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
+  startLiveSessionCleanupSweep();
+  console.log(`Minglora listening on port ${PORT}`);
+  const persistence = await persistenceHealth();
+  console.info('[Minglora readiness]', JSON.stringify({
+    authProvider: AUTH_PROVIDER,
+    authConfigured: AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured(),
+    persistenceDriver: persistence.driver,
+    persistenceDurable: persistence.durable,
+    persistenceReady: persistence.ready,
+    liveProvider: 'livekit',
+    liveConfigured: isLiveKitConfigured()
+  }));
+  const liveHealth = await verifyLiveKitConnection({ force: true });
+  const liveVerification = {
+    configured: liveHealth.configured,
+    connected: liveHealth.connected,
+    checkedAt: liveHealth.checkedAt
+  };
+  if (liveHealth.connected) {
+    // Keep the success payload free of an "error" field so structured log
+    // ingestion cannot mistake the null error property for an error-level event.
+    console.info('[Minglora LiveKit verification]', JSON.stringify(liveVerification));
+  } else {
+    console.error('[Minglora LiveKit verification failed]', JSON.stringify({
+      ...liveVerification,
+      verificationError: String(liveHealth.error || 'LiveKit connection failed').slice(0, 240)
+    }));
+  }
+});
+));
+      if(guestRequestDecisionMatch&&method==='POST'){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===guestRequestDecisionMatch[1]);
+        if(!room||room.status==='ended')return json(res,410,{error:'This MeetWave room is no longer available.'});
+        if(room.ownerId!==user.id)return json(res,403,{error:'Only the host can approve or decline guest requests.'});
+        const request=(db.meetWaveGuestRequests||[]).find(item=>item.id===guestRequestDecisionMatch[2]&&item.roomId===room.id);
+        if(!request||request.status!=='pending')return json(res,404,{error:'This guest request is no longer pending.'});
+        if(guestRequestDecisionMatch[3]==='accept'){
+          if(room.status==='active'){
+            if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot verify guest capacity while LiveKit is unavailable.'});
+            let participants=[];
+            try{participants=await listLiveKitParticipants(room.roomName);}
+            catch{return json(res,503,{error:'MeetWave could not verify the current guest seats. Try again.'});}
+            if(participants.length>=MEETWAVE_PARTICIPANT_LIMIT)return json(res,409,{error:'All guest seats are currently occupied.'});
+          }
+          request.status='accepted';request.acceptedAt=now();request.declinedAt=null;
+        }else{request.status='declined';request.declinedAt=now();}
+        request.respondedAt=now();room.lastActivityAt=request.respondedAt;
+        await saveStore();
+        return json(res,200,{request:{id:request.id,status:request.status,userId:request.userId}});
+      }
+      const guestRequestRoomMatch=p.match(new RegExp('^/api/meetwave/rooms/([^/]+)/guest-requestsp.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
+      if(meetWaveInvitationMatch&&method==='POST'){
+        requireAuth(user);
+        const invitation=(db.meetWaveInvitations||[]).find(item=>item.id===meetWaveInvitationMatch[1]&&item.userId===user.id);
+        if(!invitation||invitation.status!=='pending')return json(res,404,{error:'This MeetWave invitation is no longer pending.'});
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===invitation.roomId);
+        if(!room||room.status==='ended')return json(res,410,{error:'This meeting room has ended.'});
+        invitation.status=meetWaveInvitationMatch[2]==='accept'?'accepted':'declined';
+        invitation.respondedAt=now();
+        if(invitation.status==='accepted'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(attendance?.removedAt){attendance.removedAt=null;attendance.status='left';}
+        }
+        await saveStore();
+        return json(res,200,{invitation:{id:invitation.id,status:invitation.status},room:meetWaveRoomView(room,user.id)});
+      }
+      let meetWaveParticipantRemovalMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)\/participants\/([^/]+)\/remove$/);
+      if(meetWaveParticipantRemovalMatch&&method==='POST'){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveParticipantRemovalMatch[1]);
+        const participantId=meetWaveParticipantRemovalMatch[2];
+        if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(room.status==='ended')return json(res,410,{error:'This MeetWave meeting has ended.'});
+        if(!canManageMeetWaveParticipants(room,user.id,participantId))return json(res,403,{error:'Only the host can remove another participant from this meeting.'});
+        let removal;
+        try{removal=await removeLiveKitParticipant(room.roomName,participantId);}
+        catch(error){return json(res,503,{error:'Minglora could not update the LiveKit participant session. Try again.'});}
+        if(!removal.removed)return json(res,404,{error:'That member is no longer connected to this meeting.'});
+        const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===participantId&&!item.leftAt);
+        if(attendance){attendance.status='removed';attendance.leftAt=now();attendance.removedAt=attendance.leftAt;}
+        room.lastActivityAt=now();
+        await saveStore();
+        return json(res,200,{removed:true,participantId});
+      }
+      let meetWaveRoomMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)(?:\/(join|leave|messages|invitations))?$/);
+      if(meetWaveRoomMatch){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveRoomMatch[1]);
+        const action=meetWaveRoomMatch[2]||'';
+        if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(room.status==='ended')return json(res,410,{error:'This MeetWave meeting has ended.'});
+        if(blockedBetween(user.id,room.ownerId)&&room.ownerId!==user.id)return json(res,403,{error:'This meeting room is unavailable.'});
+        if(!canUserAccessMeetWaveRoom(room,user.id))return json(res,403,{error:'You do not have access to this MeetWave room.'});
+        if(method==='GET'&&!action){
+          let participants=[];
+          if(room.status==='active'){
+            if(!isLiveKitConfigured())return json(res,503,{error:'Minglora cannot verify this active meeting while LiveKit is unavailable.'});
+            try{participants=await listLiveKitParticipants(room.roomName);}
+            catch(error){return json(res,503,{error:'Minglora could not verify the live participant list for this room.'});}
+          }
+          return json(res,200,{room:meetWaveRoomView(room,user.id),participants,participantCount:participants.length,participantCountVerified:true});
+        }
+        if(method==='POST'&&action==='join'){
+          if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot connect because Minglora LiveKit is not configured.'});
+          const priorAttendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(priorAttendance?.status==='removed'&&priorAttendance.removedAt)return json(res,403,{error:'The host removed you from this meeting. Ask the host to invite you again.'});
+          const availability=meetWaveRoomJoinAvailability(room);
+          if(availability==='ended')return json(res,410,{error:'This meeting has ended.'});
+          if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
+          let participants=[],liveKit;
+          try{
+            const liveKitRoom=await ensureLiveKitRoom(room.roomName,MEETWAVE_PARTICIPANT_LIMIT);
+            participants=await listLiveKitParticipants(room.roomName);
+            const roomParticipantLimit=Math.min(MEETWAVE_PARTICIPANT_LIMIT,Math.max(2,Number(liveKitRoom?.maxParticipants)||MEETWAVE_PARTICIPANT_LIMIT));
+            if(participants.length>=roomParticipantLimit&&!participants.some(participant=>participant.identity===user.id)){
+              const guestLimit=roomParticipantLimit-1;
+              return json(res,409,{error:'This MeetWave room is full. The current limit is '+roomParticipantLimit+' participants: one host and up to '+guestLimit+' guests.'});
+            }
+            liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
+          }catch(error){
+            console.warn('[MeetWave] LiveKit join preparation failed.',{roomId:room.id,status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare the LiveKit meeting connection. Check the media service and try again.'});
+          }
+          db.meetWaveAttendance||=[];
+          let attendance=db.meetWaveAttendance.find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(!attendance){attendance={id:uid(),roomId:room.id,userId:user.id,role:room.ownerId===user.id?'host':'participant',status:'joined',joinedAt:now(),leftAt:null};db.meetWaveAttendance.push(attendance);}
+          else{attendance.role=room.ownerId===user.id?'host':'participant';attendance.status='joined';attendance.joinedAt=now();attendance.leftAt=null;}
+          room.status='active';room.startedAt=room.startedAt||now();room.lastActivityAt=now();
+          await saveStore();
+          return json(res,200,{room:meetWaveRoomView(room,user.id),role:attendance.role,liveKit:{...liveKit,role:attendance.role}});
+        }
+        if(method==='POST'&&action==='leave'){
+          if(room.ownerId===user.id){
+            const result=await endAndClearMeetWaveRoom(room,'host-left');
+            return json(res,200,{left:true,...result});
+          }
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&!item.leftAt);
+          if(!attendance)return json(res,200,{left:true});
+          attendance.status='left';attendance.leftAt=now();room.lastActivityAt=attendance.leftAt;await saveStore();
+          let remaining=[];
+          try{remaining=await listLiveKitParticipants(room.roomName);}
+          catch(error){
+            const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+            if(status!==404)return json(res,200,{left:true,cleanupPending:true});
+          }
+          if(!remaining.length){
+            const result=await endAndClearMeetWaveRoom(room,'last-participant-left');
+            return json(res,200,{left:true,...result});
+          }
+          return json(res,200,{left:true});
+        }
+        if(method==='POST'&&action==='invitations'){
+          if(room.ownerId!==user.id)return json(res,403,{error:'Only the room host can invite members.'});
+          const requestedIds=Array.isArray(input.userIds)?input.userIds.map(String):[];
+          const requestedUsernames=Array.isArray(input.usernames)?input.usernames.map(value=>normalizeUsername(String(value||''))).filter(Boolean):[];
+          const invitees=[...new Map([
+            ...requestedIds.map(id=>db.users.find(member=>member.id===id)).filter(Boolean),
+            ...requestedUsernames.map(username=>db.users.find(member=>normalizeUsername(member.username)===username)).filter(Boolean)
+          ].map(member=>[member.id,member])).values()];
+          if(!invitees.length||invitees.length>20)return json(res,400,{error:'Choose between one and twenty existing Minglora members to invite.'});
+          if(invitees.some(member=>member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          db.meetWaveInvitations||=[];
+          const sent=[];
+          for(const member of invitees){
+            const memberSettings=getUserSettings(member);
+            if(!canReceiveMeetWaveInvitation(memberSettings,{isFriend:isFriend(user.id,member.id)}))continue;
+            let invitation=db.meetWaveInvitations.find(item=>item.roomId===room.id&&item.userId===member.id);
+            const priorAttendance=db.meetWaveAttendance?.find(item=>item.roomId===room.id&&item.userId===member.id);
+            if(invitation&&invitation.status==='accepted'&&!priorAttendance?.removedAt)continue;
+            if(!invitation){invitation={id:uid(),roomId:room.id,userId:member.id,invitedBy:user.id,status:'pending',createdAt:now(),respondedAt:null};db.meetWaveInvitations.push(invitation);}
+            else{invitation.status='pending';invitation.invitedBy=user.id;invitation.createdAt=now();invitation.respondedAt=null;}
+            notify(member.id,user.id,'meetwave_invite',user.name+' invited you to a MeetWave room.',{roomId:room.id,roomTitle:room.title,invitationId:invitation.id});
+            sent.push({userId:member.id,username:member.username});
+          }
+          await saveStore();
+          return json(res,200,{sent,skipped:invitees.length-sent.length});
+        }
+        if((method==='GET'||method==='POST')&&action==='messages'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='joined'&&!item.leftAt);
+          if(room.ownerId!==user.id&&!attendance)return json(res,403,{error:'Join this meeting before accessing its chat.'});
+          if(method==='GET'){
+            const after=Date.parse(url.searchParams.get('after')||'');
+            const messages=(db.meetWaveMessages||[])
+              .filter(message=>message.roomId===room.id&&(!Number.isFinite(after)||new Date(message.createdAt).getTime()>after))
+              .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100)
+              .map(message=>({...message,author:safeUser(db.users.find(member=>member.id===message.userId),user.id)}));
+            return json(res,200,{messages});
+          }
+          const textValue=normalizeMeetWaveMessage(input.text);
+          if(!textValue)return json(res,400,{error:'Enter a chat message of up to 1,000 characters.'});
+          db.meetWaveMessages||=[];
+          const message={id:uid(),roomId:room.id,userId:user.id,text:textValue,createdAt:now()};
+          db.meetWaveMessages.push(message);room.lastActivityAt=message.createdAt;
+          await saveStore();
+          return json(res,201,{message:{...message,author:safeUser(user,user.id)}});
+        }
+        if(method==='DELETE'&&!action){
+          if(room.ownerId!==user.id)return json(res,403,{error:'Only the host can end this meeting for everyone.'});
+          const result=await endAndClearMeetWaveRoom(room,'ended-by-host');
+          return json(res,200,{...result});
+        }
+      }
+      if(method==='GET'&&p==='/api/calls/ringtone'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(!asset)return json(res,200,{ringtone:null});
+        const url=await resolveAssetUrl(asset);
+        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+      }
+      if(method==='POST'&&p==='/api/calls/ringtone'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='uploaded');
+        if(!asset)return json(res,404,{error:'The uploaded ringtone could not be found.'});
+        const validation=validateCallRingtoneUpload({mimeType:asset.mimeType,byteSize:asset.byteSize});
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(previous){previous.status='deleted';previous.deletedAt=now();}
+        asset.status='attached';asset.attachedTo='account:call-ringtone';asset.completedAt=asset.completedAt||now();
+        user.callRingtoneAssetId=asset.id;
+        await saveStore();
+        if(previous)void mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Previous ringtone cleanup failed.',{message:error.message}));
+        const url=await resolveAssetUrl(asset);
+        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+      }
+      if(method==='DELETE'&&p==='/api/calls/ringtone'){
+        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        user.callRingtoneAssetId=null;
+        if(previous){previous.status='deleted';previous.deletedAt=now();}
+        await saveStore();
+        if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Ringtone cleanup failed.',{message:error.message}));
+        return json(res,200,{ok:true,ringtone:null});
+      }
+      if(method==='GET'&&p==='/api/calls/incoming'){
+        // A ringing invitation is already persisted in Minglora's call ledger.
+        // Do not make its display depend on a LiveKit presence reconciliation:
+        // an unrelated provider hiccup must not hide the receiver's Answer screen.
+        const expiredCalls=[];
+        const stamp=now(),stampMs=Date.now();
+        for(const call of (db.calls||[])){
+          if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],stamp,stampMs))expiredCalls.push(call);
+        }
+        if(expiredCalls.length){
+          await saveStore();
+          expiredCalls.forEach(call=>void cleanupCallRoom(call,'ring-timeout'));
+        }
+        const incoming=(db.calls||[]).filter(call=>['ringing','active'].includes(call.status)&&!blockedBetween(user.id,call.createdBy))
+          .map(call=>{
+            const participant=(db.callParticipants||[]).find(item=>item.callId===call.id&&item.userId===user.id);
+            if(!participant||participant.status!=='invited')return null;
+            return {id:call.id,kind:call.kind,status:call.status,createdAt:call.createdAt,ringExpiresAt:call.ringExpiresAt,caller:safeUser(db.users.find(member=>member.id===call.createdBy))};
+          }).filter(Boolean);
+        return json(res,200,{calls:incoming});
+      }
+      const callStatusMatch=p.match(/^\/api\/calls\/([^/]+)\/status$/);
+      if(method==='GET'&&callStatusMatch){
+        // Ringing and participant state are already persisted. Status polling
+        // must remain available even when LiveKit presence cannot be refreshed.
+        const call=(db.calls||[]).find(item=>item.id===callStatusMatch[1]);
+        const participant=(db.callParticipants||[]).find(item=>item.callId===callStatusMatch[1]&&item.userId===user.id);
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now())){await saveStore();await cleanupCallRoom(call,'ring-timeout');}
+        return json(res,200,{call:{id:call.id,status:call.status,createdBy:call.createdBy,kind:call.kind,answeredAt:call.answeredAt,endedAt:call.endedAt},participantStatus:participant.status});
+      }
+      if(method==='POST'&&p==='/api/calls'){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        const recipientIds=[...new Set([String(input.to||''),...(Array.isArray(input.participantIds)?input.participantIds.map(String):[])].filter(Boolean))];
+        const kind=String(input.kind||'video');
+        if(!['audio','video'].includes(kind)||!recipientIds.length||recipientIds.length>CALL_MAX_PARTICIPANTS-1)return json(res,400,{error:'Choose audio or video and invite between one and seven other members.'});
+        const groupId=String(input.groupId||'').trim();
+        if(groupId){
+          if(!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          const activeGroupMembers=new Set(getActiveMessageGroupMembers(db,groupId));
+          if(recipientIds.some(id=>!activeGroupMembers.has(id)))return json(res,403,{error:'Group calls can only be started with current members of this Messenger group.'});
+        }
+        const recipients=recipientIds.map(id=>db.users.find(member=>member.id===id));
+        if(recipients.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more call participants are unavailable.'});
+        if(recipients.some(member=>getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id))))return json(res,403,{error:'One or more members only accept calls from friends.'});
+        const reservationIds=[...new Set([user.id,...recipientIds])];
+        if(reservationIds.some(id=>callCreationReservations.has(id)))return json(res,409,{error:'A call is already being started for one of these members. Finish or cancel it before starting another.'});
+        reservationIds.forEach(id=>callCreationReservations.add(id));
+        try{
+          await callSessionCleanupReady;
+          await reconcileCallPresenceForUsers(reservationIds,{force:true});
+          const busyIds=new Set((db.callParticipants||[]).filter(item=>isCallParticipantBusy((db.calls||[]).find(call=>call.id===item.callId),item)).map(item=>item.userId));
+          if(busyIds.has(user.id))return json(res,409,{error:'Finish your current Minglora call before starting another.'});
+          if(recipients.some(member=>busyIds.has(member.id)))return json(res,409,{error:'One or more members are already in another call.'});
+          const id=uid(),roomName='minglora-call-'+id.replace(/-/g,'');
+          try{await ensureLiveKitRoom(roomName,CALL_MAX_PARTICIPANTS);}
+          catch(error){
+            console.warn('[Minglora calls] Could not provision LiveKit room.',{status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare the call room. Check the LiveKit connection and try again.'});
+          }
+          const createdAt=now();
+          const call={id,roomName,createdBy:user.id,kind,status:'ringing',createdAt,ringExpiresAt:new Date(Date.now()+CALL_RING_TIMEOUT_MS).toISOString(),answeredAt:null,endedAt:null};
+          db.calls||=[];db.callParticipants||=[];db.calls.unshift(call);
+          db.callParticipants.push({id:uid(),callId:id,userId:user.id,role:'host',status:'calling',joinedAt:null,leftAt:null});
+          for(const recipient of recipients){
+            db.callParticipants.push({id:uid(),callId:id,userId:recipient.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(recipient.id,user.id,'call',user.name+' is calling you ('+kind+').',{callId:id,callKind:kind});
+          }
+          try{await saveStore();}
+          catch(error){
+            db.calls=db.calls.filter(item=>item.id!==id);
+            db.callParticipants=db.callParticipants.filter(item=>item.callId!==id);
+            await cleanupCallRoom(call,'create-persistence-failed');
+            throw error;
+          }
+          return json(res,201,{call});
+        }catch(error){
+          if(Number(error?.status)===503)return json(res,503,{error:error.message||'Minglora could not verify call availability. Try again shortly.'});
+          throw error;
+        }finally{
+          reservationIds.forEach(id=>callCreationReservations.delete(id));
+        }
+      }
+      const callMatch=p.match(/^\/api\/calls\/([^/]+)\/(join|invite|leave|end|decline|cancel)$/);
+      if(callMatch&&method==='POST'){
+        if(!isLiveKitConfigured())return json(res,503,{error:'Voice and video calls require the Minglora LiveKit service to be configured.'});
+        let call=db.calls.find(item=>item.id===callMatch[1]);
+        let participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+        const action=callMatch[2];
+        if(!call)return json(res,404,{error:'Call not found.'});
+        if(action==='join'){
+          await callSessionCleanupReady;
+          try{await reconcileCallPresenceForUsers([user.id],{force:true});}
+          catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
+          call=db.calls.find(item=>item.id===callMatch[1]);
+          participant=(db.callParticipants||[]).find(item=>item.callId===callMatch[1]&&item.userId===user.id);
+          if(!call||!participant)return json(res,404,{error:'This call invitation is no longer active.'});
+          const busyElsewhere=(db.callParticipants||[]).some(item=>item.userId===user.id&&item.callId!==call.id&&isCallParticipantBusy((db.calls||[]).find(entry=>entry.id===item.callId),item));
+          if(busyElsewhere)return json(res,409,{error:'Finish your current Minglora call before answering another call.'});
+          if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],now())){await saveStore();await cleanupCallRoom(call,'ring-timeout');}
+          if(['ended','cancelled','declined','missed'].includes(call.status)||!participant||['declined','missed','cancelled'].includes(participant.status)||(participant.status==='left'&&call.status!=='active'))return json(res,404,{error:'This call invitation is no longer active.'});
+          if(blockedBetween(user.id,call.createdBy))return json(res,403,{error:'This call is unavailable.'});
+          if(participant.status==='calling'&&call.status==='ringing')return json(res,409,{error:'Waiting for the other member to answer.'});
+          if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer ringing.'});
+          let liveKit;
+          try{
+            await ensureLiveKitRoom(call.roomName,CALL_MAX_PARTICIPANTS);
+            liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:call.roomName,canPublish:true});
+          }catch(error){
+            console.warn('[Minglora calls] Could not prepare participant connection.',{callId:call.id,status:Number(error?.statusCode||error?.status||0)});
+            return json(res,503,{error:'Minglora could not prepare your call connection. Check LiveKit and try again.'});
+          }
+          if(participant.status==='invited'&&call.status==='ringing'){call.status='active';call.answeredAt=now();call.answeredById=user.id;}
+          participant.status='joined';participant.joinedAt=now();participant.leftAt=null;
+          await saveStore();
+          const peerParticipant=(db.callParticipants||[]).find(item=>
+            item.callId===call.id&&item.userId!==user.id&&
+            !['declined','missed','cancelled','left'].includes(item.status)
+          );
+          const peerUser=peerParticipant?db.users.find(member=>member.id===peerParticipant.userId):null;
+          const peer=peerUser?safeUser(peerUser,user.id):null;
+          return json(res,200,{call,peer,liveKit:{...liveKit,role:participant.role}});
+        }
+        if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
+        if(action==='decline'){
+          if(user.id===call.createdBy||participant.status!=='invited')return json(res,403,{error:'Only an invited recipient can decline this call.'});
+          if(!['ringing','active'].includes(call.status))return json(res,409,{error:'This call is no longer available.'});
+          participant.status='declined';participant.leftAt=now();
+          const stillInvited=(db.callParticipants||[]).some(item=>item.callId===call.id&&item.status==='invited');
+          const endedNow=!stillInvited&&call.status==='ringing';
+          if(endedNow){call.status='declined';call.endedAt=now();}
+          await saveStore();if(endedNow)await cleanupCallRoom(call,'declined');return json(res,200,{ok:true,call});
+        }
+        if(action==='cancel'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the caller can cancel this call.'});
+          if(['ended','cancelled','declined','missed'].includes(call.status))return json(res,200,{ok:true,call});
+          call.status='cancelled';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='invited').forEach(item=>{item.status='cancelled';item.leftAt=call.endedAt;});
+          await saveStore();await cleanupCallRoom(call,'cancelled');return json(res,200,{ok:true,call});
+        }
+        if(action==='invite'){
+          if(['ended','cancelled','declined','missed'].includes(call.status)||participant.status!=='joined')return json(res,409,{error:'Join the call before inviting more people.'});
+          const invitedIds=[...new Set((Array.isArray(input.userIds)?input.userIds:[]).map(String).filter(Boolean))];
+          if(!invitedIds.length||invitedIds.length>6)return json(res,400,{error:'Choose between one and six additional participants.'});
+          const current=countCallParticipants(db.callParticipants||[],call.id);
+          const alreadyParticipating=new Set((db.callParticipants||[]).filter(item=>item.callId===call.id&&isCallParticipantBusy(call,item)).map(item=>item.userId));
+          const newInviteIds=invitedIds.filter(id=>!alreadyParticipating.has(id));
+          if(current+newInviteIds.length>CALL_MAX_PARTICIPANTS)return json(res,409,{error:'Minglora group calls support up to eight participants.'});
+          const invited=newInviteIds.map(id=>db.users.find(member=>member.id===id));
+          if(invited.some(member=>!member||member.id===user.id||blockedBetween(user.id,member.id)))return json(res,400,{error:'One or more invited members are unavailable.'});
+          const newlyInvited=[];
+          for(const member of invited){
+            if((db.callParticipants||[]).some(item=>item.callId===call.id&&item.userId===member.id&&!['declined','left','missed','cancelled'].includes(item.status)))continue;
+            if(getUserSettings(member).privacy.messageAudience==='nobody'||(getUserSettings(member).privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))continue;
+            db.callParticipants.push({id:uid(),callId:call.id,userId:member.id,role:'participant',status:'invited',joinedAt:null,leftAt:null});
+            notify(member.id,user.id,'call',user.name+' invited you to a Minglora group call.',{callId:call.id,callKind:call.kind});
+            newlyInvited.push(safeUser(member));
+          }
+          await saveStore();return json(res,200,{invited:newlyInvited,count:newlyInvited.length});
+        }
+        if(action==='leave'){
+          participant.status='left';participant.leftAt=now();
+          const joined=(db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status==='joined');
+          const stillInvited=(db.callParticipants||[]).some(item=>item.callId===call.id&&item.status==='invited');
+          const endedNow=user.id===call.createdBy||(joined.length===0&&!stillInvited);
+          if(endedNow){
+            call.status='ended';call.endedAt=now();
+            (db.callParticipants||[]).filter(item=>item.callId===call.id&&['invited','calling','joined'].includes(item.status)).forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=item.leftAt||call.endedAt;});
+          }
+          await saveStore();if(endedNow)await cleanupCallRoom(call,'last-participant-left');return json(res,200,{ok:true,call});
+        }
+        if(action==='end'){
+          if(user.id!==call.createdBy)return json(res,403,{error:'Only the call creator can end this call for everyone.'});
+          call.status='ended';call.endedAt=now();
+          (db.callParticipants||[]).filter(item=>item.callId===call.id&&item.status!=='left').forEach(item=>{item.status=item.status==='invited'?'cancelled':'left';item.leftAt=call.endedAt;});
+          await saveStore();await cleanupCallRoom(call,'ended-by-host');return json(res,200,{ok:true,call});
+        }
+      }
+      if(method==='GET'&&p==='/api/messages/search'){
+        const query=String(url.searchParams.get('q')||'').trim().toLocaleLowerCase().slice(0,120);
+        const conversationId=String(url.searchParams.get('conversationId')||'').trim().slice(0,140);
+        if(query.length<2)return json(res,400,{error:'Enter at least two characters to search messages.'});
+        const results=[];
+        const addResult=(message,conversation)=>{
+          if(!message||message.unsent||isMessageExpired(message)||(Array.isArray(message.deletedFor)&&message.deletedFor.includes(user.id)))return;
+          const value=String(message.text||'');
+          if(!value.toLocaleLowerCase().includes(query))return;
+          results.push({
+            id:message.id,
+            text:value.slice(0,500),
+            createdAt:message.createdAt,
+            author:safeUser(db.users.find(member=>member.id===message.from),user.id),
+            conversationId:conversation.conversationId,
+            groupId:conversation.groupId||null,
+            conversationName:conversation.name
+          });
+        };
+        if(conversationId.startsWith('group:')){
+          const groupId=conversationId.slice(6);
+          const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
+          for(const message of db.messageGroupMessages||[]){
+            if(message.groupId===groupId&&!blockedBetween(user.id,message.from)){
+              addResult(message,{conversationId:'group:'+groupId,groupId,name:group.name});
+            }
+          }
+        }else{
+          const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
+          const allowedPeers=peerId?[peerId]:[...new Set((db.messages||[])
+            .filter(item=>item.from===user.id||item.to===user.id)
+            .map(item=>item.from===user.id?item.to:item.from))];
+          for(const targetId of allowedPeers){
+            const peer=db.users.find(member=>member.id===targetId);
+            if(!peer||targetId===user.id||blockedBetween(user.id,targetId))continue;
+            const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===targetId);
+            for(const message of db.messages||[]){
+              if(!((message.from===user.id&&message.to===targetId)||(message.from===targetId&&message.to===user.id)))continue;
+              if(hide&&new Date(message.createdAt)<=new Date(hide.hiddenAt))continue;
+              addResult(message,{conversationId:targetId,name:peer.name});
+            }
+          }
+        }
+        results.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0));
+        return json(res,200,{results:results.slice(0,50),total:results.length});
+      }
+      if(method==='GET'&&p==='/api/messages/shared'){
+        let conversationId=String(url.searchParams.get('conversationId')||'').trim().slice(0,140);
+        if(!conversationId)return json(res,400,{error:'Choose a conversation to view shared items.'});
+        let messages=[];
+        if(conversationId.startsWith('group:')){
+          const groupId=conversationId.slice(6);
+          const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(getActiveMessageGroupMembers(db,groupId).some(memberId=>blockedBetween(user.id,memberId)))return json(res,404,{error:'Messenger group not found.'});
+          messages=(db.messageGroupMessages||[]).filter(item=>item.groupId===groupId
+            &&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&!blockedBetween(user.id,item.from));
+        }else{
+          const peerId=conversationId.startsWith('direct:')?conversationId.slice(7):conversationId;
+          const peer=db.users.find(member=>member.id===peerId);
+          const hasConversation=peer&&peerId!==user.id&&(db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+          if(!peer||!hasConversation||blockedBetween(user.id,peerId))return json(res,404,{error:'Conversation not found.'});
+          const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
+          messages=(db.messages||[]).filter(item=>
+            ((item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))
+            &&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+            &&(!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
+          );
+        }
+        const items=[];
+        for(const message of messages){
+          const author=safeUser(db.users.find(member=>member.id===message.from),user.id);
+          for(const assetId of message.attachmentIds||[]){
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.status==='attached'&&item.slot==='message');
+            if(!asset)continue;
+            try{
+              const url=await resolveAssetUrl(asset);
+              const mediaType=String(asset.mediaType||'').toLowerCase();
+              const mimeType=String(asset.mimeType||'').toLowerCase();
+              const kind=mediaType==='image'||mimeType.startsWith('image/')?'photos'
+                :mediaType==='video'||mimeType.startsWith('video/')?'videos'
+                :mediaType==='audio'||mimeType.startsWith('audio/')?'audio':'files';
+              items.push({
+                id:'asset:'+asset.id,kind,messageId:message.id,createdAt:message.createdAt,
+                author,name:asset.originalName||asset.fileName||'Shared attachment',
+                mimeType:asset.mimeType||'',mediaType:asset.mediaType||kind,byteSize:Number(asset.byteSize||0),url
+              });
+            }catch{}
+          }
+          const links=[...new Set(String(message.text||'').match(/https?:\/\/[^\s<>"']+/gi)||[])];
+          for(const rawLink of links){
+            const clean=rawLink.replace(/[),.!?;:]+$/,'');
+            try{
+              const parsed=new URL(clean);
+              if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)continue;
+              items.push({
+                id:'link:'+message.id+':'+items.length,kind:'links',messageId:message.id,
+                createdAt:message.createdAt,author,name:parsed.hostname,url:parsed.toString(),
+                text:String(message.text||'').slice(0,240)
+              });
+            }catch{}
+          }
+        }
+        items.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0));
+        return json(res,200,{items:items.slice(0,250),total:items.length});
+      }
+      if(method==='GET'&&p==='/api/messages/gifs'){
+        const apiKey=String(process.env.TENOR_API_KEY||'').trim();
+        if(!apiKey)return json(res,503,{error:'GIF search is not configured yet. Add TENOR_API_KEY to Minglora’s private server environment.'});
+        const query=String(url.searchParams.get('q')||'').trim().slice(0,80);
+        if(!query)return json(res,400,{error:'Enter a word or phrase to search for GIFs.'});
+        const target=new URL('https://tenor.googleapis.com/v2/search');
+        target.searchParams.set('key',apiKey);target.searchParams.set('q',query);
+        target.searchParams.set('client_key','minglora');target.searchParams.set('limit','20');
+        target.searchParams.set('media_filter','gif,tinygif');target.searchParams.set('contentfilter','high');
+        let response;
+        try{response=await fetch(target,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});}
+        catch{return json(res,503,{error:'Minglora could not reach GIF search. Try again shortly.'});}
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok)return json(res,502,{error:'GIF search rejected its server credential. Check TENOR_API_KEY in Minglora’s private environment.'});
+        const gifs=(Array.isArray(payload.results)?payload.results:[]).map(item=>{
+          const formats=item.media_formats||{},gifUrl=safeTenorGifUrl(formats.gif?.url||formats.mediumgif?.url);
+          const previewUrl=safeTenorGifUrl(formats.tinygif?.url||formats.gif?.url);
+          return gifUrl?{id:String(item.id||''),title:String(item.content_description||item.title||'GIF').slice(0,100),url:gifUrl,previewUrl:previewUrl||gifUrl}:null;
+        }).filter(Boolean);
+        return json(res,200,{gifs});
+      }
+      if(method==='GET'&&p==='/api/messages/settings'){
+        const requested=String(url.searchParams.get('conversationId')||'').trim().slice(0,180);
+        if(!requested)return json(res,400,{error:'Choose a conversation to view its settings.'});
+        let key='',group=null,peerId='';
+        if(requested.startsWith('group:')){
+          const groupId=requested.slice(6);
+          group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          key=messageConversationKey({groupId});
+        }else{
+          peerId=requested.startsWith('direct:')?requested.slice(7):requested;
+          const peer=db.users.find(item=>item.id===peerId);
+          const hasConversation=Boolean(peer&&((db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))||(db.messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))));
+          if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+          key=messageConversationKey({userIds:[user.id,peerId]});
+        }
+        const row=(db.messageConversationSettings||[]).find(item=>item.conversationKey===key);
+        return json(res,200,{settings:{conversationId:requested,disappearingAfterSeconds:getMessageDisappearingSeconds(db,key),canManage:!group||canManageMessageGroup(db,group.id,user.id),updatedAt:row?.updatedAt||null}});
+      }
+      if(method==='PATCH'&&p==='/api/messages/settings'){
+        const requested=String(input.conversationId||'').trim().slice(0,180);
+        const seconds=normalizeMessageDisappearingSeconds(input.disappearingAfterSeconds);
+        if(!requested||seconds===null)return json(res,400,{error:'Choose a supported disappearing-message duration.'});
+        let key='',group=null,peerId='';
+        if(requested.startsWith('group:')){
+          const groupId=requested.slice(6);
+          group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+          if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only the group owner or an admin can change disappearing-message settings.'});
+          key=messageConversationKey({groupId});
+        }else{
+          peerId=requested.startsWith('direct:')?requested.slice(7):requested;
+          const peer=db.users.find(item=>item.id===peerId);
+          const hasConversation=Boolean(peer&&((db.messages||[]).some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id))||(db.messageConversationSettings||[]).some(item=>item.conversationKey===messageConversationKey({userIds:[user.id,peerId]}))));
+          if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+          key=messageConversationKey({userIds:[user.id,peerId]});
+        }
+        const updatedAt=now();
+        db.messageConversationSettings=db.messageConversationSettings||[];
+        let row=db.messageConversationSettings.find(item=>item.conversationKey===key);
+        if(!row){row={id:uid(),conversationKey:key,disappearingAfterSeconds:seconds,updatedBy:user.id,updatedAt};db.messageConversationSettings.push(row);}
+        else{row.disappearingAfterSeconds=seconds;row.updatedBy=user.id;row.updatedAt=updatedAt;}
+        await saveStore();
+        const recipients=group?getActiveMessageGroupMembers(db,group.id):[user.id,peerId];
+        messengerRealtime?.publish(recipients,{type:'conversation:settings',conversationId:key,disappearingAfterSeconds:seconds});
+        return json(res,200,{ok:true,settings:{conversationId:requested,disappearingAfterSeconds:seconds,canManage:true,updatedAt}});
+      }
+      if(method==='GET'&&p==='/api/messages'){
+        const messagePeers=(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from);
+        const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id));
+        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
+        const conversations=await Promise.all(peers.map(async id=>{
+          const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
+          const visibleMessages=(db.messages||[]).filter(item=>
+            ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
+            !isMessageExpired(item) && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
+            (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
+          ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+          const savedConversationSettings=(db.messageConversationSettings||[]).find(item=>item.conversationKey===messageConversationKey({userIds:[user.id,id]}));
+          if(!visibleMessages.length&&!savedConversationSettings)return null;
+          const messages=await Promise.all(visibleMessages.map(async item=>{
+            const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+              const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+              if(!asset)return null;
+              try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+            }));
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
+          }));
+          const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
+          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
+        }));
+        const groupRows = await Promise.all((db.messageGroups||[])
+          .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .filter(group=>getActiveMessageGroupMembers(db,group.id).every(memberId=>!blockedBetween(user.id,memberId)))
+          .map(async group=>{
+            const members=getActiveMessageGroupMembers(db,group.id);
+            const rawMessages=(db.messageGroupMessages||[]).filter(item=>
+              item.groupId===group.id&&!isMessageExpired(item)&&!(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id))
+              &&!blockedBetween(user.id,item.from)
+            ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+            const messages=await Promise.all(rawMessages.map(async item=>{
+              const attachments=await Promise.all((item.attachmentIds||[]).map(async assetId=>{
+                const asset=(db.mediaAssets||[]).find(entry=>entry.id===assetId&&entry.status==='attached'&&entry.slot==='message');
+                if(!asset)return null;
+                try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
+              }));
+              return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id),readState:summarizeGroupReadState(item,members)};
+            }));
+            const unreadCount=rawMessages.filter(item=>item.from!==user.id&&!item.readBy?.[user.id]).length;
+            const memberRecords=(db.messageGroupMembers||[]).filter(item=>item.groupId===group.id&&item.status==='active');
+            const lastMessage=messages.at(-1);
+            return {
+              id:'group:'+group.id,kind:'group',groupId:group.id,
+              user:{id:'group:'+group.id,name:group.name,username:'group',avatar:group.avatar||'',isGroup:true},
+              group:{id:group.id,name:group.name,ownerId:group.ownerId,description:group.description||'',memberCount:members.length,members:memberRecords.map(item=>({id:item.userId,role:item.role,user:safeUser(db.users.find(member=>member.id===item.userId),user.id)})).filter(item=>item.user)},
+              messages,unreadCount,isRequest:false,messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({groupId:group.id}))},lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
+            };
+          }));
+        const all=[...conversations.filter(Boolean),...groupRows]
+          .sort((a,b)=>new Date(b.lastActivityAt||b.messages.at(-1)?.createdAt||0)-new Date(a.lastActivityAt||a.messages.at(-1)?.createdAt||0));
+        return json(res,200,{conversations:all});
+      }
+      if(method==='GET'&&p==='/api/message-groups'){
+        const groups=(db.messageGroups||[]).filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .map(group=>({...group,memberCount:getActiveMessageGroupMembers(db,group.id).length,role:(db.messageGroupMembers||[]).find(item=>item.groupId===group.id&&item.userId===user.id)?.role||'member'}));
+        return json(res,200,{groups});
+      }
+      if(method==='POST'&&p==='/api/message-groups'){
+        const name=normalizeMessageGroupName(input.name);
+        const description=String(input.description||'').trim().slice(0,500);
+        const memberIds=normalizeMessageGroupMemberIds(input.memberIds,user.id);
+        if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
+        if(memberIds.length<2)return json(res,400,{error:'Choose at least one other member for the group chat.'});
+        if(memberIds.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'Messenger groups support up to 50 members.'});
+        const members=memberIds.map(id=>db.users.find(item=>item.id===id));
+        if(members.some(member=>!member||['suspended','deactivated'].includes(member.status)||blockedBetween(user.id,member.id)))
+          return json(res,400,{error:'One or more selected members are unavailable for this group.'});
+        for(const member of members){
+          if(member.id===user.id)continue;
+          const settings=getUserSettings(member);
+          if(settings.privacy.messageAudience==='nobody'||(settings.privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))
+            return json(res,403,{error:'One or more members only accept new messages from confirmed friends.'});
+        }
+        const group={id:uid(),name,description,ownerId:user.id,status:'active',createdAt:now(),lastActivityAt:now()};
+        db.messageGroups.push(group);
+        for(const member of members)db.messageGroupMembers.push({id:uid(),groupId:group.id,userId:member.id,role:member.id===user.id?'owner':'member',status:'active',joinedAt:now(),addedBy:user.id});
+        for(const member of members)if(member.id!==user.id)notify(member.id,user.id,'message',user.name+' added you to the Messenger group '+name,{messageGroupId:group.id});
+        await saveStore();
+        return json(res,201,{group:{...group,memberCount:members.length},members:members.map(member=>safeUser(member,user.id))});
+      }
+      const messageGroupMatch=p.match(/^\/api\/message-groups\/([^/]+)(?:\/(members|leave|read))?(?:\/([^/]+))?$/);
+      if(messageGroupMatch){
+        const groupId=decodeURIComponent(messageGroupMatch[1]);
+        const action=messageGroupMatch[2]||'';
+        const extraId=messageGroupMatch[3]?decodeURIComponent(messageGroupMatch[3]):'';
+        const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+        if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+        if(method==='PATCH'&&!action){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can edit group details.'});
+          const name=normalizeMessageGroupName(input.name??group.name);
+          const description=String(input.description??(group.description||'')).trim().slice(0,500);
+          if(name.length<2)return json(res,400,{error:'Group names must contain at least 2 characters.'});
+          group.name=name;group.description=description;group.updatedAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          return json(res,200,{group});
+        }
+        if(method==='POST'&&action==='members'){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can add members.'});
+          const memberIds=normalizeMessageGroupMemberIds(input.memberIds||[input.userId],null);
+          if(!memberIds.length||memberIds.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'Choose between one and 50 members to add.'});
+          const current=getActiveMessageGroupMembers(db,groupId);
+          const invitees=memberIds.filter(id=>!current.includes(id)).map(id=>db.users.find(item=>item.id===id));
+          if(invitees.length!==memberIds.length||current.length+invitees.length>MESSAGE_GROUP_MAX_MEMBERS)return json(res,400,{error:'One or more selected members are unavailable or the group is full.'});
+          if(invitees.some(member=>!member||blockedBetween(user.id,member.id)||blockedBetween(member.id,group.ownerId)))return json(res,400,{error:'One or more selected members are unavailable for this group.'});
+          for(const member of invitees){
+            const settings=getUserSettings(member);
+            if(settings.privacy.messageAudience==='nobody'||(settings.privacy.messageAudience==='friends'&&!isFriend(user.id,member.id)))return json(res,403,{error:'One or more members only accept new messages from confirmed friends.'});
+          }
+          for(const member of invitees){
+            db.messageGroupMembers.push({id:uid(),groupId,userId:member.id,role:'member',status:'active',joinedAt:now(),addedBy:user.id});
+            notify(member.id,user.id,'message',user.name+' added you to the Messenger group '+group.name,{messageGroupId:groupId});
+          }
+          group.lastActivityAt=now();await saveStore();
+          messengerRealtime?.publish([...current,...invitees.map(item=>item.id)],{type:'message:group-updated',groupId});
+          return json(res,201,{members:getActiveMessageGroupMembers(db,groupId)});
+        }
+        if(method==='DELETE'&&action==='members'&&extraId){
+          if(!canManageMessageGroup(db,groupId,user.id))return json(res,403,{error:'Only group owners and admins can remove members.'});
+          const target=(db.messageGroupMembers||[]).find(item=>item.groupId===groupId&&item.userId===extraId&&item.status==='active');
+          if(!target)return json(res,404,{error:'Active group member not found.'});
+          if(target.role==='owner'||extraId===group.ownerId)return json(res,403,{error:'The group owner cannot be removed. Transfer ownership first.'});
+          if(target.role==='admin'&&target.addedBy!==user.id&&user.id!==group.ownerId)return json(res,403,{error:'Only the group owner can remove another administrator.'});
+          target.status='removed';target.leftAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          messengerRealtime?.publish([extraId],{type:'message:group-removed',groupId});
+          return json(res,200,{ok:true});
+        }
+        if(method==='POST'&&action==='leave'){
+          if(user.id===group.ownerId)return json(res,403,{error:'The group owner must transfer ownership before leaving.'});
+          const membership=(db.messageGroupMembers||[]).find(item=>item.groupId===groupId&&item.userId===user.id&&item.status==='active');
+          if(!membership)return json(res,404,{error:'Active group membership not found.'});
+          membership.status='left';membership.leftAt=now();await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:group-updated',groupId});
+          return json(res,200,{ok:true});
+        }
+        if(method==='POST'&&action==='read'){
+          const readAt=now();let updated=0;
+          for(const message of db.messageGroupMessages||[]){
+            if(message.groupId!==groupId||message.from===user.id)continue;
+            if(!message.readBy||typeof message.readBy!=='object')message.readBy={};
+            if(!message.readBy[user.id]){message.readBy[user.id]=readAt;updated++;}
+          }
+          if(updated)await saveStore();
+          messengerRealtime?.publish(getActiveMessageGroupMembers(db,groupId),{type:'message:read',conversationId:'group:'+groupId,groupId,userId:user.id});
+          return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
+        }
+      }
+      const messageActionMatch=p.match(/^\/api\/messages\/([^/]+)$/);
+      if(method==='DELETE'&&messageActionMatch){
+        let target;
+        try{target=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message or conversation identifier is invalid.'});}
+        if(!target)return json(res,400,{error:'The message or conversation identifier is invalid.'});
+        const message=db.messages.find(item=>item.id===target&&(item.from===user.id||item.to===user.id))||db.messageGroupMessages.find(item=>item.id===target&&canAccessMessageGroup(db,item.groupId,user.id));
+        if(message){
+          const scope=String(input.scope||'me');
+          if(scope==='everyone'){
+            if(message.from!==user.id)return json(res,403,{error:'Only the sender can unsend a message for everyone.'});
+            if(message.unsent)return json(res,200,{ok:true,unsent:true});
+            const attachmentIds=[...(message.attachmentIds||[])];
+            const attachmentAssets=attachmentIds.map(assetId=>(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='message'&&item.attachedTo==='message:'+message.id)).filter(Boolean);
+            message.unsent=true;
+            message.text='';
+            message.stickerId=null;
+            message.gifUrl=null;
+            message.attachmentIds=[];
+            message.unsentAt=now();
+            for(const assetId of attachmentIds){
+              const asset=attachmentAssets.find(item=>item.id===assetId);
+              if(asset){asset.status='deleted';asset.deletedAt=now();}
+            }
+            await saveStore();
+            await Promise.allSettled(attachmentAssets.map(asset=>mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path})));
+            if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:deleted',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+            else messengerRealtime?.publish([message.from,message.to],{type:'message:deleted',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+            return json(res,200,{ok:true,unsent:true});
+          }
+          if(scope!=='me')return json(res,400,{error:'Choose delete for me or unsend for everyone.'});
+          const deletedFor=new Set(Array.isArray(message.deletedFor)?message.deletedFor:[]);
+          deletedFor.add(user.id);
+          message.deletedFor=[...deletedFor];
+          await saveStore();
+          if(message.groupId)messengerRealtime?.publish([user.id],{type:'message:deleted',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+          else messengerRealtime?.publish([message.from,message.to],{type:'message:deleted',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+          return json(res,200,{ok:true,deletedForMe:true});
+        }
+        const peerId=target;
+        const peer=db.users.find(member=>member.id===peerId);
+        const hasConversation=peer&&db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+        if(!peer||peerId===user.id||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+        const latest=db.messages.filter(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+        const hideAt=new Date(Date.now()-1).toISOString();
+        let hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===peerId);
+        if(!hide){hide={userId:user.id,peerId,hiddenAt:hideAt};db.messageConversationHides.push(hide);}
+        else hide.hiddenAt=hideAt;
+        await saveStore();
+        return json(res,200,{ok:true,removed:true,hiddenBefore:latest?.createdAt||null});
+      }
+      if(method==='PATCH'&&messageActionMatch){
+        let messageId;
+        try{messageId=decodeURIComponent(messageActionMatch[1]);}catch{return json(res,400,{error:'The message identifier is invalid.'});}
+        const message=db.messages.find(item=>item.id===messageId)||db.messageGroupMessages.find(item=>item.id===messageId);
+        if(!message||(message.from!==user.id&&message.to!==user.id&&!canAccessMessageGroup(db,message.groupId,user.id)))return json(res,404,{error:'Message not found.'});
+        if(message.from!==user.id)return json(res,403,{error:'Only the sender can edit this message.'});
+        if(message.unsent||message.stickerId||message.gifUrl)return json(res,409,{error:'This type of message cannot be edited.'});
+        const text=String(input.text||'').trim();
+        if(!text||text.length>3000)return json(res,400,{error:'Edited messages must contain 1–3000 characters.'});
+        message.text=text;
+        message.editedAt=now();
+        await saveStore();
+        if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:updated',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+        else messengerRealtime?.publish([message.from,message.to],{type:'message:updated',conversationId:message.from===user.id?message.to:message.from,messageId:message.id});
+        return json(res,200,{ok:true,message:{id:message.id,text:message.text,editedAt:message.editedAt}});
+      }
+      const messageReactionMatch=p.match(/^\/api\/messages\/([^/]+)\/reactions$/);
+      if(method==='POST'&&messageReactionMatch){
+        const messageId=decodeURIComponent(messageReactionMatch[1]);
+        const message=db.messages.find(item=>item.id===messageId)||db.messageGroupMessages.find(item=>item.id===messageId&&canAccessMessageGroup(db,item.groupId,user.id));
+        if(!message||message.unsent)return json(res,404,{error:'Message not found.'});
+        if(message.groupId&&!canAccessMessageGroup(db,message.groupId,user.id))return json(res,404,{error:'Message not found.'});
+        if(!message.groupId&&message.from!==user.id&&message.to!==user.id)return json(res,404,{error:'Message not found.'});
+        const reaction=String(input.reaction||'');
+        if(!['👍','❤️','😂','😮','😢','🙏','🔥','🎉'].includes(reaction))return json(res,400,{error:'Choose a supported Messenger reaction.'});
+        message.reactions=message.reactions&&typeof message.reactions==='object'?message.reactions:{};
+        if(message.reactions[user.id]===reaction)delete message.reactions[user.id];else message.reactions[user.id]=reaction;
+        await saveStore();
+        const recipients=message.groupId?getActiveMessageGroupMembers(db,message.groupId):[message.from,message.to];
+        messengerRealtime?.publish(recipients,{type:'message:updated',conversationId:message.groupId?'group:'+message.groupId:(message.from===user.id?message.to:message.from),groupId:message.groupId||null,messageId});
+        return json(res,200,{ok:true,reactions:message.reactions});
+      }
+      const messageReadMatch=p.match(/^\/api\/messages\/([^/]+)\/read$/);
+      if(method==='POST'&&messageReadMatch){
+        let peerId;
+        try{peerId=decodeURIComponent(messageReadMatch[1]);}
+        catch{return json(res,400,{error:'The conversation member identifier is invalid.'});}
+        if(!peerId||peerId===user.id)return json(res,400,{error:'Choose another member to mark this conversation as read.'});
+        const peer=db.users.find(member=>member.id===peerId);
+        const hasConversation=db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
+        if(!peer||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+        const readAt=now();
+        let updated=0;
+        for(const message of db.messages){
+          if(message.from===peerId&&message.to===user.id&&message.read!==true){
+            message.read=true;
+            message.readAt=readAt;
+            updated++;
+          }
+        }
+        if(updated)await saveStore();
+        if(updated)messengerRealtime?.publish([peerId,user.id],{type:'message:read',conversationId:peerId,userId:user.id});
+        return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
+      }
+      if(method==='POST'&&p==='/api/messages'&&input.groupId){
+        const groupId=String(input.groupId||'');
+        const group=(db.messageGroups||[]).find(item=>item.id===groupId&&item.status==='active');
+        if(!group||!canAccessMessageGroup(db,groupId,user.id))return json(res,404,{error:'Messenger group not found.'});
+        const memberIds=getActiveMessageGroupMembers(db,groupId);
+        if(memberIds.some(id=>blockedBetween(user.id,id)))return json(res,403,{error:'This group chat is unavailable because a member relationship is blocked.'});
+        const text=String(input.text||'').trim();
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
+        const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
+        const replyToId=String(input.replyToId||'').trim();
+        if(input.stickerId&&!stickerEmoji)return json(res,400,{error:'That Minglora sticker is not available.'});
+        if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
+        if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
+        if(text.length>MESSAGE_GROUP_MESSAGE_MAX_LENGTH||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Enter a message, attach a file, or select a sticker or GIF.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const replyTo=replyToId?(db.messageGroupMessages||[]).find(item=>item.id===replyToId&&item.groupId===groupId&&!item.unsent):null;
+        if(replyToId&&!replyTo)return json(res,404,{error:'The message you are replying to is no longer available.'});
+        const createdAt=now();
+        const disappearingAfterSeconds=getMessageDisappearingSeconds(db,messageConversationKey({groupId}));
+        const msg={id:uid(),groupId,from:user.id,to:'group:'+groupId,text:stickerEmoji||text,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,replyToId:replyTo?.id||null,readBy:{[user.id]:createdAt},createdAt,read:false,disappearingAfterSeconds,expiresAt:disappearingAfterSeconds?new Date(Date.parse(createdAt)+disappearingAfterSeconds*1000).toISOString():null};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messageGroupMessages.push(msg);group.lastActivityAt=createdAt;
+        for(const memberId of memberIds)if(memberId!==user.id)notify(memberId,user.id,'message',user.name+' sent a message in '+group.name,{messageGroupId:groupId});
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        messengerRealtime?.publish(memberIds,{type:'message:new',conversationId:'group:'+groupId,groupId,messageId:msg.id,senderId:user.id});
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
+      }
+      if(method==='POST'&&p==='/api/messages'){
+        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
+        const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
+        const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
+        if(input.stickerId&&!stickerEmoji)return json(res,400,{error:'That Minglora sticker is not available.'});
+        if(input.gifUrl&&!gifUrl)return json(res,400,{error:'Choose a GIF returned by Minglora’s verified GIF search.'});
+        if(stickerEmoji&&(text||attachmentIds.length||gifUrl))return json(res,400,{error:'Send a sticker by itself.'});
+        if(!recipient||to===user.id||blockedBetween(user.id,to)||text.length>3000||(!text&&!attachmentIds.length&&!stickerEmoji&&!gifUrl)||attachmentIds.length>5)return json(res,400,{error:'Choose a recipient and enter a message, attach a file, or select a sticker or GIF.'});
+        const recipientSettings=getUserSettings(recipient);
+        if((recipientSettings.preferences.messengerRestrictedUserIds||[]).includes(user.id))return json(res,403,{error:'This member has restricted messages from your account.'});
+        const audience=recipientSettings.privacy.messageAudience;
+        if(audience!=='everyone'&&!isFriend(user.id,to))return json(res,403,{error:'This member only accepts new messages from confirmed friends.'});
+        const assets=attachmentIds.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='message'&&asset.status==='uploaded'));
+        if(assets.some(asset=>!asset))return json(res,400,{error:'One or more attachments are unavailable. Upload them again.'});
+        const messageText=stickerEmoji||text;
+        const createdAt=now();
+        const disappearingAfterSeconds=getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,to]}));
+        const msg={id:uid(),from:user.id,to,text:messageText,stickerId:stickerEmoji?stickerId:null,gifUrl:gifUrl||null,attachmentIds,createdAt,read:false,disappearingAfterSeconds,expiresAt:disappearingAfterSeconds?new Date(Date.parse(createdAt)+disappearingAfterSeconds*1000).toISOString():null};
+        db.messageConversationHides=(db.messageConversationHides||[]).filter(item=>!(item.userId===user.id&&item.peerId===to));
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo='message:'+msg.id;});
+        db.messages.push(msg);notify(to,user.id,'message',user.name+' sent you a message.');
+        await saveStore();
+        const attachments=await Promise.all(assets.map(async asset=>({id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)})));
+        messengerRealtime?.publish([user.id,to],{type:'message:new',conversationId:to,messageId:msg.id,senderId:user.id});
+        return json(res,201,{message:{...msg,attachments,author:safeUser(user)}});
+      }
+      if(method==='GET'&&p==='/api/push/public-key'){
+        if(!configureWebPush())return json(res,503,{error:'Minglora device push is not configured yet.'});
+        return json(res,200,{publicKey:String(process.env.WEB_PUSH_PUBLIC_KEY).trim()});
+      }
+      if(method==='POST'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim(),p256dh=String(input.keys?.p256dh||''),auth=String(input.keys?.auth||'');
+        let parsed;
+        try{parsed=new URL(endpoint);}catch{return json(res,400,{error:'Choose a valid browser push subscription.'});}
+        if(parsed.protocol!=='https:'||endpoint.length>2048||p256dh.length<20||p256dh.length>256||auth.length<8||auth.length>128)return json(res,400,{error:'The browser push subscription is invalid.'});
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>item.endpoint!==endpoint);
+        db.pushSubscriptions.push({id:uid(),userId:user.id,endpoint,keys:{p256dh,auth},expirationTime:input.expirationTime||null,userAgent:String(req.headers['user-agent']||'').slice(0,240),createdAt:now(),updatedAt:now()});
+        await saveStore();
+        return json(res,201,{ok:true,subscriptions:(db.pushSubscriptions||[]).filter(item=>item.userId===user.id).length});
+      }
+      if(method==='DELETE'&&p==='/api/push/subscriptions'){
+        const endpoint=String(input.endpoint||'').trim();
+        const before=(db.pushSubscriptions||[]).length;
+        db.pushSubscriptions=(db.pushSubscriptions||[]).filter(item=>!(item.userId===user.id&&item.endpoint===endpoint));
+        await saveStore();
+        return json(res,200,{ok:true,removed:before-(db.pushSubscriptions||[]).length});
+      }
+      if(method==='GET'&&p==='/api/notifications'){
+        await syncRefundedGiftActivity();
+        const prefs=getUserSettings(user).notifications;
+        const activeCallIds=new Set((db.callParticipants||[]).filter(item=>item.userId===user.id&&item.status==='invited'&&['ringing','active'].includes((db.calls||[]).find(call=>call.id===item.callId)?.status)).map(item=>item.callId));
+        const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
+        if(db.notifications.length!==before)await saveStore();
+        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
+        const unreadCount=notifications.filter(item=>!item.read).length;
+        const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
+        return json(res,200,{notifications,unreadCount,categoryCounts});
+      }
+      const notificationReadMatch=p.startsWith('/api/notifications/')&&p.endsWith('/read')&&p.split('/').length===5?p.split('/').at(-2):null;
+      if(method==='POST'&&notificationReadMatch){
+        let notificationId;try{notificationId=decodeURIComponent(notificationReadMatch);}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        const notification=(db.notifications||[]).find(item=>item.id===notificationId&&item.userId===user.id);
+        if(!notification)return json(res,404,{error:'Notification not found.'});
+        notification.read=true;notification.readAt=now();await saveStore();publishNotificationEvent(user.id,'notification:changed',notificationId);return json(res,200,{ok:true,notificationId});
+      }
+      if(method==='DELETE'&&p.startsWith('/api/notifications/')&&p.split('/').length===4){
+        let notificationId;try{notificationId=decodeURIComponent(p.split('/').at(-1));}catch{return json(res,400,{error:'Invalid notification identifier.'});}
+        const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>!(item.id===notificationId&&item.userId===user.id));
+        if(db.notifications.length===before)return json(res,404,{error:'Notification not found.'});
+        await saveStore();publishNotificationEvent(user.id,'notification:changed',notificationId);return json(res,200,{ok:true,removed:1});
+      }
+      if(method==='POST'&&p==='/api/notifications/clear'){
+        const readOnly=input.readOnly===true;const before=(db.notifications||[]).length;
+        db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||(readOnly&&!item.read));
+        const removed=before-db.notifications.length;await saveStore();publishNotificationEvent(user.id,'notification:changed');return json(res,200,{ok:true,removed,readOnly});
+      }
+      if(method==='POST'&&p==='/api/notifications/read'){db.notifications.filter(n=>n.userId===user.id).forEach(n=>{n.read=true;n.readAt=now();});await saveStore();publishNotificationEvent(user.id,'notification:changed');return json(res,200,{ok:true});}
+      if(method==='GET'&&p==='/api/search'){
+        const rawQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        const q=rawQuery.replace(/^@/,'').trim();
+        const empty={users:[],posts:[],groups:[],pages:[]};
+        if(!q)return json(res,200,empty);
+        const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
+        const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
+        const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
+        return json(res,200,{users,posts,groups,pages});
+      }
+      return json(res,404,{error:'API route not found.'});
+    } catch(e) {
+      if (process.env.NODE_ENV === 'test') return json(res, e.status || 500, { error: e.message, stack: e.stack });
+      const status = Number(e.status || 500);
+      if (status >= 500) {
+        console.error('[Minglora API error]', e);
+      } else {
+        // Expected authentication and validation rejections are client outcomes,
+        // not server faults; keep them out of the error-level incident stream.
+        console.info('[Minglora API client response]', JSON.stringify({
+          status,
+          route: p,
+          message: String(e.message || 'Request rejected').slice(0, 160)
+        }));
+      }
+      return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
+    }
+  }
+  if(p==='/assets/gifters-level-up.png'){
+    const assetFile=path.join(__dirname,'..','assets','Gifters Level Up.png');
+    fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
+    return;
+  }
+  const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
+  if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
+  fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
+}
+const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+const messengerRealtime=createMessengerRealtimeHub({
+  WebSocketServer,WebSocket,
+  getUserFromRequest:req=>sessionUser(req),
+  isOriginAllowed:(origin,req)=>isAllowedAppOrigin(origin,req),
+  getPeerIds:userId=>[
+    ...new Set([
+      ...(db.messages||[]).filter(item=>item.from===userId||item.to===userId).map(item=>item.from===userId?item.to:item.from),
+      ...(db.messageGroupMembers||[]).filter(item=>item.userId===userId&&item.status==='active').flatMap(item=>getActiveMessageGroupMembers(db,item.groupId))
+    ])
+  ].filter(id=>id&&id!==userId&&!blockedBetween(userId,id)),
+  getParticipantIds:(conversationId,senderId)=>{
+    if(String(conversationId).startsWith('group:')){
+      const groupId=String(conversationId).slice(6);
+      return canAccessMessageGroup(db,groupId,senderId)?getActiveMessageGroupMembers(db,groupId):[];
+    }
+    const peer=String(conversationId||'');
+    return peer&&peer!==senderId&&!blockedBetween(senderId,peer)?[peer]:[];
+  },
+  canMessage:(senderId,conversationId)=>{
+    if(String(conversationId).startsWith('group:')){
+      return canAccessMessageGroup(db,String(conversationId).slice(6),senderId);
+    }
+    const peer=String(conversationId||'');
+    if(!peer||peer===senderId||blockedBetween(senderId,peer))return false;
+    const recipient=db.users.find(item=>item.id===peer);
+    if(!recipient)return false;
+    const settings=getUserSettings(recipient);
+    if((settings.preferences.messengerRestrictedUserIds||[]).includes(senderId))return false;
+    const hasHistory=(db.messages||[]).some(item=>(item.from===senderId&&item.to===peer)||(item.from===peer&&item.to===senderId));
+    return hasHistory||settings.privacy.messageAudience==='everyone'||(settings.privacy.messageAudience==='friends'&&isFriend(senderId,peer));
+  },
+  isBlocked:blockedBetween,
+  isPresenceEnabled:userId=>{
+    const member=db.users.find(item=>item.id===userId);
+    return member?getUserSettings(member).preferences.messengerActiveStatus!==false:false;
+  }
+});
+server.on('upgrade',(req,socket,head)=>{
+  let pathname='';
+  try{pathname=new URL(req.url,'http://localhost').pathname;}catch{}
+  if(pathname!=='/api/messages/realtime'){socket.destroy();return;}
+  messengerRealtime.handleUpgrade(req,socket,head);
+});
+
+let messengerExpirySweepRunning=false;
+async function sweepExpiredMessengerMessages(){
+  if(messengerExpirySweepRunning)return;
+  messengerExpirySweepRunning=true;
+  try{
+    const at=Date.now();
+    const expired=[...(db.messages||[]),...(db.messageGroupMessages||[])].filter(item=>isMessageExpired(item,at));
+    if(!expired.length)return;
+    const removable=new Set();
+    let changed=false;
+    for(const message of expired){
+      const attachmentIds=Array.isArray(message.attachmentIds)?message.attachmentIds:[];
+      let pendingStorageCleanup=false;
+      for(const assetId of attachmentIds){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.slot==='message');
+        if(!asset||asset.status==='deleted')continue;
+        // Hide the object from the signed media gateway immediately, then retry
+        // physical storage deletion until the provider confirms it.
+        if(asset.status!=='expired'){asset.status='expired';asset.expiredAt=now();changed=true;}
+        try{
+          await mediaGateway('media_delete',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
+          asset.status='deleted';asset.deletedAt=now();changed=true;
+        }catch(error){
+          pendingStorageCleanup=true;
+          console.warn('[Minglora Messenger] Expired attachment cleanup will retry.',{assetId:asset.id,message:String(error?.message||'storage cleanup failed').slice(0,120)});
+        }
+      }
+      if(pendingStorageCleanup){
+        if(message.text){message.text='';changed=true;}
+        if(message.gifUrl){message.gifUrl=null;changed=true;}
+        if(message.stickerId){message.stickerId=null;changed=true;}
+        message.expiredCleanupPending=true;
+      }else removable.add(message.id);
+    }
+    if(removable.size){
+      db.messages=(db.messages||[]).filter(item=>!removable.has(item.id));
+      db.messageGroupMessages=(db.messageGroupMessages||[]).filter(item=>!removable.has(item.id));
+      changed=true;
+      for(const message of expired.filter(item=>removable.has(item.id))){
+        if(message.groupId)messengerRealtime?.publish(getActiveMessageGroupMembers(db,message.groupId),{type:'message:expired',conversationId:'group:'+message.groupId,groupId:message.groupId,messageId:message.id});
+        else{
+          messengerRealtime?.publish([message.from],{type:'message:expired',conversationId:message.to,messageId:message.id});
+          messengerRealtime?.publish([message.to],{type:'message:expired',conversationId:message.from,messageId:message.id});
+        }
+      }
+    }
+    if(changed)await saveStore();
+  }catch(error){
+    console.warn('[Minglora Messenger] Disappearing-message cleanup retry pending.',{message:String(error?.message||'expiry cleanup failed').slice(0,160)});
+  }finally{messengerExpirySweepRunning=false;}
+}
+const messengerExpiryTimer=setInterval(()=>{void sweepExpiredMessengerMessages();},15000);
+messengerExpiryTimer.unref?.();
+void sweepExpiredMessengerMessages();
+
+let leagueSettlementInProgress=false;
+let lastCreatorLeagueReconciliationAt=0;
+const leagueSettlementTimer=setInterval(async()=>{
+  if(leagueSettlementInProgress)return;
+  leagueSettlementInProgress=true;
+  const currentTime=Date.now();
+  const due=(db.creatorLeagueMatches||[]).some(match=>
+    (match.status==='live'&&Date.parse(match.endsAt)<=currentTime)||
+    (match.status==='pending'&&Date.parse(match.expiresAt)<=currentTime)
+  );
+  const reconcileCreatorLeagues=currentTime-lastCreatorLeagueReconciliationAt>=60000;
+  try{
+    const scheduled=reconcileCreatorLeagues
+      ?settleScheduledCreatorLeagueDays(db,new Date(currentTime))
+      :{changed:false};
+    if(due)settleExpiredLeagueMatches(db,new Date(currentTime));
+    if(due||scheduled.changed)await saveStore();
+    if(reconcileCreatorLeagues)lastCreatorLeagueReconciliationAt=currentTime;
+  }catch(error){
+    console.error('[Minglora League settlement] Could not persist scheduled League state.',{message:String(error?.message||'settlement failed').slice(0,180)});
+  }finally{
+    leagueSettlementInProgress=false;
+  }
+},10000);
+leagueSettlementTimer.unref?.();
+
+let liveRewardSettlementLastWarning=0;
+const liveRewardSettlementTimer=setInterval(async()=>{
+  if(!isSupabasePersistence())return;
+  try{
+    await requestSupabaseState('economy_live_reward_settle',{});
+  }catch(error){
+    const at=Date.now();
+    if(at-liveRewardSettlementLastWarning>60000){
+      liveRewardSettlementLastWarning=at;
+      console.warn('[Minglora LIVE reward settlement] Retry pending.',{message:String(error?.message||'settlement unavailable').slice(0,180)});
+    }
+  }
+},15000);
+liveRewardSettlementTimer.unref?.();
+
+server.listen(PORT,'0.0.0.0',async()=>{
+  if(String(process.env.MEETWAVE_PURGE_ALL_ROOMS_ON_STARTUP||'').trim().toLowerCase()==='true'){
+    try{
+      const meetWaveCleanup=await purgeAllMeetWaveRoomsAtStartup();
+      console.info('[Minglora MeetWave full cleanup]',JSON.stringify(meetWaveCleanup));
+    }catch(error){
+      console.error('[Minglora MeetWave full cleanup] Failed.',{message:String(error?.message||error).slice(0,180)});
+    }
+  }
+  try {
+    if (isSupabasePersistence()) {
+      const retiredStreamBayCleanup = await requestSupabaseState('streambay_cleanup');
+      console.info('[Minglora retired StreamBay cleanup]', JSON.stringify(retiredStreamBayCleanup));
+    }
+  } catch (error) {
+    console.error('[Minglora retired StreamBay cleanup] Pending retry.', { message: error?.message || String(error) });
+  }
+  callSessionCleanupReady = cleanupPersistedCalls();
+  const callCleanup = await callSessionCleanupReady;
+  console.info('[Minglora calls cleanup]', JSON.stringify(callCleanup));
+  liveSessionCleanupReady = cleanupPersistedLiveSessions();
+  const liveCleanup = await liveSessionCleanupReady;
+  console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
+  startLiveSessionCleanupSweep();
+  console.log(`Minglora listening on port ${PORT}`);
+  const persistence = await persistenceHealth();
+  console.info('[Minglora readiness]', JSON.stringify({
+    authProvider: AUTH_PROVIDER,
+    authConfigured: AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured(),
+    persistenceDriver: persistence.driver,
+    persistenceDurable: persistence.durable,
+    persistenceReady: persistence.ready,
+    liveProvider: 'livekit',
+    liveConfigured: isLiveKitConfigured()
+  }));
+  const liveHealth = await verifyLiveKitConnection({ force: true });
+  const liveVerification = {
+    configured: liveHealth.configured,
+    connected: liveHealth.connected,
+    checkedAt: liveHealth.checkedAt
+  };
+  if (liveHealth.connected) {
+    // Keep the success payload free of an "error" field so structured log
+    // ingestion cannot mistake the null error property for an error-level event.
+    console.info('[Minglora LiveKit verification]', JSON.stringify(liveVerification));
+  } else {
+    console.error('[Minglora LiveKit verification failed]', JSON.stringify({
+      ...liveVerification,
+      verificationError: String(liveHealth.error || 'LiveKit connection failed').slice(0, 240)
+    }));
+  }
+});
+));
+      if(guestRequestRoomMatch&&(method==='GET'||method==='POST')){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===guestRequestRoomMatch[1]);
+        if(!room||room.status==='ended')return json(res,410,{error:'This MeetWave room is no longer available.'});
+        if(blockedBetween(user.id,room.ownerId)&&room.ownerId!==user.id)return json(res,403,{error:'This meeting room is unavailable.'});
+        if(!canUserAccessMeetWaveRoom(room,user.id))return json(res,403,{error:'You do not have access to this MeetWave room.'});
+        db.meetWaveGuestRequests||=[];
+        if(method==='GET'){
+          if(room.ownerId===user.id){
+            const requests=db.meetWaveGuestRequests.filter(item=>item.roomId===room.id&&item.status==='pending')
+              .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))
+              .map(item=>({...item,requester:safeUser(db.users.find(member=>member.id===item.userId),user.id)}));
+            return json(res,200,{requests});
+          }
+          const request=db.meetWaveGuestRequests.find(item=>item.roomId===room.id&&item.userId===user.id);
+          return json(res,200,{request:request?{id:request.id,status:request.status,createdAt:request.createdAt}:null});
+        }
+        if(room.ownerId===user.id)return json(res,400,{error:'The host does not need to request a guest seat.'});
+        if(room.visibility!=='public')return json(res,403,{error:'Guest requests are only available in public MeetWave rooms.'});
+        const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&!item.leftAt);
+        if(attendance?.status==='joined')return json(res,200,{status:'accepted',alreadyJoined:true});
+        const acceptedInvite=(db.meetWaveInvitations||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&item.status==='accepted');
+        if(acceptedInvite)return json(res,200,{status:'accepted',invited:true});
+        const prior=db.meetWaveGuestRequests.find(item=>item.roomId===room.id&&item.userId===user.id);
+        if(prior?.status==='accepted')return json(res,200,{status:'accepted',requestId:prior.id});
+        if(prior?.status==='pending')return json(res,200,{status:'pending',requestId:prior.id});
+        if(room.status==='active'){
+          if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot verify guest capacity while LiveKit is unavailable.'});
+          let participants=[];
+          try{participants=await listLiveKitParticipants(room.roomName);}
+          catch{return json(res,503,{error:'MeetWave could not verify the available guest seats. Try again.'});}
+          if(participants.length>=MEETWAVE_PARTICIPANT_LIMIT)return json(res,409,{error:'This MeetWave room is full. Try again when a guest seat opens.'});
+        }
+        const request=prior||{id:uid(),roomId:room.id,userId:user.id,createdAt:now()};
+        request.status='pending';request.respondedAt=null;request.acceptedAt=null;request.declinedAt=null;
+        if(!prior)db.meetWaveGuestRequests.push(request);
+        room.lastActivityAt=request.createdAt;await saveStore();
+        return json(res,201,{status:'pending',requestId:request.id});
       }
       let meetWaveInvitationMatch=p.match(/^\/api\/meetwave\/invitations\/([^/]+)\/(accept|decline)$/);
       if(meetWaveInvitationMatch&&method==='POST'){
