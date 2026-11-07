@@ -20,7 +20,7 @@ test('Share thoughts is a real post composer connected to the authenticated post
   assert.ok(server.includes("if(method==='POST'&&p==='/api/posts')"));
   assert.ok(server.includes('validatePostInput(input)'));
   assert.ok(server.includes('publicPost(post,user.id)'));
-  assert.ok(html.includes('app.js?v=20261105-roomwide-live-gifts-1'));
+  assert.ok(html.includes('app.js?v=20261107-top-gifters-profile-controls-functional-1'));
 });
 
 test('Messenger controls connect to conversation, user, settings and read-receipt routes', async () => {
@@ -32,7 +32,7 @@ test('Messenger controls connect to conversation, user, settings and read-receip
 
   assert.ok(app.includes("$('#messenger-btn')?.addEventListener('click',toggleMessengerPanel)"));
   assert.ok(app.includes("panel.querySelector('[data-messenger-close]')?.addEventListener('click',closeMessengerPanel)"));
-  assert.ok(app.includes("function activateNav(view){const requestedView=view;if(state.view==='meetwave'"), 'navigation must not dismiss pinned chats');
+  assert.ok(app.includes("function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'"), 'navigation must not dismiss pinned chats');
   assert.ok(app.includes('Keep Chats pinned while the user works elsewhere.'));
   assert.ok(!app.includes("if(event.key==='Escape'&&state.messengerPanelOpen)closeMessengerPanel()"), 'Escape must not dismiss pinned chats');
   assert.ok(!app.includes("!panel.contains(event.target)&&!button?.contains(event.target))closeMessengerPanel()"), 'outside clicks must not dismiss pinned chats');
@@ -96,7 +96,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     assert.match(sprite, new RegExp('<symbol id="' + id + '" viewBox="0 0 64 64">'));
     assert.ok(app.includes("messenger3dIcon('" + id + "'") || app.includes("'" + id + "'"), id + ' is used by the client');
   }
-  assert.ok(serviceWorker.includes('minglora-shell-v93-flow-layout-safety-1'));
+  assert.ok(serviceWorker.includes('minglora-shell-v131-live-top-gifters-1'));
   assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261102-navigation-3d-2'));
   assert.ok(serviceWorker.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
 });
