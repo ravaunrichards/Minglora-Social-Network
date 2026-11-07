@@ -32,10 +32,13 @@ test('Screen layouts are inside the Settings gear with no Layout tab',()=>{
 });
 test('Host gets LIVE-style power-off; participant Leave remains separate',()=>{
  assert.ok(js.includes('id="mw-power-off" class="live-control-button is-danger live-host-power-button"'));
+  assert.ok(js.includes("screen.classList.toggle('live-full-screen-layout',layout==='full-screen')"));
+  assert.ok(js.includes("'+(!host?'") && js.includes("(host?'") && !js.includes('id="mw-end"'));
  assert.ok(js.includes('Power off MeetWave for everyone'));
  assert.ok(js.includes("$('#mw-power-off')?.addEventListener('click'"));
  assert.ok(js.includes('await leaveRoom(true)'));
  assert.ok(!js.includes('id="mw-end"'));
+  assert.match(js, /!host\\?'<button type=\\"button\\" id=\\"mw-leave\\"/);
 });
 test('Compact MeetWave side panel retains Chat, People, Settings and guest invitations',()=>{
  for(const id of ['mw-panel-chat-tab','mw-panel-people-tab','mw-panel-settings-tab','mw-chat-panel','mw-participants-panel','mw-settings-panel','mw-settings-invite','mw-room-invite'])assert.ok(js.includes('id="'+id+'"'),id);
