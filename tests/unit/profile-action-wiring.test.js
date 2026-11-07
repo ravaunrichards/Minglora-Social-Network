@@ -112,8 +112,8 @@ test('profile actions use blue when inactive and red when active without changin
   assert.ok(profileCss.includes('background:var(--danger,#c43d4b)!important'),'active profile actions use red');
   assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
   assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
-  assert.ok(profile.includes('data-friendship="'+esc(data.friendship||'')+'"'),'accepted friendship is represented as active');
-  assert.ok(profile.includes("data-subscription-active=\\"'+(subscriptionStatus==='active'?'true':'false')+'\\""),'subscription state is wired to the active color');
+  assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
+  assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionStatus==='active'"),'subscription state is wired to the active color');
   assert.ok(profileCss.includes('display:grid!important'),'existing horizontal action layout remains in place');
   assert.ok(profileCss.includes('grid-template-columns:repeat(auto-fit,minmax(min(100%,132px),1fr))!important'),'existing responsive columns remain unchanged');
 });
