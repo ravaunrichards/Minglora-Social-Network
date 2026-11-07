@@ -552,7 +552,7 @@
     catch { showToast('This audio format is not supported by the browser.'); }
   };
   const localWallTimeInZone = (value, zone) => {
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(String(value || ''));
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(value || ''));
     if (!match) throw new Error('Choose a valid source date and time.');
     const wanted = { year:+match[1], month:+match[2], day:+match[3], hour:+match[4], minute:+match[5] };
     const targetAsUtc = Date.UTC(wanted.year, wanted.month-1, wanted.day, wanted.hour, wanted.minute);
