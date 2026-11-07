@@ -13,14 +13,14 @@ const compact = read('public/live-room-compact.css');
 test('LIVE client, compact room stylesheet and service-worker cache are versioned together', () => {
   const html = read('public/index.html');
   const worker = read('public/sw.js');
-  const asset = '20261107-live-layout-1';
-  assert.ok(html.includes('/app.js?v=' + asset), 'HTML must request the updated LIVE client');
-  assert.ok(html.includes('/live-room-compact.css?v=' + asset), 'HTML must request the compact room layout');
-  assert.ok(worker.includes('minglora-shell-v161-live-compact-1'), 'service worker must activate a new cache');
-  assert.ok(worker.includes('/app.js?v=' + asset), 'precache must include the updated client');
-  assert.ok(worker.includes('/live-room-compact.css?v=' + asset), 'precache must include the compact room stylesheet');
+  const cssAsset = '20261107-live-layout-1';
+  const appAsset = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
+  assert.ok(appAsset, 'HTML must request a versioned Minglora client');
+  assert.ok(html.includes('/live-room-compact.css?v=' + cssAsset), 'HTML must request the compact room layout');
+  assert.match(worker, /CACHE_NAME='minglora-shell-v\d+-self-updating-1'/, 'service worker must activate a new cache');
+  assert.ok(worker.includes("'" + appAsset + "'"), 'precache must include the current client');
+  assert.ok(worker.includes('/live-room-compact.css?v=' + cssAsset), 'precache must include the compact room stylesheet');
 });
-
 test('LIVE chat respects the host chat-enabled setting and renders a disabled state', () => {
   assert.ok(app.includes('const liveChatOverlay=liveSettings.groupChatEnabled!==false'), 'chat node must follow the room chat setting');
   assert.ok(app.includes('The host has turned off Group LIVE chat for this broadcast.'), 'disabled chat must expose a readable status');
