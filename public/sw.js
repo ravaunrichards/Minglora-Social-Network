@@ -74,16 +74,21 @@ self.addEventListener('notificationclick',event=>{
   const target=new URL('/?'+params.toString(),self.location.origin).href;
   event.waitUntil((async()=>{
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    const existing=windows.find(client=>client.visibilityState==='visible')||windows[0];
-    if(existing){
-      try{
-        await existing.navigate(target);
-        await existing.focus();
-        return;
-      }catch(error){
-        console.warn('[Minglora push] Could not navigate the existing app window.',error);
+    const isCall=data.type==='call'&&Boolean(data.callId);
+    if(isCall){
+      const existing=windows.find(client=>client.visibilityState==='visible')||windows[0];
+      if(existing){
+        try{
+          await existing.navigate(target);
+          await existing.focus();
+          return;
+        }catch(error){
+          console.warn('[Minglora push] Could not bring the incoming call to the existing app window.',error);
+        }
       }
     }
+    const exactTarget=windows.find(client=>client.url===target);
+    if(exactTarget){await exactTarget.focus();return;}
     await self.clients.openWindow(target);
   })());
 });
