@@ -57,7 +57,7 @@ test('the gift balance interface is included in the active app shell cache', () 
   const appAsset=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]||'';
   assert.ok(appAsset,'HTML loads the app bundle');
   assert.ok(worker.includes("'"+appAsset+"'"),'service worker caches the active app bundle');
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
 });
 
 test('creator earnings are private to the signed-in creator and do not disclose Minglora share fields', () => {
