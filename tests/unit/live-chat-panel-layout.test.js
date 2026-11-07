@@ -63,7 +63,7 @@ test('The room shell and guest grid fit the viewport while chat scrolls only ins
   assert.match(compact, /body:has\(#live-player-shell\) \.live-chat-overlay \.live-chat-list\{[\s\S]*overflow-y:auto!important/);
   assert.match(compact, /body:has\(#live-player-shell\) \.live-player-controls\.live-icon-controls\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
   assert.match(compact, /@media\(max-width:760px\)[\s\S]*grid-template-rows:minmax\(0,1fr\) clamp\(135px,25dvh,205px\)/);
-  assert.match(compact, /\.live-tools-backdrop\.hidden\{display:none!important\}/);
+  assert.match(compact, /#live-tools-backdrop\.hidden\{display:none!important\}/);
   assert.match(styles, /\.live-chat-overlay \.live-chat-line\{/);
 });
 
