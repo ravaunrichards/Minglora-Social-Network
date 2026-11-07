@@ -314,3 +314,155 @@ body:has(#live-player-shell) .live-cohost-invite-row{display:grid!important;grid
 body:has(#live-player-shell) .live-cohost-invite-row input{min-width:0!important;min-height:40px!important;padding:8px 10px!important;border:1px solid rgba(175,194,226,.24)!important;border-radius:9px!important;color:#fff!important;background:#121b2b!important;font-size:13px!important}
 body:has(#live-player-shell) .live-cohost-invite-row button{min-height:40px!important;padding:7px 12px!important;border:0!important;border-radius:9px!important;color:#08151b!important;background:#80e5cf!important;font-size:11px!important;font-weight:850!important;white-space:nowrap!important}
 body:has(#live-player-shell) #live-cohost-invite-status{color:#bdc8d8!important;font-size:10px!important;line-height:1.4!important}
+
+
+/* Audio LIVE uses the same full-size stage grid as Video LIVE.
+   Row 1 is the compact room banner, row 2 is the complete nine-seat grid,
+   and row 3 is a visible, horizontally scrollable speaker roster. */
+body:has(#live-player-shell) .live-video-stage.live-audio-stage{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:42px minmax(0,1fr) 40px!important;
+  align-content:stretch!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:100%!important;
+  aspect-ratio:auto!important;
+  margin:0!important;
+  padding:6px!important;
+  gap:6px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-scene{
+  grid-column:1!important;
+  grid-row:1!important;
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:2px 8px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-orb{
+  flex:0 0 32px!important;
+  width:32px!important;
+  height:32px!important;
+  margin:0!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-orb img{
+  width:25px!important;
+  height:25px!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-live-label{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
+  font-size:9px!important;
+  white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-scene h2{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:11px!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-scene p,
+body:has(#live-player-shell) .live-audio-stage .live-audio-waveform{
+  display:none!important;
+}
+body:has(#live-player-shell) .live-audio-stage .audio-guest-layout{
+  grid-column:1!important;
+  grid-row:2!important;
+  display:grid!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  align-content:stretch!important;
+  align-items:stretch!important;
+  overflow:hidden!important;
+  /* Keep the active Video LIVE preset's columns and rows. */
+}
+body:has(#live-player-shell) .live-audio-stage .audio-guest-layout>.live-guest-seat{
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-audio-stage #live-speaker-list{
+  grid-column:1!important;
+  grid-row:3!important;
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:7px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:36px!important;
+  max-height:40px!important;
+  margin:0!important;
+  padding:3px 6px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  white-space:nowrap!important;
+  overscroll-behavior-x:contain!important;
+  scrollbar-width:thin!important;
+}
+body:has(#live-player-shell) .live-audio-stage #live-speaker-list .live-speaker-chip{
+  display:grid!important;
+  flex:0 0 auto!important;
+  min-width:max-content!important;
+  max-width:220px!important;
+  min-height:30px!important;
+  padding:4px 8px!important;
+  white-space:nowrap!important;
+}
+@media(max-width:760px){
+  body:has(#live-player-shell) .live-video-stage.live-audio-stage{
+    grid-template-rows:38px minmax(0,1fr) 38px!important;
+    gap:4px!important;
+    padding:4px!important;
+  }
+  body:has(#live-player-shell) .live-audio-stage .live-audio-orb{
+    flex-basis:28px!important;width:28px!important;height:28px!important;
+  }
+  body:has(#live-player-shell) .live-audio-stage .live-audio-orb img{
+    width:22px!important;height:22px!important;
+  }
+  body:has(#live-player-shell) .live-audio-stage #live-speaker-list{
+    min-height:34px!important;max-height:38px!important;gap:5px!important;
+  }
+}
+@media(max-height:620px){
+  body:has(#live-player-shell) .live-video-stage.live-audio-stage{
+    grid-template-rows:32px minmax(0,1fr) 32px!important;
+    gap:3px!important;padding:3px!important;
+  }
+  body:has(#live-player-shell) .live-audio-stage #live-speaker-list{
+    min-height:28px!important;max-height:32px!important;padding:1px 4px!important;
+  }
+}
