@@ -188,7 +188,7 @@
   }
   async function joinRoom(id){
     const client=window.LivekitClient;
-    if(!client?.Room)throw new Error('MeetWave media client failed to load. Refresh Minglora before joining.');
+    if(!client?.Room)throw new Error('MeetWave media client failed to load. Check your connection and try again.');
     const info=await api(endpoint(id));
     const result=await api(endpoint(id)+'/join',{method:'POST',body:'{}'});
     activeRoom=info.room;activeRole=result.role||'participant';speakerLayout=false;setContent(meetingMarkup(activeRoom,activeRole));messageIds=new Set();screenOn=false;
