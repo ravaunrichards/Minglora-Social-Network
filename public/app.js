@@ -937,7 +937,24 @@ async function refreshPeopleDiscovery(){
   }catch(error){console.warn('People discovery refresh failed:',error.message);}
   finally{peopleDiscoveryRefreshBusy=false;}
 }
-function startPeopleDiscoveryRefresh(){ /* Automatic page refresh disabled; refresh when the member opens Friends. */ }
+async function refreshPeopleDiscoveryLiveSessions(){
+  if(state.view!=='friends'||document.visibilityState!=='visible'||!$('#people-discovery-grid'))return;
+  try{
+    const result=await api('/live/sessions');
+    state.discoveryLiveSessions=(result.sessions||[]).filter(session=>
+      session.status==='live'&&session.viewerCountVerified===true
+    );
+  }catch(error){
+    console.warn('Friends LIVE preview could not be verified; hiding cached LIVE indicators.',error?.message||error);
+    state.discoveryLiveSessions=[];
+  }
+  const grid=$('#people-discovery-grid');
+  if(grid){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
+}
+function startPeopleDiscoveryRefresh(){
+  stopPeopleDiscoveryRefresh();
+  peopleDiscoveryRefreshTimer=setInterval(()=>void refreshPeopleDiscoveryLiveSessions(),5000);
+}
 async function renderFriends(){
   activateSilent('friends');stopPeopleDiscoveryRefresh();
   await loadPeopleDiscovery();
@@ -1212,12 +1229,23 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
 async function refreshLiveDirectorySessions(){
   if(state.view!=='live'||activeLiveRoom){stopLiveDirectoryRefresh();return;}
   try{
-    const data=await api('/live/sessions'),sessions=data.sessions||[],container=$('.live-room-grid');
+    const data=await api('/live/sessions');
+    const sessions=(data.sessions||[]).filter(session=>
+      session.status==='live'&&session.viewerCountVerified===true
+    );
+    const container=$('.live-room-grid');
     if(!container)return;
     container.innerHTML=sessions.length?sessions.map(liveSessionCardMarkup).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     bindLiveDirectoryCards(sessions);
     bindLiveDiscoveryBoards(sessions);
-  }catch{}
+  }catch(error){
+    const container=$('.live-room-grid');
+    if(container)container.innerHTML="<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE listings are being rechecked</h3><p>Unverified or cached broadcasts are hidden while Minglora reconnects.</p></section>";
+    const discovery=$('#live-discovery-content');
+    if(discovery)discovery.innerHTML="<p class='muted'>LIVE listings could not be verified. Reconnecting…</p>";
+    bindLiveDirectoryCards([]);
+    console.warn('[Minglora LIVE] Cached directory cards were cleared because active sessions could not be verified.',error?.message||error);
+  }
 }
 async function renderLive(){
   activateSilent("live");stopLiveChatRefresh();stopLiveDirectoryRefresh();
@@ -1232,7 +1260,9 @@ async function renderLive(){
     ? results[0].value
     : {provider:"livekit",configured:false,connected:false,error:results[0].reason?.message||"Minglora could not check the LiveKit connection."};
   const sessionResult=results[1].status==="fulfilled"?results[1].value:null;
-  const sessions=Array.isArray(sessionResult?.sessions)?sessionResult.sessions:[];
+  const sessions=(Array.isArray(sessionResult?.sessions)?sessionResult.sessions:[]).filter(session=>
+    session.status==='live'&&session.viewerCountVerified===true
+  );
   if(!sessionResult)status.liveDirectoryError=results[1].reason?.message||"Minglora could not load the LIVE directory.";
   const catalog=results[2].status==="fulfilled"?results[2].value:{gifts:[],packages:[]};
   const wallet=results[3].status==="fulfilled"?results[3].value:{wallet:null,ledger:[]};
@@ -1240,7 +1270,7 @@ async function renderLive(){
   const livePro=results[4].status==="fulfilled"?results[4].value:{hasAccess:false};
   renderLiveDirectory(sessions,status,catalog,wallet,livePro);
   $("#live-pro-open")?.addEventListener("click",()=>activateNav("live-pro"));
-  liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,12000);
+  liveDirectoryRefreshTimer=setInterval(refreshLiveDirectorySessions,5000);
 }
 
 async function renderLiveProStudio(){
