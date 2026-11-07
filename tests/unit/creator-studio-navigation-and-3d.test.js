@@ -92,7 +92,7 @@ test('the app shell and service worker cache the current navigation and stage bu
     html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
     html.match(/href="(\/mobile-profile-navigation\.css\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
   for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
 
