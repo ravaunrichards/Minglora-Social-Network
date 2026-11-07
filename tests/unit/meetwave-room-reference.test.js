@@ -88,7 +88,7 @@ test('MeetWave scripts and styles use the current cache version', () => {
   const current = '20261107-meetwave-guest-spotlight-10';
   assert.ok(html.includes('/meetwave.css?v='+current));
   assert.ok(html.includes('/meetwave.js?v='+current));
-  assert.ok(serviceWorker.includes('minglora-shell-v148-profile-actions-blue-1'));
+  assert.ok(serviceWorker.includes('minglora-shell-v153-meetwave-equal-seats-11'));
   assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
   assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
 });
@@ -121,14 +121,14 @@ test('Legacy placement rules cannot stack guest tiles in panel or spotlight layo
 });
 
 
-test('MeetWave regular, full-screen and panel grids fit all eleven seats without stage scrolling or oversized host tiles',()=>{
+test('MeetWave layouts keep all eleven participant seats equal-sized',()=>{
   const fit=css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides:'));
   assert.ok(fit.includes('overflow:hidden!important'));
   assert.ok(fit.includes('height:min(60dvh,calc(100dvh - 260px),680px)!important'));
   assert.ok(fit.includes('gap:clamp(7px,.9vw,11px)!important'));
   assert.ok(fit.includes('grid-template-rows:24px repeat(3,minmax(0,1fr))!important'));
   assert.ok(fit.includes('grid-template-rows:24px repeat(4,minmax(0,1fr))!important'));
-  assert.ok(fit.includes('grid-row:2/span 2!important'));
+  assert.ok(css.includes('grid-column:auto!important;grid-row:auto!important'));
   assert.ok(!fit.includes('grid-row:2/span 4!important'));
   assert.ok(!fit.includes('overflow:auto!important'));
 });
@@ -161,12 +161,31 @@ test('MeetWave room heading shows the room title and reserves the top host posit
 });
 
 test('MeetWave host power button is right-docked with space from the panel edge',()=>{
-  assert.ok(js.includes('class="mw-host-power-dock"'));
-  assert.ok(css.includes('.mw-host-power-dock'));
-  assert.ok(css.includes('margin:3px 8px 3px 2px'));
+  assert.ok(js.includes('id="mw-power-off"'));
+  assert.ok(css.includes('.live-host-power-button'));
+  assert.ok(css.includes('margin:0 6px 0 auto!important'));
 });
 
 test('MeetWave screen-share thumbnails can show all eleven participant seats',()=>{
   assert.ok(css.includes('#mw-screen-stage.has-screen-share #mw-grid'));
   assert.ok(css.includes('grid-template-columns:repeat(6,minmax(0,1fr))!important'));
+});
+
+
+test('MeetWave uses one restored toolbar and does not add a second host power dock',()=>{
+  assert.ok(js.includes('id="mw-power-off"'));
+  assert.ok(!js.includes('mw-host-power-dock'));
+  assert.ok(css.includes('display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important'));
+  assert.ok(css.includes('margin:0 6px 0 auto!important'));
+  assert.ok(!css.includes('border-top:1px solid rgba(255,255,255,.14)!important'));
+  assert.ok(!css.includes('border-bottom:1px solid rgba(255,255,255,.14)!important'));
+});
+
+test('All eleven MeetWave seats are equal-sized in every layout, including selected spotlight',()=>{
+  assert.ok(css.includes('#mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat'));
+  assert.ok(css.includes('grid-column:auto!important;grid-row:auto!important'));
+  assert.ok(css.includes('outline:2px solid #69e5c9!important'));
+  assert.ok(!css.includes('grid-row:span 2!important'));
+  assert.ok(js.includes('id="mw-spotlight-select"'));
+  assert.ok(js.includes("$('#mw-spotlight-select')?.addEventListener('change'"));
 });
