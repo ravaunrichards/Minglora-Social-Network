@@ -77,7 +77,8 @@ test('profile overflow and administrator controls are wired to their feature han
 });
 
 test('profile post cards reuse the working feed action bindings inside profile tabs',()=>{
-  const tabStart=app.indexOf('const showTab=nextTab=>{');
+  const profileStart=app.indexOf('function renderProfile(data){');
+  const tabStart=app.indexOf('const showTab=nextTab=>{',profileStart);
   const tabEnd=app.indexOf("document.querySelectorAll('.profile-tabs [data-profile-tab]')",tabStart);
   assert.ok(tabStart>=0&&tabEnd>tabStart);
   const tabRender=app.slice(tabStart,tabEnd);
