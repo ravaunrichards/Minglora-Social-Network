@@ -157,7 +157,7 @@
         '</header>' +
         '<section class="qcc-card" aria-label="Two-way currency calculator">' +
           '<div class="qcc-card-top"><div><h2>Two-way currency calculator</h2><p>USD to JMD, JMD to USD, and other supported pairs.</p></div>' +
-            '<button type="button" class="qcc-refresh" data-qcc-refresh ' + (state.loading ? 'disabled' : '') + ' aria-label="Refresh exchange rate" title="Refresh rate">↻ Refresh</button></div>' +
+          '</div>' +
           '<label class="qcc-search"><span>Find a currency</span><input type="search" data-qcc-search value="' + escapeHtml(state.search) + '" placeholder="Search by code, name or country" autocomplete="off"></label>' +
           '<div class="qcc-pair-grid">' +
             '<section class="qcc-side qcc-side-from" aria-label="First currency">' +
@@ -211,9 +211,7 @@
     const equationTo = $('.qcc-equation-row > div:last-child strong', root);
     if (equationFrom) equationFrom.textContent = sourceValid ? formatAmount(sourceAmount, state.from) + ' ' + state.from : '—';
     if (equationTo) equationTo.textContent = targetValid ? formatAmount(targetAmount, state.to) + ' ' + state.to : '—';
-    const refresh = $('[data-qcc-refresh]', root);
-    if (refresh) refresh.disabled = state.loading;
-  }
+      }
 
   function calculateFromSource() {
     const amount = parseAmount(state.fromAmount);
@@ -252,17 +250,15 @@
       '<strong>' + escapeHtml(rateLine) + '</strong>' +
       (inverseLine ? '<p>' + escapeHtml(inverseLine) + '</p>' : '') +
       '<small>' + escapeHtml(state.error || (state.rateDate ? 'Rate date: ' + state.rateDate + (state.stale ? ' · cached reference rate' : '') + ' · ' + state.provider : 'Rates are indicative reference rates, not payment quotes.')) + '</small>';
-    const refresh = $('[data-qcc-refresh]', root);
-    if (refresh) refresh.disabled = state.loading;
-  }
+      }
 
-  async function loadRate({ refresh = false } = {}) {
+  async function loadRate() {
     const requestId = ++state.requestId;
     state.loading = true;
     state.error = '';
     updateRateText();
     try {
-      const payload = await api('/currency/rate?base=' + encodeURIComponent(state.from) + '&quote=' + encodeURIComponent(state.to) + (refresh ? '&refresh=1' : ''));
+      const payload = await api('/currency/rate?base=' + encodeURIComponent(state.from) + '&quote=' + encodeURIComponent(state.to) + '');
       if (requestId !== state.requestId) return;
       const rate = Number(payload.rate);
       if (!Number.isFinite(rate) || rate <= 0) throw new Error('Minglora received an invalid reference rate.');
@@ -360,8 +356,7 @@
       void loadRate();
     });
 
-    $('[data-qcc-refresh]', root)?.addEventListener('click', () => void loadRate({ refresh: true }));
-  }
+      }
 
   async function renderPage() {
     readSavedState();
