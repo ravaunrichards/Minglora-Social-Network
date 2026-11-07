@@ -5461,7 +5461,7 @@ async function loadProfileGiftGallery(panel,profileData){
         '<div class="gift-gallery-tile-copy"><strong>'+esc(entry.giftName)+'</strong><small>'+Number(entry.giftCount||0).toLocaleString()+' received · '+Number(entry.totalCoins||0).toLocaleString()+' Coins</small>'+
         '<div class="gift-gallery-progress-label"><span>One gifter’s progress</span><strong>'+progress.toLocaleString()+' / '+target.toLocaleString()+'</strong></div>'+
         '<div class="gift-gallery-progress"><span style="width:'+percent+'%"></span></div>'+
-        (leader?'<div class="gift-gallery-leader"><img src="'+avatar(leader)+'" alt=""><span><strong>'+esc(leader.name)+'</strong><small>'+(entry.lit?'Lit this gift':'Top Gifter')+' · '+progress.toLocaleString()+' sent</small></span><b>TOP GIFTER</b></div>':'<p class="muted gift-gallery-no-leader">No visible gifter yet</p>')+
+        (leader?'<div class="gift-gallery-leader"><img src="'+avatar(leader)+'" alt=""><span><strong>'+esc(leader.name)+'</strong><small>'+(entry.lit?'Lit this gift':'Top Gifter')+' · '+progress.toLocaleString()+' sent</small>'+(leader.gifterBadge?'<small class="gift-gallery-earned-title">'+esc(leader.gifterBadge.badgeName||leader.gifterBadge.tier+' Gifter')+'</small>':'<small class="gift-gallery-earned-title">Gifter title not yet earned</small>')+'</span><b>TOP GIFTER</b></div>':'<p class="muted gift-gallery-no-leader">No visible gifter yet</p>')+
         (isOwner?'<form class="gift-gallery-goal-form" data-gift-gallery-goal="'+esc(entry.giftCode)+'"><label>Gift target<input name="targetCount" type="number" min="1" max="10000" step="1" value="'+target+'"></label><button type="submit" class="secondary">Save goal</button></form>':'')+
         '</div></article>';
     }).join('');
