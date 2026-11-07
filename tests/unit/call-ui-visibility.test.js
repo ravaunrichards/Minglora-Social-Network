@@ -112,9 +112,9 @@ test('call notifications return to the current app window and load the latest ca
   assert.equal(workerAsset,appAsset,'the service worker precaches the exact HTML app bundle');
   assert.match(worker,/CACHE_NAME='minglora-shell-v[0-9]+-/);
   const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
-  const clickEnd=worker.indexOf('});',clickStart);
-  const clickHandler=worker.slice(clickStart,clickEnd);
-  assert.match(clickHandler,/const isCall=data\.type==='call'&&Boolean\(data\.callId\)/);
+  const clickHandler=worker.slice(clickStart);
+  assert.ok(clickHandler.includes("const isCall=data.type==='call'&&Boolean(data.callId);"));
   assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('existing.navigate(target)'));
   assert.ok(clickHandler.includes('existing.focus()'));
+  assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('const exactTarget=windows.find'));
 });
