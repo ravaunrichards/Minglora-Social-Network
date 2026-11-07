@@ -543,7 +543,7 @@
         <section class="admin-withdrawal-tracker" id="admin-withdrawal-tracker" aria-labelledby="admin-withdrawal-tracker-title">
           <div class="admin-withdrawal-tracker-heading">
             <div><h4 id="admin-withdrawal-tracker-title">All creator/member withdrawal requests</h4>
-              <p>Every creator payout request, its PayPal batch reference and confirmed status. This list refreshes automatically while the Admin Centre is open.</p></div>
+              <p>Every creator payout request, its PayPal batch reference and confirmed status. Use Refresh report whenever you want the latest withdrawal status.</p></div>
             <span id="admin-withdrawal-tracker-updated" role="status" aria-live="polite">Loading status…</span>
           </div>
           <div id="admin-withdrawal-tracker-summary" class="admin-withdrawal-tracker-summary" aria-live="polite"></div>
