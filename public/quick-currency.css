@@ -8,7 +8,7 @@
 .qcc-card{padding:23px}
 .qcc-card-top{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .qcc-card-top h2{margin:0 0 5px;font-size:18px;letter-spacing:-.025em}
-.qcc-refresh{flex:0 0 auto;border:1px solid var(--border,#e4e8ef);border-radius:11px;background:var(--surface,#fff);color:var(--text,#17202b);font:700 12px inherit;padding:9px 12px;cursor:pointer}
+.qcc-refresh{flex:0 0 auto;border:1px solid var(--border,#e4e8ef);border-radius:11px;background:var(--surface,#fff);color:var(--text,#17202b);font:inherit;font-weight:700;font-size:12px;padding:9px 12px;cursor:pointer}
 .qcc-refresh:disabled{opacity:.55;cursor:wait}
 .qcc-search{display:grid;gap:6px;max-width:420px;margin:20px 0 15px;color:var(--muted,#697586);font-size:11px;font-weight:750}
 .qcc-search input,.qcc-side select{width:100%;min-width:0;border:1px solid var(--border,#e4e8ef);border-radius:11px;background:var(--surface,#fff);color:var(--text,#17202b);font:inherit}
