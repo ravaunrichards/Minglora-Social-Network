@@ -86,9 +86,18 @@
 .profile-actions>*{flex:0 0 auto;white-space:nowrap}
 .profile-subscribe-button{
   border-color:var(--brand,#1769e0);
-  color:var(--brand,#1769e0);
+  color:#fff;
   font-weight:750;
-  background:var(--surface,#fff);
+  background:var(--brand,#1769e0);
+}
+.profile-subscribe-button.is-subscribed{
+  border-color:#dc2626;
+  background:#dc2626;
+  color:#fff;
+}
+.profile-subscribe-button:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--brand,#1769e0) 35%,transparent);
+  outline-offset:2px;
 }
 @media(max-width:760px){
   .profile-info>.profile-actions{
