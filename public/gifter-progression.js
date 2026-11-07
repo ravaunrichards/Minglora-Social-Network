@@ -4,6 +4,7 @@
   const state = { overview: null, selectedLevel: 1 };
   let refreshInFlight = false;
   let viewGeneration = 0;
+  let autoSyncTimer = null;
 
   function isGifterViewActive() {
     return Boolean(document.querySelector("[data-view='gifter-progression'].active"));
@@ -11,6 +12,8 @@
 
   function onNavigateAway() {
     viewGeneration += 1;
+    if (autoSyncTimer !== null) window.clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
   }
 
   function publishBadge(overview) {
@@ -23,10 +26,6 @@
   async function refreshOverview() {
     if (refreshInFlight || !isGifterViewActive() || document.visibilityState !== "visible") return;
     refreshInFlight = true;
-    const refreshButton = document.getElementById("gp-refresh-button");
-    const refreshStatus = document.getElementById("gp-refresh-status");
-    if (refreshButton) { refreshButton.disabled = true; refreshButton.textContent = "Refreshing…"; }
-    if (refreshStatus) refreshStatus.textContent = "Checking confirmed gift activity…";
     const generation = viewGeneration;
     try {
       const overview = await requestOverview();
@@ -35,17 +34,25 @@
       state.selectedLevel = Math.max(1, Math.min(50, Number(state.selectedLevel) || Number(overview.current.level) || 1));
       const main = document.getElementById("main-content");
       if (!main) return;
-      main.innerHTML = renderMarkup(overview);
+      const focused = document.activeElement;
+      if (focused && main.contains(focused)) return;
+      const mainScrollTop = main.scrollTop;
+      const windowScrollX = window.scrollX || 0;
+      const windowScrollY = window.scrollY || 0;
+      const incomingRoot = document.createElement("div");
+      incomingRoot.innerHTML = renderMarkup(overview);
+      const incomingPage = incomingRoot.firstElementChild;
+      const currentPage = main.querySelector(".gp-page");
+      if (currentPage && incomingPage) currentPage.replaceWith(incomingPage);
+      else main.innerHTML = renderMarkup(overview);
+      main.scrollTop = mainScrollTop;
+      window.scrollTo(windowScrollX, windowScrollY);
       bindPage(overview);
       publishBadge(overview);
     } catch (error) {
-      console.warn("[Minglora Gifter Progression] Manual refresh failed:", error?.message || error);
-      const status = document.getElementById("gp-refresh-status");
-      if (status) status.textContent = "Refresh failed. Try again when you are ready.";
+      console.warn("[Minglora Gifter Progression] Automatic sync failed:", error?.message || error);
     } finally {
       refreshInFlight = false;
-      const button = document.getElementById("gp-refresh-button");
-      if (button) { button.disabled = false; button.textContent = "↻ Refresh"; }
     }
   }
 
@@ -166,7 +173,7 @@
     return "<div class='gp-page'>" +
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
-      "<div class='gp-heading-actions'><button type='button' class='gp-refresh-button' id='gp-refresh-button'>↻ Refresh</button><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button><small id='gp-refresh-status' role='status' aria-live='polite'>Refresh only when you choose.</small></div></header>" +
+      "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div></header>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       currentBadgeMarkup +
@@ -200,8 +207,6 @@
   }
 
   function bindPage(data) {
-    const refreshButton = document.getElementById("gp-refresh-button");
-    if (refreshButton) refreshButton.onclick = () => { void refreshOverview(); };
     document.getElementById("gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
     document.getElementById("gp-level-grid")?.addEventListener("click", event => {
       const button = event.target.closest("[data-gp-level]");
@@ -231,8 +236,9 @@
     main.innerHTML = renderMarkup(overview);
     bindPage(overview);
     publishBadge(overview);
+    autoSyncTimer = window.setInterval(() => void refreshOverview(), 30000);
   }
 
-  // This screen refreshes only when the member chooses to tap Refresh.
+  // Gifter progression syncs quietly without interrupting the member's page.
   window.MingloraGifterProgression = { render, onNavigateAway };
 })();
