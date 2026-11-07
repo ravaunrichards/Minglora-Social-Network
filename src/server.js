@@ -1291,7 +1291,7 @@ async function route(req, res) {
           const name=String(input.name||'Monthly membership').trim();
           const description=String(input.description||'').trim();
           const benefits=Array.isArray(input.benefits)?input.benefits.map(value=>String(value).trim()).filter(Boolean).slice(0,8):[];
-          if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||priceMinor%2!==0||
+          if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||
             name.length<2||name.length>48||description.length>500||benefits.some(value=>value.length>100)){
             return json(res,400,{error:'Set an even monthly price from USD 1.00 to USD 10,000.00, with a short title and benefits.'});
           }
@@ -1381,6 +1381,27 @@ async function route(req, res) {
           }
           return json(res,200,await requestSupabaseState('subscription_admin_review',{
             creatorId,reviewerId:user.id,status,reason
+          }));
+        }
+        if(method==='POST'&&p==='/api/subscriptions/admin/bonus-review'){
+          if(!isModerator(user,req))return json(res,403,{error:'Moderator access with an active reviewer session is required.'});
+          const creatorId=String(input.creatorId||'').trim();
+          const monthStart=String(input.monthStart||'').trim();
+          const followerCount=Number(input.followerCount);
+          const qualifyingVideoViews=Number(input.qualifyingVideoViews);
+          const subscriberOnlyVideoCount=Number(input.subscriberOnlyVideoCount);
+          const reviewerNote=String(input.reviewerNote||'').trim().slice(0,1000);
+          const current=new Date();
+          const requiredMonth=new Date(Date.UTC(current.getUTCFullYear(),current.getUTCMonth()-1,1)).toISOString().slice(0,10);
+          if(!/^[0-9a-f-]{36}$/i.test(creatorId)||monthStart!==requiredMonth||
+             !Number.isSafeInteger(followerCount)||followerCount<0||
+             !Number.isSafeInteger(qualifyingVideoViews)||qualifyingVideoViews<0||
+             !Number.isSafeInteger(subscriberOnlyVideoCount)||subscriberOnlyVideoCount<0){
+            return json(res,400,{error:'Review only the previous calendar month with valid verified metrics.'});
+          }
+          return json(res,200,await requestSupabaseState('subscription_bonus_review',{
+            creatorId,reviewerId:user.id,monthStart,followerCount,qualifyingVideoViews,
+            subscriberOnlyVideoCount,reviewerNote
           }));
         }
         return json(res,404,{error:'Subscription endpoint not found.'});
