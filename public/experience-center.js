@@ -322,13 +322,14 @@
     return document.hidden||document.querySelector('.live-room-layout,.meetwave-room,.call-overlay,.incoming-call-overlay,.outgoing-call-overlay,[data-call-active="true"],[data-meetwave-active="true"]');
   }
   function showScreenSaver(){
-    if(!current.screenSaverEnabled||current.screenSaverEffect==='none'||isBusy()||screenSaverOverlay)return;
+    if(!current.screenSaverEnabled||current.screenSaverEffect==='none'||screenSaverOverlay)return;
+    if(isBusy()){screenSaverTimer=setTimeout(showScreenSaver,30000);return;}
     screenSaverOverlay=document.createElement('div');
     screenSaverOverlay.className='mexp-screen-saver effect-'+current.screenSaverEffect;
     screenSaverOverlay.setAttribute('role','dialog');screenSaverOverlay.setAttribute('aria-label','Minglora screen saver');
     const title=current.screenSaverEffect==='text'?'<h2>'+esc(current.screenSaverText||'Minglora')+'</h2>':(current.screenSaverEffect==='clock'?'<h2>'+new Date().toLocaleTimeString()+'</h2>':'');
     const dots=Array.from({length:18},(_,i)=>'<i style="--i:'+i+'"></i>').join('');
-    if(current.screenSaverEffect==='photos'&&wallpaperUrl)screenSaverOverlay.style.backgroundImage='linear-gradient(#050813aa,#050813aa),url("'+wallpaperUrl.replace(/["\\]/g,'')+'")';
+    if(current.screenSaverEffect==='photos'&&current.wallpaperType==='image'&&wallpaperUrl)screenSaverOverlay.style.backgroundImage='linear-gradient(#050813aa,#050813aa),url("'+wallpaperUrl.replace(/["\\]/g,'')+'")';
     screenSaverOverlay.innerHTML='<div class="mexp-saver-art">'+dots+title+(current.screenSaverEffect==='photos'&&!wallpaperUrl?'<h2>Choose a local wallpaper photo first</h2>':'')+'</div><span class="mexp-saver-dismiss">Touch or press any key to return</span>';
     screenSaverOverlay.addEventListener('pointerdown',dismissScreenSaver,{once:true});
     document.addEventListener('keydown',dismissScreenSaver,{once:true});
@@ -491,9 +492,17 @@
   }
   const onReady=()=>observe();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',onReady,{once:true});else onReady();
+  function isDndActive(){
+    if(!current.dndEnabled)return false;
+    const now=new Date(),minute=now.getHours()*60+now.getMinutes();
+    const toMinute=value=>{const [h,m]=String(value||'00:00').split(':').map(Number);return h*60+m;};
+    const start=toMinute(current.dndStart),end=toMinute(current.dndEnd);
+    if(start===end)return true;
+    return start<end?(minute>=start&&minute<end):(minute>=start||minute<end);
+  }
   window.MingloraExperience={
     getSettings:()=>({...current}),
-    shouldSilenceNotifications:()=>current.soundMode==='mute'||current.dndEnabled,
+    shouldSilenceNotifications:(kind='all')=>current.soundMode==='mute'||(isDndActive()&&!(kind==='call'&&current.dndAllowedCalls==='everyone')),
     shouldVibrate:()=>current.soundMode==='vibrate'&&current.vibrateOnRing,
     apply,
     open:()=>{const button=$('[data-settings-category-button="experience"]');if(button)button.click();}
