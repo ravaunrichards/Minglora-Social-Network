@@ -48,6 +48,11 @@ test("same-gifter progress lights a gift; gifts from different viewers are never
   assert.equal(gallery.entries[0].leadingGifterCount, 10);
   assert.equal(gallery.entries[0].targetCount, 20);
   assert.equal(gallery.entries[0].lit, false);
+  assert.equal(gallery.entries[0].titleGifterId, "member-a");
+  assert.equal(gallery.entries[0].topGifters.length, 2);
+  assert.equal(gallery.entries[0].topGifters[0].rank, 1);
+  assert.equal(gallery.entries[0].topGifters[0].isTitleGifter, true);
+  assert.equal(gallery.entries[0].topGifters[1].isTitleGifter, false);
 });
 
 test("lit state, duplicate protection, opt-out, creator toggle, and reset are respected", () => {
