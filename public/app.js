@@ -1534,6 +1534,19 @@ function participantHasLiveAudio(participant){
   }
   return false;
 }
+function participantHasLiveStageMedia(participant){
+  const publications=participant?.trackPublications;
+  if(publications&&typeof publications.values==="function"){
+    for(const publication of publications.values()){
+      const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
+      const source=String(publication?.source||"").toLowerCase();
+      const isLiveMedia=kind==="audio"||kind==="video"||source==="microphone"||source==="camera";
+      if(isLiveMedia&&(publication?.track||publication?.isSubscribed===true))return true;
+    }
+  }
+  return false;
+}
+
 function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-speaker-list");if(!root||!room)return;
   const speakers=[];
@@ -1580,9 +1593,9 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const hostName=hostParticipant?.name||session?.host?.name||(role==="host"?state.user?.name:"Minglora host")||"Minglora host";
   const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!root.closest(".live-audio-stage");
   const guests=[];
-  if(role==="guest"&&local&&participantHasLiveAudio(local))guests.push(local);
+  if(role==="guest"&&local&&participantHasLiveStageMedia(local))guests.push(local);
   for(const person of remotes){
-    if(person.identity===session?.hostId||!participantHasLiveAudio(person))continue;
+    if(person.identity===session?.hostId||!participantHasLiveStageMedia(person))continue;
     if(!guests.some(item=>item.identity===person.identity))guests.push(person);
   }
   root.classList.toggle("live-host-only-layout",fullScreenHostOnly);
