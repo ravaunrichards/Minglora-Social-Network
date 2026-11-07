@@ -34,13 +34,14 @@ test('People You May Know renders real member covers, stories, posts and verifie
   assert.doesNotMatch(app, /Connect and get to know each other\./);
 });
 
-test('discovery refreshes only while Friends is visible and uses the real LIVE directory', async () => {
+test('Friends discovery refresh runs only after the member taps Refresh', async () => {
   const app = await read('public/app.js');
-  assert.match(app, /setInterval\(\(\)=>void refreshPeopleDiscovery\(\),20000\)/);
+  assert.match(app, /id="people-discovery-refresh"/);
+  assert.match(app, /refreshPeopleDiscovery\(\)/);
   assert.match(app, /state\.view!=='friends'/);
-  assert.match(app, /document\.visibilityState!=='visible'/);
   assert.match(app, /api\('\/live\/sessions'\)/);
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
+  assert.doesNotMatch(app, /peopleDiscoveryRefreshTimer=setInterval/);
 });
 
 test('outside-profile cards provide dimensional responsive styling and respect reduced motion', async () => {
