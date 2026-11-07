@@ -81,7 +81,7 @@ async function restoreBrowserNavigation(event){
     state.activeConnections=saved.activeConnections||null;
     state.searchQuery=String(saved.searchQuery||'');
     state.restoreCreatorSection=String(saved.creatorSection||'overview');
-    state.rechargeTab=['recharge','earnings','exchange','currency'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
+    state.rechargeTab=['recharge','earnings','exchange','currency','calculator'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
     state.rechargeCurrencyMode=saved.rechargeCurrencyMode==='global'?'global':'two-way';
     state.savedFilter=String(saved.savedFilter||'all');
     state.savedCollection=String(saved.savedCollection||'all');
@@ -158,7 +158,7 @@ async function restoreLastView(){
   state.activeConnections=saved.activeConnections||null;
   state.searchQuery=String(saved.searchQuery||'');
   state.restoreCreatorSection=String(saved.creatorSection||'overview');
-  state.rechargeTab=['recharge','earnings','exchange','currency'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
+  state.rechargeTab=['recharge','earnings','exchange','currency','calculator'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
     state.rechargeCurrencyMode=saved.rechargeCurrencyMode==='global'?'global':'two-way';
   state.savedFilter=String(saved.savedFilter||'all');
   state.savedCollection=String(saved.savedCollection||'all');
@@ -454,7 +454,7 @@ function syncNavigationActive(){
 }
 function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.addEventListener('minglora:open-wallet',event=>{
-  const tab=['recharge','earnings','exchange','currency'].includes(event.detail?.tab)?event.detail.tab:'recharge';
+  const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
   activateNav('coins');
   state.rechargeCurrencyMode=state.rechargeCurrencyMode==='global'?'global':'two-way';
@@ -3272,7 +3272,7 @@ activeLivePinnedComment=null;
 
 async function renderCoins(){
   activateSilent("coins");
-  const activeTab=['recharge','earnings','exchange','currency'].includes(state.rechargeTab)?state.rechargeTab:'recharge';
+  const activeTab=['recharge','earnings','exchange','currency','calculator'].includes(state.rechargeTab)?state.rechargeTab:'recharge';
   const walletResults=await Promise.allSettled([
     activeTab==="recharge"?api("/coins/catalog"):Promise.resolve({packages:[]}),
     api("/coins/wallet"),
@@ -3293,11 +3293,11 @@ async function renderCoins(){
     ?"<section class='wallet-money-overview'><div class='wallet-money-overview-heading'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Your Minglora money balance</strong><small>Money earned is separate from Minglora Coins.</small></div><button type='button' data-recharge-tab='earnings'>View earnings details ↗</button></div><div class='wallet-money-stat'><small>LIFETIME EARNED</small><strong>"+creatorMoney(earnings.earnedMinor||0)+"</strong><span>Your eligible creator share and subscription earnings</span></div><div class='wallet-money-stat'><small>AVAILABLE MONEY</small><strong>"+creatorMoney(earnings.availableMinor||0)+"</strong><span>Currently available after payouts and Coin exchanges</span></div><div class='wallet-money-stat'><small>NON-CASH PROMOTIONAL SHARE</small><strong>" + creatorMoney(earnings.promotionalGiftEarningsExcludedMinor||0) + "</strong><span>Historical promotional gift activity · excluded from withdrawals</span></div><div class='wallet-money-stat'><small>GIFT COINS RECEIVED</small><strong>"+Number(giftBalance.receivedCoins||0).toLocaleString()+"</strong><span>"+Number(giftBalance.giftCount||0).toLocaleString()+" gifts recorded · see Earnings for details</span></div></section>"
     :"<section class='wallet-money-overview wallet-money-unavailable'><div><span class='eyebrow'>REAL MONEY EARNINGS</span><strong>Money balance unavailable</strong><small>"+esc(earningsError||"Minglora could not load your money balance.")+"</small></div><button type='button' data-recharge-tab='earnings'>Open earnings details</button></section>";
   const header="<header class='recharge-page-heading'><div><span class='eyebrow'>MINGLORA WALLET</span><h1>Wallet &amp; earnings</h1><p class='muted'>See your real money earnings and Minglora Coins in separate balances.</p></div><div class='coin-balance-card'><small>COIN BALANCE</small><strong>"+(wallet.wallet&&wallet.wallet.balance_coins!=null?balance.toLocaleString():"—")+"</strong><span>Minglora Coins</span></div><div class='coin-source-breakdown' aria-label='Coin balance by funding source'><span><small>Cash-backed</small><strong>"+cashBackedBalance.toLocaleString()+"</strong><em>Purchased or earnings-exchanged</em></span><span><small>Marketing-funded</small><strong>"+marketingBackedBalance.toLocaleString()+"</strong><em>Reserved from funded campaigns</em></span><span><small>Promotional</small><strong>"+promoBalance.toLocaleString()+"</strong><em>Non-cash rewards and admin credits</em></span></div></header>";
-  const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='earnings' class='"+(activeTab==="earnings"?"active":"")+"' aria-current='"+(activeTab==="earnings"?"page":"false")+"'>Earnings</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button><button type='button' data-recharge-tab='currency' class='"+(activeTab==="currency"?"active":"")+"' aria-current='"+(activeTab==="currency"?"page":"false")+"'><svg class='recharge-currency-tab-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261107-recharge-currency-tab-1#currency-exchange'></use></svg>Currency Converter</button></nav>";
+  const tabs="<nav class='recharge-tabs' aria-label='Wallet actions'><button type='button' data-recharge-tab='recharge' class='"+(activeTab==="recharge"?"active":"")+"' aria-current='"+(activeTab==="recharge"?"page":"false")+"'>Recharge</button><button type='button' data-recharge-tab='earnings' class='"+(activeTab==="earnings"?"active":"")+"' aria-current='"+(activeTab==="earnings"?"page":"false")+"'>Earnings</button><button type='button' data-recharge-tab='exchange' class='"+(activeTab==="exchange"?"active":"")+"' aria-current='"+(activeTab==="exchange"?"page":"false")+"'>Exchange</button><button type='button' data-recharge-tab='currency' class='"+(activeTab==="currency"?"active":"")+"' aria-current='"+(activeTab==="currency"?"page":"false")+"'><svg class='recharge-currency-tab-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261107-recharge-currency-tab-1#currency-exchange'></use></svg>Currency Converter</button><button type='button' data-recharge-tab='calculator' class='"+(activeTab==="calculator"?"active":"")+"' aria-current='"+(activeTab==="calculator"?"page":"false")+"'><svg class='recharge-currency-tab-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261107-wallet-calculator-1#calculator'></use></svg>Calculator</button></nav>";
   const bindTabs=()=>{
     document.querySelectorAll("[data-recharge-tab]").forEach(button=>button.addEventListener("click",()=>{
       const destination=button.dataset.rechargeTab;
-      state.rechargeTab=['recharge','earnings','exchange','currency'].includes(destination)?destination:'recharge';
+      state.rechargeTab=['recharge','earnings','exchange','currency','calculator'].includes(destination)?destination:'recharge';
       recordBrowserNavigation();
       persistCurrentView();
       renderCoins().catch(error=>setContent("<section class='card empty-state'><h2>Wallet could not load</h2><p>"+esc(error.message)+"</p><button class='secondary' id='recharge-retry'>Try again</button></section>"));
@@ -3332,6 +3332,16 @@ async function renderCoins(){
     };
     document.querySelectorAll("[data-recharge-currency-mode]").forEach(button=>button.addEventListener("click",()=>void renderCurrencyMode(button.dataset.rechargeCurrencyMode)));
     await renderCurrencyMode(initialMode);
+    return;
+  }
+
+  if(activeTab==="calculator"){
+    setContent("<div class='recharge-page'>"+header+moneyOverview+tabs+"<section class='ml-calc-section'><div id='recharge-calculator-embed' aria-live='polite'></div></section></div>");
+    bindTabs();
+    const mount=$("#recharge-calculator-embed");
+    if(!window.MingloraCalculator?.render||!window.MingloraCalculator.render(mount)){
+      if(mount)mount.innerHTML="<section class='card'><h2>Calculator unavailable</h2><p class='muted'>The calculator feature could not be loaded.</p></section>";
+    }
     return;
   }
 
