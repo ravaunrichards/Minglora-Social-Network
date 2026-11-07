@@ -6563,3 +6563,17 @@ button.live-ranking-row{cursor:pointer}
 .person-card-secondary-actions .person-block-link:hover{color:var(--danger,#c43d4b);text-decoration:underline}
 .person-card-secondary-actions button:disabled,.person-dismiss-mini:disabled{opacity:.55;cursor:wait}
 .person-dismiss-mini{min-width:28px;padding-inline:7px;font-weight:800}
+
+/* Minglora device-access controls: permission is requested only after a user action. */
+.settings-device-access-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:14px 0}
+.settings-device-access-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft,var(--bg))}
+.settings-device-access-card>div{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.settings-device-access-card>div>strong{font-size:12px}
+.settings-device-access-card>div>small,.settings-device-access-note{font-size:10px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}
+.settings-device-access-card button{flex:0 0 auto;min-height:34px;padding:7px 10px;font-size:10px}
+.settings-device-access-note{max-width:112px;text-align:right;font-weight:650}
+@media(max-width:480px){
+  .settings-device-access-grid{grid-template-columns:minmax(0,1fr)}
+  .settings-device-access-card{align-items:flex-start}
+  .settings-device-access-card button{max-width:132px;white-space:normal}
+}
