@@ -20,7 +20,7 @@ function validTimeZone(value) {
 }
 
 export function giftGalleryTimeZone(user) {
-  const preferred = validTimeZone(user?.timeZone || user?.timezone || user?.settings?.preferences?.timeZone);
+  const preferred = validTimeZone(user?.timeZone || user?.timezone || user?.settings?.preferences?.timeZone || user?.deviceTimeZone);
   if (preferred) return preferred;
   const country = String(user?.country || "").trim().toLowerCase();
   if (country === "jm" || country.includes("jamaica")) return "America/Jamaica";
