@@ -415,7 +415,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261107-auto-sync-no-refresh-1',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.ready
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
