@@ -27,13 +27,13 @@ test('MeetWave reserves one host seat and exactly eight guest seats', () => {
   assert.ok(server.includes('participants.length>=roomParticipantLimit'));
 });
 
-test('The eight supported screen layouts apply to both stage and video grid', () => {
-  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','spotlight','roundtable-1','roundtable-2'];
+test('All nine supported screen layouts apply to both stage and video grid', () => {
+  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   for (const layout of layouts) {
     assert.ok(js.includes('data-mw-layout="'+layout+'"'), layout+' is selectable');
     assert.ok(css.includes('#mw-grid[data-layout="'+layout+'"]'), layout+' has a video-grid presentation');
   }
-  assert.ok(!js.includes('side-by-side'));
+  assert.ok(js.includes('data-mw-layout="side-by-side"'));
   assert.ok(js.includes('screen.dataset.screenLayout=layout'));
   assert.ok(js.includes('grid.dataset.layout=layout'));
   assert.ok(js.includes("grid.dataset.gridRole='host-eight-guest-seats'"));
@@ -121,7 +121,7 @@ test('Spotlight lights the selected guest while keeping the other guest seats vi
 });
 
 test('Every host and guest seat keeps equal dimensions across all layouts, including Spotlight', () => {
-  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','spotlight','roundtable-1','roundtable-2']) {
+  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']) {
     assert.ok(css.includes('#mw-grid[data-layout="'+layout+'"]'), layout+' selector is present');
   }
   assert.ok(finalFit.includes('.mw-video-tile{'));
@@ -180,7 +180,7 @@ test('All nine total seats fit and spotlight has a visible focus treatment', () 
 });
 
 test('MeetWave layout choices display only their horizontal name labels', () => {
-  for (const label of ['Full Screen','Fluid Panel','Fluid Grid','Fixed Grid','Fixed Panel','Spotlight','Roundtable 1','Roundtable 2']) {
+  for (const label of ['Full Screen','Fluid Panel','Fluid Grid','Fixed Grid','Fixed Panel','Side by Side','Spotlight','Roundtable 1','Roundtable 2']) {
     assert.ok(js.includes('>'+label+'</button>'), label+' is name-only');
   }
   assert.ok(!js.includes('8 guests ·'));
@@ -205,3 +205,24 @@ test('MeetWave host power glyph is centered and fits inside the red button', () 
   assert.ok(css.includes('overflow:hidden!important'));
   assert.ok(css.includes('background:linear-gradient(155deg,#f24b62,#c92340)!important'));
 });
+
+test('All nine MeetWave presets keep the host and all eight guest seats visible without clipping', () => {
+  const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  for(const layout of layouts){
+    assert.ok(css.includes('#mw-grid[data-layout="'+layout+'"]'),layout+' has an explicit layout rule');
+  }
+  assert.ok(finalFit.includes('visibility:visible!important'));
+  assert.ok(finalFit.includes('opacity:1!important'));
+  assert.ok(finalFit.includes('overflow:visible!important'));
+  assert.ok(finalFit.includes('grid-auto-rows:minmax(0,1fr)!important'));
+  assert.ok(finalFit.includes('Guest seat '+(index+1)));
+  assert.ok(js.includes('Array.from({length:MEETWAVE_GUEST_LIMIT}'));
+});
+
+test('MeetWave layout and participant panels do not introduce inner scrolling', () => {
+  assert.ok(finalFit.includes('.mw-support-column>.mw-layout-panel'));
+  assert.ok(finalFit.includes('overflow:visible!important'));
+  assert.ok(!finalFit.includes('max-height:58vh!important'));
+  assert.ok(finalFit.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'));
+});
+
