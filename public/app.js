@@ -2310,7 +2310,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
-  if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
+  if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Check your connection and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
   activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;liveCameraEnabled=canUseCamera;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
@@ -5359,7 +5359,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
     }
     onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
   }else{
-    if(!window.tus?.Upload||!uploadInfo.endpoint||!uploadInfo.token)throw new Error('The secure resumable upload component did not load. Refresh Minglora and try again.');
+    if(!window.tus?.Upload||!uploadInfo.endpoint||!uploadInfo.token)throw new Error('The secure resumable upload component did not load. Check your connection and try again.');
     try{
       await new Promise((resolve,reject)=>{
         try{
@@ -7586,7 +7586,7 @@ async function openMingloraCall(call,liveKit){
   if(!client?.Room||!client?.RoomEvent){
     const action=call.createdBy===state.user.id?'end':'leave';
     await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'}).catch(()=>{});
-    toast('The call player could not load. Refresh Minglora and try again.');return;
+    toast('The call player could not load. Check your connection and try again.');return;
   }
   const overlay=document.createElement('div');overlay.className='call-overlay';
   overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">'+(call.createdBy===state.user.id?'End call for everyone':'Leave call')+'</button></footer></section>';
