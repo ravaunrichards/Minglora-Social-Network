@@ -103,3 +103,43 @@
 @media(prefers-reduced-motion:reduce){
   .call-overlay .call-ringing-pulse{animation:none!important}
 }
+
+/* Participant identity for voice calls and the pre-video connection state. */
+.call-overlay .call-peer-card{
+  display:flex!important;visibility:visible!important;opacity:1!important;
+  grid-column:1/-1!important;align-self:center!important;justify-self:center!important;
+  flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  width:min(520px,100%)!important;min-height:300px!important;padding:28px 20px!important;
+  color:#f6f9ff!important;text-align:center!important;
+}
+.call-overlay .call-peer-avatar-wrap{
+  position:relative!important;width:clamp(108px,18vw,164px)!important;
+  height:clamp(108px,18vw,164px)!important;margin:0 auto 18px!important;
+  border-radius:50%!important;padding:5px!important;
+  background:linear-gradient(135deg,#86c2ff,#5b76e8,#21c58a)!important;
+  box-shadow:0 14px 50px rgba(42,126,239,.28)!important;
+}
+.call-overlay .call-peer-avatar{
+  display:block!important;width:100%!important;height:100%!important;
+  border:4px solid #0d1727!important;border-radius:50%!important;object-fit:cover!important;
+  background:#233956!important;
+}
+.call-overlay .call-peer-name{display:block!important;margin:0!important;color:#fff!important;font-size:clamp(22px,4vw,30px)!important;font-weight:850!important}
+.call-overlay .call-peer-handle,.call-overlay .call-peer-kind,.call-overlay .call-peer-status{display:block!important;margin-top:6px!important;color:#bacce6!important;font-size:13px!important}
+.call-overlay .call-audio-visualizer{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;height:42px!important;margin:18px 0 5px!important}
+.call-overlay .call-audio-visualizer i{
+  display:block!important;width:5px!important;height:12px!important;border-radius:8px!important;
+  background:linear-gradient(180deg,#8cc7ff,#3e8ee8)!important;
+  animation:minglora-phone-wave 1s ease-in-out infinite alternate!important;
+}
+.call-overlay .call-audio-visualizer i:nth-child(2n){animation-delay:.18s!important}
+.call-overlay .call-audio-visualizer i:nth-child(3n){animation-delay:.34s!important}
+.call-overlay .call-audio-visualizer i:nth-child(4n){animation-delay:.5s!important}
+.call-overlay .call-audio-visualizer i:nth-child(1),.call-overlay .call-audio-visualizer i:nth-child(8){height:20px!important}
+.call-overlay .call-audio-visualizer i:nth-child(3),.call-overlay .call-audio-visualizer i:nth-child(6){height:32px!important}
+@keyframes minglora-phone-wave{from{transform:scaleY(.48);opacity:.65}to{transform:scaleY(1.08);opacity:1}}
+.call-overlay .call-panel-live-status{display:flex!important;align-items:center!important;gap:13px!important}
+.call-overlay .call-duration{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:58px!important;padding:6px 9px!important;border-radius:9px!important;background:rgba(95,145,211,.16)!important;color:#e8f2ff!important;font-variant-numeric:tabular-nums!important;font-weight:800!important}
+.call-overlay .call-peer-status{min-height:18px!important}
+.call-overlay button[aria-pressed="true"]{background:rgba(54,126,221,.25)!important;border-color:rgba(114,177,255,.6)!important}
+@media(prefers-reduced-motion:reduce){.call-overlay .call-audio-visualizer i{animation:none!important}}
