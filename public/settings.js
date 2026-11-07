@@ -232,7 +232,7 @@
               <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
               <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
               <div class="settings-activity-centre">
-                <div class="settings-inline-heading"><div><h3>Activity Center</h3><p class="muted">Recent profile and account actions recorded by Minglora.</p></div><button type="button" class="secondary" id="settings-refresh-activity">Refresh</button></div>
+                <div class="settings-inline-heading"><div><h3>Activity Center</h3><p class="muted">Recent profile and account actions recorded by Minglora.</p></div></div>
                 <div id="settings-activity-list">${activityHistoryMarkup(activityItems)}</div>
                 <p class="settings-note">Watch, comment, search, advertising, mention and content-reuse histories are not yet tracked in this activity feed. They will be added when their event records are available.</p>
               </div>
@@ -343,8 +343,8 @@
               <div class="settings-security-form"><h3>Your support conversations</h3><div id="support-tickets-list">${tickets.map(ticket=>'<article class="settings-ticket" data-ticket="'+escapeHtml(ticket.id)+'"><div class="settings-inline-heading"><strong>'+escapeHtml(ticket.subject)+'</strong><span class="settings-status-pill">'+escapeHtml(ticket.status)+'</span></div><small>'+escapeHtml(ticket.category)+' · '+escapeHtml(ticket.createdAt)+'</small><div class="settings-ticket-messages">'+(ticket.messages||[]).map(message=>'<p><strong>'+escapeHtml(message.sender?.name||'Minglora support')+':</strong> '+escapeHtml(message.message)+'</p>').join('')+'</div>'+(ticket.status==='closed'?'':'<form class="support-reply-form" data-reply-ticket="'+escapeHtml(ticket.id)+'"><input name="message" maxlength="5000" required placeholder="Reply to support"><button class="secondary" type="submit">Reply</button></form>')+'</article>').join('')||'<p class="settings-empty">No support tickets yet.</p>'}</div>
               </div>
               <div class="settings-security-form"><h3>Your reports</h3><div id="member-reports-list">${reports.map(report=>'<div class="settings-session-row"><div><strong>'+escapeHtml(report.targetType)+' · '+escapeHtml(report.category)+'</strong><small>'+escapeHtml(report.createdAt)+' · '+escapeHtml(report.status)+'</small></div></div>').join('')||'<p class="settings-empty">You have not submitted any reports.</p>'}</div></div>
-              ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3><button class="secondary" type="button" id="refresh-moderation">Refresh</button></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
-              ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3><button class="secondary" type="button" id="refresh-support-inbox">Refresh</button></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
+              ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
+              ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
             </section>
             <section class="settings-card settings-signout-card" id="settings-signout" data-settings-category="logon">
               ${sectionHeading('Log out')}
@@ -500,7 +500,6 @@
           }));
         }catch(error){panel.textContent=error.message;}
       }
-      document.querySelector('#refresh-support-inbox')?.addEventListener('click',loadModeratorSupportInbox);
       async function loadModerationQueue(){
         const panel=document.querySelector('#moderation-reports-list');if(!panel)return;panel.textContent='Loading reports…';
         try{
@@ -516,7 +515,6 @@
           }));
         }catch(error){panel.textContent=error.message;}
       }
-      document.querySelector('#refresh-moderation')?.addEventListener('click',loadModerationQueue);
       if(canModerate){loadModerationQueue();loadModeratorSupportInbox();}
       
       const ringtoneInput=document.querySelector('#call-ringtone-file');
@@ -662,16 +660,6 @@
         const button=event.target.closest('[data-profile-viewer]');
         const userId=button?.dataset.profileViewer;
         if(userId)window.dispatchEvent(new CustomEvent('minglora:open-profile',{detail:{userId}}));
-      });
-
-      document.querySelector('#settings-refresh-activity')?.addEventListener('click',async event=>{
-        const button=event.currentTarget,list=document.querySelector('#settings-activity-list');
-        button.disabled=true;
-        try{
-          const refreshed=await api('/users/'+encodeURIComponent(result.account.id)+'/activity');
-          if(list)list.innerHTML=activityHistoryMarkup(refreshed.activity);
-        }catch(error){if(list)list.textContent='Activity could not be refreshed. '+error.message;}
-        finally{button.disabled=false;}
       });
 
       const settingsSaveStatus = document.querySelector('#settings-save-status');
