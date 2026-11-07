@@ -5137,7 +5137,7 @@ function renderProfile(data){
   startCreatorLeagueProfileRefresh(u.id);
   const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
-    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
+    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit profile-subscribe" id="profile-subscribe" type="button" aria-label="Subscribe to '+esc(u.name)+'">Subscribe</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const profileThought=data.profileStatus||u.profileThought||null;
   const isAdminProfile=Boolean(isMe&&(u.platformBadge==='admin'||['platform_owner','admin','moderator'].includes(u.platformRole)));
@@ -5196,6 +5196,7 @@ function renderProfile(data){
     try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
     catch(error){toast(error.message);}
   });
+  $('#profile-subscribe')?.addEventListener('click',()=>toast('Creator subscription checkout is not connected yet.'));
   $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
   document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
