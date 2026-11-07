@@ -3151,10 +3151,10 @@ async function route(req, res) {
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creatorId) ||
             creatorId === user.id) return json(res, 400, { error: 'Choose a valid creator to subscribe to.' });
         const localSubscriptionId = uid();
-        let prepared = await requestSupabaseState('subscription_checkout_prepare', {
+        const prepared=await requestSupabaseState('subscription_checkout_prepare',{
           subscriberId:user.id,creatorId,subscriptionId:localSubscriptionId
         });
-        let checkoutId=String(prepared.subscription?.id||localSubscriptionId);
+        const checkoutId=String(prepared.subscription?.id||localSubscriptionId);
         let paypalSubscription;
         let resumed=false;
         if(prepared.resume===true&&prepared.subscription?.provider_subscription_id){
@@ -3181,15 +3181,18 @@ async function route(req, res) {
             }
           },'minglora-subscribe-'+checkoutId);
         }
-        const approvalUrl = (paypalSubscription.links || []).find(link =>
-          ['approve', 'payer-action'].includes(String(link.rel || '').toLowerCase())
-        )?.href;
-        if (!paypalSubscription.id || !approvalUrl) {
-          return json(res, 502, { error: 'PayPal did not return a subscription approval link. No subscription was confirmed.' });
+        const approvalUrl=String(prepared.subscription?.provider_approval_url||'')||
+          String((paypalSubscription.links||[]).find(link=>['approve','payer-action'].includes(String(link.rel||'').toLowerCase()))?.href||'');
+        let parsedApprovalUrl;
+        try{parsedApprovalUrl=new URL(approvalUrl);}catch{return json(res,502,{error:'PayPal did not return a valid subscription approval link. No subscription was confirmed.'});}
+        const approvalHost=parsedApprovalUrl.hostname.toLowerCase();
+        if(!paypalSubscription.id||parsedApprovalUrl.protocol!=='https:'||(approvalHost!=='paypal.com'&&!approvalHost.endsWith('.paypal.com'))){
+          return json(res,502,{error:'PayPal did not return a safe subscription approval link. No subscription was confirmed.'});
         }
         try {
           if(!resumed)await requestSupabaseState('subscription_checkout_attach',{
-            subscriberId:user.id,subscriptionId:checkoutId,paypalSubscriptionId:paypalSubscription.id
+            subscriberId:user.id,subscriptionId:checkoutId,paypalSubscriptionId:paypalSubscription.id,
+            providerApprovalUrl:approvalUrl
           });
         } catch (error) {
           await paypalRequest('/v1/billing/subscriptions/' + encodeURIComponent(paypalSubscription.id) + '/cancel', 'POST', {
