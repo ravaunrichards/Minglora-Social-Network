@@ -1214,9 +1214,17 @@ async function route(req, res) {
     const subscriptionEvents = new Set(['BILLING.SUBSCRIPTION.CREATED','BILLING.SUBSCRIPTION.ACTIVATED','BILLING.SUBSCRIPTION.UPDATED','BILLING.SUBSCRIPTION.CANCELLED','BILLING.SUBSCRIPTION.EXPIRED','BILLING.SUBSCRIPTION.SUSPENDED','BILLING.SUBSCRIPTION.PAYMENT.FAILED','PAYMENT.SALE.COMPLETED','PAYMENT.SALE.REFUNDED','PAYMENT.SALE.REVERSED']);
     if(subscriptionEvents.has(eventType)){
       const paypalSubscriptionId=String(resource.billing_agreement_id||(eventType.startsWith('BILLING.SUBSCRIPTION.')?resource.id:'')||'');
-      let subscriptionDetails=null;
+      let subscriptionDetails=null,saleDetails=null;
       if(paypalSubscriptionId)subscriptionDetails=await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(paypalSubscriptionId),'GET',undefined);
-      const result=await requestSupabaseState('subscription_paypal_webhook',{event,subscriptionDetails});
+      if(eventType==='PAYMENT.SALE.COMPLETED'&&paypalSubscriptionId){
+        const paidAt=Date.parse(resource.create_time||event.create_time||new Date().toISOString());
+        const startTime=new Date(paidAt-24*60*60*1000).toISOString();
+        const endTime=new Date(paidAt+24*60*60*1000).toISOString();
+        const txList=await paypalRequest('/v1/billing/subscriptions/'+encodeURIComponent(paypalSubscriptionId)+'/transactions?start_time='+encodeURIComponent(startTime)+'&end_time='+encodeURIComponent(endTime),'GET',undefined);
+        saleDetails=(txList.transactions||[]).find(item=>String(item.id||'')===String(resource.id||''))||null;
+        if(!saleDetails)return json(res,503,{error:'PayPal confirmed the recurring charge but its fee breakdown is not yet available. Minglora will retry reconciliation.'});
+      }
+      const result=await requestSupabaseState('subscription_paypal_webhook',{event,subscriptionDetails,saleDetails});
       if(result.matched===false)return json(res,202,{received:true,matched:false});
       return json(res,200,{received:true,processed:Boolean(result.processed),duplicate:Boolean(result.duplicate)});
     }
