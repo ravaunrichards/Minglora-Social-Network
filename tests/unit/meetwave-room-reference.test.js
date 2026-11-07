@@ -88,7 +88,7 @@ test('MeetWave scripts and styles use the current cache version', () => {
   const current = '20261107-meetwave-guest-spotlight-10';
   assert.ok(html.includes('/meetwave.css?v='+current));
   assert.ok(html.includes('/meetwave.js?v='+current));
-  assert.ok(serviceWorker.includes('minglora-shell-v147-meetwave-guest-spotlight-10'));
+  assert.ok(serviceWorker.includes('minglora-shell-v148-profile-actions-blue-1'));
   assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
   assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
 });
