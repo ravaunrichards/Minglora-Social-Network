@@ -1335,11 +1335,13 @@ Deno.serve(async (req: Request) => {
   if (action === "economy_send_gift") {
     const senderId = String(input.senderId || ""), broadcastId = String(input.broadcastId || "");
     const giftCode = String(input.giftCode || "");
-    if (!validUuid(senderId) || !validUuid(broadcastId) || !/^[a-z0-9_-]{1,60}$/.test(giftCode)) {
+    const recipientUserId = String(input.recipientUserId || "");
+    if (!validUuid(senderId) || !validUuid(broadcastId) || !validUuid(recipientUserId) || !/^[a-z0-9_-]{1,60}$/.test(giftCode)) {
       return json(400, { error: "Invalid LIVE gift request." });
     }
     const { data, error } = await admin.rpc("minglora_send_live_gift", {
-      p_sender_id: senderId, p_broadcast_id: broadcastId, p_gift_code: giftCode
+      p_sender_id: senderId, p_broadcast_id: broadcastId, p_gift_code: giftCode,
+      p_recipient_id: recipientUserId
     });
     if (error) return fail(error, "Minglora could not send the LIVE gift.");
 
