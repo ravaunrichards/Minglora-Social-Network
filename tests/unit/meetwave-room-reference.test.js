@@ -59,15 +59,14 @@ test('Host uses the LIVE circular power control; attendees retain Leave', () => 
   assert.ok(!js.includes('id="mw-end"'));
 });
 
-test('MeetWave panel and layout tiles keep consistent gaps, sizes and independent scrolling', () => {
+test('MeetWave layout controls fit as a complete grid without a separate scroll area', () => {
+  const fit = css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides.'));
   assert.ok(css.includes('minmax(250px,280px)'));
-  assert.ok(css.includes('max-height:290px!important'));
-  assert.ok(css.includes('overflow:auto!important'));
-  assert.ok(css.includes('gap:clamp(5px,.8vw,10px)!important;padding:clamp(7px,1vw,12px)!important'));
-  assert.ok(css.includes('height:clamp(320px,60dvh,680px)!important') && css.includes('overflow:hidden!important;box-sizing:border-box!important'));
-  assert.ok(css.includes('.mw-screen-stage.has-screen-share #mw-grid .live-guest-seat') && css.includes('min-height:0!important'));
-  assert.ok(css.includes('min-height:0!important;max-width:none!important;max-height:none!important'));
-  assert.ok(css.includes('.mw-support-column>.mw-layout-panel[hidden]{display:none!important}'));
+  assert.ok(fit.includes('overflow:visible!important'),'layout panel does not create its own scroll container');
+  assert.ok(fit.includes('max-height:none!important'),'layout panel is not artificially shortened');
+  assert.ok(fit.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),'nine layout choices use three columns');
+  assert.ok(fit.includes('gap:7px!important'),'layout buttons keep consistent separation');
+  assert.ok(fit.includes('min-height:44px!important'),'layout buttons remain touch friendly');
 });
 
 test('Guest seats invite members and return to the same seat when a participant leaves', () => {
@@ -85,10 +84,10 @@ test('Screen sharing uses a separate stage outside participant seats', () => {
 });
 
 test('MeetWave scripts and styles use the current cache version', () => {
-  const current = '20261107-meetwave-panel-layout-tab-7';
+  const current = '20261107-meetwave-fit-grid-9';
   assert.ok(html.includes('/meetwave.css?v='+current));
   assert.ok(html.includes('/meetwave.js?v='+current));
-  assert.ok(serviceWorker.includes('minglora-shell-v129-meetwave-panel-layout-tab-7'));
+  assert.ok(serviceWorker.includes('minglora-shell-v140-meetwave-fit-grid-9'));
   assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
   assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
 });
@@ -117,4 +116,17 @@ test('Legacy placement rules cannot stack guest tiles in panel or spotlight layo
   assert.ok(css.includes('#mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid>.live-guest-seat.is-host'));
   assert.ok(css.includes('#mw-screen-stage[data-screen-layout="spotlight"] #mw-grid>.live-guest-seat.is-spotlight'));
   assert.ok(css.includes('#mw-screen-stage.has-screen-share #mw-grid'));
+});
+
+
+test('MeetWave regular, full-screen and panel grids fit all nine seats without stage scrolling or oversized host tiles',()=>{
+  const fit=css.slice(css.lastIndexOf('/* Final MeetWave fit-to-view overrides.'));
+  assert.ok(fit.includes('overflow:hidden!important'));
+  assert.ok(fit.includes('height:min(60dvh,calc(100dvh - 260px),680px)!important'));
+  assert.ok(fit.includes('gap:clamp(7px,.9vw,11px)!important'));
+  assert.ok(fit.includes('grid-template-rows:24px repeat(3,minmax(0,1fr))!important'));
+  assert.ok(fit.includes('grid-template-rows:24px repeat(4,minmax(0,1fr))!important'));
+  assert.ok(fit.includes('grid-row:2/span 2!important'));
+  assert.ok(!fit.includes('grid-row:2/span 4!important'));
+  assert.ok(!fit.includes('overflow:auto!important'));
 });
