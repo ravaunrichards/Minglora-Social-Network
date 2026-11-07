@@ -159,3 +159,22 @@
   background:#245f9f!important;color:#fff!important;
   border:1px solid rgba(144,196,255,.5)!important;
 }
+
+/* Native modal top-layer presentation prevents chats, menus and page overlays
+   from covering the caller, receiver or active Minglora call screen. */
+dialog.call-overlay{
+  position:fixed!important;inset:0!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  box-sizing:border-box!important;margin:0!important;
+  width:100vw!important;height:100vh!important;height:100dvh!important;
+  max-width:none!important;max-height:none!important;
+  border:0!important;outline:0!important;
+  color:#f5f8ff!important;
+}
+dialog.call-overlay[open]{visibility:visible!important;opacity:1!important}
+dialog.call-overlay::backdrop{background:transparent!important;backdrop-filter:none!important}
+dialog.call-overlay .call-panel{margin:auto!important}
+@media(max-width:700px){
+  dialog.call-overlay{padding:0!important}
+  dialog.call-overlay.call-ringing-overlay{padding:14px!important}
+}
