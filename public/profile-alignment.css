@@ -423,3 +423,75 @@
 @media(max-width:390px){
   .profile-header-card--viewer .profile-avatar-edit-wrap{margin-top:-34px!important}
 }
+
+
+/* People You May Know: keep the avatar clear of the cover label. */
+.person-card--immersive .person-identity{
+  position:relative!important;
+  z-index:4!important;
+  align-items:flex-start!important;
+}
+.person-card--immersive .person-avatar-wrap{
+  position:relative!important;
+  z-index:5!important;
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 72px!important;
+  width:72px!important;
+  height:72px!important;
+  min-width:72px!important;
+  aspect-ratio:1 / 1!important;
+  overflow:hidden!important;
+  border-radius:50%!important;
+  box-sizing:border-box!important;
+}
+.person-card--immersive .person-avatar-wrap button{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border-radius:50%!important;
+  aspect-ratio:1 / 1!important;
+}
+.person-card--immersive .person-avatar-wrap .avatar{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  object-fit:cover!important;
+  object-position:50% 50%!important;
+  border-radius:50%!important;
+  box-sizing:border-box!important;
+}
+.person-card--immersive .person-cover-caption{
+  left:auto!important;
+  right:14px!important;
+  bottom:12px!important;
+  max-width:calc(100% - 112px)!important;
+  overflow:hidden!important;
+  text-align:right!important;
+  white-space:nowrap!important;
+  text-overflow:ellipsis!important;
+  pointer-events:none!important;
+}
+@media(max-width:420px){
+  .person-card--immersive .person-avatar-wrap{
+    flex-basis:66px!important;
+    width:66px!important;
+    height:66px!important;
+    min-width:66px!important;
+  }
+  .person-card--immersive .person-cover-caption{
+    right:10px!important;
+    max-width:calc(100% - 96px)!important;
+    font-size:8px!important;
+    letter-spacing:1px!important;
+  }
+}
