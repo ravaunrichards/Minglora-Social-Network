@@ -17,6 +17,8 @@ test('registers before auth and refreshes the client automatically at safe idle 
   assert.match(app, /registration\.update\(\)/, 'the client checks for newer service-worker versions');
   assert.match(app, /MINGLORA_UPDATE_CHECK_INTERVAL_MS=5\*60\*1000/, 'updates are checked every five minutes while visible');
   assert.match(app, /MINGLORA_UPDATE_IDLE_MS=45\*1000/, 'updates wait for a quiet idle window');
+  assert.match(app, /querySelectorAll\('video,audio'\)/, 'updates wait while audio or video is playing');
+  assert.match(app, /'wheel','scroll'/, 'scrolling postpones automatic reload');
   assert.match(app, /activeCallRoom\|\|activeCallOverlay\|\|activeLiveRoom/, 'active calls and LIVE rooms prevent automatic reload');
   assert.match(app, /MingloraMeetWave\.canAutoUpdate\(\)/, 'active MeetWave rooms prevent automatic reload');
   assert.match(worker, /MINGLORA_ACTIVATE_WHEN_SAFE/, 'worker activation requires a safe client signal');
