@@ -135,3 +135,17 @@
 }
 .profile-actions .profile-followers-action strong{font-size:.94rem;font-weight:800}
 .profile-actions .profile-followers-action span{font-size:.76rem;color:var(--muted,#64748b)}
+
+
+/* Preserve the intended mobile swipe row even alongside legacy viewer flex rules. */
+@media(max-width:760px){
+  .profile-header-card--viewer .profile-info>.profile-actions{
+    flex-wrap:nowrap!important;
+    justify-content:flex-start!important;
+    overflow-x:auto!important;
+  }
+  .profile-header-card--viewer .profile-info>.profile-actions>*{
+    flex:0 0 auto!important;
+    min-width:max-content!important;
+  }
+}
