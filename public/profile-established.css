@@ -243,3 +243,41 @@
   opacity:.58;
   cursor:not-allowed;
 }
+
+
+/* Profile action colors: blue is inactive; red is active or selected.
+   These color rules intentionally leave the existing horizontal layout untouched. */
+.profile-header-card .profile-actions .profile-edit:is(
+  [data-following="true"],
+  [data-friendship="accepted"],
+  [data-subscription-active="true"],
+  [aria-pressed="true"],
+  [data-active="true"],
+  .is-active
+),
+.profile-header-card .profile-actions .profile-edit[aria-busy="true"]{
+  background:var(--danger,#c43d4b)!important;
+  border-color:var(--danger,#c43d4b)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-actions .profile-edit:active:not(:disabled){
+  background:var(--danger,#c43d4b)!important;
+  border-color:var(--danger,#c43d4b)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-actions .profile-edit:is(
+  [data-following="true"],
+  [data-friendship="accepted"],
+  [data-subscription-active="true"],
+  [aria-pressed="true"],
+  [data-active="true"],
+  .is-active,
+  [aria-busy="true"]
+):hover:not(:disabled){
+  background:color-mix(in srgb,var(--danger,#c43d4b) 84%,#000)!important;
+  border-color:color-mix(in srgb,var(--danger,#c43d4b) 84%,#000)!important;
+}
+.profile-header-card .profile-actions .profile-edit[data-subscription-active="true"]:disabled{
+  opacity:1;
+  cursor:default;
+}
