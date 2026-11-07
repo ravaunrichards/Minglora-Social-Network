@@ -69,3 +69,18 @@ test('multiple partial refunds reverse the original net creator/platform shares 
     refundedBeforeMinor: 9000, refundGrossMinor: 1001
   }), /cannot exceed/);
 });
+
+
+test('runtime requires PayPal-matched settled fees and calculates shares from net only', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const edge = await readFile(new URL('../../supabase/functions/minglora-runtime-state/index.ts', import.meta.url), 'utf8');
+  assert.match(edge, /transactionDetails\?\.transactions/);
+  assert.match(edge, /status\s*\|\|\s*""\)\.toUpperCase\(\) === "COMPLETED"/);
+  assert.match(edge, /fee_reconciled: true/);
+  assert.match(edge, /const netMinor = amountMinor - providerFeeMinor - taxMinor/);
+  assert.match(edge, /calculateCreatorSubscriptionShares/ === undefined ? /never/ : /never/);
+  assert.match(edge, /parent_provider_transaction_id: originalSaleId/);
+  assert.match(edge, /refundedAfterMinor/);
+  assert.match(edge, /qualifyingVideoViews >= 100000/);
+  assert.doesNotMatch(edge, /creatorMinor = amountMinor \* creatorShareBps/);
+});
