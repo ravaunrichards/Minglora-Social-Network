@@ -1032,6 +1032,7 @@ let liveScreenShareEnabled=false;
 let liveCameraFacing='user';
 let liveGiftCatalogue=[];
 let liveGiftEventsTimer=null;
+let liveGiftRecipientsTimer=null;
 let liveGiftEventsBusy=false;
 let liveGiftEventsLastSeenAt='';
 const liveGiftSeenEventIds=new Set();
@@ -1415,6 +1416,7 @@ async function syncLiveParticipantPresence(session){
 function stopLiveSpeakerRefresh(){if(liveSpeakerRefreshTimer){clearInterval(liveSpeakerRefreshTimer);liveSpeakerRefreshTimer=null;}}
 function stopLiveGiftEvents(){
   if(liveGiftEventsTimer){clearInterval(liveGiftEventsTimer);liveGiftEventsTimer=null;}
+  if(liveGiftRecipientsTimer){clearInterval(liveGiftRecipientsTimer);liveGiftRecipientsTimer=null;}
   liveGiftEventsBusy=false;
   liveGiftEventsLastSeenAt='';
   liveGiftSeenEventIds.clear();
@@ -2997,9 +2999,9 @@ activeLivePinnedComment=null;
       const liveGiftCategoryNames={flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
       const liveGiftCategoryName=key=>liveGiftCategoryNames[String(key||"").toLowerCase()]||String(key||"More gifts").replace(/[_-]+/g," ").replace(/\b\w/g,char=>char.toUpperCase());
       const liveGiftByCode=code=>liveGiftCatalogue.find(item=>String(item.code)===String(code))||null;
-      async function loadLiveGiftRecipients(liveSession){
+      async function loadLiveGiftRecipients(liveSession,silent=false){
         const select=$("#live-gift-recipient");if(!select)return;
-        select.disabled=true;select.innerHTML="<option value=''>Loading LIVE participants…</option>";
+        const previousRecipient=String(select.value||"");
         try{
           const result=await api("/live/sessions/"+encodeURIComponent(liveSession.id)+"/gift-recipients");
           liveGiftRecipients=Array.isArray(result.recipients)?result.recipients:[];
@@ -3009,12 +3011,15 @@ activeLivePinnedComment=null;
             :"<option value=''>No other connected participants</option>";
           select.disabled=!liveGiftRecipients.length;
           if(liveGiftRecipients.length){
-            const preferred=liveGiftRecipients.find(member=>member.role==="host")||liveGiftRecipients[0];
+            const preferred=liveGiftRecipients.find(member=>String(member.id)===previousRecipient)
+              ||liveGiftRecipients.find(member=>member.role==="host")||liveGiftRecipients[0];
             select.value=preferred.id;
           }
         }catch(error){
-          liveGiftRecipients=[];select.innerHTML="<option value=''>Recipient list unavailable · retry</option>";
-          select.disabled=true;toast(error.message||"Could not load LIVE gift recipients.");
+          if(!silent){
+            select.innerHTML="<option value=''>Recipient list unavailable · retry</option>";
+            select.disabled=true;toast(error.message||"Could not load LIVE gift recipients.");
+          }
         }
         updateLiveGiftPreview();
       }
@@ -3217,6 +3222,8 @@ activeLivePinnedComment=null;
       });
       $("#live-recharge")?.addEventListener("click",()=>activateNav("coins"));
       await loadLiveGiftRecipients(session);
+      if(liveGiftRecipientsTimer)clearInterval(liveGiftRecipientsTimer);
+      liveGiftRecipientsTimer=setInterval(()=>void loadLiveGiftRecipients(session,true),5000);
       await loadLiveGiftCatalogue();
       startLiveGiftEvents(session);
     }
