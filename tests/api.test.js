@@ -389,6 +389,13 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const forbiddenModeratorQueue = await request('/api/moderation/reports');
   assert.equal(forbiddenModeratorQueue.status, 403);
 
+  const forbiddenAdminMemberSearch = await request('/api/admin/members?search=second');
+  assert.equal(forbiddenAdminMemberSearch.status, 403, 'ordinary members cannot search the private admin directory');
+  const forbiddenAdminBan = await request('/api/admin/members/' + registration.body.user.id + '/status', { method: 'POST', body: JSON.stringify({ action: 'ban', reason: 'Automated authorization boundary test.' }) });
+  assert.equal(forbiddenAdminBan.status, 403, 'ordinary members cannot ban or unban accounts');
+  const forbiddenAdminAuditLog = await request('/api/admin/audit-log');
+  assert.equal(forbiddenAdminAuditLog.status, 403, 'ordinary members cannot read administrator audit history');
+
   const accountExport = await request('/api/account/export');
   assert.equal(accountExport.status, 200);
   assert.equal(accountExport.body.format, 'minglora-account-export');
