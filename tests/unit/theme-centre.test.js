@@ -53,8 +53,8 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.match(html, /styles\.css\?v=20261107-top-gifters-1/);
-  assert.match(html, /app\.js\?v=20261107-top-gifters-2/);
+  assert.ok(html.includes('styles.css?v=20261107-profile-edit-dialog-1'));
+  assert.ok(html.includes('app.js?v=20261107-live-layout-1'));
   assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(html, /settings\.js\?v=20261106-refresh-controls-removed-1/);
   assert.match(sw, /v161-live-compact-1/);
