@@ -107,6 +107,17 @@ test('visitor profile actions stay readable and tappable on narrow screens',()=>
   assert.ok(profile.includes('id="profile-block" aria-label="Block \'+esc(u.name)+\'">Block</button>'));
 });
 
+test('profile actions use blue when inactive and red when active without changing layout',()=>{
+  assert.ok(profileCss.includes('background:var(--blue)!important'),'inactive profile actions use Minglora blue');
+  assert.ok(profileCss.includes('background:var(--danger,#c43d4b)!important'),'active profile actions use red');
+  assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
+  assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
+  assert.ok(profile.includes('data-friendship="'+esc(data.friendship||'')+'"'),'accepted friendship is represented as active');
+  assert.ok(profile.includes("data-subscription-active=\\"'+(subscriptionStatus==='active'?'true':'false')+'\\""),'subscription state is wired to the active color');
+  assert.ok(profileCss.includes('display:grid!important'),'existing horizontal action layout remains in place');
+  assert.ok(profileCss.includes('grid-template-columns:repeat(auto-fit,minmax(min(100%,132px),1fr))!important'),'existing responsive columns remain unchanged');
+});
+
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
