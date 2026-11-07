@@ -5543,9 +5543,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       }
       const callStatusMatch=p.match(/^\/api\/calls\/([^/]+)\/status$/);
       if(method==='GET'&&callStatusMatch){
-        await callSessionCleanupReady;
-        try{await reconcileCallPresenceForUsers([user.id]);}
-        catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
+        // Ringing and participant state are already persisted. Status polling
+        // must remain available even when LiveKit presence cannot be refreshed.
         const call=(db.calls||[]).find(item=>item.id===callStatusMatch[1]);
         const participant=(db.callParticipants||[]).find(item=>item.callId===callStatusMatch[1]&&item.userId===user.id);
         if(!call)return json(res,404,{error:'Call not found.'});
