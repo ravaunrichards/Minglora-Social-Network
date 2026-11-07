@@ -190,3 +190,73 @@
   .profile-admin-tool{gap:6px;padding:7px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.profile-admin-tool{transition:none}}
+
+/* Compact profile thought cloud: separate it slightly from the top edge and avoid a full-width banner. */
+.profile-thought-row{
+  align-self:start!important;
+  justify-self:start!important;
+  width:100%!important;
+  margin:10px 0 8px!important;
+}
+.profile-thought-card{
+  position:relative!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:fit-content!important;
+  max-width:min(340px,calc(100vw - 42px))!important;
+  min-height:42px!important;
+  padding:8px 13px!important;
+  overflow:visible!important;
+  border-radius:22px 22px 22px 10px!important;
+  background:var(--surface-soft)!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.09)!important;
+  isolation:isolate;
+}
+.profile-thought-card::before,
+.profile-thought-card::after{
+  content:"";
+  position:absolute;
+  z-index:0;
+  display:block;
+  border:1px solid color-mix(in srgb,var(--blue) 45%,var(--line));
+  border-radius:50%;
+  background:var(--surface-soft);
+  pointer-events:none;
+}
+.profile-thought-card::before{
+  left:20px;
+  bottom:-7px;
+  width:9px;
+  height:9px;
+}
+.profile-thought-card::after{
+  left:13px;
+  bottom:-14px;
+  width:5px;
+  height:5px;
+}
+.profile-thought-card>*{
+  position:relative;
+  z-index:1;
+}
+.profile-thought-card-text{
+  max-width:285px;
+  line-height:1.4;
+}
+.profile-thought-card--empty{
+  min-width:0!important;
+  max-width:min(270px,calc(100vw - 42px))!important;
+  padding:8px 13px!important;
+}
+.profile-thought-card--empty .profile-thought-pencil{
+  flex-basis:30px;
+  width:30px;
+  height:30px;
+}
+@media(max-width:760px){
+  .profile-thought-row{margin:9px 0 7px!important}
+  .profile-thought-card{max-width:min(300px,calc(100vw - 34px))!important}
+  .profile-thought-card-text{max-width:245px;font-size:12px}
+  .profile-thought-card--empty{max-width:min(250px,calc(100vw - 34px))!important}
+}
