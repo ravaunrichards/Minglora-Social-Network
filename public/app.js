@@ -7211,6 +7211,9 @@ function renderMessageContent(messages=[]){
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
 function syncMessageRefreshPolling(){
   if(messageRefreshTimer){clearInterval(messageRefreshTimer);messageRefreshTimer=null;messageRefreshIntervalMs=0;}
+  if(!state.user||state.messengerRealtimeConnected||document.visibilityState==='hidden')return;
+  messageRefreshIntervalMs=5000;
+  messageRefreshTimer=window.setInterval(refreshMessageConversations,5000);
 }
 async function refreshMessageConversations(){
   if(!state.user||document.visibilityState==='hidden'||messageRefreshInFlight)return;
@@ -8274,7 +8277,7 @@ async function renderNotifications(){
   });
 }
 async function pollBrowserNotifications(){
-  if(!state.user)return;
+  if(!state.user||document.visibilityState==='hidden')return;
   void updateMessengerBadge();
   try{
     const items=(await api('/notifications')).notifications||[];
@@ -8298,6 +8301,8 @@ async function pollBrowserNotifications(){
 function startBrowserNotificationPolling(){
   if(browserNotificationTimer){clearInterval(browserNotificationTimer);browserNotificationTimer=null;}
   browserNotificationPrimed=false;browserNotificationSeen=new Set();
+  browserNotificationTimer=window.setInterval(pollBrowserNotifications,6000);
+  void pollBrowserNotifications();
 }
 function paintNotificationBadge(items){
   const unread=(items||[]).filter(item=>!item.read).length;
