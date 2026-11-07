@@ -79,5 +79,5 @@ test('profile overflow and administrator controls are wired to their feature han
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
   assert.ok(html.includes('/app.js?v=20261107-profile-controls-functional-1'));
   assert.ok(worker.includes("'/app.js?v=20261107-profile-controls-functional-1'"));
-  assert.ok(worker.includes("minglora-shell-v130-profile-controls-functional-1"));
+  assert.ok(worker.includes("minglora-shell-v131-live-top-gifters-1"));
 });
