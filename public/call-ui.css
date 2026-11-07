@@ -151,3 +151,11 @@
   font-size:12px!important;font-weight:800!important;cursor:pointer!important;
 }
 .call-overlay .call-audio-unlock[hidden]{display:none!important}
+
+
+/* Reconnect is a real call action; hidden controls must stay out of the layout. */
+.call-overlay .call-controls button[hidden]{display:none!important}
+.call-overlay .call-controls #call-retry{
+  background:#245f9f!important;color:#fff!important;
+  border:1px solid rgba(144,196,255,.5)!important;
+}
