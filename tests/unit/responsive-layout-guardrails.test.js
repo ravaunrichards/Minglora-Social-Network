@@ -158,13 +158,16 @@ test('profile cover preview, saved cover and phone layout use the same wide crop
   assert.match(css, /\.profile-crop-preview--cover\{[^}]*aspect-ratio:3\/1;min-height:0/);
 });
 
-test('routine profile editors stay in document flow and do not create modal overlays', async () => {
+test('routine profile editors open in centered native dialogs without scrolling to inserted forms', async () => {
   const [css, app] = await Promise.all([read('public/styles.css'), read('public/app.js')]);
-  assert.ok(css.includes('.profile-inline-editor{'));
-  assert.ok(css.includes('.about-section-inline-editor{'));
-  assert.doesNotMatch(css, /\\.profile-editor-backdrop|\\.profile-editor-modal|\\.about-section-editor-modal/);
-  assert.doesNotMatch(app, /modal-backdrop profile-editor-backdrop|modal-backdrop about-section-editor-backdrop/);
-  assert.ok(app.includes("profileHeader.insertAdjacentElement('afterend',modal)"));
-  assert.ok(app.includes('profilePanel.append(modal)'));
-});
+  assert.ok(css.includes('dialog.profile-editor-dialog{'));
+  assert.ok(css.includes('dialog.profile-editor-dialog::backdrop'));
+  assert.ok(app.includes("document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes("document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes('modal.showModal()'));
+  assert.ok(app.includes("modal.addEventListener('cancel'"));
+  assert.ok(!app.includes("profileHeader.insertAdjacentElement('afterend',modal)"));
+  assert.ok(!app.includes('profilePanel.append(modal)'));
+  assert.ok(!app.includes("modal.scrollIntoView({behavior:'smooth',block:'start'})"));
+});;
 
