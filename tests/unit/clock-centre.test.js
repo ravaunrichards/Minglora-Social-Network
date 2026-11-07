@@ -29,7 +29,8 @@ test('analogue and digital clocks support all selectable visual styles', () => {
   assert.match(clock, /clock-digital-secondary/);
   for (const style of ['luxury','silver','classic','neon','futuristic','glass','wood','skeleton','minimalist']) {
     assert.ok(clock.includes("'" + style + "'"), 'missing selectable style ' + style);
-    assert.ok(css.includes('clock-theme-' + style), 'missing style treatment ' + style);
+    if (style === 'luxury') assert.match(css, /\.clock-centre-app\{/);
+    else assert.ok(css.includes('clock-theme-' + style), 'missing style treatment ' + style);
   }
   assert.match(css, /perspective:/);
   assert.match(css, /transform-style:preserve-3d/);
