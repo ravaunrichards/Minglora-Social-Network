@@ -13,10 +13,10 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 
 test('phone call stylesheet loads after global layout overrides and is precached',()=>{
-  const styleTag='<link rel="stylesheet" href="/call-ui.css?v=20261107-phone-call-ui-3">';
+  const styleTag='<link rel="stylesheet" href="/call-ui.css?v=20261107-phone-call-ui-4">';
   assert.ok(html.includes(styleTag),'the phone call stylesheet is loaded');
   assert.ok(html.indexOf(styleTag)>html.indexOf('mobile-profile-navigation.css'),'the call styles override later page layout rules');
-  assert.ok(worker.includes("'/call-ui.css?v=20261107-phone-call-ui-3'"),'the service worker precaches call styles');
+  assert.ok(worker.includes("'/call-ui.css?v=20261107-phone-call-ui-4'"),'the service worker precaches call styles');
   assert.match(worker,/CACHE_NAME='minglora-shell-v[0-9]+-/);
 });
 
@@ -117,4 +117,23 @@ test('call notifications return to the current app window and load the latest ca
   assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('existing.navigate(target)'));
   assert.ok(clickHandler.includes('existing.focus()'));
   assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('const exactTarget=windows.find'));
+});
+
+test('call screens stay mounted and offer a live retry when media setup fails',()=>{
+  const start=app.indexOf('async function openMingloraCall(');
+  const end=app.indexOf('function notificationCategoryFor',start);
+  const source=app.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.ok(source.indexOf('document.body.append(overlay)')<source.indexOf("if(!client?.Room||!client?.RoomEvent)"));
+  assert.match(source,/id="call-retry"/);
+  assert.match(source,/showReconnect\(/);
+  assert.match(source,/\/join/);
+  assert.doesNotMatch(source,/closeOverlay\(\);toast\(error\.message\|\|'The call could not connect\.'/);
+});
+
+test('Android WebView allows asynchronous incoming and remote call audio',()=>{
+  const android=read('apps/android/app/src/main/java/com/minglora/social/MainActivity.java');
+  assert.match(android,/setMediaPlaybackRequiresUserGesture\(false\)/);
+  assert.match(android,/RESOURCE_AUDIO_CAPTURE/);
+  assert.match(android,/RESOURCE_VIDEO_CAPTURE/);
 });
