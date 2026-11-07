@@ -4096,7 +4096,18 @@ async function route(req, res) {
         if(!session||session.status!=='live'||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
         if(session.liveSettings?.groupChatEnabled===false)return json(res,403,{error:'The host has disabled group LIVE chat for this broadcast.'});
         const friends=isFriend(user.id,session.hostId);
-        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends);
+        let subscriberAccess=false;
+        if(session.visibility==='subscribers'&&session.hostId!==user.id){
+          try{
+            if(isSupabasePersistence()){
+              const access=await requestSupabaseState('subscription_access_check',{userId:user.id,creatorIds:[session.hostId]});
+              subscriberAccess=(access.authorizedCreatorIds||[]).includes(session.hostId);
+            }else{
+              subscriberAccess=listActiveCreatorSubscriptions(db.creatorSubscriptions,session.hostId).some(item=>item.subscriberId===user.id);
+            }
+          }catch{subscriberAccess=false;}
+        }
+        const canView=session.hostId===user.id||session.visibility==='public'||(session.visibility==='friends'&&friends)||subscriberAccess;
         if(!canView)return json(res,404,{error:'LIVE session not found.'});
         if(method==='GET')return json(res,200,await requestSupabaseState('live_chat_list',{broadcastId:session.id}));
         const sent=await requestSupabaseState('live_chat_send',{broadcastId:session.id,userId:user.id,body:String(input.body||'')});
