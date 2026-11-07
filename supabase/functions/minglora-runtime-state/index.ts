@@ -1526,7 +1526,7 @@ Deno.serve(async (req: Request) => {
     const name = String(input.name || "Monthly membership").trim(), description = String(input.description || "").trim();
     const benefits = Array.isArray(input.benefits) ? input.benefits.map((item: unknown) => String(item).trim()).filter(Boolean).slice(0, 8) : [];
     if (!validUuid(creatorId) || !/^PROD-[A-Z0-9]+$/i.test(productId) || !/^P-[A-Z0-9]+$/i.test(planId) ||
-        currency !== "USD" || !Number.isSafeInteger(priceMinor) || priceMinor < 100 || priceMinor > 1000000 || priceMinor % 2 !== 0 ||
+        currency !== "USD" || !Number.isSafeInteger(priceMinor) || priceMinor < 299 || priceMinor > 9999 ||
         name.length < 2 || name.length > 48 || description.length > 500 || benefits.some((item: string) => item.length > 100)) {
       return json(400, { error: "Enter a valid monthly price, title, benefits and PayPal plan." });
     }
