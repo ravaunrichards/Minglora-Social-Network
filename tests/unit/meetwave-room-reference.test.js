@@ -92,3 +92,22 @@ test('MeetWave scripts and styles use the current cache version', () => {
   assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
   assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
 });
+
+
+test('MeetWave layouts fit all nine fixed seats inside a non-scrolling stage', () => {
+  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']) {
+    assert.ok(css.includes('data-screen-layout="'+layout+'"'), layout+' has a fit-to-view layout rule');
+  }
+  assert.ok(css.includes('height:clamp(320px,60dvh,680px)!important'));
+  assert.ok(css.includes('overflow:hidden!important;box-sizing:border-box!important'));
+  assert.ok(css.includes('grid-template-rows:28px repeat(3,minmax(0,1fr))!important'));
+  assert.ok(!css.endsWith('/* Allow every seat row to be reached; the screen stage scrolls instead of cropping tiles. */'));
+});
+
+test('Spotlight allows selecting any guest and returning focus to host', () => {
+  assert.ok(js.includes('id="mw-spotlight-host"'));
+  assert.ok(js.includes("applySpotlightSelection(tile.dataset.identity)"));
+  assert.ok(js.includes("applySpotlightSelection(hostTile?.dataset.identity||activeRoom?.ownerId||state.user.id)"));
+  assert.ok(js.includes("activeLayout==='spotlight'"));
+  assert.ok(css.includes('.mw-screen-stage[data-screen-layout="spotlight"] #mw-grid>.live-guest-seat.is-spotlight'));
+});
