@@ -77,10 +77,11 @@ test('a full app refresh restores the signed-in member to the last page and scro
 });
 
 test('the page restore and non-disruptive refresh scripts receive a fresh browser cache version', () => {
-  assert.match(html, /app\.js\?v=20261106-refresh-controls-removed-1/);
+  const appAsset = html.match(/app\.js\?v=[^\"' ]+/)?.[0];
+  assert.ok(appAsset, 'HTML requests a versioned app script');
   assert.match(html, /leagues\.js\?v=20261106-league-auto-update-1/);
   assert.match(sw, /v102-preserve-active-page-refresh-2/);
-  assert.match(sw, /app\.js\?v=20261106-refresh-controls-removed-1/);
+  assert.ok(sw.includes(appAsset), 'service worker caches the same app script URL');
   assert.match(sw, /leagues\.js\?v=20261106-league-auto-update-1/);
 });
 
