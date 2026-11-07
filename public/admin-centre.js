@@ -209,16 +209,20 @@
             <span class="admin-control-centre-status">Owner-only</span>
           </div>
           <div class="admin-user-management-search">
-            <label for="admin-user-search">Find any member account</label>
-            <input id="admin-user-search" type="search" maxlength="120" autocomplete="off" placeholder="Name, @username, email address or user ID">
-            <label for="admin-user-status-filter">Account status</label>
-            <select id="admin-user-status-filter">
-              <option value="all">All accounts</option>
-              <option value="active">Active</option>
-              <option value="banned">Banned</option>
-              <option value="suspended">Suspended</option>
-              <option value="deactivated">Deactivated</option>
-            </select>
+            <div class="admin-user-search-field">
+              <label for="admin-user-search">Find any member account</label>
+              <input id="admin-user-search" type="search" maxlength="120" autocomplete="off" placeholder="Name, @username, email address or user ID">
+            </div>
+            <div class="admin-user-search-field">
+              <label for="admin-user-status-filter">Account status</label>
+              <select id="admin-user-status-filter">
+                <option value="all">All accounts</option>
+                <option value="active">Active</option>
+                <option value="banned">Banned</option>
+                <option value="suspended">Suspended</option>
+                <option value="deactivated">Deactivated</option>
+              </select>
+            </div>
             <button type="button" class="primary" id="admin-user-search-button">Search accounts</button>
           </div>
           <p id="admin-user-management-status" class="admin-user-management-status" role="status" aria-live="polite">Loading member accounts…</p>
