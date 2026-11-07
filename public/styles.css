@@ -6825,3 +6825,11 @@ button.live-ranking-row{cursor:pointer}
   visibility:visible!important;
 }
 .profile-account-menu.is-top-layer[hidden]{display:none!important}
+
+
+/* Subscription experience controls. */
+.creator-subscription-features .creator-toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.creator-subscription-features .creator-toggle-row:last-child{border-bottom:0}
+.creator-subscription-features .creator-toggle-row span{display:grid;gap:3px;min-width:0}
+.creator-subscription-features .creator-toggle-row small{color:var(--muted);font-size:12px;line-height:1.4}
+.creator-subscription-features .creator-toggle-row input{width:18px;height:18px;flex:none;accent-color:var(--blue)}
