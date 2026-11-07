@@ -28,7 +28,9 @@ test("viewers can gift hosts or guests and hosts and guests can gift each other"
 });
 
 test("the database credits the selected recipient and preserves source-backed earnings", () => {
-  assert.match(migration, /DROP FUNCTION IF EXISTS public\.minglora_send_live_gift\(uuid,uuid,text\)/);
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.minglora_send_live_gift/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION public\.minglora_send_live_gift\(uuid,uuid,text,uuid\)/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.minglora_send_live_gift\(uuid,uuid,text,uuid\)\s+TO service_role/);
   assert.match(migration, /p_recipient_id uuid DEFAULT NULL/);
   assert.match(migration, /recipient_id := coalesce\(p_recipient_id,broadcast\.host_id\)/);
   assert.match(migration, /p_recipient_id uuid/);
