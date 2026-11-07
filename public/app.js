@@ -5474,11 +5474,16 @@ function renderProfile(data){
   document.querySelectorAll('[data-view-image]').forEach(image=>image.addEventListener('click',()=>{const url=image.dataset.viewImage;if(url)openImageViewer(url,image.dataset.imageLabel||'Profile image');}));
   const profileSubscribeButton=$('#profile-subscribe');
   if(profileSubscribeButton){
-    if(!subscriptionEnabled)profileSubscribeButton.remove();
-    else{
-      profileSubscribeButton.textContent=subscriptionLabel;
-      profileSubscribeButton.disabled=subscriptionAlreadyExists;
-      profileSubscribeButton.setAttribute('aria-label',subscriptionLabel);
+    // Keep Subscribe visible on every visitor profile. The checkout route remains
+    // connected; the server validates creator approval and the active billing tier.
+    profileSubscribeButton.textContent=subscriptionLabel;
+    profileSubscribeButton.disabled=subscriptionAlreadyExists;
+    profileSubscribeButton.dataset.subscriptionEnabled=subscriptionEnabled?'true':'false';
+    profileSubscribeButton.setAttribute('aria-label',subscriptionLabel);
+    if(!subscriptionEnabled&&!subscriptionAlreadyExists){
+      profileSubscribeButton.title='Creator subscriptions are not currently enabled for this profile.';
+    }else{
+      profileSubscribeButton.removeAttribute('title');
     }
   }
   showTab(tab);
