@@ -63,11 +63,11 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 });
 
 test('the refreshed shell and service worker load the pinch-to-zoom crop editor and styles',()=>{
-  assert.match(html,/styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(html,/app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(worker,/v113-pinch-zoom-photo-crop-1/);
-  assert.match(worker,/styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(worker,/app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
+  assert.match(html,/app\.js\?v=20261107-top-gifters-1/);
+  assert.match(worker,/v131-live-top-gifters-1/);
+  assert.match(worker,/styles\.css\?v=20261107-top-gifters-1/);
+  assert.match(worker,/app\.js\?v=20261107-top-gifters-1/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
