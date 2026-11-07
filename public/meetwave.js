@@ -289,7 +289,7 @@
     $('#mw-screen').onclick=async()=>{const next=!screenOn;try{const publication=await roomClient.localParticipant.setScreenShareEnabled(next);screenOn=next;if(next&&publication?.track)attachTrack(publication.track,roomClient.localParticipant);if(!next)$('#mw-tile-'+state.user.id.replace(/[^a-zA-Z0-9_-]/g,'_')+'-screen')?.remove();setRoomControlState('mw-screen',screenOn,screenOn?'Stop share':'Share',screenOn?'Stop screen sharing':'Share screen');}catch(error){note(error.message,true);}};
     $('#mw-layout').onclick=toggleMeetingLayout;
     $('#mw-fullscreen').onclick=toggleMeetingFullscreen;
-    $('#mw-settings').onclick=toggleMeetingSettings;
+    $('#mw-settings').onclick=()=>setMeetWaveSideTab('settings');
     $('#mw-layout-picker-close').onclick=()=>$('#mw-layout-picker').hidden=true;
     $('#mw-settings-close').onclick=()=>{ $('#mw-settings-panel').hidden=true; $('#mw-settings').classList.remove('is-active'); $('#mw-settings').setAttribute('aria-expanded','false'); };
     document.querySelectorAll('[data-mw-layout]').forEach(button=>button.onclick=()=>applyMeetingLayout(button.dataset.mwLayout));
