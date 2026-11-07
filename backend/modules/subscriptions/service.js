@@ -41,3 +41,79 @@ export function listActiveCreatorSubscriptions(subscriptions, creatorId, at = ne
     String(a.subscriberId).localeCompare(String(b.subscriberId))
   );
 }
+
+
+/**
+ * Calculate creator/platform shares from PayPal cash actually received,
+ * excluding the verified processing fee and tax before applying the creator
+ * base share and any approved performance bonus.
+ */
+export function calculateCreatorSubscriptionShares({
+  grossMinor,
+  processingFeeMinor,
+  taxMinor = 0,
+  performanceBonusBps = 0
+}) {
+  for (const [name, value] of Object.entries({ grossMinor, processingFeeMinor, taxMinor, performanceBonusBps })) {
+    if (!Number.isSafeInteger(value)) throw new TypeError(`${name} must be a safe integer.`);
+  }
+  if (grossMinor <= 0 || processingFeeMinor < 0 || taxMinor < 0 ||
+      processingFeeMinor + taxMinor >= grossMinor) {
+    throw new RangeError('The gross amount must exceed the verified fee and tax.');
+  }
+  if (![0, 2000].includes(performanceBonusBps)) {
+    throw new RangeError('The subscription performance bonus must be 0 or 2000 basis points.');
+  }
+  const netMinor = grossMinor - processingFeeMinor - taxMinor;
+  const creatorShareBps = 5000 + performanceBonusBps;
+  const platformShareBps = 10000 - creatorShareBps;
+  const creatorMinor = Math.floor(netMinor * creatorShareBps / 10000);
+  return {
+    grossMinor,
+    processingFeeMinor,
+    taxMinor,
+    netMinor,
+    creatorShareBps,
+    platformShareBps,
+    performanceBonusBps,
+    creatorMinor,
+    platformMinor: netMinor - creatorMinor
+  };
+}
+
+/**
+ * Return only the incremental reversal due for a new refund, preserving the
+ * exact original share across multiple partial refunds without rounding drift.
+ */
+export function calculateCreatorSubscriptionRefund({
+  originalGrossMinor,
+  originalNetMinor,
+  originalCreatorMinor,
+  refundedBeforeMinor,
+  refundGrossMinor
+}) {
+  for (const [name, value] of Object.entries({
+    originalGrossMinor, originalNetMinor, originalCreatorMinor,
+    refundedBeforeMinor, refundGrossMinor
+  })) {
+    if (!Number.isSafeInteger(value)) throw new TypeError(`${name} must be a safe integer.`);
+  }
+  if (originalGrossMinor <= 0 || originalNetMinor < 0 || originalCreatorMinor < 0 ||
+      originalCreatorMinor > originalNetMinor || refundedBeforeMinor < 0 ||
+      refundGrossMinor <= 0 || refundedBeforeMinor + refundGrossMinor > originalGrossMinor) {
+    throw new RangeError('The refund must be positive and cannot exceed the original payment.');
+  }
+  const refundedAfterMinor = refundedBeforeMinor + refundGrossMinor;
+  const proportional = (total, refunded) => Math.round(total * refunded / originalGrossMinor);
+  const netMinor = proportional(originalNetMinor, refundedAfterMinor) -
+    proportional(originalNetMinor, refundedBeforeMinor);
+  const creatorMinor = proportional(originalCreatorMinor, refundedAfterMinor) -
+    proportional(originalCreatorMinor, refundedBeforeMinor);
+  return {
+    grossMinor: refundGrossMinor,
+    netMinor,
+    creatorMinor,
+    platformMinor: netMinor - creatorMinor,
+    refundedAfterMinor
+  };
+}
