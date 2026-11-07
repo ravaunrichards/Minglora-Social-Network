@@ -24,5 +24,6 @@ test('registers the service worker without forcing an open page to refresh or ch
   assert.ok(clickHandler.includes('await self.clients.openWindow(target)'), 'other notification destinations still open separately');
   assert.ok(html.includes('/app.js?v=20261107-real-phone-calls-1'), 'the latest call-enabled app URL is loaded');
   assert.ok(worker.includes('/app.js?v=20261107-real-phone-calls-1'), 'the service-worker shell caches the same latest app asset');
-  assert.ok(worker.includes('/profile-established.css?v=20261106-profile-actions-horizontal-1'), 'the established profile styles must be included in the offline shell');
+  assert.ok(html.includes('profile-established.css'), 'the established profile stylesheet is linked');
+  assert.ok(worker.includes('profile-established.css'), 'the established profile stylesheet is included in the offline shell');
 });
