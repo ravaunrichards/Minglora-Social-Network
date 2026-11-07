@@ -1270,11 +1270,11 @@ async function route(req, res) {
             requestSupabaseState('subscription_my',{userId:user.id})
           ]);
           const mySubscription=(all.subscriptions||[]).find(item=>item.creator_id===creatorId&&item.subscriber_id===user.id)||null;
-          const approved=creator.settings?.application_status==='approved';
+          const eligible=creator.settings?.application_status!=='suspended';
           return json(res,200,{
             creatorId,
-            available:Boolean(approved&&creator.settings?.subscriptions_enabled&&creator.tier?.paypal_plan_id),
-            tier:approved&&creator.settings?.subscriptions_enabled&&creator.tier?{
+            available:Boolean(eligible&&creator.settings?.subscriptions_enabled&&creator.tier?.paypal_plan_id),
+            tier:eligible&&creator.settings?.subscriptions_enabled&&creator.tier?{
               id:creator.tier.id,name:creator.tier.name,description:creator.tier.description,
               currency:creator.tier.currency,priceMinor:creator.tier.price_minor,
               billingInterval:creator.tier.billing_interval,benefits:creator.tier.benefits
@@ -1296,7 +1296,7 @@ async function route(req, res) {
             return json(res,400,{error:'Set a monthly price from USD 2.99 to USD 99.99, with a short title and benefits.'});
           }
           const creator=await requestSupabaseState('subscription_creator_get',{userId:user.id});
-          if(creator.settings?.application_status!=='approved')return json(res,403,{error:'Minglora must approve your creator application before you can create paid subscriptions.'});
+          if(creator.settings?.application_status==='suspended')return json(res,403,{error:'This creator account is suspended from subscriptions.'});
           const product=await paypalRequest('/v1/catalogs/products','POST',{
             name:'Minglora creator membership',
             description:'Monthly creator subscription offered through Minglora.',
