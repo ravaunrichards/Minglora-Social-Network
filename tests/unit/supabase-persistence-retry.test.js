@@ -16,7 +16,7 @@ const collections = [
   'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
   'liveFanClubMemberships', 'liveFanClubEvents',
   'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences',
-  'sounds', 'soundFavorites',
+  'sounds', 'soundFavorites', 'dismissedPeopleSuggestions', 'meetWaveProviderCleanupQueue',
   'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
