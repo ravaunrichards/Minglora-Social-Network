@@ -13,8 +13,8 @@ const [server, app, css, html, serviceWorker] = await Promise.all([
   read('public/sw.js')
 ]);
 
-test('public profile data exposes only a currently active LIVE Pro grant', () => {
-  assert.ok(server.includes("result.liveProBadge=(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));"));
+test('the designated Minglora admin and members with active grants get LIVE Pro profile recognition', () => {
+  assert.ok(server.includes("result.liveProBadge=isDesignatedCreatorHubAdmin(u)||(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));"));
 });
 
 test('LIVE Pro appears beside the username in the profile header and previews', () => {
