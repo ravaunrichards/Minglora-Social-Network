@@ -74,13 +74,12 @@ test('multiple partial refunds reverse the original net creator/platform shares 
 test('runtime requires PayPal-matched settled fees and calculates shares from net only', async () => {
   const { readFile } = await import('node:fs/promises');
   const edge = await readFile(new URL('../../supabase/functions/minglora-runtime-state/index.ts', import.meta.url), 'utf8');
-  assert.match(edge, /transactionDetails\?\.transactions/);
-  assert.match(edge, /status\s*\|\|\s*""\)\.toUpperCase\(\) === "COMPLETED"/);
-  assert.match(edge, /fee_reconciled: true/);
-  assert.match(edge, /const netMinor = amountMinor - providerFeeMinor - taxMinor/);
-  assert.match(edge, /calculateCreatorSubscriptionShares/ === undefined ? /never/ : /never/);
-  assert.match(edge, /parent_provider_transaction_id: originalSaleId/);
-  assert.match(edge, /refundedAfterMinor/);
-  assert.match(edge, /qualifyingVideoViews >= 100000/);
-  assert.doesNotMatch(edge, /creatorMinor = amountMinor \* creatorShareBps/);
+  assert.ok(edge.includes('transactionDetails?.transactions'));
+  assert.ok(edge.includes('status || "").toUpperCase() === "COMPLETED"'));
+  assert.ok(edge.includes('fee_reconciled: true'));
+  assert.ok(edge.includes('const netMinor = amountMinor - providerFeeMinor - taxMinor'));
+  assert.ok(edge.includes('parent_provider_transaction_id: originalSaleId'));
+  assert.ok(edge.includes('refundedAfterMinor'));
+  assert.ok(edge.includes('qualifyingVideoViews >= 100000'));
+  assert.ok(!edge.includes('creatorMinor = amountMinor * creatorShareBps'));
 });
