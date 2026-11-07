@@ -389,6 +389,9 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const forbiddenModeratorQueue = await request('/api/moderation/reports');
   assert.equal(forbiddenModeratorQueue.status, 403);
 
+  const forbiddenAdminAuditLog = await request('/api/admin/audit-log');
+  assert.equal(forbiddenAdminAuditLog.status, 403, 'ordinary members cannot read administrator audit history');
+
   const accountExport = await request('/api/account/export');
   assert.equal(accountExport.status, 200);
   assert.equal(accountExport.body.format, 'minglora-account-export');
