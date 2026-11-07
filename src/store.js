@@ -10,7 +10,7 @@ const dbPath = path.join(dataDir, 'db.json');
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'mediaAssets',
+  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'mediaAssets', 'dismissedPeopleSuggestions',
   'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'pageViews', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
