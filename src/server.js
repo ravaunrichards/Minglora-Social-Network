@@ -10,7 +10,7 @@ import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
-import { canAccessMeetWaveRoom, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
+import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
 import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired, getMessageConversationPeerId } from '../backend/modules/messaging/service.js';
@@ -4570,8 +4570,30 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(!room||room.status==='ended')return json(res,410,{error:'This meeting room has ended.'});
         invitation.status=meetWaveInvitationMatch[2]==='accept'?'accepted':'declined';
         invitation.respondedAt=now();
+        if(invitation.status==='accepted'){
+          const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(attendance?.removedAt){attendance.removedAt=null;attendance.status='left';}
+        }
         await saveStore();
         return json(res,200,{invitation:{id:invitation.id,status:invitation.status},room:meetWaveRoomView(room,user.id)});
+      }
+      let meetWaveParticipantRemovalMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)\/participants\/([^/]+)\/remove$/);
+      if(meetWaveParticipantRemovalMatch&&method==='POST'){
+        requireAuth(user);
+        const room=(db.meetWaveRooms||[]).find(item=>item.id===meetWaveParticipantRemovalMatch[1]);
+        const participantId=meetWaveParticipantRemovalMatch[2];
+        if(!room)return json(res,404,{error:'MeetWave room not found.'});
+        if(room.status==='ended')return json(res,410,{error:'This MeetWave meeting has ended.'});
+        if(!canManageMeetWaveParticipants(room,user.id,participantId))return json(res,403,{error:'Only the host can remove another participant from this meeting.'});
+        let removal;
+        try{removal=await removeLiveKitParticipant(room.roomName,participantId);}
+        catch(error){return json(res,503,{error:'Minglora could not update the LiveKit participant session. Try again.'});}
+        if(!removal.removed)return json(res,404,{error:'That member is no longer connected to this meeting.'});
+        const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===participantId&&!item.leftAt);
+        if(attendance){attendance.status='removed';attendance.leftAt=now();attendance.removedAt=attendance.leftAt;}
+        room.lastActivityAt=now();
+        await saveStore();
+        return json(res,200,{removed:true,participantId});
       }
       let meetWaveRoomMatch=p.match(/^\/api\/meetwave\/rooms\/([^/]+)(?:\/(join|leave|messages|invitations))?$/);
       if(meetWaveRoomMatch){
@@ -4593,6 +4615,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         }
         if(method==='POST'&&action==='join'){
           if(!isLiveKitConfigured())return json(res,503,{error:'MeetWave cannot connect because Minglora LiveKit is not configured.'});
+          const priorAttendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id);
+          if(priorAttendance?.status==='removed'&&priorAttendance.removedAt)return json(res,403,{error:'The host removed you from this meeting. Ask the host to invite you again.'});
           const availability=meetWaveRoomJoinAvailability(room);
           if(availability==='ended')return json(res,410,{error:'This meeting has ended.'});
           if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
@@ -4638,7 +4662,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
             const memberSettings=getUserSettings(member);
             if(!canReceiveMeetWaveInvitation(memberSettings,{isFriend:isFriend(user.id,member.id)}))continue;
             let invitation=db.meetWaveInvitations.find(item=>item.roomId===room.id&&item.userId===member.id);
-            if(invitation&&invitation.status==='accepted')continue;
+            const priorAttendance=db.meetWaveAttendance?.find(item=>item.roomId===room.id&&item.userId===member.id);
+            if(invitation&&invitation.status==='accepted'&&!priorAttendance?.removedAt)continue;
             if(!invitation){invitation={id:uid(),roomId:room.id,userId:member.id,invitedBy:user.id,status:'pending',createdAt:now(),respondedAt:null};db.meetWaveInvitations.push(invitation);}
             else{invitation.status='pending';invitation.invitedBy=user.id;invitation.createdAt=now();invitation.respondedAt=null;}
             notify(member.id,user.id,'meetwave_invite',user.name+' invited you to a MeetWave room.',{roomId:room.id,roomTitle:room.title,invitationId:invitation.id});
