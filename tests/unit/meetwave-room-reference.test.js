@@ -52,21 +52,26 @@ test('MeetWave automatic-sync assets bypass stale browser and service-worker cac
 test('MeetWave has exactly nine local-screen layout choices', () => {
   const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   for (const layout of layouts) {
-    assert.ok(js.includes('data-mw-layout=\\\"'+layout+'\\\"'), layout+' choice is present');
-    assert.ok(css.includes('data-layout=\\\"'+layout+'\\\"'), layout+' has a screen arrangement');
+    assert.ok(js.includes('data-mw-layout="'+layout+'"'), layout+' choice is present');
+    assert.ok(css.includes('data-layout="'+layout+'"'), layout+' has a screen arrangement');
   }
   assert.match(js, /function applyMeetingLayout\\(layout\\)/);
   assert.match(js, /changes only your local screen arrangement/);
-  assert.doesNotMatch(js, /data-mw-layout=\\\"(?:gallery-2|gallery-3|gallery-4|speaker|sidebar|filmstrip|presentation)\\\"/);
+  assert.doesNotMatch(js, /data-mw-layout="(?:gallery-2|gallery-3|gallery-4|speaker|sidebar|filmstrip|presentation)"/);
+  assert.match(js, /activeLayout='fluid-grid'/);
 });
 
-test('MeetWave layout and settings live inside the accessible side panel, not floating overlays', () => {
-  assert.match(js, /id=\\\"mw-panel-layouts-tab\\\"/);
-  assert.match(js, /id=\\\"mw-layout-picker\\\"[\\s\\S]*?id=\\\"mw-settings-panel\\\"/);
+test('MeetWave layouts and settings are integrated into the reachable side panel', () => {
+  const aside = js.indexOf('id="mw-support-column"');
+  const layouts = js.indexOf('id="mw-layout-picker"', aside);
+  const settings = js.indexOf('id="mw-settings-panel"', layouts);
+  const end = js.indexOf('</aside></div><p id="mw-room-status"', settings);
+  assert.ok(aside >= 0 && layouts > aside && settings > layouts && end > settings);
+  assert.ok(js.includes('id="mw-panel-layouts-tab"'));
   assert.match(js, /const panels=\\{chat:[\\s\\S]*?layouts:[\\s\\S]*?settings:/);
-  assert.match(css, /\\.mw-support-column\\.live-fullscreen-chat-slot[\\s\\S]*?display:flex/);
-  assert.match(css, /\\.mw-support-column>\\.mw-layout-picker[\\s\\S]*?position:static!important/);
-  assert.match(css, /\\.mw-support-column>\\.mw-settings-panel[\\s\\S]*?position:static!important/);
+  assert.match(css, /\\.mw-meeting \\.mw-support-column\\.live-fullscreen-chat-slot[\\s\\S]*?display:flex/);
+  assert.match(css, /\\.mw-meeting \\.mw-support-column>\\.mw-layout-picker[\\s\\S]*?position:static!important/);
+  assert.match(css, /\\.mw-meeting \\.mw-support-column>\\.mw-settings-panel[\\s\\S]*?position:static!important/);
   assert.match(css, /live-full-screen-active/);
 });
 test('MeetWave settings cover devices and appearance while retaining visible room chat', () => {
