@@ -581,12 +581,12 @@ async function refreshVisiblePosts(){
 function bindFeed(root=document){
   if(root===document){
     bindSoundtrackPlayback(document);
-    $('#create-story')?.addEventListener('click',()=>openStoryComposer());
     $('#open-composer')?.addEventListener('click',()=>openComposer());
     $('#post-text')?.addEventListener('click',()=>openComposer());
     $('#post-photo')?.addEventListener('click',()=>openComposer(true));
     $('#post-feeling')?.addEventListener('click',()=>openComposer());
   }else bindSoundtrackPlayback(root);
+  root.querySelector('#create-story')?.addEventListener('click',()=>openStoryComposer());
   root.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
   bindProfileLinks(root);
   root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
