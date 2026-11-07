@@ -912,3 +912,18 @@
   .admin-user-result-copy{min-width:calc(100% - 68px)}
   .admin-user-status{margin-left:52px}
 }
+
+/* Dedicated owner-only account action audit history. */
+.admin-audit-log-controls{display:grid;grid-template-columns:minmax(220px,1fr) minmax(170px,220px) auto;gap:10px;align-items:end;margin:14px 0 8px}
+.admin-audit-log-controls label{font-size:12px;font-weight:700}
+.admin-audit-log-controls input,.admin-audit-log-controls select{min-width:0;width:100%;box-sizing:border-box}
+.admin-audit-log-status{font-size:12px;color:var(--muted,#687386)}
+.admin-audit-log-results{display:grid;gap:10px}
+.admin-audit-log-entry{display:grid;gap:8px;padding:14px;border:1px solid var(--border,#dce3ee);border-radius:12px;background:var(--surface,#fff);min-width:0}
+.admin-audit-log-entry-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;min-width:0}
+.admin-audit-log-entry-heading>div{display:grid;gap:4px;min-width:0}
+.admin-audit-log-entry-heading strong{overflow-wrap:anywhere}
+.admin-audit-log-entry-heading small,.admin-audit-log-entry-heading time,.admin-audit-log-details{font-size:12px;color:var(--muted,#687386);overflow-wrap:anywhere}
+.admin-audit-log-entry p{margin:0;font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap}
+.admin-audit-log-empty{padding:14px;border:1px dashed var(--border,#dce3ee);border-radius:12px;color:var(--muted,#687386)}
+@media(max-width:680px){.admin-audit-log-controls{grid-template-columns:minmax(0,1fr)}.admin-audit-log-entry-heading{display:grid;grid-template-columns:minmax(0,1fr)}}
