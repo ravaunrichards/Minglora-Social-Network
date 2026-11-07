@@ -87,3 +87,10 @@ body[data-minglora-avatar-frame="glow"] :where(.avatar,.profile-avatar,[data-pro
 body[data-minglora-avatar-frame="ribbon"] :where(.avatar,.profile-avatar,[data-profile-avatar]){outline:3px solid transparent;outline-offset:3px;border-image:linear-gradient(135deg,#ea65bb,#65d4ff,#f6c65d) 1}
 body[data-minglora-avatar-frame="glass"] :where(.avatar,.profile-avatar,[data-profile-avatar]){box-shadow:0 0 0 3px #ffffffaa,0 0 0 6px color-mix(in srgb,var(--blue) 45%,transparent)}
 body[data-minglora-avatar-frame="neon"] :where(.avatar,.profile-avatar,[data-profile-avatar]){box-shadow:0 0 0 2px #52dfff,0 0 20px #52dfff99}
+
+/* Distinct screen saver motion families. */
+.effect-bubbles .mexp-saver-art i{border-radius:50%;background:radial-gradient(circle at 30% 25%,#ffffffaa,transparent 55%);box-shadow:inset -5px -8px 16px #69c9ff44,0 0 20px #83eaff33}
+.effect-particles .mexp-saver-art i{width:5px;height:5px;border:0;background:#d8f7ff;box-shadow:0 0 12px #8de7ff}
+.effect-fireflies .mexp-saver-art i{width:7px;height:7px;border:0;background:#ffe98a;box-shadow:0 0 22px #ffe98a;animation-duration:calc(2s + var(--i)*.3s)}
+.effect-mystifying .mexp-saver-art i{border-radius:32% 68% 50% 50%;border-width:2px;transform:rotate(calc(var(--i)*17deg))}
+.effect-ribbons .mexp-saver-art i{height:3px;filter:drop-shadow(0 0 8px #d8a8ff)}
