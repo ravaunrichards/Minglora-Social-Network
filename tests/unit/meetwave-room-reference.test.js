@@ -225,4 +225,14 @@ test('MeetWave layout and participant panels do not introduce inner scrolling', 
   assert.ok(finalFit.includes('max-height:none!important'));
   assert.ok(finalFit.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'));
 });
-
+test('MeetWave Full Screen shows Guest Seats 1–8 in the normal, non-expanded player', () => {
+  const fit=css.slice(css.lastIndexOf('/* Full Screen normal-window fit:'));
+  assert.ok(fit.includes(':not(.live-full-screen-active)'));
+  assert.ok(fit.includes('height:min(66dvh,calc(100dvh - 210px),760px)!important'));
+  assert.ok(fit.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
+  for(let seat=1;seat<=8;seat++){
+    assert.ok(fit.includes('.live-guest-seat[data-seat-index="'+seat+'"]'), 'Guest Seat '+seat+' has an explicit grid cell');
+  }
+  assert.ok(fit.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(fit.includes('grid-template-rows:22px minmax(0,1.08fr) repeat(3,minmax(0,.82fr))!important'));
+});
