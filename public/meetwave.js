@@ -32,16 +32,16 @@
   function applyMeetingLayout(layout){
     if(!Object.prototype.hasOwnProperty.call(MEETING_LAYOUTS,layout))return;
     activeLayout=layout;
-    const grid=$('#mw-grid');
-    if(grid)grid.dataset.layout=layout;
+    const screen=$('#mw-screen-stage');
+    if(screen)screen.dataset.screenLayout=layout;
     document.querySelectorAll('[data-mw-layout]').forEach(button=>{
       const active=button.dataset.mwLayout===layout;
       button.classList.toggle('is-selected',active);
       button.setAttribute('aria-pressed',String(active));
     });
-    if(layout==='full-screen'&&!document.fullscreenElement)void toggleMeetingFullscreen();
-    else if(layout!=='full-screen'&&document.fullscreenElement)void toggleMeetingFullscreen();
-    note('MeetWave layout: '+MEETING_LAYOUTS[layout]+'. This changes only your local screen arrangement.');
+    const status=$('#mw-layout-status');
+    if(status)status.textContent=MEETING_LAYOUTS[layout]+' selected for your screen.';
+    note('MeetWave screen layout: '+MEETING_LAYOUTS[layout]+'. The host and guest seats remain unchanged.');
   }
   function toggleMeetingSettings(){
     const panel=$('#mw-settings-panel');
@@ -61,7 +61,7 @@
     catch(error){note('Could not apply microphone settings: '+error.message,true);}
   }
   function applyMeetingVisualSettings(){
-    document.querySelectorAll('#mw-grid .mw-video-tile').forEach(tile=>{
+    document.querySelectorAll('#mw-grid .mw-video-tile, #mw-screen-share-stage .mw-screen-share-tile').forEach(tile=>{
       tile.classList.toggle('mw-names-hidden',!meetingSettings.showNames);
       const video=tile.querySelector('video');
       if(video){video.style.objectFit=meetingSettings.videoFit;video.style.transform=tile.id==='mw-local'&&meetingSettings.mirrorSelf?'scaleX(-1)':'';}
@@ -96,7 +96,7 @@
     }catch(error){note(error.message,true);}
   }
   function lobbyMarkup(){
-    return '<section class="mw-page"><header class="mw-hero"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Make room for <em>real connection.</em></h1><p>Meet, collaborate, teach, study and connect — all inside Minglora.</p><div class="mw-hero-chips"><span>Live video &amp; audio</span><span>Screen sharing</span><span>Meeting chat</span><span>Up to 8 people</span></div></div><div class="mw-hero-orb"><div class="mw-orb-ring"></div><div class="mw-orb-core"><svg class="mw-brand-icon" viewBox="0 0 64 64" role="img" aria-label="MeetWave"><use href="/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2#meetwave"></use></svg></div></div></header><div class="mw-actions-grid"><button class="mw-action-card" data-new="instant"><b>▶ Start instant meeting</b><small>Create a room and meet now</small></button><button class="mw-action-card" data-new="scheduled"><b>▦ Schedule a meeting</b><small>Pick a time and invite people</small></button><button class="mw-action-card" data-new="personal"><b>⌂ Personal meeting room</b><small>Keep a reusable room link</small></button></div><section class="mw-join-panel"><div><span class="mw-eyebrow">ROOM CODE</span><h2>Join a meeting</h2></div><form id="mw-code-form" class="mw-join-form"><input id="mw-code" placeholder="MW-12AB34CD" required aria-label="Meeting code"><button class="mw-primary">Join</button></form></section><section class="mw-section"><div class="mw-section-heading"><h2>Rooms you can access</h2><p class="mw-section-note">Rooms and invitations update automatically.</p></div><div id="mw-rooms" class="mw-room-grid"><div class="mw-empty">Loading rooms…</div></div></section><section class="mw-section"><h2>Meeting invitations</h2><div id="mw-invites" class="mw-invite-list"><div class="mw-empty">Loading invitations…</div></div></section><p id="mw-status" class="mw-status">MeetWave uses Minglora accounts and meeting services.</p></section>';
+    return '<section class="mw-page"><header class="mw-hero"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Make room for <em>real connection.</em></h1><p>Meet, collaborate, teach, study and connect — all inside Minglora.</p><div class="mw-hero-chips"><span>Live video &amp; audio</span><span>Screen sharing</span><span>Meeting chat</span><span>Host + 8 guest seats</span></div></div><div class="mw-hero-orb"><div class="mw-orb-ring"></div><div class="mw-orb-core"><svg class="mw-brand-icon" viewBox="0 0 64 64" role="img" aria-label="MeetWave"><use href="/assets/icons/navigation-3d.svg?v=20261101-messenger-right-panel-2#meetwave"></use></svg></div></div></header><div class="mw-actions-grid"><button class="mw-action-card" data-new="instant"><b>▶ Start instant meeting</b><small>Create a room and meet now</small></button><button class="mw-action-card" data-new="scheduled"><b>▦ Schedule a meeting</b><small>Pick a time and invite people</small></button><button class="mw-action-card" data-new="personal"><b>⌂ Personal meeting room</b><small>Keep a reusable room link</small></button></div><section class="mw-join-panel"><div><span class="mw-eyebrow">ROOM CODE</span><h2>Join a meeting</h2></div><form id="mw-code-form" class="mw-join-form"><input id="mw-code" placeholder="MW-12AB34CD" required aria-label="Meeting code"><button class="mw-primary">Join</button></form></section><section class="mw-section"><div class="mw-section-heading"><h2>Rooms you can access</h2><p class="mw-section-note">Rooms and invitations update automatically.</p></div><div id="mw-rooms" class="mw-room-grid"><div class="mw-empty">Loading rooms…</div></div></section><section class="mw-section"><h2>Meeting invitations</h2><div id="mw-invites" class="mw-invite-list"><div class="mw-empty">Loading invitations…</div></div></section><p id="mw-status" class="mw-status">MeetWave uses Minglora accounts and meeting services.</p></section>';
   }
   function roomCard(room){
     const date=room.scheduledAt?new Date(room.scheduledAt).toLocaleString():'Ready now';
@@ -182,20 +182,23 @@
   }
   function meetingMarkup(room,role){
     const host=role==='host';
-    return '<section class="mw-meeting live-player-shell"><header class="mw-meeting-head live-player-header"><div><span class="mw-eyebrow">MINGLORA MEETWAVE · SECURE ROOM</span><h1>'+esc(room.title)+'</h1><small>Room '+esc(room.id)+' · '+(host?'Host':'Participant')+'</small></div><b id="mw-count" class="mw-meeting-count">Connecting…</b></header><div class="mw-meeting-layout live-player-layout"><section class="mw-stage-column live-video-column"><div id="mw-grid" class="mw-video-grid live-video-stage" data-layout="fluid-grid"><div class="mw-video-tile is-focused" id="mw-local" data-identity="'+esc(state.user.id)+'"><div class="mw-video-placeholder">'+esc(state.user.name)+'</div><span class="mw-name-tag">You</span></div></div><div id="mw-audio" class="mw-audio"></div><div class="mw-controls live-player-controls live-icon-controls" role="group" aria-label="MeetWave meeting controls"><button type="button" id="mw-mic" class="live-control-button is-active" aria-label="Mute microphone" title="Mute microphone" aria-pressed="true"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v3M8 21h8"/></svg></span><small class="live-control-caption">Mute</small></button><button type="button" id="mw-camera" class="live-control-button is-active" aria-label="Turn camera off" title="Turn camera off" aria-pressed="true"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></span><small class="live-control-caption">Camera on</small></button><button type="button" id="mw-screen" class="live-control-button" aria-label="Share screen" title="Share screen" aria-pressed="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/></svg></span><small class="live-control-caption">Share</small></button><button type="button" id="mw-layout" class="live-control-button" aria-label="Switch to speaker view" title="Switch to speaker view" aria-pressed="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></span><small class="live-control-caption">Layout</small></button><button type="button" id="mw-fullscreen" class="live-control-button" aria-label="Enter full screen" title="Enter full screen" aria-pressed="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg></span><small class="live-control-caption">Full</small></button><button type="button" id="mw-copy" class="live-control-button" aria-label="Copy meeting invite link" title="Copy meeting invite link"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l2-2a5 5 0 0 0-7.07-7.07l-1.15 1.15M14 11a5 5 0 0 0-7.07 0l-2 2A5 5 0 0 0 12 20.07l1.15-1.15"/></svg></span><small class="live-control-caption">Copy link</small></button>'+(host?'<button type="button" id="mw-invite-members" class="live-control-button" aria-label="Invite members" title="Invite members"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M22 11h-6"/></svg></span><small class="live-control-caption">Invite</small></button>':'')+'<button type="button" id="mw-settings" class="live-control-button" aria-label="Open meeting settings" title="Open meeting settings" aria-expanded="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 1.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-2.4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L8 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6.7v-2.4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L8 8.6l1.7-1.7.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h2.4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.7 1.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.4 1z"/></svg></span><small class="live-control-caption">Settings</small></button><button type="button" id="mw-people-toggle" class="live-control-button" aria-label="Show meeting participants" title="Show meeting participants" aria-expanded="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></span><small class="live-control-caption">People</small></button><button type="button" id="mw-chat-toggle" class="live-control-button is-active" aria-label="Hide meeting chat" title="Hide meeting chat" aria-expanded="true"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></span><small class="live-control-caption">Chat</small></button><button type="button" id="mw-leave" class="live-control-button is-danger" aria-label="Leave meeting" title="Leave meeting"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.4 2.8a2 2 0 0 1-.6 1.7L7 10a16 16 0 0 0 6 6l1.8-1.9a2 2 0 0 1 1.7-.6l2.8.4a2 2 0 0 1 1.7 2Z"/></svg></span><small class="live-control-caption">Leave</small></button>'+(host?'<button type="button" id="mw-end" class="live-control-button is-danger" aria-label="End meeting for everyone" title="End meeting for everyone"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></span><small class="live-control-caption">End room</small></button>':'')+'</div></section><aside id="mw-support-column" class="mw-support-column live-fullscreen-chat-slot" aria-label="MeetWave side panel"><div class="live-fullscreen-side-head"><strong>MEETWAVE PANEL</strong><nav class="live-fullscreen-side-tabs" aria-label="Switch MeetWave side panel"><button id="mw-panel-chat-tab" type="button" data-mw-tab="chat" class="active" aria-pressed="true">Chat</button><button id="mw-panel-people-tab" type="button" data-mw-tab="people" aria-pressed="false">People</button><button id="mw-panel-layouts-tab" type="button" data-mw-tab="layouts" aria-pressed="false">Layouts</button><button id="mw-panel-settings-tab" type="button" data-mw-tab="settings" aria-pressed="false">Settings</button></nav></div><section id="mw-participants-panel" class="mw-participants-panel" hidden><header><b>Participants</b><span id="mw-participant-count">1</span></header><div id="mw-participants" class="mw-participant-list"></div>'+(host?'<button type="button" id="mw-room-invite" class="mw-secondary mw-panel-invite">Invite members</button>':'')+'</section><section id="mw-chat-panel" class="mw-chat-panel"><b>Meeting chat</b><div id="mw-messages" class="mw-chat-messages"></div><form id="mw-chat-form" class="mw-chat-form"><input id="mw-chat-input" maxlength="1000" placeholder="Message…" required><button>Send</button></form></section><section id="mw-layout-picker" class="mw-tool-panel mw-layout-picker" hidden aria-label="Choose meeting layout"><header><b>MeetWave room layouts</b><button type="button" id="mw-layout-picker-close" aria-label="Close layouts">×</button></header><div class="mw-layout-options"><button type="button" data-mw-layout="full-screen" aria-pressed="false"><b>Full Screen</b><small>Expand the meeting view while keeping the room controls available</small></button><button type="button" data-mw-layout="fluid-panel" aria-pressed="false"><b>Fluid Panel</b><small>Flexible featured tile with a responsive attendee panel</small></button><button type="button" data-mw-layout="fluid-grid" aria-pressed="true"><b>Fluid Grid</b><small>Automatically fit every participant to the available space</small></button><button type="button" data-mw-layout="fixed-grid" aria-pressed="false"><b>Fixed Grid</b><small>Consistent equal-sized participant tiles</small></button><button type="button" data-mw-layout="fixed-panel" aria-pressed="false"><b>Fixed Panel</b><small>Featured participant with a stable thumbnail rail</small></button><button type="button" data-mw-layout="side-by-side" aria-pressed="false"><b>Side by Side</b><small>Two equal columns for balanced conversations</small></button><button type="button" data-mw-layout="spotlight" aria-pressed="false"><b>Spotlight</b><small>Emphasize the active speaker and keep others visible</small></button><button type="button" data-mw-layout="roundtable-1" aria-pressed="false"><b>Roundtable 1</b><small>Open roundtable seating for a collaborative discussion</small></button><button type="button" data-mw-layout="roundtable-2" aria-pressed="false"><b>Roundtable 2</b><small>Compact roundtable seating for larger groups</small></button></div></section><section id="mw-settings-panel" class="mw-tool-panel mw-settings-panel" hidden aria-label="MeetWave settings"><header><b>MeetWave settings</b><button type="button" id="mw-settings-close" aria-label="Close settings">×</button></header><div class="mw-settings-content"><section class="mw-settings-section"><h3>Audio devices</h3><label>Microphone<select id="mw-audio-input"><option value="">System default</option></select></label><label>Speaker / output<select id="mw-audio-output"><option value="">System default</option></select></label><label class="mw-setting-check"><input id="mw-echo-cancellation" type="checkbox" checked> Echo cancellation</label><label class="mw-setting-check"><input id="mw-noise-suppression" type="checkbox" checked> Noise suppression</label><label class="mw-setting-check"><input id="mw-auto-gain" type="checkbox" checked> Automatic microphone level</label></section><section class="mw-settings-section"><h3>Camera and appearance</h3><label>Camera<select id="mw-video-input"><option value="">System default</option></select></label><label>Video framing<select id="mw-video-fit"><option value="cover">Fill tile</option><option value="contain">Fit entire video</option></select></label><label class="mw-setting-check"><input id="mw-mirror-self" type="checkbox" checked> Mirror my camera preview</label><label class="mw-setting-check"><input id="mw-show-names" type="checkbox" checked> Show participant names</label></section><section class="mw-settings-section"><h3>Meeting information</h3><p><b>Room:</b> '+esc(room.title)+'</p><p><b>Room code:</b> <code>'+esc(room.id)+'</code></p><p><b>Your role:</b> '+(host?'Host':'Participant')+'</p><button type="button" class="mw-secondary" id="mw-settings-copy">Copy meeting invite</button></section></div></section></aside></div><p id="mw-room-status" class="mw-status">Connecting to meeting…</p></section>';
+    return '<section class="mw-meeting live-player-shell"><header class="mw-meeting-head live-player-header"><div><span class="mw-eyebrow">MINGLORA MEETWAVE · SECURE ROOM</span><h1>'+esc(room.title)+'</h1><small>Room '+esc(room.id)+' · '+(host?'Host':'Participant')+'</small></div><b id="mw-count" class="mw-meeting-count">Connecting…</b></header><div class="mw-meeting-layout live-player-layout"><section class="mw-stage-column live-video-column"><div id="mw-screen-stage" class="mw-screen-stage" data-screen-layout="fluid-grid"><div id="mw-grid" class="mw-video-grid live-guest-layout" data-grid-role="fixed-host-eight-guest-seats"><div class="live-guest-layout-heading"><strong>MEETWAVE STAGE</strong><small id="mw-seat-count">1 / 9 seats in use</small></div><div class="mw-video-tile live-guest-seat '+(host?'is-host':'is-guest')+' is-focused" id="mw-local" data-identity="'+esc(state.user.id)+'" data-seat-index="0"><div class="mw-video-placeholder">'+esc(state.user.name)+'</div><span class="live-guest-seat-tag">'+(host?'HOST':'YOU')+'</span><span class="live-guest-seat-meta"><strong>'+esc(state.user.name)+'</strong><small>'+(host?'Host':'You')+'</small></span></div>'+Array.from({length:8},(_,index)=>'<button type="button" class="mw-video-tile live-guest-seat empty mw-empty-seat" data-seat-index="'+(index+1)+'" data-open-guest-invite aria-label="Invite a guest to seat '+(index+1)+'"><span class="live-guest-seat-plus" aria-hidden="true">+</span><strong>Guest seat '+(index+1)+'</strong><small>Tap to invite</small></button>').join('')+'</div><div id="mw-screen-share-stage" class="mw-screen-share-stage" hidden></div></div><div id="mw-audio" class="mw-audio"></div><div class="mw-controls live-player-controls live-icon-controls" role="group" aria-label="MeetWave meeting controls"><button type="button" id="mw-mic" class="live-control-button is-active" aria-label="Mute microphone" title="Mute microphone" aria-pressed="true"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v3M8 21h8"/></svg></span><small class="live-control-caption">Mute</small></button><button type="button" id="mw-camera" class="live-control-button is-active" aria-label="Turn camera off" title="Turn camera off" aria-pressed="true"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></span><small class="live-control-caption">Camera on</small></button><button type="button" id="mw-screen" class="live-control-button" aria-label="Share screen" title="Share screen" aria-pressed="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/></svg></span><small class="live-control-caption">Share</small></button><button type="button" id="mw-fullscreen" class="live-control-button" aria-label="Enter full screen" title="Enter full screen" aria-pressed="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg></span><small class="live-control-caption">Full</small></button><button type="button" id="mw-copy" class="live-control-button" aria-label="Copy meeting invite link" title="Copy meeting invite link"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l2-2a5 5 0 0 0-7.07-7.07l-1.15 1.15M14 11a5 5 0 0 0-7.07 0l-2 2A5 5 0 0 0 12 20.07l1.15-1.15"/></svg></span><small class="live-control-caption">Copy link</small></button>'+(host?'<button type="button" id="mw-invite-members" class="live-control-button" aria-label="Invite members" title="Invite members"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M22 11h-6"/></svg></span><small class="live-control-caption">Invite</small></button>':'')+'<button type="button" id="mw-settings" class="live-control-button" aria-label="Open MeetWave settings and tools" title="Open MeetWave settings and tools" aria-expanded="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 15 .1.1 1.2 1-1.5 2.6-1.5-.6a8 8 0 0 1-1.7 1l-.2 1.6h-3l-.3-1.6a8 8 0 0 1-1.7-1l-1.5.6-1.5-2.6 1.2-1a7 7 0 0 1 0-2l-1.2-1 1.5-2.6 1.5.6a8 8 0 0 1 1.7-1l.3-1.6h3l.2 1.6a8 8 0 0 1 1.7 1l1.5-.6 1.5 2.6-1.2 1a7 7 0 0 1 0 2Z"/></svg></span><small class="live-control-caption">Settings</small></button><button type="button" id="mw-people-toggle" class="live-control-button" aria-label="Show meeting participants" title="Show meeting participants" aria-expanded="false"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></span><small class="live-control-caption">People</small></button><button type="button" id="mw-chat-toggle" class="live-control-button is-active" aria-label="Hide meeting chat" title="Hide meeting chat" aria-expanded="true"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></span><small class="live-control-caption">Chat</small></button><button type="button" id="mw-leave" class="live-control-button is-danger" aria-label="Leave meeting" title="Leave meeting"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.4 2.8a2 2 0 0 1-.6 1.7L7 10a16 16 0 0 0 6 6l1.8-1.9a2 2 0 0 1 1.7-.6l2.8.4a2 2 0 0 1 1.7 2Z"/></svg></span><small class="live-control-caption">Leave</small></button>'+(host?''+(host?'<button type="button" id="mw-power-off" class="live-control-button is-danger live-host-power-button" aria-label="Power off MeetWave for everyone" title="Power off meeting"><span class="live-control-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"></path><path d="M7.05 4.95a8 8 0 1 0 9.9 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></span><small class="live-control-caption">Power off</small></button>':'')+'':'')+'</div></section><aside id="mw-support-column" class="mw-support-column live-fullscreen-chat-slot" aria-label="MeetWave side panel"><div class="live-fullscreen-side-head"><strong>MEETWAVE PANEL</strong><nav class="live-fullscreen-side-tabs" aria-label="Switch MeetWave side panel"><button id="mw-panel-chat-tab" type="button" data-mw-tab="chat" class="active" aria-pressed="true">Chat</button><button id="mw-panel-people-tab" type="button" data-mw-tab="people" aria-pressed="false">People</button><button id="mw-panel-settings-tab" type="button" data-mw-tab="settings" aria-pressed="false">Settings</button></nav></div><section id="mw-participants-panel" class="mw-participants-panel" hidden><header><b>Participants</b><span id="mw-participant-count">1</span></header><div id="mw-participants" class="mw-participant-list"></div>'+(host?'<button type="button" id="mw-room-invite" class="mw-secondary mw-panel-invite">Invite members</button>':'')+'</section><section id="mw-chat-panel" class="mw-chat-panel"><b>Meeting chat</b><div id="mw-messages" class="mw-chat-messages"></div><form id="mw-chat-form" class="mw-chat-form"><input id="mw-chat-input" maxlength="1000" placeholder="Message…" required><button>Send</button></form></section><section id="mw-settings-panel" class="mw-tool-panel mw-settings-panel" hidden aria-label="MeetWave settings"><header><b>MeetWave settings</b><button type="button" id="mw-settings-close" aria-label="Close settings">×</button></header><div class="mw-settings-content"><section id="mw-layout-picker" class="mw-settings-section mw-layout-picker" aria-label="Screen layout"><div class="mw-settings-section-heading"><h3>Screen layout</h3><span id="mw-layout-status" role="status">Fluid Grid selected for your screen.</span></div><div class="mw-layout-options"><button type="button" data-mw-layout="full-screen" aria-pressed="false"><b>Full Screen</b></button><button type="button" data-mw-layout="fluid-panel" aria-pressed="false"><b>Fluid Panel</b></button><button type="button" data-mw-layout="fluid-grid" aria-pressed="true"><b>Fluid Grid</b></button><button type="button" data-mw-layout="fixed-grid" aria-pressed="false"><b>Fixed Grid</b></button><button type="button" data-mw-layout="fixed-panel" aria-pressed="false"><b>Fixed Panel</b></button><button type="button" data-mw-layout="side-by-side" aria-pressed="false"><b>Side by Side</b></button><button type="button" data-mw-layout="spotlight" aria-pressed="false"><b>Spotlight</b></button><button type="button" data-mw-layout="roundtable-1" aria-pressed="false"><b>Roundtable 1</b></button><button type="button" data-mw-layout="roundtable-2" aria-pressed="false"><b>Roundtable 2</b></button></div></section><section class="mw-settings-section mw-guest-seat-settings"><h3>Guest seats</h3><p>One host seat and eight guest seats. Invite members to join the meeting.</p><button type="button" class="mw-secondary" id="mw-settings-invite">Invite guests</button></section><section class="mw-settings-section"><h3>Audio devices</h3><label>Microphone<select id="mw-audio-input"><option value="">System default</option></select></label><label>Speaker / output<select id="mw-audio-output"><option value="">System default</option></select></label><label class="mw-setting-check"><input id="mw-echo-cancellation" type="checkbox" checked> Echo cancellation</label><label class="mw-setting-check"><input id="mw-noise-suppression" type="checkbox" checked> Noise suppression</label><label class="mw-setting-check"><input id="mw-auto-gain" type="checkbox" checked> Automatic microphone level</label></section><section class="mw-settings-section"><h3>Camera and appearance</h3><label>Camera<select id="mw-video-input"><option value="">System default</option></select></label><label>Video framing<select id="mw-video-fit"><option value="cover">Fill tile</option><option value="contain">Fit entire video</option></select></label><label class="mw-setting-check"><input id="mw-mirror-self" type="checkbox" checked> Mirror my camera preview</label><label class="mw-setting-check"><input id="mw-show-names" type="checkbox" checked> Show participant names</label></section><section class="mw-settings-section"><h3>Meeting information</h3><p><b>Room:</b> '+esc(room.title)+'</p><p><b>Room code:</b> <code>'+esc(room.id)+'</code></p><p><b>Your role:</b> '+(host?'Host':'Participant')+'</p><button type="button" class="mw-secondary" id="mw-settings-copy">Copy meeting invite</button></section></div></section></aside></div><p id="mw-room-status" class="mw-status">Connecting to meeting…</p></section>';
   }
   function updateCount(){
     if(!roomClient)return;
     const count=1+roomClient.remoteParticipants.size;
-    $('#mw-count').textContent=count+' / 8 participants';
-    renderParticipants();
+    $('#mw-count').textContent=count+' / 9 participants';
+    updateGuestSeatCount();renderParticipants();
   }
   function renderParticipants(){
     if(!roomClient||!$('#mw-participants'))return;
-    const people=[{identity:state.user.id,name:state.user.name,isLocal:true},...Array.from(roomClient.remoteParticipants.values()).map(participant=>({identity:participant.identity,name:participant.name||participant.identity,isLocal:false}))];
+    const remotePeople=Array.from(roomClient.remoteParticipants.values());
+    remotePeople.forEach(participant=>ensureParticipantSeat(participant));
+    const people=[{identity:state.user.id,name:state.user.name,isLocal:true},...remotePeople.map(participant=>({identity:participant.identity,name:participant.name||participant.identity,isLocal:false}))];
     $('#mw-participant-count').textContent=String(people.length);
-    $('#mw-participants').innerHTML=people.map(person=>'<div class="mw-participant-item"><span class="mw-participant-avatar">'+esc((person.name||'?').trim().charAt(0).toUpperCase())+'</span><span class="mw-participant-name"><b>'+esc(person.name)+'</b><small>'+(person.isLocal?(activeRole==='host'?'You · Host':'You · Participant'):(activeRoom?.ownerId===person.identity?'Host':'In meeting'))+'</small></span>'+(activeRole==='host'&&!person.isLocal?'<button type="button" class="mw-remove-person" data-remove-participant="'+esc(person.identity)+'" aria-label="Remove '+esc(person.name)+'">Remove</button>':'')+'</div>').join('');
+    $('#mw-participants').innerHTML=people.map(person=>'<div class="mw-participant-item"><span class="mw-participant-avatar">'+esc((person.name||'?').trim().charAt(0).toUpperCase())+'</span><span class="mw-participant-name"><b>'+esc(person.name)+'</b><small>'+(person.isLocal?(activeRole==='host'?'You · Host':'You · Participant'):(activeRoom?.ownerId===person.identity?'Host':'Guest'))+'</small></span>'+(activeRole==='host'&&!person.isLocal?'<button type="button" class="mw-remove-person" data-remove-participant="'+esc(person.identity)+'" aria-label="Remove '+esc(person.name)+'">Remove</button>':'')+'</div>').join('');
     document.querySelectorAll('[data-remove-participant]').forEach(button=>button.onclick=()=>removeParticipant(button.dataset.removeParticipant));
+    updateGuestSeatCount();
   }
   async function removeParticipant(identity){
     if(!activeRoom||activeRole!=='host'||!identity||identity===state.user.id)return;
@@ -206,8 +209,7 @@
   }
   function setSpeakerFocus(speakers=[]){
     const identity=speakers[0]?.identity||state.user.id;
-    const shared=activeLayout==='presentation'?$('#mw-grid .mw-video-tile[data-source="screen-share"]'):null;
-    document.querySelectorAll('#mw-grid .mw-video-tile').forEach(tile=>tile.classList.toggle('is-focused',shared?tile===shared:tile.dataset.identity===identity));
+    document.querySelectorAll('#mw-grid .mw-video-tile').forEach(tile=>tile.classList.toggle('is-focused',tile.dataset.identity===identity));
   }
   async function toggleMeetingFullscreen(){
     const meeting=$('.mw-meeting');
@@ -224,17 +226,66 @@
     document.querySelector('.mw-meeting')?.classList.toggle('live-full-screen-active',active);
     setRoomControlState('mw-fullscreen',active,active?'Exit full':'Full',active?'Exit full screen':'Enter full screen');
   });
+  function updateGuestSeatCount(){
+    const grid=$('#mw-grid');if(!grid)return;
+    const occupied=grid.querySelectorAll('.mw-video-tile:not(.mw-empty-seat)').length;
+    const counter=$('#mw-seat-count');if(counter)counter.textContent=occupied+' / 9 seats in use';
+  }
+  function ensureParticipantSeat(participant){
+    const identity=String(participant?.identity||'');if(!identity)return null;
+    if(identity===String(state.user.id))return $('#mw-local');
+    const safe=identity.replace(/[^a-zA-Z0-9_-]/g,'_');
+    const existing=$('#mw-tile-'+safe);if(existing)return existing;
+    const empty=$('#mw-grid .mw-empty-seat');if(!empty)return null;
+    const name=String(participant?.name||identity);
+    const tile=document.createElement('div');
+    tile.id='mw-tile-'+safe;
+    tile.className='mw-video-tile live-guest-seat'+(identity===activeRoom?.ownerId?' is-host':' is-guest');
+    tile.dataset.identity=identity;tile.dataset.seatIndex=empty.dataset.seatIndex||'1';
+    tile.innerHTML='<div class="mw-video-placeholder">'+esc(name)+'</div><span class="live-guest-seat-tag">'+(identity===activeRoom?.ownerId?'HOST':'GUEST')+'</span><span class="live-guest-seat-meta"><strong>'+esc(name)+'</strong><small>Connecting to stage</small></span>';
+    empty.replaceWith(tile);updateGuestSeatCount();return tile;
+  }
+  function resetGuestSeat(identity){
+    const safe=String(identity||'').replace(/[^a-zA-Z0-9_-]/g,'_');
+    const tile=$('#mw-tile-'+safe);if(!tile||tile.id==='mw-local')return;
+    const seatNumber=Number(tile.dataset.seatIndex)||1;
+    const button=document.createElement('button');button.type='button';
+    button.className='mw-video-tile live-guest-seat empty mw-empty-seat';
+    button.dataset.seatIndex=String(seatNumber);button.setAttribute('data-open-guest-invite','');
+    button.setAttribute('aria-label','Invite a guest to seat '+seatNumber);
+    button.innerHTML='<span class="live-guest-seat-plus" aria-hidden="true">+</span><strong>Guest seat '+seatNumber+'</strong><small>Tap to invite</small>';
+    tile.replaceWith(button);updateGuestSeatCount();
+  }
   function addTile(participant,source='camera'){
-    const identity=participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_');
-    const id='mw-tile-'+identity+(source==='screen-share'?'-screen':'');let element=$('#'+CSS.escape(id));
-    if(!element){element=document.createElement('div');element.id=id;element.dataset.identity=participant.identity;element.dataset.source=source;element.className='mw-video-tile';element.innerHTML='<div class="mw-video-placeholder">'+esc(participant.name||participant.identity)+(source==='screen-share'?' · Screen':'')+'</div><span class="mw-name-tag">'+esc(participant.name||participant.identity)+(source==='screen-share'?' · Screen':'')+'</span>';$('#mw-grid').append(element);}
-    return element;
+    const identity=String(participant?.identity||'');
+    const safe=identity.replace(/[^a-zA-Z0-9_-]/g,'_');
+    if(source==='screen-share'){
+      const id='mw-tile-'+safe+'-screen';let element=$('#'+CSS.escape(id));
+      if(!element){
+        element=document.createElement('div');element.id=id;element.dataset.identity=identity;element.className='mw-screen-share-tile';
+        element.innerHTML='<div class="mw-video-placeholder">Screen shared by '+esc(participant?.name||identity)+'</div>';
+        $('#mw-screen-share-stage')?.append(element);
+      }
+      const share=$('#mw-screen-share-stage');if(share)share.hidden=false;
+      $('#mw-screen-stage')?.classList.add('has-screen-share');
+      return element;
+    }
+    return ensureParticipantSeat(participant);
   }
   function attachTrack(track,participant){
-    if(track.kind==='audio'){const audio=track.attach();audio.autoplay=true;const output=$('#mw-audio-output')?.value;if(output&&typeof audio.setSinkId==='function')audio.setSinkId(output).catch(()=>{});$('#mw-audio').append(audio);return;}
+    if(track.kind==='audio'){
+      const audio=track.attach();audio.autoplay=true;const output=$('#mw-audio-output')?.value;
+      if(output&&typeof audio.setSinkId==='function')audio.setSinkId(output).catch(()=>{});
+      $('#mw-audio').append(audio);return;
+    }
     const source=String(track.source||'').toLowerCase().includes('screen')?'screen-share':'camera';
-    const tile=addTile(participant,source),video=track.attach();video.autoplay=true;video.playsInline=true;video.dataset.mwTrackSource=source;
-    tile.querySelector('.mw-video-placeholder')?.remove();tile.querySelector('video[data-mw-track-source="'+source+'"]')?.remove();tile.prepend(video);applyMeetingVisualSettings();
+    const tile=addTile(participant,source);if(!tile)return;
+    const video=track.attach();video.autoplay=true;video.playsInline=true;video.dataset.mwTrackSource=source;
+    tile.querySelector('.mw-video-placeholder')?.remove();
+    tile.querySelector('video[data-mw-track-source="'+source+'"]')?.remove();
+    tile.prepend(video);
+    if(source==='camera'){const status=tile.querySelector('.live-guest-seat-meta small');if(status)status.textContent='In meeting';}
+    applyMeetingVisualSettings();
   }
   async function refreshChat(){
     if(!activeRoom||chatBusy)return;chatBusy=true;
@@ -248,10 +299,10 @@
     const result=await api(endpoint(id)+'/join',{method:'POST',body:'{}'});
     activeRoom=info.room;activeRole=result.role||'participant';activeLayout='fluid-grid';setContent(meetingMarkup(activeRoom,activeRole));messageIds=new Set();screenOn=false;
     roomClient=new client.Room({adaptiveStream:true,dynacast:true});
-    roomClient.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{attachTrack(track,participant);updateCount();});
-    roomClient.on(client.RoomEvent.TrackUnsubscribed,(track,publication,participant)=>{track.detach().forEach(element=>element.remove());if(track.kind==='video'&&participant){const identity=participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_');const source=String(track.source||'').toLowerCase().includes('screen')?'screen-share':'camera';const tile=$('#mw-tile-'+identity+(source==='screen-share'?'-screen':''));if(tile&&!tile.querySelector('video'))tile.remove();if(source==='screen-share'&&activeLayout==='presentation')setSpeakerFocus([]);}});
-    roomClient.on(client.RoomEvent.ParticipantConnected,()=>updateCount());
-    roomClient.on(client.RoomEvent.ParticipantDisconnected,participant=>{$('#mw-tile-'+participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_'))?.remove();$('#mw-tile-'+participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_')+'-screen')?.remove();updateCount();});
+    roomClient.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{ensureParticipantSeat(participant);attachTrack(track,participant);updateCount();});
+    roomClient.on(client.RoomEvent.TrackUnsubscribed,(track,publication,participant)=>{track.detach().forEach(element=>element.remove());if(track.kind==='video'&&participant){const identity=participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_');const source=String(track.source||'').toLowerCase().includes('screen')?'screen-share':'camera';const tile=$('#mw-tile-'+identity+(source==='screen-share'?'-screen':''));if(source==='screen-share'){tile?.remove();const share=$('#mw-screen-share-stage');if(share&&!share.querySelector('.mw-screen-share-tile')){share.hidden=true;$('#mw-screen-stage')?.classList.remove('has-screen-share');}}else if(tile&&!tile.querySelector('video')&&!tile.querySelector('.mw-video-placeholder')){const placeholder=document.createElement('div');placeholder.className='mw-video-placeholder';placeholder.textContent='Camera off';tile.prepend(placeholder);}}});
+    roomClient.on(client.RoomEvent.ParticipantConnected,participant=>{ensureParticipantSeat(participant);updateCount();});
+    roomClient.on(client.RoomEvent.ParticipantDisconnected,participant=>{const identity=participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_');$('#mw-tile-'+identity+'-screen')?.remove();resetGuestSeat(participant.identity);const share=$('#mw-screen-share-stage');if(share&&!share.querySelector('.mw-screen-share-tile')){share.hidden=true;$('#mw-screen-stage')?.classList.remove('has-screen-share');}updateCount();});
     if(client.RoomEvent.ActiveSpeakersChanged)roomClient.on(client.RoomEvent.ActiveSpeakersChanged,speakers=>setSpeakerFocus(speakers));
     if(client.RoomEvent.Disconnected)roomClient.on(client.RoomEvent.Disconnected,async()=>{
       if(!activeRoom)return;
@@ -274,6 +325,7 @@
       }
     }catch(error){note('Joined, but camera/microphone permission was not granted. Chat and listening remain available.',true);}
     for(const participant of roomClient.remoteParticipants.values()){
+      ensureParticipantSeat(participant);
       for(const publication of participant.trackPublications.values())if(publication.track)attachTrack(publication.track,participant);
     }
     updateCount();setSpeakerFocus([]);applyMeetingLayout(activeLayout);applyMeetingVisualSettings();
@@ -285,26 +337,32 @@
     $('#mw-camera').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isCameraEnabled;const publication=await roomClient.localParticipant.setCameraEnabled(enabled);setRoomControlState('mw-camera',enabled,enabled?'Camera on':'Camera off',enabled?'Turn camera off':'Turn camera on');const tile=$('#mw-local');tile.querySelector('video')?.remove();if(enabled){const track=publication?.track||Array.from(roomClient.localParticipant.trackPublications.values()).find(item=>item.track?.kind==='video')?.track;if(track){const video=track.attach();video.autoplay=true;video.playsInline=true;tile.querySelector('.mw-video-placeholder')?.remove();tile.prepend(video);}}else if(!tile.querySelector('.mw-video-placeholder')){const placeholder=document.createElement('div');placeholder.className='mw-video-placeholder';placeholder.textContent='Camera off';tile.prepend(placeholder);}}catch(error){note(error.message,true);}};
     $('#mw-screen').onclick=async()=>{const next=!screenOn;try{const publication=await roomClient.localParticipant.setScreenShareEnabled(next);screenOn=next;if(next&&publication?.track)attachTrack(publication.track,roomClient.localParticipant);if(!next)$('#mw-tile-'+state.user.id.replace(/[^a-zA-Z0-9_-]/g,'_')+'-screen')?.remove();setRoomControlState('mw-screen',screenOn,screenOn?'Stop share':'Share',screenOn?'Stop screen sharing':'Share screen');}catch(error){note(error.message,true);}};
     const setMeetWaveSideTab=name=>{
-      const panels={chat:$('#mw-chat-panel'),people:$('#mw-participants-panel'),layouts:$('#mw-layout-picker'),settings:$('#mw-settings-panel')};
+      const panels={chat:$('#mw-chat-panel'),people:$('#mw-participants-panel'),settings:$('#mw-settings-panel')};
       Object.entries(panels).forEach(([key,panel])=>{if(panel)panel.hidden=key!==name;});
-      [['chat','#mw-panel-chat-tab'],['people','#mw-panel-people-tab'],['layouts','#mw-panel-layouts-tab'],['settings','#mw-panel-settings-tab']].forEach(([key,selector])=>{const button=$(selector);if(button){button.classList.toggle('active',key===name);button.setAttribute('aria-pressed',String(key===name));}});
-      if(name==='settings')populateMeetingDevices();
-      const toolbarState={chat:'mw-chat-toggle',people:'mw-people-toggle',layouts:'mw-layout',settings:'mw-settings'};
+      [['chat','#mw-panel-chat-tab'],['people','#mw-panel-people-tab'],['settings','#mw-panel-settings-tab']].forEach(([key,selector])=>{
+        const button=$(selector);
+        if(button){button.classList.toggle('active',key===name);button.setAttribute('aria-pressed',String(key===name));}
+      });
+      const toolbarState={chat:'mw-chat-toggle',people:'mw-people-toggle',settings:'mw-settings'};
       Object.entries(toolbarState).forEach(([key,id])=>{const button=$('#'+id);if(button){const active=key===name;button.classList.toggle('is-active',active);button.setAttribute('aria-expanded',String(active));}});
+      if(name==='settings')populateMeetingDevices();
     };
-    $('#mw-layout').onclick=()=>setMeetWaveSideTab('layouts');
     $('#mw-fullscreen').onclick=toggleMeetingFullscreen;
     $('#mw-settings').onclick=()=>setMeetWaveSideTab('settings');
-    $('#mw-layout-picker-close').onclick=()=>setMeetWaveSideTab('chat');
     $('#mw-settings-close').onclick=()=>setMeetWaveSideTab('chat');
     document.querySelectorAll('[data-mw-layout]').forEach(button=>button.onclick=()=>applyMeetingLayout(button.dataset.mwLayout));
     $('#mw-people-toggle').onclick=()=>setMeetWaveSideTab('people');
     $('#mw-chat-toggle').onclick=()=>setMeetWaveSideTab('chat');
     $('#mw-panel-chat-tab').onclick=()=>setMeetWaveSideTab('chat');
     $('#mw-panel-people-tab').onclick=()=>setMeetWaveSideTab('people');
-    $('#mw-panel-layouts-tab').onclick=()=>setMeetWaveSideTab('layouts');
     $('#mw-panel-settings-tab').onclick=()=>setMeetWaveSideTab('settings');
-
+    $('#mw-grid').onclick=event=>{
+      const seat=event.target.closest?.('[data-open-guest-invite]');
+      if(!seat)return;
+      event.preventDefault();
+      if(activeRole==='host'&&activeRoom)void inviteMembers(activeRoom.id);
+      else note('Ask the host to invite a guest into this seat.');
+    };
     $('#mw-audio-input').onchange=event=>switchMeetingDevice('audioinput',event.target.value);
     $('#mw-video-input').onchange=event=>switchMeetingDevice('videoinput',event.target.value);
     $('#mw-audio-output').onchange=event=>switchMeetingDevice('audiooutput',event.target.value);
@@ -318,9 +376,15 @@
     await populateMeetingDevices();
     $('#mw-room-invite')?.addEventListener('click',()=>inviteMembers(activeRoom.id));
     $('#mw-invite-members')?.addEventListener('click',()=>inviteMembers(activeRoom.id));
+    $('#mw-settings-invite')?.addEventListener('click',()=>inviteMembers(activeRoom.id));
     $('#mw-copy').onclick=()=>copyInvite(activeRoom.id);
-    $('#mw-leave').onclick=()=>leaveRoom(false);
-    $('#mw-end')?.addEventListener('click',()=>leaveRoom(true));
+    $('#mw-leave')?.addEventListener('click',()=>leaveRoom(false));
+    $('#mw-power-off')?.addEventListener('click',async event=>{
+      if(!activeRoom||activeRole!=='host')return;
+      if(!window.confirm('Power off this MeetWave meeting for everyone?'))return;
+      event.currentTarget.disabled=true;
+      await leaveRoom(true);
+    });
     $('#mw-chat-form').onsubmit=async event=>{event.preventDefault();const input=$('#mw-chat-input');try{await api(endpoint(activeRoom.id)+'/messages',{method:'POST',body:JSON.stringify({text:input.value})});input.value='';await refreshChat();}catch(error){note(error.message,true);}};
     await refreshChat();poller=setInterval(refreshChat,3500);
   }
