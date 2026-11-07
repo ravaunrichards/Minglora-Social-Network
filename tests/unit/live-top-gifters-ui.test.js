@@ -84,6 +84,6 @@ test("profile Gift Gallery presents the weekly Title Gifter and up to ten ranked
   assert.ok(gallery.includes("data-gift-gallery-gifter-profile"));
   assert.ok(css.includes("gift-gallery-ranked-row.is-podium-2"));
   assert.ok(css.includes("grid-template-columns:minmax(0,1fr)"));
-  assert.ok(html.includes("20261107-gift-gallery-top10-1"));
-  assert.ok(sw.includes("minglora-shell-v144-gift-gallery-top10-1"));
+  assert.ok(html.includes("/app.js?v=20261107-account-switcher-2"));
+  assert.ok(sw.includes("minglora-shell-v144-phone-call-ui-3"));
 });
