@@ -441,8 +441,8 @@ function activateNav(view){const requestedView=view;if(requestedView==='profile'
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
-  state.rechargeCurrencyMode=state.rechargeCurrencyMode==='global'?'global':'two-way';
   activateNav('coins');
+  state.rechargeCurrencyMode=state.rechargeCurrencyMode==='global'?'global':'two-way';
 });
 window.addEventListener('minglora:open-creator-section',async event=>{
   const section=['monetization','overview','audience','analytics','pages','settings'].includes(event.detail?.section)?event.detail.section:'monetization';
