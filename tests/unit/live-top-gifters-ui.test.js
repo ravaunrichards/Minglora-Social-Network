@@ -27,6 +27,8 @@ test("LIVE room Top Gifters ranks broadcast-scoped confirmed LIVE gifts and refr
   assert.match(server, /weeklyTitleGifters/);
   assert.match(app, /Weekly Gift Gallery · Top Gifters/);
   assert.match(app, /data-live-weekly-title-profile/);
+  assert.match(app, /TOP GIFTER/);
+  assert.match(app, /Weekly TOP GIFTER for this gift/);
   assert.match(app, /openLiveProfilePreview\(userId,session\|\|activeLiveSession\)/);
 });
 
