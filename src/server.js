@@ -278,13 +278,23 @@ function friendStoriesMuted(viewerId,targetId){
   const preference=friendPreferenceFor(viewerId,targetId);
   return Boolean(preference?.isMutedStories||friendUpdatesSnoozed(viewerId,targetId));
 }
-function canViewProfile(viewerId,target){if(!target||viewerId===target.id)return true;const visibility=getUserSettings(target).privacy.profileVisibility;if(visibility==='public')return true;if(visibility==='friends')return isFriend(viewerId,target.id);return false;}
+function canViewProfile(viewerId,target){
+  if(!target||isAccountBlocked(target))return false;
+  if(viewerId===target.id)return true;
+  if(blockedBetween(viewerId,target.id))return false;
+  const visibility=getUserSettings(target).privacy.profileVisibility;
+  if(visibility==='public')return true;
+  if(visibility==='friends')return isFriend(viewerId,target.id);
+  return false;
+}
 const DEFAULT_PROFILE_SECTIONS={about:true,friends:true,photos:true,reels:true,groups:true,events:true,checkIns:true,highlights:true};
 function readProfileSections(userId){
   const saved=(db.profileSections||[]).find(item=>item.userId===userId);
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
 }
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
+  const owner=(db.users||[]).find(member=>member.id===ownerId);
+  if(!owner||isAccountBlocked(owner))return false;
   if(viewerId===ownerId)return true;
   if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
@@ -4725,7 +4735,7 @@ async function route(req, res) {
       if(method==='GET'&&m){
         await syncRefundedGiftActivity();
         const target=db.users.find(member=>member.id===m[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const relationshipType=m[2];
         const listPrivacyKey={followers:'followersListAudience',following:'followingListAudience',subscribers:'subscribersListAudience'}[relationshipType];
         const listAudience=getUserSettings(target).privacy[listPrivacyKey]||'public';
@@ -4818,7 +4828,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|friends)$/);
       if(method==='GET'&&m){
         const target=db.users.find(u=>u.id===m[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const listAudience=getUserSettings(target).privacy.friendsListAudience||'public';
         if(!canViewProfileAudience(user.id,target.id,listAudience))return json(res,404,{error:'This friends list is not available.'});
         const rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
@@ -4829,7 +4839,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/profile-presence$/);
       if(method==='POST'&&m){
         const target=db.users.find(member=>member.id===m[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         if(target.id!==user.id){
           db.profileViewPresence ||= [];
           touchProfilePresence(db.profileViewPresence,{targetUserId:target.id,viewerUserId:user.id,at:new Date()});
@@ -4892,7 +4902,7 @@ async function route(req, res) {
       const profileSectionsMatch=p.match(/^\/api\/users\/([^/]+)\/profile-sections$/);
       if(method==='GET'&&profileSectionsMatch){
         const target=db.users.find(member=>member.id===profileSectionsMatch[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         return json(res,200,{sections:readProfileSections(target.id)});
       }
       if(method==='PATCH'&&p==='/api/profile-sections'){
@@ -4911,7 +4921,7 @@ async function route(req, res) {
       const profileStatusMatch=p.match(/^\/api\/users\/([^/]+)\/profile-status$/);
       if(method==='GET'&&profileStatusMatch){
         const target=db.users.find(member=>member.id===profileStatusMatch[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const status=(db.profileStatuses||[]).filter(item=>item.userId===target.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(user.id,target.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]||null;
         return json(res,200,{status:status?{text:status.text,mood:status.mood,audience:status.audience,expiresAt:status.expiresAt,createdAt:status.createdAt}:null});
       }
@@ -4935,7 +4945,7 @@ async function route(req, res) {
       const checkInsMatch=p.match(/^\/api\/users\/([^/]+)\/check-ins$/);
       if(method==='GET'&&checkInsMatch){
         const target=db.users.find(member=>member.id===checkInsMatch[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const checkIns=(db.checkIns||[]).filter(item=>item.userId===target.id&&canViewProfileAudience(user.id,target.id,item.visibility)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,100);
         return json(res,200,{checkIns});
       }
@@ -4993,7 +5003,7 @@ async function route(req, res) {
       const profileEventsMatch=p.match(/^\/api\/users\/([^/]+)\/events$/);
       if(method==='GET'&&profileEventsMatch){
         const target=db.users.find(member=>member.id===profileEventsMatch[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const events=(db.events||[]).filter(event=>(event.hostId===target.id||(db.eventRsvps||[]).some(rsvp=>rsvp.eventId===event.id&&rsvp.userId===target.id))&&canViewProfileAudience(user.id,event.hostId,event.visibility)).map(event=>({...event,host:safeUser(db.users.find(member=>member.id===event.hostId),user.id),rsvpCount:(db.eventRsvps||[]).filter(rsvp=>rsvp.eventId===event.id&&rsvp.status==='going').length,myRsvp:(db.eventRsvps||[]).find(rsvp=>rsvp.eventId===event.id&&rsvp.userId===user.id)?.status||null})).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).slice(0,100);
         return json(res,200,{events});
       }
@@ -5028,7 +5038,7 @@ async function route(req, res) {
       const profileHighlightsMatch=p.match(/^\/api\/users\/([^/]+)\/highlights$/);
       if(method==='GET'&&profileHighlightsMatch){
         const target=db.users.find(member=>member.id===profileHighlightsMatch[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const highlights=await Promise.all((db.profileHighlights||[]).filter(item=>item.userId===target.id).map(async item=>{
           const source=(item.storyIds||[]).map(id=>(db.stories||[]).find(story=>story.id===id)||(db.storyArchives||[]).find(story=>story.id===id)).filter(story=>story&&canViewStory(user.id,story));
           if(!source.length)return null;
@@ -5101,7 +5111,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/gift-gallery$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const gallery=getGiftGallery(db,target);
         const entries=gallery.entries.map(entry=>{
           const topGifters=(entry.topGifters||[]).map(gifter=>{
@@ -5158,7 +5168,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/creator-league$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         await syncRefundedGiftActivity();
         const leagueReconciliation=settleScheduledCreatorLeagueDays(db,new Date());
         if(leagueReconciliation.changed)await saveStore();
@@ -5173,7 +5183,7 @@ async function route(req, res) {
         await syncRefundedGiftActivity();
         const leagueReconciliation=settleScheduledCreatorLeagueDays(db,new Date());
         if(leagueReconciliation.changed)await saveStore();
-        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         db.profileViews ||= [];
         db.profileViewPresence ||= [];
         const mayRecordProfileView=target.id!==user.id&&getUserSettings(user).notifications.profileViews===true&&getUserSettings(target).notifications.profileViews===true;
