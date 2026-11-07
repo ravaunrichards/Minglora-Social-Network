@@ -2761,8 +2761,7 @@ body.auth-mode .auth-screen{
 .profile-crop-preview.has-selection{cursor:grab;touch-action:none}
 .profile-crop-preview.is-dragging{cursor:grabbing}
 .profile-crop-caption{display:block;color:var(--muted);font-size:11px;line-height:1.45;text-align:center}
-.profile-crop-zoom{display:flex;flex-direction:column;gap:5px;width:100%;font-size:12px;font-weight:700;color:var(--ink)}
-.profile-crop-zoom input{width:100%;accent-color:var(--blue)}
+.profile-crop-preview.is-zooming{cursor:zoom-in}
 .profile-crop-actions{display:flex;flex-wrap:wrap;gap:7px}
 .profile-crop-actions button{font-size:11px;padding:8px 10px}
 .profile-crop-workspace .profile-upload-controls{width:100%;min-width:0}

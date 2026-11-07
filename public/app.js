@@ -5590,6 +5590,7 @@ function updateProfileCropPreview(stage,image,edit){
 }
 function bindProfileCropStage(stage,image,edit){
   const update=()=>updateProfileCropPreview(stage,image,edit);
+  const clampZoom=value=>Math.max(1,Math.min(3,value));
   image.addEventListener('load',()=>{
     edit.imageWidth=image.naturalWidth||0;
     edit.imageHeight=image.naturalHeight||0;
@@ -5600,27 +5601,87 @@ function bindProfileCropStage(stage,image,edit){
     edit.imageHeight=image.naturalHeight;
     update();
   }
-  let drag=null;
+  const pointers=new Map();
+  let drag=null,pinch=null;
+  const beginDrag=pointer=>{
+    drag={pointerId:pointer.pointerId,x:pointer.x,y:pointer.y,offsetX:edit.offsetX,offsetY:edit.offsetY};
+    stage.classList.add('is-dragging');
+  };
+  const beginPinch=()=>{
+    const active=[...pointers.values()].slice(0,2);
+    if(active.length<2)return;
+    drag=null;
+    stage.classList.remove('is-dragging');
+    const dx=active[1].x-active[0].x,dy=active[1].y-active[0].y;
+    const rect=stage.getBoundingClientRect();
+    pinch={
+      distance:Math.max(1,Math.hypot(dx,dy)),
+      zoom:edit.zoom,
+      offsetX:edit.offsetX,
+      offsetY:edit.offsetY,
+      centerX:(active[0].x+active[1].x)/2-(rect.left+rect.width/2),
+      centerY:(active[0].y+active[1].y)/2-(rect.top+rect.height/2)
+    };
+    stage.classList.add('is-zooming');
+  };
   stage.addEventListener('pointerdown',event=>{
     if(!edit.fileSelected)return;
-    drag={pointerId:event.pointerId,x:event.clientX,y:event.clientY,offsetX:edit.offsetX,offsetY:edit.offsetY};
-    stage.classList.add('is-dragging');
+    const pointer={pointerId:event.pointerId,x:event.clientX,y:event.clientY};
+    pointers.set(event.pointerId,pointer);
     try{stage.setPointerCapture(event.pointerId);}catch{}
+    if(pointers.size>=2)beginPinch();
+    else beginDrag(pointer);
     event.preventDefault();
   });
   stage.addEventListener('pointermove',event=>{
+    const pointer=pointers.get(event.pointerId);
+    if(!pointer)return;
+    pointer.x=event.clientX;
+    pointer.y=event.clientY;
+    if(pointers.size>=2&&pinch){
+      const active=[...pointers.values()].slice(0,2);
+      const dx=active[1].x-active[0].x,dy=active[1].y-active[0].y;
+      const distance=Math.max(1,Math.hypot(dx,dy));
+      const rect=stage.getBoundingClientRect();
+      const centerX=(active[0].x+active[1].x)/2-(rect.left+rect.width/2);
+      const centerY=(active[0].y+active[1].y)/2-(rect.top+rect.height/2);
+      edit.zoom=clampZoom(pinch.zoom*(distance/pinch.distance));
+      const scale=edit.zoom/pinch.zoom;
+      edit.offsetX=centerX-scale*(pinch.centerX-pinch.offsetX);
+      edit.offsetY=centerY-scale*(pinch.centerY-pinch.offsetY);
+      update();
+      event.preventDefault();
+      return;
+    }
     if(!drag||drag.pointerId!==event.pointerId)return;
     edit.offsetX=drag.offsetX+(event.clientX-drag.x);
     edit.offsetY=drag.offsetY+(event.clientY-drag.y);
     update();
+    event.preventDefault();
   });
+  const resumeGesture=()=>{
+    if(pointers.size>=2){beginPinch();return;}
+    pinch=null;
+    stage.classList.remove('is-zooming');
+    drag=null;
+    const remaining=pointers.values().next().value;
+    if(remaining)beginDrag(remaining);
+    else stage.classList.remove('is-dragging');
+  };
   const stop=event=>{
-    if(!drag||(event?.pointerId!=null&&drag.pointerId!==event.pointerId))return;
-    drag=null;stage.classList.remove('is-dragging');
+    if(event?.pointerId!=null&&!pointers.has(event.pointerId))return;
+    if(event?.pointerId!=null)pointers.delete(event.pointerId);
+    resumeGesture();
   };
   stage.addEventListener('pointerup',stop);
   stage.addEventListener('pointercancel',stop);
   stage.addEventListener('lostpointercapture',stop);
+  stage.addEventListener('wheel',event=>{
+    if(!edit.fileSelected||(!event.ctrlKey&&!event.metaKey))return;
+    event.preventDefault();
+    edit.zoom=clampZoom(edit.zoom*Math.exp(-event.deltaY*0.002));
+    update();
+  },{passive:false});
   return update;
 }
 async function transformProfileCrop(file,edit,stage,slot){
@@ -5689,9 +5750,9 @@ function openEditProfile(u,mediaOnly=null){
           <div class="profile-upload-controls">
             <div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-avatar-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-avatar-camera-button">Take photo</button></div>
             <input id="edit-avatar-file" class="profile-file-input" type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif">
-            <label class="profile-crop-zoom">Zoom <input type="range" min="1" max="3" step="0.05" value="1" id="edit-avatar-zoom" disabled></label>
+            
             <div class="profile-crop-actions"><button class="secondary" type="button" id="edit-avatar-rotate" disabled>Rotate 90°</button><button class="secondary" type="button" id="edit-avatar-reset" disabled>Reset crop</button></div>
-            <small>Drag the photo inside the circle to move it. Zoom in or out, rotate it, then save when the preview looks right.</small>
+            <small>Drag with one finger to reposition. Pinch with two fingers to zoom on phones; hold Ctrl and scroll over the preview on a computer.</small>
           </div>
         </div>
       </div>
@@ -5703,9 +5764,9 @@ function openEditProfile(u,mediaOnly=null){
           <div class="profile-upload-controls">
             <div class="profile-upload-buttons"><label class="secondary profile-file-button" for="edit-cover-file">Choose from gallery / files</label><button class="secondary" type="button" id="edit-cover-camera-button">Take cover photo</button></div>
             <input id="edit-cover-file" class="profile-file-input" type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif">
-            <label class="profile-crop-zoom">Zoom <input type="range" min="1" max="3" step="0.05" value="1" id="edit-cover-zoom" disabled></label>
+            
             <div class="profile-crop-actions"><button class="secondary" type="button" id="edit-cover-rotate" disabled>Rotate 90°</button><button class="secondary" type="button" id="edit-cover-reset" disabled>Reset crop</button></div>
-            <small>Drag the photo inside the rectangle to reposition it. The finished cover is cropped to the same wide shape shown here.</small>
+            <small>Drag with one finger to reposition. Pinch with two fingers to zoom on phones; hold Ctrl and scroll over the preview on a computer.</small>
           </div>
         </div>
       </div>
@@ -5723,8 +5784,8 @@ function openEditProfile(u,mediaOnly=null){
     });
     modal.querySelector('#save-profile-button').textContent=mediaOnly==='avatar'?'Save profile picture':'Save cover picture';
     modal.querySelector('#profile-upload-status').textContent=mediaOnly==='avatar'
-      ?'Choose or take a profile picture, adjust its circular crop, then save only the profile picture.'
-      :'Choose or take a cover picture, adjust its wide crop, then save only the cover picture.';
+      ?'Choose or take a profile picture, drag to position it and pinch with two fingers to zoom, then save only the profile picture.'
+      :'Choose or take a cover picture, drag to position it and pinch with two fingers to zoom, then save only the cover picture.';
   }
   const avatarInput=modal.querySelector('#edit-avatar-file');
   const coverInput=modal.querySelector('#edit-cover-file');
@@ -5734,22 +5795,19 @@ function openEditProfile(u,mediaOnly=null){
   const coverPreview=modal.querySelector('#edit-cover-preview');
   const avatarPreviewImage=modal.querySelector('#edit-avatar-crop-image');
   const coverPreviewImage=modal.querySelector('#edit-cover-crop-image');
-  const avatarZoom=modal.querySelector('#edit-avatar-zoom');
-  const coverZoom=modal.querySelector('#edit-cover-zoom');
   const previewUrls=[];
   const updateAvatarCrop=bindProfileCropStage(avatarPreview,avatarPreviewImage,avatarEdit);
   const updateCoverCrop=bindProfileCropStage(coverPreview,coverPreviewImage,coverEdit);
-  function resetProfileCrop(edit,zoomInput,update){
+  function resetProfileCrop(edit,update){
     edit.zoom=1;edit.rotation=0;edit.offsetX=0;edit.offsetY=0;
-    zoomInput.value='1';update();
+    update();
   }
-  function previewFile(input,stage,image,edit,zoomInput,slot){
+  function previewFile(input,stage,image,edit,slot){
     const file=input.files?.[0];if(!file)return;
     if(!imageMime(file)){toast('Choose a supported JPEG, PNG, WEBP, AVIF, HEIC or HEIF image.');input.value='';return;}
     if(file.size>mediaMaxBytes(slot)){toast('The '+(slot==='avatar'?'profile picture':'cover photo')+' must be '+mediaMaxLabel(slot)+' or smaller.');input.value='';return;}
-    resetProfileCrop(edit,zoomInput,slot==='avatar'?updateAvatarCrop:updateCoverCrop);
+    resetProfileCrop(edit,slot==='avatar'?updateAvatarCrop:updateCoverCrop);
     edit.fileSelected=true;stage.classList.add('has-selection');
-    zoomInput.disabled=false;
     modal.querySelector('#edit-'+slot+'-rotate').disabled=false;
     modal.querySelector('#edit-'+slot+'-reset').disabled=false;
     const url=URL.createObjectURL(file);previewUrls.push(url);
@@ -5786,22 +5844,20 @@ function openEditProfile(u,mediaOnly=null){
       state.user.contactPhone=phone;
     }catch(error){phoneStatus.textContent=error.message;toast(error.message);phoneVerify.disabled=false;}
   };
-  avatarInput.addEventListener('change',()=>previewFile(avatarInput,avatarPreview,avatarPreviewImage,avatarEdit,avatarZoom,'avatar'));
-  coverInput.addEventListener('change',()=>previewFile(coverInput,coverPreview,coverPreviewImage,coverEdit,coverZoom,'cover'));
+  avatarInput.addEventListener('change',()=>previewFile(avatarInput,avatarPreview,avatarPreviewImage,avatarEdit,'avatar'));
+  coverInput.addEventListener('change',()=>previewFile(coverInput,coverPreview,coverPreviewImage,coverEdit,'cover'));
   modal.querySelector('#edit-avatar-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{
     const transfer=new DataTransfer();transfer.items.add(file);avatarInput.files=transfer.files;
-    previewFile(avatarInput,avatarPreview,avatarPreviewImage,avatarEdit,avatarZoom,'avatar');
+    previewFile(avatarInput,avatarPreview,avatarPreviewImage,avatarEdit,'avatar');
   }});
   modal.querySelector('#edit-cover-camera-button').onclick=()=>openDeviceCapture({mode:'photo',onCapture:file=>{
     const transfer=new DataTransfer();transfer.items.add(file);coverInput.files=transfer.files;
-    previewFile(coverInput,coverPreview,coverPreviewImage,coverEdit,coverZoom,'cover');
+    previewFile(coverInput,coverPreview,coverPreviewImage,coverEdit,'cover');
   }});
-  avatarZoom.addEventListener('input',event=>{avatarEdit.zoom=Number(event.target.value);updateAvatarCrop();});
-  coverZoom.addEventListener('input',event=>{coverEdit.zoom=Number(event.target.value);updateCoverCrop();});
   modal.querySelector('#edit-avatar-rotate').onclick=()=>{avatarEdit.rotation=(avatarEdit.rotation+90)%360;updateAvatarCrop();};
   modal.querySelector('#edit-cover-rotate').onclick=()=>{coverEdit.rotation=(coverEdit.rotation+90)%360;updateCoverCrop();};
-  modal.querySelector('#edit-avatar-reset').onclick=()=>resetProfileCrop(avatarEdit,avatarZoom,updateAvatarCrop);
-  modal.querySelector('#edit-cover-reset').onclick=()=>resetProfileCrop(coverEdit,coverZoom,updateCoverCrop);
+  modal.querySelector('#edit-avatar-reset').onclick=()=>resetProfileCrop(avatarEdit,updateAvatarCrop);
+  modal.querySelector('#edit-cover-reset').onclick=()=>resetProfileCrop(coverEdit,updateCoverCrop);
   const close=()=>{clearTimeout(profileSaveTimer);window.removeEventListener('resize',updateBothCrops);previewUrls.forEach(url=>URL.revokeObjectURL(url));modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   const profileForm=modal.querySelector('#edit-profile-form');

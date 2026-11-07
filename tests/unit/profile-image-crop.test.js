@@ -21,20 +21,27 @@ test('profile editor previews the avatar as a circle and the cover as a wide rec
   assert.match(css,/\.profile-cover\{[^}]*aspect-ratio:3\/1/);
 });
 
-test('profile image crop tools support drag positioning, zoom, rotation and reset for each image',()=>{
-  assert.match(app,/stage\.addEventListener\('pointerdown'/);
-  assert.match(app,/stage\.addEventListener\('pointermove'/);
-  assert.match(app,/stage\.setPointerCapture\(event\.pointerId\)/);
-  assert.match(app,/edit\.offsetX=drag\.offsetX/);
-  assert.match(app,/edit\.offsetY=drag\.offsetY/);
-  assert.match(app,/id="edit-avatar-zoom"/);
-  assert.match(app,/id="edit-cover-zoom"/);
-  assert.match(app,/id="edit-avatar-rotate"/);
-  assert.match(app,/id="edit-cover-rotate"/);
-  assert.match(app,/id="edit-avatar-reset"/);
-  assert.match(app,/id="edit-cover-reset"/);
-  assert.match(app,/avatarEdit\.rotation=\(avatarEdit\.rotation\+90\)%360/);
-  assert.match(app,/coverEdit\.rotation=\(coverEdit\.rotation\+90\)%360/);
+test('profile and cover crop previews support touch pinch zoom, dragging, rotation and reset without zoom sliders',()=>{
+  assert.ok(app.includes("stage.addEventListener('pointerdown'"));
+  assert.ok(app.includes("stage.addEventListener('pointermove'"));
+  assert.ok(app.includes("stage.addEventListener('pointerup'"));
+  assert.ok(app.includes("stage.setPointerCapture(event.pointerId)"));
+  assert.ok(app.includes('const pointers=new Map()'));
+  assert.ok(app.includes('const beginPinch=()=>'));
+  assert.ok(app.includes('edit.zoom=clampZoom(pinch.zoom*(distance/pinch.distance))'));
+  assert.ok(app.includes('(!event.ctrlKey&&!event.metaKey)'));
+  assert.ok(!app.includes('id="edit-avatar-zoom"'));
+  assert.ok(!app.includes('id="edit-cover-zoom"'));
+  assert.ok(!app.includes('profile-crop-zoom'));
+  assert.ok(app.includes('Pinch with two fingers to zoom on phones'));
+  assert.ok(app.includes('id="edit-avatar-rotate"'));
+  assert.ok(app.includes('id="edit-cover-rotate"'));
+  assert.ok(app.includes('id="edit-avatar-reset"'));
+  assert.ok(app.includes('id="edit-cover-reset"'));
+  assert.ok(app.includes('avatarEdit.rotation=(avatarEdit.rotation+90)%360'));
+  assert.ok(app.includes('coverEdit.rotation=(coverEdit.rotation+90)%360'));
+  assert.ok(css.includes('.profile-crop-preview.has-selection{cursor:grab;touch-action:none}'));
+  assert.ok(css.includes('.profile-crop-preview.is-zooming'));
 });
 
 test('the uploaded avatar and cover are cropped to the exact selected preview frame',()=>{
@@ -55,12 +62,12 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
   assert.match(app,/transformProfileCrop\(coverInput\.files\[0\],coverEdit,coverPreview,'cover'\)/);
 });
 
-test('the refreshed shell and service worker load the profile crop editor and its styles',()=>{
-  assert.match(html,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(html,/app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(worker,/minglora-shell-v93-flow-layout-safety-1/);
-  assert.match(worker,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(worker,/app\.js\?v=20261105-roomwide-live-gifts-1/);
+test('the refreshed shell and service worker load the pinch-to-zoom crop editor and styles',()=>{
+  assert.match(html,/styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(html,/app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(worker,/v113-pinch-zoom-photo-crop-1/);
+  assert.match(worker,/styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(worker,/app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
 });
 
 test('crop preview and saved output use the visible inner frame rather than its border',()=>{
