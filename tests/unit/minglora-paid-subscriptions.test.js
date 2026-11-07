@@ -56,10 +56,11 @@ test('subscriber-only posts and LIVE are enforced by server access checks', asyn
 });
 
 test('Minglora uses a 70% base share and a reviewed 20-point bonus up to 90% after PayPal fees', async () => {
-  const [edge, splitMigration, feeMigration] = await Promise.all([
+  const [edge, splitMigration, feeMigration, bonusMigration] = await Promise.all([
     read('../../supabase/functions/minglora-runtime-state/index.ts'),
-    read('../../supabase/migrations/20261106120000_minglora_tiktok_style_subscription_performance_share.sql'),
-    read('../../supabase/migrations/20261106121000_minglora_subscription_provider_fee_net_split.sql')
+    read('../../supabase/migrations/20261107050000_minglora_subscription_70_base_90_bonus.sql'),
+    read('../../supabase/migrations/20261106121000_minglora_subscription_provider_fee_net_split.sql'),
+    read('../../supabase/migrations/20261107051000_minglora_subscription_bonus_100k_video_views.sql')
   ]);
   assert.match(edge, /subscription_bonus_review/);
   assert.match(edge, /followerCount >= 10000/);
@@ -71,6 +72,7 @@ test('Minglora uses a 70% base share and a reviewed 20-point bonus up to 90% aft
   assert.match(edge, /originalPayment\?\.creator_share_bps/);
   assert.match(splitMigration, /creator_share_bps IN \(5000,7000,9000\)/);
   assert.match(splitMigration, /platform_share_bps IN \(1000,3000,5000\)/);
+  assert.match(bonusMigration, /qualifying_video_views >= 100000/);
   assert.match(feeMigration, /provider_fee_minor integer NOT NULL DEFAULT 0/);
   assert.match(feeMigration, /creator_minor \+ platform_minor \+ provider_fee_minor = gross_minor/);
 });
@@ -88,8 +90,8 @@ test('subscription pages, Creator Studio navigation and current cache version ar
   assert.match(app, /state\.view==='subscriptions'/);
   assert.match(app, /profile-subscribe/);
   assert.match(html, /subscriptions\.css\?v=20261106-tiktok-style-subscriptions-1/);
-  assert.match(html, /app\.js\?v=20261106-tiktok-style-subscriptions-1/);
-  assert.match(worker, /minglora-shell-v115-tiktok-style-subscriptions-1/);
+  assert.match(html, /app\.js\?v=20261107-subscriptions-70-90-1/);
+  assert.match(worker, /minglora-shell-v116-subscriptions-70-90-1/);
   assert.match(worker, /subscriptions\.css\?v=20261106-tiktok-style-subscriptions-1/);
   assert.ok(css.length > 1000);
 });
