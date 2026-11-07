@@ -15,7 +15,8 @@ test('profile owner has individual profile-picture and cover-picture edit contro
   assert.match(app,/id="profile-edit-cover"/);
   assert.match(app,/\$\('#profile-edit-avatar'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u,'avatar'\)\)/);
   assert.match(app,/\$\('#profile-edit-cover'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u,'cover'\)\)/);
-  const avatarButton=app.slice(app.indexOf('id="profile-edit-avatar"'),app.indexOf('</button>',app.indexOf('id="profile-edit-avatar"')));
+  const avatarStart=app.indexOf('class="profile-inline-media-edit profile-avatar-inline-edit"');
+  const avatarButton=app.slice(avatarStart,app.indexOf('</button>',avatarStart));
   const coverButton=app.slice(app.indexOf('id="profile-edit-cover"'),app.indexOf('</button>',app.indexOf('id="profile-edit-cover"')));
   assert.match(avatarButton,/<svg class="profile-control-icon"/);
   assert.match(coverButton,/<svg class="profile-control-icon"/);
@@ -67,11 +68,11 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(css,/\.profile-avatar-edit-wrap\{[^}]*flex:0 0/);
   assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
   assert.match(css,/@media\(max-width:720px\)/);
-  assert.match(html,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(html,/app\.js\?v=20261106-admin-cover-management-1/);
-  assert.match(worker,/minglora-shell-v130-profile-controls-functional-1/);
-  assert.match(worker,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(worker,/app\.js\?v=20261106-admin-cover-management-1/);
+  assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
+  assert.match(html,/app\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
+  assert.match(worker,/minglora-shell-v131-live-top-gifters-1/);
+  assert.match(worker,/styles\.css\?v=20261107-top-gifters-1/);
+  assert.match(worker,/app\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
 });
 
 test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{
