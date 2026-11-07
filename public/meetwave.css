@@ -1632,3 +1632,15 @@
   .mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta small{display:none!important}
   .mw-meeting .mw-host-power-dock{margin-right:7px!important;padding-inline:7px!important}
 }
+
+/* Screen-share picture-in-picture holds all eleven seats in a compact 6x2 tray. */
+#mw-screen-stage.has-screen-share #mw-grid{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  grid-template-rows:18px repeat(2,minmax(0,1fr))!important;
+}
+@media(max-width:780px){
+  #mw-screen-stage.has-screen-share #mw-grid{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-template-rows:16px repeat(2,minmax(0,1fr))!important;
+  }
+}
