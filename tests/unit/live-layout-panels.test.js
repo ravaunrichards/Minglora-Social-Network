@@ -111,7 +111,10 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
   assert.match(app, /id='live-gift-panel' class='live-gift-panel/);
   assert.match(app, /data-live-tools-panel-target='gifts'/);
   assert.match(app, /role===\"host\"\?\"LIVE gift catalogue\"/);
-  assert.match(app, /role===\"host\"\?\"Viewer preview · sending to your own LIVE is disabled\"/);
+  assert.match(app, /Choose any other connected host, guest or viewer in this LIVE/);
+  assert.match(app, /id='live-gift-recipient'/);
+  assert.match(app, /loadLiveGiftRecipients\(session\)/);
+  assert.match(app, /liveGiftSendSelected\.disabled=!giftsEnabled/);
   assert.match(app, /const loadLiveGiftCatalogue=async\(\)=>/);
   assert.match(app, /liveGiftCatalogue=\[\];liveGiftScope='all';refreshLiveGiftGrid=null/);
   assert.match(app, /api\(\"\/coins\/catalog\"\)/);
@@ -126,7 +129,8 @@ test('LIVE gift catalogue is visible from the room for viewers, guests and host 
 
 test('LIVE gift animations use server-confirmed gift ledger events, not client messages', () => {
   assert.ok(server.includes("if(method==='GET'&&liveAction)"), 'missing authenticated LIVE gifts read route');
-  assert.ok(server.includes("event.broadcastId===session.id&&event.creatorId===session.hostId"), 'gift history must be scoped to this broadcast and host');
+  assert.ok(server.includes("event.broadcastId===session.id"), 'gift history must be scoped to this broadcast');
+  assert.ok(server.includes("creatorId:recipientId"), 'gift history must include gifts received by hosts and guests');
   assert.ok(server.includes("id:String(event.giftId||event.id||'')"), 'events must expose their confirmed transaction id');
   assert.ok(app.includes('function startLiveGiftEvents(session)'), 'missing room gift event polling');
   assert.ok(app.includes('function stopLiveGiftEvents()'), 'missing LIVE gift polling cleanup');
