@@ -82,7 +82,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 });
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
-  const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const html=read('public/index.html');
   const activeStyles=html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1]||'';
   assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\d+-/);
   assert.ok(activeStyles&&serviceWorker.includes("'"+activeStyles+"'"),'active stylesheet is cached');
