@@ -63,21 +63,21 @@ test('retry actions remain available for failed content loads', () => {
 
 test('automatic-update assets are versioned consistently in HTML and the service-worker shell', () => {
   const assets = [
-    '/styles.css?v=20261106-pinch-zoom-photo-crop-1',
+    '/styles.css?v=20261107-top-gifters-1',
     '/meetwave.css?v=20261107-auto-sync-no-refresh-1',
-    '/meetwave.js?v=20261106-auto-sync-no-refresh-1',
-    '/leagues.js?v=20261106-auto-sync-no-refresh-1',
+    '/meetwave.js?v=20261107-top-gifters-profile-controls-functional-1',
+    '/leagues.js?v=20261107-top-gifters-profile-controls-functional-1',
     '/gifter-progression.css?v=20261107-auto-sync-no-refresh-1',
-    '/gifter-progression.js?v=20261106-auto-sync-no-refresh-1',
-    '/app.js?v=20261106-auto-sync-no-refresh-1',
-    '/admin-centre.js?v=20261106-auto-sync-no-refresh-1'
+    '/gifter-progression.js?v=20261107-top-gifters-profile-controls-functional-1',
+    '/app.js?v=20261107-top-gifters-profile-controls-functional-1',
+    '/admin-centre.js?v=20261107-top-gifters-profile-controls-functional-1'
   ];
   for (const asset of assets) {
     assert.ok(html.includes(asset), 'Minglora HTML requests ' + asset);
     assert.ok(serviceWorker.includes(asset), 'service worker caches ' + asset);
   }
-  assert.match(adminHtml, /admin-centre\.js\?v=20261106-auto-sync-no-refresh-1/);
-  assert.match(serviceWorker, /minglora-shell-v119-auto-sync-no-refresh-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
+  assert.match(serviceWorker, /minglora-shell-v131-live-top-gifters-1/);
 });
 
 test('service-worker registration does not force an active page reload', () => {
