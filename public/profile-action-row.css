@@ -154,23 +154,3 @@
   cursor:not-allowed;
 }
 
-
-/* Minglora creator membership CTA: bold, high-contrast pill with a distinct active state. */
-.profile-header-card .profile-actions .profile-edit.profile-subscribe:not(:disabled){
-  background:linear-gradient(115deg,#171923 0%,#171923 58%,#ef2d62 100%)!important;
-  border:1px solid rgba(239,45,98,.72)!important;
-  color:#fff!important;
-  border-radius:999px!important;
-  box-shadow:0 5px 16px rgba(239,45,98,.18)!important;
-  font-weight:850!important;
-}
-.profile-header-card .profile-actions .profile-edit.profile-subscribe:not(:disabled):hover{
-  background:linear-gradient(115deg,#242735 0%,#242735 58%,#f33c70 100%)!important;
-  border-color:#f33c70!important;
-}
-.profile-header-card .profile-actions .profile-edit.profile-subscribe:disabled{
-  opacity:.82!important;
-  cursor:default!important;
-}
-.creator-subscription-features{display:grid;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
-.creator-subscription-features h4{margin:0;font-size:14px}
