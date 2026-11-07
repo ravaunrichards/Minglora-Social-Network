@@ -33,6 +33,8 @@ test('experience settings reject unsupported keys and invalid device values', ()
   assert.equal(validateExperienceSettingsPatch({}, { airplaneMode: true }).valid, false);
   assert.equal(validateExperienceSettingsPatch({}, { screenTimeoutSeconds: 90 }).valid, false);
   assert.equal(validateExperienceSettingsPatch({}, { screenSaverWaitValue: 0 }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { screenSaverWaitValue: 1441, screenSaverWaitUnit: 'minutes' }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { screenSaverWaitValue: 24, screenSaverWaitUnit: 'hours' }).valid, true);
   assert.equal(validateExperienceSettingsPatch({}, { customAccentColor: 'red' }).valid, false);
   assert.equal(validateExperienceSettingsPatch({}, { dndStart: '25:99' }).valid, false);
 });
