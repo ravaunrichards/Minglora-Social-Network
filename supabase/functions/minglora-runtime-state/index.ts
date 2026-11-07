@@ -72,6 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed",
+    "admin_users_list", "admin_user_set_ban",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -102,6 +103,160 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "admin_users_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") {
+      return json(403, { error: "Only the designated Minglora owner can manage member accounts." });
+    }
+    const search = String(input.search || "").trim().toLowerCase().slice(0, 120);
+    const requestedStatus = String(input.status || "all").toLowerCase();
+    const allowedStatuses = ["all", "active", "banned", "suspended", "deactivated"];
+    if (!allowedStatuses.includes(requestedStatus)) return json(400, { error: "Choose a valid account status filter." });
+    const users: any[] = [];
+    const perPage = 1000;
+    const maxPages = search || requestedStatus !== "all" ? 50 : 5;
+    for (let page = 1; page <= maxPages && users.length < 50; page += 1) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+      if (error) return json(503, { error: "Minglora could not load Auth member accounts." });
+      const authUsers = Array.isArray(data?.users) ? data.users : [];
+      if (!authUsers.length) break;
+      const ids = authUsers.map((item: any) => String(item.id || "")).filter((id: string) => validUuid(id));
+      const { data: profiles, error: profileError } = await admin.from("profiles")
+        .select("id,username,display_name,avatar_url")
+        .in("id", ids);
+      if (profileError) return json(503, { error: "Minglora member profiles could not be loaded." });
+      const profileById = new Map((profiles || []).map((profile: any) => [String(profile.id), profile]));
+      for (const authUser of authUsers) {
+        const id = String(authUser.id || "");
+        const metadata = authUser.user_metadata && typeof authUser.user_metadata === "object" ? authUser.user_metadata : {};
+        const profile: any = profileById.get(id) || {};
+        const username = String(profile.username || metadata.username || "");
+        const displayName = String(profile.display_name || metadata.name || metadata.full_name || username || "Minglora member");
+        const email = String(authUser.email || "");
+        const bannedUntil = authUser.banned_until ? String(authUser.banned_until) : null;
+        const isBanned = Boolean(bannedUntil && Date.parse(bannedUntil) > Date.now());
+        const rawAccountStatus = String(metadata.account_status || "active").toLowerCase();
+        const restoredStatus = rawAccountStatus === "banned"
+          ? String(metadata.pre_ban_account_status || "active").toLowerCase()
+          : rawAccountStatus;
+        const accountStatus = isBanned ? "banned"
+          : ["suspended", "deactivated"].includes(restoredStatus) ? restoredStatus : "active";
+        if (requestedStatus !== "all" && accountStatus !== requestedStatus) continue;
+        const searchable = [id, email, username, displayName].join(" ").toLowerCase();
+        if (search && !searchable.includes(search)) continue;
+        users.push({
+          id, email, username, displayName,
+          avatarUrl: String(profile.avatar_url || ""),
+          status: accountStatus,
+          bannedUntil: isBanned ? bannedUntil : null,
+          createdAt: authUser.created_at || null,
+          lastSignInAt: authUser.last_sign_in_at || null,
+          isOwner: id === "5b998c21-86b5-4621-ab37-e0808a2657b1"
+        });
+        if (users.length >= 50) break;
+      }
+      if (authUsers.length < perPage) break;
+    }
+    users.sort((a: any, b: any) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    return json(200, { users, count: users.length, searched: Boolean(search), status: requestedStatus });
+  }
+
+  if (action === "admin_user_set_ban") {
+    const actorUserId = String(input.actorUserId || "");
+    const userId = String(input.userId || "");
+    const operation = String(input.operation || "");
+    if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") {
+      return json(403, { error: "Only the designated Minglora owner can manage member accounts." });
+    }
+    if (!validUuid(userId) || userId === actorUserId) {
+      return json(400, { error: "Choose a valid member account. The owner account is protected." });
+    }
+    if (operation !== "ban" && operation !== "unban") {
+      return json(400, { error: "Choose whether to ban or unban this member." });
+    }
+    const reason = String(input.reason || "").trim().slice(0, 500);
+    const duration = String(input.duration || "");
+    const allowedDurations: Record<string, string> = {
+      "1h": "1 hour", "24h": "24 hours", "7d": "7 days",
+      "30d": "30 days", "90d": "90 days", "876000h": "Permanent (100 years)"
+    };
+    if (operation === "ban" && (!allowedDurations[duration] || reason.length < 3)) {
+      return json(400, { error: "Choose a ban duration and enter a reason of at least 3 characters." });
+    }
+    if (reason.length > 500) return json(400, { error: "The moderation note is too long." });
+    const { data: found, error: lookupError } = await admin.auth.admin.getUserById(userId);
+    const target = found?.user;
+    if (lookupError || !target) return json(404, { error: "The selected Minglora account was not found." });
+    if (target.id === "5b998c21-86b5-4621-ab37-e0808a2657b1") {
+      return json(403, { error: "The platform owner account cannot be banned from this control." });
+    }
+    const metadata = target.user_metadata && typeof target.user_metadata === "object" ? target.user_metadata : {};
+    let attributes: Record<string, unknown>;
+    let restoredAccountStatus = "active";
+    if (operation === "ban") {
+      const currentStatus = String(metadata.account_status || "active").toLowerCase();
+      const previousStatus = currentStatus === "banned"
+        ? String(metadata.pre_ban_account_status || "active")
+        : currentStatus;
+      attributes = {
+        ban_duration: duration,
+        user_metadata: {
+          ...metadata,
+          account_status: "banned",
+          pre_ban_account_status: previousStatus
+        }
+      };
+    } else {
+      restoredAccountStatus = String(metadata.pre_ban_account_status || "active").toLowerCase();
+      if (!["active", "suspended", "deactivated"].includes(restoredAccountStatus)) restoredAccountStatus = "active";
+      const nextMetadata = { ...metadata, account_status: restoredAccountStatus };
+      delete (nextMetadata as any).pre_ban_account_status;
+      attributes = {
+        ban_duration: "none",
+        user_metadata: nextMetadata
+      };
+    }
+    const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(userId, attributes as any);
+    if (updateError || !updated?.user) {
+      return json(503, { error: String(updateError?.message || "Minglora could not update this account's ban status.").slice(0, 240) });
+    }
+    let sessionRevoked = false;
+    if (operation === "ban") {
+      const targetJwt = String(input.targetJwt || "");
+      if (targetJwt.length >= 20) {
+        const { error: signOutError } = await admin.auth.admin.signOut(targetJwt, "global");
+        sessionRevoked = !signOutError;
+      }
+    }
+    const bannedUntil = updated.user.banned_until ? String(updated.user.banned_until) : null;
+    const auditAction = operation === "ban" ? "account.ban" : "account.unban";
+    const auditMetadata: Record<string, unknown> = {
+      reason: reason || null,
+      duration: operation === "ban" ? duration : null,
+      banned_until: operation === "ban" ? bannedUntil : null,
+      sessions_revoked: sessionRevoked
+    };
+    const { error: auditError } = await admin.from("audit_log").insert({
+      actor_id: actorUserId,
+      action: auditAction,
+      target_type: "user",
+      target_id: userId,
+      request_id: crypto.randomUUID(),
+      metadata: auditMetadata
+    });
+    return json(200, {
+      ok: true,
+      operation,
+      userId,
+      status: operation === "ban" ? "banned" : restoredAccountStatus,
+      bannedUntil: operation === "ban" ? bannedUntil : null,
+      sessionRevoked,
+      auditRecorded: !auditError,
+      message: operation === "ban" ? "The account ban was saved." : "The account ban was removed."
+    });
+  }
+
 
   const payPalMoneyMinor = (money: any, expectedCurrency: string): number | null => {
     if (!money || typeof money !== "object") return null;
