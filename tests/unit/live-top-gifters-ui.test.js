@@ -84,6 +84,7 @@ test("profile Gift Gallery presents the weekly Title Gifter and up to ten ranked
   assert.ok(gallery.includes("data-gift-gallery-gifter-profile"));
   assert.ok(css.includes("gift-gallery-ranked-row.is-podium-2"));
   assert.ok(css.includes("grid-template-columns:minmax(0,1fr)"));
-  assert.ok(html.includes("/app.js?v=20261107-account-switcher-2"));
-  assert.ok(sw.includes("minglora-shell-v144-phone-call-ui-3"));
+  const appAsset=html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]||'';
+  assert.ok(appAsset&&sw.includes("'"+appAsset+"'"),'service worker caches the active application bundle');
+  assert.match(sw,/CACHE_NAME='minglora-shell-v\\d+-/);
 });
