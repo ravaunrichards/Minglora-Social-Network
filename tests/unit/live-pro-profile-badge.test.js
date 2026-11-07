@@ -17,6 +17,13 @@ test('the designated Minglora admin and members with active grants get LIVE Pro 
   assert.ok(server.includes("result.liveProBadge=isDesignatedCreatorHubAdmin(u)||(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));"));
 });
 
+test('the designated Minglora admin has permanent LIVE Pro feature access while MFA remains required to manage grants', () => {
+  assert.ok(server.includes("const hasLivePro = () => Boolean(isDesignatedCreatorHubAdmin(user) || liveProGrantFor(user.id));"));
+  assert.ok(server.includes("const isDesignatedAdmin = isDesignatedCreatorHubAdmin(user);"));
+  assert.ok(server.includes("hasAccess: hasLivePro(),"));
+  assert.ok(server.includes("canManageAccess: adminAccess,"));
+});
+
 test('LIVE Pro appears beside the username in the profile header and previews', () => {
   assert.ok(app.includes("<p class=\"profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+liveProProfileBadge(u)+'</p>"));
   assert.ok(app.includes("live-profile-preview-heading"));
