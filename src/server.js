@@ -4573,8 +4573,22 @@ async function route(req, res) {
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'Profile not found.'});
         const gallery=getGiftGallery(db,target);
         const entries=gallery.entries.map(entry=>{
-          const leader=entry.leadingGifterId?db.users.find(member=>member.id===entry.leadingGifterId):null;
-          return {...entry,leadingGifter:leader?{...safeUser(leader,user.id),gifterBadge:getGifterBadgeSummary(db,leader.id)}:null};
+          const topGifters=(entry.topGifters||[]).map(gifter=>{
+            const member=db.users.find(candidate=>candidate.id===gifter.userId);
+            if(!member||blockedBetween(user.id,member.id))return null;
+            return {
+              ...gifter,
+              user:safeUser(member,user.id),
+              gifterBadge:getGifterBadgeSummary(db,member.id)
+            };
+          }).filter(Boolean);
+          const titleGifter=topGifters.find(gifter=>gifter.isTitleGifter)||null;
+          return {
+            ...entry,
+            topGifters,
+            titleGifter:titleGifter?{...titleGifter.user,gifterBadge:titleGifter.gifterBadge}:null,
+            leadingGifter:titleGifter?{...titleGifter.user,gifterBadge:titleGifter.gifterBadge}:null
+          };
         });
         const response={...gallery,entries};
         if(user.id===target.id){
