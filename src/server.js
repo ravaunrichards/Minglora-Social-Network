@@ -382,6 +382,21 @@ function isModerator(user,req=null){
   }
   return true;
 }
+function refreshExpiredAccountSuspension(account){
+  if(!account||account.status!=='suspended'||!account.suspendedUntil)return false;
+  const expiresAt=Date.parse(account.suspendedUntil);
+  if(!Number.isFinite(expiresAt)||expiresAt>Date.now())return false;
+  account.status='active';
+  delete account.suspendedUntil;
+  delete account.suspendedAt;
+  delete account.suspendedBy;
+  delete account.suspensionReason;
+  delete account.suspensionDuration;
+  return true;
+}
+function isAccountAccessBlocked(account){
+  return ['suspended','banned'].includes(String(account?.status||''));
+}
 function hasActiveReviewerSession(user){
   if(!user||!isPlatformStaffIdentity(user))return false;
   if(!PLATFORM_OWNER_USER_IDS.has(user.id))return true;
@@ -1512,7 +1527,8 @@ async function route(req, res) {
         if(!verifiedUser?.id||!verifiedUser?.email)return json(res,401,{error:'Supabase could not validate this sign-in link. Request a new one.'});
         if(!verifiedUser.email_confirmed_at)return json(res,403,{error:'Confirm your email address before signing in with a magic link.'});
         const account=ensureLocalUser(verifiedUser);
-        if(account.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        if(refreshExpiredAccountSuspension(account))await saveStore();
+        if(isAccountAccessBlocked(account))return json(res,403,{error:account.status==='banned'?'This Minglora account is banned. Contact support to appeal.':'This Minglora account is suspended. Contact support to appeal.'});
         const authenticated={
           user:verifiedUser,access_token:accessToken,refresh_token:refreshToken,
           expires_in:Number.isFinite(expiresIn)&&expiresIn>0&&expiresIn<=86400?expiresIn:3600,
@@ -1567,7 +1583,8 @@ async function route(req, res) {
             }
           }
           const signedInUser=ensureLocalUser(authenticated.user);
-          if(signedInUser.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+          if(refreshExpiredAccountSuspension(signedInUser))await saveStore();
+          if(isAccountAccessBlocked(signedInUser))return json(res,403,{error:signedInUser.status==='banned'?'This Minglora account is banned. Contact support to appeal.':'This Minglora account is suspended. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
           let verifiedTotp=null;
           if(accessToken){
@@ -1589,7 +1606,8 @@ async function route(req, res) {
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
-        if(found.status==='suspended')return json(res,403,{error:'This Minglora account is suspended. Contact support to appeal.'});
+        if(refreshExpiredAccountSuspension(found))await saveStore();
+        if(isAccountAccessBlocked(found))return json(res,403,{error:found.status==='banned'?'This Minglora account is banned. Contact support to appeal.':'This Minglora account is suspended. Contact support to appeal.'});
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -1609,6 +1627,12 @@ async function route(req, res) {
         if(!verified?.access_token||tokenAal(verified.access_token)!=='aal2')return json(res,502,{error:'Supabase did not return a verified multi-factor session. Try the authenticator code again.'});
         const account=db.users.find(item=>item.id===pending.userId);
         if(!account)return json(res,401,{error:'Account not found.'});
+        if(refreshExpiredAccountSuspension(account))await saveStore();
+        if(isAccountAccessBlocked(account)){
+          db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
+          await saveStore();
+          return json(res,403,{error:account.status==='banned'?'This Minglora account is banned. Contact support to appeal.':'This Minglora account is suspended. Contact support to appeal.'});
+        }
         db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
         if(account.status==='deactivated'){account.status='active';await supabaseUpdateUserMetadata(verified.access_token,{account_status:'active'});}
         const sessionCookie=await createAppSession(account,verified,req);
@@ -1905,6 +1929,125 @@ async function route(req, res) {
           setupRequired: designatedCreatorHubAdmin && !canAccess,
           mfaVerified: canAccess
         });
+      }
+
+      const adminMemberRoutesAuthorized=()=>isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user);
+      if(method==='GET'&&p==='/api/admin/members'){
+        if(!adminMemberRoutesAuthorized())return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can manage Minglora accounts.'});
+        const query=String(url.searchParams.get('search')||'').trim().toLowerCase().slice(0,80);
+        const status=String(url.searchParams.get('status')||'all').trim().toLowerCase();
+        const allowedStatuses=['all','active','suspended','banned','deactivated'];
+        if(!allowedStatuses.includes(status))return json(res,400,{error:'Choose a valid account status filter.'});
+        const matches=(db.users||[]).filter(member=>{
+          if(status!=='all'&&String(member.status||'active')!==status)return false;
+          if(!query)return true;
+          return [member.id,member.name,member.username,member.email,member.contactPhone]
+            .some(value=>String(value||'').toLowerCase().includes(query));
+        }).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        const members=matches.slice(0,100).map(member=>({
+          id:member.id,
+          name:member.name||'Minglora member',
+          username:member.username||'',
+          email:member.email||'',
+          phoneNumber:member.contactPhone||'',
+          createdAt:member.createdAt||null,
+          status:member.status||'active',
+          role:member.role||'member',
+          suspendedUntil:member.suspendedUntil||null,
+          suspensionReason:member.suspensionReason||'',
+          banReason:member.banReason||'',
+          lastSeenAt:(db.sessions||[]).filter(session=>session.userId===member.id)
+            .map(session=>session.lastSeenAt||session.createdAt).sort().at(-1)||null
+        }));
+        return json(res,200,{members,total:matches.length,limit:100});
+      }
+      const adminMemberStatusMatch=p.match(/^\\/api\\/admin\\/members\\/([^/]+)\\/status$/);
+      if(method==='POST'&&adminMemberStatusMatch){
+        if(!adminMemberRoutesAuthorized())return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can manage Minglora accounts.'});
+        const targetId=decodeURIComponent(adminMemberStatusMatch[1]);
+        const target=(db.users||[]).find(member=>member.id===targetId);
+        if(!target)return json(res,404,{error:'Minglora member account not found.'});
+        if(target.id===user.id||['platform_owner','admin','moderator'].includes(String(target.role||''))||PLATFORM_OWNER_USER_IDS.has(target.id)){
+          return json(res,403,{error:'This protected administrator account cannot be restricted through member management.'});
+        }
+        const action=String(input.action||'').trim().toLowerCase();
+        const reason=String(input.reason||'').trim();
+        if(!['suspend','ban','unban'].includes(action))return json(res,400,{error:'Choose suspend, ban or unban.'});
+        if(reason.length<8||reason.length>500)return json(res,400,{error:'Enter an action reason between 8 and 500 characters.'});
+        const previousStatus=target.status||'active';
+        let duration=null;
+        if(action==='suspend'){
+          const rawDuration=String(input.duration||'24h');
+          const durations={'1h':3600000,'24h':86400000,'7d':604800000,'30d':2592000000,'permanent':null};
+          if(!Object.hasOwn(durations,rawDuration))return json(res,400,{error:'Choose a supported suspension duration.'});
+          duration=rawDuration;
+          target.status='suspended';
+          target.suspendedAt=now();
+          target.suspendedBy=user.id;
+          target.suspensionReason=reason;
+          target.suspensionDuration=duration;
+          target.suspendedUntil=durations[rawDuration]===null?null:new Date(Date.now()+durations[rawDuration]).toISOString();
+          delete target.bannedAt;
+          delete target.bannedBy;
+          delete target.banReason;
+        }else if(action==='ban'){
+          target.status='banned';
+          target.bannedAt=now();
+          target.bannedBy=user.id;
+          target.banReason=reason;
+          delete target.suspendedUntil;
+          delete target.suspendedAt;
+          delete target.suspendedBy;
+          delete target.suspensionReason;
+          delete target.suspensionDuration;
+        }else{
+          if(!['suspended','banned'].includes(previousStatus))return json(res,409,{error:'This account is not currently suspended or banned.'});
+          target.status='active';
+          delete target.suspendedUntil;
+          delete target.suspendedAt;
+          delete target.suspendedBy;
+          delete target.suspensionReason;
+          delete target.suspensionDuration;
+          delete target.bannedAt;
+          delete target.bannedBy;
+          delete target.banReason;
+        }
+        db.sessions=(db.sessions||[]).filter(session=>session.userId!==target.id);
+        db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==target.id);
+        db.auditLog=db.auditLog||[];
+        db.auditLog.unshift({
+          id:uid(),
+          actorId:user.id,
+          event:'admin.account.'+action,
+          action,
+          targetType:'user',
+          targetId:target.id,
+          previousStatus,
+          newStatus:target.status,
+          reason,
+          duration,
+          createdAt:now()
+        });
+        await saveStore();
+        return json(res,200,{ok:true,action,member:{
+          id:target.id,name:target.name||'Minglora member',username:target.username||'',
+          status:target.status,suspendedUntil:target.suspendedUntil||null
+        },sessionsRevoked:true});
+      }
+      if(method==='GET'&&p==='/api/admin/audit-log'){
+        if(!adminMemberRoutesAuthorized())return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can view admin audit logs.'});
+        const requestedLimit=Math.floor(Number(url.searchParams.get('limit')||50));
+        const limit=Number.isFinite(requestedLimit)?Math.max(1,Math.min(100,requestedLimit)):50;
+        const records=(db.auditLog||[]).slice(0,limit).map(entry=>({
+          id:entry.id||null,event:entry.event||entry.action||'admin.activity',
+          action:entry.action||entry.event||'activity',targetType:entry.targetType||null,
+          targetId:entry.targetId||null,previousStatus:entry.previousStatus||null,
+          newStatus:entry.newStatus||null,reason:entry.reason||'',
+          duration:entry.duration||null,createdAt:entry.createdAt||null,
+          actor:safeUser((db.users||[]).find(member=>member.id===entry.actorId)),
+          target:entry.targetType==='user'?safeUser((db.users||[]).find(member=>member.id===entry.targetId)):null
+        }));
+        return json(res,200,{records});
       }
 
       if(method==='GET'&&p==='/api/admin/internal-activity'){
