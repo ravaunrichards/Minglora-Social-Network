@@ -29,7 +29,8 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | GET | `/api/saved-posts` | List the current account's saved posts |
 | POST/DELETE | `/api/posts/:id/save` | Save or unsave a post |
 | GET | `/api/users` | Lightweight list of other accounts and friendship status |
-| GET | `/api/discovery/people` | Privacy-filtered member previews with real recent posts, currently visible stories, relationship counts and mutual-connection counts; verified LIVE presence is obtained separately from `/api/live/sessions` |
+| GET | `/api/discovery/people` | Privacy-filtered member previews with real recent posts, currently visible stories, relationship counts and mutual-connection counts; suggestions dismissed by the current account are excluded |
+| POST/DELETE | `/api/discovery/people/:id/dismiss` | Dismiss or restore a People You May Know suggestion for the current account only; does not block the member or change follow/friend relationships |
 | GET | `/api/users/:id` | Read a profile and its posts; blocked pairs return not found |
 | PATCH | `/api/users/me` | Update display name, unique username, legacy profile details, structured About sections and per-section visibility; profile media is uploaded separately |
 | POST/DELETE | `/api/users/:id/follow` | Follow or unfollow a member |
