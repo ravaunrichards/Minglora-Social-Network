@@ -150,6 +150,77 @@
     schedule(0);
   }
 
+  function initializeAdminAuditLog(panel) {
+    const section = panel.querySelector('#admin-audit-log');
+    if (!section || section.dataset.initialized === 'true') return;
+    section.dataset.initialized = 'true';
+    const searchInput = section.querySelector('#admin-audit-log-search');
+    const actionFilter = section.querySelector('#admin-audit-log-action');
+    const resultList = section.querySelector('#admin-audit-log-results');
+    const status = section.querySelector('#admin-audit-log-status');
+    const refreshButton = section.querySelector('#admin-audit-log-refresh');
+
+    const displayDate = value => {
+      const date = new Date(value);
+      return value && !Number.isNaN(date.getTime()) ? date.toLocaleString() : 'Date unavailable';
+    };
+    const actionLabel = value => ({
+      'account.ban':'Account banned',
+      'account.unban':'Account unbanned'
+    })[String(value || '')] || String(value || 'Administrator action').replace(/[._]/g,' ');
+    const durationLabel = value => ({
+      '1h':'1 hour','24h':'24 hours','7d':'7 days','30d':'30 days','90d':'90 days',
+      '876000h':'Permanent (100 years)'
+    })[String(value || '')] || String(value || '');
+
+    const load = async () => {
+      if (!resultList) return;
+      resultList.innerHTML = '<p class="admin-audit-log-empty">Loading administrator records…</p>';
+      if (status) status.textContent = 'Retrieving protected audit records…';
+      if (refreshButton) refreshButton.disabled = true;
+      try {
+        const params = new URLSearchParams({
+          limit:'100',
+          search:String(searchInput?.value || '').trim(),
+          action:String(actionFilter?.value || 'all')
+        });
+        const response = await adminCentreApi('/admin/audit-log?' + params.toString());
+        const records = Array.isArray(response.records) ? response.records : [];
+        resultList.innerHTML = records.length ? records.map(record => {
+          const metadata = record.metadata && typeof record.metadata === 'object' ? record.metadata : {};
+          const actor = record.actor?.displayName || (record.actor?.username ? '@' + record.actor.username : 'Minglora owner');
+          const target = record.target?.displayName || (record.target?.username ? '@' + record.target.username : record.targetId || 'Unknown account');
+          const reason = metadata.reason || 'No moderation note recorded.';
+          const duration = durationLabel(metadata.duration);
+          const statusDetails = [
+            duration ? 'Duration: ' + duration : '',
+            metadata.bannedUntil ? 'Until: ' + displayDate(metadata.bannedUntil) : '',
+            metadata.sessionsRevoked ? 'Global sessions revoked' : ''
+          ].filter(Boolean).join(' · ');
+          return '<article class="admin-audit-log-entry">' +
+            '<div class="admin-audit-log-entry-heading"><div><strong>' + escapeText(actionLabel(record.action)) +
+            '</strong><small>By ' + escapeText(actor) + ' · Target ' + escapeText(target) + '</small></div>' +
+            '<time>' + escapeText(displayDate(record.createdAt)) + '</time></div>' +
+            '<p>' + escapeText(reason) + '</p>' +
+            (statusDetails ? '<small class="admin-audit-log-details">' + escapeText(statusDetails) + '</small>' : '') +
+            '</article>';
+        }).join('') : '<p class="admin-audit-log-empty">No matching administrator actions were found.</p>';
+        if (status) status.textContent = records.length + ' audit record(s) returned. Most recent first.';
+      } catch (error) {
+        resultList.innerHTML = '<p class="admin-audit-log-empty">' + escapeText(error.message || 'Audit history could not be loaded.') + '</p>';
+        if (status) status.textContent = 'Audit history unavailable.';
+      } finally {
+        if (refreshButton) refreshButton.disabled = false;
+      }
+    };
+    refreshButton?.addEventListener('click', load);
+    actionFilter?.addEventListener('change', load);
+    searchInput?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); load(); }
+    });
+    load();
+  }
+
   function addControlCentrePanel() {
     const root = document.querySelector('#admin-centre-root');
     if (!root || root.querySelector('#admin-control-centre')) return;
@@ -172,7 +243,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-user-management">User management</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-audit-log">Audit log</a><a href="#admin-user-management">User management</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -193,6 +264,29 @@
             </div>
           </div>
           <p class="admin-internal-activity-footnote">The journal records event type, time, source table, operation and a reference ID only. It never stores message bodies, passwords, session tokens, media URLs or payment credentials.</p>
+        </section>
+        <section class="admin-audit-log admin-control-centre-section" id="admin-audit-log" aria-labelledby="admin-audit-log-title">
+          <div class="admin-control-centre-section-heading">
+            <div><h3 id="admin-audit-log-title">Administrator audit log</h3>
+              <p>Review account bans and restores with the acting administrator, affected account, reason, duration and session-revocation outcome.</p></div>
+            <span class="admin-control-centre-status">Owner-only</span>
+          </div>
+          <div class="admin-audit-log-controls">
+            <label for="admin-audit-log-search">Search audit history</label>
+            <input id="admin-audit-log-search" type="search" maxlength="100" autocomplete="off" placeholder="Reason, username, user ID or action">
+            <label for="admin-audit-log-action">Action type</label>
+            <select id="admin-audit-log-action">
+              <option value="all">All account actions</option>
+              <option value="account.ban">Account bans</option>
+              <option value="account.unban">Account restores</option>
+            </select>
+            <button type="button" class="secondary" id="admin-audit-log-refresh">Refresh history</button>
+          </div>
+          <p id="admin-audit-log-status" class="admin-audit-log-status" role="status" aria-live="polite">Loading administrator history…</p>
+          <div id="admin-audit-log-results" class="admin-audit-log-results" aria-live="polite">
+            <p class="admin-audit-log-empty">Loading administrator records…</p>
+          </div>
+          <p class="admin-user-safety-note">Only non-secret audit metadata is displayed. Passwords, tokens and private message contents are never included.</p>
         </section>
         <div class="admin-control-centre-grid">
           <button type="button" class="admin-control-centre-tile" data-admin-jump="moderation-workspace">
@@ -1201,6 +1295,7 @@
     loadAdminSecuritySettings(panel);
     if (unlocked) {
       initializeAdminUserManagement(panel);
+      initializeAdminAuditLog(panel);
       loadAdminModerationQueue(panel);
       loadAdminSupportInbox(panel);
     }
