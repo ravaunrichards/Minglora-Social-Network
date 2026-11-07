@@ -14,6 +14,7 @@ import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWav
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
 import { createCurrencyConverterService, normalizeCurrencyCode } from '../backend/modules/currency-converter/service.js';
+import { normalizeCalendarEntry } from '../backend/modules/calendar/service.js';
 import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired, getMessageConversationPeerId } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
@@ -4566,6 +4567,48 @@ async function route(req, res) {
         const checkIn={id:uid(),userId:user.id,place,note,visibility,createdAt:now()};
         db.checkIns.unshift(checkIn);recordProfileActivity(user.id,'check_in_created','Checked in at '+place+'.','check_in',checkIn.id);
         await saveStore();return json(res,201,{checkIn});
+      }
+
+      if (p === '/api/calendar/events' && method === 'GET') {
+        db.calendarEntries ||= [];
+        const events = db.calendarEntries
+          .filter(item => item.userId === user.id)
+          .sort((a,b) => String(a.startAt).localeCompare(String(b.startAt)))
+          .slice(0,2000)
+          .map(({userId, ...item}) => item);
+        return json(res,200,{events,timeZone:String(req.headers['x-minglora-time-zone']||'UTC')});
+      }
+      if (p === '/api/calendar/events' && method === 'POST') {
+        let normalized;
+        try { normalized = normalizeCalendarEntry(input); }
+        catch (error) { return json(res,400,{error:error.message||'Invalid calendar entry.'}); }
+        db.calendarEntries ||= [];
+        const event = {id:uid(),userId:user.id,...normalized,createdAt:now(),updatedAt:now()};
+        db.calendarEntries.unshift(event);
+        await saveStore();
+        const {userId, ...publicEvent}=event;
+        return json(res,201,{event:publicEvent});
+      }
+      const calendarEntryMatch = p.match(/^\/api\/calendar\/events\/([^/]+)$/);
+      if (calendarEntryMatch && (method === 'PATCH' || method === 'DELETE')) {
+        let entryId;
+        try { entryId=decodeURIComponent(calendarEntryMatch[1]); }
+        catch { return json(res,400,{error:'Invalid calendar item identifier.'}); }
+        db.calendarEntries ||= [];
+        const existing=db.calendarEntries.find(item=>item.id===entryId&&item.userId===user.id);
+        if (!existing) return json(res,404,{error:'Calendar item not found.'});
+        if (method === 'DELETE') {
+          db.calendarEntries=db.calendarEntries.filter(item=>!(item.id===entryId&&item.userId===user.id));
+          await saveStore();
+          return json(res,200,{ok:true});
+        }
+        let normalized;
+        try { normalized=normalizeCalendarEntry(input,existing); }
+        catch (error) { return json(res,400,{error:error.message||'Invalid calendar entry.'}); }
+        Object.assign(existing,normalized,{updatedAt:now()});
+        await saveStore();
+        const {userId, ...publicEvent}=existing;
+        return json(res,200,{event:publicEvent});
       }
       const profileEventsMatch=p.match(/^\/api\/users\/([^/]+)\/events$/);
       if(method==='GET'&&profileEventsMatch){
