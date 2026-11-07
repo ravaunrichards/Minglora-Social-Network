@@ -54,7 +54,7 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(!css.includes('.mobile-nav [data-logout]'), 'no detached phone logout styling remains');
   assert.match(css, /\.settings-signout-card/);
   assert.match(css, /\.settings-logout-button/);
-  assert.match(serviceWorker, /minglora-shell-v140-account-switcher-1/);
+  assert.match(serviceWorker, /minglora-shell-v141-account-switcher-2/);
   assert.ok(serviceWorker.includes('styles.css?v=20261107-top-gifters-1'));
   assert.ok(serviceWorker.includes('app.js?v=20261107-top-gifters-2'));
   assert.ok(serviceWorker.includes('settings.js?v=20261106-refresh-controls-removed-1'));
