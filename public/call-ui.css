@@ -143,3 +143,11 @@
 .call-overlay .call-peer-status{min-height:18px!important}
 .call-overlay button[aria-pressed="true"]{background:rgba(54,126,221,.25)!important;border-color:rgba(114,177,255,.6)!important}
 @media(prefers-reduced-motion:reduce){.call-overlay .call-audio-visualizer i{animation:none!important}}
+
+.call-overlay .call-audio-unlock{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:38px!important;padding:8px 12px!important;border:1px solid rgba(121,183,255,.52)!important;
+  border-radius:11px!important;background:rgba(46,111,190,.2)!important;color:#e9f4ff!important;
+  font-size:12px!important;font-weight:800!important;cursor:pointer!important;
+}
+.call-overlay .call-audio-unlock[hidden]{display:none!important}
