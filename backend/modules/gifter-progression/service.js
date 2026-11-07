@@ -223,6 +223,7 @@ export function recordGifterGift(db, details = {}) {
     giftName: safeText(details.giftName || giftCode.replace(/[_-]+/g, " "), 120),
     coinAmount,
     contextType: details.contextType === "live" ? "live" : "member",
+    broadcastId: details.contextType === "live" ? safeText(details.broadcastId || details.sessionId, 180) || null : null,
     createdAt: createdAt.toISOString()
   };
   db.gifterProgressionLedger.push(event);
@@ -248,6 +249,101 @@ export function refundGifterGift(db, giftId, now = new Date()) {
   gift.status = "refunded";
   db.gifterProgressionLedger = ledger.slice();
   return { reversed: true, senderId: gift.senderId, coinAmount: Number(gift.coinAmount) || 0 };
+}
+
+
+function liveLeaderboardPeriodStart(period, now, timeZone) {
+  if (period === "all_time") return Number.NEGATIVE_INFINITY;
+  const zone = (() => {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone }).format(now);
+      return timeZone;
+    } catch {
+      return "America/Jamaica";
+    }
+  })();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(now)
+    .filter(part => part.type !== "literal")
+    .map(part => [part.type, Number(part.value)]));
+  let year = parts.year, month = parts.month, day = parts.day;
+  if (period === "monthly") {
+    day = 1;
+  } else if (period === "weekly") {
+    const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+    const daysSinceMonday = (weekday + 6) % 7;
+    const monday = new Date(Date.UTC(year, month - 1, day - daysSinceMonday));
+    year = monday.getUTCFullYear();
+    month = monday.getUTCMonth() + 1;
+    day = monday.getUTCDate();
+  }
+  const target = Date.UTC(year, month - 1, day, 0, 0, 0);
+  let guess = target;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const local = Object.fromEntries(formatter.formatToParts(new Date(guess))
+      .filter(part => part.type !== "literal")
+      .map(part => [part.type, Number(part.value)]));
+    const representedAsUtc = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, local.second);
+    const difference = target - representedAsUtc;
+    if (difference === 0) break;
+    guess += difference;
+  }
+  return guess;
+}
+
+/**
+ * Rank members only from unique, confirmed LIVE gifts. A broadcastId scopes
+ * the result to one room; period rankings use the viewer's selected timezone.
+ */
+export function getLiveGifterLeaderboard(db, options = {}) {
+  if (!db || typeof db !== "object") return [];
+  const allowedPeriods = new Set(["daily", "weekly", "monthly", "all_time"]);
+  const requestedPeriod = String(options.period || "daily").toLowerCase();
+  const period = allowedPeriods.has(requestedPeriod) ? requestedPeriod : "daily";
+  const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+  if (Number.isNaN(now.getTime())) throw new TypeError("LIVE gifter rankings require a valid timestamp.");
+  const broadcastId = safeText(options.broadcastId, 180);
+  const startMs = broadcastId ? Number.NEGATIVE_INFINITY :
+    liveLeaderboardPeriodStart(period, now, options.timeZone || "America/Jamaica");
+  const members = new Map((db.users || []).map(member => [member.id, member]));
+  const totals = aggregateBySender(getDeduplicatedGiftEvents(db).filter(event => {
+    if (event.contextType !== "live") return false;
+    if (broadcastId && event.broadcastId !== broadcastId) return false;
+    const createdAt = Date.parse(event.createdAt || "");
+    return Number.isFinite(createdAt) && createdAt >= startMs;
+  }));
+  const rows = [...totals.entries()].map(([userId, value]) => {
+    const member = members.get(userId);
+    if (!member) return null;
+    const badge = getGifterBadgeSummary(db, userId);
+    return {
+      userId,
+      username: safeText(member.username || "member", 40),
+      name: safeText(member.name || member.username || "Minglora member", 80),
+      points: value.xp,
+      coinsSent: value.xp,
+      giftsSent: value.giftsSent,
+      level: badge?.level || 0,
+      tier: badge?.tier || null,
+      badgeName: badge?.badgeName || null,
+      gifterBadge: badge,
+      lastGiftAt: value.lastGiftAt
+    };
+  }).filter(Boolean).sort((a, b) =>
+    b.points - a.points || b.giftsSent - a.giftsSent ||
+    a.username.localeCompare(b.username)
+  );
+  const limit = Math.max(1, Math.min(50, Math.floor(Number(options.limit) || 10)));
+  return rows.slice(0, limit).map((item, index) => {
+    const position = index + 1;
+    const title = position === 1 ? "TOP GIFTER" :
+      position <= 3 ? "TOP 3 GIFTER" :
+      position <= 10 ? "TOP 10 GIFTER" : "LIVE GIFTER";
+    return { ...item, position, rank: position, title };
+  });
 }
 
 export function getGifterProgressionOverview(db, userId) {
