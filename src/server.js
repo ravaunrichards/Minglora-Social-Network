@@ -3296,7 +3296,7 @@ async function route(req, res) {
         if(!recipientId||recipientId===String(user.id))return json(res,400,{error:'Choose another LIVE participant to receive this gift.'});
         const requestedGiftCode=String(input.giftCode||'');
         if(!/^[a-z0-9_-]{1,60}$/.test(requestedGiftCode))return json(res,400,{error:'Choose a valid Minglora gift.'});
-        if(LIVE_FAN_CLUB_GIFT_CODES.includes(requestedGiftCode)){
+        if(LIVE_FAN_CLUB_GIFT_CODES.includes(requestedGiftCode)&&user.id!==session.hostId){
           const fanMembership=getLiveFanClubMembership(db,session.hostId,user.id);
           if(fanMembership?.status!=='active')return json(res,403,{error:'Join this host’s Fan Club before sending Team Gifts.',code:'fan_club_required'});
         }
