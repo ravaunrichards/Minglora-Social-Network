@@ -713,3 +713,29 @@
  .admin-internal-activity-row time{grid-column:2}
  .admin-internal-activity-list-heading{flex-direction:column;gap:4px}
 }
+
+/* Minglora member management and administrator audit history. */
+.admin-member-search-controls{display:grid;grid-template-columns:minmax(220px,1fr) minmax(150px,210px) auto;gap:10px;align-items:center;margin:16px 0 8px}
+.admin-member-search-controls input,.admin-member-search-controls select,.admin-member-action-form select,.admin-member-action-form textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.admin-member-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin:12px 0 20px}
+.admin-member-result-card{display:grid;gap:12px;min-width:0;padding:14px;border:1px solid var(--border,#dce3ee);border-radius:14px;background:var(--surface,#fff)}
+.admin-member-result-main{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+.admin-member-result-main>div{display:grid;gap:4px;min-width:0}
+.admin-member-result-main strong{overflow-wrap:anywhere}
+.admin-member-result-main small,.admin-member-result-details span{color:var(--muted,#687386);font-size:12px;overflow-wrap:anywhere}
+.admin-member-status-pill{display:inline-flex;flex:0 0 auto;padding:4px 8px;border-radius:999px;background:#eef2f7;color:#39465a;font-size:11px;font-weight:750}
+.admin-member-status-pill[data-status="active"]{background:#eaf7ef;color:#176b38}
+.admin-member-status-pill[data-status="suspended"],.admin-member-status-pill[data-status="banned"]{background:#fff0ed;color:#a52b1e}
+.admin-member-result-details{display:grid;gap:5px;min-width:0}
+.admin-member-result-card button{justify-self:start}
+.admin-member-action-form{display:grid;gap:10px;max-width:720px;padding:16px;border:1px solid var(--border,#dce3ee);border-radius:14px;background:var(--surface,#fff)}
+.admin-member-action-form h4,.admin-member-action-form p{margin:0}
+.admin-member-action-form label{font-size:13px;font-weight:700}
+.admin-member-action-form textarea{resize:vertical}
+.admin-member-safety-note{margin-top:12px;color:var(--muted,#687386);font-size:12px;line-height:1.5}
+.admin-audit-log-list{display:grid;gap:10px}
+.admin-audit-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--border,#dce3ee);min-width:0}
+.admin-audit-row>div{display:grid;gap:4px;min-width:0}
+.admin-audit-row small,.admin-audit-row time{font-size:12px;color:var(--muted,#687386);overflow-wrap:anywhere}
+.admin-audit-row p{grid-column:1/-1;margin:4px 0 0;overflow-wrap:anywhere;font-size:13px}
+@media(max-width:680px){.admin-member-search-controls{grid-template-columns:minmax(0,1fr)}.admin-audit-row{grid-template-columns:minmax(0,1fr)}.admin-audit-row time{grid-column:1/-1}}
