@@ -29,7 +29,7 @@ import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
-import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity } from '../backend/modules/gifter-progression/service.js';
+import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -3440,7 +3440,7 @@ async function route(req, res) {
               giftId: String(transactionId), senderId: user.id, recipientId: session.hostId,
               recipientUsername: host?.username || '', giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE,
               giftName: gift.giftName || joinGift.name || 'Heart Me', coinAmount,
-              contextType: 'live', now: timestamp
+              contextType: 'live', broadcastId: session.id, now: timestamp
             });
           } catch (error) {
             console.error('[Minglora Fan Club] Confirmed Heart Me gift could not update gifter progression.', String(error?.message || error).slice(0, 160));
@@ -3549,7 +3549,15 @@ async function route(req, res) {
               recipient:(()=>{const host=db.users.find(member=>member.id===session.hostId);return host?{id:host.id,name:host.name||'LIVE host',username:host.username||''}:{id:session.hostId,name:'LIVE host',username:''};})()
             };
           });
-        return json(res,200,{events});
+        const topGifters=getLiveGifterLeaderboard(db,{
+          period:'all_time',broadcastId:session.id,timeZone:giftGalleryTimeZone(user),limit:10
+        }).map(item=>{
+          const member=db.users.find(candidate=>candidate.id===item.userId);
+          return member&&!blockedBetween(user.id,member.id)?{
+            ...item,user:safeUser(member,user.id)
+          }:null;
+        }).filter(Boolean);
+        return json(res,200,{events,topGifters});
       }
       if(method==='POST'&&liveAction){
         const session=(db.liveSessions||[]).find(item=>item.id===liveAction[1]&&item.status==='live');
@@ -3583,7 +3591,7 @@ async function route(req, res) {
         if(confirmedGiftId&&Number.isSafeInteger(confirmedCoinAmount)&&confirmedCoinAmount>0){
           try{
             const recipient=db.users.find(member=>member.id===session.hostId);
-            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId:session.hostId,recipientUsername:recipient?.username||'',giftCode:String(input.giftCode||''),giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',now:confirmedAt});
+            recordGifterGift(db,{giftId:String(confirmedGiftId),senderId:user.id,recipientId:session.hostId,recipientUsername:recipient?.username||'',giftCode:String(input.giftCode||''),giftName:confirmedGift.giftName||confirmedGift.name||'',coinAmount:confirmedCoinAmount,contextType:'live',broadcastId:session.id,now:confirmedAt});
           }catch(error){console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
           try{
             recordLiveGiftForLeagues(db,{
@@ -3787,12 +3795,31 @@ async function route(req, res) {
         await syncRefundedGiftActivity();
         return json(res,200,{viewerId:user.id,badge:getGifterBadgeSummary(db,user.id),...getGifterProgressionOverview(db,user.id)});
       }
+      if(method==='GET'&&p==='/api/live/rankings/top-gifters'){
+        await syncRefundedGiftActivity();
+        const requestedPeriod=String(url.searchParams.get('period')||'daily').toLowerCase();
+        const period=['daily','weekly','monthly','all_time'].includes(requestedPeriod)?requestedPeriod:'daily';
+        const timeZone=giftGalleryTimeZone(user);
+        const leaderboard=getLiveGifterLeaderboard(db,{
+          period,now:new Date(),timeZone,limit:50
+        }).map(item=>{
+          const member=db.users.find(candidate=>candidate.id===item.userId);
+          return member&&!blockedBetween(user.id,member.id)?{
+            ...item,user:safeUser(member,user.id)
+          }:null;
+        }).filter(Boolean);
+        return json(res,200,{
+          period,timeZone,leaderboard,
+          scoring:'unique, confirmed LIVE gifts sent; refunded and duplicate gifts excluded',
+          titlePolicy:{first:'TOP GIFTER',topThree:'TOP 3 GIFTER',topTen:'TOP 10 GIFTER'}
+        });
+      }
       if(method==='GET'&&p==='/api/live/rankings/daily'){
         await syncRefundedGiftActivity();
         const dayKey=new Date().toISOString().slice(0,10);
         const totals=new Map();
         for(const event of (db.gifterProgressionLedger||[])){
-          if(!event?.senderId||event.refundedAt||event.status==='refunded'||!String(event.createdAt||'').startsWith(dayKey))continue;
+          if(!event?.senderId||event.contextType!=='live'||event.refundedAt||event.status==='refunded'||!String(event.createdAt||'').startsWith(dayKey))continue;
           const amount=Number(event.coinAmount);
           if(!Number.isSafeInteger(amount)||amount<=0)continue;
           const current=totals.get(event.senderId)||{points:0,giftsSent:0,lastGiftAt:event.createdAt};
