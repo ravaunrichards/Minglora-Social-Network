@@ -108,7 +108,7 @@ test('call notifications return to the current app window and load the latest ca
   const workerMarker="'/app.js?v=";
   const workerStart=worker.indexOf(workerMarker);
   const workerAsset=workerStart<0?'':worker.slice(workerStart+1,worker.indexOf("'",workerStart+1));
-  assert.equal(appAsset,'/app.js?v=20261107-real-phone-calls-1');
+  assert.ok(appAsset.startsWith('/app.js?v='),'HTML loads a versioned app bundle');
   assert.equal(workerAsset,appAsset,'the service worker precaches the exact HTML app bundle');
   assert.match(worker,/CACHE_NAME='minglora-shell-v[0-9]+-/);
   const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
