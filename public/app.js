@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
-const RESTORABLE_VIEWS=new Set(['feed','more','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar']);
+const RESTORABLE_VIEWS=new Set(['feed','more','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
 let restoringSavedView=false;
 let restoringBrowserNavigation=false;
@@ -454,6 +454,7 @@ function syncNavigationActive(){
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
 function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
@@ -6126,6 +6127,7 @@ async function transformProfileCrop(file,edit,stage,slot){
 
 function openEditProfile(u,mediaOnly=null){
   if(!['avatar','cover'].includes(mediaOnly))mediaOnly=null;
+  const priorGender=String(u.gender||'').trim();
   const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
   const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog';modal.setAttribute('aria-labelledby','edit-profile-title');modal.tabIndex=-1;
   modal.innerHTML=`<div class="profile-inline-editor-content" aria-labelledby="edit-profile-title">
@@ -6347,9 +6349,14 @@ function openEditProfile(u,mediaOnly=null){
         const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
         state.user=result.user;
       }
+      const nextGender=String(state.user?.gender||'').trim();
+      const wasFemale=/(^|[^a-z])(female|woman|women)([^a-z]|$)/i.test(priorGender);
+      const isFemale=/(^|[^a-z])(female|woman|women)([^a-z]|$)/i.test(nextGender);
+      const offerMenstrualHealth=!wasFemale&&isFemale;
       close();
       showApp();
       await openProfile(state.user.id);
+      if(offerMenstrualHealth)window.setTimeout(()=>window.MingloraMenstrualHealth?.offerOnboarding?.(),250);
       toast(mediaOnly==='avatar'?'Profile picture updated.':mediaOnly==='cover'?'Cover picture updated.':'Profile updated and saved.');
     }catch(error){
       status.textContent='Profile changes were not saved. '+error.message;
@@ -8334,7 +8341,7 @@ function renderMoreHub(){
       {label:'Gifters Level',detail:'Track your LV, Coins and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
       {label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins',icon:messenger3dIcon('recharge','mobile-hub-icon')}
     ]},
-    {title:'Tools & productivity',items:[{label:'Calendar',detail:'Your schedule, events, tasks and reminders',view:'calendar',icon:messenger3dIcon('calendar','mobile-hub-icon')}]},
+    {title:'Tools & productivity',items:[{label:'Calendar',detail:'Your schedule, events, tasks and reminders',view:'calendar',icon:messenger3dIcon('calendar','mobile-hub-icon')},{label:'Menstrual Health',detail:'Private period, cycle and symptom tracking',view:'menstrual-health',icon:'<span class="mobile-hub-emoji" aria-hidden="true">♡</span>'}]},
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
       {label:'Notifications',detail:'See your recent activity',action:'notifications',icon:messenger3dIcon('activity','mobile-hub-icon')},
@@ -8357,7 +8364,7 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 let accountSwitcherTopLayerCleanup=null;
 function positionAccountSwitcherTopLayer(){
   const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');

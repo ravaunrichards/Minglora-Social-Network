@@ -44,3 +44,7 @@ ALTER ROLE minglora_runtime WITH LOGIN PASSWORD '<new-long-random-password>';
 Then place the Session Pooler connection string for this role into the existing Render service's private `DATABASE_URL` secret. Use the Session Pooler on port 5432 for Render's IPv4 network; do not use the `postgres` owner account. The connection string is documented in `infrastructure/render/README.md`.
 
 No demo accounts, sample posts, fake messages, or engagement rows were seeded.
+
+## Menstrual Health private records
+
+Migration `083_minglora_menstrual_health_tracker.sql` adds separate owner-only tables for tracker consent and preferences, period cycles, daily symptom logs, private journal entries and reminder preferences. Each table has RLS enabled and policies restrict rows to the authenticated owner. The feature is opt-in; gender is not used as database authorization or proof that a member menstruates. Records are never placed on public profiles or made available through administrative views.

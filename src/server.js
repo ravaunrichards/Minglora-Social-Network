@@ -1618,6 +1618,107 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
+      if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Menstrual Health requires Minglora Supabase Auth and private database storage.'});
+        const healthSession=sessionFromRequest(req),healthAuth=await sessionAuth(healthSession);
+        if(!healthAuth?.access_token)return json(res,401,{error:'Your secure session has expired. Sign in again.'});
+        const pairs=[
+          [process.env.SUPABASE_URL,process.env.SUPABASE_PUBLISHABLE_KEY],
+          [process.env.VITE_SUPABASE_URL,process.env.VITE_SUPABASE_PUBLISHABLE_KEY],
+          [process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY],
+          [process.env.SUPABASE_URL,process.env.SUPABASE_ANON_KEY]
+        ];
+        const credentials=pairs.find(([url,key])=>String(url||'').trim()&&String(key||'').trim());
+        const baseUrl=String(credentials?.[0]||'').trim().replace(/\/+$/,''),apiKey=String(credentials?.[1]||'').trim();
+        if(!baseUrl||!apiKey)return json(res,503,{error:'Minglora private health storage is not configured.'});
+        const rest=async(table,query='',options={})=>{
+          let response;
+          try{response=await fetch(baseUrl+'/rest/v1/'+encodeURIComponent(table)+(query?'?'+query:''),{
+            method:options.method||'GET',
+            headers:{apikey:apiKey,Authorization:'Bearer '+healthAuth.access_token,Accept:'application/json','Content-Type':'application/json',...(options.prefer?{Prefer:options.prefer}:{})},
+            ...(options.payload===undefined?{}:{body:JSON.stringify(options.payload)}),signal:AbortSignal.timeout(12000)
+          });}catch{throw Object.assign(new Error('Minglora could not reach private menstrual-health storage.'),{status:503});}
+          const raw=await response.text();let data=null;try{data=raw?JSON.parse(raw):null;}catch{}
+          if(!response.ok)throw Object.assign(new Error(String(data?.message||data?.details||data?.hint||data?.error||'Private menstrual-health request failed.')),{status:response.status>=500?503:response.status});
+          return data;
+        };
+        const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const resource=p==='/api/menstrual-health'?'':p.slice('/api/menstrual-health/'.length);
+        try{
+          if(method==='GET'&&!resource){
+            const profiles=await rest('menstrual_tracker_profiles','select=*&limit=1'),profile=Array.isArray(profiles)?profiles[0]||null:null;
+            if(!profile?.enabled)return json(res,200,{enabled:false,needsConsent:true,profile:null,cycles:[],dailyLogs:[],journal:[],reminders:[]});
+            const [cycles,dailyLogs,journal,reminders]=await Promise.all([
+              rest('menstrual_cycles','select=*&order=start_date.desc&limit=100'),
+              rest('menstrual_daily_logs','select=*&order=entry_date.desc&limit=120'),
+              rest('menstrual_journal_entries','select=*&order=entry_date.desc&limit=100'),
+              rest('menstrual_reminders','select=*&order=reminder_type.asc')
+            ]);
+            const service=await import('../backend/modules/menstrual-health/service.js');
+            return json(res,200,{enabled:true,profile,cycles,dailyLogs,journal,reminders,insights:service.calculateMenstrualInsights(cycles,profile)});
+          }
+          if(method==='POST'&&resource==='consent'){
+            if(input?.acceptConsent!==true)return json(res,400,{error:'Read and accept the private health-tracking consent before enabling the tracker.'});
+            const timezone=String(input.timezone||'America/Jamaica').trim().slice(0,80);
+            try{new Intl.DateTimeFormat('en',{timeZone:timezone}).format(new Date());}catch{return json(res,400,{error:'Choose a valid time zone.'});}
+            const stamp=new Date().toISOString();
+            const result=await rest('menstrual_tracker_profiles','on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=representation',payload:{user_id:user.id,enabled:true,consent_version:'2026-11-07-v1',consented_at:stamp,timezone,updated_at:stamp}});
+            return json(res,201,{ok:true,profile:Array.isArray(result)?result[0]||null:result});
+          }
+          if(method==='PATCH'&&resource==='preferences'){
+            const service=await import('../backend/modules/menstrual-health/service.js'),patch=service.normalizeTrackerPreferences(input||{});
+            if(!Object.keys(patch).length)return json(res,400,{error:'There are no supported preferences to update.'});
+            const current=await rest('menstrual_tracker_profiles','select=enabled&limit=1');
+            if(!current?.[0]?.enabled)return json(res,403,{error:'Enable the tracker with your consent before changing health preferences.'});
+            if(patch.enabled===true)return json(res,400,{error:'Re-enable the tracker through the consent flow.'});
+            patch.updated_at=new Date().toISOString();
+            const result=await rest('menstrual_tracker_profiles','user_id=eq.'+encodeURIComponent(user.id),{method:'PATCH',prefer:'return=representation',payload:patch});
+            return json(res,200,{ok:true,profile:Array.isArray(result)?result[0]||null:result});
+          }
+          if(method==='POST'&&resource==='cycles'){
+            const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeCycleInput(input||{});
+            const result=await rest('menstrual_cycles','',{method:'POST',prefer:'return=representation',payload:{...normalized,user_id:user.id}});
+            return json(res,201,{cycle:Array.isArray(result)?result[0]:result});
+          }
+          if(method==='PATCH'&&resource.startsWith('cycles/')){
+            const id=resource.slice(7);if(!uuid.test(id))return json(res,400,{error:'Choose a valid period record.'});
+            const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeCycleInput(input||{},true);
+            normalized.updated_at=new Date().toISOString();
+            const result=await rest('menstrual_cycles','id=eq.'+encodeURIComponent(id),{method:'PATCH',prefer:'return=representation',payload:normalized});
+            if(!Array.isArray(result)||!result.length)return json(res,404,{error:'Period record not found.'});
+            return json(res,200,{cycle:result[0]});
+          }
+          if(method==='DELETE'&&resource.startsWith('cycles/')){
+            const id=resource.slice(7);if(!uuid.test(id))return json(res,400,{error:'Choose a valid period record.'});
+            await rest('menstrual_cycles','id=eq.'+encodeURIComponent(id),{method:'DELETE'});return json(res,200,{ok:true});
+          }
+          if(method==='POST'&&resource==='daily-logs'){
+            const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeDailyLogInput(input||{});
+            const result=await rest('menstrual_daily_logs','on_conflict=user_id,entry_date',{method:'POST',prefer:'resolution=merge-duplicates,return=representation',payload:{...normalized,user_id:user.id,updated_at:new Date().toISOString()}});
+            return json(res,200,{log:Array.isArray(result)?result[0]:result});
+          }
+          if(method==='POST'&&resource==='journal'){
+            const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeJournalInput(input||{});
+            const result=await rest('menstrual_journal_entries','',{method:'POST',prefer:'return=representation',payload:{...normalized,user_id:user.id}});
+            return json(res,201,{entry:Array.isArray(result)?result[0]:result});
+          }
+          if(method==='DELETE'&&resource.startsWith('journal/')){
+            const id=resource.slice(8);if(!uuid.test(id))return json(res,400,{error:'Choose a valid journal entry.'});
+            await rest('menstrual_journal_entries','id=eq.'+encodeURIComponent(id),{method:'DELETE'});return json(res,200,{ok:true});
+          }
+          if(method==='POST'&&resource==='reminders'){
+            const service=await import('../backend/modules/menstrual-health/service.js'),normalized=service.normalizeReminderInput(input||{});
+            const result=await rest('menstrual_reminders','on_conflict=user_id,reminder_type',{method:'POST',prefer:'resolution=merge-duplicates,return=representation',payload:{...normalized,user_id:user.id,updated_at:new Date().toISOString()}});
+            return json(res,200,{reminder:Array.isArray(result)?result[0]:result});
+          }
+          if(method==='DELETE'&&resource==='data'){
+            if(input?.confirmation!=='DELETE MY MENSTRUAL DATA')return json(res,400,{error:'Type DELETE MY MENSTRUAL DATA to permanently remove your private health records.'});
+            for(const table of ['menstrual_daily_logs','menstrual_journal_entries','menstrual_reminders','menstrual_cycles','menstrual_tracker_profiles'])await rest(table,'user_id=eq.'+encodeURIComponent(user.id),{method:'DELETE'});
+            return json(res,200,{ok:true,deleted:true});
+          }
+          return json(res,404,{error:'Menstrual Health route not found.'});
+        }catch(error){return json(res,error.status||400,{error:String(error?.message||'Menstrual Health request failed.').slice(0,240)});}
+      }
       if(method==='POST'&&p==='/api/auth/phone/change'){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Verified phone authentication requires Supabase Auth.'});
         const phone=normalizeContactPhone(input.phone||'');
