@@ -30,6 +30,15 @@ test('phone profile moves owner actions beside Edit picture without moving the a
   assert.match(css,/\.profile-header-card--owner \.profile-info--with-thought \.profile-owner-actions\{\s*grid-row:3!important/);
 });
 
+test('profile cover, picture and admin actions share blue and active-red states',()=>{
+  assert.match(css, /\.profile-header-card \.profile-inline-media-edit,[\\s\\S]*?\.profile-admin-tools-grid \.profile-admin-tool/);
+  assert.match(css, /background:var\\(--blue\\)!important/);
+  assert.match(css, /\.profile-header-card \.profile-inline-media-edit:active:not\\(:disabled\\)/);
+  assert.match(css, /\.profile-admin-tools-grid \.profile-admin-tool:is\\(\\[aria-pressed="true"\\]/);
+  assert.match(css, /background:var\\(--danger,#c43d4b\\)!important/);
+  assert.match(css, /\.profile-header-card \.profile-actions \.profile-edit:focus-visible/);
+});
+
 test('the profile action stylesheet is loaded and precached with a new shell cache key',()=>{
   assert.match(html,/profile-action-row\.css\?v=20261107-horizontal-owner-actions-1/);
   assert.match(worker,/profile-action-row\.css\?v=20261107-horizontal-owner-actions-1/);
