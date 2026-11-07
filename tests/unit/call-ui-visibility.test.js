@@ -90,3 +90,13 @@ test('incoming Answer keeps the receiver call UI visible while the secure room i
   assert.match(source,/Connecting securely to your call/);
   assert.doesNotMatch(source,/closeIncomingCallOverlay\(\);const joined/);
 });
+
+test('ringing call status is readable without depending on LiveKit provider presence',()=>{
+  const statusStart=server.indexOf('const callStatusMatch=p.match');
+  const statusEnd=server.indexOf("if(method==='POST'&&p==='/api/calls')",statusStart);
+  const route=server.slice(statusStart,statusEnd);
+  assert.ok(statusStart>=0&&statusEnd>statusStart);
+  assert.doesNotMatch(route,/callSessionCleanupReady|reconcileCallPresenceForUsers/);
+  assert.match(route,/participantStatus:participant\.status/);
+  assert.match(route,/expireRingingCall/);
+});
