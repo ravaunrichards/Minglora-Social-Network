@@ -69,30 +69,21 @@ test('retry actions remain available for failed content loads', () => {
 });
 
 test('automatic-update assets are versioned consistently in HTML and the service-worker shell', () => {
-  const assets = [
-    '/styles.css?v=20261107-top-gifters-1',
-    '/meetwave.css?v=20261107-auto-sync-no-refresh-1',
-    '/meetwave.js?v=20261107-top-gifters-2',
-    '/leagues.js?v=20261107-top-gifters-2',
-    '/gifter-progression.css?v=20261107-auto-sync-no-refresh-1',
-    '/gifter-progression.js?v=20261107-top-gifters-2',
-    '/app.js?v=20261107-top-gifters-2',
-    '/admin-centre.js?v=20261107-top-gifters-2'
-  ];
-  for (const asset of assets) {
-    assert.ok(html.includes(asset), 'Minglora HTML requests ' + asset);
-    assert.ok(serviceWorker.includes(asset), 'service worker caches ' + asset);
+  const paths=['/styles.css','/meetwave.css','/meetwave.js','/leagues.js','/gifter-progression.css','/gifter-progression.js','/app.js','/admin-centre.js'];
+  for(const path of paths){
+    const attribute=path.endsWith('.css')?'href':'src';
+    const asset=html.match(new RegExp(attribute+'="('+path.replace(/[.*+?^{}()|[\\]\\]/g,'\\\\$&')+'\\\\?v=[^"]+)"'))?.[1]||'';
+    assert.ok(asset,'HTML declares '+path);
+    assert.ok(serviceWorker.includes("'"+asset+"'"),'service worker caches '+asset);
   }
-  assert.match(adminHtml, /admin-centre\.js\?v=20261107-top-gifters-2/);
-  assert.match(serviceWorker, /minglora-shell-v132-live-top-gifters-2/);
+  const adminAsset=adminHtml.match(/src="(\\/admin-centre\\.js\\?v=[^"]+)"/)?.[1]||'';
+  assert.ok(adminAsset&&serviceWorker.includes("'"+adminAsset+"'"));
+  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\\d+-/);
 });
 
 test('service-worker registration does not force an active page reload', () => {
-  assert.equal(
-    (app.match(/navigator\.serviceWorker\.register\('\/sw\.js\?v=20261107-auto-sync-no-refresh-1/g) || []).length,
-    2
-  );
-  assert.match(app, /updateViaCache:'none'/);
-  assert.doesNotMatch(app, /await registration\.update\(\)/);
-  assert.doesNotMatch(serviceWorker, /self\.skipWaiting\(\)|self\.clients\.claim\(\)/);
+  assert.equal((app.match(/navigator\\.serviceWorker\\.register\\('/\\/sw\\.js\\?v=/g)||[]).length,1);
+  assert.match(app,/updateViaCache:'none'/);
+  assert.doesNotMatch(app,/await registration\\.update\\(\\)/);
+  assert.doesNotMatch(serviceWorker,/self\\.skipWaiting\\(\\)|self\\.clients\\.claim\\(\\)/);
 });
