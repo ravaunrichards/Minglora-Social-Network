@@ -124,7 +124,7 @@
       setTimeout(() => context.close().catch(() => {}), 100);
     } catch {}
   };
-  const beep = (soft = false) => {
+  const beep = (soft = false, volume = 0.8) => {
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return;
@@ -136,7 +136,7 @@
         oscillator.type = soft ? 'sine' : 'triangle';
         oscillator.frequency.value = frequency;
         gain.gain.setValueAtTime(0.0001, context.currentTime + index * 0.2);
-        gain.gain.exponentialRampToValueAtTime(soft ? 0.12 : 0.2, context.currentTime + index * 0.2 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.025, Math.min(0.35, Number(volume) || 0.8) * (soft ? 0.15 : 0.25)), context.currentTime + index * 0.2 + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + index * 0.2 + 0.17);
         oscillator.connect(gain).connect(context.destination);
         oscillator.start(context.currentTime + index * 0.2);
@@ -154,7 +154,7 @@
         alarmAudio.volume = Math.max(0.1, Math.min(1, Number(alarm.volume ?? 0.8)));
         alarmAudio.play().catch(() => beep(alarm.mode === 'smart'));
       } catch { beep(alarm.mode === 'smart'); }
-    } else beep(alarm?.mode === 'smart');
+    } else beep(alarm?.mode === 'smart' || alarm?.sound === 'gentle', alarm?.volume ?? 0.8);
     if (state.settings.vibration && alarm?.vibrate !== false && navigator.vibrate) navigator.vibrate([350, 200, 350, 200, 700]);
   };
   const stopAlarmSound = () => {
@@ -400,7 +400,8 @@
         stopAlarmSound(); ringingAlarm = null; $('#clock-ringing-alert')?.remove();
       } else if (action?.hasAttribute('data-alarm-snooze')) {
         stopAlarmSound();
-        const snooze = { ...ringingAlarm, id: uid(), time: shiftTime(new Date().getHours() + ':' + String(new Date().getMinutes()).padStart(2,'0'), 5), date: localDate(new Date()), days: [], label: (ringingAlarm?.label || 'Alarm') + ' · Snooze', enabled: true };
+        const snoozeAt = new Date(Date.now() + 5 * 60000);
+        const snooze = { ...ringingAlarm, id: uid(), time: String(snoozeAt.getHours()).padStart(2,'0') + ':' + String(snoozeAt.getMinutes()).padStart(2,'0'), date: localDate(snoozeAt), days: [], label: (ringingAlarm?.label || 'Alarm') + ' · Snooze', enabled: true };
         state.alarms.push(snooze); persist(); ringingAlarm = null; $('#clock-ringing-alert')?.remove(); showToast('Snoozed for five minutes.');
       } else if (action?.dataset.alarmCancelEdit !== undefined) {
         editingAlarmId = null; renderTab();
@@ -550,15 +551,38 @@
     try { const audio = new Audio(state.settings.customSoundData); audio.play().catch(() => showToast('Tap Preview again after interacting with the page.')); }
     catch { showToast('This audio format is not supported by the browser.'); }
   };
+  const localWallTimeInZone = (value, zone) => {
+    const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(String(value || ''));
+    if (!match) throw new Error('Choose a valid source date and time.');
+    const wanted = { year:+match[1], month:+match[2], day:+match[3], hour:+match[4], minute:+match[5] };
+    const targetAsUtc = Date.UTC(wanted.year, wanted.month-1, wanted.day, wanted.hour, wanted.minute);
+    let guess = targetAsUtc;
+    for (let attempt=0; attempt<5; attempt++) {
+      const parts = new Intl.DateTimeFormat('en-CA', { timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(guess));
+      const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+      const observedAsUtc = Date.UTC(values.year, values.month-1, values.day, values.hour, values.minute);
+      const delta = targetAsUtc - observedAsUtc;
+      if (!delta) break;
+      guess += delta;
+    }
+    const date = new Date(guess);
+    const check = new Intl.DateTimeFormat('en-CA', { timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(date);
+    const actual = Object.fromEntries(check.filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+    if (actual.year !== wanted.year || actual.month !== wanted.month || actual.day !== wanted.day || actual.hour !== wanted.hour || actual.minute !== wanted.minute) throw new Error('That source time does not exist because of a daylight-saving clock change. Choose another time.');
+    return date;
+  };
   const runConverter = () => {
     const from = $('#clock-convert-from')?.value;
     const to = $('#clock-convert-to')?.value;
     const value = $('#clock-convert-time')?.value;
     if (!from || !to || !value) { showToast('Choose both cities and a source time.'); return; }
-    const date = new Date(value);
-    const target = new Intl.DateTimeFormat(undefined, { dateStyle:'full', timeStyle:'short', timeZone:to }).format(date);
-    const result = $('#clock-convert-result');
-    if (result) result.textContent = target;
+    try {
+      const date = localWallTimeInZone(value, from);
+      const source = new Intl.DateTimeFormat(undefined, { dateStyle:'medium', timeStyle:'short', timeZone:from }).format(date);
+      const target = new Intl.DateTimeFormat(undefined, { dateStyle:'full', timeStyle:'short', timeZone:to, timeZoneName:'short' }).format(date);
+      const result = $('#clock-convert-result');
+      if (result) result.textContent = source + ' → ' + target;
+    } catch (error) { showToast(error.message); }
   };
   const exportCalendar = () => {
     if (!state.countdowns.length) return;
