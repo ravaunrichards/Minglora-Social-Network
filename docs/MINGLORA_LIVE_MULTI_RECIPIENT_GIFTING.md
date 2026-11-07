@@ -4,9 +4,10 @@ Minglora LIVE supports gifts between different connected participants in the sam
 
 ## Recipient directions
 
-- Audience viewers can send gifts to the host, approved guests/co-hosts, and connected viewers.
-- The host can send gifts to connected guests, co-hosts, and viewers, but not to themselves.
-- Guests and co-hosts can send gifts to the host and any other connected participant, but not to themselves.
+- Audience viewers can send gifts to the host and approved guests/co-hosts.
+- The host can send gifts to connected guests and co-hosts, but not to themselves.
+- Guests and co-hosts can send gifts to the host and other approved guests/co-hosts, but not to themselves.
+- Ordinary viewers are senders only; they are not listed as creator-earning LIVE recipients.
 - A person who leaves the room is removed from the picker and cannot receive another gift in that LIVE.
 
 ## Runtime guarantees
