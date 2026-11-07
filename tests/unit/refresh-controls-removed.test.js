@@ -65,19 +65,19 @@ test('automatic-update assets are versioned consistently in HTML and the service
   const assets = [
     '/styles.css?v=20261107-top-gifters-1',
     '/meetwave.css?v=20261107-auto-sync-no-refresh-1',
-    '/meetwave.js?v=20261107-top-gifters-profile-controls-functional-1',
-    '/leagues.js?v=20261107-top-gifters-profile-controls-functional-1',
+    '/meetwave.js?v=20261107-top-gifters-2',
+    '/leagues.js?v=20261107-top-gifters-2',
     '/gifter-progression.css?v=20261107-auto-sync-no-refresh-1',
-    '/gifter-progression.js?v=20261107-top-gifters-profile-controls-functional-1',
-    '/app.js?v=20261107-top-gifters-profile-controls-functional-1',
-    '/admin-centre.js?v=20261107-top-gifters-profile-controls-functional-1'
+    '/gifter-progression.js?v=20261107-top-gifters-2',
+    '/app.js?v=20261107-top-gifters-2',
+    '/admin-centre.js?v=20261107-top-gifters-2'
   ];
   for (const asset of assets) {
     assert.ok(html.includes(asset), 'Minglora HTML requests ' + asset);
     assert.ok(serviceWorker.includes(asset), 'service worker caches ' + asset);
   }
-  assert.match(adminHtml, /admin-centre\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
-  assert.match(serviceWorker, /minglora-shell-v131-live-top-gifters-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261107-top-gifters-2/);
+  assert.match(serviceWorker, /minglora-shell-v132-live-top-gifters-2/);
 });
 
 test('service-worker registration does not force an active page reload', () => {
