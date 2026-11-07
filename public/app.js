@@ -72,7 +72,7 @@ async function restoreBrowserNavigation(event){
     state.view=saved.view;
     state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
     state.profileTargetId=String(saved.profileId||'');
-    state.profileTab=['posts','about','friends','photos','reels','more','gift-gallery'].includes(saved.profileTab)?saved.profileTab:'posts';
+    state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
     state.activePage=String(saved.activePage||'')||null;
     state.pageTab=String(saved.pageTab||'posts');
     state.pageDays=[7,30,90].includes(Number(saved.pageDays))?Number(saved.pageDays):30;
@@ -146,7 +146,7 @@ async function restoreLastView(){
   const saved=readPersistedView();
   if(!saved){activateNav('feed');return;}
   state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
-  state.profileTab=['posts','about','friends','photos','reels','more','gift-gallery'].includes(saved.profileTab)?saved.profileTab:'posts';
+  state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
   state.profileTargetId=String(saved.profileId||'');
   state.activePage=String(saved.activePage||'')||null;
   state.pageTab=String(saved.pageTab||'posts');
@@ -362,7 +362,7 @@ function base64UrlToBytes(value){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261106-user-controlled-refresh-1',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261107-auto-sync-no-refresh-1',{scope:'/',updateViaCache:'none'});
     // Keep the installed shell current even while the visitor is signed out.
     // The browser checks for worker updates normally; new versions must not take over this open page.
     if(!state.user)return;
@@ -383,7 +383,7 @@ async function enableMingloraPush(){
     if(permission!=='granted'){toast('Allow notifications in your browser settings to enable Minglora push.');return;}
     const [keyData,registration]=await Promise.all([
       api('/push/public-key'),
-      navigator.serviceWorker.register('/sw.js?v=20261106-user-controlled-refresh-1',{scope:'/',updateViaCache:'none'})
+      navigator.serviceWorker.register('/sw.js?v=20261107-auto-sync-no-refresh-1',{scope:'/',updateViaCache:'none'})
     ]);
     if(!keyData.publicKey)throw new Error('Minglora could not retrieve its device push key.');
     let subscription=await registration.pushManager.getSubscription();
@@ -419,9 +419,9 @@ function syncNavigationActive(){
   const activeView=state.view==='feed'&&state.feedScope==='for-you'?'for-you':state.view;
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===activeView));
   const moreButton=document.querySelector('#mobile-more-nav');
-  moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','friends','live','messages'].includes(activeView));
+  moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
@@ -578,49 +578,52 @@ async function refreshVisiblePosts(){
   }
   await loadFeed();await renderFeed();
 }
-function bindFeed(){
-  bindSoundtrackPlayback(document);
-  $('#create-story')?.addEventListener('click',()=>openStoryComposer());
-  document.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
-  $('#open-composer')?.addEventListener('click',()=>openComposer());
-  $('#post-text')?.addEventListener('click',()=>openComposer());
-  $('#post-photo')?.addEventListener('click',()=>openComposer(true));
-  $('#post-feeling')?.addEventListener('click',()=>openComposer());
-  bindProfileLinks(document);
-  document.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
+function bindFeed(root=document){
+  if(root===document){
+    bindSoundtrackPlayback(document);
+    $('#open-composer')?.addEventListener('click',()=>openComposer());
+    $('#post-text')?.addEventListener('click',()=>openComposer());
+    $('#post-photo')?.addEventListener('click',()=>openComposer(true));
+    $('#post-feeling')?.addEventListener('click',()=>openComposer());
+  }else bindSoundtrackPlayback(root);
+  root.querySelector('#create-story')?.addEventListener('click',()=>openStoryComposer());
+  root.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
+  bindProfileLinks(root);
+  root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
     try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:'like'})});await refreshVisiblePosts();}
     catch(e){toast(e.message);}
   }));
-  document.querySelectorAll('[data-comment-form]').forEach(form=>form.addEventListener('submit',async e=>{
+  root.querySelectorAll('[data-comment-form]').forEach(form=>form.addEventListener('submit',async e=>{
     e.preventDefault();const input=form.elements.text;
     try{await api(`/posts/${form.dataset.commentForm}/comments`,{method:'POST',body:JSON.stringify({text:input.value})});await refreshVisiblePosts();}
     catch(err){toast(err.message);}
   }));
-  document.querySelectorAll('[data-report-comment]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('comment',btn.dataset.reportComment)));
-  document.querySelectorAll('[data-delete-comment-id]').forEach(btn=>btn.addEventListener('click',async()=>{
+  root.querySelectorAll('[data-report-comment]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('comment',btn.dataset.reportComment)));
+  root.querySelectorAll('[data-delete-comment-id]').forEach(btn=>btn.addEventListener('click',async()=>{
     if(!window.confirm('Delete this comment?'))return;
     try{await api(`/posts/${btn.dataset.deleteCommentPost}/comments/${btn.dataset.deleteCommentId}`,{method:'DELETE',body:'{}'});await refreshVisiblePosts();toast('Comment deleted.');}
     catch(err){toast(err.message);}
   }));
-  document.querySelectorAll('[data-focus-comment]').forEach(el=>el.addEventListener('click',()=>document.querySelector(`[data-comment-form="${el.dataset.focusComment}"] input`)?.focus()));
-  document.querySelectorAll('[data-toggle-save]').forEach(btn=>btn.addEventListener('click',async()=>{
+  root.querySelectorAll('[data-focus-comment]').forEach(el=>el.addEventListener('click',()=>root.querySelector(`[data-comment-form="${el.dataset.focusComment}"] input`)?.focus()));
+  root.querySelectorAll('[data-toggle-save]').forEach(btn=>btn.addEventListener('click',async()=>{
     const saving=btn.dataset.saved!=='true';
     try{await api(`/posts/${btn.dataset.toggleSave}/save`,{method:saving?'POST':'DELETE',body:'{}'});await refreshVisiblePosts();toast(saving?'Post saved.':'Post removed from saved posts.');}
     catch(err){toast(err.message);}
   }));
-  document.querySelectorAll('[data-share]').forEach(el=>el.addEventListener('click',async()=>{
+  root.querySelectorAll('[data-share]').forEach(el=>el.addEventListener('click',async()=>{
     const post=findVisiblePost(el.dataset.share);if(!post)return;
     try{await navigator.clipboard.writeText(`${location.origin}/#post-${post.id}`);toast('Post link copied.');}
     catch{toast('Copy this page URL to share the post.');}
   }));
-  document.querySelectorAll('[data-post-menu]').forEach(el=>el.addEventListener('click',()=>{
+  root.querySelectorAll('[data-post-menu]').forEach(el=>el.addEventListener('click',()=>{
     const post=findVisiblePost(el.dataset.postMenu);if(post)openPostOptions(post);
   }));
 }
 function openEditPost(post){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="edit-post-title"><div class="modal-head"><h2 id="edit-post-title">Edit post</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="edit-post-form"><div class="field"><label for="edit-post-text">Post text</label><textarea id="edit-post-text" name="text" maxlength="5000">'+esc(post.text||'')+'</textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="edit-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="edit-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="edit-post-title"><div class="modal-head"><h2 id="edit-post-title">Edit post</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="edit-post-form"><div class="field"><label for="edit-post-access">Post access</label><select id="edit-post-access" name="accessLevel"><option value="public">Public</option><option value="subscribers">Subscribers only · Paid members</option></select></div><div class="field"><label for="edit-post-text">Post text</label><textarea id="edit-post-text" name="text" maxlength="5000">'+esc(post.text||'')+'</textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="edit-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="edit-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Save changes</button></div></form></section>';
   document.body.append(modal);
+  modal.querySelector('#edit-post-access').value=post.accessLevel==='subscribers'?'subscribers':'public';
   const picker=createMediaPicker(modal.querySelector('#edit-post-media-picker'),{slot:'post',initialMedia:post.media||[]});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#edit-post-soundtrack'),post.soundtrack||null);
   const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
@@ -630,7 +633,7 @@ function openEditPost(post){
     event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
-      await api('/posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:soundtrack.value()})});
+      await api('/posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:soundtrack.value(),accessLevel:values.get('accessLevel')||'public'})});
       close();await refreshVisiblePosts();toast('Post updated.');
     }catch(error){toast(error.message);button.disabled=false;}
   };
@@ -673,8 +676,50 @@ function openPostOptions(post){
 }
 async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;state.feed=(await api(`/feed?scope=${encodeURIComponent(state.feedScope)}`)).posts;}
 async function loadStories(){state.stories=(await api('/stories')).stories;}
+let feedAutoSyncTimer=null,feedAutoSyncBusy=false;
+function stopFeedAutoSync(){
+  if(feedAutoSyncTimer!==null)window.clearInterval(feedAutoSyncTimer);
+  feedAutoSyncTimer=null;
+}
+function startFeedAutoSync(){
+  stopFeedAutoSync();
+  feedAutoSyncTimer=window.setInterval(()=>void syncFeedAutomatically(),30000);
+}
+async function syncFeedAutomatically(){
+  if(feedAutoSyncBusy||state.view!=='feed'||document.visibilityState!=='visible')return;
+  const list=$('#feed-list');
+  const currentStories=$('.story-panel');
+  if(!list)return;
+  const focused=document.activeElement;
+  if((focused&&list.contains(focused))||(focused&&currentStories?.contains(focused)))return;
+  feedAutoSyncBusy=true;
+  const anchor=[...list.querySelectorAll('[data-post]')].find(post=>post.getBoundingClientRect().bottom>=0);
+  const anchorId=anchor?.dataset.post||'';
+  const anchorTop=anchor?anchor.getBoundingClientRect().top:0;
+  try{
+    await Promise.all([loadFeed(state.feedScope),loadStories()]);
+    if(state.view!=='feed'||!list.isConnected)return;
+    const sort=$('#feed-sort')?.value||'new';
+    const posts=[...state.feed].sort((a,b)=>sort==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));
+    const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';
+    list.innerHTML=posts.length?posts.map(post=>postCard(post)).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`;
+    bindFeed(list);
+    if(currentStories?.isConnected&&!currentStories.contains(document.activeElement)){
+      const wrapper=document.createElement('div');
+      wrapper.innerHTML=renderStoriesPanel();
+      const incoming=wrapper.firstElementChild;
+      if(incoming){currentStories.replaceWith(incoming);bindFeed(incoming);}
+    }
+    if(anchorId){
+      const restored=[...list.querySelectorAll('[data-post]')].find(post=>post.dataset.post===anchorId);
+      if(restored)window.scrollBy(0,restored.getBoundingClientRect().top-anchorTop);
+    }
+  }catch(error){
+    console.warn('[Minglora] Feed background sync failed:',error?.message||error);
+  }finally{feedAutoSyncBusy=false;}
+}
 function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(Array.isArray(story.mediaItems)&&story.mediaItems.length>1?'<span class="story-media-count">'+story.mediaItems.length+' items</span>':'')+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
-async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><button type="button" class="secondary" id="feed-refresh">↻ Refresh</button><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-refresh')?.addEventListener('click',async()=>{const button=$('#feed-refresh');if(button){button.disabled=true;button.textContent='Refreshing…';}try{await Promise.all([loadFeed(state.feedScope),loadStories()]);await renderFeed();toast('Feed updated.');}catch(error){toast('Feed could not be refreshed: '+error.message);const current=$('#feed-refresh');if(current){current.disabled=false;current.textContent='↻ Refresh';}}});$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
+async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();startFeedAutoSync();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed($('#feed-list'))});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 
 function measureAudioDurationMs(file){
   if(!file)return Promise.resolve(0);
@@ -789,7 +834,7 @@ function createSoundtrackEditor(root,initialTrack=null){
 }
 function openComposer(){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Choose the audience for this post</small></div></div><div class="field"><label for="post-audience">Who can see this post?</label><select id="post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="create-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="create-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Choose the audience for this post</small></div></div><div class="field"><label for="post-audience">Who can see this post?</label><select id="post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="create-post-access">Post access</label><select id="create-post-access" name="accessLevel"><option value="public">Public</option><option value="subscribers">Subscribers only · Paid members</option></select></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="create-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="create-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
   document.body.append(modal);
   const picker=createMediaPicker(modal.querySelector('#create-post-media-picker'),{slot:'post',maxFiles:10});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#create-post-soundtrack'));
@@ -800,7 +845,7 @@ function openComposer(){
     event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,soundtrack:soundtrack.value()})});
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,soundtrack:soundtrack.value(),accessLevel:values.get('accessLevel')||'public'})});
       close();await loadFeed();await renderFeed();toast('Your post is published.');
     }catch(error){toast(error.message);button.disabled=false;}
   });
@@ -917,25 +962,36 @@ function bindPeople(root=document){
   }));
 }
 let peopleDiscoveryRefreshBusy=false;
-function stopPeopleDiscoveryRefresh(){}
-async function refreshPeopleDiscovery(){
+let peopleDiscoveryRefreshTimer=null;
+function stopPeopleDiscoveryRefresh(){
+  if(peopleDiscoveryRefreshTimer!==null)window.clearInterval(peopleDiscoveryRefreshTimer);
+  peopleDiscoveryRefreshTimer=null;
+}
+function startPeopleDiscoveryRefresh(){
+  stopPeopleDiscoveryRefresh();
+  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),30000);
+}
+async function refreshPeopleDiscovery({quiet=true}={}){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
-  if(!$('#people-discovery-grid'))return;
+  const grid=$('#people-discovery-grid');
+  if(!grid)return;
+  const focused=document.activeElement;
+  if(focused&&grid.contains(focused))return;
   peopleDiscoveryRefreshBusy=true;
   try{
     const [peopleResult,liveResult]=await Promise.all([
       api('/discovery/people'),
       api('/live/sessions').catch(()=>({sessions:[]}))
     ]);
+    if(state.view!=='friends'||document.visibilityState!=='visible')return;
     state.people=peopleResult.users||[];
     state.discoveryLiveSessions=liveResult.sessions||[];
-    const grid=$('#people-discovery-grid');
-    if(grid){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
-  }catch(error){toast('People could not be refreshed: '+error.message);}
-  finally{
+    if(grid.isConnected){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
+  }catch(error){
+    if(!quiet)toast('People could not be updated: '+error.message);
+    else console.warn('[Minglora] People discovery sync failed:',error?.message||error);
+  }finally{
     peopleDiscoveryRefreshBusy=false;
-    const button=$('#people-discovery-refresh');
-    if(button){button.disabled=false;button.textContent='↻ Refresh';}
   }
 }
 
@@ -949,16 +1005,12 @@ async function renderFriends(){
   state.discoveryLiveSessions=liveResult.sessions||[];
   const friends=result.friends||[];
   setContent('<div class="page-heading"><div><h1>Friends</h1><p class="muted">Discover members through the moments they choose to share.</p></div></div>'+
-    '<div class="feed-header"><h2>People you may know</h2><button type="button" class="secondary" id="people-discovery-refresh">↻ Refresh</button></div>'+
+    '<div class="feed-header"><h2>People you may know</h2></div>'+
     '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
     '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
     (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" data-profile="'+esc(member.id)+'" alt="View '+esc(member.name)+'’s profile" src="'+avatar(member)+'"><div class="person-meta"><strong data-profile="'+esc(member.id)+'">'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
   bindPeople(document);
-  $('#people-discovery-refresh')?.addEventListener('click',()=>{
-    const button=$('#people-discovery-refresh');
-    if(button){button.disabled=true;button.textContent='Refreshing…';}
-    void refreshPeopleDiscovery();
-  });
+  startPeopleDiscoveryRefresh();
 }
 let activeCallRoom=null;
 let activeCallOverlay=null;
@@ -1050,6 +1102,10 @@ function activateLiveToolsPanel(name){
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
+function startLiveDirectoryRefresh(){
+  stopLiveDirectoryRefresh();
+  liveDirectoryRefreshTimer=window.setInterval(()=>void refreshLiveDirectorySessions({quiet:true}),15000);
+}
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function liveSessionCardMarkup(session){
   const audioOnly=session.broadcastType==='audio_only';
@@ -1098,7 +1154,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   ];
   const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#creator'></use></svg>")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
   const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<button type='button' class='secondary live-directory-refresh-button' id='live-directory-refresh'>↻ Refresh LIVE</button><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
@@ -1214,21 +1270,25 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   bindLiveDirectoryCards(sessions);
   bindLiveDiscoveryBoards(sessions);
 }
-async function refreshLiveDirectorySessions(){
-  if(state.view!=='live'||activeLiveRoom)return false;
+async function refreshLiveDirectorySessions({quiet=true}={}){
+  if(state.view!=='live'||activeLiveRoom||document.visibilityState!=='visible')return false;
+  const container=$('.live-room-grid');
+  if(!container)return false;
+  const focused=document.activeElement;
+  if(focused&&container.contains(focused))return false;
   try{
     const data=await api('/live/sessions');
+    if(state.view!=='live'||activeLiveRoom||!container.isConnected)return false;
     const sessions=(data.sessions||[]).filter(session=>
       session.status==='live'&&session.viewerCountVerified===true
     );
-    const container=$('.live-room-grid');
-    if(!container)return false;
     container.innerHTML=sessions.length?sessions.map(liveSessionCardMarkup).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     bindLiveDirectoryCards(sessions);
     bindLiveDiscoveryBoards(sessions);
     return true;
   }catch(error){
-    toast('LIVE directory could not be refreshed: '+error.message);
+    if(!quiet)toast('LIVE directory could not be updated: '+error.message);
+    else console.warn('[Minglora LIVE] Directory sync failed:',error?.message||error);
     return false;
   }
 }
@@ -1255,12 +1315,7 @@ async function renderLive(){
   const livePro=results[4].status==="fulfilled"?results[4].value:{hasAccess:false};
   renderLiveDirectory(sessions,status,catalog,wallet,livePro);
   $("#live-pro-open")?.addEventListener("click",()=>activateNav("live-pro"));
-  const refreshButton=$("#live-directory-refresh");
-  if(refreshButton)refreshButton.onclick=async()=>{
-    refreshButton.disabled=true;refreshButton.textContent="Refreshing…";
-    try{if(await refreshLiveDirectorySessions())toast("LIVE directory updated.");}
-    finally{refreshButton.disabled=false;refreshButton.textContent="↻ Refresh LIVE";}
-  };
+  startLiveDirectoryRefresh();
 }
 
 async function renderLiveProStudio(){
@@ -2256,7 +2311,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
-  if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Refresh Minglora and try again.");}
+  if(!client?.Room||!client?.RoomEvent){if(role!=="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});throw new Error("The LIVE player could not load. Check your connection and try again.");}
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
   activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;liveCameraEnabled=canUseCamera;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
@@ -3531,6 +3586,7 @@ function creatorStudioChrome(section,content){
     ["analytics","Analytics","explore","Measure real activity"],
     ["pages","Pages & channels","pages","Manage your Pages"],
     ["monetization","Monetization","coins","Earnings and payouts"],
+    ["subscriptions","Subscriptions","coins","Monthly memberships and subscribers"],
     ["settings","Studio settings","settings","Creator preferences"]
   ];
   const nav=sections.map(([id,label,icon,description])=>"<button type='button' class='creator-studio-nav-item live-format-card "+(id===section?"active":"")+"' data-creator-section='"+id+"' aria-current='"+(id===section?"page":"false")+"'><span class='live-format-icon "+(["audience","analytics"].includes(id)?"audio":"")+"'>"+creatorIcon(icon)+"</span><span class='creator-tab-copy'><strong>"+label+"</strong><small>"+description+"</small></span></button>").join("");
@@ -3655,7 +3711,7 @@ function creatorPublishMarkup(){
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>CONTENT PRODUCTION</span><h2>Create & publish</h2><p>Publish directly to your Minglora profile with the existing authenticated media pipeline.</p></div></div>"+
     "<div class='creator-publish-layout'><section class='creator-studio-panel creator-composer-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>POST COMPOSER</span><h3>Build your next post</h3></div><span class='creator-draft-tag'>MINGLORA POST</span></div>"+
     "<form id='creator-publish-form'><div class='creator-publish-author'><span class='creator-publish-avatar'>"+esc(String(creatorProfileName()).charAt(0).toUpperCase())+"</span><span><strong>"+esc(creatorProfileName())+"</strong><small>Publishing to your Minglora profile</small></span></div>"+
-    "<label class='creator-field-label' for='creator-post-text'>Caption or message</label><textarea id='creator-post-text' name='text' rows='5' maxlength='5000' placeholder='Share an update, an idea or a moment with your audience…'></textarea>"+
+    "<label class='creator-field-label' for='creator-post-access'>Post access</label><select id='creator-post-access' name='accessLevel'><option value='public'>Public</option><option value='subscribers'>Subscribers only · Paid members</option></select><label class='creator-field-label' for='creator-post-text'>Caption or message</label><textarea id='creator-post-text' name='text' rows='5' maxlength='5000' placeholder='Share an update, an idea or a moment with your audience…'></textarea>"+
     "<label class='creator-field-label'>Attach media</label><div id='creator-post-media-picker'></div>"+
     "<div class='creator-publish-foot'><span>Text · Photo · Video · Audio · 3D GLB</span><button type='submit' class='primary' id='creator-publish-submit'>Publish to Minglora ↗</button></div><p class='creator-inline-status' id='creator-publish-status' role='status'>Files are uploaded through Minglora’s secure media endpoint before the post is published.</p></form></section>"+
     "<aside class='creator-studio-panel creator-publish-guidance'><span class='creator-eyebrow'>PUBLISHING WORKFLOW</span><h3>From creation to publication</h3><ol><li><i>01</i><span><strong>Create your post</strong><small>Write a caption or message.</small></span></li><li><i>02</i><span><strong>Add your media</strong><small>Choose gallery, files or device camera.</small></span></li><li><i>03</i><span><strong>Secure upload</strong><small>Minglora validates and stores your media.</small></span></li><li><i>04</i><span><strong>Publish</strong><small>Your post is saved through the Minglora API.</small></span></li></ol><p>Scheduled publishing is not enabled in the current Minglora backend, so this screen only offers confirmed immediate publishing.</p></aside></div>";
@@ -3786,6 +3842,18 @@ async function renderCreatorSection(section){
     try{s.earnings=await api("/creator/earnings");s.earningsError=null;}
     catch(error){s.earnings=null;s.earningsError=error.message;}
     content=creatorMonetizationMarkup();
+  }else if(section==="subscriptions"){
+    try{
+      s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));
+      s.subscriptionData.mySubscriptions=await api("/subscriptions/mine");
+      s.subscriptionData.adminError=null;
+      if(["platform_owner","admin","moderator"].includes(state.user?.platformRole)){
+        try{s.subscriptionData.applications=(await api("/subscriptions/admin/applications")).applications||[];}
+        catch(error){s.subscriptionData.adminError=error.message;}
+      }
+      s.subscriptionError=null;
+    }catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
+    content=creatorSubscriptionsMarkup();
   }else if(section==="settings"){
     try{content=await creatorSettingsMarkup();}
     catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
@@ -3801,6 +3869,91 @@ async function renderCreatorSection(section){
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
   document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
   $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
+  if(section==="subscriptions"){
+    try{
+      s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));
+      const membershipData=await api("/subscriptions/mine");
+      s.subscriptionData.mySubscriptions=membershipData;
+      s.subscriptionData.adminError=null;
+      if(["platform_owner","admin","moderator"].includes(state.user?.platformRole)){
+        try{s.subscriptionData.applications=(await api("/subscriptions/admin/applications")).applications||[];}
+        catch(error){s.subscriptionData.adminError=error.message;}
+        document.getElementById("subscription-bonus-review-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=document.getElementById("subscription-bonus-review-status"),values=new FormData(form);
+      const monthStart=String(values.get("monthStart")||"");
+      if(!/^\\d{4}-\\d{2}-01$/.test(monthStart)){toast("Choose the first day of the month being reviewed.");return;}
+      button.disabled=true;
+      try{
+        const result=await api("/subscriptions/admin/bonus-review",{method:"POST",body:JSON.stringify({
+          creatorId:values.get("creatorId"),monthStart,followerCount:Number(values.get("followerCount")),
+          qualifyingVideoViews:Number(values.get("qualifyingVideoViews")),subscriberOnlyVideoCount:Number(values.get("subscriberOnlyVideoCount")),
+          reviewerNote:values.get("reviewerNote")
+        })});
+        if(status)status.textContent=result.eligible?"Verified: creator share is 70% for qualifying payments in the next month.":"Not eligible: the creator remains on the 50% base share.";
+        toast(result.eligible?"Monthly 20-point creator bonus approved.":"Monthly bonus not approved; base share remains 50%.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+    });
+  }
+      s.subscriptionError=null;
+    }catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
+    content=creatorSubscriptionsMarkup();
+  }else if(section==="settings"){
+    try{content=await creatorSettingsMarkup();}
+    catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
+  }else{
+    content=creatorOverviewMarkup();
+    section="overview";
+  }
+  setContent(creatorStudioChrome(section,content));
+  syncCreatorStudioNavigationLayout();
+  window.scrollTo({top:0,behavior:"auto"});
+  document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
+  document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
+  document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
+  document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
+  $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
+  if(section==="subscriptions"){
+    const applyForm=document.getElementById("subscription-apply-form");
+    applyForm?.addEventListener("submit",async event=>{
+      event.preventDefault();const button=applyForm.querySelector("button[type='submit']"),status=document.getElementById("subscription-application-status");
+      button.disabled=true;if(status)status.textContent="Submitting your application…";
+      try{await api("/subscriptions/apply",{method:"POST",body:JSON.stringify({applicationNote:applyForm.applicationNote.value})});toast("Creator subscription application submitted.");await renderCreatorSection("subscriptions");}
+      catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+    });
+    const tierForm=document.getElementById("subscription-tier-form");
+    tierForm?.addEventListener("submit",async event=>{
+      event.preventDefault();const button=document.getElementById("subscription-tier-save"),status=document.getElementById("subscription-tier-status");
+      const values=new FormData(tierForm),price=Number(values.get("price")),priceMinor=Math.round(price*100);
+      if(!Number.isSafeInteger(priceMinor)||priceMinor<100||priceMinor>1000000||false){toast("Use a monthly amount from $1.00 to $10,000.00.");return;}
+      button.disabled=true;if(status)status.textContent="Creating your monthly plan with PayPal…";
+      try{
+        await api("/subscriptions/tier",{method:"POST",body:JSON.stringify({
+          name:String(values.get("name")||""),description:String(values.get("description")||""),
+          priceMinor,benefits:String(values.get("benefits")||"").split("\n").map(item=>item.trim()).filter(Boolean)
+        })});
+        toast("Your PayPal monthly membership was saved.");await renderCreatorSection("subscriptions");
+      }catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+    });
+    document.getElementById("subscription-enabled-toggle")?.addEventListener("change",async event=>{
+      const toggle=event.currentTarget;toggle.disabled=true;
+      try{await api("/subscriptions/settings",{method:"PUT",body:JSON.stringify({enabled:toggle.checked})});toast(toggle.checked?"New subscriptions are enabled.":"New subscriptions are paused.");await renderCreatorSection("subscriptions");}
+      catch(error){toast(error.message);toggle.checked=!toggle.checked;toggle.disabled=false;}
+    });
+    document.querySelectorAll("[data-subscription-review]").forEach(button=>button.addEventListener("click",async()=>{
+      const creatorId=button.dataset.subscriptionCreator,status=button.dataset.subscriptionReview;
+      const reason=document.querySelector("[data-subscription-reason='"+creatorId+"']")?.value||"";
+      const prompt=status==="approved"?"Approve this creator for paid subscriptions?":"Reject this creator application?";
+      if(!window.confirm(prompt))return;
+      button.disabled=true;
+      try{
+        await api("/subscriptions/admin/review",{method:"POST",body:JSON.stringify({creatorId,status,reason})});
+        toast(status==="approved"?"Creator approved. They can now publish a PayPal subscription offer.":"Creator application rejected.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){toast(error.message);button.disabled=false;}
+    }));
+  }
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
   }
@@ -3840,7 +3993,7 @@ async function renderCreatorSection(section){
       if(status)status.textContent="Uploading media and publishing through Minglora…";
       try{
         const mediaIds=picker?await picker.upload():[];
-        await api("/posts",{method:"POST",body:JSON.stringify({text,mediaIds})});
+        await api("/posts",{method:"POST",body:JSON.stringify({text,mediaIds,accessLevel:values.get('accessLevel')||'public'})});
         if(status)status.textContent="Minglora confirmed your post was published.";
         toast("Your post is published.");
         s.profile=await api("/users/"+encodeURIComponent(state.user.id));
@@ -4278,7 +4431,7 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profileTargetId!==String(id))state.profileTab='posts';state.profileTargetId=String(id);persistCurrentView();try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights')]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profileTargetId!==String(id))state.profileTab='posts';state.profileTargetId=String(id);persistCurrentView();try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights'),api('/subscriptions/creator/'+encodeURIComponent(id))]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];data.subscriptionOffer=extras[4].status==='fulfilled'?extras[4].value:null;state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 window.addEventListener('minglora:open-profile',event=>{const userId=event.detail?.userId;if(state.user&&userId)void openProfile(String(userId));});
 
@@ -5066,12 +5219,18 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='verified'){await openProfileVerificationManager();return;}
   if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
+function subscriptionMoneyLabel(minor,currency='USD'){
+  const value=Number(minor);
+  if(!Number.isFinite(value))return 'Monthly';
+  try{return new Intl.NumberFormat(undefined,{style:'currency',currency}).format(value/100);}
+  catch{return (value/100).toFixed(2)+' '+currency;}
+}
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   startCreatorLeagueProfileRefresh(u.id);
-  const relationshipActions=isMe
+const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
-    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
+    :'<div class="profile-actions"><button class="primary profile-edit" id="profile-follow" data-following="'+(data.following?'true':'false')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button>'+(data.subscriptionOffer?.available?'<button class="secondary profile-edit profile-subscribe-button" id="profile-subscribe">'+(['active','past_due'].includes(data.subscriptionOffer.mySubscription?.status)?'Manage subscription':'Subscribe · '+subscriptionMoneyLabel(data.subscriptionOffer.tier?.priceMinor,data.subscriptionOffer.tier?.currency))+'</button>':'')+'<button class="secondary profile-edit" id="profile-message">Message</button><button class="secondary profile-edit" data-profile-call="audio">Voice call</button><button class="secondary profile-edit" data-profile-call="video">Video call</button><button class="secondary profile-edit" id="profile-report">Report</button><button class="secondary profile-edit" id="profile-block">Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const profileThought=data.profileStatus||u.profileThought||null;
   const isAdminProfile=Boolean(isMe&&(u.platformBadge==='admin'||['platform_owner','admin','moderator'].includes(u.platformRole)));
@@ -5090,7 +5249,7 @@ function renderProfile(data){
     : '';
   const profileActionMarkup=isAdminProfile?adminToolsMarkup:relationshipActions;
   const tab=state.profileTab||'posts';
-  setContent('<section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+(isAdminProfile?' profile-header-card--admin':'')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+(isMe&&!isAdminProfile?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info'+(isAdminProfile?' profile-info--admin':'')+((profileThought||isMe)?' profile-info--with-thought':'')+'">'+profileThoughtMarkup+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+(!isAdminProfile&&isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['badges','Badges'],['more','More']].filter(([key])=>key==='posts'||key==='more'||getProfileSectionPrefs(u.id)[key]!==false).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status" aria-label="Share a thought (Profile status)"><span aria-hidden="true">✎</span><span>Share a thought</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
+  setContent('<section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+(isAdminProfile?' profile-header-card--admin':'')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+(isMe&&!isAdminProfile?'<div class="profile-media-action-row"><button type="button" class="profile-inline-media-edit" id="profile-edit-cover" title="Edit cover picture" aria-label="Edit cover picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 3 3 3-4 5 6"></path></svg><span>Edit cover</span></button></div>':'')+'<div class="profile-info'+(isAdminProfile?' profile-info--admin':'')+((profileThought||isMe)?' profile-info--with-thought':'')+'">'+profileThoughtMarkup+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+(!isAdminProfile&&isMe?'<button type="button" class="profile-inline-media-edit profile-avatar-inline-edit" id="profile-edit-avatar" title="Edit profile picture" aria-label="Edit profile picture"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0M19 13v6m-3-3h6"></path></svg><span>Edit picture</span></button>':'')+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div><nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['badges','Badges'],['more','More']].map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="status" aria-label="Share a thought (Profile status)"><span aria-hidden="true">✎</span><span>Share a thought</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     persistCurrentView();
@@ -5129,6 +5288,13 @@ function renderProfile(data){
     const following=$('#profile-follow')?.dataset.following==='true';
     try{const result=await api('/users/'+encodeURIComponent(u.id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await openProfile(u.id);}
     catch(error){toast(error.message);}
+  });
+  $('#profile-subscribe')?.addEventListener('click',async()=>{
+    const current=data.subscriptionOffer?.mySubscription;
+    if(['active','past_due'].includes(current?.status)){activateNav('subscriptions');return;}
+    const button=$('#profile-subscribe');if(!button)return;button.disabled=true;
+    try{const checkout=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:u.id})});window.location.assign(checkout.approveUrl);}
+    catch(error){toast(error.message);button.disabled=false;}
   });
   $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
   document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
@@ -5305,7 +5471,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
     }
     onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
   }else{
-    if(!window.tus?.Upload||!uploadInfo.endpoint||!uploadInfo.token)throw new Error('The secure resumable upload component did not load. Refresh Minglora and try again.');
+    if(!window.tus?.Upload||!uploadInfo.endpoint||!uploadInfo.token)throw new Error('The secure resumable upload component did not load. Check your connection and try again.');
     try{
       await new Promise((resolve,reject)=>{
         try{
@@ -7532,7 +7698,7 @@ async function openMingloraCall(call,liveKit){
   if(!client?.Room||!client?.RoomEvent){
     const action=call.createdBy===state.user.id?'end':'leave';
     await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'}).catch(()=>{});
-    toast('The call player could not load. Refresh Minglora and try again.');return;
+    toast('The call player could not load. Check your connection and try again.');return;
   }
   const overlay=document.createElement('div');overlay.className='call-overlay';
   overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting…</span></div><span id="call-participant-count">1 in call</span></header><div class="call-video-stage" id="call-video-stage"><div class="call-empty-stage">Connecting to secure call…</div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone">Mute microphone</button><button type="button" class="secondary" id="call-camera">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">'+(call.createdBy===state.user.id?'End call for everyone':'Leave call')+'</button></footer></section>';
@@ -7843,6 +8009,7 @@ function renderMoreHub(){
     ]},
     {title:'Creator & competition',items:[
       {label:'Creator Studio',detail:'Manage your creator activity',view:'creator',icon:messenger3dIcon('creator','mobile-hub-icon')},
+      {label:'My Subscriptions',detail:'Manage paid creator memberships',view:'subscriptions',icon:messenger3dIcon('coins','mobile-hub-icon')},
       {label:'Leagues',detail:'Matches, rankings and rewards',view:'leagues',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏆</span>'},
       {label:'Gifts',detail:'Browse and send member gifts',view:'gifts',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🎁</span>'},
       {label:'Gifters Level',detail:'Track your LV, Coins and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
@@ -7870,7 +8037,7 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='subscriptions')await renderSubscriptions();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 function bindNavigation(){
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
