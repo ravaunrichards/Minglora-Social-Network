@@ -6716,3 +6716,76 @@ button.live-ranking-row{cursor:pointer}
 .live-weekly-title-row>span>small{font-size:10px;color:var(--muted,#687386)}
 .live-weekly-title-row>b{font-size:10px;white-space:nowrap;color:var(--accent,#1769e0)}
 .live-weekly-title-row>button,.gift-gallery-ranked-row>button,.gift-gallery-leader>button{padding:4px 7px;font-size:11px}
+
+
+/* Creator profile dropdown: secure same-device account switcher. */
+.profile-menu-anchor{position:relative;display:flex;align-items:center;flex:0 0 auto}
+.profile-account-menu[hidden]{display:none!important}
+.profile-account-menu{
+  position:absolute;top:calc(100% + 11px);right:0;z-index:140;
+  display:grid;gap:11px;width:min(370px,calc(100vw - 24px));max-height:min(76vh,650px);
+  overflow-y:auto;overscroll-behavior:contain;padding:15px;
+  border:1px solid var(--line);border-radius:17px;background:var(--card);color:var(--ink);
+  box-shadow:0 20px 55px rgba(10,23,46,.25);text-align:left;
+}
+.account-switcher-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+.account-switcher-head>div{display:grid;gap:3px;min-width:0}
+.account-switcher-head strong{font-size:15px;font-weight:800}
+.account-switcher-head small,.account-switcher-foot small{color:var(--muted);font-size:11px;line-height:1.45}
+.account-switcher-close{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;padding:0;border:0;border-radius:9px;background:var(--bg);color:var(--muted);font-size:21px;cursor:pointer}
+.account-switcher-list{display:grid;gap:6px}
+.account-switcher-row{display:flex;align-items:center;gap:5px;min-width:0;padding:4px;border:1px solid transparent;border-radius:13px}
+.account-switcher-row:has(.account-switcher-account[aria-current=true]){border-color:color-mix(in srgb,var(--blue) 25%,var(--line));background:color-mix(in srgb,var(--blue) 5%,var(--card))}
+.account-switcher-account{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:5px;border:0;border-radius:10px;background:transparent;color:var(--ink);text-align:left;cursor:pointer}
+.account-switcher-account:hover{background:color-mix(in srgb,var(--blue) 7%,var(--card))}
+.account-switcher-account:disabled,.account-switcher-remove:disabled{opacity:.55;cursor:wait}
+.account-switcher-account>img{display:block;flex:0 0 43px;width:43px;height:43px;border:1px solid var(--line);border-radius:50%;background:var(--bg);object-fit:cover}
+.account-switcher-account-copy{display:grid;gap:3px;flex:1;min-width:0}
+.account-switcher-account-copy strong{overflow:hidden;color:var(--ink);font-size:13px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.account-switcher-account-copy small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.account-switcher-active{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,var(--blue) 12%,var(--card));color:var(--blue);font-size:10px;font-weight:800}
+.account-switcher-arrow{padding:0 7px;color:var(--muted);font-size:17px}
+.account-switcher-remove{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;padding:0;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
+.account-switcher-remove:hover{background:#feecec;color:#bd2c2c}
+.account-switcher-add{display:flex;align-items:center;gap:11px;width:100%;min-height:57px;padding:9px 11px;border:1px solid var(--line);border-radius:13px;background:var(--bg);color:var(--ink);text-align:left;cursor:pointer}
+.account-switcher-add:hover{border-color:color-mix(in srgb,var(--blue) 42%,var(--line));background:color-mix(in srgb,var(--blue) 5%,var(--card))}
+.account-switcher-add>span:first-child{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:50%;background:color-mix(in srgb,var(--blue) 13%,var(--card));color:var(--blue);font-size:23px;font-weight:500}
+.account-switcher-add>span:last-child{display:grid;gap:3px;min-width:0}
+.account-switcher-add strong{font-size:12px;font-weight:800}
+.account-switcher-add small{color:var(--muted);font-size:10px;line-height:1.35}
+.account-switcher-foot{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.account-switcher-logout-all{justify-self:start;padding:0;border:0;background:transparent;color:var(--muted);font-size:11px;font-weight:750;text-align:left;cursor:pointer}
+.account-switcher-logout-all:hover{color:#bd2c2c;text-decoration:underline}
+.account-switcher-empty,.account-switcher-error{margin:4px 0;color:var(--muted);font-size:12px;line-height:1.5}
+.account-switcher-loading{display:flex;align-items:center;gap:10px;min-height:58px;color:var(--muted);font-size:12px}
+.account-switcher-loader{width:17px;height:17px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:account-switcher-spin .7s linear infinite}
+@keyframes account-switcher-spin{to{transform:rotate(360deg)}}
+.account-access-backdrop{z-index:220}
+.account-access-modal{width:min(460px,calc(100vw - 28px));max-height:min(88vh,820px);overflow-y:auto}
+.account-access-modal .modal-head{align-items:flex-start}
+.account-access-modal .modal-head>div{display:grid;gap:4px}
+.account-access-modal .modal-head .eyebrow{color:var(--blue);font-size:9px;font-weight:850;letter-spacing:.11em}
+.account-access-modal .modal-head h2{margin:0;font-size:21px}
+.account-access-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0 18px;padding:4px;border-radius:12px;background:var(--bg)}
+.account-access-tabs button{min-height:38px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:12px;font-weight:800;cursor:pointer}
+.account-access-tabs button.active{background:var(--card);color:var(--blue);box-shadow:0 1px 5px rgba(10,23,46,.1)}
+.account-access-form{display:grid;gap:11px}
+.account-access-form>label{display:grid;gap:6px;color:var(--ink);font-size:12px;font-weight:750}
+.account-access-form>label[hidden]{display:none!important}
+.account-access-form input{width:100%;min-height:43px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px}
+.account-access-form input:focus{outline:2px solid color-mix(in srgb,var(--blue) 45%,transparent);outline-offset:1px;border-color:var(--blue)}
+.account-access-intro{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+.account-access-error{min-height:0;margin:0;text-align:left}
+.account-access-submit{min-height:44px}
+.account-access-security{margin:0 18px 18px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:10px;line-height:1.5;text-align:center}
+@media(max-width:760px){
+  .profile-menu-anchor{position:static}
+  .profile-account-menu{position:fixed;top:calc(58px + env(safe-area-inset-top));right:8px;width:min(370px,calc(100vw - 16px));max-height:calc(100dvh - 82px);padding:13px;border-radius:15px}
+  .account-access-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 28px);padding:16px}
+  .account-access-tabs{margin-inline:16px}
+  .account-access-security{margin-inline:16px}
+}
+@media(max-width:390px){
+  .profile-account-menu{right:6px;width:calc(100vw - 12px);padding:11px}
+  .account-switcher-account>img{width:39px;height:39px;flex-basis:39px}
+}
