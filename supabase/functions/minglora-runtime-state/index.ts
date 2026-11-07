@@ -1715,6 +1715,7 @@ Deno.serve(async (req: Request) => {
 
   if (action === "subscription_paypal_webhook") {
     const event = input.event as any, details = input.subscriptionDetails as any;
+    const saleDetails = input.saleDetails as any;
     const eventId = String(event?.id || ""), eventType = String(event?.event_type || "");
     const resource = event?.resource || {};
     const allowedEvents = new Set([
@@ -1786,15 +1787,31 @@ Deno.serve(async (req: Request) => {
     } else if (eventType === "BILLING.SUBSCRIPTION.SUSPENDED" || eventType === "BILLING.SUBSCRIPTION.PAYMENT.FAILED") {
       patch.status = "past_due";
     } else if (eventType === "PAYMENT.SALE.COMPLETED") {
-      const amountNode = resource?.amount || resource?.amount_with_breakdown?.gross_amount || {};
+      const paymentTransaction = saleDetails || resource;
+      const breakdown = paymentTransaction?.amount_with_breakdown || resource?.amount_with_breakdown || resource?.seller_receivable_breakdown || {};
+      const amountNode = breakdown.gross_amount || resource?.amount || {};
       const amountValue = Number(amountNode.total ?? amountNode.value);
       const amountMinor = Math.round(amountValue * 100);
       const currency = String(amountNode.currency || amountNode.currency_code || "").toUpperCase();
-      const transactionId = String(resource.id || "");
+      const feeNode = breakdown.fee_amount || breakdown.paypal_fee || {};
+      const netNode = breakdown.net_amount || {};
+      const feeValue = Number(feeNode.total ?? feeNode.value);
+      const netValue = Number(netNode.total ?? netNode.value);
+      const hasFee = feeNode.value !== undefined || feeNode.total !== undefined;
+      const hasNet = netNode.value !== undefined || netNode.total !== undefined;
+      const providerFeeMinor = hasFee ? Math.round(feeValue * 100) :
+        hasNet ? amountMinor - Math.round(netValue * 100) : null;
+      const netMinor = hasNet ? Math.round(netValue * 100) :
+        providerFeeMinor === null ? null : amountMinor - providerFeeMinor;
+      const transactionId = String(resource.id || paymentTransaction?.id || "");
+      const feeCurrency = String(feeNode.currency_code || feeNode.currency || currency).toUpperCase();
       if (!Number.isSafeInteger(amountMinor) || amountMinor !== Number(subscription.amount_minor) ||
-          currency !== subscription.currency || transactionId.length < 5) {
-        await admin.from("subscription_payment_events").update({ processing_error: "PayPal recurring payment amount or currency did not match the creator tier." }).eq("id", paymentEvent.id);
-        return json(409, { error: "PayPal recurring payment does not match the saved subscription price. Reconciliation is required." });
+          currency !== subscription.currency || transactionId.length < 5 ||
+          providerFeeMinor === null || !Number.isSafeInteger(providerFeeMinor) || providerFeeMinor < 0 ||
+          netMinor === null || !Number.isSafeInteger(netMinor) || netMinor < 0 ||
+          providerFeeMinor + netMinor !== amountMinor || feeCurrency !== currency) {
+        await admin.from("subscription_payment_events").update({ processing_error: "PayPal recurring payment amount or fee breakdown did not match the creator tier." }).eq("id", paymentEvent.id);
+        return json(409, { error: "PayPal recurring payment or processing fee breakdown could not be reconciled. No creator earnings were credited." });
       }
       const { data: creatorSettings, error: settingsError } = await admin.from("subscription_creator_settings")
         .select("performance_bonus_bps,performance_bonus_month")
@@ -1808,8 +1825,8 @@ Deno.serve(async (req: Request) => {
         Number(creatorSettings?.performance_bonus_bps) === 2000 ? 2000 : 0;
       const creatorShareBps = 5000 + performanceBonusBps;
       const platformShareBps = 10000 - creatorShareBps;
-      const creatorMinor = Math.floor(amountMinor * creatorShareBps / 10000);
-      const platformMinor = amountMinor - creatorMinor;
+      const creatorMinor = Math.floor(netMinor * creatorShareBps / 10000);
+      const platformMinor = netMinor - creatorMinor;
       const { error: subscriptionShareError } = await admin.from("creator_subscriptions").update({
         creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps
       }).eq("id", subscription.id);
@@ -1819,7 +1836,7 @@ Deno.serve(async (req: Request) => {
         provider_transaction_id: transactionId,
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
         currency, gross_minor: amountMinor, creator_minor: creatorMinor, platform_minor: platformMinor,
-        creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
+        provider_fee_minor: providerFeeMinor, creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
         performance_bonus_bps: performanceBonusBps, entry_type: "payment"
       }, { onConflict: "provider_transaction_id", ignoreDuplicates: true });
       if (ledgerError) return fail(ledgerError, "PayPal payment was received but Minglora could not write the earnings ledger.");
