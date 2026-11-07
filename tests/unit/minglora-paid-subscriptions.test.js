@@ -75,6 +75,9 @@ test('Minglora uses a 70% base share and a reviewed 20-point bonus up to 90% aft
   assert.match(bonusMigration, /qualifying_video_views >= 100000/);
   assert.match(feeMigration, /provider_fee_minor integer NOT NULL DEFAULT 0/);
   assert.match(feeMigration, /creator_minor \+ platform_minor \+ provider_fee_minor = gross_minor/);
+  const priceMigration = await read('../../supabase/migrations/20261107052000_minglora_subscription_usd_price_range_299_9999.sql');
+  assert.match(priceMigration, /price_minor BETWEEN 299 AND 9999/);
+  assert.match(priceMigration, /DROP CONSTRAINT IF EXISTS subscription_tiers_even_price/);
 });
 
 test('subscription pages, Creator Studio navigation and current cache version are reachable', async () => {
