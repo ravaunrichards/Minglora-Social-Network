@@ -495,5 +495,5 @@
     if(!activeRoom)return;const room=activeRoom;activeRoom=null;await disconnect();
     await api(endpoint(room.id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});
   }
-  window.MingloraMeetWave={render,onNavigateAway};
+  window.MingloraMeetWave={render,onNavigateAway,canAutoUpdate:()=>!activeRoom&&!roomClient&&!pendingGuestJoinRoomId};
 })();
