@@ -38,7 +38,7 @@ export const DEFAULT_EXPERIENCE_SETTINGS = Object.freeze({
   dndEnabled: false,
   dndStart: '22:00',
   dndEnd: '07:00',
-  dndAllowedCalls: 'favorites',
+  dndAllowedCalls: 'none',
   notificationSort: 'newest',
   lockScreenNotifications: 'content',
   fontScale: 100,
@@ -65,7 +65,7 @@ const ENUMS = {
   screenSaverWaitUnit: ['seconds', 'minutes', 'hours'],
   osdPosition: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
   soundMode: ['sound', 'vibrate', 'mute'],
-  dndAllowedCalls: ['everyone', 'contacts', 'favorites', 'none'],
+  dndAllowedCalls: ['everyone', 'none'],
   notificationSort: ['newest', 'oldest', 'unread', 'priority', 'people', 'category'],
   lockScreenNotifications: ['content', 'hide-content', 'icon-only', 'hidden'],
   screenTimeoutSeconds: [15, 30, 60, 120, 300, 600, 1800]
