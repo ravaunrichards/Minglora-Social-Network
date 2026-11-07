@@ -14,7 +14,7 @@ Visitor profile actions remain on one horizontal row in this order: Follow, Subs
 ## Creator roles and Creator Studio
 - Any eligible member may apply to offer paid subscriptions.
 - Minglora moderator approval is required before paid plans can be enabled.
-- Approved creators can set a monthly price, description and benefits, enable/disable new subscriptions, and view active subscriber records.
+- Approved creators can set one monthly USD membership from $2.99 to $99.99, with a default of $5.99, plus a description and benefits; they can enable/disable new subscriptions and view active subscriber records.
 - Existing subscriptions retain the PayPal plan they accepted when the creator later changes a price or pauses new sign-ups.
 - Subscriber-only posts and subscriber-only LIVE are checked by the server; client-side labels do not grant access.
 - Moderators can approve/reject creator applications and record monthly performance-bonus reviews.
