@@ -6805,3 +6805,23 @@ button.live-ranking-row{cursor:pointer}
   .gift-gallery-ranked-row>span:nth-of-type(2)>strong{font-size:12px}
   .gift-gallery-ranked-place{font-size:8px}
 }
+
+/* The Creator account switcher is portalled to the document root to escape
+   sticky-header stacking contexts and stay above every standard app overlay. */
+.profile-account-menu.is-top-layer{
+  position:fixed!important;
+  z-index:2147483647!important;
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  isolation:isolate!important;
+  transform:none!important;
+  filter:none!important;
+  contain:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  visibility:visible!important;
+}
+.profile-account-menu.is-top-layer[hidden]{display:none!important}
