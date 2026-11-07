@@ -18,7 +18,7 @@ test('registers the service worker without forcing an open page to refresh or ch
   assert.doesNotMatch(worker, /self\.clients\.claim\(\)/, 'new worker must not take over open tabs');
   assert.doesNotMatch(worker, /existing\.navigate\(target\)/, 'notification clicks must not redirect the existing tab');
   assert.match(worker, /await self\.clients\.openWindow\(target\)/, 'notification destinations must open separately');
-  assert.ok(html.includes('/app.js?v=20261106-established-profile-1'), 'the current profile bundle must be linked without forcing an active page reload');
-  assert.ok(worker.includes('/app.js?v=20261106-established-profile-1'), 'the service-worker shell must cache the same versioned app asset');
+  assert.ok(html.includes('/app.js?v=20261105-roomwide-live-gifts-1-advanced-notifications-1&refresh=20261106-preserve-active-page-3'), 'keep the established app URL; service-worker revalidation refreshes code without forcing an active page reload');
+  assert.ok(worker.includes('/app.js?v=20261105-roomwide-live-gifts-1-advanced-notifications-1&refresh=20261106-preserve-active-page-3'), 'the service-worker shell must cache the same established app asset');
   assert.ok(worker.includes('/profile-established.css?v=20261106-established-profile-1'), 'the established profile styles must be included in the offline shell');
 });
