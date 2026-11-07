@@ -1,3 +1,6 @@
+export const MEETWAVE_GUEST_LIMIT = 8;
+export const MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1;
+
 const ROOM_MODES = new Set(['instant', 'scheduled', 'personal']);
 const ROOM_VISIBILITIES = new Set(['private', 'friends', 'public']);
 
