@@ -5361,6 +5361,7 @@ function renderProfile(data){
     document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&['checkins','events','highlights','groups','videos','manage'].includes(nextTab));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
     const panel=$('#profile-tab-panel');if(!panel)return;
     panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
+    bindFeed(panel);
     bindProfileTabActions(panel);
   };
   document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.profileTab)));
@@ -5552,7 +5553,6 @@ function bindProfileTabActions(panel){
   panel.querySelectorAll('[data-profile-tab]').forEach(button=>button.addEventListener('click',()=>{
     if(!state.profile)return;state.profileTab=button.dataset.profileTab;renderProfile(state.profile);
   }));
-  panel.querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.profile)));
   panel.querySelectorAll('[data-album-edit]').forEach(button=>button.addEventListener('click',()=>{
     const album=(state.profile.albums||[]).find(item=>item.id===button.dataset.albumEdit);if(album)openProfileAlbumEditor(state.profile.user.id,album);
   }));
