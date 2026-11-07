@@ -54,7 +54,7 @@ test('profile navigation keeps all seven requested sections available',()=>{
 
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
   assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
-  assert.ok(html.includes('/app.js?v=20261106-horizontal-profile-navigation-1'));
+  assert.ok(html.includes('/app.js?v=20261106-pinch-zoom-photo-crop-1'));
   assert.ok(html.includes('/mobile-profile-navigation.css?v=20261106-horizontal-profile-navigation-1'));
 });
 
