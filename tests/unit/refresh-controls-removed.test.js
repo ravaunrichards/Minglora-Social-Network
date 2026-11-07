@@ -87,6 +87,8 @@ test('service-worker updates check regularly and reload only after the current i
   assert.match(app,/registration\.update\(\)/);
   assert.match(app,/MINGLORA_UPDATE_CHECK_INTERVAL_MS=5\*60\*1000/);
   assert.match(app,/MINGLORA_UPDATE_IDLE_MS=45\*1000/);
+  assert.match(app,/querySelectorAll\('video,audio'\)/);
+  assert.match(app,/'wheel','scroll'/);
   assert.match(app,/activeCallRoom\|\|activeCallOverlay\|\|activeLiveRoom/);
   assert.match(app,/MingloraMeetWave\.canAutoUpdate\(\)/);
   assert.match(app,/scheduleMingloraSafeReload/);
