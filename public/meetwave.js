@@ -343,7 +343,7 @@
         const button=$(selector);
         if(button){button.classList.toggle('active',key===name);button.setAttribute('aria-pressed',String(key===name));}
       });
-      const toolbarState={chat:'mw-chat-toggle',people:'mw-people-toggle',layouts:'mw-layout',settings:'mw-settings'};
+      const toolbarState={chat:'mw-chat-toggle',people:'mw-people-toggle',settings:'mw-settings'};
       Object.entries(toolbarState).forEach(([key,id])=>{const button=$('#'+id);if(button){const active=key===name;button.classList.toggle('is-active',active);button.setAttribute('aria-expanded',String(active));}});
       if(name==='settings')populateMeetingDevices();
     };
