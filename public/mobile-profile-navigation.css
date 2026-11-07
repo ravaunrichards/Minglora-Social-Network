@@ -69,3 +69,31 @@
   .profile-tabs-list{gap:4px!important}
   .profile-tabs-list button{padding-inline:6px!important;font-size:10px!important}
 }
+
+/* The phone navigation belongs to the bottom edge of the viewport.
+   Reserve matching document space so the bar never hides the final controls. */
+@media(max-width:760px){
+  body{
+    padding-bottom:calc(76px + env(safe-area-inset-bottom))!important;
+  }
+  .mobile-nav{
+    position:fixed!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    top:auto!important;
+    z-index:100!important;
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:64px!important;
+    margin:0!important;
+    padding:7px max(4px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(4px,env(safe-area-inset-left))!important;
+    background:var(--card)!important;
+    border-top:1px solid var(--line)!important;
+    box-shadow:0 -4px 16px rgba(15,35,65,.10);
+    overflow:visible!important;
+  }
+}
