@@ -77,21 +77,21 @@ test('a full app refresh restores the signed-in member to the last page and scro
 });
 
 test('the page restore and non-disruptive refresh scripts receive a fresh browser cache version', () => {
-  const appAsset = html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]||'';
-  const leagueAsset = html.match(/src="(\\/leagues\\.js\\?v=[^"]+)"/)?.[1]||'';
+  const appAsset = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]||'';
+  const leagueAsset = html.match(/src="(\/leagues\.js\?v=[^"]+)"/)?.[1]||'';
   assert.ok(appAsset&&leagueAsset,'HTML requests the active app and League scripts');
   assert.ok(sw.includes("'"+appAsset+"'"),'service worker caches the same app script URL');
   assert.ok(sw.includes("'"+leagueAsset+"'"),'service worker caches the active League script URL');
-  assert.match(sw,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.match(sw,/CACHE_NAME='minglora-shell-v\d+-/);
 });
 
 test('the service worker versions and caches the Match Power-Up 3D models', () => {
-  const leagueAsset=html.match(/src="(\\/leagues\\.js\\?v=[^"]+)"/)?.[1]||'';
-  const leagueCss=html.match(/href="(\\/leagues\\.css\\?v=[^"]+)"/)?.[1]||'';
+  const leagueAsset = html.match(/src="(\/leagues\.js\?v=[^"]+)"/)?.[1]||'';
+  const leagueCss=html.match(/href="(\/leagues\.css\?v=[^"]+)"/)?.[1]||'';
   assert.ok(leagueAsset&&leagueCss,'HTML loads the current League scripts and styles');
   assert.ok(sw.includes("'"+leagueAsset+"'"));
   assert.ok(sw.includes("'"+leagueCss+"'"));
-  assert.match(sw,/CACHE_NAME='minglora-shell-v\\d+-/);
-  assert.match(sw,/minglora_time_boost\\.gltf/);
+  assert.match(sw,/CACHE_NAME='minglora-shell-v\d+-/);
+  assert.match(sw,/minglora_time_boost\.gltf/);
   assert.ok(sw.includes("url.pathname.startsWith('/assets/match-powerups/')"));
 });
