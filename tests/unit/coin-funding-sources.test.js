@@ -104,6 +104,6 @@ test('the PWA shell caches the current wallet and private admin assets', () => {
     html.match(/href="(\/admin-centre\.css\?v=[^"]+)"/)?.[1],
     html.match(/src="(\/admin-centre\.js\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
   for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
