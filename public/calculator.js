@@ -9,7 +9,8 @@
     memory: 0,
     angle: 'DEG',
     scientific: false,
-    history: loadHistory()
+    history: loadHistory(),
+    justEvaluated: false
   };
   const functionNames = new Set([
     'sin','cos','tan','asin','acos','atan','sinh','cosh','tanh',
@@ -253,6 +254,12 @@
   }
 
   function insert(value) {
+    if (state.justEvaluated) {
+      if (/^[0-9.]$/.test(value) || value === 'pi' || value === 'e' || value === '(' || functionNames.has(value)) {
+        state.expression = '';
+      }
+      state.justEvaluated = false;
+    }
     const last = state.expression.slice(-1);
     if (/^[0-9.]$/.test(value)) {
       if (value === '.') {
@@ -309,6 +316,7 @@
       state.lastValue = value;
       state.expression = String(Number(value.toPrecision(12)));
       state.result = result;
+      state.justEvaluated = true;
       addHistory(displayExpressionFrom(expression), result);
       updateDisplay();
       const status = document.querySelector('[data-calc-status]');
@@ -339,6 +347,7 @@
     if (key === 'AC') {
       state.expression = '';
       state.lastValue = 0;
+      state.justEvaluated = false;
       updateDisplay();
       return;
     }
@@ -439,6 +448,7 @@
       const item = state.history[Number(historyItem.dataset.calcHistoryIndex)];
       if (!item) return;
       state.expression = normalizeExpression(item.expression);
+      state.justEvaluated = false;
       updateDisplay();
       return;
     }
@@ -469,7 +479,7 @@
     mount.innerHTML =
       '<div class="ml-calc-shell">' +
         '<header class="ml-calc-heading"><div><span class="eyebrow">MINGLORA TOOLS</span><h2>Digital Calculator</h2><p>Everyday maths, with scientific tools when you need them.</p></div>' +
-          '<div class="ml-calc-heading-actions"><button type="button" data-calc-action="scientific" aria-expanded="false" class="ml-calc-mode-button">Scientific</button><button type="button" data-calc-action="copy" class="ml-calc-copy">Copy result</button></div></header>' +
+          '<div class="ml-calc-heading-actions"><button type="button" data-calc-action="scientific" aria-expanded="' + (state.scientific ? 'true' : 'false') + '" class="ml-calc-mode-button' + (state.scientific ? ' is-active' : '') + '">Scientific</button><button type="button" data-calc-action="copy" class="ml-calc-copy">Copy result</button></div></header>' +
         '<div class="ml-calc-workspace">' +
           '<section class="ml-calc-device" aria-label="Minglora digital calculator">' +
             '<div class="ml-calc-screen"><div class="ml-calc-screen-brand"><strong>MINGLORA</strong><span>DUAL POWER · DIGITAL</span></div>' +
@@ -479,7 +489,7 @@
               '<div class="ml-calc-screen-footer"><span data-calc-status role="status">Ready</span><button type="button" data-calc-action="angle" aria-label="Switch between degrees and radians">DEG</button></div>' +
             '</div>' +
             '<div class="ml-calc-memory-keys">' + ['MC','MR','M+','M-','MS'].map(key => '<button type="button" data-calc-action="' + key + '">' + key + '</button>').join('') + '</div>' +
-            '<div class="ml-calc-scientific" data-calc-scientific hidden>' +
+            '<div class="ml-calc-scientific" data-calc-scientific' + (state.scientific ? '' : ' hidden') + '>' +
               ['sin','cos','tan','sqrt','ln','log','log2','exp','asin','acos','atan','cbrt','x2','inv','pi','e','!','abs','floor','round'].map(key => {
                 const label = ({sqrt:'√',cbrt:'∛',x2:'x²',inv:'1/x',pi:'π',exp:'eˣ'})[key] || key;
                 const value = ({x2:'x2',inv:'inv'})[key] || key;
