@@ -29,12 +29,13 @@ test("hosts, guests and viewers can choose another connected room participant", 
 test("the database credits the selected recipient and preserves source-backed earnings", () => {
   assert.match(migration, /p_recipient_id uuid/);
   assert.match(migration, /lp\.status='connected'/);
-  assert.match(migration, /receiver_id,p_recipient_id/);
+  assert.match(migration, /receiver_id,[\s\S]*?creator_share_minor/);
+  assert.match(migration, /p_recipient_id,gift\.code/);
   assert.match(migration, /creator_id,gift_transaction_id,gross_minor,creator_share_minor,platform_share_minor/);
   assert.match(migration, /eligible_gross := cash_used\+marketing_used/);
 });
 
-test("gift events name the selected recipient and broadcast to every connected room member", () => {
+test("gift event reports the selected recipient and broadcasts across the room", () => {
   assert.match(server, /recipient:\{id:String\(recipientId\)/);
   assert.match(server, /creatorId:recipientId/);
   assert.match(server, /broadcastLiveKitData\(session\.roomName,\{type:'minglora\.live\.gift'/);
