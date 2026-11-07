@@ -1,0 +1,71 @@
+/* Phone profile layout: a fixed single horizontal row for all six metrics and tabs. */
+@media(max-width:760px){
+  .profile-counts{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-auto-flow:row!important;
+    align-items:stretch!important;
+    gap:0!important;
+    width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+  .profile-counts>*{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:0!important;
+    min-height:40px!important;
+    padding:5px 1px!important;
+    border-right:1px solid var(--line);
+  }
+  .profile-counts>*:last-child{border-right:0}
+  .profile-counts strong{
+    max-width:100%;
+    font-size:clamp(9px,2.7vw,12px)!important;
+    line-height:1.2;
+    white-space:nowrap!important;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .profile-counts span{
+    max-width:100%;
+    font-size:clamp(6px,1.95vw,8px)!important;
+    line-height:1.15;
+    letter-spacing:-.2px;
+    white-space:nowrap!important;
+    overflow-wrap:normal!important;
+  }
+  .profile-tabs{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden;
+  }
+  .profile-tabs-list{
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-wrap:nowrap!important;
+    min-width:0!important;
+    max-width:100%!important;
+    gap:5px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    white-space:nowrap!important;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+    -webkit-overflow-scrolling:touch;
+  }
+  .profile-tabs-list button{
+    flex:0 0 auto!important;
+    white-space:nowrap!important;
+  }
+}
+@media(max-width:390px){
+  .profile-counts strong{font-size:clamp(8px,2.5vw,10px)!important}
+  .profile-counts span{font-size:clamp(5.8px,1.85vw,7.2px)!important}
+  .profile-tabs-list{gap:4px!important}
+  .profile-tabs-list button{padding-inline:6px!important;font-size:10px!important}
+}
