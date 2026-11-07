@@ -107,15 +107,22 @@ test('visitor profile actions stay readable and tappable on narrow screens',()=>
   assert.ok(profile.includes('id="profile-block" aria-label="Block \'+esc(u.name)+\'">Block</button>'));
 });
 
-test('profile actions use blue when inactive and red when active without changing layout',()=>{
+test('visitor profile actions stay in one horizontal row and preserve subscription checkout',()=>{
   assert.ok(profileCss.includes('background:var(--blue)!important'),'inactive profile actions use Minglora blue');
   assert.ok(profileCss.includes('background:var(--danger,#c43d4b)!important'),'active profile actions use red');
   assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
   assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
   assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
   assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionStatus==='active'"),'subscription state is wired to the active color');
-  assert.ok(profileCss.includes('display:grid!important'),'existing horizontal action layout remains in place');
-  assert.ok(profileCss.includes('grid-template-columns:repeat(auto-fit,minmax(min(100%,132px),1fr))!important'),'existing responsive columns remain unchanged');
+  assert.ok(profileCss.includes('display:flex!important'),'visitor actions use a horizontal flex row');
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'visitor actions never wrap into vertical rows');
+  assert.ok(profileCss.includes('overflow-x:auto!important'),'narrow screens scroll horizontally to reach every action');
+  assert.ok(profileCss.includes('white-space:nowrap!important'),'action labels remain on one line');
+  assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"),'Subscribe remains available unless a subscription already exists');
+  assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
+  assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
+  for(const label of ['Follow','Message','Voice call','Video call','Report','Block'])assert.ok(profile.includes('>'+label+'</button>'),'Missing visitor action '+label);
+  assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe button remains in the visitor actions');
 });
 
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
