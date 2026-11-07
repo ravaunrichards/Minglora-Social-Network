@@ -6563,7 +6563,7 @@ server.listen(PORT,'0.0.0.0',async()=>{
     }));
   }
 });
-));
+      const guestRequestDecisionMatch=p.match(new RegExp('^/api/meetwave/rooms/([^/]+)/guest-requests/([^/]+)/(accept|decline)$'));
       if(guestRequestDecisionMatch&&method==='POST'){
         requireAuth(user);
         const room=(db.meetWaveRooms||[]).find(item=>item.id===guestRequestDecisionMatch[1]);
@@ -7716,7 +7716,7 @@ server.listen(PORT,'0.0.0.0',async()=>{
     }));
   }
 });
-));
+      const guestRequestRoomMatch=p.match(new RegExp('^/api/meetwave/rooms/([^/]+)/guest-requests$'));
       if(guestRequestRoomMatch&&(method==='GET'||method==='POST')){
         requireAuth(user);
         const room=(db.meetWaveRooms||[]).find(item=>item.id===guestRequestRoomMatch[1]);
