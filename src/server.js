@@ -1510,6 +1510,18 @@ async function route(req, res) {
         });
       }
 
+      if(method==='GET'&&p==='/api/admin/internal-activity'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can view internal Minglora activity.'});
+        }
+        const params=new URL(req.url,'http://localhost').searchParams;
+        const afterId=Math.max(0,Math.floor(Number(params.get('afterId')||0)));
+        const requestedLimit=Math.floor(Number(params.get('limit')||50));
+        const limit=Number.isFinite(requestedLimit)?Math.max(1,Math.min(100,requestedLimit)):50;
+        const result=await requestSupabaseState('internal_activity_feed',{afterId,limit});
+        return json(res,200,result);
+      }
+
       if(method==='GET'&&p==='/api/admin/creator-earnings'){
         const adminEmail=normalizeEmail(user?.email||'');
         const creatorHubAdminId='5b998c21-86b5-4621-ab37-e0808a2657b1';
