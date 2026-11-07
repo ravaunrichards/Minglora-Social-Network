@@ -12,12 +12,11 @@ const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 test('PWA cache keys advance with the LIVE chat app and styles', () => {
   const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const worker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
-  const assets=[
-    html.match(/href="(\\/styles\\.css\\?v=[^"]+)"/)?.[1],
-    html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]
-  ].filter(Boolean);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
-  for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
+  const styleAsset=html.split('href="').map(part=>part.split('"')[0]).find(asset=>asset.startsWith('/styles.css?v='))||'';
+  const appAsset=html.split('src="').map(part=>part.split('"')[0]).find(asset=>asset.startsWith('/app.js?v='))||'';
+  assert.ok(styleAsset&&worker.includes("'"+styleAsset+"'"));
+  assert.ok(appAsset&&worker.includes("'"+appAsset+"'"));
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"));
 });
 
 test('LIVE chat panel clearly reflects the host chat-enabled setting', () => {
@@ -67,5 +66,5 @@ test('LIVE Chat tab stays compact instead of expanding into a tall chat screen',
   assert.match(styles, /#live-chat-panel-body>#live-chat-overlay\{[\s\S]*height:min\(38dvh,340px\)!important[\s\S]*max-height:min\(42dvh,360px\)!important/);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*height:min\(36dvh,300px\)!important/);
   assert.match(styles, /@media\(max-height:620px\)[\s\S]*height:min\(42dvh,230px\)!important/);
-  assert.ok(fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8').includes('minglora-shell-v93-flow-layout-safety-1'));
+  assert.ok(fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8').includes("const CACHE_NAME='minglora-shell-v"));
 });
