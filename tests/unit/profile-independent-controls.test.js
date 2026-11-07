@@ -78,15 +78,14 @@ test('profile media and story controls remain responsive and visible in refreshe
   assert.match(cacheName,/^minglora-shell-v\d+-/);
 });
 
-test('routine profile and About editing uses inline page sections with no backdrop overlays',()=>{
-  assert.match(app,/const modal=document\.createElement\('section'\);modal\.className='card profile-inline-editor'/);
-  assert.match(app,/profileHeader\.insertAdjacentElement\('afterend',modal\)/);
-  assert.match(app,/className='card profile-inline-editor about-section-inline-editor'/);
-  assert.match(app,/profilePanel\.append\(modal\)/);
-  assert.doesNotMatch(app,/modal-backdrop profile-editor-backdrop|modal-backdrop about-section-editor-backdrop/);
-  assert.doesNotMatch(css,/\.profile-editor-backdrop|\.profile-editor-modal|\.about-section-editor-modal/);
-  assert.match(css,/\.profile-inline-editor\{/);
-  assert.match(css,/\.about-section-inline-editor\{/);
+test('routine profile and About editing opens centered native dialogs without moving the page',()=>{
+  assert.match(app,/document\\.createElement\\('dialog'\\);modal\\.className='profile-inline-editor profile-editor-dialog'/);
+  assert.match(app,/document\\.createElement\\('dialog'\\);modal\\.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'/);
+  assert.match(app,/modal\\.showModal\\(\\)/);
+  assert.match(app,/modal\\.addEventListener\\('cancel'/);
+  assert.doesNotMatch(app,/profileHeader\\.insertAdjacentElement\\('afterend',modal\\)|profilePanel\\.append\\(modal\\)|modal\\.scrollIntoView\\(\\{behavior:'smooth',block:'start'\\}\\)/);
+  assert.match(css,/dialog\\.profile-editor-dialog\\{/);
+  assert.match(css,/dialog\\.profile-editor-dialog::backdrop/);
 });
 
 test('profile Likes total is supplied by the server from actual like reactions on visible profile posts',()=>{
