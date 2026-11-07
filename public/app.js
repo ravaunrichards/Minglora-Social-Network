@@ -1131,7 +1131,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
     "<div class='live-preflight-unavailable' aria-label='Additional LIVE production integrations'><strong>Additional LIVE integrations</strong><span>Guardian/family controls · Cloud recording/egress · Advanced effects · LIVE Services · Fan Club</span><small>These need verified provider, storage, creator and safety workflows before they can be enabled.</small></div>"+
     "<div class='live-preflight-submit'><button class='primary' type='submit' "+(liveReady?"":"disabled")+">🔴 Start LIVE</button><p class='form-hint'>Mobile Gaming uses screen sharing. Screen-capture availability depends on the device and browser; native Android game capture still needs platform integration.</p></div></form>"+
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
-    "<div class='feed-header'><h2>Live now</h2><button class='text-button' id='refresh-live'>Refresh</button></div>"+
+    "<div class='feed-header'><h2>Live now</h2></div>"+
     "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button><button type='button' data-live-filter='mobile_gaming'>Gaming</button><button type='button' data-live-filter='live_studio'>Studio</button></div>"+
     "<section class='live-discovery-board card'><nav class='live-discovery-tabs' aria-label='LIVE discovery rankings'><button type='button' data-live-discovery='daily'>Daily</button><button type='button' data-live-discovery='popular'>Popular LIVE</button><button type='button' data-live-discovery='league'>League</button></nav><div id='live-discovery-content'><p class='muted'>Loading Daily LIVE rankings…</p></div></section>"+
     "<div class='live-room-grid'>"+cards+"</div>"+
@@ -1205,7 +1205,6 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
       await openLiveRoom(result.session,"host",result.liveKit);
     }catch(error){toast(error.message);button.disabled=false;}
   });
-  $("#refresh-live")?.addEventListener("click",renderLive);
   $("#open-live-coins")?.addEventListener("click",()=>activateNav("coins"));
   bindLiveDirectoryCards(sessions);
   bindLiveDiscoveryBoards(sessions);
@@ -1262,10 +1261,9 @@ async function renderLiveProStudio(){
     setContent("<div class='page-heading live-pro-page-heading'><div><span class='eyebrow'>Minglora creator tools</span><h1>LIVE Pro Studio</h1><p class='muted'>Advanced LIVE production and creator controls, with your real broadcast history.</p></div><span class='live-pro-access-pill'>LIVE Pro enabled</span></div>"+
       "<section class='live-pro-stat-grid'><article class='card'><small>Total broadcasts</small><strong>"+Number(stats.totalBroadcasts||0).toLocaleString()+"</strong></article><article class='card'><small>Currently live</small><strong>"+Number(stats.activeBroadcasts||0).toLocaleString()+"</strong></article><article class='card'><small>Broadcast minutes</small><strong>"+Number(stats.totalMinutes||0).toLocaleString()+"</strong></article><article class='card'><small>Recorded participant joins</small><strong>"+Number(stats.recordedParticipantJoins||0).toLocaleString()+"</strong></article></section>"+
       "<section class='card live-pro-tools-card'><div class='live-pro-card-heading'><div><h2>Production tools</h2><p class='muted'>These controls use Minglora's existing LiveKit LIVE room and server permissions.</p></div><button class='primary' id='live-pro-start-live' type='button'>Start a LIVE</button></div><div class='live-pro-capabilities'>"+capabilities.map(item=>"<article><strong>"+esc(item.label)+"</strong><p>"+esc(item.description)+"</p></article>").join("")+"</div></section>"+
-      "<section class='card live-pro-history-card'><div class='live-pro-card-heading'><div><h2>Broadcast history</h2><p class='muted'>Only broadcasts saved under your account are shown.</p></div><button class='secondary' id='live-pro-history-refresh' type='button'>Refresh</button></div>"+history+"</section>");
+      "<section class='card live-pro-history-card'><div class='live-pro-card-heading'><div><h2>Broadcast history</h2><p class='muted'>Only broadcasts saved under your account are shown.</p></div></div>"+history+"</section>");
     $("#live-pro-start-live")?.addEventListener("click",()=>activateNav("live"));
-    $("#live-pro-history-refresh")?.addEventListener("click",renderLiveProStudio);
-  }catch(error){
+    }catch(error){
     setContent("<section class='card empty-state'><h2>LIVE Pro Studio is unavailable</h2><p>"+esc(error.message||"Minglora could not load LIVE Pro.")+"</p><button class='secondary' id='live-pro-back-live'>Back to LIVE</button></section>");
     $("#live-pro-back-live")?.addEventListener("click",()=>activateNav("live"));
   }
