@@ -344,6 +344,19 @@ function sealSessionAuth(value){
 }
 function openSessionAuth(sealed){if(!sealed)return null;try{const bytes=Buffer.from(sealed,'base64url');const iv=bytes.subarray(0,12),tag=bytes.subarray(12,28),encrypted=bytes.subarray(28);const decipher=crypto.createDecipheriv('aes-256-gcm',sessionCipherKey,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(encrypted),decipher.final()]).toString('utf8'));}catch{return null;}}
 function sessionFromRequest(req){const raw=cookie(req,'sid');if(!raw)return null;let decoded;try{decoded=decodeURIComponent(raw);}catch{return null;}const parts=decoded.split('.');if(parts.length!==2)return null;const [id,sig]=parts;if(!id||!sig)return null;const expected=Buffer.from(sign(id),'utf8'),supplied=Buffer.from(sig,'utf8');if(supplied.length!==expected.length||!crypto.timingSafeEqual(supplied,expected))return null;return db.sessions.find(item=>item.id===id&&new Date(item.expiresAt)>new Date())||null;}
+function deviceIdFromRequest(req){
+  const raw=cookie(req,'mid');
+  if(!raw)return null;
+  let decoded;
+  try{decoded=decodeURIComponent(raw);}catch{return null;}
+  const parts=decoded.split('.');
+  if(parts.length!==2)return null;
+  const [id,sig]=parts;
+  if(!id||!sig||id.length>128)return null;
+  const expected=Buffer.from(sign('device:'+id),'utf8');
+  const supplied=Buffer.from(sig,'utf8');
+  return supplied.length===expected.length&&crypto.timingSafeEqual(supplied,expected)?id:null;
+}
 const PLATFORM_OWNER_USER_IDS=new Set(['5b998c21-86b5-4621-ab37-e0808a2657b1']);
 const CREATOR_HUB_ADMIN_EMAIL='creatorhubcreatornetwork@gmail.com';
 const CREATOR_HUB_ADMIN_USER_ID='5b998c21-86b5-4621-ab37-e0808a2657b1';
@@ -387,13 +400,25 @@ function isSameOriginApiWrite(req) {
 function appSessionCookie(sid) {
   return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
+function appDeviceSessionCookie(deviceId){
+  return `mid=${encodeURIComponent(deviceId+'.'+sign('device:'+deviceId))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${process.env.NODE_ENV==='production'?'; Secure':''}`;
+}
+function clearDeviceSessionCookie(){
+  return `mid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`;
+}
 function clearAppSessionCookie() {
   return `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
 async function createAppSession(user,authTokens=null,req=null) {
+  const currentSession=req?sessionFromRequest(req):null;
+  const deviceId=currentSession?.deviceId||deviceIdFromRequest(req||{})||uid();
   const sid=uid();const createdAt=now();
-  db.sessions.push({id:sid,userId:user.id,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
-  await saveStore();return appSessionCookie(sid);
+  // Keep one saved session per account on this browser. Sessions belonging to
+  // the same account on another device are intentionally left untouched.
+  db.sessions=db.sessions.filter(session=>!(session.deviceId===deviceId&&session.userId===user.id));
+  db.sessions.push({id:sid,userId:user.id,deviceId,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
+  await saveStore();
+  return [appSessionCookie(sid),appDeviceSessionCookie(deviceId)];
 }
 function ensureLocalUser(authUser, fallback = {}) {
   if (!authUser?.id || !authUser?.email) throw Object.assign(new Error('Supabase Auth returned an incomplete user record.'), { status:502 });
@@ -1308,6 +1333,74 @@ async function route(req, res) {
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
+    if(method==='GET'&&p==='/api/auth/accounts'){
+      const activeSession=sessionFromRequest(req);
+      if(!user||!activeSession)return json(res,401,{error:'Sign in to manage your saved Minglora accounts.'});
+      const suppliedDeviceId=deviceIdFromRequest(req);
+      if(activeSession.deviceId&&suppliedDeviceId&&activeSession.deviceId!==suppliedDeviceId)return json(res,403,{error:'This account session belongs to another device.'});
+      const deviceId=activeSession.deviceId||suppliedDeviceId||uid();
+      activeSession.deviceId=deviceId;
+      activeSession.lastSeenAt=now();
+      const sessions=(db.sessions||[])
+        .filter(session=>session.deviceId===deviceId&&new Date(session.expiresAt)>new Date()&&!(AUTH_PROVIDER==='supabase'&&session.authInvalidatedAt))
+        .sort((a,b)=>(a.id===activeSession.id?-1:b.id===activeSession.id?1:0)||Date.parse(b.lastSeenAt||b.createdAt||0)-Date.parse(a.lastSeenAt||a.createdAt||0));
+      const seenUsers=new Set(),accounts=[];
+      for(const session of sessions){
+        if(seenUsers.has(session.userId))continue;
+        const account=db.users.find(item=>item.id===session.userId);
+        if(!account||['suspended','deactivated'].includes(account.status))continue;
+        seenUsers.add(account.id);
+        accounts.push({sessionId:session.id,user:safeUser(account,account.id),active:session.id===activeSession.id,lastSeenAt:session.lastSeenAt||session.createdAt});
+      }
+      await saveStore();
+      return json(res,200,{accounts,activeUserId:user.id},{'Set-Cookie':appDeviceSessionCookie(deviceId)});
+    }
+    if(method==='POST'&&p==='/api/auth/switch'){
+      const activeSession=sessionFromRequest(req);
+      if(!user||!activeSession)return json(res,401,{error:'Sign in before switching accounts.'});
+      const suppliedDeviceId=deviceIdFromRequest(req);
+      if(activeSession.deviceId&&suppliedDeviceId&&activeSession.deviceId!==suppliedDeviceId)return json(res,403,{error:'This account session belongs to another device.'});
+      const deviceId=activeSession.deviceId||suppliedDeviceId;
+      const targetId=String(input.sessionId||'').trim();
+      if(!deviceId||!targetId)return json(res,400,{error:'Choose an account saved on this device.'});
+      const targetSession=(db.sessions||[]).find(session=>session.id===targetId&&session.deviceId===deviceId&&new Date(session.expiresAt)>new Date());
+      if(!targetSession||(targetSession.authInvalidatedAt&&AUTH_PROVIDER==='supabase'))return json(res,404,{error:'That saved account is no longer available on this device. Sign in again to add it.'});
+      const targetUser=db.users.find(account=>account.id===targetSession.userId);
+      if(!targetUser||['suspended','deactivated'].includes(targetUser.status))return json(res,403,{error:'This account cannot be opened. Contact Minglora support for help.'});
+      if(AUTH_PROVIDER==='supabase'&&targetSession.authSealed){
+        const auth=await sessionAuth(targetSession);
+        if(!auth?.access_token)return json(res,401,{error:'This account session has expired. Add the account again to continue.'});
+      }
+      targetSession.lastSeenAt=now();
+      targetSession.expiresAt=new Date(Date.now()+7*86400000).toISOString();
+      await saveStore();
+      return json(res,200,{user:safeUser(targetUser,targetUser.id)},{'Set-Cookie':[appSessionCookie(targetSession.id),appDeviceSessionCookie(deviceId)]});
+    }
+    if(method==='POST'&&p==='/api/auth/accounts/remove'){
+      const activeSession=sessionFromRequest(req);
+      if(!user||!activeSession)return json(res,401,{error:'Sign in to manage saved accounts.'});
+      const suppliedDeviceId=deviceIdFromRequest(req);
+      if(activeSession.deviceId&&suppliedDeviceId&&activeSession.deviceId!==suppliedDeviceId)return json(res,403,{error:'This account session belongs to another device.'});
+      const deviceId=activeSession.deviceId||suppliedDeviceId;
+      const targetId=String(input.sessionId||'').trim();
+      const target=(db.sessions||[]).find(session=>session.id===targetId&&session.deviceId===deviceId);
+      if(!target)return json(res,404,{error:'The saved account was not found on this device.'});
+      if(target.id===activeSession.id)return json(res,409,{error:'Switch to another account before removing the account currently in use.'});
+      db.sessions=db.sessions.filter(session=>session.id!==target.id);
+      await saveStore();
+      return json(res,200,{ok:true});
+    }
+    if(method==='POST'&&p==='/api/auth/logout-all'){
+      const activeSession=sessionFromRequest(req);
+      if(!user||!activeSession)return json(res,401,{error:'Sign in to manage saved accounts.'});
+      const suppliedDeviceId=deviceIdFromRequest(req);
+      if(activeSession.deviceId&&suppliedDeviceId&&activeSession.deviceId!==suppliedDeviceId)return json(res,403,{error:'This account session belongs to another device.'});
+      const deviceId=activeSession.deviceId||suppliedDeviceId;
+      if(!deviceId)return json(res,400,{error:'This browser has no saved account session.'});
+      db.sessions=db.sessions.filter(session=>session.deviceId!==deviceId);
+      await saveStore();
+      return json(res,200,{ok:true},{'Set-Cookie':[clearAppSessionCookie(),clearDeviceSessionCookie()]});
+    }
     if(user){
       const deviceTimeZone=String(req.headers['x-minglora-time-zone']||'').trim();
       if(deviceTimeZone&&deviceTimeZone.length<=100&&deviceTimeZone!==user.deviceTimeZone){
@@ -1346,7 +1439,7 @@ async function route(req, res) {
           return json(res,201,{user:safeUser(created,created.id)},{'Set-Cookie':sessionCookie});
         }
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',contactPhone:phoneNumber,country:'',county:'',parish:'',city:'',gender:'',relationshipStatus:'',aboutVisibility:DEFAULT_ABOUT_VISIBILITY,avatar:'',cover:'',createdAt:now()}; db.users.push(created);
-        const sessionCookie = await createAppSession(created);
+        const sessionCookie = await createAppSession(created,null,req);
         return json(res,201,{user:safeUser(created)},{'Set-Cookie':sessionCookie});
       }
 
