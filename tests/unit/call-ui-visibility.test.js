@@ -102,13 +102,17 @@ test('ringing call status is readable without depending on LiveKit provider pres
 });
 
 test('call notifications return to the current app window and load the latest call bundle',()=>{
-  const appAsset=html.match(/src="([^"]*\\/app\\.js\\?v=[^"]+)"/)?.[1]||'';
-  const workerAsset=worker.match(/'([^']*\\/app\\.js\\?v=[^']+)'/)?.[1]||'';
+  const htmlMarker='src="/app.js?v=';
+  const htmlStart=html.indexOf(htmlMarker);
+  const appAsset=htmlStart<0?'':html.slice(htmlStart+5,html.indexOf('"',htmlStart));
+  const workerMarker="'/app.js?v=";
+  const workerStart=worker.indexOf(workerMarker);
+  const workerAsset=workerStart<0?'':worker.slice(workerStart+1,worker.indexOf("'",workerStart+1));
   assert.equal(appAsset,'/app.js?v=20261107-real-phone-calls-1');
   assert.equal(workerAsset,appAsset,'the service worker precaches the exact HTML app bundle');
-  assert.match(worker,/CACHE_NAME='minglora-shell-v145-phone-call-ui-3'/);
+  assert.ok(worker.includes("CACHE_NAME='minglora-shell-v145-phone-call-ui-3'"));
   const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
-  const clickEnd=worker.indexOf('\\n});',clickStart);
+  const clickEnd=worker.indexOf('});',clickStart);
   const clickHandler=worker.slice(clickStart,clickEnd);
   assert.ok(clickHandler.includes('const existing=windows.find'));
   assert.ok(clickHandler.indexOf('existing.navigate(target)')<clickHandler.indexOf('self.clients.openWindow(target)'));
