@@ -5201,11 +5201,12 @@ async function route(req, res) {
         const profileVideos=profileMedia.filter(media=>media.mediaType==='video');
         const profileFriends=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
           .map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)).map(member=>safeUser(member,user.id));
-        const profileSubscriberIds=isSupabasePersistence()
-          ?(await requestSupabaseState('subscription_subscribers_list',{creatorId:target.id})).subscriberIds
-          :listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).map(item=>item.subscriberId);
-        const subscribersCount=[...new Set((Array.isArray(profileSubscriberIds)?profileSubscriberIds:[]).map(String).filter(Boolean))]
-          .filter(subscriberId=>!blockedBetween(user.id,subscriberId)).length;
+        // Subscription totals are loaded through the separate, supported creator-subscription
+        // endpoint. They are optional profile metadata and must never block the core profile.
+        const subscribersCount=isSupabasePersistence()
+          ?0
+          :[...new Set(listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).map(item=>String(item.subscriberId||'')).filter(Boolean))]
+            .filter(subscriberId=>!blockedBetween(user.id,subscriberId)).length;
 
         return json(res,200,{
           user:safeUser(target,user.id),
