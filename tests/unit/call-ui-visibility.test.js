@@ -13,10 +13,10 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 
 test('phone call stylesheet loads after global layout overrides and is precached',()=>{
-  const styleTag='<link rel="stylesheet" href="/call-ui.css?v=20261107-phone-call-ui-1">';
+  const styleTag='<link rel="stylesheet" href="/call-ui.css?v=20261107-phone-call-ui-2">';
   assert.ok(html.includes(styleTag),'the phone call stylesheet is loaded');
   assert.ok(html.indexOf(styleTag)>html.indexOf('mobile-profile-navigation.css'),'the call styles override later page layout rules');
-  assert.ok(worker.includes("'/call-ui.css?v=20261107-phone-call-ui-1'"),'the service worker precaches call styles');
+  assert.ok(worker.includes("'/call-ui.css?v=20261107-phone-call-ui-2'"),'the service worker precaches call styles');
   assert.match(worker,/CACHE_NAME='minglora-shell-v\d+-phone-call-ui-1'/);
 });
 
