@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canManageMeetWaveParticipants } from '../backend/modules/meetwave/service.js';
+import { canManageMeetWaveParticipants, MEETWAVE_GUEST_LIMIT, MEETWAVE_PARTICIPANT_LIMIT } from '../backend/modules/meetwave/service.js';
+
+test('MeetWave has one host seat and exactly eight guest seats', () => {
+  assert.equal(MEETWAVE_GUEST_LIMIT, 8);
+  assert.equal(MEETWAVE_PARTICIPANT_LIMIT, 9);
+});
 
 test('only the room host can remove another participant', () => {
   const room = { ownerId: 'host-1', status: 'active' };
