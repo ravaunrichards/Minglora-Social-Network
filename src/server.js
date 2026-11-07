@@ -5584,7 +5584,14 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           }
           if(participant.status==='invited'&&call.status==='ringing'){call.status='active';call.answeredAt=now();call.answeredById=user.id;}
           participant.status='joined';participant.joinedAt=now();participant.leftAt=null;
-          await saveStore();return json(res,200,{call,liveKit:{...liveKit,role:participant.role}});
+          await saveStore();
+          const peerParticipant=(db.callParticipants||[]).find(item=>
+            item.callId===call.id&&item.userId!==user.id&&
+            !['declined','missed','cancelled','left'].includes(item.status)
+          );
+          const peerUser=peerParticipant?db.users.find(member=>member.id===peerParticipant.userId):null;
+          const peer=peerUser?safeUser(peerUser,user.id):null;
+          return json(res,200,{call,peer,liveKit:{...liveKit,role:participant.role}});
         }
         if(!participant)return json(res,403,{error:'You are not a participant in this call.'});
         if(action==='decline'){
