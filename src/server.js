@@ -2259,13 +2259,26 @@ async function route(req, res) {
         await liveSessionCleanupReady;
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 200, { sessions: [] });
-        const canView = session => {
-          if (session.hostId === user.id || session.visibility === 'public') return true;
-          if (session.visibility !== 'friends') return false;
-          return isFriend(user.id, session.hostId);
-        };
-        const activeSessions = (db.liveSessions || [])
-          .filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId) && canView(session))
+        const directoryCandidates = (db.liveSessions || []).filter(session => session.status === 'live' && !blockedBetween(user.id, session.hostId));
+        const subscriberCreatorIds = [...new Set(directoryCandidates.filter(session => session.visibility === 'subscribers').map(session => session.hostId))];
+        let authorizedSubscriberIds = new Set();
+        if (subscriberCreatorIds.length) {
+          try {
+            if (isSupabasePersistence()) {
+              const access = await requestSupabaseState('subscription_access_check', { userId: user.id, creatorIds: subscriberCreatorIds });
+              authorizedSubscriberIds = new Set(access.authorizedCreatorIds || []);
+            } else {
+              authorizedSubscriberIds = new Set(subscriberCreatorIds.filter(creatorId => listActiveCreatorSubscriptions(db.creatorSubscriptions, creatorId).some(item => item.subscriberId === user.id)));
+            }
+          } catch (error) {
+            console.warn('[Minglora LIVE] Subscriber-only directory access check failed closed.', String(error?.message || error).slice(0, 160));
+          }
+        }
+        const canView = session => session.hostId === user.id || session.visibility === 'public' ||
+          (session.visibility === 'friends' && isFriend(user.id, session.hostId)) ||
+          (session.visibility === 'subscribers' && authorizedSubscriberIds.has(session.hostId));
+        const activeSessions = directoryCandidates
+          .filter(session => canView(session))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const sessions = [];
         for (const session of activeSessions) {
@@ -2309,7 +2322,7 @@ async function route(req, res) {
         const liveMode = String(input.liveMode || (input.broadcastType === 'audio_only' ? 'audio_only' : 'video_audio'));
         const broadcastType = broadcastTypeForLiveMode(liveMode);
         const setupResult = normalizeLiveSettings(input.liveSettings || {});
-        if (!title || title.length > 120 || !['public', 'friends', 'private'].includes(selectedVisibility) ||
+        if (!title || title.length > 120 || !['public', 'friends', 'subscribers', 'private'].includes(selectedVisibility) ||
             !LIVE_MODES.includes(liveMode) || !setupResult.valid) {
           return json(res, 400, { error: !setupResult.valid ? setupResult.error : 'Enter a LIVE title, choose an audience and select a supported LIVE mode.' });
         }
@@ -2317,6 +2330,12 @@ async function route(req, res) {
         const visibility = liveSettings.practiceMode
           ? 'private'
           : liveSettings.audienceControl ? selectedVisibility : 'public';
+        if (visibility === 'subscribers') {
+          const creatorSubscription = await requestSupabaseState('subscription_creator_get', { userId: user.id, viewerId: user.id });
+          if (creatorSubscription.settings?.subscriber_only_live_enabled === false || creatorSubscription.settings?.subscriptions_enabled !== true || !creatorSubscription.tier?.id) {
+            return json(res, 409, { error: 'Create and enable your monthly subscription plan before starting a subscribers-only LIVE.' });
+          }
+        }
         const id = uid();
         const roomName = 'minglora-' + id.replace(/-/g, '');
         const publishSources = getLivePublishSourceNames(liveMode, 'host', broadcastType)
@@ -2596,9 +2615,19 @@ async function route(req, res) {
         const session = (db.liveSessions || []).find(item => item.id === liveMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'Live session not found.' });
         const friendAccess = isFriend(user.id, session.hostId);
-        const allowed = session.hostId === user.id ||
-          session.visibility === 'public' ||
-          (session.visibility === 'friends' && friendAccess);
+        let subscriberAccess = false;
+        if (session.visibility === 'subscribers' && session.hostId !== user.id) {
+          try {
+            if (isSupabasePersistence()) {
+              const access = await requestSupabaseState('subscription_access_check', { userId: user.id, creatorIds: [session.hostId] });
+              subscriberAccess = (access.authorizedCreatorIds || []).includes(session.hostId);
+            } else {
+              subscriberAccess = listActiveCreatorSubscriptions(db.creatorSubscriptions, session.hostId).some(item => item.subscriberId === user.id);
+            }
+          } catch { subscriberAccess = false; }
+        }
+        const allowed = session.hostId === user.id || session.visibility === 'public' ||
+          (session.visibility === 'friends' && friendAccess) || subscriberAccess;
         if (!allowed) return json(res, 404, { error: 'Live session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
@@ -2623,8 +2652,19 @@ async function route(req, res) {
       if (method === 'POST' && liveConnectedMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveConnectedMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        let subscriberAccess = false;
+        if (session.visibility === 'subscribers' && session.hostId !== user.id) {
+          try {
+            if (isSupabasePersistence()) {
+              const access = await requestSupabaseState('subscription_access_check', { userId: user.id, creatorIds: [session.hostId] });
+              subscriberAccess = (access.authorizedCreatorIds || []).includes(session.hostId);
+            } else {
+              subscriberAccess = listActiveCreatorSubscriptions(db.creatorSubscriptions, session.hostId).some(item => item.subscriberId === user.id);
+            }
+          } catch { subscriberAccess = false; }
+        }
         const canView = session.hostId === user.id || session.visibility === 'public' ||
-          (session.visibility === 'friends' && isFriend(user.id, session.hostId));
+          (session.visibility === 'friends' && isFriend(user.id, session.hostId)) || subscriberAccess;
         if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
@@ -3090,8 +3130,8 @@ async function route(req, res) {
           return json(res, 400, { error: 'Set a monthly price from US$2.99 to US$99.99, a title, and up to eight short benefits.' });
         }
         const creatorState = await requestSupabaseState('subscription_creator_get', { userId: user.id, viewerId: user.id });
-        if (creatorState.settings?.application_status !== 'approved') {
-          return json(res, 403, { error: 'Minglora approval is required before you can publish a subscription tier.' });
+        if (creatorState.settings?.application_status === 'suspended') {
+          return json(res, 403, { error: 'Subscriptions are unavailable for this account.' });
         }
         const suffix = uid();
         const product = await paypalRequest('/v1/catalogs/products', 'POST', {
