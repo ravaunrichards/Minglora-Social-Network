@@ -421,7 +421,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange'].includes(event.detail?.tab)?event.detail.tab:'recharge';
   state.rechargeTab=tab;
@@ -578,42 +578,44 @@ async function refreshVisiblePosts(){
   }
   await loadFeed();await renderFeed();
 }
-function bindFeed(){
-  bindSoundtrackPlayback(document);
-  $('#create-story')?.addEventListener('click',()=>openStoryComposer());
-  document.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
-  $('#open-composer')?.addEventListener('click',()=>openComposer());
-  $('#post-text')?.addEventListener('click',()=>openComposer());
-  $('#post-photo')?.addEventListener('click',()=>openComposer(true));
-  $('#post-feeling')?.addEventListener('click',()=>openComposer());
-  bindProfileLinks(document);
-  document.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
+function bindFeed(root=document){
+  if(root===document){
+    bindSoundtrackPlayback(document);
+    $('#create-story')?.addEventListener('click',()=>openStoryComposer());
+    $('#open-composer')?.addEventListener('click',()=>openComposer());
+    $('#post-text')?.addEventListener('click',()=>openComposer());
+    $('#post-photo')?.addEventListener('click',()=>openComposer(true));
+    $('#post-feeling')?.addEventListener('click',()=>openComposer());
+  }else bindSoundtrackPlayback(root);
+  root.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
+  bindProfileLinks(root);
+  root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
     try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:'like'})});await refreshVisiblePosts();}
     catch(e){toast(e.message);}
   }));
-  document.querySelectorAll('[data-comment-form]').forEach(form=>form.addEventListener('submit',async e=>{
+  root.querySelectorAll('[data-comment-form]').forEach(form=>form.addEventListener('submit',async e=>{
     e.preventDefault();const input=form.elements.text;
     try{await api(`/posts/${form.dataset.commentForm}/comments`,{method:'POST',body:JSON.stringify({text:input.value})});await refreshVisiblePosts();}
     catch(err){toast(err.message);}
   }));
-  document.querySelectorAll('[data-report-comment]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('comment',btn.dataset.reportComment)));
-  document.querySelectorAll('[data-delete-comment-id]').forEach(btn=>btn.addEventListener('click',async()=>{
+  root.querySelectorAll('[data-report-comment]').forEach(btn=>btn.addEventListener('click',()=>openReportComposer('comment',btn.dataset.reportComment)));
+  root.querySelectorAll('[data-delete-comment-id]').forEach(btn=>btn.addEventListener('click',async()=>{
     if(!window.confirm('Delete this comment?'))return;
     try{await api(`/posts/${btn.dataset.deleteCommentPost}/comments/${btn.dataset.deleteCommentId}`,{method:'DELETE',body:'{}'});await refreshVisiblePosts();toast('Comment deleted.');}
     catch(err){toast(err.message);}
   }));
-  document.querySelectorAll('[data-focus-comment]').forEach(el=>el.addEventListener('click',()=>document.querySelector(`[data-comment-form="${el.dataset.focusComment}"] input`)?.focus()));
-  document.querySelectorAll('[data-toggle-save]').forEach(btn=>btn.addEventListener('click',async()=>{
+  root.querySelectorAll('[data-focus-comment]').forEach(el=>el.addEventListener('click',()=>root.querySelector(`[data-comment-form="${el.dataset.focusComment}"] input`)?.focus()));
+  root.querySelectorAll('[data-toggle-save]').forEach(btn=>btn.addEventListener('click',async()=>{
     const saving=btn.dataset.saved!=='true';
     try{await api(`/posts/${btn.dataset.toggleSave}/save`,{method:saving?'POST':'DELETE',body:'{}'});await refreshVisiblePosts();toast(saving?'Post saved.':'Post removed from saved posts.');}
     catch(err){toast(err.message);}
   }));
-  document.querySelectorAll('[data-share]').forEach(el=>el.addEventListener('click',async()=>{
+  root.querySelectorAll('[data-share]').forEach(el=>el.addEventListener('click',async()=>{
     const post=findVisiblePost(el.dataset.share);if(!post)return;
     try{await navigator.clipboard.writeText(`${location.origin}/#post-${post.id}`);toast('Post link copied.');}
     catch{toast('Copy this page URL to share the post.');}
   }));
-  document.querySelectorAll('[data-post-menu]').forEach(el=>el.addEventListener('click',()=>{
+  root.querySelectorAll('[data-post-menu]').forEach(el=>el.addEventListener('click',()=>{
     const post=findVisiblePost(el.dataset.postMenu);if(post)openPostOptions(post);
   }));
 }
@@ -673,8 +675,50 @@ function openPostOptions(post){
 }
 async function loadFeed(scope=state.feedScope||'all'){state.feedScope=scope;state.feed=(await api(`/feed?scope=${encodeURIComponent(state.feedScope)}`)).posts;}
 async function loadStories(){state.stories=(await api('/stories')).stories;}
+let feedAutoSyncTimer=null,feedAutoSyncBusy=false;
+function stopFeedAutoSync(){
+  if(feedAutoSyncTimer!==null)window.clearInterval(feedAutoSyncTimer);
+  feedAutoSyncTimer=null;
+}
+function startFeedAutoSync(){
+  stopFeedAutoSync();
+  feedAutoSyncTimer=window.setInterval(()=>void syncFeedAutomatically(),30000);
+}
+async function syncFeedAutomatically(){
+  if(feedAutoSyncBusy||state.view!=='feed'||document.visibilityState!=='visible')return;
+  const list=$('#feed-list');
+  const currentStories=$('.story-panel');
+  if(!list)return;
+  const focused=document.activeElement;
+  if((focused&&list.contains(focused))||(focused&&currentStories?.contains(focused)))return;
+  feedAutoSyncBusy=true;
+  const anchor=[...list.querySelectorAll('[data-post]')].find(post=>post.getBoundingClientRect().bottom>=0);
+  const anchorId=anchor?.dataset.post||'';
+  const anchorTop=anchor?anchor.getBoundingClientRect().top:0;
+  try{
+    await Promise.all([loadFeed(state.feedScope),loadStories()]);
+    if(state.view!=='feed'||!list.isConnected)return;
+    const sort=$('#feed-sort')?.value||'new';
+    const posts=[...state.feed].sort((a,b)=>sort==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));
+    const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';
+    list.innerHTML=posts.length?posts.map(post=>postCard(post)).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`;
+    bindFeed(list);
+    if(currentStories?.isConnected&&!currentStories.contains(document.activeElement)){
+      const wrapper=document.createElement('div');
+      wrapper.innerHTML=renderStoriesPanel();
+      const incoming=wrapper.firstElementChild;
+      if(incoming){currentStories.replaceWith(incoming);bindFeed(incoming);}
+    }
+    if(anchorId){
+      const restored=[...list.querySelectorAll('[data-post]')].find(post=>post.dataset.post===anchorId);
+      if(restored)window.scrollBy(0,restored.getBoundingClientRect().top-anchorTop);
+    }
+  }catch(error){
+    console.warn('[Minglora] Feed background sync failed:',error?.message||error);
+  }finally{feedAutoSyncBusy=false;}
+}
 function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(Array.isArray(story.mediaItems)&&story.mediaItems.length>1?'<span class="story-media-count">'+story.mediaItems.length+' items</span>':'')+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
-async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><button type="button" class="secondary" id="feed-refresh">↻ Refresh</button><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();$('#feed-refresh')?.addEventListener('click',async()=>{const button=$('#feed-refresh');if(button){button.disabled=true;button.textContent='Refreshing…';}try{await Promise.all([loadFeed(state.feedScope),loadStories()]);await renderFeed();toast('Feed updated.');}catch(error){toast('Feed could not be refreshed: '+error.message);const current=$('#feed-refresh');if(current){current.disabled=false;current.textContent='↻ Refresh';}}});$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed()});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
+async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();startFeedAutoSync();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed($('#feed-list'))});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 
 function measureAudioDurationMs(file){
   if(!file)return Promise.resolve(0);
@@ -917,25 +961,36 @@ function bindPeople(root=document){
   }));
 }
 let peopleDiscoveryRefreshBusy=false;
-function stopPeopleDiscoveryRefresh(){}
-async function refreshPeopleDiscovery(){
+let peopleDiscoveryRefreshTimer=null;
+function stopPeopleDiscoveryRefresh(){
+  if(peopleDiscoveryRefreshTimer!==null)window.clearInterval(peopleDiscoveryRefreshTimer);
+  peopleDiscoveryRefreshTimer=null;
+}
+function startPeopleDiscoveryRefresh(){
+  stopPeopleDiscoveryRefresh();
+  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),30000);
+}
+async function refreshPeopleDiscovery({quiet=true}={}){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
-  if(!$('#people-discovery-grid'))return;
+  const grid=$('#people-discovery-grid');
+  if(!grid)return;
+  const focused=document.activeElement;
+  if(focused&&grid.contains(focused))return;
   peopleDiscoveryRefreshBusy=true;
   try{
     const [peopleResult,liveResult]=await Promise.all([
       api('/discovery/people'),
       api('/live/sessions').catch(()=>({sessions:[]}))
     ]);
+    if(state.view!=='friends'||document.visibilityState!=='visible')return;
     state.people=peopleResult.users||[];
     state.discoveryLiveSessions=liveResult.sessions||[];
-    const grid=$('#people-discovery-grid');
-    if(grid){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
-  }catch(error){toast('People could not be refreshed: '+error.message);}
-  finally{
+    if(grid.isConnected){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
+  }catch(error){
+    if(!quiet)toast('People could not be updated: '+error.message);
+    else console.warn('[Minglora] People discovery sync failed:',error?.message||error);
+  }finally{
     peopleDiscoveryRefreshBusy=false;
-    const button=$('#people-discovery-refresh');
-    if(button){button.disabled=false;button.textContent='↻ Refresh';}
   }
 }
 
@@ -949,16 +1004,12 @@ async function renderFriends(){
   state.discoveryLiveSessions=liveResult.sessions||[];
   const friends=result.friends||[];
   setContent('<div class="page-heading"><div><h1>Friends</h1><p class="muted">Discover members through the moments they choose to share.</p></div></div>'+
-    '<div class="feed-header"><h2>People you may know</h2><button type="button" class="secondary" id="people-discovery-refresh">↻ Refresh</button></div>'+
+    '<div class="feed-header"><h2>People you may know</h2></div>'+
     '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
     '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
     (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" data-profile="'+esc(member.id)+'" alt="View '+esc(member.name)+'’s profile" src="'+avatar(member)+'"><div class="person-meta"><strong data-profile="'+esc(member.id)+'">'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
   bindPeople(document);
-  $('#people-discovery-refresh')?.addEventListener('click',()=>{
-    const button=$('#people-discovery-refresh');
-    if(button){button.disabled=true;button.textContent='Refreshing…';}
-    void refreshPeopleDiscovery();
-  });
+  startPeopleDiscoveryRefresh();
 }
 let activeCallRoom=null;
 let activeCallOverlay=null;
@@ -1050,6 +1101,10 @@ function activateLiveToolsPanel(name){
 
 function stopLiveChatRefresh(){if(liveChatRefreshTimer){clearInterval(liveChatRefreshTimer);liveChatRefreshTimer=null;}}
 function stopLiveDirectoryRefresh(){if(liveDirectoryRefreshTimer){clearInterval(liveDirectoryRefreshTimer);liveDirectoryRefreshTimer=null;}}
+function startLiveDirectoryRefresh(){
+  stopLiveDirectoryRefresh();
+  liveDirectoryRefreshTimer=window.setInterval(()=>void refreshLiveDirectorySessions({quiet:true}),15000);
+}
 function liveMoney(minor){return "$"+(Number(minor||0)/100).toFixed(2);}
 function liveSessionCardMarkup(session){
   const audioOnly=session.broadcastType==='audio_only';
@@ -1098,7 +1153,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   ];
   const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#creator'></use></svg>")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
   const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<button type='button' class='secondary live-directory-refresh-button' id='live-directory-refresh'>↻ Refresh LIVE</button><span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
@@ -1214,21 +1269,25 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   bindLiveDirectoryCards(sessions);
   bindLiveDiscoveryBoards(sessions);
 }
-async function refreshLiveDirectorySessions(){
-  if(state.view!=='live'||activeLiveRoom)return false;
+async function refreshLiveDirectorySessions({quiet=true}={}){
+  if(state.view!=='live'||activeLiveRoom||document.visibilityState!=='visible')return false;
+  const container=$('.live-room-grid');
+  if(!container)return false;
+  const focused=document.activeElement;
+  if(focused&&container.contains(focused))return false;
   try{
     const data=await api('/live/sessions');
+    if(state.view!=='live'||activeLiveRoom||!container.isConnected)return false;
     const sessions=(data.sessions||[]).filter(session=>
       session.status==='live'&&session.viewerCountVerified===true
     );
-    const container=$('.live-room-grid');
-    if(!container)return false;
     container.innerHTML=sessions.length?sessions.map(liveSessionCardMarkup).join(""):"<section class='card empty-state'><div class='empty-icon'>🔴</div><h3>No one is live right now</h3><p>Start a LIVE session and bring your community together.</p></section>";
     bindLiveDirectoryCards(sessions);
     bindLiveDiscoveryBoards(sessions);
     return true;
   }catch(error){
-    toast('LIVE directory could not be refreshed: '+error.message);
+    if(!quiet)toast('LIVE directory could not be updated: '+error.message);
+    else console.warn('[Minglora LIVE] Directory sync failed:',error?.message||error);
     return false;
   }
 }
@@ -1255,12 +1314,7 @@ async function renderLive(){
   const livePro=results[4].status==="fulfilled"?results[4].value:{hasAccess:false};
   renderLiveDirectory(sessions,status,catalog,wallet,livePro);
   $("#live-pro-open")?.addEventListener("click",()=>activateNav("live-pro"));
-  const refreshButton=$("#live-directory-refresh");
-  if(refreshButton)refreshButton.onclick=async()=>{
-    refreshButton.disabled=true;refreshButton.textContent="Refreshing…";
-    try{if(await refreshLiveDirectorySessions())toast("LIVE directory updated.");}
-    finally{refreshButton.disabled=false;refreshButton.textContent="↻ Refresh LIVE";}
-  };
+  startLiveDirectoryRefresh();
 }
 
 async function renderLiveProStudio(){
