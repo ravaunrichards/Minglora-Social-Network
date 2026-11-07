@@ -3175,7 +3175,7 @@ activeLivePinnedComment=null;
         const gift=liveGiftByCode(liveGiftSelectedCode);
         if(!gift||liveGiftSending||!giftsEnabled)return;
         const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
-        if(teamGift&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
+        if(teamGift&&role!=="host"&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
         const recipientUserId=String($("#live-gift-recipient")?.value||"");
         const selectedRecipient=liveGiftRecipients.find(member=>String(member.id)===recipientUserId);
         if(!recipientUserId||!selectedRecipient){toast("Choose a connected LIVE participant to receive this gift.");return;}
