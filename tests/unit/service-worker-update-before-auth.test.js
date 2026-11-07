@@ -16,9 +16,13 @@ test('registers the service worker without forcing an open page to refresh or ch
   assert.doesNotMatch(app, /await registration\.update\(\)/, 'do not force an update check during the active session');
   assert.doesNotMatch(worker, /self\.skipWaiting\(\)/, 'new worker must wait for existing app tabs to close');
   assert.doesNotMatch(worker, /self\.clients\.claim\(\)/, 'new worker must not take over open tabs');
-  assert.doesNotMatch(worker, /existing\.navigate\(target\)/, 'notification clicks must not redirect the existing tab');
-  assert.match(worker, /await self\.clients\.openWindow\(target\)/, 'notification destinations must open separately');
-  assert.ok(html.includes('/app.js?v=20261107-account-switcher-2'), 'keep the established app URL; service-worker revalidation refreshes code without forcing an active page reload');
-  assert.ok(worker.includes('/app.js?v=20261107-account-switcher-2'), 'the service-worker shell must cache the same established app asset');
+  const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
+  const clickEnd=worker.indexOf('});',clickStart);
+  const clickHandler=worker.slice(clickStart,clickEnd);
+  assert.match(clickHandler, /if\(isCall\)[\s\S]*?existing\.navigate\(target\)/, 'only call notifications may navigate the current app tab');
+  assert.ok(clickHandler.includes('const exactTarget=windows.find(client=>client.url===target)'), 'other notifications only focus an exact target tab');
+  assert.ok(clickHandler.includes('await self.clients.openWindow(target)'), 'other notification destinations still open separately');
+  assert.ok(html.includes('/app.js?v=20261107-real-phone-calls-1'), 'the latest call-enabled app URL is loaded');
+  assert.ok(worker.includes('/app.js?v=20261107-real-phone-calls-1'), 'the service-worker shell caches the same latest app asset');
   assert.ok(worker.includes('/profile-established.css?v=20261106-profile-actions-horizontal-1'), 'the established profile styles must be included in the offline shell');
 });
