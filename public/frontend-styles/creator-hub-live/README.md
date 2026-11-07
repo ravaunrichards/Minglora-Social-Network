@@ -1,15 +1,15 @@
-# Creator Hub Live frontend style migration
+# Creator Hub Live frontend styles — imported source library
 
-This directory preserves the original Creator Hub Live `frontend/styles/app.css` source stylesheet.
+This directory contains the complete **177-file** contents of Creator Hub Live's `frontend/styles/` folder, copied into Minglora without executing or globally loading source files.
 
-The original file is intentionally not linked directly into Minglora's global page because it defines global selectors, root tokens and generic class names that overlap Minglora's existing interface. Minglora exposes the imported Creator Hub Live palette tokens through `/experience-center.css` and the account-backed Style Library in Settings → Experience Center instead. This keeps the source intact while preventing CSS collisions.
+- Original source: `ravaunrichards/Creator-Hub-Live-CHL/frontend/styles/`
+- Imported destination: `ravaunrichards/Minglora-Social-Network/public/frontend-styles/creator-hub-live/`
+- CSS and JavaScript source assets are preserved with their original filenames.
+- The two JavaScript files in this directory are retained as source assets only; Minglora does not load them as application scripts.
+- Original global stylesheets are not linked directly to Minglora. The compatible visual design tokens are mapped through `/experience-center.css` to prevent collisions with Minglora, MeetWave, LIVE, profile, feed and Messenger layouts.
 
-Imported palettes:
-- CHL Night
-- Ocean Studio
-- Violet Creator
-- Emerald Studio
-- Rose Premium
-- Light Professional
+## Selectable Creator Hub Live visual styles
 
-The source stylesheet is retained for future component-by-component adoption. Do not add it as a global stylesheet without first scoping its selectors and keyframes.
+The Experience Center provides the six CHL palette themes and the 18 design-system styles: Default, Minimal, Flat, Swiss, Editorial, Material, Fluent, Glass, Frost, Neo, Brutal, Neumorphic, Clay, Aurora, Cyber, Memphis, Y2K, Pixel and Skeuomorphic.
+
+The original stylesheet collection remains available here for future component-by-component migration. In particular, do not import the original generic layout rules globally; Minglora owns its responsive grids and its nine MeetWave layouts.
