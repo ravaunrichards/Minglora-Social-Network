@@ -1150,7 +1150,7 @@ async function renderFriends(){
 let activeCallRoom=null;
 let activeCallOverlay=null;
 function refreshMingloraCallAvailability(){
-  if(document.visibilityState==='visible'&&state.user&&!activeCallRoom&&!outgoingCallPending)void pollIncomingCalls();
+  if(document.visibilityState==='visible'&&state.user&&!activeCallRoom&&!activeCallOverlay&&!outgoingCallPending)void pollIncomingCalls();
 }
 document.addEventListener('visibilitychange',refreshMingloraCallAvailability);
 window.addEventListener('online',refreshMingloraCallAvailability);
@@ -8233,7 +8233,7 @@ async function clearStaleMingloraCallNotifications(activeCallIds=[]){
  }catch{}
 }
 async function pollIncomingCalls(){
- if(!state.user||incomingCallPollBusy||activeCallRoom||outgoingCallPending)return;
+ if(!state.user||incomingCallPollBusy||activeCallRoom||activeCallOverlay||outgoingCallPending)return;
  incomingCallPollBusy=true;
  try{
   const result=await api('/calls/incoming'),calls=result.calls||[];
@@ -8316,7 +8316,7 @@ function openMingloraGroupCallPicker(conversation,kind){
 }
 async function startMingloraCall(member,kind='video',participantIds=null,groupId=null){
  if(!member?.id||!state.user||member.id===state.user.id)return;
- if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before starting another.');return;}
+ if(activeCallRoom||activeCallOverlay||outgoingCallPending){toast('Finish or cancel your current call before starting another.');return;}
  // Reserve the outgoing state before the network request so a fast double tap
  // cannot create two simultaneous calls from the same device.
  outgoingCallPending={callId:null,cancelled:false,starting:true};
@@ -8337,7 +8337,7 @@ async function startMingloraCall(member,kind='video',participantIds=null,groupId
  }
 }
 async function answerMingloraCall(callId){
- if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before answering another call.');return;}
+ if(activeCallRoom||activeCallOverlay||outgoingCallPending){toast('Finish or cancel your current call before answering another call.');return;}
  primeCallAudio();
  const overlay=incomingCallOverlay;
  const ringingPeer=overlay?{
@@ -8384,53 +8384,78 @@ async function declineMingloraCall(callId){
  catch(e){toast(e.message);}
 }
 async function openMingloraCall(call,liveKit,peer=null){
-  closeIncomingCallOverlay();closeOutgoingCallOverlay();
-  if(activeCallRoom){toast('A call is already open.');return;}
-  const client=window.LivekitClient;
-  if(!client?.Room||!client?.RoomEvent){
-    const action=call.createdBy===state.user.id?'end':'leave';
-    await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'}).catch(()=>{});
-    toast('The call player could not load. Check your connection and try again.');return;
-  }
-  const overlay=document.createElement('div');overlay.className='call-overlay';
-  overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div class="call-panel-heading"><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting securely…</span></div><div class="call-panel-live-status"><span id="call-participant-count">1 in call</span><span class="call-duration" id="call-call-duration">00:00</span><button type="button" id="call-audio-unlock" class="call-audio-unlock" hidden>Enable audio</button></div></header><div class="call-video-stage" id="call-video-stage"><div class="call-peer-card" id="call-peer-card"><div class="call-peer-avatar-wrap"><img class="call-peer-avatar" src="'+esc(avatar(peer||{}))+'" alt=""></div><strong class="call-peer-name">'+esc(peer?.name||'Minglora member')+'</strong><span class="call-peer-handle">'+(peer?.username?'@'+esc(peer.username):'Secure Minglora call')+'</span><span class="call-peer-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</span><div class="call-audio-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="call-peer-status" id="call-peer-status">Preparing your call…</span></div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone" aria-pressed="false">Mute microphone</button><button type="button" class="secondary" id="call-camera" aria-pressed="'+(call.kind==='video'?'true':'false')+'">'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="danger" id="call-leave">'+(call.createdBy===state.user.id?'End call for everyone':'Leave call')+'</button></footer></section>';
-  document.body.append(overlay);activeCallOverlay=overlay;
-  const room=new client.Room({adaptiveStream:true,dynacast:true});activeCallRoom=room;
-  let microphoneEnabled=true,cameraEnabled=call.kind==='video',intentionallyLeaving=false;
-  const status=overlay.querySelector('#call-connection-status'),count=overlay.querySelector('#call-participant-count'),stage=overlay.querySelector('#call-video-stage');
-  const attach=(track,participant,local=false)=>{
-    if(!track)return;
-    const element=track.attach();
-    if(track.kind==='video'){element.autoplay=true;element.playsInline=true;element.className='call-video-element';if(local)element.muted=true;element.dataset.identity=participant?.identity||'local';if(!local)stage.querySelector('#call-peer-card')?.remove();stage.querySelector('.call-empty-stage')?.remove();stage.append(element);const playback=element.play?.();if(playback?.catch)void playback.catch(()=>{});}
-    else{element.autoplay=true;element.playsInline=true;element.muted=false;element.volume=1;element.className='call-audio-element';overlay.querySelector('#call-audio-root').append(element);const playback=element.play?.();if(playback?.catch)void playback.catch(()=>{const unlock=overlay.querySelector('#call-audio-unlock');if(unlock)unlock.hidden=false;status.textContent='Connected · enable audio to hear the call';});}
-  };
-  const updateCount=()=>{count.textContent=(Number(room.remoteParticipants?.size||0)+1)+' in call';};
-  let callConnectedAt=0,callDurationTimer=null;
+  if(activeCallRoom||activeCallOverlay){toast('A call is already open.');return;}
+  // Mount the phone screen before testing media support. Neither participant
+  // should lose the call UI because a CDN, permission or network request fails.
+  const overlay=document.createElement('div');
+  overlay.className='call-overlay';
+  overlay.dataset.callId=String(call.id||'');
+  overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div class="call-panel-heading"><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting securely…</span></div><div class="call-panel-live-status"><span id="call-participant-count">1 in call</span><span class="call-duration" id="call-call-duration">00:00</span><button type="button" id="call-audio-unlock" class="call-audio-unlock" hidden>Enable audio</button></div></header><div class="call-video-stage" id="call-video-stage"><div class="call-peer-card" id="call-peer-card"><div class="call-peer-avatar-wrap"><img class="call-peer-avatar" src="'+esc(avatar(peer||{}))+'" alt=""></div><strong class="call-peer-name">'+esc(peer?.name||'Minglora member')+'</strong><span class="call-peer-handle">'+(peer?.username?'@'+esc(peer.username):'Secure Minglora call')+'</span><span class="call-peer-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</span><div class="call-audio-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="call-peer-status" id="call-peer-status">Preparing your call…</span></div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone" aria-pressed="false" disabled>Enable microphone</button><button type="button" class="secondary" id="call-camera" aria-pressed="'+(call.kind==='video'?'true':'false')+'" disabled>'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="secondary" id="call-retry" hidden>Reconnect</button><button type="button" class="danger" id="call-leave">'+(call.createdBy===state.user.id?'End call for everyone':'Leave call')+'</button></footer></section>';
+  document.body.append(overlay);
+  activeCallOverlay=overlay;
+  closeIncomingCallOverlay();
+  closeOutgoingCallOverlay();
+
+  const status=overlay.querySelector('#call-connection-status');
+  const count=overlay.querySelector('#call-participant-count');
+  const stage=overlay.querySelector('#call-video-stage');
+  const peerStatus=overlay.querySelector('#call-peer-status');
+  const retryButton=overlay.querySelector('#call-retry');
+  const microphoneButton=overlay.querySelector('#call-microphone');
+  const cameraButton=overlay.querySelector('#call-camera');
   const durationNode=overlay.querySelector('#call-call-duration');
-  const updateCallDuration=()=>{if(!callConnectedAt||!durationNode)return;const elapsed=Math.max(0,Math.floor((Date.now()-callConnectedAt)/1000));durationNode.textContent=String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');};
-  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attach(track,participant,false));
-  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
-  room.on(client.RoomEvent.ParticipantConnected,updateCount);
-  room.on(client.RoomEvent.ParticipantDisconnected,updateCount);
-  overlay.querySelector('#call-audio-unlock')?.addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;primeCallAudio();try{await Promise.all([...overlay.querySelectorAll('.call-audio-element')].map(element=>element.play()));button.hidden=true;status.textContent='Connected';}catch(error){button.disabled=false;toast('Allow audio playback for Minglora calls in your browser.');}});
-  const closeOverlay=()=>{if(callDurationTimer){clearInterval(callDurationTimer);callDurationTimer=null;}if(activeCallOverlay===overlay)activeCallOverlay=null;overlay.remove();};
+  let microphoneEnabled=false,cameraEnabled=false,intentionallyLeaving=false;
+  let callConnectedAt=0,callDurationTimer=null,room=null;
+
+  const updateCallDuration=()=>{
+    if(!callConnectedAt||!durationNode)return;
+    const elapsed=Math.max(0,Math.floor((Date.now()-callConnectedAt)/1000));
+    durationNode.textContent=String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');
+  };
+  const closeOverlay=()=>{
+    if(callDurationTimer){clearInterval(callDurationTimer);callDurationTimer=null;}
+    if(activeCallOverlay===overlay)activeCallOverlay=null;
+    overlay.remove();
+  };
+  const showReconnect=message=>{
+    if(status)status.textContent=message||'Call connection interrupted.';
+    if(peerStatus)peerStatus.textContent='Your call screen is still open. Reconnect or end the call.';
+    if(retryButton){retryButton.hidden=false;retryButton.disabled=false;}
+    if(microphoneButton)microphoneButton.disabled=true;
+    if(cameraButton)cameraButton.disabled=true;
+  };
+
+  retryButton?.addEventListener('click',async()=>{
+    retryButton.disabled=true;
+    status.textContent='Reconnecting securely…';
+    try{
+      const joined=await api('/calls/'+encodeURIComponent(call.id)+'/join',{method:'POST',body:'{}'});
+      if(room)await room.disconnect().catch(()=>{});
+      if(activeCallRoom===room)activeCallRoom=null;
+      if(activeCallOverlay===overlay)activeCallOverlay=null;
+      closeOverlay();
+      await openMingloraCall(joined.call,joined.liveKit,joined.peer||peer);
+    }catch(error){
+      showReconnect(error.message||'Minglora could not reconnect. Check your connection and try again.');
+    }
+  });
+
   overlay.querySelector('#call-leave').onclick=async()=>{
-    const button=overlay.querySelector('#call-leave');button.disabled=true;
+    const button=overlay.querySelector('#call-leave');
+    button.disabled=true;
     try{
       const action=call.createdBy===state.user.id?'end':'leave';
       await api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'});
       intentionallyLeaving=true;
-    }catch(error){toast(error.message);}
-    await room.disconnect();if(activeCallRoom===room)activeCallRoom=null;closeOverlay();
+      if(room)await room.disconnect().catch(()=>{});
+      if(activeCallRoom===room)activeCallRoom=null;
+      closeOverlay();
+    }catch(error){
+      button.disabled=false;
+      toast(error.message||'Minglora could not end the call. Try again.');
+    }
   };
-  overlay.querySelector('#call-microphone').onclick=async()=>{
-    try{microphoneEnabled=!microphoneEnabled;await room.localParticipant.setMicrophoneEnabled(microphoneEnabled);overlay.querySelector('#call-microphone').textContent=microphoneEnabled?'Mute microphone':'Unmute microphone';overlay.querySelector('#call-microphone').setAttribute('aria-pressed',microphoneEnabled?'false':'true');}
-    catch(error){toast(error.message);}
-  };
-  overlay.querySelector('#call-camera').onclick=async()=>{
-    try{cameraEnabled=!cameraEnabled;await room.localParticipant.setCameraEnabled(cameraEnabled);overlay.querySelector('#call-camera').textContent=cameraEnabled?'Turn camera off':'Turn video on';overlay.querySelector('#call-camera').setAttribute('aria-pressed',cameraEnabled?'true':'false');}
-    catch(error){cameraEnabled=!cameraEnabled;toast(error.message);}
-  };
+
   overlay.querySelector('#call-add-people').onclick=async()=>{
     try{
       const visible=(await api('/users')).users||[];
@@ -8443,37 +8468,154 @@ async function openMingloraCall(call,liveKit,peer=null){
       toast(result.count+' call invitation(s) sent.');
     }catch(error){toast(error.message);}
   };
+
+  const client=window.LivekitClient;
+  if(!client?.Room||!client?.RoomEvent){
+    showReconnect('Minglora call media is not ready. Check your connection, then tap Reconnect.');
+    return;
+  }
+
+  room=new client.Room({adaptiveStream:true,dynacast:true});
+  activeCallRoom=room;
+  const attach=(track,participant,local=false)=>{
+    if(!track)return;
+    const element=track.attach();
+    if(track.kind==='video'){
+      element.autoplay=true;element.playsInline=true;element.className='call-video-element';
+      if(local)element.muted=true;
+      element.dataset.identity=participant?.identity||'local';
+      if(!local)stage.querySelector('#call-peer-card')?.remove();
+      stage.querySelector('.call-empty-stage')?.remove();
+      stage.append(element);
+      const playback=element.play?.();
+      if(playback?.catch)void playback.catch(()=>{});
+    }else{
+      element.autoplay=true;element.playsInline=true;element.muted=false;element.volume=1;
+      element.className='call-audio-element';
+      overlay.querySelector('#call-audio-root').append(element);
+      const playback=element.play?.();
+      if(playback?.catch)void playback.catch(()=>{
+        const unlock=overlay.querySelector('#call-audio-unlock');
+        if(unlock){unlock.hidden=false;status.textContent='Connected · tap Enable audio to hear the call';}
+      });
+    }
+  };
+  const updateCount=()=>{count.textContent=(Number(room.remoteParticipants?.size||0)+1)+' in call';};
+
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attach(track,participant,false));
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>element.remove()));
+  room.on(client.RoomEvent.ParticipantConnected,updateCount);
+  room.on(client.RoomEvent.ParticipantDisconnected,updateCount);
+  overlay.querySelector('#call-audio-unlock')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    button.disabled=true;
+    primeCallAudio();
+    try{
+      await Promise.all([...overlay.querySelectorAll('.call-audio-element')].map(element=>element.play()));
+      button.hidden=true;
+      status.textContent='Connected';
+    }catch(error){
+      button.disabled=false;
+      toast('Allow audio playback for Minglora calls in your browser.');
+    }
+  });
+
   room.on(client.RoomEvent.Disconnected,()=>{
     if(activeCallRoom===room){
-      activeCallRoom=null;closeOverlay();
+      activeCallRoom=null;
       if(!intentionallyLeaving){
-        const action=call.createdBy===state.user.id?'end':'leave';
-        void api('/calls/'+encodeURIComponent(call.id)+'/'+action,{method:'POST',body:'{}'}).catch(error=>console.warn('Could not update call state after disconnect:',error.message));
-        toast('The call connection ended.');
+        showReconnect('Call connection lost. Tap Reconnect to restore the call.');
+        toast('Your call connection was interrupted.');
       }
     }
   });
+
+  microphoneButton.onclick=async()=>{
+    try{
+      microphoneEnabled=!microphoneEnabled;
+      await room.localParticipant.setMicrophoneEnabled(microphoneEnabled);
+      microphoneButton.textContent=microphoneEnabled?'Mute microphone':'Enable microphone';
+      microphoneButton.setAttribute('aria-pressed',microphoneEnabled?'false':'true');
+    }catch(error){
+      microphoneEnabled=!microphoneEnabled;
+      toast(error.message||'Allow microphone access to use voice calling.');
+    }
+  };
+  cameraButton.onclick=async()=>{
+    try{
+      cameraEnabled=!cameraEnabled;
+      await room.localParticipant.setCameraEnabled(cameraEnabled);
+      cameraButton.textContent=cameraEnabled?'Turn camera off':'Turn video on';
+      cameraButton.setAttribute('aria-pressed',cameraEnabled?'true':'false');
+    }catch(error){
+      cameraEnabled=!cameraEnabled;
+      toast(error.message||'Allow camera access to use video calling.');
+    }
+  };
+
   try{
     status.textContent='Connecting securely…';
     let timeout;
-    try{await Promise.race([room.connect(liveKit.url,liveKit.token),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Could not connect to the call. Check your LiveKit server URL and network connection.')),20000);})]);}
-    finally{if(timeout)clearTimeout(timeout);}
+    try{
+      await Promise.race([
+        room.connect(liveKit.url,liveKit.token),
+        new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Could not connect to the call. Check your LiveKit server URL and network connection.')),20000);})
+      ]);
+    }finally{if(timeout)clearTimeout(timeout);}
+
     status.textContent='Connected';
-    callConnectedAt=Date.now();overlay.dataset.callState='connected';
-    const peerStatus=overlay.querySelector('#call-peer-status');if(peerStatus)peerStatus.textContent=call.kind==='audio'?'Voice connection active':'Waiting for '+(peer?.name||'participant')+' video…';
-    updateCallDuration();callDurationTimer=setInterval(updateCallDuration,1000);
-    await room.localParticipant.setMicrophoneEnabled(true);
-    if(cameraEnabled)await room.localParticipant.setCameraEnabled(true);
-    for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attach(publication.track,room.localParticipant,true);
+    callConnectedAt=Date.now();
+    overlay.dataset.callState='connected';
+    if(peerStatus)peerStatus.textContent=call.kind==='audio'?'Voice connection active':'Waiting for '+(peer?.name||'participant')+' video…';
+    updateCallDuration();
+    callDurationTimer=setInterval(updateCallDuration,1000);
     updateCount();
-    overlay.querySelector('#call-microphone').disabled=false;
-    overlay.querySelector('#call-camera').disabled=false;
+    microphoneButton.disabled=false;
+    cameraButton.disabled=false;
+    retryButton.hidden=true;
+
+    try{
+      await room.localParticipant.setMicrophoneEnabled(true);
+      microphoneEnabled=true;
+      microphoneButton.textContent='Mute microphone';
+      microphoneButton.setAttribute('aria-pressed','false');
+    }catch(error){
+      microphoneEnabled=false;
+      microphoneButton.textContent='Enable microphone';
+      microphoneButton.setAttribute('aria-pressed','false');
+      status.textContent='Connected · microphone permission needed';
+      if(peerStatus)peerStatus.textContent='Allow microphone access, then tap Enable microphone to speak.';
+      toast('Minglora is connected. Allow microphone access to speak.');
+    }
+
+    cameraEnabled=call.kind==='video';
+    if(cameraEnabled){
+      try{
+        await room.localParticipant.setCameraEnabled(true);
+        cameraButton.textContent='Turn camera off';
+        cameraButton.setAttribute('aria-pressed','true');
+      }catch(error){
+        cameraEnabled=false;
+        cameraButton.textContent='Turn video on';
+        cameraButton.setAttribute('aria-pressed','false');
+        status.textContent='Connected · camera permission needed';
+        if(peerStatus)peerStatus.textContent='Your voice call is connected. Allow camera access to enable video.';
+        toast('Minglora is connected. Allow camera access to enable video.');
+      }
+    }else{
+      cameraButton.textContent='Turn video on';
+      cameraButton.setAttribute('aria-pressed','false');
+    }
+
+    for(const publication of room.localParticipant.videoTrackPublications.values()){
+      if(publication.track)attach(publication.track,room.localParticipant,true);
+    }
   }catch(error){
     intentionallyLeaving=true;
     await room.disconnect().catch(()=>{});
-    if(activeCallRoom===room)activeCallRoom=null;closeOverlay();toast(error.message||'The call could not connect.');
-    if(call.createdBy===state.user.id)await api('/calls/'+encodeURIComponent(call.id)+'/end',{method:'POST',body:'{}'}).catch(()=>{});
-    else await api('/calls/'+encodeURIComponent(call.id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});
+    if(activeCallRoom===room)activeCallRoom=null;
+    showReconnect(error.message||'The call could not connect. Check your network and tap Reconnect.');
+    toast(error.message||'The call could not connect. Your call screen is still open.');
   }
 }
 function notificationCategoryFor(item){
