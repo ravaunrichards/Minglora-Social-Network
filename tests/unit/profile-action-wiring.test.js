@@ -133,3 +133,23 @@ test('HTML and service worker load the current profile-action script and cache g
   assert.ok(worker.includes('/'+appAsset),'service worker caches the exact HTML app bundle');
   assert.match(cacheName,/^minglora-shell-v\d+-/,'service-worker cache generation is versioned');
 });
+
+test('core profile loading is independent of optional subscription persistence',()=>{
+  const routeStart=server.indexOf("m=p.match(/^\\/api\\/users\\/([^/]+)$/);");
+  const routeEnd=server.indexOf("if(method==='PATCH'&&p==='/api/users/me')",routeStart);
+  assert.ok(routeStart>=0&&routeEnd>routeStart,'primary profile API route exists');
+  const route=server.slice(routeStart,routeEnd);
+  assert.doesNotMatch(route,/subscription_subscribers_list/,'unsupported subscription action must not run inside the primary profile request');
+  assert.ok(route.includes('subscribersCount'),'the base profile still returns a safe subscriber-count fallback');
+});
+
+test('profile renders core data before optional profile panels settle',()=>{
+  const loadStart=app.indexOf('let profileLoadGeneration=0;');
+  const loadEnd=app.indexOf("window.addEventListener('minglora:open-profile-editor'",loadStart);
+  assert.ok(loadStart>=0&&loadEnd>loadStart,'profile loader exists');
+  const loader=app.slice(loadStart,loadEnd);
+  assert.ok(loader.indexOf('renderProfile(data)')>=0,'core profile renders');
+  assert.ok(loader.indexOf('renderProfile(data)')<loader.indexOf('void Promise.allSettled(['),'supplemental requests start only after the profile is rendered');
+  assert.ok(loader.includes('retry-profile-load'),'failed core requests show a working retry action');
+  assert.ok(loader.includes('profileLoadGeneration'),'late profile responses are prevented from replacing a newer profile');
+});
