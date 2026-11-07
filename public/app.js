@@ -1492,6 +1492,28 @@ function presentLiveGiftEvent(event){
   if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
   return true;
 }
+function renderLiveTopGifters(items,session){
+  const root=$("#live-top-gifters-list");
+  if(!root)return;
+  const rows=Array.isArray(items)?items.slice(0,10):[];
+  if(!rows.length){
+    root.innerHTML="<div class='live-top-gifter-empty'><strong>No Top Gifters yet</strong><small>Confirmed LIVE gifts will appear here as people support this broadcast.</small></div>";
+    return;
+  }
+  root.innerHTML=rows.map((item,index)=>{
+    const member=item.user||{};
+    const userId=String(member.id||item.userId||"");
+    const position=Number(item.position||index+1);
+    const rankTitle=item.title||(position===1?"TOP GIFTER":position<=3?"TOP 3 GIFTER":position<=10?"TOP 10 GIFTER":"LIVE GIFTER");
+    const earned=item.gifterBadge?.badgeName||item.badgeName||"";
+    const avatarUrl=avatar(member);
+    return "<article class='live-top-gifter-row "+(position===1?"is-first":"")+"'><span class='live-top-gifter-rank'>#"+position+"</span><img src='"+esc(avatarUrl)+"' alt='' loading='lazy'><span class='live-top-gifter-person'><strong>"+esc(member.name||item.name||member.username||item.username||"Minglora member")+"</strong><small>@"+esc(member.username||item.username||"member")+"</small>"+(earned?"<small class='live-top-gifter-earned'>"+esc(earned)+"</small>":"")+"</span><span class='live-top-gifter-title'>"+esc(rankTitle)+"</span><strong class='live-top-gifter-coins'>"+Number(item.coinsSent??item.points??0).toLocaleString()+"<small>Coins</small></strong><button type='button' class='text-button' data-live-top-gifter-profile='"+esc(userId)+"'>Profile</button></article>";
+  }).join("");
+  root.querySelectorAll("[data-live-top-gifter-profile]").forEach(button=>button.addEventListener("click",()=>{
+    const userId=button.dataset.liveTopGifterProfile;
+    if(userId)openLiveProfilePreview(userId,session||activeLiveSession);
+  }));
+}
 async function refreshLiveGiftEvents(session){
   if(liveGiftEventsBusy||!session?.id||activeLiveSession?.id!==session.id)return;
   liveGiftEventsBusy=true;
@@ -1500,6 +1522,7 @@ async function refreshLiveGiftEvents(session){
     const result=await api('/live/sessions/'+encodeURIComponent(session.id)+'/gifts?since='+encodeURIComponent(since));
     const events=Array.isArray(result.events)?result.events:[];
     for(const event of events)presentLiveGiftEvent(event);
+    renderLiveTopGifters(result.topGifters,session);
   }catch(error){
     console.warn('[Minglora LIVE] Confirmed gift activity could not be refreshed.',error?.message||error);
   }finally{liveGiftEventsBusy=false;}
@@ -2408,6 +2431,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     "<button type='button' data-live-tools-panel-target='fanclub' data-live-tools-target='#live-fan-club-panel' aria-pressed='false'>Fan Club</button>"+
     "<button type='button' data-live-tools-panel-target='matches' data-live-tools-target='#live-match-panel' aria-pressed='false'>Match</button>"+
+    "<button type='button' data-live-tools-panel-target='top-gifters' aria-pressed='false'>Top Gifters</button>"+
     "<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button>"+
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
@@ -2435,11 +2459,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveChatTools=liveSettings.groupChatEnabled!==false
     ? "<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Live comments, emoji and host moderation.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='muted'>Open the Chat tab to view the live conversation.</p></div></section>"
     : "<section id='live-chat-panel' class='live-tools-card live-chat-panel' data-live-tools-panel='chat'><div class='live-panel-title'><strong>LIVE chat</strong><small>Chat is turned off for this broadcast.</small></div><div id='live-chat-panel-body' class='live-chat-panel-body'><p class='live-chat-disabled-note' role='status'>The host has turned off Group LIVE chat for this broadcast.</p></div></section>";
+  const liveTopGiftersTools="<section id='live-top-gifters-panel' class='live-tools-card live-top-gifters-panel' data-live-tools-panel='top-gifters'><div class='live-panel-title'><strong>Top Gifters</strong><small>Ranked by confirmed Coins sent in this LIVE</small></div><div id='live-top-gifters-list' class='live-top-gifters-list'><p class='muted'>Loading this room’s gifter ranking…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveTopGiftersTools+liveGiftTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
