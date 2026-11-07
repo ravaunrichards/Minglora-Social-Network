@@ -1648,7 +1648,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
         primeCallAudio();window.setTimeout(()=>playCallTone([620,820],520),160);
       }
       liveSpeakerSeenRequestsBySession.set(session.id,currentPendingIds);
-      const pendingCount=requests.filter(request=>request.status==="requested").length;
+      const pendingCount=requests.filter(request=>["requested","invited"].includes(request.status)).length;
       const activeCount=requests.filter(request=>request.status==="connected").length;
       const approvedCount=requests.filter(request=>request.status==="accepted").length;
       const historyCount=requests.filter(request=>["rejected","left"].includes(request.status)).length;
@@ -1661,10 +1661,12 @@ async function refreshLiveSpeakerPanel(session,role,room){
       const stageState=$("#live-guest-stage-state");
       if(stageState)stageState.textContent=guestStageEnabled?"ON":"OFF";
       list.innerHTML=requests.length?requests.map(request=>{
-        const statusLabels={requested:"Pending review",connected:"On stage",accepted:"Approved · waiting to join",rejected:"Declined",left:"Removed or left stage"};
+        const statusLabels={requested:"Pending review",invited:"Co-host invitation sent",connected:"On stage",accepted:"Approved · waiting to join",rejected:"Declined",left:"Removed or left stage"};
         const status=statusLabels[request.status]||"Status · "+String(request.status||"Unknown");
         const actions=request.status==="requested"
           ?"<div class='live-speaker-actions'><button type='button' data-speaker-accept='"+esc(request.userId)+"'>Accept</button><button type='button' data-speaker-reject='"+esc(request.userId)+"'>Decline</button></div>"
+          :request.status==="invited"
+            ?"<div class='live-speaker-actions'><span class='live-speaker-approved'>Invitation sent</span><button type='button' class='live-speaker-remove' data-speaker-reject='"+esc(request.userId)+"'>Cancel invitation</button></div>"
           :["accepted","connected"].includes(request.status)
             ?"<div class='live-speaker-actions'><span class='live-speaker-approved'>"+esc(request.status==="connected"?"Connected on stage":"Approved · waiting to join")+"</span><button type='button' class='live-speaker-remove' data-speaker-remove='"+esc(request.userId)+"'>Remove</button></div>"
             :"<div class='live-speaker-actions'><span class='live-speaker-closed'>Request closed</span></div>";
@@ -1672,7 +1674,8 @@ async function refreshLiveSpeakerPanel(session,role,room){
         const formatTime=value=>value?new Date(value).toLocaleString():"";
         const timeline=[
           "Requested · "+(formatTime(request.requestedAt)||"Time unavailable"),
-          request.acceptedAt?"Approved · "+formatTime(request.acceptedAt):"",
+          request.invitedAt?"Invited · "+formatTime(request.invitedAt):"",
+          request.acceptedAt?"Accepted · "+formatTime(request.acceptedAt):"",
           request.connectedAt?"Connected · "+formatTime(request.connectedAt):"",
           request.reviewedAt?"Reviewed · "+formatTime(request.reviewedAt):"",
           request.leftAt?"Left stage · "+formatTime(request.leftAt):""
@@ -1699,6 +1702,19 @@ async function refreshLiveSpeakerPanel(session,role,room){
   const button=$("#live-request-speaker"),status=$("#live-speaker-request-status");if(!button)return;
   try{
     const data=await api(root+"/speaker-request"),request=data.request;
+    if(request&&request.status==="invited"){
+      button.disabled=false;button.textContent="Accept Co-host invitation";
+      if(status)status.textContent="The host invited you to join the LIVE stage. Join the room first, then accept.";
+      button.onclick=async()=>{
+        button.disabled=true;
+        try{
+          await api(root+"/speaker-request/accept",{method:"POST",body:"{}"});
+          toast("Co-host invitation accepted. Joining the stage…");
+          stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");
+        }catch(error){toast(error.message||"The Co-host invitation could not be accepted.");button.disabled=false;}
+      };
+      return;
+    }
     if(request&&request.status==="accepted"){
       button.disabled=false;button.textContent="Join Co-host stage";
       if(status)status.textContent="The host approved your microphone. Join when you're ready.";
@@ -2481,7 +2497,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
-    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Co-host & Multi-Guest stage</strong><small>Review Co-host requests and manage up to 8 guest seats.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
+    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Co-host & Multi-Guest stage</strong><small>Review Co-host requests and manage up to 8 guest seats.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><form id='live-cohost-invite-form' class='live-cohost-invite-form'><label for='live-cohost-invite-username'>Invite a member by username</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit'>Invite Co-host</button></div><small id='live-cohost-invite-status' role='status'>Invited members must join this LIVE before accepting.</small></form><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
     : role==="viewer"
       ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Co-host Match request</strong><small>Send a request to join this creator’s LIVE stage</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to Co-host</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
@@ -2597,6 +2613,26 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
     "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE side panel'><div class='live-fullscreen-side-head'><strong>LIVE PANEL</strong><nav class='live-fullscreen-side-tabs' aria-label='Switch LIVE side panel'><button id='live-fullscreen-chat-tab' type='button' data-live-fullscreen-panel='chat' class='active' aria-pressed='true'>Chat</button><button id='live-fullscreen-tools-tab' type='button' data-live-fullscreen-panel='tools' aria-pressed='false'>Tools</button></nav></div></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
     if(role==="host"){
+    const cohostInviteForm=$("#live-cohost-invite-form");
+    cohostInviteForm?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const username=String(cohostInviteForm.elements.username?.value||"").trim();
+      const button=cohostInviteForm.querySelector("button[type='submit']");
+      const status=$("#live-cohost-invite-status");
+      if(!username)return;
+      button.disabled=true;
+      if(status)status.textContent="Sending Co-host invitation…";
+      try{
+        const result=await api("/live/sessions/"+encodeURIComponent(session.id)+"/cohost-invitations",{method:"POST",body:JSON.stringify({username})});
+        cohostInviteForm.reset();
+        if(status)status.textContent="Invitation sent to @"+String(result.invitation?.user?.username||username)+". They must join this LIVE and accept.";
+        toast("Co-host invitation sent.");
+        await refreshLiveSpeakerPanel(session,role,room);
+      }catch(error){
+        if(status)status.textContent=error.message||"The Co-host invitation could not be sent.";
+        toast(error.message||"The Co-host invitation could not be sent.");
+      }finally{button.disabled=false;}
+    });
     const moderatorList=$("#live-moderator-list");
     const refreshLiveModerators=async()=>{
       if(!moderatorList)return;
