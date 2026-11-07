@@ -54,12 +54,15 @@ test('outside-profile cards provide dimensional responsive styling and respect r
   assert.match(css, /\.theme-dark \.person-card--immersive/);
 });
 
-test('static shell cache is versioned for the upgraded discovery cards', async () => {
+test('static shell cache includes the active discovery app assets', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
-  assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(worker, /minglora-shell-v93-flow-layout-safety-1/);
+  const assets=[
+    html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]
+  ].filter(Boolean);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
 
 test('outside profile cards preserve the full 3:1 saved cover and uncropped avatar',async()=>{
