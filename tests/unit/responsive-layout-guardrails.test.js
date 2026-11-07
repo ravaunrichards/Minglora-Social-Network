@@ -93,7 +93,7 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   assert.ok(worker.includes('v131-live-top-gifters-1'));
   assert.ok(worker.includes('/styles.css?v=20261107-top-gifters-1'));
   assert.ok(worker.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
-  assert.ok(worker.includes('/app.js?v=20261107-top-gifters-profile-controls-functional-1'));
+  assert.ok(worker.includes('/app.js?v=20261107-top-gifters-2'));
   assert.ok(worker.includes('/meetwave.css?v=20261107-meetwave-panel-layout-tab-7'));
   assert.ok(mobile.includes('.mobile-nav>button{display:flex;flex:none;width:100%;max-width:100%'));
   assert.ok(mobile.includes('.mobile-hub-grid'));
