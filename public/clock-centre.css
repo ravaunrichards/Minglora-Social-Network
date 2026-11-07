@@ -10,6 +10,26 @@
 .clock-theme-neon{--cc-gold:#6fffe9;--cc-accent:#8576ff}
 .clock-theme-glass{--cc-gold:#d8f2ff;--cc-accent:#7bb6d8}
 .clock-theme-wood{--cc-gold:#e2b179;--cc-accent:#9a633e}
+
+.clock-theme-silver{--cc-gold:#dce5f0;--cc-accent:#8295aa}
+.clock-theme-silver .clock-face-bezel{background:linear-gradient(135deg,#fff,#78899c 22%,#f2f6fb 38%,#536579 58%,#dfe9f4 74%,#596a7d)}
+.clock-theme-futuristic{--cc-gold:#75f3ff;--cc-accent:#a05dff}
+.clock-theme-futuristic .clock-face-dial{background:radial-gradient(circle at 50% 50%,#182b48,#080a17 72%);box-shadow:inset 0 0 22px #75f3ff55,0 0 24px #a05dff55}
+.clock-theme-futuristic .clock-number{color:#8ef7ff;text-shadow:0 0 9px #75f3ff}
+.clock-theme-skeleton{--cc-gold:#f0c987}
+.clock-theme-skeleton .clock-face-dial{background:radial-gradient(circle at 50% 50%,#546072,#151d29 62%,#080c13);border:3px solid #c8aa72}
+.clock-theme-skeleton .clock-face-inner{border:2px dashed #e2c68c99;box-shadow:inset 0 0 24px #000a}
+.clock-theme-skeleton .clock-face-brand{color:#f1d5a9}
+.clock-theme-minimalist{--cc-gold:#26364a;--cc-accent:#8093a7}
+.clock-theme-minimalist .clock-face-bezel{background:linear-gradient(135deg,#f9fbff,#a9b8c9 35%,#fff 55%,#718398)}
+.clock-theme-minimalist .clock-face-dial{background:radial-gradient(circle at 34% 25%,#fff,#f0f3f6 60%,#d8e0e8);box-shadow:inset 0 3px 8px #fff, inset 0 -5px 12px #71839844}
+.clock-theme-minimalist .clock-number{color:#26364a;text-shadow:none}
+.clock-theme-minimalist .clock-mark{background:#26364a88}
+.clock-theme-minimalist .clock-mark.is-major{background:#26364a}
+.clock-theme-minimalist .clock-hour-hand{background:linear-gradient(90deg,#1a293a,#42566e)}
+.clock-theme-minimalist .clock-minute-hand{background:linear-gradient(90deg,#607286,#1f3349)}
+.clock-theme-minimalist .clock-face-brand{color:#4a5d70}
+
 .clock-centre-header{display:flex;align-items:center;gap:15px;margin:0 0 22px}
 .clock-brand-mark{width:54px;height:54px;flex:0 0 54px;display:grid;place-items:center;border-radius:17px;color:#1a1c21;font-size:36px;font-weight:300;background:linear-gradient(145deg,#fff0c4,#c18d45 55%,#805a2f);box-shadow:inset 1px 2px 4px #fff8,0 9px 22px #0007}
 .clock-centre-header h1{font-size:clamp(24px,3vw,32px);letter-spacing:-.04em;margin:2px 0 3px;color:var(--cc-text)}
