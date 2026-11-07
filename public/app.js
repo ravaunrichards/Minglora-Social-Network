@@ -8189,6 +8189,11 @@ async function enterMingloraApp(user,showWelcome=false){
   }
   await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
+  else if(params.get('paypal')==='subscription'||params.get('paypal')==='subscription-cancelled'){
+    window.history.replaceState(null,'',window.location.pathname+window.location.hash);
+    await renderSubscriptions();
+    toast(params.get('paypal')==='subscription'?'PayPal returned to Minglora. Membership access updates after the payment webhook confirms settlement.':'PayPal checkout was canceled. No subscription was activated.');
+  }
   else await restoreLastView();
   if(showWelcome)toast('Welcome to Minglora!');
 }
