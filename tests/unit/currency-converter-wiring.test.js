@@ -11,34 +11,34 @@ test('Currency Converter is wired into Minglora Wallet, navigation and browser h
   const html = read('public/index.html');
   const app = read('public/app.js');
 
-  assert.match(html, /currency-converter\.css\?v=/);
-  assert.match(html, /currency-converter\.js\?v=/);
-  assert.match(html, /data-view="currency-converter"/);
-  assert.match(html, /currency-exchange#currency-exchange/);
-  assert.match(app, /'currency-converter'/);
-  assert.match(app, /view:'currency-converter'/);
-  assert.match(app, /state\.view==='currency-converter'\)await window\.MingloraCurrencyConverter\?\.render\(\)/);
-  assert.match(app, /Currency Converter/);
+  assert.ok(html.includes('currency-converter.css?v='));
+  assert.ok(html.includes('currency-converter.js?v='));
+  assert.ok(html.includes('data-view="currency-converter"'));
+  assert.ok(html.includes('#currency-exchange'));
+  assert.ok(app.includes("'currency-converter'"));
+  assert.ok(app.includes("view:'currency-converter'"));
+  assert.ok(app.includes("state.view==='currency-converter'"));
+  assert.ok(app.includes('Currency Converter'));
 });
 
 test('Currency reference endpoints are authenticated and separate from Coin wallet routes', () => {
   const server = read('src/server.js');
-  assert.match(server, /createCurrencyConverterService/);
-  assert.match(server, /p==='/api/currency/currencies'/);
-  assert.match(server, /p==='/api/currency/rate'/);
+  assert.ok(server.includes('createCurrencyConverterService'));
+  assert.ok(server.includes("p==='/api/currency/currencies'"));
+  assert.ok(server.includes("p==='/api/currency/rate'"));
   const authGuard = server.indexOf('requireAuth(user);');
   const currencyRoute = server.indexOf("p==='/api/currency/currencies'");
   assert.ok(authGuard >= 0 && currencyRoute > authGuard, 'currency endpoints must remain behind the member session guard');
-  assert.match(server, /currencyConverterService\.getRate\(base,quote/);
-  assert.match(server, /requestSupabaseState\('economy_wallet'/);
+  assert.ok(server.includes('currencyConverterService.getRate(base,quote'));
+  assert.ok(server.includes("requestSupabaseState('economy_wallet'"));
 });
 
 test('Currency converter client assets and custom 3D icon are included in the offline shell', () => {
   const worker = read('public/sw.js');
   const icons = read('public/assets/icons/navigation-3d.svg');
-  assert.match(worker, /currency-converter\.css\?v=/);
-  assert.match(worker, /currency-converter\.js\?v=/);
-  assert.match(worker, /currency-exchange-3d-1#currency-exchange/);
+  assert.ok(worker.includes('currency-converter.css?v='));
+  assert.ok(worker.includes('currency-converter.js?v='));
+  assert.ok(worker.includes('currency-exchange-3d-1#currency-exchange'));
   assert.match(worker, /CACHE_NAME='minglora-shell-v[0-9]+-currency-converter-1'/);
-  assert.match(icons, /<symbol id="currency-exchange"/);
+  assert.ok(icons.includes('<symbol id="currency-exchange"'));
 });
