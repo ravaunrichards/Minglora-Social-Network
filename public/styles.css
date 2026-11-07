@@ -6828,37 +6828,21 @@ button.live-ranking-row{cursor:pointer}
 
 
 
-/* Profile editing opens as a viewport-level dialog, never as content appended to the page. */
+/* Profile editing uses the browser top layer: centered, scroll-contained, and independent of page position. */
 body.profile-dialog-open{overflow:hidden}
-.profile-editor-backdrop{
-  z-index:2700;
-  padding:clamp(12px,3vw,24px);
-  overflow-y:auto;
-  overscroll-behavior:contain;
+dialog.profile-editor-dialog{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(92vw,900px);max-width:calc(100vw - 20px);
+  max-height:calc(100dvh - 24px);margin:0;padding:0;
+  overflow-x:hidden;overflow-y:auto;border:0;border-radius:16px;
+  background:var(--surface,#fff);color:var(--ink,#202938);
+  box-shadow:0 24px 80px #101b2f55;
 }
-.profile-editor-backdrop .profile-inline-editor{
-  width:min(100%,900px);
-  max-height:calc(100dvh - 32px);
-  margin:0;
-  overflow-x:hidden;
-  overflow-y:auto;
-  border-radius:16px;
-  background:var(--surface,#fff);
-}
-.profile-editor-backdrop .about-section-inline-editor{width:min(100%,760px)}
-.profile-editor-backdrop .profile-inline-editor .modal-head{
-  position:sticky;
-  top:0;
-  z-index:2;
-  background:var(--surface,#fff);
-}
-@supports not (height:100dvh){
-  .profile-editor-backdrop .profile-inline-editor{max-height:calc(100vh - 32px)}
-}
+dialog.profile-editor-dialog::backdrop{background:#14203388}
+dialog.profile-editor-dialog.about-section-inline-editor{width:min(92vw,760px)}
+dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;background:var(--surface,#fff)}
+@supports not (height:100dvh){dialog.profile-editor-dialog{max-height:calc(100vh - 24px)}}
 @media(max-width:600px){
-  .profile-editor-backdrop{padding:10px;align-items:center}
-  .profile-editor-backdrop .profile-inline-editor{max-height:calc(100dvh - 20px);border-radius:14px}
-  @supports not (height:100dvh){
-    .profile-editor-backdrop .profile-inline-editor{max-height:calc(100vh - 20px)}
-  }
+  dialog.profile-editor-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:14px}
+  @supports not (height:100dvh){dialog.profile-editor-dialog{max-height:calc(100vh - 20px)}}
 }
