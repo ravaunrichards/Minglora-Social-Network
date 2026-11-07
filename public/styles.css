@@ -6789,3 +6789,19 @@ button.live-ranking-row{cursor:pointer}
   .profile-account-menu{right:6px;width:calc(100vw - 12px);padding:11px}
   .account-switcher-account>img{width:39px;height:39px;flex-basis:39px}
 }
+
+/* Weekly per-gift Title Gifter rankings: keep the full Top 10 legible on every screen. */
+.gift-gallery-ranked-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.gift-gallery-ranked-heading>strong{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#687386)}
+.gift-gallery-ranked-heading>small{font-size:10px;color:var(--muted,#687386);white-space:nowrap}
+.gift-gallery-ranked-row.is-podium{border:1px solid var(--line)}
+.gift-gallery-ranked-row.is-podium-2{background:color-mix(in srgb,#a8b2c2 13%,var(--surface-soft,#f5f6f8))}
+.gift-gallery-ranked-row.is-podium-3{background:color-mix(in srgb,#bd875d 12%,var(--surface-soft,#f5f6f8))}
+.gift-gallery-ranked-place{flex:none;font-size:8px;font-weight:900;letter-spacing:.035em;color:var(--muted,#687386);white-space:nowrap}
+.gift-gallery-leader-position{flex:none;min-width:22px;padding:3px 5px;border-radius:7px;background:#fff1bf;color:#79550a;font-size:11px;font-weight:900;text-align:center}
+@media(max-width:520px){
+  .gift-gallery-grid{grid-template-columns:minmax(0,1fr)}
+  .gift-gallery-ranked-row{gap:8px}
+  .gift-gallery-ranked-row>span:nth-of-type(2)>strong{font-size:12px}
+  .gift-gallery-ranked-place{font-size:8px}
+}

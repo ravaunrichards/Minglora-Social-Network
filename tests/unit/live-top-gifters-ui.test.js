@@ -28,7 +28,7 @@ test("LIVE room Top Gifters ranks broadcast-scoped confirmed LIVE gifts and refr
   assert.match(app, /Weekly Gift Gallery · Top Gifters/);
   assert.match(app, /data-live-weekly-title-profile/);
   assert.match(app, /TOP GIFTER/);
-  assert.match(app, /Weekly TOP GIFTER for this gift/);
+  assert.match(app, /Weekly Title Gifter for this gift/);
   assert.match(app, /openLiveProfilePreview\(userId,session\|\|activeLiveSession\)/);
 });
 
@@ -63,7 +63,9 @@ test("profile Gift Gallery ranks each gift's weekly supporters and lets visitors
   const gallery = app.slice(galleryStart, galleryEnd);
   assert.match(gallery, /entry\.topGifters/);
   assert.match(gallery, /TOP GIFTER/);
-  assert.match(gallery, /Other top gifters/);
+  assert.match(gallery, /Weekly gifter ranking/);
+  assert.ok(gallery.includes('.slice(0,10)'));
+  assert.match(gallery, /RUNNER-UP/);
   assert.match(gallery, /data-gift-gallery-gifter-profile/);
   assert.match(gallery, /openProfile\(id\)/);
   assert.match(server, /isTitleGifter:index===0/);
@@ -71,3 +73,17 @@ test("profile Gift Gallery ranks each gift's weekly supporters and lets visitors
   assert.match(server, /blockedBetween\(user\.id,member\.id\)/);
 });
 
+
+test("profile Gift Gallery presents the weekly Title Gifter and up to ten ranked supporters without mobile overflow", () => {
+  const galleryStart = app.indexOf("async function loadProfileGiftGallery");
+  const galleryEnd = app.indexOf("function bindProfileTabActions", galleryStart);
+  const gallery = app.slice(galleryStart, galleryEnd);
+  assert.ok(gallery.includes("Weekly Title Gifter for this gift"));
+  assert.ok(gallery.includes('aria-label="Rank 1"'));
+  assert.ok(gallery.includes(".slice(0,10)"));
+  assert.ok(gallery.includes("data-gift-gallery-gifter-profile"));
+  assert.ok(css.includes("gift-gallery-ranked-row.is-podium-2"));
+  assert.ok(css.includes("grid-template-columns:minmax(0,1fr)"));
+  assert.ok(html.includes("20261107-gift-gallery-top10-1"));
+  assert.ok(sw.includes("minglora-shell-v144-gift-gallery-top10-1"));
+});
