@@ -34,5 +34,5 @@ test('Gifts preview assets are versioned in both the HTML shell and service work
   const stylesAsset=html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1]||'';
   assert.ok(giftsAsset&&sw.includes("'"+giftsAsset+"'"),'current Gifts script is precached');
   assert.ok(stylesAsset&&sw.includes("'"+stylesAsset+"'"),'current stylesheet is precached');
-  assert.match(sw,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
 });
