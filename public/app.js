@@ -2464,7 +2464,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveTopGiftersTools+liveGiftTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+liveTopGiftersTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
