@@ -414,6 +414,7 @@ function isMingloraUpdateSafe(){
   if(!meetWaveCanUpdate)return false;
   const focused=document.activeElement;
   if(focused?.matches?.('input,textarea,select,[contenteditable="true"]'))return false;
+  if(Array.from(document.querySelectorAll('video,audio')).some(media=>!media.paused&&!media.ended))return false;
   const openDialog=Array.from(document.querySelectorAll('dialog[open],[role="dialog"],[aria-modal="true"]'))
     .some(element=>!element.hidden&&element.getClientRects().length>0);
   return !openDialog;
@@ -459,7 +460,7 @@ function startMingloraServiceWorkerUpdates(registration){
       mingloraKnownController=Boolean(navigator.serviceWorker.controller);
       if(replacingExistingController&&mingloraKnownController)scheduleMingloraSafeReload();
     });
-    for(const eventName of ['pointerdown','keydown','touchstart','input']){
+    for(const eventName of ['pointerdown','keydown','touchstart','input','wheel','scroll']){
       document.addEventListener(eventName,markMingloraUpdateActivity,{capture:true,passive:true});
     }
     const resumeUpdateChecks=()=>{
