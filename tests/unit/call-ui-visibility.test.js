@@ -104,7 +104,7 @@ test('ringing call status is readable without depending on LiveKit provider pres
 test('call notifications return to the current app window and load the latest call bundle',()=>{
   const htmlMarker='src="/app.js?v=';
   const htmlStart=html.indexOf(htmlMarker);
-  const appAsset=htmlStart<0?'':html.slice(htmlStart+5,html.indexOf('"',htmlStart));
+  const appAsset=htmlStart<0?'':html.slice(htmlStart+5,html.indexOf('"',htmlStart+5));
   const workerMarker="'/app.js?v=";
   const workerStart=worker.indexOf(workerMarker);
   const workerAsset=workerStart<0?'':worker.slice(workerStart+1,worker.indexOf("'",workerStart+1));
@@ -114,7 +114,7 @@ test('call notifications return to the current app window and load the latest ca
   const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
   const clickEnd=worker.indexOf('});',clickStart);
   const clickHandler=worker.slice(clickStart,clickEnd);
-  assert.ok(clickHandler.includes('const existing=windows.find'));
-  assert.ok(clickHandler.indexOf('existing.navigate(target)')<clickHandler.indexOf('self.clients.openWindow(target)'));
+  assert.match(clickHandler,/const isCall=data\.type==='call'&&Boolean\(data\.callId\)/);
+  assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('existing.navigate(target)'));
   assert.ok(clickHandler.includes('existing.focus()'));
 });
