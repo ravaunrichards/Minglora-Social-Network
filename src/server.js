@@ -748,7 +748,7 @@ function meetWaveRoomView(room,viewerId){
     id:room.id,title:room.title,description:room.description||'',mode:room.mode,
     visibility:room.visibility,scheduledAt:room.scheduledAt||null,status:room.status,
     createdAt:room.createdAt,startedAt:room.startedAt||null,endedAt:room.endedAt||null,
-    participantLimit:9,ownerId:room.ownerId,
+    participantLimit:11,ownerId:room.ownerId,
     owner:safeUser(owner,viewerId),isHost:room.ownerId===viewerId
   };
 }
@@ -5287,7 +5287,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='GET'&&p==='/api/meetwave/status'){
         requireAuth(user);
         const health=await verifyLiveKitConnection();
-        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,error:health.error||null,maxParticipants:9});
+        return json(res,200,{enabled:true,provider:'LiveKit',configured:health.configured,connected:health.connected,error:health.error||null,maxParticipants:11});
       }
       if(method==='GET'&&p==='/api/meetwave/rooms'){
         requireAuth(user);
@@ -5327,7 +5327,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           ownerId:user.id,title:validation.value.title,description:validation.value.description,
           mode:validation.value.mode,visibility:validation.value.visibility,
           scheduledAt:validation.value.scheduledAt,status:validation.value.mode==='scheduled'?'scheduled':'ready',
-          participantLimit:9,createdAt:now(),startedAt:null,endedAt:null
+          participantLimit:11,createdAt:now(),startedAt:null,endedAt:null
         };
         db.meetWaveRooms.unshift(room);
         await saveStore();
@@ -5403,10 +5403,12 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           if(availability==='too-early')return json(res,409,{error:'This scheduled meeting is not open yet. Participants can join 15 minutes before its start time.'});
           let participants=[],liveKit;
           try{
-            await ensureLiveKitRoom(room.roomName,9);
+            const liveKitRoom=await ensureLiveKitRoom(room.roomName,11);
             participants=await listLiveKitParticipants(room.roomName);
-            if(participants.length>=(9)&&!participants.some(participant=>participant.identity===user.id)){
-              return json(res,409,{error:'This MeetWave room is full. The limit is nine participants: one host and up to eight guests.'});
+            const roomParticipantLimit=Math.max(2,Number(liveKitRoom?.maxParticipants)||11);
+            if(participants.length>=roomParticipantLimit&&!participants.some(participant=>participant.identity===user.id)){
+              const guestLimit=roomParticipantLimit-1;
+              return json(res,409,{error:'This MeetWave room is full. The current limit is '+roomParticipantLimit+' participants: one host and up to '+guestLimit+' guests.'});
             }
             liveKit=await createLiveKitToken({identity:user.id,name:user.name,roomName:room.roomName,canPublish:true});
           }catch(error){
