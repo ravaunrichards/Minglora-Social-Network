@@ -28,7 +28,8 @@ test('LIVE likes have a white-to-red heart button and also respond to stage taps
 test('Host profile, LIVE likes and power control occupy a separate row above the stage', () => {
   assert.match(app, /id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg/);
   assert.match(app, /stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
-  assert.match(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
+  assert.match(app, /liveChatPanel\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
+  assert.doesNotMatch(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
   assert.match(styles, /\.live-video-column>\.live-stage-topbar/);
   assert.match(styles, /position:static!important/);
   assert.match(styles, /\.live-host-power-button svg/);
