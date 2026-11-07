@@ -77,15 +77,15 @@ test('a full app refresh restores the signed-in member to the last page and scro
 });
 
 test('the page restore and non-disruptive refresh scripts receive a fresh browser cache version', () => {
-  assert.match(html, /app\.js\?v=[^"' ]+&refresh=20261106-preserve-active-page-3/);
-  assert.match(html, /leagues\.js\?v=[^"' ]+&refresh=20261106-preserve-active-page-3/);
+  assert.match(html, /app\.js\?v=20261106-refresh-controls-removed-1/);
+  assert.match(html, /leagues\.js\?v=20261106-league-auto-update-1/);
   assert.match(sw, /v102-preserve-active-page-refresh-2/);
-  assert.match(sw, /app\.js\?v=[^"' ]+&refresh=20261106-preserve-active-page-3/);
-  assert.match(sw, /leagues\.js\?v=[^"' ]+&refresh=20261106-preserve-active-page-3/);
+  assert.match(sw, /app\.js\?v=20261106-refresh-controls-removed-1/);
+  assert.match(sw, /leagues\.js\?v=20261106-league-auto-update-1/);
 });
 
 test('the service worker versions and caches the Match Power-Up 3D models', () => {
-  assert.match(html, /leagues\.js\?v=20261106-match-powerups-3d-preview-1/);
+  assert.match(html, /leagues\.js\?v=20261106-league-auto-update-1/);
   assert.match(html, /leagues\.css\?v=20261106-match-powerups-3d-preview-1/);
   assert.match(sw, /v100-match-powerups-3d-preview-1/);
   assert.match(sw, /minglora_time_boost\.gltf/);
