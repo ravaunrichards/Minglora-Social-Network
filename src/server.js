@@ -3250,7 +3250,7 @@ async function route(req, res) {
             ['connected','accepted'].includes(String(item.status||''))
           );
           const role=id===String(session.hostId)?'host':String(liveParticipant?.role||'viewer');
-          if(id!==String(session.hostId)&&!['guest','cohost','viewer'].includes(role))return null;
+          if(id!==String(session.hostId)&&!['guest','cohost'].includes(role))return null;
           return {id,name:String(member.name||member.username||'Minglora member'),username:String(member.username||''),role};
         }).filter(Boolean);
         return json(res,200,{recipients});
@@ -3314,7 +3314,7 @@ async function route(req, res) {
           item.sessionId===session.id&&String(item.userId)===recipientId&&!item.leftAt&&
           ['connected','accepted'].includes(String(item.status||''))
         );
-        if(recipientId!==String(session.hostId)&&!recipientParticipant){
+        if(recipientId!==String(session.hostId)&&(!recipientParticipant||!['guest','cohost'].includes(String(recipientParticipant.role||'')))){
           return json(res,409,{error:'The selected participant is not an active LIVE guest or viewer.'});
         }
         const fundingSource=String(input.fundingSource||'cash');
