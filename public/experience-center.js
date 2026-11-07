@@ -121,6 +121,7 @@
     applyWallpaper(current);
     refreshOsdPreview();
     refreshScreenSaverSchedule();
+    refreshStyleChoices();
   }
   function timeLabel(value){return String(value||'').padStart(2,'0');}
   function refreshOsdPreview(){
@@ -218,6 +219,12 @@
   }
   function styleVariantCards(){
     return '<div class="mexp-theme-grid mexp-variant-grid">'+STYLE_VARIANTS.map(t=>'<button type="button" class="mexp-theme-card mexp-variant-card" data-exp-chl-style="'+t[0]+'" aria-pressed="'+(current.chlStyle===t[0]?'true':'false')+'"><span class="mexp-theme-swatch" style="--swatch-accent:'+t[2]+';--swatch-bg:'+t[3]+';--swatch-text:'+t[4]+'"></span><strong>'+t[1]+'</strong><small>Creator Hub Live design style</small></button>').join('')+'</div>';
+  }
+  function refreshStyleChoices(){
+    const area=$('#settings-experience');
+    if(!area)return;
+    area.querySelectorAll('[data-exp-theme]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.expTheme===current.style?'true':'false'));
+    area.querySelectorAll('[data-exp-chl-style]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.expChlStyle===current.chlStyle?'true':'false'));
   }
   function markup(){
     const unitOptions=[['seconds','Seconds'],['minutes','Minutes'],['hours','Hours']];
