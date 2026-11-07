@@ -74,21 +74,21 @@ html[data-minglora-variant="neo"] .card, html[data-minglora-variant="brutal"] .c
 html[data-minglora-variant="pixel"] *, html[data-minglora-variant="pixel"] *::before, html[data-minglora-variant="pixel"] *::after { image-rendering:pixelated; }
 
 /* The picker is isolated from app navigation and only appears after opting in. */
-#chl-style-launcher { position:fixed; z-index:10000; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom)); font:600 14px/1.3 var(--minglora-variant-font); }
-#chl-style-launcher button { min-height:44px; border:1px solid var(--minglora-variant-line); border-radius:999px; padding:10px 14px; background:var(--minglora-variant-surface); color:var(--minglora-variant-text); box-shadow:var(--minglora-variant-shadow); }
-#chl-style-panel { width:min(360px,calc(100vw - 24px)); max-height:min(72vh,640px); overflow:auto; margin-top:8px; padding:16px; border:1px solid var(--minglora-variant-line); border-radius:var(--minglora-variant-radius); background:var(--minglora-variant-bg-raised); color:var(--minglora-variant-text); box-shadow:var(--minglora-variant-shadow); }
-#chl-style-panel[hidden] { display:none; }
-#chl-style-panel label { display:block; font-weight:750; margin:0 0 8px; }
-#chl-style-panel select { width:100%; min-height:44px; padding:8px 10px; background:var(--minglora-variant-surface); color:var(--minglora-variant-text); border:1px solid var(--minglora-variant-line); border-radius:var(--minglora-variant-radius-sm); }
-#chl-style-panel .chl-style-hint { color:var(--minglora-variant-muted); font-size:12px; line-height:1.5; margin:10px 0 0; }
-#chl-style-panel .chl-style-actions { display:flex; gap:8px; margin-top:12px; }
-#chl-style-panel .chl-style-actions button { flex:1; min-height:40px; }
+#minglora-style-launcher { position:fixed; z-index:10000; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom)); font:600 14px/1.3 var(--minglora-variant-font); }
+#minglora-style-launcher button { min-height:44px; border:1px solid var(--minglora-variant-line); border-radius:999px; padding:10px 14px; background:var(--minglora-variant-surface); color:var(--minglora-variant-text); box-shadow:var(--minglora-variant-shadow); }
+#minglora-style-panel { width:min(360px,calc(100vw - 24px)); max-height:min(72vh,640px); overflow:auto; margin-top:8px; padding:16px; border:1px solid var(--minglora-variant-line); border-radius:var(--minglora-variant-radius); background:var(--minglora-variant-bg-raised); color:var(--minglora-variant-text); box-shadow:var(--minglora-variant-shadow); }
+#minglora-style-panel[hidden] { display:none; }
+#minglora-style-panel label { display:block; font-weight:750; margin:0 0 8px; }
+#minglora-style-panel select { width:100%; min-height:44px; padding:8px 10px; background:var(--minglora-variant-surface); color:var(--minglora-variant-text); border:1px solid var(--minglora-variant-line); border-radius:var(--minglora-variant-radius-sm); }
+#minglora-style-panel .minglora-style-hint { color:var(--minglora-variant-muted); font-size:12px; line-height:1.5; margin:10px 0 0; }
+#minglora-style-panel .minglora-style-actions { display:flex; gap:8px; margin-top:12px; }
+#minglora-style-panel .minglora-style-actions button { flex:1; min-height:40px; }
 @media (max-width:760px) {
   html[data-minglora-variant] .live-room-layout { grid-template-columns:minmax(0,1fr); }
   html[data-minglora-variant] .live-stage { aspect-ratio:4/5; min-height:min(62vh,520px); max-height:68vh; }
   html[data-minglora-variant] .live-chat-messages { max-height:28vh; }
-  #chl-style-launcher { right:max(8px,env(safe-area-inset-right)); bottom:max(8px,env(safe-area-inset-bottom)); }
-  #chl-style-launcher > button { min-height:42px; padding:9px 12px; }
+  #minglora-style-launcher { right:max(8px,env(safe-area-inset-right)); bottom:max(8px,env(safe-area-inset-bottom)); }
+  #minglora-style-launcher > button { min-height:42px; padding:9px 12px; }
 }
 @media (prefers-reduced-motion:reduce) { html[data-minglora-variant] *, html[data-minglora-variant] *::before, html[data-minglora-variant] *::after { transition:none!important; animation:none!important; scroll-behavior:auto!important; } }
 html.reduce-motion[data-minglora-variant] *, html.reduce-motion[data-minglora-variant] *::before, html.reduce-motion[data-minglora-variant] *::after { transition:none!important; animation:none!important; }
