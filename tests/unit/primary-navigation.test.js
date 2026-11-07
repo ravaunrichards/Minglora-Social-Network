@@ -60,7 +60,10 @@ test('mobile navigation stylesheet is linked and versioned independently',()=>{
 
 test('phone profile counts stay horizontal and the bottom Profile destination opens the signed-in profile',()=>{
   const css=fs.readFileSync(path.join(root,'public/mobile-profile-navigation.css'),'utf8');
-  assert.ok(css.includes('grid-template-columns:repeat(6,minmax(0,1fr))'));
-  assert.ok(css.includes('overflow-x:auto'));
+  assert.ok(css.includes('display:flex!important'));
+  assert.ok(css.includes('flex-flow:row nowrap!important'));
+  assert.ok(css.includes('flex:0 0 16.666667%!important'));
+  assert.ok(css.includes('overflow-x:auto!important'));
+  assert.ok(css.includes('flex-shrink:0!important'));
   assert.ok(app.includes("if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}"));
 });
