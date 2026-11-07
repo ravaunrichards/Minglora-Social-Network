@@ -92,6 +92,7 @@ Deno.serve(async (req: Request) => {
     "subscription_tier_store", "subscription_enable", "subscription_checkout_prepare",
     "subscription_checkout_attach", "subscription_my", "subscription_access_check", "subscription_cancel_lookup",
     "subscription_cancel_mark", "subscription_paypal_webhook",
+    "subscription_bonus_review",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -1682,6 +1683,36 @@ Deno.serve(async (req: Request) => {
     return json(200, { subscription: data });
   }
 
+
+  if (action === "subscription_bonus_review") {
+    const creatorId = String(input.creatorId || ""), reviewerId = String(input.reviewerId || "");
+    const monthStart = String(input.monthStart || "");
+    const followerCount = Number(input.followerCount);
+    const qualifyingVideoViews = Number(input.qualifyingVideoViews);
+    const subscriberOnlyVideoCount = Number(input.subscriberOnlyVideoCount);
+    const reviewerNote = String(input.reviewerNote || "").trim().slice(0, 1000);
+    if (!validUuid(creatorId) || !validUuid(reviewerId) ||
+        !/^\d{4}-\d{2}-01$/.test(monthStart) ||
+        !Number.isSafeInteger(followerCount) || followerCount < 0 ||
+        !Number.isSafeInteger(qualifyingVideoViews) || qualifyingVideoViews < 0 ||
+        !Number.isSafeInteger(subscriberOnlyVideoCount) || subscriberOnlyVideoCount < 0) {
+      return json(400, { error: "Invalid monthly creator performance review." });
+    }
+    const eligible = followerCount >= 10000 && qualifyingVideoViews >= 1000000 && subscriberOnlyVideoCount >= 3;
+    const { error: reviewError } = await admin.from("subscription_creator_performance_reviews").upsert({
+      creator_id: creatorId, month_start: monthStart, follower_count: followerCount,
+      qualifying_video_views: qualifyingVideoViews, subscriber_only_video_count: subscriberOnlyVideoCount,
+      bonus_eligible: eligible, reviewer_id: reviewerId, reviewer_note: reviewerNote,
+      reviewed_at: new Date().toISOString()
+    }, { onConflict: "creator_id,month_start" });
+    if (reviewError) return fail(reviewError, "Monthly creator performance review could not be saved.");
+    const { data: settings, error: settingsError } = await admin.from("subscription_creator_settings")
+      .update({ performance_bonus_bps: eligible ? 2000 : 0, performance_bonus_month: monthStart, updated_at: new Date().toISOString() })
+      .eq("creator_id", creatorId).select("creator_id,performance_bonus_bps,performance_bonus_month").maybeSingle();
+    if (settingsError || !settings) return json(503, { error: "Creator subscription bonus settings could not be updated." });
+    return json(200, { eligible, creatorShareBps: eligible ? 7000 : 5000, platformShareBps: eligible ? 3000 : 5000, review: settings });
+  }
+
   if (action === "subscription_paypal_webhook") {
     const event = input.event as any, details = input.subscriptionDetails as any;
     const eventId = String(event?.id || ""), eventType = String(event?.event_type || "");
@@ -1761,16 +1792,35 @@ Deno.serve(async (req: Request) => {
       const currency = String(amountNode.currency || amountNode.currency_code || "").toUpperCase();
       const transactionId = String(resource.id || "");
       if (!Number.isSafeInteger(amountMinor) || amountMinor !== Number(subscription.amount_minor) ||
-          amountMinor % 2 !== 0 || currency !== subscription.currency || transactionId.length < 5) {
+          currency !== subscription.currency || transactionId.length < 5) {
         await admin.from("subscription_payment_events").update({ processing_error: "PayPal recurring payment amount or currency did not match the creator tier." }).eq("id", paymentEvent.id);
         return json(409, { error: "PayPal recurring payment does not match the saved subscription price. Reconciliation is required." });
       }
-      const half = amountMinor / 2;
+      const { data: creatorSettings, error: settingsError } = await admin.from("subscription_creator_settings")
+        .select("performance_bonus_bps,performance_bonus_month")
+        .eq("creator_id", subscription.creator_id).maybeSingle();
+      if (settingsError) return json(503, { error: "Creator subscription bonus status could not be checked." });
+      const previousMonth = (() => {
+        const current = new Date();
+        return new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
+      })();
+      const performanceBonusBps = creatorSettings?.performance_bonus_month === previousMonth &&
+        Number(creatorSettings?.performance_bonus_bps) === 2000 ? 2000 : 0;
+      const creatorShareBps = 5000 + performanceBonusBps;
+      const platformShareBps = 10000 - creatorShareBps;
+      const creatorMinor = Math.floor(amountMinor * creatorShareBps / 10000);
+      const platformMinor = amountMinor - creatorMinor;
+      const { error: subscriptionShareError } = await admin.from("creator_subscriptions").update({
+        creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps
+      }).eq("id", subscription.id);
+      if (subscriptionShareError) return fail(subscriptionShareError, "Subscription payout share could not be saved.");
       const { error: ledgerError } = await admin.from("subscription_earnings_ledger").upsert({
         subscription_id: subscription.id, payment_event_id: paymentEvent.id,
         provider_transaction_id: transactionId,
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
-        currency, gross_minor: amountMinor, creator_minor: half, platform_minor: half, entry_type: "payment"
+        currency, gross_minor: amountMinor, creator_minor: creatorMinor, platform_minor: platformMinor,
+        creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
+        performance_bonus_bps: performanceBonusBps, entry_type: "payment"
       }, { onConflict: "provider_transaction_id", ignoreDuplicates: true });
       if (ledgerError) return fail(ledgerError, "PayPal payment was received but Minglora could not write the earnings ledger.");
       patch.status = "active";
@@ -1786,12 +1836,26 @@ Deno.serve(async (req: Request) => {
         await admin.from("subscription_payment_events").update({ processing_error: "PayPal refund or reversal amount requires manual reconciliation." }).eq("id", paymentEvent.id);
         return json(409, { error: "PayPal refund or reversal requires manual reconciliation." });
       }
-      const creatorRefund = Math.floor(amountMinor / 2), platformRefund = amountMinor - creatorRefund;
+      const originalSaleId = String(resource.sale_id || resource.related_ids?.sale_id || "");
+      let originalPaymentQuery = admin.from("subscription_earnings_ledger")
+        .select("creator_share_bps,platform_share_bps,performance_bonus_bps")
+        .eq("subscription_id", subscription.id).eq("entry_type", "payment");
+      if (originalSaleId) originalPaymentQuery = originalPaymentQuery.eq("provider_transaction_id", originalSaleId);
+      const { data: originalPayment, error: originalPaymentError } = await originalPaymentQuery
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (originalPaymentError) return json(503, { error: "Original subscription payment share could not be checked." });
+      const creatorShareBps = Number(originalPayment?.creator_share_bps || subscription.creator_share_bps || 5000);
+      const platformShareBps = 10000 - creatorShareBps;
+      const performanceBonusBps = Number(originalPayment?.performance_bonus_bps || Math.max(0, creatorShareBps - 5000));
+      const creatorRefund = Math.floor(amountMinor * creatorShareBps / 10000);
+      const platformRefund = amountMinor - creatorRefund;
       const { error: refundError } = await admin.from("subscription_earnings_ledger").insert({
         subscription_id: subscription.id, payment_event_id: paymentEvent.id,
         provider_transaction_id: refundId,
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
-        currency, gross_minor: amountMinor, creator_minor: creatorRefund, platform_minor: platformRefund, entry_type: "refund"
+        currency, gross_minor: amountMinor, creator_minor: creatorRefund, platform_minor: platformRefund,
+        creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
+        performance_bonus_bps: performanceBonusBps, entry_type: "refund"
       });
       if (refundError && refundError.code !== "23505") return fail(refundError, "PayPal refund was received but Minglora could not reconcile the earnings ledger.");
       // A refunded or reversed settled charge no longer grants paid access.
