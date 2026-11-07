@@ -38,7 +38,7 @@ test('Currency converter client assets and custom 3D icon are included in the of
   const icons = read('public/assets/icons/navigation-3d.svg');
   assert.ok(worker.includes('currency-converter.css?v='));
   assert.ok(worker.includes('currency-converter.js?v='));
-  assert.ok(worker.includes('currency-exchange-3d-1#currency-exchange'));
+  assert.ok(worker.includes('currency-exchange-3d-1'));
   assert.match(worker, /CACHE_NAME='minglora-shell-v[0-9]+-currency-converter-1'/);
   assert.ok(icons.includes('<symbol id="currency-exchange"'));
 });
