@@ -75,7 +75,7 @@ test('HTML and service worker load and cache both converter modes and 3D artwork
     assert.ok(html.includes(asset), 'index includes ' + asset);
     assert.ok(worker.includes(asset), 'service worker precaches ' + asset);
   }
-  const appAsset=html.match(/app\.js\\?v=[^"']+/)?.[0]||'';
+  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset&&worker.includes("'/"+appAsset+"'"),'service worker caches the exact HTML app script');
   assert.match(cacheName,/^minglora-shell-v\d+-/);
