@@ -1102,11 +1102,9 @@ function liveLayoutIcon(name){const paths={grid:"<rect x='3' y='3' width='8' hei
 function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;root.setAttribute('aria-label','LIVE host and guest seats');root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen');root.closest('.live-audio-stage')?.classList.remove('live-host-only-layout');});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
 function restoreLiveChatToStage(){
   const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
-  const stage=$('#live-video-stage');
   const slot=$('#live-fullscreen-chat-slot');
-  if(!chat||!stage)return;
-  const target=activeLiveScreenLayout==='full-screen'&&slot?slot:stage;
-  if(chat.parentElement!==target)target.append(chat);
+  if(!chat||!slot)return;
+  if(chat.parentElement!==slot)slot.append(chat);
 }
 function activateLiveToolsPanel(name){
   const shell=$('#live-player-shell');
@@ -2127,6 +2125,7 @@ function liveControlIcon(name){
     users:"<path d='M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/>",
     message:"<path d='M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.7 8.7 0 0 1 4 11.5 8.5 8.5 0 1 1 21 11.5Z'/>",
     screen:"<rect x='2.5' y='3.5' width='19' height='14' rx='2'/><path d='M8 21h8M12 17.5V21M9 10l2 2 4-4'/>",
+    fullscreen:"<path d='M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5'/>",
     gift:"<rect x='3' y='8' width='18' height='13' rx='2'/><path d='M12 8v13M3 12h18M12 8H7.5a2.5 2.5 0 1 1 2.4-3.2L12 8Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 8Z'/>",
     volume:"<path d='M11 5 6 9H3v6h3l5 4z'/><path d='M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13'/>",
     "volume-off":"<path d='m3 3 18 18M11 5 6 9H3v6h3l2 1.6M11 19l-1.5-1.2M16 9.5a5 5 0 0 1 .2 5M19 6.5a9 9 0 0 1 .5 10'/>",
@@ -2409,6 +2408,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-gifts-toggle","gift",role==="host"?"Preview LIVE gift catalogue":giftsEnabled?"Open LIVE gifts":"View LIVE gift availability","Gift"),
     liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
+    liveControlButton("live-fullscreen-toggle","fullscreen","Enter room full screen","Expand",{pressed:false}),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
   const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Browse, preview and quickly send from the complete Minglora gift collection")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
@@ -2427,6 +2427,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveThemeAppearance=role==="host"
     ? "<section class='live-tools-card live-room-appearance' data-live-tools-panel='appearance'><div><strong>Room appearance</strong><small>Change the visual style of this LIVE room.</small></div><label for='live-room-theme-select'>Stage theme<select id='live-room-theme-select'>"+LIVE_ROOM_THEME_OPTIONS.map(option=>"<option value='"+esc(option.value)+"'"+(option.value===liveTheme?" selected":"")+">"+esc(option.label)+"</option>").join("")+"</select></label></section>"
     : "<section class='live-tools-card live-room-appearance' data-live-tools-panel='appearance'><strong>Room appearance</strong><p>"+esc(LIVE_ROOM_THEME_OPTIONS.find(option=>option.value===liveTheme)?.label||"Creator Studio")+"</p></section>";
+  const liveDeviceSettings="<section id='live-device-settings-panel' class='live-tools-card live-device-settings' data-live-tools-panel='devices'><div class='live-panel-title'><strong>Audio, camera & display</strong><small>Choose your devices and adjust your local LIVE preview.</small></div><div class='live-device-settings-grid'><label>Microphone<select id='live-audio-input' data-live-device-kind='audioinput'><option value=''>System default</option></select></label><label>Camera<select id='live-video-input' data-live-device-kind='videoinput'><option value=''>System default</option></select></label><label>Speaker / output<select id='live-audio-output' data-live-device-kind='audiooutput'><option value=''>System default</option></select></label><label>Video framing<select id='live-video-fit' data-live-device-setting='videoFit'><option value='cover'>Fill tile</option><option value='contain'>Fit entire video</option></select></label></div><div class='live-device-setting-toggles'><label><input id='live-mirror-self' type='checkbox' data-live-device-setting='mirrorSelf' checked><span>Mirror my camera preview</span></label><label><input id='live-show-names' type='checkbox' data-live-device-setting='showNames' checked><span>Show participant names</span></label><label><input id='live-echo-cancellation' type='checkbox' data-live-device-setting='echoCancellation' checked><span>Echo cancellation</span></label><label><input id='live-noise-suppression' type='checkbox' data-live-device-setting='noiseSuppression' checked><span>Noise suppression</span></label><label><input id='live-auto-gain' type='checkbox' data-live-device-setting='autoGainControl' checked><span>Automatic microphone level</span></label></div><p id='live-device-settings-status' class='live-device-settings-status' role='status'>Device preferences apply to this LIVE session only.</p></section>";
   const liveModeratorTools=role==="host"&&liveSettings.manageModerators!==false
     ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel' data-live-tools-panel='moderators'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
     : "";
@@ -2434,7 +2435,6 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
     "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
     (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
-    "<button type='button' data-live-tools-panel-target='chat' aria-pressed='false'>Chat</button>"+
     "<button type='button' data-live-tools-panel-target='fanclub' data-live-tools-target='#live-fan-club-panel' aria-pressed='false'>Fan Club</button>"+
     "<button type='button' data-live-tools-panel-target='matches' data-live-tools-target='#live-match-panel' aria-pressed='false'>Match</button>"+
     "<button type='button' data-live-tools-panel-target='top-gifters' aria-pressed='false'>Top Gifters</button>"+
@@ -2442,6 +2442,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (giftsEnabled?"<button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
     (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
     (role==="host"?"<button type='button' data-live-tools-panel-target='appearance' data-live-tools-target='.live-room-appearance' aria-pressed='false'>Appearance</button>":"")+
+    "<button type='button' data-live-tools-panel-target='devices' aria-pressed='false'>Devices</button>"+
     "</nav>";
   const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
@@ -2470,7 +2471,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+liveTopGiftersTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveChatTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveDeviceSettings+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+liveTopGiftersTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
@@ -2537,7 +2538,7 @@ activeLivePinnedComment=null;
   const stage=$("#live-video-stage");
   stage?.append(reactionLayer,pinnedCommentLayer);
   stage?.insertAdjacentHTML("beforebegin",liveStageHud);
-  stage?.insertAdjacentHTML("beforeend",liveChatOverlay);
+  const liveChatPanel=$("#live-fullscreen-chat-slot");liveChatPanel?.insertAdjacentHTML("beforeend",liveChatOverlay);
   const stablePublishing=liveSettings.optimizeForStability!==false;
   const qualityKey=liveSettings.liveQuality==='1080p'?'h1080':liveSettings.liveQuality==='720p'?'h720':null;
   const qualityPreset=qualityKey?client.VideoPresets?.[qualityKey]:null;
@@ -2720,6 +2721,24 @@ activeLivePinnedComment=null;
     const micControl=$("#live-mic-toggle"),cameraControl=$("#live-camera-toggle"),flipCameraControl=$("#live-camera-flip");
     const roomAudioControl=$("#live-audio-toggle");
     const screenShareControl=$("#live-screen-share-toggle");
+    const liveFullscreenControl=$("#live-fullscreen-toggle");
+    const livePlayerShell=$("#live-player-shell");
+    const liveFullscreenChangeListener=()=>{
+      const active=Boolean(document.fullscreenElement===livePlayerShell);
+      livePlayerShell?.classList.toggle("live-browser-fullscreen",active);
+      updateLiveControlButton(liveFullscreenControl,"fullscreen",active?"Exit room full screen":"Enter room full screen",active?"Exit full":"Expand",active);
+    };
+    document.addEventListener("fullscreenchange",liveFullscreenChangeListener);
+    liveFullscreenControl?.addEventListener("click",async()=>{
+      try{
+        if(document.fullscreenElement===livePlayerShell){
+          if(document.exitFullscreen)await document.exitFullscreen();
+        }else if(typeof livePlayerShell?.requestFullscreen==="function"){
+          await livePlayerShell.requestFullscreen({navigationUI:"hide"});
+        }else toast("Full screen is not supported by this browser or device.");
+      }catch(error){toast(error.message||"Could not change LIVE full-screen mode.");}
+    });
+    liveFullscreenChangeListener();
     liveScreenShareEnabled=false;
     liveAudioMuted=false;
     if(micControl)micControl.disabled=!(role==="host"||role==="guest");
@@ -2905,26 +2924,42 @@ activeLivePinnedComment=null;
       if(interactiveTarget)return;
       void sendLiveLike();
     });
-    $("#live-settings-toggle")?.addEventListener("click",()=>{
-      const backdrop=$("#live-tools-backdrop");
-      if(backdrop&&!backdrop.classList.contains("hidden"))closeLiveToolsPanel();
-      else openLiveToolsPanel();
-    });
-    $("#live-chat-toggle")?.addEventListener("click",()=>toggleLiveChatView());
-    $("#live-fullscreen-chat-tab")?.addEventListener("click",()=>{
+    const setLiveRoomPanelTab=name=>{
+      const chatTab=$("#live-fullscreen-chat-tab"),toolsTab=$("#live-fullscreen-tools-tab");
+      const showChat=name!=="tools";
+      chatTab?.classList.toggle("active",showChat);chatTab?.setAttribute("aria-pressed",String(showChat));
+      toolsTab?.classList.toggle("active",!showChat);toolsTab?.setAttribute("aria-pressed",String(!showChat));
+      if(showChat)restoreLiveChatToStage();
+    };
+    const showLiveRoomChat=()=>{
+      setLiveRoomPanelTab("chat");
       const backdrop=$("#live-tools-backdrop");
       if(backdrop&&!backdrop.classList.contains("hidden"))closeLiveToolsPanel({returnTo:"chat"});
-      else showFullscreenChat();
+    };
+    const showLiveRoomTools=()=>{
+      setLiveRoomPanelTab("tools");
+      openLiveToolsPanel();
+    };
+    $("#live-settings-toggle")?.addEventListener("click",()=>{
+      const backdrop=$("#live-tools-backdrop");
+      if(backdrop&&!backdrop.classList.contains("hidden")){closeLiveToolsPanel();setLiveRoomPanelTab("chat");}
+      else showLiveRoomTools();
     });
-    $("#live-fullscreen-tools-tab")?.addEventListener("click",()=>openLiveToolsPanel());
+    $("#live-chat-toggle")?.addEventListener("click",showLiveRoomChat);
+    $("#live-fullscreen-chat-tab")?.addEventListener("click",showLiveRoomChat);
+    $("#live-fullscreen-tools-tab")?.addEventListener("click",showLiveRoomTools);
     $("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-stage-gift-open")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));
     $("#live-guest-layout")?.addEventListener("click",event=>{if(event.target?.closest?.("[data-open-guest-panel]"))openLiveToolsPanel("#live-speaker-request-panel");});
     $("#live-gifts-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-gift-panel"));
-    $("#live-tools-close")?.addEventListener("click",closeLiveToolsPanel);
-    $("#live-tools-backdrop")?.addEventListener("click",event=>{if(event.target?.id==="live-tools-backdrop")closeLiveToolsPanel();});
-    $("#live-tools-drawer")?.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();closeLiveToolsPanel();}});
-    $("#live-tools-drawer")?.querySelectorAll("[data-live-tools-panel-target]").forEach(button=>button.addEventListener("click",()=>activateLiveToolsPanel(button.dataset.liveToolsPanelTarget)));
+    $("#live-tools-close")?.addEventListener("click",()=>{closeLiveToolsPanel();setLiveRoomPanelTab("chat");});
+    $("#live-tools-backdrop")?.addEventListener("click",event=>{if(event.target?.id==="live-tools-backdrop"){closeLiveToolsPanel();setLiveRoomPanelTab("chat");}});
+    $("#live-tools-drawer")?.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();closeLiveToolsPanel();setLiveRoomPanelTab("chat");}});
+    $("#live-tools-drawer")?.querySelectorAll("[data-live-tools-panel-target]").forEach(button=>button.addEventListener("click",()=>{
+      const target=button.dataset.liveToolsPanelTarget;
+      activateLiveToolsPanel(target);
+      if(target==="devices")void populateLiveRoomDevices();
+    }));
     $("#live-layout-options")?.addEventListener("click",async event=>{
       const button=event.target?.closest?.('[data-live-screen-layout]');
       if(!button||role!=="host"||button.disabled)return;
@@ -2944,6 +2979,90 @@ activeLivePinnedComment=null;
         if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE layout could not be changed.');
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
+    });
+    const liveDevicePreferences={echoCancellation:true,noiseSuppression:liveSettings.noiseSuppression!==false,autoGainControl:true,videoFit:"cover",mirrorSelf:true,showNames:true};
+    const noiseSuppressionControl=$("#live-noise-suppression");
+    if(noiseSuppressionControl)noiseSuppressionControl.checked=liveDevicePreferences.noiseSuppression;
+    const applyLiveDeviceVisualSettings=()=>{
+      document.querySelectorAll("#live-guest-layout .live-video-tile,#live-screen-share-stage .live-video-tile").forEach(tile=>{
+        tile.classList.toggle("live-device-names-hidden",!liveDevicePreferences.showNames);
+        const video=tile.querySelector("video");
+        if(video){
+          video.style.objectFit=liveDevicePreferences.videoFit;
+          const isLocal=tile.classList.contains("local")||tile.dataset.identity===String(state.user?.id||"");
+          video.style.transform=isLocal&&liveDevicePreferences.mirrorSelf?"scaleX(-1)":"";
+        }
+      });
+    };
+    const populateLiveRoomDevices=async()=>{
+      if(!navigator.mediaDevices?.enumerateDevices)return;
+      try{
+        const devices=await navigator.mediaDevices.enumerateDevices();
+        const definitions={"live-audio-input":"audioinput","live-video-input":"videoinput","live-audio-output":"audiooutput"};
+        Object.entries(definitions).forEach(([id,kind])=>{
+          const select=$("#"+id);if(!select)return;
+          const previous=select.value;
+          const list=devices.filter(device=>device.kind===kind);
+          select.innerHTML="<option value=''>System default</option>"+list.map((device,index)=>"<option value='"+esc(device.deviceId)+"'>"+esc(device.label||("Device "+(index+1)))+"</option>").join("");
+          const active=room.getActiveDevice?.(kind);
+          if(active&&list.some(device=>device.deviceId===active))select.value=active;
+          else if(previous&&list.some(device=>device.deviceId===previous))select.value=previous;
+          select.dataset.previousValue=select.value;
+        });
+      }catch(error){
+        const status=$("#live-device-settings-status");if(status)status.textContent=error.message||"Device list is unavailable.";
+      }
+    };
+    const switchLiveRoomDevice=async(kind,deviceId)=>{
+      const selected=deviceId||"";
+      if(kind==="audiooutput"){
+        const elements=Array.from(document.querySelectorAll("#live-audio-root audio,#live-audio-root video"));
+        if(elements.length&&elements.every(element=>typeof element.setSinkId==="function"))await Promise.all(elements.map(element=>element.setSinkId(selected)));
+        else if(typeof room.switchActiveDevice==="function")await room.switchActiveDevice(kind,selected);
+        else throw new Error("Audio output selection is not supported by this browser.");
+      }else{
+        if(typeof room.switchActiveDevice!=="function")throw new Error("Device switching is not supported by this browser.");
+        await room.switchActiveDevice(kind,selected);
+      }
+      const status=$("#live-device-settings-status");if(status)status.textContent=selected?"The selected device is active for this LIVE.":"Using the system default device.";
+      toast(selected?"LIVE device updated.":"Returned to the system default device.");
+    };
+    const applyLiveAudioCaptureSettings=async()=>{
+      const participant=room.localParticipant;
+      if(!participant?.isMicrophoneEnabled){
+        const status=$("#live-device-settings-status");if(status)status.textContent="Audio preferences saved for the next time your microphone is enabled.";
+        return;
+      }
+      try{
+        await participant.setMicrophoneEnabled(false);
+        await participant.setMicrophoneEnabled(true,{
+          echoCancellation:liveDevicePreferences.echoCancellation,
+          noiseSuppression:liveDevicePreferences.noiseSuppression,
+          autoGainControl:liveDevicePreferences.autoGainControl
+        });
+        liveMicrophoneEnabled=true;
+        refreshSpeakerRoster();
+        const status=$("#live-device-settings-status");if(status)status.textContent="Microphone processing preferences applied.";
+      }catch(error){toast(error.message||"Could not apply microphone preferences.");}
+    };
+    $("#live-tools-drawer")?.addEventListener("change",async event=>{
+      const deviceSelect=event.target?.closest?.("[data-live-device-kind]");
+      if(deviceSelect){
+        const previous=deviceSelect.dataset.previousValue||"";
+        deviceSelect.disabled=true;
+        try{
+          await switchLiveRoomDevice(deviceSelect.dataset.liveDeviceKind,deviceSelect.value);
+          deviceSelect.dataset.previousValue=deviceSelect.value;
+        }catch(error){deviceSelect.value=previous;toast(error.message||"Could not switch this device.");}
+        finally{deviceSelect.disabled=false;}
+        return;
+      }
+      const setting=event.target?.closest?.("[data-live-device-setting]");if(!setting)return;
+      const key=setting.dataset.liveDeviceSetting;
+      if(key==="videoFit")liveDevicePreferences.videoFit=setting.value==="contain"?"contain":"cover";
+      else liveDevicePreferences[key]=Boolean(setting.checked);
+      applyLiveDeviceVisualSettings();
+      if(["echoCancellation","noiseSuppression","autoGainControl"].includes(key))await applyLiveAudioCaptureSettings();
     });
     $("#live-tools-drawer")?.addEventListener('change',async event=>{
       const input=event.target?.closest?.('[data-live-room-setting]');if(!input||role!=='host')return;
@@ -3019,6 +3138,8 @@ activeLivePinnedComment=null;
         if(button)button.disabled=false;
         return;
       }
+      document.removeEventListener("fullscreenchange",liveFullscreenChangeListener);
+      if(document.fullscreenElement===livePlayerShell&&document.exitFullscreen)await document.exitFullscreen().catch(()=>{});
       closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
