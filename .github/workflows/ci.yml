@@ -84,6 +84,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/app-lock.js
           node --check public/friends-advanced.js
           node --check public/gifts.js
           node --check public/gift-effects.js
