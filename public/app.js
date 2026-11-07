@@ -7822,7 +7822,7 @@ function messengerPreference(key,fallback){const value=messengerPreferences()[ke
 function playMessengerMessageSound(){
   try{
     const experience=window.MingloraExperience?.getSettings?.();
-    if(experience&&(experience.soundMode==='mute'||experience.dndEnabled||experience.messageSound===false))return;
+    if((window.MingloraExperience?.shouldSilenceNotifications?.('message')||experience?.soundMode==='mute')||experience?.messageSound===false)return;
     if(state.settings?.preferences?.messengerMessageSounds===false)return;
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
     if(!AudioContextClass)return;
@@ -8087,7 +8087,7 @@ function playCallTone(frequencies,durationMs=900){
  for(const frequency of frequencies){
   const oscillator=callToneContext.createOscillator(),gain=callToneContext.createGain();
   oscillator.type='sine';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(0,start);
-  const experience=window.MingloraExperience?.getSettings?.();const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;if(experience&&(experience.soundMode==='mute'||experience.dndEnabled)||volume===0)return false;gain.gain.linearRampToValueAtTime(.12*volume,start+.035);gain.gain.setValueAtTime(.12*volume,start+Math.max(.05,durationMs/1000-.08));
+  const experience=window.MingloraExperience?.getSettings?.();const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;if((window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute')||volume===0)return false;gain.gain.linearRampToValueAtTime(.12*volume,start+.035);gain.gain.setValueAtTime(.12*volume,start+Math.max(.05,durationMs/1000-.08));
   gain.gain.linearRampToValueAtTime(0,start+durationMs/1000);oscillator.connect(gain);gain.connect(callToneContext.destination);
   oscillator.start(start);oscillator.stop(start+durationMs/1000+.02);callToneNodes.push(oscillator,gain);
   oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
@@ -8105,7 +8105,7 @@ async function startIncomingRingtone(call=null){
  const experience=window.MingloraExperience?.getSettings?.();
  const voiceCall=call?.kind==='audio';
  const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
- if(state.settings?.preferences?.messengerIncomingCallSounds===false||soundEnabled===false||experience?.soundMode==='mute'||experience?.dndEnabled){stopCallTone();return false;}
+ if(state.settings?.preferences?.messengerIncomingCallSounds===false||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
  stopCallTone();
  if(experience?.soundMode==='vibrate'){
    if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
