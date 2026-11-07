@@ -186,3 +186,35 @@
 .profile-header-card.profile-layout-creator ~ #profile-tab-panel .profile-intro-card{border-color:color-mix(in srgb,var(--blue) 32%,var(--line))}
 .profile-header-card.profile-layout-creator ~ #profile-tab-panel .profile-overview-identity:first-child{box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 9%,transparent)}
 @media(max-width:900px){.profile-header-card.profile-layout-standard ~ #profile-tab-panel .profile-body--established{grid-template-columns:minmax(0,1fr)!important}}
+
+
+/* Visitor profile actions: keep every relationship and safety action in one horizontal row. */
+.profile-header-card--viewer .profile-actions{
+  grid-column:1 / -1!important;
+  grid-row:2!important;
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  gap:clamp(2px,.9vw,6px)!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  overflow:visible!important;
+}
+.profile-header-card--viewer .profile-actions .profile-edit{
+  display:inline-flex!important;
+  flex:1 1 0!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:40px!important;
+  padding:7px 3px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:clamp(7px,2.25vw,12px)!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-align:center!important;
+}
