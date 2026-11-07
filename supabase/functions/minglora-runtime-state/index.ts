@@ -198,9 +198,16 @@ Deno.serve(async (req: Request) => {
       const currentStatus = String(metadata.account_status || "active").toLowerCase();
       const suppliedPreviousStatus = String(input.previousAccountStatus || "").toLowerCase();
       const validPreviousStatuses = ["active", "suspended", "deactivated"];
+      const storedPreviousStatus = String(metadata.pre_ban_account_status || "").toLowerCase();
       const previousStatus = currentStatus === "banned"
-        ? String(metadata.pre_ban_account_status || (validPreviousStatuses.includes(suppliedPreviousStatus) ? suppliedPreviousStatus : "active"))
-        : (validPreviousStatuses.includes(suppliedPreviousStatus) ? suppliedPreviousStatus : currentStatus);
+        ? (validPreviousStatuses.includes(storedPreviousStatus)
+            ? storedPreviousStatus
+            : (validPreviousStatuses.includes(suppliedPreviousStatus) ? suppliedPreviousStatus : "active"))
+        : (currentStatus === "suspended" || currentStatus === "deactivated"
+            ? currentStatus
+            : (suppliedPreviousStatus === "suspended" || suppliedPreviousStatus === "deactivated"
+                ? suppliedPreviousStatus
+                : "active"));
       attributes = {
         ban_duration: duration,
         user_metadata: {
