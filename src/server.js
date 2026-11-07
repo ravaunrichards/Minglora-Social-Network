@@ -1377,7 +1377,7 @@ async function route(req, res) {
       for(const session of sessions){
         if(seenUsers.has(session.userId))continue;
         const account=db.users.find(item=>item.id===session.userId);
-        if(!account||['suspended','deactivated'].includes(account.status))continue;
+        if(!account||isAccountBlocked(account))continue;
         seenUsers.add(account.id);
         accounts.push({sessionId:session.id,user:safeUser(account,account.id),active:session.id===activeSession.id,lastSeenAt:session.lastSeenAt||session.createdAt});
       }
@@ -1635,6 +1635,7 @@ async function route(req, res) {
         if(!verified?.access_token||tokenAal(verified.access_token)!=='aal2')return json(res,502,{error:'Supabase did not return a verified multi-factor session. Try the authenticator code again.'});
         const account=db.users.find(item=>item.id===pending.userId);
         if(!account)return json(res,401,{error:'Account not found.'});
+        if(isAccountBlocked(account))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
         db.pendingAuth=db.pendingAuth.filter(item=>item.id!==pending.id);
         if(account.status==='deactivated'){account.status='active';await supabaseUpdateUserMetadata(verified.access_token,{account_status:'active'});}
         const sessionCookie=await createAppSession(account,verified,req);
@@ -1983,11 +1984,11 @@ async function route(req, res) {
             }catch{}
           }
         }
+        const target=db.users.find(item=>item.id===targetId);
         const result=await requestSupabaseState('admin_user_set_ban',{
           actorUserId:user.id,userId:targetId,operation,duration:operation==='ban'?duration:'none',
           previousAccountStatus:target?.status||'active',reason,targetJwt
         });
-        const target=db.users.find(item=>item.id===targetId);
         if(target){
           if(operation==='ban'){
             target.status='banned';
