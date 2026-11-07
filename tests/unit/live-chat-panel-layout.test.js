@@ -59,7 +59,7 @@ test('LIVE chat auto-scrolls only while the viewer is already near the newest me
 test('The room shell and guest grid fit the viewport while chat scrolls only inside its own panel', () => {
   assert.match(compact, /body:has\(#live-player-shell\)\{[\s\S]*height:100dvh!important[\s\S]*overflow:hidden!important/);
   assert.match(compact, /body:has\(#live-player-shell\) \.live-player-layout\{[\s\S]*grid-template-columns:minmax\(0,1fr\) minmax\(250px,310px\)/);
-  assert.match(compact, /body:has\(#live-player-shell\) #live-guest-layout\.live-guest-layout\{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\))/);
+  assert.match(compact, /body:has\(#live-player-shell\) #live-guest-layout\.live-guest-layout\{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(compact, /body:has\(#live-player-shell\) \.live-chat-overlay \.live-chat-list\{[\s\S]*overflow-y:auto!important/);
   assert.match(compact, /body:has\(#live-player-shell\) \.live-player-controls\.live-icon-controls\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
   assert.match(compact, /@media\(max-width:760px\)[\s\S]*grid-template-rows:minmax\(0,1fr\) clamp\(135px,25dvh,205px\)/);
