@@ -5431,10 +5431,44 @@ function renderProfile(data){
       button.removeAttribute('aria-busy');
     }
   });
-  $('#profile-message')?.addEventListener('click',()=>openMessageWindow(u));
+  $('#profile-message')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    if(button.disabled)return;
+    button.disabled=true;button.setAttribute('aria-busy','true');
+    try{
+      await openMessageWindow(u);
+      requestAnimationFrame(()=>{
+        const composer=document.querySelector('#message-window-dock [data-message-window="'+CSS.escape(u.id)+'"] [data-message-form] input[name="text"]');
+        composer?.focus({preventScroll:true});
+      });
+    }finally{
+      button.disabled=false;button.removeAttribute('aria-busy');
+    }
+  });
   document.querySelectorAll('[data-profile-call]').forEach(button=>button.addEventListener('click',()=>startMingloraCall(u,button.dataset.profileCall)));
   $('#profile-report')?.addEventListener('click',()=>openReportComposer('user',u.id));
-  $('#profile-block')?.addEventListener('click',async()=>{if(!window.confirm('Block '+u.name+'? You will no longer see each other’s profile, posts or messages.'))return;try{await api('/users/'+encodeURIComponent(u.id)+'/block',{method:'POST',body:'{}'});toast('Member blocked.');state.profile=null;state.view='feed';await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar();}catch(error){toast(error.message);}});
+  $('#profile-block')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    if(button.disabled||!window.confirm('Block '+u.name+'? You will no longer see each other’s profile, posts or messages.'))return;
+    button.disabled=true;button.setAttribute('aria-busy','true');
+    try{
+      const result=await api('/users/'+encodeURIComponent(u.id)+'/block',{method:'POST',body:'{}'});
+      if(result.blocked!==true)throw new Error('Minglora could not confirm that this member was blocked.');
+      state.messageWindows=state.messageWindows.filter(win=>{
+        if(win.user.id!==u.id)return true;
+        cancelMessageVoiceRecording(u.id);
+        return false;
+      });
+      state.conversations=(await api('/messages')).conversations||[];
+      renderMessageWindows();
+      paintMessengerBadge(state.conversations);
+      if(state.messengerPanelOpen)renderMessengerPanelList();
+      toast('Member blocked. Their chat has been closed.');
+      state.profile=null;state.view='feed';
+      await loadPeople();await loadFeed('all');await renderFeed();await renderSidebar();
+    }catch(error){toast(error.message);}
+    finally{button.disabled=false;button.removeAttribute('aria-busy');}
+  });
   document.querySelectorAll('[data-open-connections]').forEach(button=>button.addEventListener('click',()=>renderConnections(u.id,button.dataset.openConnections)));
   document.querySelectorAll('[data-view-image]').forEach(image=>image.addEventListener('click',()=>{const url=image.dataset.viewImage;if(url)openImageViewer(url,image.dataset.imageLabel||'Profile image');}));
   const profileSubscribeButton=$('#profile-subscribe');
