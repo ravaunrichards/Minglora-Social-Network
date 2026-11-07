@@ -182,10 +182,10 @@
     status.textContent = state.refreshing
       ? "Refreshing live scores…"
       : state.refreshError
-        ? "Refresh failed. Tap Refresh to try again."
+        ? "Refresh failed. You can try again when ready."
         : state.lastUpdatedAt
           ? "Last updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
-          : "Tap Refresh whenever you want the latest scores.";
+          : "Refresh whenever you want the latest scores.";
     const button = $("#league-refresh-button");
     if (button) {
       button.disabled = state.refreshing;
