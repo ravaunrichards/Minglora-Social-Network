@@ -8205,15 +8205,31 @@ async function startIncomingRingtone(call=null){
  if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
  const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
 }
-function closeIncomingCallOverlay(){if(incomingCallStatusTimer){clearInterval(incomingCallStatusTimer);incomingCallStatusTimer=null;}if(incomingCallOverlay){incomingCallOverlay.remove();incomingCallOverlay=null;}stopCallTone();}
-function closeOutgoingCallOverlay(){if(outgoingCallOverlay){outgoingCallOverlay.remove();outgoingCallOverlay=null;}stopCallTone();}
+function mountMingloraCallOverlay(overlay){
+ document.body.append(overlay);
+ try{
+  if(typeof overlay.showModal==='function'&&!overlay.open)overlay.showModal();
+  else overlay.setAttribute('open','');
+ }catch{
+  overlay.setAttribute('open','');
+ }
+ overlay.dataset.visible='true';
+ return overlay;
+}
+function dismissMingloraCallOverlay(overlay){
+ if(!overlay)return;
+ try{if(overlay.open&&typeof overlay.close==='function')overlay.close();}catch{}
+ overlay.remove();
+}
+function closeIncomingCallOverlay(){if(incomingCallStatusTimer){clearInterval(incomingCallStatusTimer);incomingCallStatusTimer=null;}if(incomingCallOverlay){dismissMingloraCallOverlay(incomingCallOverlay);incomingCallOverlay=null;}stopCallTone();}
+function closeOutgoingCallOverlay(){if(outgoingCallOverlay){dismissMingloraCallOverlay(outgoingCallOverlay);outgoingCallOverlay=null;}stopCallTone();}
 async function showIncomingCallOverlay(call){
  if(!call?.id||activeCallRoom||incomingCallOverlay?.dataset.callId===call.id)return;
  if(incomingCallOverlay)closeIncomingCallOverlay();
- const caller=call.caller||{},label=call.kind==='audio'?'Voice call':'Video call',overlay=document.createElement('div');
+ const caller=call.caller||{},label=call.kind==='audio'?'Voice call':'Video call',overlay=document.createElement('dialog');
  overlay.className='call-overlay call-ringing-overlay';overlay.dataset.callId=call.id;overlay.dataset.callerId=String(caller.id||'');overlay.dataset.callerName=String(caller.name||'');overlay.dataset.callerAvatar=String(avatar(caller)||'');overlay.dataset.callerUsername=String(caller.username||'');
  overlay.innerHTML='<section class="call-ringing-card" role="dialog" aria-modal="true" aria-label="Incoming '+label.toLowerCase()+'"><div class="call-ringing-glow"></div><div class="call-ringing-avatar-wrap"><img class="call-ringing-avatar" src="'+esc(avatar(caller))+'" alt=""><span class="call-ringing-pulse"></span></div><span class="call-ringing-eyebrow">INCOMING MINGLORA CALL</span><h2>'+esc(caller.name||'Minglora member')+'</h2><p class="call-ringing-kind">'+label+'</p><p class="call-ringing-status">Your phone is ringing</p><div class="call-ringing-actions"><button type="button" class="call-answer-button" id="call-answer-incoming">Answer</button><button type="button" class="call-decline-button" id="call-decline-incoming">Decline</button></div><button type="button" class="call-enable-sound hidden" id="call-enable-ringtone">Tap to enable ringtone</button></section>';
- document.body.append(overlay);incomingCallOverlay=overlay;
+ mountMingloraCallOverlay(overlay);incomingCallOverlay=overlay;
  overlay.querySelector('#call-answer-incoming').onclick=async()=>{overlay.querySelector('#call-answer-incoming').disabled=true;await answerMingloraCall(call.id);};
  overlay.querySelector('#call-decline-incoming').onclick=async()=>{overlay.querySelector('#call-decline-incoming').disabled=true;await declineMingloraCall(call.id);};
  overlay.querySelector('#call-enable-ringtone').onclick=async()=>{primeCallAudio();const ok=await startIncomingRingtone(call);if(ok)overlay.querySelector('#call-enable-ringtone').classList.add('hidden');};
@@ -8257,10 +8273,10 @@ async function pollIncomingCalls(){
 function startIncomingCallPolling(){if(incomingCallPollingTimer)clearInterval(incomingCallPollingTimer);incomingCallPollingTimer=null;if(!state.user)return;void pollIncomingCalls();incomingCallPollingTimer=setInterval(pollIncomingCalls,1800);}
 function showOutgoingCallOverlay(member,call){
  closeIncomingCallOverlay();
- if(outgoingCallOverlay){outgoingCallOverlay.remove();outgoingCallOverlay=null;}
- const overlay=document.createElement('div');overlay.className='call-overlay call-ringing-overlay call-outgoing-overlay';
+ if(outgoingCallOverlay){dismissMingloraCallOverlay(outgoingCallOverlay);outgoingCallOverlay=null;}
+ const overlay=document.createElement('dialog');overlay.className='call-overlay call-ringing-overlay call-outgoing-overlay';
  overlay.innerHTML='<section class="call-ringing-card" role="dialog" aria-modal="true" aria-label="Calling '+esc(member.name||'member')+'"><div class="call-ringing-glow"></div><div class="call-ringing-avatar-wrap"><img class="call-ringing-avatar" src="'+esc(avatar(member))+'" alt=""><span class="call-ringing-pulse"></span></div><span class="call-ringing-eyebrow">MINGLORA CALL</span><h2>'+esc(member.name||'Minglora member')+'</h2><p class="call-ringing-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</p><p class="call-ringing-status">'+(call.id?'Ringing…':'Setting up your secure call…')+'</p><button type="button" class="call-decline-button" id="call-cancel-outgoing">'+(call.id?'Cancel call':'Cancel')+'</button></section>';
- document.body.append(overlay);outgoingCallOverlay=overlay;
+ mountMingloraCallOverlay(overlay);outgoingCallOverlay=overlay;
  overlay.querySelector('#call-cancel-outgoing').onclick=async()=>{
   const button=overlay.querySelector('#call-cancel-outgoing');button.disabled=true;
   if(outgoingCallPending)outgoingCallPending.cancelled=true;
@@ -8387,11 +8403,11 @@ async function openMingloraCall(call,liveKit,peer=null){
   if(activeCallRoom||activeCallOverlay){toast('A call is already open.');return;}
   // Mount the phone screen before testing media support. Neither participant
   // should lose the call UI because a CDN, permission or network request fails.
-  const overlay=document.createElement('div');
+  const overlay=document.createElement('dialog');
   overlay.className='call-overlay';
   overlay.dataset.callId=String(call.id||'');
   overlay.innerHTML='<section class="call-panel" role="dialog" aria-modal="true" aria-label="Minglora call"><header class="call-panel-header"><div class="call-panel-heading"><strong>'+esc(call.kind==='audio'?'Voice call':'Video call')+'</strong><span id="call-connection-status">Connecting securely…</span></div><div class="call-panel-live-status"><span id="call-participant-count">1 in call</span><span class="call-duration" id="call-call-duration">00:00</span><button type="button" id="call-audio-unlock" class="call-audio-unlock" hidden>Enable audio</button></div></header><div class="call-video-stage" id="call-video-stage"><div class="call-peer-card" id="call-peer-card"><div class="call-peer-avatar-wrap"><img class="call-peer-avatar" src="'+esc(avatar(peer||{}))+'" alt=""></div><strong class="call-peer-name">'+esc(peer?.name||'Minglora member')+'</strong><span class="call-peer-handle">'+(peer?.username?'@'+esc(peer.username):'Secure Minglora call')+'</span><span class="call-peer-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</span><div class="call-audio-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="call-peer-status" id="call-peer-status">Preparing your call…</span></div></div><div id="call-audio-root" class="call-audio-root"></div><footer class="call-controls"><button type="button" class="secondary" id="call-microphone" aria-pressed="false" disabled>Enable microphone</button><button type="button" class="secondary" id="call-camera" aria-pressed="'+(call.kind==='video'?'true':'false')+'" disabled>'+(call.kind==='video'?'Turn camera off':'Turn video on')+'</button><button type="button" class="secondary" id="call-add-people">Add people</button><button type="button" class="secondary" id="call-retry" hidden>Reconnect</button><button type="button" class="danger" id="call-leave">'+(call.createdBy===state.user.id?'End call for everyone':'Leave call')+'</button></footer></section>';
-  document.body.append(overlay);
+  mountMingloraCallOverlay(overlay);
   activeCallOverlay=overlay;
   closeIncomingCallOverlay();
   closeOutgoingCallOverlay();
@@ -8415,7 +8431,7 @@ async function openMingloraCall(call,liveKit,peer=null){
   const closeOverlay=()=>{
     if(callDurationTimer){clearInterval(callDurationTimer);callDurationTimer=null;}
     if(activeCallOverlay===overlay)activeCallOverlay=null;
-    overlay.remove();
+    dismissMingloraCallOverlay(overlay);
   };
   const showReconnect=message=>{
     if(status)status.textContent=message||'Call connection interrupted.';
