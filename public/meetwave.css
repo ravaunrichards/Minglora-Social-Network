@@ -1098,3 +1098,60 @@
 @media(max-height:520px){
   .mw-meeting .mw-screen-stage.live-full-screen-layout{max-height:78dvh!important}
 }
+
+/* MeetWave panel tabs: Layouts is a first-class tab; Settings remains gear + tab. */
+.mw-meeting .mw-support-column>.mw-layout-panel{
+  position:static!important;inset:auto!important;transform:none!important;
+  display:flex;flex:1 1 auto;flex-direction:column;width:100%!important;max-width:none!important;
+  min-width:0!important;min-height:0!important;max-height:none!important;height:auto!important;
+  margin:0!important;padding:9px!important;overflow:auto!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;background:#111722!important
+}
+.mw-meeting .mw-support-column>.mw-layout-panel[hidden]{display:none!important}
+.mw-meeting .mw-support-column>.mw-layout-panel>header{
+  position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
+  flex:0 0 auto;min-height:36px;margin:0 0 8px;padding:0 0 7px;
+  border-bottom:1px solid rgba(255,255,255,.1);background:#111722;color:#f5f7fb;font-size:11px
+}
+.mw-meeting .mw-support-column>.mw-layout-panel .mw-layout-options{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;min-width:0
+}
+.mw-meeting .mw-support-column>.mw-layout-panel .mw-layout-options button{
+  display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;
+  padding:7px 5px;border:1px solid rgba(255,255,255,.14);border-radius:10px;
+  background:#202b3b;color:#f5f7fb;font-size:10px;font-weight:800;text-align:center;
+  overflow-wrap:anywhere
+}
+.mw-meeting .mw-support-column>.mw-layout-panel .mw-layout-options button.is-selected{
+  border-color:#70ddc9;background:linear-gradient(145deg,#234c4a,#20334a);
+  box-shadow:inset 0 0 0 1px rgba(112,221,201,.22)
+}
+/* Consistent participant tile rhythm: predictable spacing and minimum size in every preset. */
+.mw-meeting #mw-grid.live-guest-layout{
+  gap:12px!important;padding:14px!important;align-content:stretch!important
+}
+.mw-meeting #mw-grid .live-guest-seat{
+  min-width:0!important;min-height:clamp(88px,11vh,132px)!important;
+  margin:0!important;border-radius:14px!important;box-sizing:border-box!important
+}
+.mw-meeting #mw-grid .mw-empty-seat{
+  min-width:0!important;min-height:clamp(88px,11vh,132px)!important
+}
+.mw-meeting .mw-screen-stage:not(.has-screen-share) #mw-grid .live-guest-seat video{
+  width:100%!important;height:100%!important;object-fit:cover!important
+}
+.mw-meeting #mw-grid .live-guest-seat .live-guest-seat-meta{
+  right:7px!important;bottom:7px!important;left:7px!important;padding:6px 8px!important
+}
+@media(max-width:780px){
+  .mw-meeting .mw-support-column>.mw-layout-panel{max-height:290px!important}
+  .mw-meeting .mw-support-column>.mw-layout-panel .mw-layout-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .mw-meeting #mw-grid.live-guest-layout{gap:9px!important;padding:9px!important}
+  .mw-meeting #mw-grid .live-guest-seat,.mw-meeting #mw-grid .mw-empty-seat{min-height:clamp(68px,10vh,104px)!important}
+}
+@media(max-width:420px){
+  .mw-meeting .live-fullscreen-side-tabs button{font-size:9px!important;padding-inline:3px!important}
+  .mw-meeting .mw-support-column>.mw-layout-panel .mw-layout-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mw-meeting #mw-grid.live-guest-layout{gap:7px!important;padding:7px!important}
+  .mw-meeting #mw-grid .live-guest-seat,.mw-meeting #mw-grid .mw-empty-seat{min-height:64px!important}
+}
