@@ -432,7 +432,7 @@ window.addEventListener('minglora:open-creator-section',async event=>{
   await renderCreator();
   await renderCreatorSection(section);
 });
-function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));}
+function setContent(html){$('#main-content').innerHTML=html;bindSoundtrackPlayback($('#main-content'));bindProfileThoughtControls($('#main-content'));bindProfileLinks($('#main-content'));}
 const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge-wallet-3d-2';
 function messenger3dIcon(id,className='messenger-3d-icon'){
   return '<svg class="'+className+'" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="'+MESSENGER_ICON_SPRITE+'#'+id+'"></use></svg>';
