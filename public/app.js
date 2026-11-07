@@ -4829,7 +4829,71 @@ async function renderGroup(groupId){
   document.querySelectorAll('[data-delete-group-post]').forEach(btn=>btn.addEventListener('click',async()=>{if(!window.confirm('Delete this group post?'))return;try{await api('/groups/'+groupId+'/posts/'+btn.dataset.deleteGroupPost,{method:'DELETE',body:'{}'});toast('Group post deleted.');await renderGroup(groupId)}catch(err){toast(err.message)}}));
 }
 function openGroupModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<section class="modal"><div class="modal-head"><h2>Create a group</h2><button class="modal-close">×</button></div><form class="modal-body" id="group-form"><div class="field"><label>Group name</label><input name="name" minlength="3" maxlength="80" required placeholder="e.g. Local book club"></div><div class="field"><label>Description</label><textarea name="description" maxlength="500" placeholder="What brings this community together?"></textarea></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary">Create group</button></div></form></section>`;document.body.append(modal);modal.querySelectorAll('.modal-close,.modal-cancel').forEach(b=>b.onclick=()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});modal.querySelector('form').onsubmit=async e=>{e.preventDefault();try{await api('/groups',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});modal.remove();toast('Group created.');renderGroups()}catch(err){toast(err.message)}};}
-async function openProfile(id,openEditor=false){stopProfilePresence();if(state.profileTargetId!==String(id))state.profileTab='posts';state.profileTargetId=String(id);persistCurrentView();try{const data=await api('/users/'+encodeURIComponent(id));const extras=await Promise.allSettled([api('/users/'+encodeURIComponent(id)+'/profile-status'),api('/users/'+encodeURIComponent(id)+'/check-ins'),api('/users/'+encodeURIComponent(id)+'/events'),api('/users/'+encodeURIComponent(id)+'/highlights'),api('/subscriptions/creator/'+encodeURIComponent(id))]);data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:null;data.user.profileThought=data.profileStatus;if(data.user.id===state.user?.id)state.user.profileThought=data.profileStatus;data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:[];data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:[];data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:[];data.subscription=extras[4].status==='fulfilled'?extras[4].value:null;state.profile=data;renderProfile(data);if(openEditor)openEditProfile(data.user)}catch(e){toast(e.message)}}
+let profileLoadGeneration=0;
+async function openProfile(id,openEditor=false){
+  const profileId=String(id||'').trim();
+  if(!profileId)return;
+  const generation=++profileLoadGeneration;
+  stopProfilePresence();
+  if(state.profileTargetId!==profileId)state.profileTab='posts';
+  state.profileTargetId=profileId;
+  activateSilent('profile');
+  persistCurrentView();
+  const cachedProfile=state.profile?.user?.id===profileId?state.profile:null;
+  if(!cachedProfile){
+    setContent('<section class="card empty-state profile-loading-state" role="status" aria-live="polite"><h3>Loading profile…</h3><p>Loading profile information and posts.</p></section>');
+  }
+  try{
+    const data=await api('/users/'+encodeURIComponent(profileId));
+    if(generation!==profileLoadGeneration||state.profileTargetId!==profileId||state.view!=='profile')return;
+    data.profileStatus=data.profileStatus||data.user?.profileThought||cachedProfile?.profileStatus||null;
+    data.checkIns=Array.isArray(data.checkIns)?data.checkIns:(cachedProfile?.checkIns||[]);
+    data.events=Array.isArray(data.events)?data.events:(cachedProfile?.events||[]);
+    data.highlights=Array.isArray(data.highlights)?data.highlights:(cachedProfile?.highlights||[]);
+    data.subscription=data.subscription||cachedProfile?.subscription||null;
+    data.subscribersCount=Number(data.subscribersCount||cachedProfile?.subscribersCount||0);
+    state.profile=data;
+    renderProfile(data);
+    if(openEditor)openEditProfile(data.user);
+
+    // These panels are supplemental. Never hold the main profile behind them.
+    void Promise.allSettled([
+      api('/users/'+encodeURIComponent(profileId)+'/profile-status'),
+      api('/users/'+encodeURIComponent(profileId)+'/check-ins'),
+      api('/users/'+encodeURIComponent(profileId)+'/events'),
+      api('/users/'+encodeURIComponent(profileId)+'/highlights'),
+      api('/subscriptions/creator/'+encodeURIComponent(profileId))
+    ]).then(extras=>{
+      if(generation!==profileLoadGeneration||state.profileTargetId!==profileId||state.view!=='profile'||state.profile!==data)return;
+      const scroll={x:window.scrollX||0,y:window.scrollY||0,main:document.querySelector('#main-content')?.scrollTop||0};
+      data.profileStatus=extras[0].status==='fulfilled'?extras[0].value.status||null:(data.profileStatus||data.user?.profileThought||null);
+      if(data.user)data.user.profileThought=data.profileStatus;
+      if(data.user?.id===state.user?.id)state.user.profileThought=data.profileStatus;
+      data.checkIns=extras[1].status==='fulfilled'?extras[1].value.checkIns||[]:data.checkIns||[];
+      data.events=extras[2].status==='fulfilled'?extras[2].value.events||[]:data.events||[];
+      data.highlights=extras[3].status==='fulfilled'?extras[3].value.highlights||[]:data.highlights||[];
+      data.subscription=extras[4].status==='fulfilled'?extras[4].value:(data.subscription||null);
+      if(extras[4].status==='fulfilled'&&Number.isFinite(Number(data.subscription?.activeSubscribers))){
+        data.subscribersCount=Math.max(0,Number(data.subscription.activeSubscribers));
+      }
+      state.profile=data;
+      renderProfile(data);
+      window.scrollTo(scroll.x,scroll.y);
+      const main=document.querySelector('#main-content');
+      if(main)main.scrollTop=scroll.main;
+    }).catch(error=>console.warn('Minglora profile supplements could not finish loading:',error?.message||error));
+  }catch(error){
+    if(generation!==profileLoadGeneration||state.profileTargetId!==profileId||state.view!=='profile')return;
+    if(cachedProfile){
+      state.profile=cachedProfile;
+      renderProfile(cachedProfile);
+      toast('Profile could not be refreshed: '+error.message);
+      return;
+    }
+    setContent('<section class="card empty-state"><h3>Profile could not load</h3><p>'+esc(error.message||'Please try again.')+'</p><button class="primary" id="retry-profile-load" type="button">Try again</button></section>');
+    $('#retry-profile-load')?.addEventListener('click',()=>void openProfile(profileId,openEditor));
+  }
+}
 window.addEventListener('minglora:open-profile-editor',()=>{if(state.user)void openProfile(state.user.id,true);});
 window.addEventListener('minglora:open-profile',event=>{const userId=event.detail?.userId;if(state.user&&userId)void openProfile(String(userId));});
 
