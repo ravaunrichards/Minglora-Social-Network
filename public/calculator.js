@@ -190,6 +190,9 @@
 
   function formatResult(value) {
     if (Object.is(value, -0)) value = 0;
+    if (value !== 0 && (Math.abs(value) < 1e-8 || Math.abs(value) >= 1e12)) {
+      return Number(value.toPrecision(10)).toExponential(6);
+    }
     const rounded = Number(value.toPrecision(12));
     return rounded.toLocaleString(undefined, { maximumFractionDigits: 10 });
   }
