@@ -3946,51 +3946,6 @@ async function renderCreatorSection(section){
   document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
   $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
   if(section==="subscriptions"){
-    try{
-      s.subscriptionData=await api("/subscriptions/creator/"+encodeURIComponent(state.user.id));
-      const membershipData=await api("/subscriptions/mine");
-      s.subscriptionData.mySubscriptions=membershipData;
-      s.subscriptionData.adminError=null;
-      if(["platform_owner","admin","moderator"].includes(state.user?.platformRole)){
-        try{s.subscriptionData.applications=(await api("/subscriptions/admin/applications")).applications||[];}
-        catch(error){s.subscriptionData.adminError=error.message;}
-        document.getElementById("subscription-bonus-review-form")?.addEventListener("submit",async event=>{
-      event.preventDefault();
-      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=document.getElementById("subscription-bonus-review-status"),values=new FormData(form);
-      const monthStart=String(values.get("monthStart")||"");
-      if(!/^\\d{4}-\\d{2}-01$/.test(monthStart)){toast("Choose the first day of the month being reviewed.");return;}
-      button.disabled=true;
-      try{
-        const result=await api("/subscriptions/admin/bonus-review",{method:"POST",body:JSON.stringify({
-          creatorId:values.get("creatorId"),monthStart,followerCount:Number(values.get("followerCount")),
-          qualifyingVideoViews:Number(values.get("qualifyingVideoViews")),subscriberOnlyVideoCount:Number(values.get("subscriberOnlyVideoCount")),
-          reviewerNote:values.get("reviewerNote")
-        })});
-        if(status)status.textContent=result.eligible?"Verified: creator share is 70% for qualifying payments in the next month.":"Not eligible: the creator remains on the 50% base share.";
-        toast(result.eligible?"Monthly 20-point creator bonus approved.":"Monthly bonus not approved; base share remains 50%.");
-        await renderCreatorSection("subscriptions");
-      }catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
-    });
-  }
-      s.subscriptionError=null;
-    }catch(error){s.subscriptionData=null;s.subscriptionError=error.message;}
-    content=creatorSubscriptionsMarkup();
-  }else if(section==="settings"){
-    try{content=await creatorSettingsMarkup();}
-    catch(error){content="<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>WORKSPACE & ACCOUNT</span><h2>Studio settings</h2></div></div>"+creatorEmpty("Settings unavailable",error.message||"Minglora could not load your account settings.","settings");}
-  }else{
-    content=creatorOverviewMarkup();
-    section="overview";
-  }
-  setContent(creatorStudioChrome(section,content));
-  syncCreatorStudioNavigationLayout();
-  window.scrollTo({top:0,behavior:"auto"});
-  document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
-  document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
-  document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
-  document.querySelectorAll("[data-creator-edit-profile]").forEach(button=>button.addEventListener("click",()=>openEditProfile(state.user)));
-  $("#creator-edit-profile-button")?.addEventListener("click",()=>openEditProfile(state.user));
-  if(section==="subscriptions"){
     const applyForm=document.getElementById("subscription-apply-form");
     applyForm?.addEventListener("submit",async event=>{
       event.preventDefault();const button=applyForm.querySelector("button[type='submit']"),status=document.getElementById("subscription-application-status");
@@ -4029,6 +3984,23 @@ async function renderCreatorSection(section){
         await renderCreatorSection("subscriptions");
       }catch(error){toast(error.message);button.disabled=false;}
     }));
+    document.getElementById("subscription-bonus-review-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,button=form.querySelector("button[type='submit']"),status=document.getElementById("subscription-bonus-review-status"),values=new FormData(form);
+      const monthStart=String(values.get("monthStart")||"");
+      if(!/^\\d{4}-\\d{2}-01$/.test(monthStart)){toast("Choose the first day of the month being reviewed.");return;}
+      button.disabled=true;
+      try{
+        const result=await api("/subscriptions/admin/bonus-review",{method:"POST",body:JSON.stringify({
+          creatorId:values.get("creatorId"),monthStart,followerCount:Number(values.get("followerCount")),
+          qualifyingVideoViews:Number(values.get("qualifyingVideoViews")),subscriberOnlyVideoCount:Number(values.get("subscriberOnlyVideoCount")),
+          reviewerNote:values.get("reviewerNote")
+        })});
+        if(status)status.textContent=result.eligible?"Verified: creator share is 70% for qualifying payments in the next month.":"Not eligible: the creator remains on the 50% base share.";
+        toast(result.eligible?"Monthly 20-point creator bonus approved.":"Monthly bonus not approved; base share remains 50%.");
+        await renderCreatorSection("subscriptions");
+      }catch(error){toast(error.message);if(status)status.textContent=error.message;button.disabled=false;}
+    });
   }
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
