@@ -63,8 +63,8 @@ test('the uploaded avatar and cover are cropped to the exact selected preview fr
 });
 
 test('the refreshed shell and service worker load the profile crop editor and styles',()=>{
-  const appAsset=html.match(/app\.js\\?v=[^"']+/)?.[0]||'';
-  const styleAsset=html.match(/styles\.css\\?v=[^"']+/)?.[0]||'';
+  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
+  const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||'';
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset&&worker.includes('/'+appAsset));
   assert.ok(styleAsset&&worker.includes('/'+styleAsset));
