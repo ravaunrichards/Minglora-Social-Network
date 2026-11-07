@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
+const compact = fs.readFileSync(path.join(root, 'public/live-room-compact.css'), 'utf8');
 const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
 test('LIVE has nine host-selectable screen layouts with a safe default', () => {
@@ -51,7 +52,7 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
   assert.match(app, /restoreLiveChatToStage/);
   assert.match(app, /data-live-tools-panel-target/);
   assert.match(styles, /\.live-viewer-roster/);
-  assert.match(styles, /\.live-chat-panel-body/);
+  assert.match(compact, /body:has\(#live-player-shell\) \.live-chat-overlay \.live-chat-list/);
   assert.match(styles, /\.live-tools-content \[data-live-tools-panel\]\[hidden\]/);
 });
 
