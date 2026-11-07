@@ -154,3 +154,9 @@
   cursor:not-allowed;
 }
 
+/* Match every profile action control to the Subscribe pill shape only. */
+.profile-header-card .profile-inline-media-edit,
+.profile-header-card .profile-actions .profile-edit,
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool{
+  border-radius:999px!important;
+}
