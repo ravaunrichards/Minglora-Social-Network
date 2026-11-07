@@ -1,0 +1,42 @@
+name: LIVE mutual gifting
+on:
+  push:
+    branches:
+      - main
+      - feature/live-mutual-gifting
+    paths:
+      - "src/server.js"
+      - "public/app.js"
+      - "public/styles.css"
+      - "supabase/functions/minglora-runtime-state/index.ts"
+      - "supabase/migrations/*live_multi_recipient_gifting.sql"
+      - "tests/unit/live-multi-recipient-gifting.test.js"
+      - ".github/workflows/live-mutual-gifting.yml"
+  pull_request:
+    paths:
+      - "src/server.js"
+      - "public/app.js"
+      - "public/styles.css"
+      - "supabase/functions/minglora-runtime-state/index.ts"
+      - "supabase/migrations/*live_multi_recipient_gifting.sql"
+      - "tests/unit/live-multi-recipient-gifting.test.js"
+      - ".github/workflows/live-mutual-gifting.yml"
+
+jobs:
+  live-mutual-gifting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Check JavaScript syntax
+        run: |
+          node --check public/app.js
+          node --check src/server.js
+          node --check tests/unit/live-multi-recipient-gifting.test.js
+      - name: Test mutual LIVE gifts
+        run: node --test tests/unit/live-multi-recipient-gifting.test.js
