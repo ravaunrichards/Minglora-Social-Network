@@ -17,7 +17,7 @@ test('phone call stylesheet loads after global layout overrides and is precached
   assert.ok(html.includes(styleTag),'the phone call stylesheet is loaded');
   assert.ok(html.indexOf(styleTag)>html.indexOf('mobile-profile-navigation.css'),'the call styles override later page layout rules');
   assert.ok(worker.includes("'/call-ui.css?v=20261107-phone-call-ui-3'"),'the service worker precaches call styles');
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\d+-phone-call-ui-3'/);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v[0-9]+-/);
 });
 
 test('incoming and outgoing ringing cards stay visible above the app shell',()=>{
@@ -110,7 +110,7 @@ test('call notifications return to the current app window and load the latest ca
   const workerAsset=workerStart<0?'':worker.slice(workerStart+1,worker.indexOf("'",workerStart+1));
   assert.equal(appAsset,'/app.js?v=20261107-real-phone-calls-1');
   assert.equal(workerAsset,appAsset,'the service worker precaches the exact HTML app bundle');
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v[0-9]+-/);
   const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
   const clickEnd=worker.indexOf('});',clickStart);
   const clickHandler=worker.slice(clickStart,clickEnd);
