@@ -39,11 +39,14 @@ test('The host layout selection is synchronized to viewers and guests via host-a
 });
 
 test('Host panels switch without removing the chat, guest tools, gifts or moderator tools', () => {
-  for (const panel of ['layouts', 'guests', 'viewers', 'chat', 'gifts', 'rewards', 'moderators', 'appearance']) {
+  for (const panel of ['layouts', 'guests', 'viewers', 'gifts', 'rewards', 'moderators', 'appearance', 'devices']) {
     assert.ok(app.includes("data-live-tools-panel='" + panel + "'"), 'missing ' + panel + ' panel');
   }
   assert.match(app, /function renderLiveViewerPanel\(/);
   assert.match(app, /room\.remoteParticipants/);
+  assert.match(app, /id='live-fullscreen-chat-slot'/);
+  assert.doesNotMatch(app, /data-live-tools-panel='chat'/, 'the only Chat panel is the persistent side panel');
+  assert.match(app, /data-live-tools-panel-target='devices'/);
   assert.match(app, /live-chat-panel-body/);
   assert.match(app, /restoreLiveChatToStage/);
   assert.match(app, /data-live-tools-panel-target/);
