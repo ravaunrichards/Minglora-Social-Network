@@ -179,18 +179,12 @@
   }
   function updateRefreshStatus() {
     const status = $("#league-refresh-status");
-    const button = $("[data-league-refresh]");
-    if (status) {
-      status.textContent = state.refreshError
-        ? "Refresh failed. Tap Refresh to retry."
-        : state.lastUpdatedAt
-          ? "Updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + " · Updates when you tap Refresh"
-          : "Tap Refresh when you want the latest scores";
-    }
-    if (button) {
-      button.disabled = state.refreshing;
-      button.textContent = state.refreshing ? "Refreshing…" : "↻ Refresh";
-    }
+    if (!status) return;
+    status.textContent = state.refreshError
+      ? "Live scores could not update. Minglora will retry automatically."
+      : state.lastUpdatedAt
+        ? "Live updates · Last updated " + state.lastUpdatedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+        : "Live scores update automatically";
   }
   function isLeagueViewActive() {
     return Boolean($("#main-content") && document.querySelector("[data-view='leagues'].active"));
@@ -311,7 +305,7 @@
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
-      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Tap Refresh to update scores</small><button type='button' class='league-action' data-league-refresh>↻ Refresh</button></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
+      "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p><small id='league-refresh-status' aria-live='polite'>Live scores update automatically</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
@@ -384,8 +378,6 @@
       const userId = button.dataset.leagueProfile;
       if (userId) window.dispatchEvent(new CustomEvent("minglora:open-profile", { detail: { userId } }));
     }));
-    const refreshButton = $("[data-league-refresh]");
-    if (refreshButton) refreshButton.addEventListener("click", () => { void refreshScores({force:true}); });
     updateRefreshStatus();
   }
   function onNavigateAway() {
@@ -398,7 +390,7 @@
     refreshController = null;
     state.refreshing = false;
   }
-  async function refreshScores({force = false} = {}) {
+  async function refreshScores() {
     const main = $("#main-content");
     if (!main || !isLeagueViewActive()) { onNavigateAway(); return; }
     if (document.visibilityState !== "visible") return;
@@ -447,7 +439,7 @@
         const incoming = incomingRoot.querySelector("#" + id);
         if (!current || !incoming) continue;
         // Never remove a control while the user is interacting with its section.
-        if (focused && current.contains(focused) && !focused.matches("[data-league-refresh]")) continue;
+        if (focused && current.contains(focused)) continue;
         current.replaceWith(incoming);
       }
       main.scrollTop = scrollTop;
@@ -455,8 +447,7 @@
       bindActions();
     } catch (error) {
       if (token === refreshToken && error?.name !== "AbortError") {
-        state.refreshError = error.message || "The League could not refresh.";
-        if (force) toast(state.refreshError);
+        state.refreshError = error.message || "Minglora could not update League data.";
       }
     } finally {
       if (token === refreshToken) {
@@ -487,8 +478,8 @@
     main.innerHTML = renderMarkup(state.overview,state.sessions);
     bindActions();
     updateRefreshStatus();
-    // No background refresh: preserve the current screen until the member taps Refresh.
+    refreshTimer = window.setInterval(() => { void refreshScores(); }, 15000);
   }
-  // Reconnection and tab visibility do not replace or refresh the League screen automatically.
+  // The League refreshes its live data automatically while its screen is open.
   window.MingloraLeagues = { render, onNavigateAway };
 })();
