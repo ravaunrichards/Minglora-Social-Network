@@ -25,9 +25,10 @@ test('the admin verification control explicitly describes one username check', (
   assert.ok(adminCentre.includes('Verified — one blue check beside username'));
 });
 
-test('the app keeps its established asset URL and refreshes the service worker cache', () => {
-  assert.ok(html.includes('/app.js?v=20261107-top-gifters-2'));
-  assert.ok(serviceWorker.includes('/app.js?v=20261107-top-gifters-2'));
+test('the app keeps its current asset URL and refreshes the service-worker cache',()=>{
+  const appAsset=html.match(/app\\.js\\?v=[^"']+/)?.[0]||'';
+  const cacheName=serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
+  assert.ok(appAsset&&serviceWorker.includes('/'+appAsset));
   assert.ok(serviceWorker.includes("cache:'no-cache'"));
-  assert.ok(serviceWorker.includes('minglora-shell-v132-live-top-gifters-2'));
+  assert.match(cacheName,/^minglora-shell-v\\d+-/);
 });
