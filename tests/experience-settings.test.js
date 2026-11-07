@@ -7,6 +7,7 @@ test('experience settings start with safe, explicit defaults', () => {
   assert.equal(result.valid, true);
   assert.equal(result.settings.style, 'minglora');
   assert.equal(result.settings.screenTimeoutSeconds, 60);
+  assert.equal(result.settings.dndAllowedCalls, 'none');
   assert.equal(result.settings.screenSaverEnabled, false);
 });
 
@@ -36,6 +37,7 @@ test('experience settings reject unsupported keys and invalid device values', ()
   assert.equal(validateExperienceSettingsPatch({}, { screenSaverWaitValue: 1441, screenSaverWaitUnit: 'minutes' }).valid, false);
   assert.equal(validateExperienceSettingsPatch({}, { screenSaverWaitValue: 24, screenSaverWaitUnit: 'hours' }).valid, true);
   assert.equal(validateExperienceSettingsPatch({}, { customAccentColor: 'red' }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { dndAllowedCalls: 'favorites' }).valid, false);
   assert.equal(validateExperienceSettingsPatch({}, { dndStart: '25:99' }).valid, false);
 });
 
