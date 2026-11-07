@@ -7700,6 +7700,7 @@ function bindProfileLinks(root=document){
     if(!nativeControl){
       element.setAttribute('role','link');
       element.setAttribute('tabindex','0');
+      element.style.cursor='pointer';
     }
     const open=()=>{
       const profileId=String(element.dataset.profile||'').trim();
