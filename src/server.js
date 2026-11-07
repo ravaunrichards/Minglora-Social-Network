@@ -2775,6 +2775,70 @@ async function route(req, res) {
         await saveStore();
         return json(res, 201, { request, autoAccepted });
       }
+      const liveCohostInvitationMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/cohost-invitations$/);
+      if (method === 'POST' && liveCohostInvitationMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveCohostInvitationMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can invite a co-host.' });
+        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowCoHost === false) {
+          return json(res, 403, { error: 'Enable the guest stage and Allow co-host before sending invitations.' });
+        }
+        const username = normalizeUsername(input.username || '');
+        if (!username) return json(res, 400, { error: 'Enter the co-host member username.' });
+        const target = (db.users || []).find(member => normalizeUsername(member.username || '') === username);
+        if (!target || target.id === user.id || blockedBetween(user.id, target.id)) {
+          return json(res, 404, { error: 'Choose an available Minglora member.' });
+        }
+        const targetIsHosting = (db.liveSessions || []).some(item => item.status === 'live' && item.hostId === target.id);
+        if (targetIsHosting) return json(res, 409, { error: 'This creator is hosting another LIVE. They must leave that broadcast before accepting a Co-host invitation.' });
+        const existing = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === target.id);
+        if (existing && ['requested', 'accepted', 'connected', 'invited'].includes(existing.status)) {
+          return json(res, 409, { error: 'This member already has an active guest request or invitation.' });
+        }
+        const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+          item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+        ).length;
+        if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+        const invitedAt = now();
+        const invitation = {
+          id: uid(), sessionId: session.id, userId: target.id, role: 'guest', status: 'invited',
+          requestedAt: invitedAt, invitedAt, invitedBy: user.id, acceptedAt: null, connectedAt: null, leftAt: null
+        };
+        db.liveSpeakerRequests = db.liveSpeakerRequests || [];
+        if (existing) Object.assign(existing, invitation); else db.liveSpeakerRequests.unshift(invitation);
+        notify(target.id, user.id, 'live', user.name + ' invited you to co-host their LIVE: ' + session.title, { liveSessionId: session.id });
+        await saveStore();
+        return json(res, 201, { invitation: { ...invitation, user: safeUser(target, user.id) } });
+      }
+      const liveCohostAcceptMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request\/accept$/);
+      if (method === 'POST' && liveCohostAcceptMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveCohostAcceptMatch[1] && item.status === 'live');
+        if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE invitation is not available.' });
+        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowGuestRequests === false || session.liveSettings?.allowCoHost === false) {
+          return json(res, 403, { error: 'The host has disabled Co-host invitations for this LIVE.' });
+        }
+        const request = (db.liveSpeakerRequests || []).find(item =>
+          item.sessionId === session.id && item.userId === user.id && item.status === 'invited'
+        );
+        if (!request) return json(res, 404, { error: 'There is no pending Co-host invitation for you.' });
+        const targetIsHosting = (db.liveSessions || []).some(item => item.status === 'live' && item.hostId === user.id);
+        if (targetIsHosting) return json(res, 409, { error: 'Leave your own LIVE broadcast before accepting this Co-host invitation.' });
+        let participants;
+        try { participants = await listLiveKitParticipants(session.roomName); }
+        catch { return json(res, 503, { error: 'Minglora could not verify that you are connected to this LIVE room.' }); }
+        if (!participants.some(participant => participant.identity === user.id)) {
+          return json(res, 409, { error: 'Join this LIVE room first, then accept the Co-host invitation.' });
+        }
+        const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+          item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+        ).length;
+        if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+        request.status = 'accepted';
+        request.acceptedAt = now();
+        request.reviewedAt = now();
+        await saveStore();
+        notify(session.hostId, user.id, 'live', user.name + ' accepted your Co-host invitation.');
+        return json(res, 200, { request });
+      }
       const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerStatusMatch[1] && item.status === 'live');
@@ -2789,7 +2853,7 @@ async function route(req, res) {
         const speakerId = liveSpeakerDecisionMatch[2], decision = String(input.decision || '');
         if (speakerId === user.id || !['accept', 'reject', 'remove'].includes(decision)) return json(res, 400, { error: 'Choose a valid speaker stage action.' });
         const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === speakerId &&
-          (decision === 'remove' ? ['accepted', 'connected'].includes(item.status) : item.status === 'requested'));
+          (decision === 'remove' ? ['accepted', 'connected'].includes(item.status) : decision === 'reject' ? ['requested', 'invited'].includes(item.status) : item.status === 'requested'));
         if (!request) return json(res, 404, { error: decision === 'remove' ? 'This member is not an active approved speaker.' : 'This speaker request is no longer pending.' });
         if (decision === 'remove') {
           let removal;
