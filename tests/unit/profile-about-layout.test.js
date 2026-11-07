@@ -13,7 +13,7 @@ const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
 test('profile identity stays compact and About information is shown in its own section cards',()=>{
   const renderAt=app.indexOf('function renderProfile(data)');
   const headerStart=app.indexOf('<div class="profile-info-main">',renderAt);
-  const headerEnd=app.indexOf("</div>'+relationshipActions",headerStart);
+  const headerEnd=app.indexOf("</div>'+profileActionMarkup",headerStart);
   assert.notEqual(renderAt,-1);
   assert.notEqual(headerStart,-1);
   assert.notEqual(headerEnd,-1);
@@ -91,9 +91,9 @@ test('private contact information is only supplied to its owner or viewers allow
 });
 
 test('profile shell and service worker load the organised About UI without stale cached assets',()=>{
-  assert.match(html,/app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(html,/styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(worker,/minglora-shell-v130-profile-controls-functional-1/);
-  assert.match(worker,/app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(worker,/styles\.css\?v=20261105-live-layout-expand-1/);
+  assert.match(html,/app\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
+  assert.match(html,/styles\.css\?v=20261107-top-gifters-1/);
+  assert.match(worker,/minglora-shell-v131-live-top-gifters-1/);
+  assert.match(worker,/app\.js\?v=20261107-top-gifters-profile-controls-functional-1/);
+  assert.match(worker,/styles\.css\?v=20261107-top-gifters-1/);
 });
