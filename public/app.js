@@ -1700,7 +1700,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
   try{
     const data=await api(root+"/speaker-request"),request=data.request;
     if(request&&request.status==="accepted"){
-      button.disabled=false;button.textContent="Join speaker stage";
+      button.disabled=false;button.textContent="Join Co-host stage";
       if(status)status.textContent="The host approved your microphone. Join when you're ready.";
       button.onclick=async()=>{
         button.disabled=true;
@@ -1710,7 +1710,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
       return;
     }
     button.disabled=Boolean(request&&request.status==="requested");
-    button.textContent=request?.status==="requested"?"Request sent":request?.status==="rejected"?"Request to speak again":"Raise hand to speak";
+    button.textContent=request?.status==="requested"?"Request sent":request?.status==="rejected"?"Request Co-host again":"Request to Co-host";
     if(status)status.textContent=request?.status==="requested"?"Waiting for the host to review your request.":request?.status==="rejected"?"Your last request was declined. You can ask again.":"You are listening as an audience member.";
     button.onclick=async()=>{
       button.disabled=true;
@@ -2222,7 +2222,8 @@ function liveControlIcon(name){
     camera:"<rect x='3' y='6' width='13' height='12' rx='2'/><path d='m16 10 5-3v10l-5-3z'/>",
     "camera-off":"<path d='m3 3 18 18M10 6h4a2 2 0 0 1 2 2v2l5-3v10l-5-3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2'/>",
     flip:"<path d='M20 7v5h-5M4 17v-5h5'/><path d='M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3'/>",
-    users:"<path d='M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/>",
+    "multi-guest":"<circle cx='12' cy='6.5' r='3'/><circle cx='5' cy='9' r='2.3'/><circle cx='19' cy='9' r='2.3'/><path d='M6 21v-2a6 6 0 0 1 12 0v2M1.5 20v-1.2A4.3 4.3 0 0 1 5 14.6M22.5 20v-1.2a4.3 4.3 0 0 0-3.5-4.2'/>",
+    cohost:"<circle cx='8' cy='7' r='3'/><circle cx='17' cy='7' r='3'/><path d='M2 20v-1.5A5.5 5.5 0 0 1 7.5 13h1A5.5 5.5 0 0 1 14 18.5V20M13.5 13h1A5.5 5.5 0 0 1 20 19v1M10 16h4m-2-2v4'/>",
     message:"<path d='M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.7 8.7 0 0 1 4 11.5 8.5 8.5 0 1 1 21 11.5Z'/>",
     screen:"<rect x='2.5' y='3.5' width='19' height='14' rx='2'/><path d='M8 21h8M12 17.5V21M9 10l2 2 4-4'/>",
     fullscreen:"<path d='M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5'/>",
@@ -2480,9 +2481,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
-    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Guest stage</strong><small>Manage up to 8 active guest speakers and review every request.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
+    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Co-host & Multi-Guest stage</strong><small>Review Co-host requests and manage up to 8 guest seats.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
     : role==="viewer"
-      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
+      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Co-host Match request</strong><small>Send a request to join this creator’s LIVE stage</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to Co-host</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel' data-live-tools-panel='rewards'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
@@ -2502,11 +2503,11 @@ async function openLiveRoom(session,role,issuedLiveKit){
     (role==="host"||role==="guest")&&canUseCamera?liveControlButton("live-camera-toggle","camera","Turn camera off","Camera",{pressed:true}):"",
     (role==="host"||role==="guest")&&canUseCamera?liveControlButton("live-camera-flip","flip","Switch front/back camera","Flip"):"",
     role==="host"&&broadcastType==="video_audio"?liveControlButton("live-screen-share-toggle","screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",{pressed:false}):"",
-    liveControlButton("live-guests-toggle","users",role==="host"?"Manage multi-guest stage":"Open guest stage","Guests"),
+    liveControlButton("live-guests-toggle","multi-guest",role==="host"?"Manage Multi-Guest seats":"Open Multi-Guest stage","Multi Guest"),
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat"),
     liveControlButton("live-gifts-toggle","gift",role==="host"?"Preview LIVE gift catalogue":giftsEnabled?"Open LIVE gifts":"View LIVE gift availability","Gift"),
-    liveControlButton("live-settings-toggle","settings","Open LIVE settings and tools","Settings"),
+    liveControlButton("live-cohost-toggle","cohost","Open Co-host Match requests","Co-host"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     liveControlButton("live-fullscreen-toggle","fullscreen","Enter room full screen","Expand",{pressed:false}),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
@@ -2707,7 +2708,7 @@ activeLivePinnedComment=null;
           const canRequest=packet.enabled&&session.liveSettings?.allowGuestRequests!==false&&session.liveSettings?.allowCoHost!==false;
           if(panel){
             panel.innerHTML=canRequest
-              ?"<div class='live-speaker-panel-heading'><strong>Join the conversation</strong><small>Request a microphone seat from the host</small></div><button type='button' class='secondary full' id='live-request-speaker'>Raise hand to speak</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p>"
+              ?"<div class='live-speaker-panel-heading'><strong>Co-host Match request</strong><small>Send a request to join this creator’s LIVE stage</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to Co-host</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p>"
               :"<strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p>";
           }
           if(canRequest)void refreshLiveSpeakerPanel(session,role,room);
@@ -3042,11 +3043,7 @@ activeLivePinnedComment=null;
       setLiveRoomPanelTab("tools");
       openLiveToolsPanel();
     };
-    $("#live-settings-toggle")?.addEventListener("click",()=>{
-      const backdrop=$("#live-tools-backdrop");
-      if(backdrop&&!backdrop.classList.contains("hidden")){closeLiveToolsPanel();setLiveRoomPanelTab("chat");}
-      else showLiveRoomTools();
-    });
+    $("#live-cohost-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
     $("#live-chat-toggle")?.addEventListener("click",showLiveRoomChat);
     $("#live-fullscreen-chat-tab")?.addEventListener("click",showLiveRoomChat);
     $("#live-fullscreen-tools-tab")?.addEventListener("click",showLiveRoomTools);
