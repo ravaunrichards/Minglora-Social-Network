@@ -161,13 +161,25 @@ export async function ensureLiveKitRoom(roomName, maxParticipants = 8) {
   }
   const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
   const existing = await service.listRooms([roomName]);
-  if (existing.some(room => room.name === roomName)) return { name: roomName, created: false };
+  const existingRoom = existing.find(room => room.name === roomName);
+  if (existingRoom) {
+    const currentLimit = Number(existingRoom.maxParticipants || 0);
+    const currentParticipants = Number(existingRoom.numParticipants || 0);
+    if (currentLimit === 0 || currentLimit >= participantLimit) {
+      return { name: roomName, created: false, maxParticipants: currentLimit || participantLimit };
+    }
+    if (currentParticipants > 0) {
+      return { name: roomName, created: false, maxParticipants: currentLimit, upgradePending: true };
+    }
+    await service.deleteRoom(roomName);
+  }
   try {
     await service.createRoom({ name: roomName, emptyTimeout: 600, maxParticipants: participantLimit });
-    return { name: roomName, created: true };
+    return { name: roomName, created: true, maxParticipants: participantLimit };
   } catch (error) {
     const rooms = await service.listRooms([roomName]);
-    if (rooms.some(room => room.name === roomName)) return { name: roomName, created: false };
+    const room = rooms.find(item => item.name === roomName);
+    if (room) return { name: roomName, created: false, maxParticipants: Number(room.maxParticipants || participantLimit) };
     throw error;
   }
 }
