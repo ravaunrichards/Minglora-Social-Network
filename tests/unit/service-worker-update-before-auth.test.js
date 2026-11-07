@@ -22,7 +22,7 @@ test('registers the service worker without forcing an open page to refresh or ch
   assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('existing.navigate(target)'), 'only call notifications may navigate the current app tab');
   assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('const exactTarget=windows.find(client=>client.url===target)'), 'other notifications only focus an exact target tab');
   assert.ok(clickHandler.includes('await self.clients.openWindow(target)'), 'other notification destinations still open separately');
-  const appAsset=html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]||'';
+  const appAsset=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]||'';
   assert.ok(appAsset,'the latest call-enabled app URL is loaded');
   assert.ok(worker.includes("'"+appAsset+"'"), 'the service-worker shell caches the same latest app asset');
   assert.ok(html.includes('profile-established.css'), 'the established profile stylesheet is linked');
