@@ -548,6 +548,89 @@ async function cleanupPersistedCalls(){
     return {ended:0,expired:0,verified:false};
   }
 }
+async function endAndClearMeetWaveRoom(room,reason='ended'){
+  if(!room?.id)return {ended:false,cleared:false};
+  const roomId=String(room.id),roomName=String(room.roomName||'');
+  room.status='ended';room.endedAt=room.endedAt||now();
+  const endedAt=room.endedAt;
+  (db.meetWaveAttendance||[]).filter(item=>item.roomId===roomId&&!item.leftAt).forEach(item=>{item.status='left';item.leftAt=endedAt;});
+  await saveStore();
+  let providerDeleted=false,providerMissing=false,providerCleanupFailed=false;
+  if(roomName){
+    try{await deleteLiveKitRoom(roomName);providerDeleted=true;}
+    catch(error){
+      const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+      if(status===404)providerMissing=true;
+      else{
+        providerCleanupFailed=true;
+        console.warn('[Minglora MeetWave] Provider room cleanup will need retry.',{roomId,reason,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
+      }
+    }
+  }
+  db.meetWaveRooms=(db.meetWaveRooms||[]).filter(item=>String(item.id)!==roomId);
+  db.meetWaveAttendance=(db.meetWaveAttendance||[]).filter(item=>String(item.roomId)!==roomId);
+  db.meetWaveInvitations=(db.meetWaveInvitations||[]).filter(item=>String(item.roomId)!==roomId);
+  db.meetWaveMessages=(db.meetWaveMessages||[]).filter(item=>String(item.roomId)!==roomId);
+  db.notifications=(db.notifications||[]).filter(item=>!(item.type==='meetwave_invite'&&String(item.roomId||'')===roomId));
+  await saveStore();
+  return {ended:true,cleared:true,roomId,providerDeleted,providerMissing,providerCleanupFailed};
+}
+
+async function purgeAllMeetWaveRoomsAtStartup(){
+  const rooms=[...(db.meetWaveRooms||[])];
+  let providerDeleted=0,providerMissing=0,providerCleanupFailed=0;
+  for(const room of rooms){
+    if(!room?.roomName)continue;
+    try{await deleteLiveKitRoom(room.roomName);providerDeleted++;}
+    catch(error){
+      const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+      if(status===404)providerMissing++;
+      else{
+        providerCleanupFailed++;
+        console.warn('[Minglora MeetWave] Startup room cleanup will need retry.',{roomId:room.id,status,message:String(error?.message||'provider cleanup failed').slice(0,160)});
+      }
+    }
+  }
+  db.meetWaveRooms=[];
+  db.meetWaveAttendance=[];
+  db.meetWaveInvitations=[];
+  db.meetWaveMessages=[];
+  db.notifications=(db.notifications||[]).filter(item=>item.type!=='meetwave_invite');
+  await saveStore();
+  return {clearedRooms:rooms.length,providerDeleted,providerMissing,providerCleanupFailed,verified:true};
+}
+
+let meetWaveRoomSweepRunning=false;
+async function sweepInactiveMeetWaveRooms(){
+  if(meetWaveRoomSweepRunning)return;
+  meetWaveRoomSweepRunning=true;
+  try{
+    for(const room of [...(db.meetWaveRooms||[])]){
+      if(!room?.id)continue;
+      if(room.status==='ended'){
+        await endAndClearMeetWaveRoom(room,'ended-room-sweep');
+        continue;
+      }
+      if(room.status!=='active'||!room.roomName)continue;
+      let participants;
+      try{participants=await listLiveKitParticipants(room.roomName);}
+      catch(error){
+        const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+        if(status!==404)continue;
+        participants=[];
+      }
+      if(participants.length)continue;
+      const lastActivity=Date.parse(String(room.lastActivityAt||room.startedAt||room.createdAt||''));
+      if(Number.isFinite(lastActivity)&&Date.now()-lastActivity<60_000)continue;
+      await endAndClearMeetWaveRoom(room,'empty-room-auto-cleanup');
+    }
+  }catch(error){
+    console.warn('[Minglora MeetWave] Automatic room cleanup retry pending.',{message:String(error?.message||'room cleanup failed').slice(0,160)});
+  }finally{meetWaveRoomSweepRunning=false;}
+}
+const meetWaveRoomSweepTimer=setInterval(()=>{void sweepInactiveMeetWaveRooms();},15000);
+meetWaveRoomSweepTimer.unref?.();
+
 function meetWaveRoomView(room,viewerId){
   if(!room)return null;
   const owner=db.users.find(member=>member.id===room.ownerId);
@@ -4677,9 +4760,23 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           return json(res,200,{room:meetWaveRoomView(room,user.id),role:attendance.role,liveKit:{...liveKit,role:attendance.role}});
         }
         if(method==='POST'&&action==='leave'){
+          if(room.ownerId===user.id){
+            const result=await endAndClearMeetWaveRoom(room,'host-left');
+            return json(res,200,{left:true,...result});
+          }
           const attendance=(db.meetWaveAttendance||[]).find(item=>item.roomId===room.id&&item.userId===user.id&&!item.leftAt);
           if(!attendance)return json(res,200,{left:true});
-          attendance.status='left';attendance.leftAt=now();await saveStore();
+          attendance.status='left';attendance.leftAt=now();room.lastActivityAt=attendance.leftAt;await saveStore();
+          let remaining=[];
+          try{remaining=await listLiveKitParticipants(room.roomName);}
+          catch(error){
+            const status=Number(error?.statusCode||error?.status||error?.response?.status||0);
+            if(status!==404)return json(res,200,{left:true,cleanupPending:true});
+          }
+          if(!remaining.length){
+            const result=await endAndClearMeetWaveRoom(room,'last-participant-left');
+            return json(res,200,{left:true,...result});
+          }
           return json(res,200,{left:true});
         }
         if(method==='POST'&&action==='invitations'){
@@ -4729,12 +4826,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         }
         if(method==='DELETE'&&!action){
           if(room.ownerId!==user.id)return json(res,403,{error:'Only the host can end this meeting for everyone.'});
-          if(room.status==='ended')return json(res,200,{ended:true});
-          room.status='ended';room.endedAt=now();
-          (db.meetWaveAttendance||[]).filter(item=>item.roomId===room.id&&!item.leftAt).forEach(item=>{item.status='left';item.leftAt=room.endedAt;});
-          await saveStore();
-          try{await deleteLiveKitRoom(room.roomName);}catch(error){const status=Number(error?.statusCode||error?.status||0);if(status!==404)console.warn('[MeetWave] LiveKit room cleanup failed.',{roomId:room.id,status});}
-          return json(res,200,{ended:true,room:meetWaveRoomView(room,user.id)});
+          const result=await endAndClearMeetWaveRoom(room,'ended-by-host');
+          return json(res,200,{...result});
         }
       }
       if(method==='GET'&&p==='/api/calls/ringtone'){
@@ -5650,6 +5743,14 @@ const liveRewardSettlementTimer=setInterval(async()=>{
 liveRewardSettlementTimer.unref?.();
 
 server.listen(PORT,'0.0.0.0',async()=>{
+  if(String(process.env.MEETWAVE_PURGE_ALL_ROOMS_ON_STARTUP||'').trim().toLowerCase()==='true'){
+    try{
+      const meetWaveCleanup=await purgeAllMeetWaveRoomsAtStartup();
+      console.info('[Minglora MeetWave full cleanup]',JSON.stringify(meetWaveCleanup));
+    }catch(error){
+      console.error('[Minglora MeetWave full cleanup] Failed.',{message:String(error?.message||error).slice(0,180)});
+    }
+  }
   try {
     if (isSupabasePersistence()) {
       const retiredStreamBayCleanup = await requestSupabaseState('streambay_cleanup');
