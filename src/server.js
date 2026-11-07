@@ -5521,9 +5521,18 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,200,{ok:true,ringtone:null});
       }
       if(method==='GET'&&p==='/api/calls/incoming'){
-        await callSessionCleanupReady;
-        try{await reconcileCallPresenceForUsers([user.id]);}
-        catch(error){return json(res,503,{error:error.message||'Minglora could not refresh call availability. Try again shortly.'});}
+        // A ringing invitation is already persisted in Minglora's call ledger.
+        // Do not make its display depend on a LiveKit presence reconciliation:
+        // an unrelated provider hiccup must not hide the receiver's Answer screen.
+        const expiredCalls=[];
+        const stamp=now(),stampMs=Date.now();
+        for(const call of (db.calls||[])){
+          if(call.status==='ringing'&&expireRingingCall(call,db.callParticipants||[],stamp,stampMs))expiredCalls.push(call);
+        }
+        if(expiredCalls.length){
+          await saveStore();
+          expiredCalls.forEach(call=>void cleanupCallRoom(call,'ring-timeout'));
+        }
         const incoming=(db.calls||[]).filter(call=>['ringing','active'].includes(call.status)&&!blockedBetween(user.id,call.createdBy))
           .map(call=>{
             const participant=(db.callParticipants||[]).find(item=>item.callId===call.id&&item.userId===user.id);
