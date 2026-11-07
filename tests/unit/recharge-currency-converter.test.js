@@ -40,7 +40,7 @@ test('Currency Converter is an enabled Recharge tab with persistent two-way and 
   assert.match(app, /data-recharge-currency-mode='global'/);
   assert.match(app, /window\.MingloraQuickCurrency/);
   assert.match(app, /window\.MingloraCurrencyConverter/);
-  assert.match(app, /rechargeCurrencyMode:saved\.rechargeCurrencyMode/);
+  assert.match(app, /state\.rechargeCurrencyMode=saved\.rechargeCurrencyMode/);
   assert.match(app, /state\.rechargeTab=\['recharge','earnings','exchange','currency'\]/);
 });
 
