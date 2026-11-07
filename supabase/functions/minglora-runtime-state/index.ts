@@ -1349,38 +1349,24 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "economy_send_gift") {
-    const senderId = String(input.senderId || ""), broadcastId = String(input.broadcastId || "");
-    const giftCode = String(input.giftCode || "");
-    if (!validUuid(senderId) || !validUuid(broadcastId) || !/^[a-z0-9_-]{1,60}$/.test(giftCode)) {
-      return json(400, { error: "Invalid LIVE gift request." });
-    }
-    const { data, error } = await admin.rpc("minglora_send_live_gift", {
-      p_sender_id: senderId, p_broadcast_id: broadcastId, p_gift_code: giftCode
+    const senderId=String(input.senderId||""),broadcastId=String(input.broadcastId||"");
+    const giftCode=String(input.giftCode||""),recipientUserId=String(input.recipientUserId||"");
+    if(!validUuid(senderId)||!validUuid(broadcastId)||!validUuid(recipientUserId)||!/^[a-z0-9_-]{1,60}$/.test(giftCode))
+      return json(400,{error:"Invalid LIVE gift request."});
+    const {data,error}=await admin.rpc("minglora_send_live_gift",{
+      p_sender_id:senderId,p_broadcast_id:broadcastId,p_gift_code:giftCode,p_recipient_id:recipientUserId
     });
-    if (error) return fail(error, "Minglora could not send the LIVE gift.");
-
-    // Artwork is presentation metadata, not part of the payment decision.
-    // Enrich only after the gift RPC confirms the transaction; never turn an
-    // artwork lookup failure into a failed/duplicated gift payment.
-    const gift = data && typeof data === "object" && !Array.isArray(data) ? { ...data } : { gift: data };
-    const { data: artwork, error: artworkError } = await admin
-      .from("live_gift_catalog")
-      .select("name,emoji,image_url,model_url,coin_price")
-      .eq("code", giftCode)
-      .maybeSingle();
-    if (artworkError) {
-      console.warn("[Minglora LIVE gift] Gift artwork lookup was unavailable.", {
-        giftCode,
-        message: String(artworkError.message || "catalogue lookup failed").slice(0, 160)
-      });
-    } else if (artwork) {
-      gift.giftName = gift.giftName || artwork.name;
-      gift.emoji = gift.emoji || artwork.emoji;
-      gift.imageUrl = gift.imageUrl || artwork.image_url || "";
-      gift.modelUrl = gift.modelUrl || artwork.model_url || "";
-      gift.coinPrice = Number(gift.coinPrice || artwork.coin_price || 0);
-    }
-    return json(200, { gift });
+    if(error)return fail(error,"Minglora could not send the LIVE gift.");
+    const gift=data&&typeof data==="object"&&!Array.isArray(data)?{...data}:{gift:data};
+    const {data:artwork,error:artworkError}=await admin.from("live_gift_catalog")
+      .select("name,emoji,image_url,model_url,coin_price").eq("code",giftCode).maybeSingle();
+    if(artworkError)console.warn("[Minglora LIVE gift] Artwork lookup was unavailable.",{
+      giftCode,message:String(artworkError.message||"catalogue lookup failed").slice(0,160)
+    });
+    else if(artwork){gift.giftName=gift.giftName||artwork.name;gift.emoji=gift.emoji||artwork.emoji;
+      gift.imageUrl=gift.imageUrl||artwork.image_url||"";gift.modelUrl=gift.modelUrl||artwork.model_url||"";
+      gift.coinPrice=Number(gift.coinPrice||artwork.coin_price||0);}
+    return json(200,{gift});
   }
 
   if (action === "economy_send_social_gift") {
@@ -1440,33 +1426,26 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "economy_send_admin_promotional_gift") {
-    const senderId = String(input.senderId || "");
-    const giftCode = String(input.giftCode || "");
-    const broadcastId = input.broadcastId == null ? null : String(input.broadcastId);
-    const recipientUsername = input.recipientUsername == null
-      ? null
-      : String(input.recipientUsername || "").trim().replace(/^@/, "").toLowerCase();
-    if (!validUuid(senderId) || !/^[a-z0-9_-]{1,60}$/.test(giftCode) ||
-        (broadcastId !== null && !validUuid(broadcastId)) ||
-        (broadcastId === null && !/^[a-z0-9_]{3,30}$/.test(String(recipientUsername || "")))) {
-      return json(400, { error: "Invalid Admin Promotional Gift request." });
-    }
-    const { data, error } = await admin.rpc("minglora_send_admin_promotional_gift", {
-      p_sender_id: senderId, p_gift_code: giftCode,
-      p_broadcast_id: broadcastId, p_recipient_username: recipientUsername
+    const senderId=String(input.senderId||""),giftCode=String(input.giftCode||"");
+    const broadcastId=input.broadcastId==null?null:String(input.broadcastId);
+    const recipientUsername=input.recipientUsername==null?null:String(input.recipientUsername||"").trim().replace(/^@/,"").toLowerCase();
+    const recipientUserId=input.recipientUserId==null?null:String(input.recipientUserId);
+    if(!validUuid(senderId)||!/^[a-z0-9_-]{1,60}$/.test(giftCode)||(broadcastId!==null&&!validUuid(broadcastId))||
+       (recipientUserId!==null&&!validUuid(recipientUserId))||
+       (broadcastId===null&&recipientUserId===null&&!/^[a-z0-9_]{3,30}$/.test(String(recipientUsername||""))))
+      return json(400,{error:"Invalid Admin Promotional Gift request."});
+    const {data,error}=await admin.rpc("minglora_send_admin_promotional_gift",{
+      p_sender_id:senderId,p_gift_code:giftCode,p_broadcast_id:broadcastId,
+      p_recipient_username:recipientUsername,p_recipient_id:recipientUserId
     });
-    if (error) return fail(error, "Promotional gift could not be sent or the USD reserve is insufficient.");
-    const gift = data && typeof data === "object" && !Array.isArray(data) ? { ...data } : { gift: data };
-    const { data: artwork, error: artworkError } = await admin.from("live_gift_catalog")
-      .select("name,emoji,image_url,model_url,coin_price").eq("code", giftCode).maybeSingle();
-    if (!artworkError && artwork) {
-      gift.giftName = gift.giftName || artwork.name;
-      gift.emoji = gift.emoji || artwork.emoji;
-      gift.imageUrl = gift.imageUrl || artwork.image_url || "";
-      gift.modelUrl = gift.modelUrl || artwork.model_url || "";
-      gift.coinPrice = Number(gift.coinPrice || artwork.coin_price || 0);
-    }
-    return json(200, { gift });
+    if(error)return fail(error,"Promotional gift could not be sent or the USD reserve is insufficient.");
+    const gift=data&&typeof data==="object"&&!Array.isArray(data)?{...data}:{gift:data};
+    const {data:artwork,error:artworkError}=await admin.from("live_gift_catalog")
+      .select("name,emoji,image_url,model_url,coin_price").eq("code",giftCode).maybeSingle();
+    if(!artworkError&&artwork){gift.giftName=gift.giftName||artwork.name;gift.emoji=gift.emoji||artwork.emoji;
+      gift.imageUrl=gift.imageUrl||artwork.image_url||"";gift.modelUrl=gift.modelUrl||artwork.model_url||"";
+      gift.coinPrice=Number(gift.coinPrice||artwork.coin_price||0);}
+    return json(200,{gift});
   }
 
   if (action === "subscription_creator_get") {
