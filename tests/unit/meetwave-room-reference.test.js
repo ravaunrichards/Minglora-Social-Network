@@ -40,11 +40,11 @@ test('MeetWave room dock stays attached and meeting chat remains in the room', (
 });
 
 test('MeetWave automatic-sync assets bypass stale browser and service-worker caches', () => {
-  const cssVersion = '20261107-meetwave-advanced-room-3';
-  const jsVersion = '20261107-meetwave-advanced-room-3';
+  const cssVersion = '20261107-meetwave-control-access-4';
+  const jsVersion = '20261107-meetwave-control-access-4';
   assert.ok(html.includes('/meetwave.css?v=' + cssVersion));
   assert.ok(html.includes('/meetwave.js?v=' + jsVersion));
-  assert.match(serviceWorker, new RegExp('minglora-shell-v123-meetwave-advanced-room-3'));
+  assert.match(serviceWorker, new RegExp('minglora-shell-v124-meetwave-control-access-4'));
   assert.ok(serviceWorker.includes('/meetwave.css?v=' + cssVersion));
   assert.ok(serviceWorker.includes('/meetwave.js?v=' + jsVersion));
 });
@@ -80,4 +80,23 @@ test('MeetWave settings cover devices and appearance while retaining visible roo
   for (const id of ['mw-settings-panel','mw-audio-input','mw-audio-output','mw-video-input','mw-echo-cancellation','mw-noise-suppression','mw-auto-gain','mw-video-fit','mw-mirror-self','mw-show-names','mw-chat-panel']) assert.ok(js.includes('id=\"'+id+'\"'));
   assert.match(js, /function switchMeetingDevice\(kind,deviceId\)/);
   assert.match(js, /function applyMeetingVisualSettings\(\)/);
+});
+
+
+test('MeetWave side panel resets stale floating transforms and uses the full room width', () => {
+  assert.match(css, /\\.mw-meeting \\.mw-support-column\\.live-fullscreen-chat-slot\\{[\\s\\S]*?transform:none!important/);
+  assert.match(css, /\\.mw-meeting \\.mw-support-column\\.live-fullscreen-chat-slot\\{[\\s\\S]*?width:100%!important/);
+  assert.match(css, /\\.mw-meeting \\.live-player-controls\\.live-icon-controls\\{[\\s\\S]*?display:grid!important/);
+  assert.match(css, /grid-template-columns:repeat\\(auto-fit,minmax\\(64px,1fr\\)\\)!important/);
+  assert.match(css, /overflow:visible!important/);
+  assert.match(css, /@media\\(max-width:380px\\)[\\s\\S]*?grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)!important/);
+});
+
+test('MeetWave controls are all wired to accessible room actions', () => {
+  for (const id of ['mw-mic','mw-camera','mw-screen','mw-layout','mw-fullscreen','mw-copy','mw-settings','mw-people-toggle','mw-chat-toggle','mw-leave']) {
+    assert.ok(js.includes('id="'+id+'"'), id+' is present');
+  }
+  assert.match(js, /\\$\\('#mw-layout'\\)\\.onclick=\\(\\)=>setMeetWaveSideTab\\('layouts'\\)/);
+  assert.match(js, /\\$\\('#mw-settings'\\)\\.onclick=\\(\\)=>setMeetWaveSideTab\\('settings'\\)/);
+  assert.match(js, /\\$\\('#mw-chat-toggle'\\)\\.onclick=\\(\\)=>setMeetWaveSideTab\\('chat'\\)/);
 });
