@@ -5377,8 +5377,10 @@ function renderProfile(data){
       const result=await api('/subscriptions/checkout',{method:'POST',body:JSON.stringify({creatorId:u.id})});
       if(!result.approvalUrl)throw new Error('PayPal did not return an approval link. No subscription was confirmed.');
       const approvalUrl=new URL(result.approvalUrl,window.location.origin);
-      if(approvalUrl.protocol!=='https:'||!/(^|\\.)paypal\\.com$/i.test(approvalUrl.hostname)){
+      const paypalHost=approvalUrl.hostname.toLowerCase();
+      if(approvalUrl.protocol!=='https:'||(paypalHost!=='paypal.com'&&!paypalHost.endsWith('.paypal.com'))){
         throw new Error('Minglora received an invalid PayPal approval link. No subscription was confirmed.');
+
       }
       toast('Opening PayPal to approve your monthly subscription…');
       window.location.assign(approvalUrl.href);
