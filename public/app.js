@@ -8087,14 +8087,20 @@ function playCallTone(frequencies,durationMs=900){
  for(const frequency of frequencies){
   const oscillator=callToneContext.createOscillator(),gain=callToneContext.createGain();
   oscillator.type='sine';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(0,start);
-  const experience=window.MingloraExperience?.getSettings?.();const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;if((window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute')||volume===0)return false;gain.gain.linearRampToValueAtTime(.12*volume,start+.035);gain.gain.setValueAtTime(.12*volume,start+Math.max(.05,durationMs/1000-.08));
+  const experience=window.MingloraExperience?.getSettings?.();const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;if((window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'||experience?.soundMode==='vibrate')||volume===0)return false;gain.gain.linearRampToValueAtTime(.12*volume,start+.035);gain.gain.setValueAtTime(.12*volume,start+Math.max(.05,durationMs/1000-.08));
   gain.gain.linearRampToValueAtTime(0,start+durationMs/1000);oscillator.connect(gain);gain.connect(callToneContext.destination);
   oscillator.start(start);oscillator.stop(start+durationMs/1000+.02);callToneNodes.push(oscillator,gain);
   oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
  }
  return true;
 }
-function startCallRingback(){stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);}
+function startCallRingback(call=null){
+ const experience=window.MingloraExperience?.getSettings?.();
+ const voiceCall=call?.kind==='audio';
+ const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
+ if(experience?.soundMode==='mute'||experience?.soundMode==='vibrate'||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')){stopCallTone();return;}
+ stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);
+}
 async function getCallRingtone(force=false){
  if(!force&&Date.now()-callRingtoneCache.loadedAt<300000)return callRingtoneCache.ringtone;
  try{const result=await api('/calls/ringtone');callRingtoneCache={loadedAt:Date.now(),ringtone:result.ringtone||null};}
@@ -8105,12 +8111,13 @@ async function startIncomingRingtone(call=null){
  const experience=window.MingloraExperience?.getSettings?.();
  const voiceCall=call?.kind==='audio';
  const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
- if(state.settings?.preferences?.messengerIncomingCallSounds===false||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
+ if(state.settings?.preferences?.messengerIncomingCallSounds===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
  stopCallTone();
  if(experience?.soundMode==='vibrate'){
    if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
    return true;
  }
+ if(soundEnabled===false)return false;
  if(experience?.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
  const ringtone=await getCallRingtone();
  if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
@@ -8186,7 +8193,7 @@ function showOutgoingCallOverlay(member,call){
  };
 }
 async function waitForCallAnswer(call,member){
- showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false,starting:false};
+ showOutgoingCallOverlay(member,call);startCallRingback(call);outgoingCallPending={callId:call.id,cancelled:false,starting:false};
  const deadline=Date.parse(call.ringExpiresAt||'')||Date.now()+45000;
  while(outgoingCallPending&&!outgoingCallPending.cancelled&&Date.now()<deadline){
   let response;try{response=await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch(e){await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);return;}
