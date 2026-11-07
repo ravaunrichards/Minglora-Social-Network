@@ -179,15 +179,15 @@ export function createCurrencyConverterService({
       error.status = 400;
       throw error;
     }
-    if (base === quote) {
-      return { base, quote, rate: 1, date: new Date(now()).toISOString().slice(0, 10), provider: 'Minglora identity rate', stale: false };
-    }
     const directory = await getCurrencyDirectory();
     const supported = new Set(directory.currencies.map(currency => currency.code));
     if (!supported.has(base) || !supported.has(quote)) {
       const error = new Error('One of the selected codes is not an active currency in the current ISO 4217 directory.');
       error.status = 400;
       throw error;
+    }
+    if (base === quote) {
+      return { base, quote, rate: 1, date: new Date(now()).toISOString().slice(0, 10), provider: 'Minglora identity rate', stale: false };
     }
 
     const key = base + ':' + quote;
