@@ -1,5 +1,6 @@
 export const DEFAULT_EXPERIENCE_SETTINGS = Object.freeze({
   style: 'minglora',
+  chlStyle: 'default',
   typography: 'system',
   surfaces: 'standard',
   density: 'comfortable',
@@ -52,6 +53,7 @@ export const DEFAULT_EXPERIENCE_SETTINGS = Object.freeze({
 
 const ENUMS = {
   style: ['minglora', 'chl-night', 'chl-ocean', 'chl-violet', 'chl-emerald', 'chl-rose', 'chl-light'],
+  chlStyle: ['default', 'minimal', 'flat', 'swiss', 'editorial', 'material', 'fluent', 'glass', 'frost', 'neo', 'brutal', 'neumorphic', 'clay', 'aurora', 'cyber', 'memphis', 'y2k', 'pixel', 'skeuo'],
   typography: ['system', 'studio', 'readable'],
   surfaces: ['standard', 'soft', 'sharp'],
   density: ['comfortable', 'compact'],
