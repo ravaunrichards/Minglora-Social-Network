@@ -116,8 +116,7 @@ body:has(#live-player-shell) #live-video-stage{
   border-radius:14px!important;transform:none!important;
 }
 body:has(#live-player-shell) #live-guest-layout.live-guest-layout{
-  box-sizing:border-box!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:minmax(0,1fr)!important;grid-auto-rows:minmax(0,1fr)!important;align-content:stretch!important;align-items:stretch!important;
+  box-sizing:border-box!important;display:grid!important;align-content:stretch!important;align-items:stretch!important;
   gap:7px!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:100%!important;
   margin:0!important;padding:0!important;overflow:hidden!important;
 }
@@ -136,7 +135,7 @@ body:has(#live-player-shell) #live-guest-layout.live-host-only-layout>.live-gues
 body:has(#live-player-shell) #live-guest-layout.live-host-only-layout>.live-guest-seat.is-guest{
   grid-column:auto!important;grid-row:auto!important;width:100%!important;height:100%!important;min-width:0!important;min-height:58px!important;max-height:none!important;
 }
-body:has(#live-player-shell) #live-guest-layout:not(.live-host-only-layout){
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="full-screen"]:not(.live-host-only-layout){
   grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:auto repeat(3,minmax(0,1fr))!important;
 }
 body:has(#live-player-shell) #live-guest-layout .live-guest-layout-heading{
@@ -160,7 +159,7 @@ body:has(#live-player-shell) #live-video-stage .live-video-element{width:100%!im
 body:has(#live-player-shell) #live-audio-root{display:none!important}
 body:has(#live-player-shell) .live-player-controls.live-icon-controls{
   position:relative!important;inset:auto!important;display:grid!important;
-  grid-template-columns:repeat(10,minmax(0,1fr))!important;grid-auto-rows:54px!important;
+  grid-template-columns:repeat(8,minmax(0,1fr))!important;grid-auto-rows:54px!important;
   align-content:center!important;align-items:stretch!important;justify-content:stretch!important;gap:5px!important;
   width:100%!important;min-width:0!important;min-height:58px!important;max-height:116px!important;
   margin:0!important;padding:5px!important;overflow:visible!important;border:1px solid rgba(255,255,255,.14)!important;
@@ -307,3 +306,11 @@ body:has(#live-player-shell) #live-guest-layout .live-guest-seat.is-host .live-g
   body:has(#live-player-shell) .live-player-controls .live-control-button{height:41px!important;min-height:40px!important}
   body:has(#live-player-shell) .live-player-controls .live-control-caption{font-size:7px!important}
 }
+
+/* Co-host invitations use the same readable control sizing as the other LIVE tools. */
+body:has(#live-player-shell) .live-cohost-invite-form{display:grid!important;gap:7px!important;margin:10px 0 14px!important;padding:10px!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:11px!important;background:rgba(255,255,255,.035)!important}
+body:has(#live-player-shell) .live-cohost-invite-form>label{color:#edf3fb!important;font-size:11px!important;font-weight:800!important}
+body:has(#live-player-shell) .live-cohost-invite-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:7px!important;min-width:0!important}
+body:has(#live-player-shell) .live-cohost-invite-row input{min-width:0!important;min-height:40px!important;padding:8px 10px!important;border:1px solid rgba(175,194,226,.24)!important;border-radius:9px!important;color:#fff!important;background:#121b2b!important;font-size:13px!important}
+body:has(#live-player-shell) .live-cohost-invite-row button{min-height:40px!important;padding:7px 12px!important;border:0!important;border-radius:9px!important;color:#08151b!important;background:#80e5cf!important;font-size:11px!important;font-weight:850!important;white-space:nowrap!important}
+body:has(#live-player-shell) #live-cohost-invite-status{color:#bdc8d8!important;font-size:10px!important;line-height:1.4!important}
