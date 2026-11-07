@@ -1,0 +1,575 @@
+/* Minglora Phone Experience — final responsive layer.
+   Loads after feature skins to resolve conflicting overrides without changing
+   the dedicated immersive LIVE room layout or the existing app routes. */
+
+:root{
+  --minglora-phone-nav-height:64px;
+  --minglora-phone-gutter:clamp(8px,2.6vw,14px);
+}
+
+html,body{
+  width:100%;
+  max-width:100%;
+  min-width:320px;
+  overflow-x:clip;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+*,*::before,*::after{box-sizing:border-box}
+#app,.layout,.main-content,#main-content{min-width:0;max-width:100%}
+img,video,canvas,svg,iframe,model-viewer{max-width:100%}
+button,input,select,textarea{min-width:0;max-width:100%}
+.hidden,[hidden]{display:none!important}
+
+/* Restore the actual incoming/outgoing call surface after the page-flow reset.
+   Calls are exceptional, task-critical screens and must remain visible. */
+.call-overlay{
+  position:fixed!important;
+  inset:0!important;
+  z-index:100000!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100vw!important;
+  height:100vh!important;
+  height:100dvh!important;
+  max-width:none!important;
+  max-height:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:18px!important;
+  overflow:auto!important;
+  background:rgba(3,8,18,.94)!important;
+  backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;
+  pointer-events:auto!important;
+  visibility:visible!important;
+  opacity:1!important;
+  transform:none!important;
+  box-shadow:none!important;
+}
+.call-overlay.call-ringing-overlay{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:radial-gradient(ellipse at 50% 25%,rgba(39,112,220,.32),rgba(3,8,18,.97) 65%)!important;
+}
+.call-overlay[hidden],.call-overlay.hidden{display:none!important}
+
+/* Medium windows use a compact two-pane shell, never a squeezed three-column page. */
+@media(min-width:761px) and (max-width:1100px){
+  .layout{
+    display:grid!important;
+    grid-template-columns:minmax(175px,210px) minmax(0,1fr)!important;
+    gap:14px!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0 auto!important;
+    padding:14px!important;
+  }
+  .right-rail{display:none!important}
+  .main-content,#main-content{min-width:0!important;max-width:100%!important}
+}
+
+/* Compact phone and small-window experience. */
+@media(max-width:760px){
+  :root{--minglora-phone-nav-height:64px}
+
+  body:not(:has(#live-player-shell)):not(.auth-mode){
+    padding-bottom:calc(76px + env(safe-area-inset-bottom))!important;
+  }
+  body:not(:has(#live-player-shell)) #app{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:100svh;
+    overflow-x:clip!important;
+  }
+
+  /* A calm, compact header with room for search and the essential account actions. */
+  body:not(:has(#live-player-shell)) .topbar{
+    position:static!important;
+    inset:auto!important;
+    z-index:auto!important;
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:6px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:54px!important;
+    height:auto!important;
+    margin:0!important;
+    padding:6px 8px!important;
+    overflow:visible!important;
+    background:var(--card)!important;
+    border-bottom:1px solid var(--line)!important;
+  }
+  body:not(:has(#live-player-shell)) .top-left{
+    display:flex!important;
+    flex:1 1 auto!important;
+    align-items:center!important;
+    gap:6px!important;
+    min-width:0!important;
+  }
+  body:not(:has(#live-player-shell)) .brand{
+    display:flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    gap:5px!important;
+    min-width:0!important;
+    font-size:clamp(16px,4.2vw,19px)!important;
+    line-height:1.1!important;
+    white-space:nowrap!important;
+  }
+  body:not(:has(#live-player-shell)) .brand-mark{
+    display:grid!important;
+    flex:0 0 31px!important;
+    width:31px!important;
+    height:31px!important;
+    place-items:center!important;
+    font-size:22px!important;
+  }
+  body:not(:has(#live-player-shell)) .search-box{
+    display:flex!important;
+    flex:1 1 90px!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:39px!important;
+    min-height:39px!important;
+    padding:0 8px!important;
+    gap:6px!important;
+  }
+  body:not(:has(#live-player-shell)) .search-box input{
+    flex:1 1 auto!important;
+    width:100%!important;
+    min-width:0!important;
+    font-size:16px!important;
+    line-height:1.25!important;
+  }
+  body:not(:has(#live-player-shell)) .top-nav{display:none!important}
+  body:not(:has(#live-player-shell)) .top-actions{
+    display:flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:3px!important;
+    min-width:0!important;
+  }
+  body:not(:has(#live-player-shell)) .top-actions .circle-action{
+    display:grid!important;
+    flex:0 0 35px!important;
+    place-items:center!important;
+    width:35px!important;
+    height:35px!important;
+    min-width:35px!important;
+    min-height:35px!important;
+    padding:0!important;
+    font-size:18px!important;
+  }
+  body:not(:has(#live-player-shell)) .top-actions #settings-btn{display:none!important}
+  body:not(:has(#live-player-shell)) .top-actions .profile-menu{
+    display:flex!important;
+    flex:0 0 33px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:33px!important;
+    height:33px!important;
+    min-width:33px!important;
+    min-height:33px!important;
+    padding:1px!important;
+    font-size:0!important;
+  }
+  body:not(:has(#live-player-shell)) .top-actions .profile-menu img{
+    display:block!important;
+    flex:0 0 30px!important;
+    width:30px!important;
+    height:30px!important;
+    object-fit:cover!important;
+  }
+  body:not(:has(#live-player-shell)) .top-actions #top-name,
+  body:not(:has(#live-player-shell)) .top-actions .logout-btn{display:none!important}
+
+  /* Five clear destinations stay reachable; the reserved body space prevents overlap. */
+  body:not(:has(#live-player-shell)) .mobile-nav{
+    position:fixed!important;
+    inset:auto 0 0 0!important;
+    z-index:1000!important;
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    justify-items:stretch!important;
+    gap:2px!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:calc(var(--minglora-phone-nav-height) + env(safe-area-inset-bottom))!important;
+    min-height:var(--minglora-phone-nav-height)!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:5px max(5px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(5px,env(safe-area-inset-left))!important;
+    border-top:1px solid var(--line)!important;
+    background:color-mix(in srgb,var(--card) 97%,transparent)!important;
+    box-shadow:0 -5px 18px rgba(20,35,60,.12)!important;
+    overflow:visible!important;
+    transform:none!important;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button{
+    display:flex!important;
+    flex:1 1 0!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:2px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    min-height:50px!important;
+    margin:0!important;
+    padding:3px 1px!important;
+    border:0!important;
+    border-radius:10px!important;
+    background:transparent!important;
+    color:var(--muted)!important;
+    font-size:12px!important;
+    line-height:1.15!important;
+    overflow:visible!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button.active{
+    background:var(--surface-soft)!important;
+    color:var(--blue)!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button .nav-3d-icon{
+    display:block!important;
+    flex:0 0 22px!important;
+    width:22px!important;
+    height:22px!important;
+    max-width:100%!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button small{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    font-size:clamp(9px,2.7vw,11px)!important;
+    line-height:1.15!important;
+    font-weight:800!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav .mobile-more-symbol{
+    font-size:22px!important;
+    line-height:1!important;
+  }
+
+  /* Main content gets one predictable reading column with even side gutters. */
+  body:not(:has(#live-player-shell)) .layout{
+    display:block!important;
+    width:100%!important;
+    max-width:720px!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    padding:10px var(--minglora-phone-gutter) 18px!important;
+  }
+  body:not(:has(#live-player-shell)) .left-rail,
+  body:not(:has(#live-player-shell)) .right-rail{display:none!important}
+  body:not(:has(#live-player-shell)) .main-content,
+  body:not(:has(#live-player-shell)) #main-content{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  body:not(:has(#live-player-shell)) #main-content>*{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }
+  body:not(:has(#live-player-shell)) .card{
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0 0 12px!important;
+    padding:clamp(10px,2.8vw,14px)!important;
+    border-radius:14px!important;
+  }
+  body:not(:has(#live-player-shell)) .page-heading,
+  body:not(:has(#live-player-shell)) .section-heading,
+  body:not(:has(#live-player-shell)) .card-heading,
+  body:not(:has(#live-player-shell)) .feed-heading,
+  body:not(:has(#live-player-shell)) .notification-center-header{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body:not(:has(#live-player-shell)) h1{
+    font-size:clamp(20px,5.6vw,25px)!important;
+    line-height:1.2!important;
+    letter-spacing:-.35px;
+    overflow-wrap:anywhere;
+  }
+  body:not(:has(#live-player-shell)) h2{
+    font-size:clamp(16px,4.5vw,20px)!important;
+    line-height:1.25!important;
+    overflow-wrap:anywhere;
+  }
+  body:not(:has(#live-player-shell)) h3{
+    font-size:clamp(14px,3.8vw,16px)!important;
+    line-height:1.3!important;
+    overflow-wrap:anywhere;
+  }
+  body:not(:has(#live-player-shell)) p,
+  body:not(:has(#live-player-shell)) label,
+  body:not(:has(#live-player-shell)) small{
+    line-height:1.45;
+  }
+  body:not(:has(#live-player-shell)) p,
+  body:not(:has(#live-player-shell)) label,
+  body:not(:has(#live-player-shell)) strong,
+  body:not(:has(#live-player-shell)) span,
+  body:not(:has(#live-player-shell)) a{
+    overflow-wrap:anywhere;
+  }
+  body:not(:has(#live-player-shell)) .main-content button:not(.post-menu):not(.comment-delete):not(.modal-close){
+    min-height:44px;
+    max-width:100%;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  body:not(:has(#live-player-shell)) .main-content .primary,
+  body:not(:has(#live-player-shell)) .main-content .success,
+  body:not(:has(#live-player-shell)) .main-content .secondary{
+    min-height:48px!important;
+  }
+  body:not(:has(#live-player-shell)) .main-content input,
+  body:not(:has(#live-player-shell)) .main-content select,
+  body:not(:has(#live-player-shell)) .main-content textarea{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    font-size:16px!important;
+    line-height:1.35;
+  }
+  body:not(:has(#live-player-shell)) .main-content textarea{min-height:88px}
+  body:not(:has(#live-player-shell)) .main-content table{
+    width:100%;
+    max-width:100%;
+    table-layout:fixed;
+  }
+  body:not(:has(#live-player-shell)) .main-content th,
+  body:not(:has(#live-player-shell)) .main-content td{
+    min-width:0;
+    padding:7px 5px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    vertical-align:top;
+  }
+  body:not(:has(#live-player-shell)) .main-content pre,
+  body:not(:has(#live-player-shell)) .main-content code{
+    max-width:100%;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+  }
+
+  /* Profile sections and long horizontal collections remain discoverable. */
+  body:not(:has(#live-player-shell)) .profile-tabs{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    gap:6px!important;
+  }
+  body:not(:has(#live-player-shell)) .profile-tabs-list{
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-wrap:nowrap!important;
+    min-width:0!important;
+    max-width:100%!important;
+    gap:5px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+    -webkit-overflow-scrolling:touch;
+  }
+  body:not(:has(#live-player-shell)) .profile-tabs-list button{
+    flex:0 0 auto!important;
+    min-width:max-content!important;
+    min-height:42px!important;
+    white-space:nowrap!important;
+  }
+  body:not(:has(#live-player-shell)) .profile-counts{
+    max-width:100%!important;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* Responsive cards: readable columns, then a clean single column on narrow phones. */
+  body:not(:has(#live-player-shell)) .people-grid,
+  body:not(:has(#live-player-shell)) .groups-grid,
+  body:not(:has(#live-player-shell)) .creator-metrics-grid,
+  body:not(:has(#live-player-shell)) .creator-analytics-grid,
+  body:not(:has(#live-player-shell)) .creator-audience-summary,
+  body:not(:has(#live-player-shell)) .creator-earning-metrics,
+  body:not(:has(#live-player-shell)) .notification-summary,
+  body:not(:has(#live-player-shell)) .settings-card-grid,
+  body:not(:has(#live-player-shell)) .settings-quick-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+  }
+  body:not(:has(#live-player-shell)) .gift-catalogue-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:7px!important;
+  }
+  body:not(:has(#live-player-shell)) .toast{
+    max-width:calc(100vw - 20px)!important;
+    overflow-wrap:anywhere;
+  }
+
+  /* Dialog and in-page tools can grow; they never create a second clipped scroll area. */
+  body:not(:has(#live-player-shell)) .modal,
+  body:not(:has(#live-player-shell)) .modal-body,
+  body:not(:has(#live-player-shell)) .modal-content,
+  body:not(:has(#live-player-shell)) .live-tools-content,
+  body:not(:has(#live-player-shell)) .settings-content,
+  body:not(:has(#live-player-shell)) .creator-studio-shell{
+    min-width:0!important;
+    max-width:100%!important;
+    max-height:none!important;
+  }
+  body:not(:has(#live-player-shell)) .modal,
+  body:not(:has(#live-player-shell)) .modal-body,
+  body:not(:has(#live-player-shell)) .modal-content{
+    overflow:visible!important;
+  }
+}
+
+/* Narrow devices: remove decorative brand text before sacrificing search or actions. */
+@media(max-width:390px){
+  body:not(:has(#live-player-shell)) .brand>span:last-child{display:none!important}
+  body:not(:has(#live-player-shell)) .search-box{flex-basis:72px!important}
+  body:not(:has(#live-player-shell)) .top-actions .circle-action{
+    flex-basis:32px!important;
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
+  }
+  body:not(:has(#live-player-shell)) .top-actions .profile-menu{
+    flex-basis:31px!important;
+    width:31px!important;
+    height:31px!important;
+    min-width:31px!important;
+  }
+  body:not(:has(#live-player-shell)) .top-actions .profile-menu img{
+    flex-basis:28px!important;
+    width:28px!important;
+    height:28px!important;
+  }
+  body:not(:has(#live-player-shell)) .people-grid,
+  body:not(:has(#live-player-shell)) .groups-grid,
+  body:not(:has(#live-player-shell)) .creator-metrics-grid,
+  body:not(:has(#live-player-shell)) .creator-analytics-grid,
+  body:not(:has(#live-player-shell)) .creator-audience-summary,
+  body:not(:has(#live-player-shell)) .creator-earning-metrics,
+  body:not(:has(#live-player-shell)) .notification-summary,
+  body:not(:has(#live-player-shell)) .settings-card-grid,
+  body:not(:has(#live-player-shell)) .settings-quick-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  body:not(:has(#live-player-shell)) .gift-catalogue-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+
+@media(max-width:350px){
+  body:not(:has(#live-player-shell)) .mobile-nav>button .nav-3d-icon{
+    width:20px!important;
+    height:20px!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button small{font-size:9px!important}
+  body:not(:has(#live-player-shell)) .topbar{gap:4px!important;padding-inline:6px!important}
+  body:not(:has(#live-player-shell)) .top-left{gap:4px!important}
+  body:not(:has(#live-player-shell)) .search-box{flex-basis:60px!important}
+}
+
+/* Short landscape phones retain reachability without taking over the page. */
+@media(max-width:760px) and (orientation:landscape) and (max-height:520px){
+  :root{--minglora-phone-nav-height:54px}
+  body:not(:has(#live-player-shell)) .topbar{min-height:46px!important;padding-block:3px!important}
+  body:not(:has(#live-player-shell)) .mobile-nav{
+    height:calc(var(--minglora-phone-nav-height) + env(safe-area-inset-bottom))!important;
+    padding-top:2px!important;
+    padding-bottom:calc(2px + env(safe-area-inset-bottom))!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button{min-height:44px!important}
+  body:not(:has(#live-player-shell)) .mobile-nav>button .nav-3d-icon{
+    width:19px!important;
+    height:19px!important;
+    flex-basis:19px!important;
+  }
+  body:not(:has(#live-player-shell)) .mobile-nav>button small{font-size:9px!important}
+  body:not(:has(#live-player-shell)) .layout{padding-top:7px!important}
+}
+
+/* Phone call actions remain full-screen, readable and reachable above app navigation. */
+@media(max-width:760px){
+  .call-overlay{padding:0!important}
+  .call-overlay .call-panel{
+    width:100vw!important;
+    height:100vh!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    min-height:0!important;
+    border:0!important;
+    border-radius:0!important;
+  }
+  .call-overlay .call-panel-header{
+    padding:calc(12px + env(safe-area-inset-top)) 14px 12px!important;
+  }
+  .call-overlay .call-video-stage{
+    min-height:0!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    padding:8px!important;
+    gap:8px!important;
+  }
+  .call-overlay .call-video-element{
+    min-height:0!important;
+    max-height:calc(100dvh - 190px)!important;
+  }
+  .call-overlay .call-controls{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom))!important;
+    gap:8px!important;
+  }
+  .call-overlay .call-controls button{
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    font-size:13px!important;
+  }
+  .call-overlay.call-ringing-overlay{padding:14px!important}
+  .call-overlay .call-ringing-card{
+    width:min(420px,100%)!important;
+    max-height:calc(100dvh - 28px)!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .mobile-nav,.topbar,.card{scroll-behavior:auto!important;transition:none!important}
+}
