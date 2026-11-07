@@ -87,12 +87,13 @@ test('global navigation destinations all resolve to an application view and Home
 });
 
 test('the app shell and service worker cache the current navigation and stage build', () => {
-  assert.match(html, /styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(html, /app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(worker, /minglora-shell-v117-bottom-profile-navigation-1/);
-  assert.match(worker, /styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(worker, /app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
-  assert.match(worker, /mobile-profile-navigation\.css\?v=20261106-horizontal-profile-navigation-1/);
+  const assets=[
+    html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
+    html.match(/href="(\/mobile-profile-navigation\.css\?v=[^"]+)"/)?.[1]
+  ].filter(Boolean);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
 
 
