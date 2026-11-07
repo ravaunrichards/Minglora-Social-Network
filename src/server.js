@@ -479,19 +479,20 @@ function ensureLocalUser(authUser, fallback = {}) {
   }
   return user;
 }
+function isAccountBanned(account){
+  if(!account||account.status!=='banned')return false;
+  const expiry=Date.parse(String(account.bannedUntil||''));
+  if(Number.isFinite(expiry)&&expiry<=Date.now()){
+    account.status='active';
+    account.bannedUntil=null;
+    void saveStore().catch(()=>{});
+    return false;
+  }
+  return true;
+}
 function isAccountBlocked(account){
   if(!account)return false;
-  if(account.status==='banned'){
-    const expiry=Date.parse(String(account.bannedUntil||''));
-    if(Number.isFinite(expiry)&&expiry<=Date.now()){
-      account.status='active';
-      account.bannedUntil=null;
-      void saveStore().catch(()=>{});
-      return false;
-    }
-    return true;
-  }
-  return ['suspended','deactivated'].includes(account.status);
+  return isAccountBanned(account)||['suspended','deactivated'].includes(account.status);
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
@@ -1538,7 +1539,7 @@ async function route(req, res) {
         if(!verifiedUser?.id||!verifiedUser?.email)return json(res,401,{error:'Supabase could not validate this sign-in link. Request a new one.'});
         if(!verifiedUser.email_confirmed_at)return json(res,403,{error:'Confirm your email address before signing in with a magic link.'});
         const account=ensureLocalUser(verifiedUser);
-        if(isAccountBlocked(account))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
+        if((isAccountBanned(account)||account.status==='suspended'))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
         const authenticated={
           user:verifiedUser,access_token:accessToken,refresh_token:refreshToken,
           expires_in:Number.isFinite(expiresIn)&&expiresIn>0&&expiresIn<=86400?expiresIn:3600,
@@ -1593,7 +1594,7 @@ async function route(req, res) {
             }
           }
           const signedInUser=ensureLocalUser(authenticated.user);
-          if(isAccountBlocked(signedInUser))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
+          if((isAccountBanned(signedInUser)||signedInUser.status==='suspended'))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
           const accessToken=authenticated.access_token;
           let verifiedTotp=null;
           if(accessToken){
@@ -1615,7 +1616,7 @@ async function route(req, res) {
         }
         const found=db.users.find(item=>normalizeEmail(item.email)===email);
         if(!found?.passwordHash){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
-        if(isAccountBlocked(found))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
+        if((isAccountBanned(found)||found.status==='suspended'))return json(res,403,{error:'This Minglora account is restricted. Contact support to appeal.'});
         const [salt,expected]=found.passwordHash.split(':');
         const actual=(await scrypt(password,salt,64)).toString('hex');
         if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
