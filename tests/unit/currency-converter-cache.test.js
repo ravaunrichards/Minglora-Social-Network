@@ -97,3 +97,16 @@ test('rejects currencies outside the current ISO directory instead of inventing 
   await assert.rejects(service.getRate('USD', 'BGN'), /not an active currency/);
   assert.equal(rateRequests, 0);
 });
+
+
+test('accepts identity conversion only for a currency in the current ISO directory', async () => {
+  const fetcher = async url => {
+    if (url.includes('list-one.xml')) return response({ text: currencyXml });
+    throw new Error('No external rate should be needed for an identity conversion.');
+  };
+  const service = createCurrencyConverterService({ fetcher });
+  const identity = await service.getRate('USD', 'USD');
+  assert.equal(identity.rate, 1);
+  assert.equal(identity.base, 'USD');
+  await assert.rejects(service.getRate('ZZZ', 'ZZZ'), /not an active currency/);
+});
