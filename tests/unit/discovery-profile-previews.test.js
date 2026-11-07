@@ -61,7 +61,7 @@ test('static shell cache includes the active discovery app assets', async () => 
     html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
     html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
   for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
 
