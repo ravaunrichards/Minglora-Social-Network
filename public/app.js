@@ -7885,14 +7885,18 @@ function messengerPreferences(){return state.settings?.preferences||{};}
 function messengerPreference(key,fallback){const value=messengerPreferences()[key];return value===undefined?fallback:value;}
 function playMessengerMessageSound(){
   try{
+    const experience=window.MingloraExperience?.getSettings?.();
+    if((window.MingloraExperience?.shouldSilenceNotifications?.('message')||experience?.soundMode==='mute')||experience?.messageSound===false)return;
+    if(state.settings?.preferences?.messengerMessageSounds===false)return;
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
     if(!AudioContextClass)return;
     const context=callToneContext||messengerMessageSoundContext||new AudioContextClass();
     messengerMessageSoundContext=context;
     if(context.state!=='running')return;
     const oscillator=context.createOscillator(),gain=context.createGain(),start=context.currentTime;
+    const volume=Math.max(0,Math.min(100,Number(experience?.notificationVolume??80)))/100;
     oscillator.type='sine';oscillator.frequency.setValueAtTime(740,start);oscillator.frequency.setValueAtTime(990,start+.075);
-    gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.075,start+.018);gain.gain.linearRampToValueAtTime(0,start+.17);
+    gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.075*volume,start+.018);gain.gain.linearRampToValueAtTime(0,start+.17);
     oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+.18);
     oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
   }catch{}
@@ -8137,6 +8141,7 @@ async function renderMessages(){
 function stopCallTone(){
  if(callToneTimer){clearInterval(callToneTimer);callToneTimer=null;}
  if(callRingtoneAudio){callRingtoneAudio.pause();callRingtoneAudio.currentTime=0;callRingtoneAudio=null;}
+ try{navigator.vibrate?.(0);}catch{}
  for(const node of callToneNodes){try{node.stop?.();node.disconnect?.();}catch{}}
  callToneNodes=[];
 }
@@ -8146,24 +8151,40 @@ function playCallTone(frequencies,durationMs=900){
  for(const frequency of frequencies){
   const oscillator=callToneContext.createOscillator(),gain=callToneContext.createGain();
   oscillator.type='sine';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(0,start);
-  gain.gain.linearRampToValueAtTime(.12,start+.035);gain.gain.setValueAtTime(.12,start+Math.max(.05,durationMs/1000-.08));
+  const experience=window.MingloraExperience?.getSettings?.();const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;if((window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'||experience?.soundMode==='vibrate')||volume===0)return false;gain.gain.linearRampToValueAtTime(.12*volume,start+.035);gain.gain.setValueAtTime(.12*volume,start+Math.max(.05,durationMs/1000-.08));
   gain.gain.linearRampToValueAtTime(0,start+durationMs/1000);oscillator.connect(gain);gain.connect(callToneContext.destination);
   oscillator.start(start);oscillator.stop(start+durationMs/1000+.02);callToneNodes.push(oscillator,gain);
   oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
  }
  return true;
 }
-function startCallRingback(){stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);}
+function startCallRingback(call=null){
+ const experience=window.MingloraExperience?.getSettings?.();
+ const voiceCall=call?.kind==='audio';
+ const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
+ if(experience?.soundMode==='mute'||experience?.soundMode==='vibrate'||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')){stopCallTone();return;}
+ stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);
+}
 async function getCallRingtone(force=false){
  if(!force&&Date.now()-callRingtoneCache.loadedAt<300000)return callRingtoneCache.ringtone;
  try{const result=await api('/calls/ringtone');callRingtoneCache={loadedAt:Date.now(),ringtone:result.ringtone||null};}
  catch{callRingtoneCache={loadedAt:Date.now(),ringtone:null};}
  return callRingtoneCache.ringtone;
 }
-async function startIncomingRingtone(){
- if(state.settings?.preferences?.messengerIncomingCallSounds===false){stopCallTone();return false;}
- stopCallTone();const ringtone=await getCallRingtone();
- if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=.9;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
+async function startIncomingRingtone(call=null){
+ const experience=window.MingloraExperience?.getSettings?.();
+ const voiceCall=call?.kind==='audio';
+ const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
+ if(state.settings?.preferences?.messengerIncomingCallSounds===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
+ stopCallTone();
+ if(experience?.soundMode==='vibrate'){
+   if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
+   return true;
+ }
+ if(soundEnabled===false)return false;
+ if(experience?.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
+ const ringtone=await getCallRingtone();
+ if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
  const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
 }
 function closeIncomingCallOverlay(){if(incomingCallStatusTimer){clearInterval(incomingCallStatusTimer);incomingCallStatusTimer=null;}if(incomingCallOverlay){incomingCallOverlay.remove();incomingCallOverlay=null;}stopCallTone();}
@@ -8177,8 +8198,8 @@ async function showIncomingCallOverlay(call){
  document.body.append(overlay);incomingCallOverlay=overlay;
  overlay.querySelector('#call-answer-incoming').onclick=async()=>{overlay.querySelector('#call-answer-incoming').disabled=true;await answerMingloraCall(call.id);};
  overlay.querySelector('#call-decline-incoming').onclick=async()=>{overlay.querySelector('#call-decline-incoming').disabled=true;await declineMingloraCall(call.id);};
- overlay.querySelector('#call-enable-ringtone').onclick=async()=>{primeCallAudio();const ok=await startIncomingRingtone();if(ok)overlay.querySelector('#call-enable-ringtone').classList.add('hidden');};
- if(state.settings?.preferences?.messengerIncomingCallSounds!==false&&!await startIncomingRingtone())overlay.querySelector('#call-enable-ringtone').classList.remove('hidden');
+ overlay.querySelector('#call-enable-ringtone').onclick=async()=>{primeCallAudio();const ok=await startIncomingRingtone(call);if(ok)overlay.querySelector('#call-enable-ringtone').classList.add('hidden');};
+ const exp=window.MingloraExperience?.getSettings?.();const callSoundEnabled=call.kind==='audio'?exp?.voiceCallSound!==false:exp?.videoCallSound!==false;const ringtonePermitted=state.settings?.preferences?.messengerIncomingCallSounds!==false&&callSoundEnabled&&exp?.soundMode!=='mute'&&exp?.soundMode!=='vibrate'&&!window.MingloraExperience?.shouldSilenceNotifications?.('call');if(ringtonePermitted&&!await startIncomingRingtone(call))overlay.querySelector('#call-enable-ringtone').classList.remove('hidden');else if(ringtonePermitted===false)void startIncomingRingtone(call);
  incomingCallStatusTimer=setInterval(async()=>{if(overlay.dataset.answering==='true')return;try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch(error){if([401,403,404].includes(Number(error?.status)))closeIncomingCallOverlay();else{const status=overlay.querySelector('.call-ringing-status');if(status)status.textContent='Reconnecting to your call…';}}},1600);
 }
 async function clearStaleMingloraCallNotifications(activeCallIds=[]){
@@ -8236,7 +8257,7 @@ function showOutgoingCallOverlay(member,call){
  };
 }
 async function waitForCallAnswer(call,member){
- showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false,starting:false};
+ showOutgoingCallOverlay(member,call);startCallRingback(call);outgoingCallPending={callId:call.id,cancelled:false,starting:false};
  const deadline=Date.parse(call.ringExpiresAt||'')||Date.now()+45000;
  while(outgoingCallPending&&!outgoingCallPending.cancelled&&Date.now()<deadline){
   let response;try{response=await api('/calls/'+encodeURIComponent(call.id)+'/status');}catch(e){await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);return;}
@@ -8466,6 +8487,17 @@ async function renderNotifications(){
   state.view='notifications';syncNavigationActive();persistCurrentView();recordBrowserNavigation();
   const response=await api('/notifications');
   state.notifications=Array.isArray(response.notifications)?response.notifications:[];
+  const notificationSort=window.MingloraExperience?.getSettings?.()?.notificationSort||'newest';
+  const notificationTime=item=>{const value=Date.parse(item.createdAt||item.timestamp||'');return Number.isFinite(value)?value:0;};
+  const priority=item=>({call:0,security:1,account:2,live:3,gift:4,fan_club:4,message:5,meetwave_invite:6}[String(item.type||'').toLowerCase()]??10);
+  state.notifications.sort((a,b)=>{
+    if(notificationSort==='oldest')return notificationTime(a)-notificationTime(b);
+    if(notificationSort==='unread'&&Boolean(a.read)!==Boolean(b.read))return a.read?1:-1;
+    if(notificationSort==='priority'&&priority(a)!==priority(b))return priority(a)-priority(b);
+    if(notificationSort==='people'){const name=String(a.actor?.name||'').localeCompare(String(b.actor?.name||''));if(name)return name;}
+    if(notificationSort==='category'){const category=String(notificationCategoryFor(a)).localeCompare(String(notificationCategoryFor(b)));if(category)return category;}
+    return notificationTime(b)-notificationTime(a);
+  });
   const notifications=state.notifications;
   const unreadCount=notifications.filter(item=>!item.read).length;
   const readCount=notifications.length-unreadCount;
