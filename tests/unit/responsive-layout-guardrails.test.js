@@ -90,7 +90,7 @@ test('the responsive shell caches the dedicated phone layout and current navigat
   const mobile = await read('public/mobile-layout.css');
   assert.ok(html.includes('styles.css?v=20261107-top-gifters-1'));
   assert.ok(html.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
-  assert.ok(worker.includes('v131-live-top-gifters-1'));
+  assert.ok(worker.includes('minglora-shell-v132-live-top-gifters-2'));
   assert.ok(worker.includes('/styles.css?v=20261107-top-gifters-1'));
   assert.ok(worker.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
   assert.ok(worker.includes('/app.js?v=20261107-top-gifters-2'));
