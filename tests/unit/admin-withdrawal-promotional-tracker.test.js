@@ -19,11 +19,13 @@ test("owner earnings report includes every creator withdrawal with account and P
   assert.match(server, /hasActiveReviewerSession/);
 });
 
-test("admin withdrawal tracker renders status totals, filtering and auto-refresh", () => {
+test("admin withdrawal tracker renders status totals, filtering and user-controlled refresh", () => {
   assert.match(admin, /All creator\/member withdrawal requests/);
   assert.match(admin, /admin-withdrawal-tracker-status/);
   assert.match(admin, /renderAdminWithdrawalTracker/);
-  assert.match(admin, /15000/);
+  assert.match(admin, /id="admin-gift-earnings-refresh"/);
+  assert.match(admin, /earningsRefreshButton\.onclick = \(\) => \{ void loadAdminGiftEarnings\(panel\); \}/);
+  assert.doesNotMatch(admin, /mingloraWithdrawalTimer|mingloraWithdrawalAutoRefresh/);
   assert.match(adminCss, /admin-withdrawal-tracker-row/);
   assert.match(adminHtml, /admin-withdrawal-promotional-tracker-1/);
 });
