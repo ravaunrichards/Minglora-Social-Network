@@ -1,102 +1,58 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-
-const [css, js, html, serviceWorker] = await Promise.all([
-  readFile(new URL('../../public/meetwave.css', import.meta.url), 'utf8'),
-  readFile(new URL('../../public/meetwave.js', import.meta.url), 'utf8'),
-  readFile(new URL('../../public/index.html', import.meta.url), 'utf8'),
-  readFile(new URL('../../public/sw.js', import.meta.url), 'utf8')
+const [css,js,html,serviceWorker]=await Promise.all([
+ readFile(new URL('../../public/meetwave.css',import.meta.url),'utf8'),
+ readFile(new URL('../../public/meetwave.js',import.meta.url),'utf8'),
+ readFile(new URL('../../public/index.html',import.meta.url),'utf8'),
+ readFile(new URL('../../public/sw.js',import.meta.url),'utf8')
 ]);
-
-test('Minglora MeetWave keeps the standalone room starting geometry', () => {
-  assert.match(css, /grid-template-columns:minmax\(0,1fr\) 300px!important/);
-  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
-  assert.match(css, /aspect-ratio:16\/10!important/);
-  assert.match(css, /min-height:160px!important/);
+test('MeetWave has fixed host plus eight persistent guest seats',()=>{
+ assert.ok(js.includes('data-grid-role="fixed-host-eight-guest-seats"'));
+ assert.ok(js.includes('Array.from({length:8}'));
+ assert.ok(js.includes('function ensureParticipantSeat(participant)'));
+ assert.ok(js.includes('function resetGuestSeat(identity)'));
+ assert.ok(css.includes('#mw-grid.live-guest-layout'));
 });
-
-test('Minglora retains People and Chat as one compact companion column', () => {
-  assert.match(js, /class="mw-support-column"/);
-  assert.match(css, /\.mw-support-column\{[\s\S]*?grid-template-rows:auto minmax\(390px,1fr\)/);
+test('Layout choices affect the screen wrapper, not the grid state',()=>{
+ for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']){
+  assert.ok(js.includes('data-mw-layout="'+layout+'"'),layout);
+  assert.ok(css.includes('#mw-screen-stage[data-screen-layout="'+layout+'"]'),layout+' screen style');
+ }
+ assert.ok(js.includes('screen.dataset.screenLayout=layout'));
+ assert.ok(!js.includes('grid.dataset.layout=layout'));
+ assert.ok(!js.includes("layout==='full-screen'&&!document.fullscreenElement"));
 });
-
-test('phone layout preserves two landscape video tiles and side-by-side People and Chat', () => {
-  assert.match(css, /@media\(max-width:800px\)[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
-  assert.match(css, /\.mw-support-column\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.doesNotMatch(css, /@media\(max-width:430px\)[\s\S]*?\.mw-video-grid\s*\{[^}]*grid-template-columns:1fr/);
+test('Screen layouts are inside the Settings gear with no Layout tab',()=>{
+ assert.ok(js.includes('id="mw-settings"'));
+ assert.ok(js.includes('id="mw-panel-settings-tab"'));
+ assert.ok(js.includes('id="mw-layout-picker" class="mw-settings-section mw-layout-picker"'));
+ assert.ok(!js.includes('id="mw-panel-layouts-tab"'));
+ assert.ok(!js.includes('id="mw-layout"'));
 });
-
-test('MeetWave room dock stays attached and meeting chat remains in the room', () => {
-  assert.match(js, /class="mw-controls live-player-controls live-icon-controls"/);
-  assert.match(js, /id="mw-people-toggle"/);
-  assert.match(js, /id="mw-chat-toggle"/);
-  assert.match(js, /function toggleSupportPanel\(name\)/);
-  assert.match(js, /setRoomControlState\('mw-mic'/);
-  assert.match(js, /setRoomControlState\('mw-camera'/);
-  assert.match(css, /\.mw-controls\.live-player-controls\.live-icon-controls\{[\s\S]*?position:relative!important/);
-  assert.match(css, /\.mw-support-column\[hidden\]\{display:none!important\}/);
-  assert.match(css, /@media\(max-width:760px\)[\s\S]*?bottom:calc\(66px \+ env\(safe-area-inset-bottom\)\)/);
+test('Host gets LIVE-style power-off; participant Leave remains separate',()=>{
+ assert.ok(js.includes('id="mw-power-off" class="live-control-button is-danger live-host-power-button"'));
+ assert.ok(js.includes('Power off MeetWave for everyone'));
+ assert.ok(js.includes("$('#mw-power-off')?.addEventListener('click'"));
+ assert.ok(js.includes('await leaveRoom(true)'));
+ assert.ok(!js.includes('id="mw-end"'));
 });
-
-test('MeetWave automatic-sync assets bypass stale browser and service-worker caches', () => {
-  const cssVersion = '20261107-meetwave-control-access-4';
-  const jsVersion = '20261107-meetwave-control-access-4';
-  assert.ok(html.includes('/meetwave.css?v=' + cssVersion));
-  assert.ok(html.includes('/meetwave.js?v=' + jsVersion));
-  assert.match(serviceWorker, new RegExp('minglora-shell-v124-meetwave-control-access-4'));
-  assert.ok(serviceWorker.includes('/meetwave.css?v=' + cssVersion));
-  assert.ok(serviceWorker.includes('/meetwave.js?v=' + jsVersion));
+test('Compact MeetWave side panel retains Chat, People, Settings and guest invitations',()=>{
+ for(const id of ['mw-panel-chat-tab','mw-panel-people-tab','mw-panel-settings-tab','mw-chat-panel','mw-participants-panel','mw-settings-panel','mw-settings-invite','mw-room-invite'])assert.ok(js.includes('id="'+id+'"'),id);
+ assert.ok(css.includes('minmax(250px,280px)'));
+ assert.ok(css.includes('max-height:290px!important'));
+ assert.ok(js.includes('function inviteMembers(id)'));
 });
-
-test('MeetWave has exactly nine local-screen layout choices', () => {
-  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-  for (const layout of layouts) {
-    assert.ok(js.includes('data-mw-layout="'+layout+'"'), layout+' choice is present');
-    assert.ok(css.includes('data-layout="'+layout+'"'), layout+' has a screen arrangement');
-  }
-  assert.ok(js.includes('function applyMeetingLayout(layout)'));
-  assert.ok(js.includes('This changes only your local screen arrangement'));
-  for (const oldLayout of ['gallery-2','gallery-3','gallery-4','speaker','sidebar','filmstrip','presentation']) {
-    assert.ok(!js.includes('data-mw-layout="'+oldLayout+'"'), oldLayout+' is not offered');
-  }
-  assert.ok(js.includes("activeLayout='fluid-grid'"));
+test('Screen sharing has its own stage and does not consume a guest seat',()=>{
+ assert.ok(js.includes('id="mw-screen-share-stage"'));
+ assert.ok(js.includes("$('#mw-screen-share-stage')?.append(element)"));
+ assert.ok(js.includes("$('#mw-screen-stage')?.classList.add('has-screen-share')"));
 });
-
-test('MeetWave layouts and settings are integrated into the reachable side panel', () => {
-  const aside = js.indexOf('id="mw-support-column"');
-  const layouts = js.indexOf('id="mw-layout-picker"', aside);
-  const settings = js.indexOf('id="mw-settings-panel"', layouts);
-  const end = js.indexOf('</aside></div><p id="mw-room-status"', settings);
-  assert.ok(aside >= 0 && layouts > aside && settings > layouts && end > settings);
-  assert.ok(js.includes('id="mw-panel-layouts-tab"'));
-  assert.ok(js.includes("const panels={chat:$('#mw-chat-panel'),people:$('#mw-participants-panel'),layouts:$('#mw-layout-picker'),settings:$('#mw-settings-panel')}"));
-  assert.ok(css.includes('.mw-meeting .mw-support-column.live-fullscreen-chat-slot{'));
-  assert.ok(css.includes('.mw-meeting .mw-support-column>.mw-layout-picker{'));
-  assert.ok(css.includes('.mw-meeting .mw-support-column>.mw-settings-panel{'));
-  assert.ok(css.includes('live-full-screen-active'));
-});
-test('MeetWave settings cover devices and appearance while retaining visible room chat', () => {
-  for (const id of ['mw-settings-panel','mw-audio-input','mw-audio-output','mw-video-input','mw-echo-cancellation','mw-noise-suppression','mw-auto-gain','mw-video-fit','mw-mirror-self','mw-show-names','mw-chat-panel']) assert.ok(js.includes('id=\"'+id+'\"'));
-  assert.match(js, /function switchMeetingDevice\(kind,deviceId\)/);
-  assert.match(js, /function applyMeetingVisualSettings\(\)/);
-});
-
-
-test('MeetWave side panel resets stale floating transforms and uses the full room width', () => {
-  assert.match(css, /\\.mw-meeting \\.mw-support-column\\.live-fullscreen-chat-slot\\{[\\s\\S]*?transform:none!important/);
-  assert.match(css, /\\.mw-meeting \\.mw-support-column\\.live-fullscreen-chat-slot\\{[\\s\\S]*?width:100%!important/);
-  assert.match(css, /\\.mw-meeting \\.live-player-controls\\.live-icon-controls\\{[\\s\\S]*?display:grid!important/);
-  assert.match(css, /grid-template-columns:repeat\\(auto-fit,minmax\\(64px,1fr\\)\\)!important/);
-  assert.match(css, /overflow:visible!important/);
-  assert.match(css, /@media\\(max-width:380px\\)[\\s\\S]*?grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)!important/);
-});
-
-test('MeetWave controls are all wired to accessible room actions', () => {
-  for (const id of ['mw-mic','mw-camera','mw-screen','mw-layout','mw-fullscreen','mw-copy','mw-settings','mw-people-toggle','mw-chat-toggle','mw-leave']) {
-    assert.ok(js.includes('id="'+id+'"'), id+' is present');
-  }
-  assert.match(js, /\\$\\('#mw-layout'\\)\\.onclick=\\(\\)=>setMeetWaveSideTab\\('layouts'\\)/);
-  assert.match(js, /\\$\\('#mw-settings'\\)\\.onclick=\\(\\)=>setMeetWaveSideTab\\('settings'\\)/);
-  assert.match(js, /\\$\\('#mw-chat-toggle'\\)\\.onclick=\\(\\)=>setMeetWaveSideTab\\('chat'\\)/);
+test('MeetWave asset cache versions are current',()=>{
+ const current='20261107-meetwave-screen-seat-layout-5';
+ assert.ok(html.includes('/meetwave.css?v='+current));
+ assert.ok(html.includes('/meetwave.js?v='+current));
+ assert.ok(serviceWorker.includes('minglora-shell-v125-meetwave-screen-seat-layout-5'));
+ assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
+ assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
 });
