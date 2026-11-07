@@ -38,6 +38,117 @@
     }
   }
 
+
+  function initializeInternalActivityFeed(panel) {
+    const section = panel.querySelector('#admin-internal-activity');
+    if (!section || section.dataset.initialized === 'true') return;
+    section.dataset.initialized = 'true';
+
+    const list = section.querySelector('#admin-internal-activity-feed');
+    const status = section.querySelector('#admin-internal-activity-status');
+    const updated = section.querySelector('#admin-internal-activity-updated');
+    const summary = section.querySelector('#admin-internal-activity-summary');
+    let cursor = 0;
+    let busy = false;
+    let timer = null;
+    let firstLoad = true;
+    let stopped = false;
+
+    const formatTime = value => {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? 'Time unavailable' :
+        date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit' });
+    };
+    const describe = event => {
+      const source = String(event.source_table || 'Minglora').replace(/_/g, ' ');
+      const operation = String(event.operation || '').toLowerCase();
+      if (event.source_table === 'minglora_runtime_state') {
+        const changed = Array.isArray(event.collections) ? event.collections : [];
+        return changed.length
+          ? 'Runtime state updated · ' + changed.map(value => String(value).replace(/_/g, ' ')).join(', ')
+          : 'Runtime state updated';
+      }
+      return source + (operation ? ' · ' + operation : '');
+    };
+    const eventMarkup = event => {
+      const actor = event.actor_id ? 'Actor ' + String(event.actor_id).slice(0, 8) : 'System event';
+      const record = event.record_id ? 'Record ' + String(event.record_id).slice(0, 12) : '';
+      return '<article class="admin-internal-activity-row">' +
+        '<span class="admin-internal-activity-dot" aria-hidden="true"></span>' +
+        '<div class="admin-internal-activity-copy"><strong>' + escapeText(describe(event)) + '</strong>' +
+        '<small>' + escapeText(actor + (record ? ' · ' + record : '')) + '</small></div>' +
+        '<time datetime="' + escapeText(event.occurred_at || '') + '">' + escapeText(formatTime(event.occurred_at)) + '</time>' +
+        '</article>';
+    };
+    const setSnapshot = snapshot => {
+      if (!summary || !snapshot) return;
+      const metrics = [
+        ['Members', snapshot.registeredMembers],
+        ['Active calls', snapshot.activeCalls],
+        ['LIVE now', Math.max(Number(snapshot.activeLiveSessions || 0), Number(snapshot.activeDatabaseBroadcasts || 0))],
+        ['MeetWave rooms', snapshot.activeMeetings],
+        ['Runtime revision', snapshot.revision]
+      ];
+      summary.innerHTML = metrics.map(([label, value]) =>
+        '<div class="admin-internal-activity-metric"><strong>' +
+        escapeText(Number(value || 0).toLocaleString()) +
+        '</strong><small>' + escapeText(label) + '</small></div>'
+      ).join('');
+      if (updated) updated.textContent = 'Database synced ' + formatTime(snapshot.syncedAt || snapshot.updatedAt);
+    };
+    const schedule = delay => {
+      if (stopped) return;
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(poll, delay);
+    };
+    const poll = async () => {
+      if (busy || stopped) return;
+      if (document.visibilityState === 'hidden') {
+        schedule(5000);
+        return;
+      }
+      busy = true;
+      try {
+        const query = new URLSearchParams({ limit:'50', afterId:String(firstLoad ? 0 : cursor) });
+        const response = await fetch('/api/admin/internal-activity?' + query.toString(), {
+          credentials:'same-origin',
+          headers:{ Accept:'application/json', 'Cache-Control':'no-cache' },
+          cache:'no-store'
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Internal activity could not be synchronized.');
+        const events = Array.isArray(result.events) ? result.events : [];
+        if (firstLoad) {
+          list.innerHTML = events.length ? events.map(eventMarkup).join('') :
+            '<p class="admin-internal-activity-empty">No activity has been recorded yet. New Minglora events will appear here automatically.</p>';
+          firstLoad = false;
+          cursor = Number(result.cursor || 0);
+        } else if (events.length) {
+          events.forEach(event => {
+            cursor = Math.max(cursor, Number(event.id || 0));
+            list.insertAdjacentHTML('afterbegin', eventMarkup(event));
+          });
+          while (list.children.length > 50) list.lastElementChild?.remove();
+        }
+        if (firstLoad === false && !events.length && Number(result.cursor || 0) > cursor) {
+          cursor = Number(result.cursor);
+        }
+        setSnapshot(result.snapshot);
+        if (status) status.textContent = 'LIVE · listening for new internal activity';
+        schedule(2000);
+      } catch (error) {
+        if (status) status.textContent = 'Reconnecting · ' + String(error.message || 'activity feed unavailable');
+        schedule(5000);
+      } finally {
+        busy = false;
+      }
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') schedule(0);
+    });
+    schedule(0);
+  }
+
   function addControlCentrePanel() {
     const root = document.querySelector('#admin-centre-root');
     if (!root || root.querySelector('#admin-control-centre')) return;
@@ -60,10 +171,28 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
+        <section class="admin-internal-activity" id="admin-internal-operations" aria-labelledby="admin-internal-activity-title">
+          <div class="admin-internal-activity-heading">
+            <div><h3 id="admin-internal-activity-title">Minglora internal operations</h3>
+              <p>Live metadata-only activity from the application database, including social activity, calls, meetings, LIVE, moderation, accounts and financial operations.</p></div>
+            <div class="admin-internal-activity-state">
+              <span id="admin-internal-activity-status" role="status" aria-live="polite">Connecting to live activity…</span>
+              <small id="admin-internal-activity-updated">Waiting for the first database sync</small>
+            </div>
+          </div>
+          <div id="admin-internal-activity-summary" class="admin-internal-activity-summary" aria-live="polite"></div>
+          <div class="admin-internal-activity-list-wrap">
+            <div class="admin-internal-activity-list-heading"><strong>Recent internal events</strong><small>Newest first · latest 50 events</small></div>
+            <div id="admin-internal-activity-feed" class="admin-internal-activity-feed" aria-live="polite">
+              <p class="admin-internal-activity-empty">Connecting to the Minglora database…</p>
+            </div>
+          </div>
+          <p class="admin-internal-activity-footnote">The journal records event type, time, source table, operation and a reference ID only. It never stores message bodies, passwords, session tokens, media URLs or payment credentials.</p>
+        </section>
         <div class="admin-control-centre-grid">
           <button type="button" class="admin-control-centre-tile" data-admin-jump="moderation-workspace">
             <strong>Moderation reports</strong><small>Review reports and apply available moderation actions.</small>
@@ -455,6 +584,7 @@
     panel.append(adminSettings);
     root.replaceChildren(panel);
     root.dataset.adminCentreReady = 'true';
+    if (unlocked) initializeInternalActivityFeed(panel);
 
     if (unlocked) {
       panel.querySelector('#admin-platform-payout-account-form')?.addEventListener('submit', async event => {
