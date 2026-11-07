@@ -4581,13 +4581,24 @@ async function route(req, res) {
               user:safeUser(member,user.id),
               gifterBadge:getGifterBadgeSummary(db,member.id)
             };
-          }).filter(Boolean);
-          const titleGifter=topGifters.find(gifter=>gifter.isTitleGifter)||null;
+          }).filter(Boolean).map((gifter,index)=>({
+            ...gifter,
+            rank:index+1,
+            isTitleGifter:index===0
+          }));
+          const titleGifter=topGifters[0]||null;
+          const titleGiftCount=Number(titleGifter?.giftCount||0);
+          const titleGiftCoins=Number(titleGifter?.totalCoins||0);
           return {
             ...entry,
             topGifters,
             titleGifter:titleGifter?{...titleGifter.user,gifterBadge:titleGifter.gifterBadge}:null,
-            leadingGifter:titleGifter?{...titleGifter.user,gifterBadge:titleGifter.gifterBadge}:null
+            titleGifterGiftCount:titleGiftCount,
+            titleGifterCoins:titleGiftCoins,
+            leadingGifter:titleGifter?{...titleGifter.user,gifterBadge:titleGifter.gifterBadge}:null,
+            leadingGifterCount:titleGiftCount,
+            leadingGifterCoins:titleGiftCoins,
+            lit:Boolean(titleGifter&&titleGiftCount>=Number(entry.targetCount||1))
           };
         });
         const response={...gallery,entries};
