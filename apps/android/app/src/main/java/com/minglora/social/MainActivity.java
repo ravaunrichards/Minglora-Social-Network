@@ -86,7 +86,8 @@ public final class MainActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setMediaPlaybackRequiresUserGesture(true);
+        // LiveKit remote tracks and incoming call audio arrive asynchronously after the user answers.
+        settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setGeolocationEnabled(true);
         settings.setSupportMultipleWindows(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
