@@ -63,10 +63,10 @@ test('MeetWave panel and layout tiles keep consistent gaps, sizes and independen
   assert.ok(css.includes('minmax(250px,280px)'));
   assert.ok(css.includes('max-height:290px!important'));
   assert.ok(css.includes('overflow:auto!important'));
-  assert.ok(css.includes('gap:12px!important;padding:14px!important'));
-  assert.ok(css.includes('.mw-screen-stage{') && css.includes('overflow:auto!important;overscroll-behavior:contain!important'));
+  assert.ok(css.includes('gap:clamp(5px,.8vw,10px)!important;padding:clamp(7px,1vw,12px)!important'));
+  assert.ok(css.includes('height:clamp(320px,60dvh,680px)!important') && css.includes('overflow:hidden!important;box-sizing:border-box!important'));
   assert.ok(css.includes('.mw-screen-stage.has-screen-share #mw-grid .live-guest-seat') && css.includes('min-height:0!important'));
-  assert.ok(css.includes('min-height:clamp(88px,11vh,132px)!important'));
+  assert.ok(css.includes('min-height:0!important;max-width:none!important;max-height:none!important'));
   assert.ok(css.includes('.mw-support-column>.mw-layout-panel[hidden]{display:none!important}'));
 });
 
