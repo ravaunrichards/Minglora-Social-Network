@@ -2170,13 +2170,14 @@ async function route(req, res) {
         grant.userId === memberId && grant.status === 'active' &&
         (!grant.expiresAt || new Date(grant.expiresAt).getTime() > Date.now())
       ) || null;
-      const hasLivePro = () => Boolean(canManageLivePro() || liveProGrantFor(user.id));
+      const hasLivePro = () => Boolean(isDesignatedCreatorHubAdmin(user) || liveProGrantFor(user.id));
       if (method === 'GET' && p === '/api/live-pro/access') {
+        const isDesignatedAdmin = isDesignatedCreatorHubAdmin(user);
         const adminAccess = canManageLivePro();
-        const grant = adminAccess ? null : liveProGrantFor(user.id);
+        const grant = isDesignatedAdmin ? null : liveProGrantFor(user.id);
         return json(res,200,{
-          hasAccess: adminAccess || Boolean(grant),
-          source: adminAccess ? 'designated_admin' : grant ? 'admin_grant' : 'none',
+          hasAccess: hasLivePro(),
+          source: isDesignatedAdmin ? 'designated_admin' : grant ? 'admin_grant' : 'none',
           grantedAt: grant?.grantedAt || null,
           expiresAt: grant?.expiresAt || null,
           canManageAccess: adminAccess,
