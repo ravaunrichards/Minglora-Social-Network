@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [css, js] = await Promise.all([
+const [css, js, html, serviceWorker] = await Promise.all([
   readFile(new URL('../../public/meetwave.css', import.meta.url), 'utf8'),
-  readFile(new URL('../../public/meetwave.js', import.meta.url), 'utf8')
+  readFile(new URL('../../public/meetwave.js', import.meta.url), 'utf8'),
+  readFile(new URL('../../public/index.html', import.meta.url), 'utf8'),
+  readFile(new URL('../../public/sw.js', import.meta.url), 'utf8')
 ]);
 
 test('Minglora MeetWave keeps the standalone room starting geometry', () => {
@@ -35,4 +37,13 @@ test('MeetWave mirrors LIVE with a bottom control rail and panel toggles', () =>
   assert.match(css, /\.mw-controls\.live-player-controls\.live-icon-controls\{[\s\S]*?position:fixed/);
   assert.match(css, /\.mw-support-column\[hidden\]\{display:none!important\}/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?bottom:calc\(66px \+ env\(safe-area-inset-bottom\)\)/);
+});
+
+test('MeetWave bottom-control assets bypass stale browser and service-worker caches', () => {
+  const version = '20261107-meetwave-bottom-controls-1';
+  assert.match(html, new RegExp('/meetwave\\\\.css\\\\?v=' + version));
+  assert.match(html, new RegExp('/meetwave\\\\.js\\\\?v=' + version));
+  assert.match(serviceWorker, new RegExp('minglora-shell-v115-meetwave-bottom-controls-1'));
+  assert.match(serviceWorker, new RegExp('/meetwave\\\\.css\\\\?v=' + version));
+  assert.match(serviceWorker, new RegExp('/meetwave\\\\.js\\\\?v=' + version));
 });
