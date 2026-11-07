@@ -54,7 +54,8 @@
       (earned ? "<small class='minglora-gifter-earned'>" + escapeHtml(earned) + "</small>" : "") +
       "</span><span class='minglora-gifter-title'>" + titleFor(position) +
       "</span><strong class='minglora-gifter-coins'>" + count(item.points ?? item.coinsSent) +
-      "<small>Coins sent</small></strong></article>";
+      "<small>Coins sent</small></strong><button type='button' class='minglora-gifter-profile' data-top-gifter-profile='" +
+      escapeHtml(user.id || item.userId || "") + "'>Profile</button></article>";
   }
 
   async function loadLeaderboard() {
@@ -77,6 +78,12 @@
         (items.length
           ? "<div class='minglora-gifter-list'>" + items.map(gifterRow).join("") + "</div>"
           : "<div class='minglora-gifter-empty'><strong>No LIVE gifters ranked yet</strong><p>Confirmed LIVE gifts will appear here. Failed, duplicate and refunded gifts never count.</p></div>");
+      root.querySelectorAll("[data-top-gifter-profile]").forEach(button => {
+        button.addEventListener("click", () => {
+          const userId = button.dataset.topGifterProfile;
+          if (userId && typeof window.openProfile === "function") window.openProfile(userId);
+        });
+      });
       root.querySelectorAll("[data-live-gifter-period]").forEach(button => {
         button.addEventListener("click", () => {
           activePeriod = button.dataset.liveGifterPeriod;
