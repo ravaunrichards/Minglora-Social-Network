@@ -200,7 +200,7 @@ function safeUser(u,viewerId=null){
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
   const own=viewerId===u.id;
   const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:getProfileVerificationBadge(u),platformBadge:getPlatformAdminBadge(u,viewerId),verificationStatus:u.verificationStatus||'not_submitted',profileLayout:getUserSettings(u).preferences.profileLayout};
-  result.liveProBadge=(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));
+  result.liveProBadge=isDesignatedCreatorHubAdmin(u)||(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));
   const profileThought=typeof viewerId==='string'?(db.profileStatuses||[]).filter(item=>item.userId===u.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(viewerId,u.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]:null;
   if(profileThought)result.profileThought={text:profileThought.text,mood:profileThought.mood||'',audience:profileThought.audience,createdAt:profileThought.createdAt,expiresAt:profileThought.expiresAt};
   const gifterBadge=getGifterBadgeSummary(db,u.id);
