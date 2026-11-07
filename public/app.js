@@ -3922,8 +3922,9 @@ async function creatorSubscriptionsMarkup(){
   const mySubscriptions=Array.isArray(myResult.subscriptions)?myResult.subscriptions:[];
   const tiers=new Map((myResult.tiers||[]).map(item=>[item.id,item]));
   const members=new Map((myResult.members||[]).map(item=>[item.id,item]));
-  const incoming=mySubscriptions.filter(item=>item.creator_id===userId&&["active","past_due"].includes(item.status));
-  const outgoing=mySubscriptions.filter(item=>item.subscriber_id===userId&&["active","past_due"].includes(item.status));
+  const currentPaidMembership=item=>["active","past_due"].includes(item.status)&&Number.isFinite(Date.parse(item.current_period_end||""))&&Date.parse(item.current_period_end)>Date.now();
+  const incoming=mySubscriptions.filter(item=>item.creator_id===userId&&currentPaidMembership(item));
+  const outgoing=mySubscriptions.filter(item=>item.subscriber_id===userId&&currentPaidMembership(item));
   const money=minor=>"$"+(Number(minor||0)/100).toFixed(2);
   const applicationPanel=applicationStatus==="approved"
     ? ""
@@ -3933,7 +3934,7 @@ async function creatorSubscriptionsMarkup(){
         ? "<section class='card creator-subscription-application'><span class='creator-eyebrow'>CREATOR SUBSCRIPTIONS</span><h3>Application under review</h3><p>Your creator subscription application has been submitted. Monthly memberships become available after Minglora approval.</p><span class='creator-subscription-status'>Pending review</span></section>"
         : "<section class='card creator-subscription-application'><span class='creator-eyebrow'>CREATOR SUBSCRIPTIONS</span><h3>Apply to offer monthly subscriptions</h3><p>Let your audience support your creator work with a recurring monthly membership, subscriber benefits and subscriber-only experiences.</p><form id='creator-subscription-apply-form'><label for='creator-subscription-application-note'>Application note (optional)</label><textarea id='creator-subscription-application-note' name='applicationNote' maxlength='1200' rows='3' placeholder='Tell Minglora what you plan to offer subscribers.'></textarea><button type='submit' class='primary'>Submit creator application</button><p id='creator-subscription-application-status' class='creator-inline-status' role='status'></p></form></section>";
   const manager=applicationStatus==="approved"
-    ? "<section class='card creator-subscription-manager'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>MONTHLY MEMBERSHIP</span><h3>Subscription offer</h3><p>Choose your monthly price and the benefits members receive. Pricing is in USD.</p></div><label class='creator-subscription-toggle'><input type='checkbox' id='creator-subscription-enabled' "+(settings.subscriptions_enabled===true?"checked":"")+" "+(!tier.id?"disabled":"")+"><span>Accept subscriptions</span></label></div><form id='creator-subscription-tier-form' class='creator-subscription-tier-form'><label for='creator-subscription-name'>Membership name</label><input id='creator-subscription-name' name='name' maxlength='48' required value='"+esc(tier.name||"Monthly membership")+"'><label for='creator-subscription-price'>Monthly price (USD)</label><input id='creator-subscription-price' name='price' type='number' min='2.99' max='99.99' step='0.01' required value='"+(tier.price_minor?(Number(tier.price_minor)/100).toFixed(2):"2.99")+"'><label for='creator-subscription-description'>What subscribers get</label><textarea id='creator-subscription-description' name='description' maxlength='500' rows='3' placeholder='Describe the value of your monthly membership.'>"+esc(tier.description||"")+"</textarea><label for='creator-subscription-benefits'>Subscriber benefits (one per line, up to eight)</label><textarea id='creator-subscription-benefits' name='benefits' maxlength='800' rows='4' placeholder='Subscriber badge\nSubscriber-only LIVE access\nExclusive creator updates'>"+esc((Array.isArray(tier.benefits)?tier.benefits:[]).join("\n"))+"</textarea><button type='submit' class='primary' id='creator-subscription-save-tier'>Save monthly subscription</button><p class='creator-inline-status' id='creator-subscription-tier-status' role='status'>"+(tier.id?"Current monthly offer: "+money(tier.price_minor)+".":"Save a price to create your monthly PayPal billing plan.")+"</p></form></section>"
+    ? "<section class='card creator-subscription-manager'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>MONTHLY MEMBERSHIP</span><h3>Subscription offer</h3><p>Choose your monthly price and the benefits members receive. Pricing is in USD.</p></div><label class='creator-subscription-toggle'><input type='checkbox' id='creator-subscription-enabled' "+(settings.subscriptions_enabled===true?"checked":"")+" "+(!tier.id?"disabled":"")+"><span>Accept subscriptions</span></label></div><form id='creator-subscription-tier-form' class='creator-subscription-tier-form'><label for='creator-subscription-name'>Membership name</label><input id='creator-subscription-name' name='name' maxlength='48' required value='"+esc(tier.name||"Monthly membership")+"'><label for='creator-subscription-price'>Monthly price (USD)</label><input id='creator-subscription-price' name='price' type='number' min='2.99' max='99.99' step='0.01' required value='"+(tier.price_minor?(Number(tier.price_minor)/100).toFixed(2):"2.99")+"'><label for='creator-subscription-description'>What subscribers get</label><textarea id='creator-subscription-description' name='description' maxlength='500' rows='3' placeholder='Describe the value of your monthly membership.'>"+esc(tier.description||"")+"</textarea><label for='creator-subscription-benefits'>Subscriber benefits (one per line, up to eight)</label><textarea id='creator-subscription-benefits' name='benefits' maxlength='800' rows='4' placeholder='Subscriber badge\nSubscriber-only LIVE access\nExclusive creator updates'>"+esc((Array.isArray(tier.benefits)?tier.benefits:[]).join("\n"))+"</textarea><button type='submit' class='primary' id='creator-subscription-save-tier'>Save monthly subscription</button><p class='creator-inline-status' id='creator-subscription-tier-status' role='status'>"+(tier.id?"Current monthly offer: "+money(tier.price_minor)+".":"Save a price to create your monthly PayPal billing plan.")+"</p></form><div class='creator-subscription-features'><h4>Subscriber experience</h4><label class='creator-toggle-row'><span><strong>Subscriber badge</strong><small>Show a member badge for active subscribers.</small></span><input type='checkbox' id='creator-subscription-badge' "+(settings.subscriber_badge_enabled!==false?"checked":"")+"></label><label class='creator-toggle-row'><span><strong>Subscriber chat</strong><small>Enable subscriber-only chat experiences where supported.</small></span><input type='checkbox' id='creator-subscription-chat' "+(settings.subscriber_chat_enabled===true?"checked":"")+"></label><label class='creator-toggle-row'><span><strong>Subscriber-only LIVE</strong><small>Allow eligible LIVE sessions to be limited to paid subscribers.</small></span><input type='checkbox' id='creator-subscription-live' "+(settings.subscriber_only_live_enabled!==false?"checked":"")+"></label></div></section>"
     : "";
   const subscriberRows=incoming.map(item=>{
     const member=members.get(item.subscriber_id)||{};
@@ -4056,6 +4057,26 @@ async function renderCreatorSection(section){
         enabledToggle.disabled=false;
       }
     });
+    for(const [id,key,label] of [
+      ["creator-subscription-badge","subscriberBadgeEnabled","Subscriber badge"],
+      ["creator-subscription-chat","subscriberChatEnabled","Subscriber chat"],
+      ["creator-subscription-live","subscriberOnlyLiveEnabled","Subscriber-only LIVE"]
+    ]){
+      const control=document.getElementById(id);
+      control?.addEventListener("change",async()=>{
+        const nextValue=control.checked;
+        control.disabled=true;
+        try{
+          await api("/subscriptions/enable",{method:"POST",body:JSON.stringify({[key]:nextValue})});
+          toast(label+(nextValue?" enabled.":" disabled."));
+        }catch(error){
+          control.checked=!nextValue;
+          toast(error.message||label+" could not be updated.");
+        }finally{
+          control.disabled=false;
+        }
+      });
+    }
     document.querySelectorAll("[data-cancel-subscription]").forEach(button=>button.addEventListener("click",async()=>{
       const id=button.dataset.cancelSubscription;
       if(!id||!window.confirm("Cancel this monthly subscription renewal? Access remains until the current paid period ends."))return;
@@ -5341,13 +5362,14 @@ function renderProfile(data){
   const subscriptionData=data.subscription||{},subscriptionTier=subscriptionData.tier||{},subscriptionSettings=subscriptionData.settings||{},viewerSubscription=subscriptionData.viewerSubscription||null;
   const subscriptionEnabled=!isMe&&subscriptionSettings.application_status==='approved'&&subscriptionSettings.subscriptions_enabled===true&&subscriptionTier.id;
   const subscriptionStatus=String(viewerSubscription?.status||'');
-  const subscriptionAlreadyExists=['incomplete','active','past_due'].includes(subscriptionStatus);
+  const currentSubscriptionPeriodEnd=Date.parse(viewerSubscription?.current_period_end||'');
+  const subscriptionAlreadyExists=['active','past_due'].includes(subscriptionStatus)&&Number.isFinite(currentSubscriptionPeriodEnd)&&currentSubscriptionPeriodEnd>Date.now();
   const subscriptionPriceMinor=Number(subscriptionTier.price_minor);
   const subscriptionCurrency=String(subscriptionTier.currency||'USD').trim().toUpperCase();
   const subscriptionPriceLabel=Number.isSafeInteger(subscriptionPriceMinor)&&subscriptionPriceMinor>0&&/^[A-Z]{3}$/.test(subscriptionCurrency)
     ? ' · '+new Intl.NumberFormat(undefined,{style:'currency',currency:subscriptionCurrency}).format(subscriptionPriceMinor/100)+'/month'
     : '';
-  const subscriptionLabel=subscriptionStatus==='active'?'Subscribed':subscriptionStatus==='past_due'?'Payment issue':subscriptionStatus==='incomplete'?'Awaiting payment':'Subscribe'+subscriptionPriceLabel;
+  const subscriptionLabel=subscriptionAlreadyExists?(subscriptionStatus==='past_due'?'Payment issue':'Subscribed'):subscriptionStatus==='incomplete'?'Continue payment':'Subscribe'+subscriptionPriceLabel;
   const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit profile</span></button><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add story</span></button></div>'
     :'<div class="profile-actions"><button class="primary profile-edit" type="button" id="profile-follow" data-following="'+(data.following?'true':'false')+'" data-friendship="'+esc(data.friendship||'')+'">'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="secondary profile-edit profile-subscribe" type="button" id="profile-subscribe" type="button" data-subscription-active="'+(subscriptionStatus==='active'?'true':'false')+'" aria-label="Subscribe to '+esc(u.name)+'">'+esc(subscriptionLabel)+'</button><button class="secondary profile-edit" type="button" id="profile-message" aria-label="Start a chat with '+esc(u.name)+'">Message</button><button class="secondary profile-edit" type="button" data-profile-call="audio" aria-label="Start a voice call with '+esc(u.name)+'">Voice call</button><button class="secondary profile-edit" type="button" data-profile-call="video" aria-label="Start a video call with '+esc(u.name)+'">Video call</button><button class="secondary profile-edit" type="button" id="profile-report" aria-label="Report '+esc(u.name)+'">Report</button><button class="secondary profile-edit" type="button" id="profile-block" aria-label="Block '+esc(u.name)+'">Block</button></div>';
@@ -5477,11 +5499,13 @@ function renderProfile(data){
     // Keep Subscribe visible on every visitor profile. The checkout route remains
     // connected; the server validates creator approval and the active billing tier.
     profileSubscribeButton.textContent=subscriptionLabel;
-    profileSubscribeButton.disabled=subscriptionAlreadyExists;
+    profileSubscribeButton.disabled=!subscriptionEnabled||subscriptionAlreadyExists;
     profileSubscribeButton.dataset.subscriptionEnabled=subscriptionEnabled?'true':'false';
     profileSubscribeButton.setAttribute('aria-label',subscriptionLabel);
     if(!subscriptionEnabled&&!subscriptionAlreadyExists){
-      profileSubscribeButton.title='Creator subscriptions are not currently enabled for this profile.';
+      profileSubscribeButton.title='This creator is not currently accepting new subscriptions.';
+    }else if(subscriptionStatus==='incomplete'){
+      profileSubscribeButton.title='Continue your pending PayPal subscription approval.';
     }else{
       profileSubscribeButton.removeAttribute('title');
     }
