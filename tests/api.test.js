@@ -299,6 +299,19 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.match(deniedFriendRequest.body.error, /follow each other to become friends/i);
   const deniedMessage = await request('/api/messages', { method: 'POST', body: JSON.stringify({ to: registration.body.user.id, text: 'Should be blocked' }) });
   assert.equal(deniedMessage.status, 403);
+  const profileReport = await request('/api/reports', {
+    method: 'POST',
+    body: JSON.stringify({
+      targetType: 'user',
+      targetId: registration.body.user.id,
+      category: 'harassment',
+      details: 'Automated profile-report integration test.'
+    })
+  });
+  assert.equal(profileReport.status, 201, JSON.stringify(profileReport.body));
+  assert.equal(profileReport.body.report.targetType, 'user');
+  const profileReportHistory = await request('/api/reports/mine');
+  assert.equal(profileReportHistory.body.reports.some(report => report.id === profileReport.body.report.id), true);
   cookie = firstAccountCookie;
 
   const invalidSettings = await request('/api/settings', {
