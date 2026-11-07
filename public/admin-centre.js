@@ -78,7 +78,6 @@
               <strong id="admin-badge-controls-title">Profile verification &amp; gifter badge controls</strong>
               <p>Search a Minglora account once, then manage its blue profile check and 50-level gifter badges independently.</p>
             </div>
-            <button type="button" class="secondary" id="admin-badge-members-refresh">Refresh accounts</button>
           </div>
           <div class="admin-badge-member-search">
             <label for="admin-badge-member-search-input">Find an account by email, username or display name</label>
@@ -130,14 +129,12 @@
           <div class="admin-marketing-budget-heading">
             <div><strong id="admin-campaign-coins-wallet-title">Admin Promotional Gift Wallet</strong>
               <p>Independent campaign allocation and transaction ledger. This wallet is separate from Main Coins, Main Promotional Coins and cash-backed marketing funds.</p></div>
-            <button type="button" class="secondary" id="admin-campaign-coins-refresh">Refresh balance</button>
           </div>
           <div class="admin-marketing-budget-summary" id="admin-campaign-coins-summary" aria-live="polite">Loading verified campaign balance…</div>
           <div class="admin-promotional-gift-fund" id="admin-promotional-gift-fund">
             <div class="admin-marketing-budget-heading">
               <div><strong>Real USD backing for promotional gifts</strong>
                 <p>This is a separate PayPal-funded cash reserve. Campaign Coin allocations do not count as USD funding. Promotional gifts are enabled only up to captured reserve funds.</p></div>
-              <button type="button" class="secondary" id="admin-promotional-gift-fund-refresh">Refresh cash reserve</button>
             </div>
             <div id="admin-paypal-readiness" class="admin-control-centre-note" aria-live="polite">Checking PayPal configuration…</div>
             <div id="admin-promotional-gift-fund-summary" class="admin-marketing-budget-summary" aria-live="polite">Loading verified USD reserve…</div>
@@ -185,7 +182,6 @@
           <div class="admin-member-promotion-history">
             <div class="admin-member-promotion-history-heading">
               <strong>Recent member promotions</strong>
-              <button type="button" class="secondary" id="admin-member-promotion-refresh">Refresh history</button>
             </div>
             <div id="admin-member-promotion-history-list" aria-live="polite">Loading promotion history…</div>
           </div>
@@ -196,7 +192,6 @@
               <strong id="admin-marketing-budget-title">Creator marketing budget</strong>
               <p>Cash-backed promotional Coins for member campaigns. Creator earnings from these gifts are paid only from this reserved, funded budget.</p>
             </div>
-            <button type="button" class="secondary" id="admin-marketing-budget-refresh">Refresh budget</button>
           </div>
           <div class="admin-marketing-budget-summary" id="admin-marketing-budget-summary" aria-live="polite">Loading verified budget…</div>
           <form id="admin-marketing-funding-form" class="admin-marketing-form">
@@ -235,11 +230,9 @@
       panel.insertAdjacentHTML('beforeend',
         '<section class="admin-control-centre-section" id="moderation-workspace" aria-labelledby="admin-moderation-title">' +
           '<div class="admin-control-centre-section-heading"><div><h3 id="admin-moderation-title">Moderation reports</h3><p>Review member reports and apply available content or account actions.</p></div>' +
-          '<button type="button" class="secondary" id="admin-centre-refresh-moderation">Refresh</button></div>' +
           '<div id="moderation-reports-list" aria-live="polite">Loading reports…</div></section>' +
         '<section class="admin-control-centre-section" id="moderator-support-workspace" aria-labelledby="admin-support-title">' +
           '<div class="admin-control-centre-section-heading"><div><h3 id="admin-support-title">Member support inbox</h3><p>Respond to member tickets and update their status.</p></div>' +
-          '<button type="button" class="secondary" id="admin-centre-refresh-support">Refresh</button></div>' +
           '<div id="moderator-support-tickets" aria-live="polite">Loading support tickets…</div></section>'
       );
     }
@@ -248,7 +241,6 @@
       panel.insertAdjacentHTML('beforeend',
         '<section class="admin-control-centre-section admin-live-pro-section" id="admin-live-pro-access" aria-labelledby="admin-live-pro-title">' +
           '<div class="admin-control-centre-section-heading"><div><h3 id="admin-live-pro-title">LIVE Pro access</h3><p>Grant or revoke LIVE Pro for real Minglora member accounts. The designated administrator already receives LIVE Pro automatically.</p></div>' +
-            '<button type="button" class="secondary" id="admin-live-pro-refresh">Refresh grants</button></div>' +
           '<div class="admin-live-pro-grid">' +
             '<form id="admin-live-pro-grant-form" class="admin-centre-settings-card admin-live-pro-form">' +
               '<label for="admin-live-pro-search">Find a member by username, name or email</label>' +
@@ -312,10 +304,10 @@
       };
       const runLiveProSearch = () => loadLiveProMembers(String(liveProSearch?.value || '').trim());
       panel.querySelector('#admin-live-pro-search-button')?.addEventListener('click', runLiveProSearch);
+      void loadLiveProGrants();
       liveProSearch?.addEventListener('keydown', event => {
         if (event.key === 'Enter') { event.preventDefault(); runLiveProSearch(); }
       });
-      panel.querySelector('#admin-live-pro-refresh')?.addEventListener('click', loadLiveProGrants);
       panel.querySelector('#admin-live-pro-grant-form')?.addEventListener('submit', async event => {
         event.preventDefault();
         const submit = panel.querySelector('#admin-live-pro-grant-submit');
@@ -384,7 +376,6 @@
         <div class="admin-control-centre-section-heading admin-gift-earnings-heading">
           <div><h3 id="admin-gift-earnings-title">LIVE gift revenue &amp; creator earnings</h3>
             <p>Read-only financial reporting from the verified gift earnings ledger. This does not move or change any wallet funds.</p></div>
-          <button type="button" class="secondary" id="admin-gift-earnings-refresh">Refresh report</button>
         </div>
         <p id="admin-gift-earnings-status" class="admin-gift-earnings-status" role="status" aria-live="polite">Loading actual gift earnings…</p>
         <div id="admin-gift-earnings-metrics" class="admin-gift-earnings-metrics"></div>
@@ -465,7 +456,6 @@
     root.dataset.adminCentreReady = 'true';
 
     if (unlocked) {
-      panel.querySelector('#admin-gift-earnings-refresh')?.addEventListener('click', () => loadAdminGiftEarnings(panel));
       panel.querySelector('#admin-platform-payout-account-form')?.addEventListener('submit', async event => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -627,7 +617,6 @@
         promotionHistoryList.textContent = error.message || 'Promotion history could not be loaded.';
       }
     };
-    panel.querySelector('#admin-member-promotion-refresh')?.addEventListener('click', refreshMemberPromotionHistory);
     refreshMemberPromotionHistory();
 
     panel.querySelector('#admin-member-promotion-form')?.addEventListener('submit', async event => {
@@ -698,7 +687,6 @@
         budgetSummary.textContent = error.message || 'Marketing budget is unavailable.';
       }
     };
-    panel.querySelector('#admin-marketing-budget-refresh')?.addEventListener('click', refreshMarketingBudget);
     refreshMarketingBudget();
 
     panel.querySelector('#admin-marketing-funding-form')?.addEventListener('submit', async event => {
@@ -817,7 +805,6 @@
         target.textContent = error.message || 'Campaign wallet could not be loaded.';
       }
     };
-    panel.querySelector('#admin-campaign-coins-refresh')?.addEventListener('click', refreshAdminCampaignWallet);
     refreshAdminCampaignWallet();
 
     const refreshPromotionalGiftFund = async () => {
@@ -875,10 +862,8 @@
         target.textContent = error.message || 'PayPal readiness could not be checked.';
       }
     };
-    panel.querySelector('#admin-promotional-gift-fund-refresh')?.addEventListener('click', () => {
-      refreshPromotionalGiftFund();
-      refreshPayPalReadiness();
-    });
+    void refreshPromotionalGiftFund();
+    void refreshPayPalReadiness();
     panel.querySelector('#admin-promotional-gift-fund-form')?.addEventListener('submit', async event => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -959,10 +944,6 @@
     panel.querySelector('#admin-badge-member-find')?.addEventListener('click', () => {
       loadAdminBadgeMembers(panel, String(badgeMemberSearch?.value || '').trim());
     });
-    panel.querySelector('#admin-badge-members-refresh')?.addEventListener('click', () => {
-      if (badgeMemberSearch) badgeMemberSearch.value = '';
-      loadAdminBadgeMembers(panel, '');
-    });
     badgeMemberSearch?.addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -1005,8 +986,6 @@
     panel.querySelector('#admin-gifter-badge-reset')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'reset'));
     if (unlocked) loadAdminBadgeMembers(panel, '');
     panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => startAdminMfaEnrollment(panel));
-    panel.querySelector('#admin-centre-refresh-moderation')?.addEventListener('click', () => loadAdminModerationQueue(panel));
-    panel.querySelector('#admin-centre-refresh-support')?.addEventListener('click', () => loadAdminSupportInbox(panel));
     panel.querySelector('#admin-centre-revoke-other-sessions')?.addEventListener('click', async event => {
       const button = event.currentTarget;
       const status = panel.querySelector('#admin-centre-session-status');
