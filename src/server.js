@@ -2016,6 +2016,24 @@ async function route(req, res) {
         });
       }
 
+      if(method==='GET'&&p==='/api/admin/audit-log'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can view administrator audit history.'});
+        }
+        const params=new URL(req.url,'http://localhost').searchParams;
+        const requestedLimit=Math.floor(Number(params.get('limit')||50));
+        const limit=Number.isFinite(requestedLimit)?Math.max(1,Math.min(100,requestedLimit)):50;
+        const search=String(params.get('search')||'').trim().slice(0,100);
+        const actionFilter=String(params.get('action')||'all').trim().toLowerCase();
+        if(!['all','account.ban','account.unban'].includes(actionFilter)){
+          return json(res,400,{error:'Choose a supported administrator audit action filter.'});
+        }
+        const result=await requestSupabaseState('admin_audit_log',{
+          actorUserId:user.id,limit,search,actionFilter
+        });
+        return json(res,200,result);
+      }
+
       if(method==='GET'&&p==='/api/admin/internal-activity'){
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can view internal Minglora activity.'});
