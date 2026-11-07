@@ -41,9 +41,9 @@ test('MeetWave mirrors LIVE with a bottom control rail and panel toggles', () =>
 
 test('MeetWave bottom-control assets bypass stale browser and service-worker caches', () => {
   const version = '20261107-meetwave-bottom-controls-1';
-  assert.match(html, new RegExp('/meetwave\\\\.css\\\\?v=' + version));
-  assert.match(html, new RegExp('/meetwave\\\\.js\\\\?v=' + version));
+  assert.ok(html.includes('/meetwave.css?v=' + version));
+  assert.ok(html.includes('/meetwave.js?v=' + version));
   assert.match(serviceWorker, new RegExp('minglora-shell-v115-meetwave-bottom-controls-1'));
-  assert.match(serviceWorker, new RegExp('/meetwave\\\\.css\\\\?v=' + version));
-  assert.match(serviceWorker, new RegExp('/meetwave\\\\.js\\\\?v=' + version));
+  assert.ok(serviceWorker.includes('/meetwave.css?v=' + version));
+  assert.ok(serviceWorker.includes('/meetwave.js?v=' + version));
 });
