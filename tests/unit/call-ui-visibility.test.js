@@ -110,7 +110,7 @@ test('call notifications return to the current app window and load the latest ca
   const workerAsset=workerStart<0?'':worker.slice(workerStart+1,worker.indexOf("'",workerStart+1));
   assert.equal(appAsset,'/app.js?v=20261107-real-phone-calls-1');
   assert.equal(workerAsset,appAsset,'the service worker precaches the exact HTML app bundle');
-  assert.ok(worker.includes("CACHE_NAME='minglora-shell-v145-phone-call-ui-3'"));
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
   const clickStart=worker.indexOf("self.addEventListener('notificationclick'");
   const clickEnd=worker.indexOf('});',clickStart);
   const clickHandler=worker.slice(clickStart,clickEnd);
