@@ -281,3 +281,53 @@
   opacity:1;
   cursor:default;
 }
+
+
+/* Visitor profile actions remain one horizontal row on every screen.
+   Narrow screens scroll sideways instead of wrapping actions vertically. */
+.profile-header-card--viewer .profile-actions{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  flex-wrap:nowrap!important;
+  grid-template-columns:none!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:5px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:5px 0 0!important;
+  padding:5px 0 8px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+  white-space:nowrap!important;
+}
+.profile-header-card--viewer .profile-actions>.profile-edit{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:max-content!important;
+  max-width:none!important;
+  min-height:42px!important;
+  box-sizing:border-box!important;
+  padding:7px 8px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  text-align:center!important;
+  font-size:clamp(9px,2.2vw,12px)!important;
+  line-height:1.15!important;
+  scroll-snap-align:start;
+}
+.profile-header-card--viewer .profile-actions>.profile-edit:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--blue) 48%,transparent)!important;
+  outline-offset:-2px!important;
+}
+@media(max-width:360px){
+  .profile-header-card--viewer .profile-actions{gap:4px!important}
+  .profile-header-card--viewer .profile-actions>.profile-edit{padding-inline:6px!important}
+}
