@@ -92,12 +92,12 @@ test('Screen sharing uses a separate stage outside the nine participant seats', 
 });
 
 test('MeetWave scripts and styles share the current browser cache version', () => {
-  const current = '20261107-meetwave-guest-requests-12';
-  assert.ok(html.includes('/meetwave.css?v='+current));
-  assert.ok(html.includes('/meetwave.js?v='+current));
-  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v156-meetwave-guest-requests-12'"));
-  assert.ok(serviceWorker.includes('/meetwave.css?v='+current));
-  assert.ok(serviceWorker.includes('/meetwave.js?v='+current));
+  const cssAsset=html.match(/href="(\\/meetwave\\.css\\?v=[^"]+)"/)?.[1]||'';
+  const jsAsset=html.match(/src="(\\/meetwave\\.js\\?v=[^"]+)"/)?.[1]||'';
+  assert.ok(cssAsset&&jsAsset,'HTML loads current MeetWave assets');
+  assert.ok(serviceWorker.includes("'"+cssAsset+"'"));
+  assert.ok(serviceWorker.includes("'"+jsAsset+"'"));
+  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\\d+-/);
 });
 
 test('All eight layouts place the host and guest seats inside the same grid stage', () => {
@@ -110,10 +110,10 @@ test('All eight layouts place the host and guest seats inside the same grid stag
 });
 
 test('Spotlight lights the selected guest while keeping the other guest seats visible', () => {
-  assert.ok(js.includes('id="mw-spotlight-host"'));
   assert.ok(js.includes("applySpotlightSelection(tile.dataset.identity)"));
-  assert.ok(js.includes("const identity=hostTile?.dataset.identity||activeRoom?.ownerId||state.user.id;"));
-  assert.ok(js.includes('applySpotlightSelection(identity);setSpeakerFocus([{identity}])'));
+  assert.ok(js.includes("setSpeakerFocus([{identity:tile.dataset.identity}])"));
+  assert.ok(js.includes("const activeIdentity=speakers[0]?.identity||spotlightIdentity||activeRoom?.ownerId||state.user.id"));
+  assert.ok(js.includes("target.classList.add('is-focused')"));
   assert.ok(js.includes("activeLayout==='spotlight'"));
   assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
   assert.ok(finalFit.includes('box-shadow:0 0 0 2px rgba(114,224,203,.2),0 0 28px rgba(77,213,189,.48)'));
