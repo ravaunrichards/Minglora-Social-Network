@@ -76,12 +76,12 @@ test('profile tabs include a right-aligned three-dot overflow menu with requeste
   assert.match(app, /profileVisibility:next/);
   assert.match(css, /\.profile-tabs-overflow\{[^}]*align-items:center/);
   assert.match(css, /\.profile-overflow-trigger\{[^}]*align-self:center/);
-  const appAsset=html.match(/app\\.js\\?v=[^\"']+/)?.[0]||'';
-  const styleAsset=html.match(/styles\\.css\\?v=[^\"']+/)?.[0]||'';
+  const appAsset=html.match(/app\.js\\?v=[^\"']+/)?.[0]||'';
+  const styleAsset=html.match(/styles\.css\\?v=[^\"']+/)?.[0]||'';
   const cacheName=sw.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset&&sw.includes('/'+appAsset));
   assert.ok(styleAsset&&sw.includes('/'+styleAsset));
-  assert.match(cacheName,/^minglora-shell-v\\d+-/);
+  assert.match(cacheName,/^minglora-shell-v\d+-/);
   assert.match(html, /mobile-layout\.css\?v=20261105-flow-navigation-1/);
   assert.match(sw, /mobile-layout\.css\?v=20261105-flow-navigation-1/);
 });
