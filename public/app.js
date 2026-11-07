@@ -82,6 +82,7 @@ async function restoreBrowserNavigation(event){
     state.searchQuery=String(saved.searchQuery||'');
     state.restoreCreatorSection=String(saved.creatorSection||'overview');
     state.rechargeTab=['recharge','earnings','exchange','currency'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
+    state.rechargeCurrencyMode=saved.rechargeCurrencyMode==='global'?'global':'two-way';
     state.savedFilter=String(saved.savedFilter||'all');
     state.savedCollection=String(saved.savedCollection||'all');
     state.savedType=String(saved.savedType||'all');
@@ -158,6 +159,7 @@ async function restoreLastView(){
   state.searchQuery=String(saved.searchQuery||'');
   state.restoreCreatorSection=String(saved.creatorSection||'overview');
   state.rechargeTab=['recharge','earnings','exchange','currency'].includes(saved.rechargeTab)?saved.rechargeTab:'recharge';
+    state.rechargeCurrencyMode=saved.rechargeCurrencyMode==='global'?'global':'two-way';
   state.savedFilter=String(saved.savedFilter||'all');
   state.savedCollection=String(saved.savedCollection||'all');
   state.savedType=String(saved.savedType||'all');
