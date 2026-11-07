@@ -62,3 +62,31 @@ test('active call overlay retains working microphone, camera, invite and hang-up
   assert.match(app,/\/invite/);
   assert.match(app,/id==='call-leave'|#call-leave/);
 });
+
+test('receiver call polling does not hide persisted ringing invitations during a LiveKit presence outage',()=>{
+  const incomingStart=server.indexOf("if(method==='GET'&&p==='/api/calls/incoming')");
+  const incomingEnd=server.indexOf('const callStatusMatch',incomingStart);
+  const route=server.slice(incomingStart,incomingEnd);
+  assert.ok(incomingStart>=0&&incomingEnd>incomingStart);
+  assert.doesNotMatch(route,/await callSessionCleanupReady|reconcileCallPresenceForUsers/);
+  assert.match(route,/expireRingingCall\(call,db\.callParticipants\|\|\[\],stamp,stampMs\)/);
+  assert.match(route,/participant\.status!=='invited'/);
+});
+
+test('outgoing call screen appears before the call-create request returns and cancellation is safe',()=>{
+  const start=app.indexOf('async function startMingloraCall(');
+  const end=app.indexOf('\nasync function answerMingloraCall',start);
+  const source=app.slice(start,end);
+  assert.ok(source.indexOf('showOutgoingCallOverlay(member,{kind,id:null})')<source.indexOf("api('/calls'"));
+  assert.match(app,/call\.id\?'Ringing…':'Setting up your secure call…'/);
+  assert.match(app,/if\(outgoingCallPending\)outgoingCallPending\.cancelled=true/);
+});
+
+test('incoming Answer keeps the receiver call UI visible while the secure room is being joined',()=>{
+  const start=app.indexOf('async function answerMingloraCall(');
+  const end=app.indexOf('\nasync function declineMingloraCall',start);
+  const source=app.slice(start,end);
+  assert.ok(source.indexOf("overlay.querySelector('.call-ringing-status')")<source.indexOf("api('/calls/'"));
+  assert.match(source,/Connecting securely to your call/);
+  assert.doesNotMatch(source,/closeIncomingCallOverlay\(\);const joined/);
+});
