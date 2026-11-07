@@ -362,6 +362,7 @@ let browserNotificationSeen=new Set();
 let browserNotificationPrimed=false;
 let webPushSubscriptionActive=false;
 let incomingCallPollingTimer=null,incomingCallPollBusy=false,incomingCallOverlay=null,incomingCallStatusTimer=null;
+let incomingCallLastErrorAt=0;
 let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtone:null};
 let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
 window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
@@ -7779,7 +7780,7 @@ async function showIncomingCallOverlay(call){
  overlay.querySelector('#call-decline-incoming').onclick=async()=>{overlay.querySelector('#call-decline-incoming').disabled=true;await declineMingloraCall(call.id);};
  overlay.querySelector('#call-enable-ringtone').onclick=async()=>{primeCallAudio();const ok=await startIncomingRingtone();if(ok)overlay.querySelector('#call-enable-ringtone').classList.add('hidden');};
  if(state.settings?.preferences?.messengerIncomingCallSounds!==false&&!await startIncomingRingtone())overlay.querySelector('#call-enable-ringtone').classList.remove('hidden');
- incomingCallStatusTimer=setInterval(async()=>{try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch{closeIncomingCallOverlay();}},1600);
+ incomingCallStatusTimer=setInterval(async()=>{if(overlay.dataset.answering==='true')return;try{const s=await api('/calls/'+encodeURIComponent(call.id)+'/status');if(s.participantStatus!=='invited'||!['ringing','active'].includes(s.call.status))closeIncomingCallOverlay();}catch{if(overlay.dataset.answering!=='true')closeIncomingCallOverlay();}},1600);
 }
 async function clearStaleMingloraCallNotifications(activeCallIds=[]){
  try{
@@ -7799,18 +7800,41 @@ async function pollIncomingCalls(){
  try{
   const result=await api('/calls/incoming'),calls=result.calls||[];
   await clearStaleMingloraCallNotifications(calls.map(call=>call.id));
+  incomingCallLastErrorAt=0;
   const call=calls[0];
   if(call&&!incomingCallOverlay)await showIncomingCallOverlay(call);
-  else if(!call&&incomingCallOverlay)closeIncomingCallOverlay();
- }
- catch{}finally{incomingCallPollBusy=false;}
+  else if(!call&&incomingCallOverlay&&!incomingCallOverlay.dataset.answering)closeIncomingCallOverlay();
+ }catch(error){
+  const now=Date.now();
+  if(error?.status!==401&&now-incomingCallLastErrorAt>12000){
+   incomingCallLastErrorAt=now;
+   console.warn('[Minglora calls] Incoming-call polling failed; it will retry automatically.',{status:Number(error?.status||0),message:String(error?.message||'').slice(0,160)});
+   if(incomingCallOverlay){
+    const status=incomingCallOverlay.querySelector('.call-ringing-status');
+    if(status&&incomingCallOverlay.dataset.answering!=='true')status.textContent='Reconnecting to your call…';
+   }else toast('Minglora is reconnecting to incoming calls. Please keep this screen open.');
+  }
+ }finally{incomingCallPollBusy=false;}
 }
 function startIncomingCallPolling(){if(incomingCallPollingTimer)clearInterval(incomingCallPollingTimer);incomingCallPollingTimer=null;if(!state.user)return;void pollIncomingCalls();incomingCallPollingTimer=setInterval(pollIncomingCalls,1800);}
 function showOutgoingCallOverlay(member,call){
- closeIncomingCallOverlay();const overlay=document.createElement('div');overlay.className='call-overlay call-ringing-overlay call-outgoing-overlay';
- overlay.innerHTML='<section class="call-ringing-card" role="dialog" aria-modal="true" aria-label="Calling '+esc(member.name||'member')+'"><div class="call-ringing-glow"></div><div class="call-ringing-avatar-wrap"><img class="call-ringing-avatar" src="'+esc(avatar(member))+'" alt=""><span class="call-ringing-pulse"></span></div><span class="call-ringing-eyebrow">MINGLORA CALL</span><h2>'+esc(member.name||'Minglora member')+'</h2><p class="call-ringing-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</p><p class="call-ringing-status">Ringing…</p><button type="button" class="call-decline-button" id="call-cancel-outgoing">Cancel call</button></section>';
+ closeIncomingCallOverlay();
+ if(outgoingCallOverlay){outgoingCallOverlay.remove();outgoingCallOverlay=null;}
+ const overlay=document.createElement('div');overlay.className='call-overlay call-ringing-overlay call-outgoing-overlay';
+ overlay.innerHTML='<section class="call-ringing-card" role="dialog" aria-modal="true" aria-label="Calling '+esc(member.name||'member')+'"><div class="call-ringing-glow"></div><div class="call-ringing-avatar-wrap"><img class="call-ringing-avatar" src="'+esc(avatar(member))+'" alt=""><span class="call-ringing-pulse"></span></div><span class="call-ringing-eyebrow">MINGLORA CALL</span><h2>'+esc(member.name||'Minglora member')+'</h2><p class="call-ringing-kind">'+(call.kind==='audio'?'Voice call':'Video call')+'</p><p class="call-ringing-status">'+(call.id?'Ringing…':'Setting up your secure call…')+'</p><button type="button" class="call-decline-button" id="call-cancel-outgoing">'+(call.id?'Cancel call':'Cancel')+'</button></section>';
  document.body.append(overlay);outgoingCallOverlay=overlay;
- overlay.querySelector('#call-cancel-outgoing').onclick=async()=>{overlay.querySelector('#call-cancel-outgoing').disabled=true;if(outgoingCallPending)outgoingCallPending.cancelled=true;try{await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'});}catch(e){toast(e.message);}closeOutgoingCallOverlay();outgoingCallPending=null;};
+ overlay.querySelector('#call-cancel-outgoing').onclick=async()=>{
+  const button=overlay.querySelector('#call-cancel-outgoing');button.disabled=true;
+  if(outgoingCallPending)outgoingCallPending.cancelled=true;
+  if(call.id){
+   try{await api('/calls/'+encodeURIComponent(call.id)+'/cancel',{method:'POST',body:'{}'});}
+   catch(error){toast(error.message);}
+   closeOutgoingCallOverlay();outgoingCallPending=null;
+  }else{
+   closeOutgoingCallOverlay();
+   toast('Cancelling call setup…');
+  }
+ };
 }
 async function waitForCallAnswer(call,member){
  showOutgoingCallOverlay(member,call);startCallRingback();outgoingCallPending={callId:call.id,cancelled:false,starting:false};
@@ -7860,26 +7884,62 @@ async function startMingloraCall(member,kind='video',participantIds=null,groupId
  outgoingCallPending={callId:null,cancelled:false,starting:true};
  try{
   primeCallAudio();
+  showOutgoingCallOverlay(member,{kind,id:null});
   const callPayload=Array.isArray(participantIds)&&participantIds.length?{participantIds,kind,...(groupId?{groupId}:{})}:{to:member.id,kind};
   const created=await api('/calls',{method:'POST',body:JSON.stringify(callPayload)});
   if(outgoingCallPending?.cancelled){
    await api('/calls/'+encodeURIComponent(created.call.id)+'/cancel',{method:'POST',body:'{}'}).catch(()=>{});
    outgoingCallPending=null;return;
   }
+  outgoingCallPending.callId=created.call.id;
   await waitForCallAnswer(created.call,member);
- }catch(e){closeOutgoingCallOverlay();outgoingCallPending=null;toast(e.message);}
+ }catch(error){
+  closeOutgoingCallOverlay();outgoingCallPending=null;
+  toast(error.message||'Minglora could not start this call.');
+ }
 }
 async function answerMingloraCall(callId){
  if(activeCallRoom||outgoingCallPending){toast('Finish or cancel your current call before answering another call.');return;}
  primeCallAudio();
- const ringingPeer=incomingCallOverlay?{
-  id:incomingCallOverlay.dataset.callerId,
-  name:incomingCallOverlay.dataset.callerName,
-  username:incomingCallOverlay.dataset.callerUsername,
-  avatar:incomingCallOverlay.dataset.callerAvatar
+ const overlay=incomingCallOverlay;
+ const ringingPeer=overlay?{
+  id:overlay.dataset.callerId,
+  name:overlay.dataset.callerName,
+  username:overlay.dataset.callerUsername,
+  avatar:overlay.dataset.callerAvatar
  }:null;
- try{closeIncomingCallOverlay();const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});await clearStaleMingloraCallNotifications([]);await openMingloraCall(joined.call,joined.liveKit,joined.peer||ringingPeer);}
- catch(e){toast(e.message);void pollIncomingCalls();}
+ if(overlay){
+  overlay.dataset.answering='true';
+  const status=overlay.querySelector('.call-ringing-status');
+  if(status)status.textContent='Connecting securely to your call…';
+  const answer=overlay.querySelector('#call-answer-incoming'),decline=overlay.querySelector('#call-decline-incoming');
+  if(answer){answer.disabled=true;answer.textContent='Connecting…';}
+  if(decline)decline.disabled=true;
+  if(incomingCallStatusTimer){clearInterval(incomingCallStatusTimer);incomingCallStatusTimer=null;}
+ }
+ try{
+  const joined=await api('/calls/'+encodeURIComponent(callId)+'/join',{method:'POST',body:'{}'});
+  await clearStaleMingloraCallNotifications([]);
+  await openMingloraCall(joined.call,joined.liveKit,joined.peer||ringingPeer);
+ }catch(error){
+  if(overlay&&overlay.isConnected){
+   delete overlay.dataset.answering;
+   const status=overlay.querySelector('.call-ringing-status');
+   if(status)status.textContent=error.message||'Could not connect. Please try again.';
+   const answer=overlay.querySelector('#call-answer-incoming'),decline=overlay.querySelector('#call-decline-incoming');
+   if(answer){answer.disabled=false;answer.textContent='Try again';}
+   if(decline)decline.disabled=false;
+   incomingCallStatusTimer=setInterval(async()=>{
+    if(overlay.dataset.answering==='true')return;
+    try{
+     const result=await api('/calls/'+encodeURIComponent(callId)+'/status');
+     if(result.participantStatus!=='invited'||!['ringing','active'].includes(result.call.status))closeIncomingCallOverlay();
+    }catch{closeIncomingCallOverlay();}
+   },1600);
+  }
+  toast(error.message);
+  void pollIncomingCalls();
+ }
 }
 async function declineMingloraCall(callId){
  try{await api('/calls/'+encodeURIComponent(callId)+'/decline',{method:'POST',body:'{}'});if(incomingCallOverlay?.dataset.callId===callId)closeIncomingCallOverlay();toast('Call declined.');await renderNotifications();}
