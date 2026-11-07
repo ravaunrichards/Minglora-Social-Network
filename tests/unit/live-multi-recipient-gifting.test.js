@@ -9,7 +9,7 @@ const read = file => readFileSync(path.join(root, file), "utf8");
 const server = read("src/server.js");
 const app = read("public/app.js");
 const runtime = read("supabase/functions/minglora-runtime-state/index.ts");
-const migration = read("supabase/migrations/20261106100000_minglora_live_multi_recipient_gifting.sql");
+const migration = read("supabase/migrations/20261107051559_minglora_live_multi_recipient_gifting.sql");
 
 test("LIVE gift recipient list is derived from connected LiveKit participants", () => {
   assert.match(server, /gift-recipients/);
