@@ -1855,7 +1855,7 @@ Deno.serve(async (req: Request) => {
       }
       const originalSaleId = String(resource.sale_id || resource.related_ids?.sale_id || "");
       let originalPaymentQuery = admin.from("subscription_earnings_ledger")
-        .select("creator_share_bps,platform_share_bps,performance_bonus_bps")
+        .select("gross_minor,provider_fee_minor,creator_share_bps,platform_share_bps,performance_bonus_bps")
         .eq("subscription_id", subscription.id).eq("entry_type", "payment");
       if (originalSaleId) originalPaymentQuery = originalPaymentQuery.eq("provider_transaction_id", originalSaleId);
       const { data: originalPayment, error: originalPaymentError } = await originalPaymentQuery
@@ -1864,14 +1864,18 @@ Deno.serve(async (req: Request) => {
       const creatorShareBps = Number(originalPayment?.creator_share_bps || subscription.creator_share_bps || 5000);
       const platformShareBps = 10000 - creatorShareBps;
       const performanceBonusBps = Number(originalPayment?.performance_bonus_bps || Math.max(0, creatorShareBps - 5000));
-      const creatorRefund = Math.floor(amountMinor * creatorShareBps / 10000);
-      const platformRefund = amountMinor - creatorRefund;
+      const originalGrossMinor = Math.max(1, Number(originalPayment?.gross_minor || amountMinor));
+      const originalFeeMinor = Math.max(0, Number(originalPayment?.provider_fee_minor || 0));
+      const refundFeeMinor = Math.min(amountMinor, Math.floor(amountMinor * originalFeeMinor / originalGrossMinor));
+      const refundNetMinor = amountMinor - refundFeeMinor;
+      const creatorRefund = Math.floor(refundNetMinor * creatorShareBps / 10000);
+      const platformRefund = refundNetMinor - creatorRefund;
       const { error: refundError } = await admin.from("subscription_earnings_ledger").insert({
         subscription_id: subscription.id, payment_event_id: paymentEvent.id,
         provider_transaction_id: refundId,
         creator_id: subscription.creator_id, subscriber_id: subscription.subscriber_id,
         currency, gross_minor: amountMinor, creator_minor: creatorRefund, platform_minor: platformRefund,
-        creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
+        provider_fee_minor: refundFeeMinor, creator_share_bps: creatorShareBps, platform_share_bps: platformShareBps,
         performance_bonus_bps: performanceBonusBps, entry_type: "refund"
       });
       if (refundError && refundError.code !== "23505") return fail(refundError, "PayPal refund was received but Minglora could not reconcile the earnings ledger.");
