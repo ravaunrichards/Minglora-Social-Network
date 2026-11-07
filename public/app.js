@@ -176,7 +176,7 @@ async function restoreLastView(){
 window.addEventListener('pagehide',persistCurrentView);
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
-const DEFAULT_PROFILE_AVATAR='/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-1';
+const DEFAULT_PROFILE_AVATAR='/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-2';
 const DEFAULT_PROFILE_COVER='/assets/default-profile-cover.svg?v=20261106-profile-defaults-1';
 const fallbackAvatar = () => DEFAULT_PROFILE_AVATAR;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
