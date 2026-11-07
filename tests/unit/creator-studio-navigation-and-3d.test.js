@@ -86,12 +86,13 @@ test('global navigation destinations all resolve to an application view and Home
   assert.match(app, /\$\('#retry-view'\)\.onclick=renderView/);
 });
 
-test('the app shell and service worker cache the same final navigation and stage build', () => {
-  assert.match(html, /styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(html, /app\.js\?v=20261105-roomwide-live-gifts-1/);
-  assert.match(worker, /minglora-shell-v93-flow-layout-safety-1/);
-  assert.match(worker, /styles\.css\?v=20261105-live-layout-expand-1/);
-  assert.match(worker, /app\.js\?v=20261105-roomwide-live-gifts-1/);
+test('the app shell and service worker cache the current navigation and stage build', () => {
+  assert.match(html, /styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(html, /app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(worker, /minglora-shell-v117-bottom-profile-navigation-1/);
+  assert.match(worker, /styles\.css\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(worker, /app\.js\?v=20261106-pinch-zoom-photo-crop-1/);
+  assert.match(worker, /mobile-profile-navigation\.css\?v=20261106-horizontal-profile-navigation-1/);
 });
 
 
@@ -109,7 +110,7 @@ test('primary navigation contains only five main destinations', () => {
   const mobilePrimary = html.slice(mobileStart, mobileEnd);
   assert.deepEqual(
     [...mobilePrimary.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'for-you', 'live', 'messages', 'more']
+    ['feed', 'profile', 'live', 'messages', 'more']
   );
   assert.match(html, /id="mobile-more-nav"/);
   const hubStart = app.indexOf('function renderMoreHub(){');
