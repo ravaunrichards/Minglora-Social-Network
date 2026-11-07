@@ -18,12 +18,12 @@ The web first slice is implemented in the browser client:
 - Live local time and date, 12/24-hour display, analogue hands, and digital time with seconds.
 - Interactive perspective clock face using layered CSS 3D transforms; selectable luxury, silver, classic, neon, futuristic, glass, wood, mechanical-skeleton and minimalist appearances.
 - Advanced Alarm and Smart Wake-Up alarm modes, recurring weekdays, one-time date, custom labels, sound selection, local custom sound upload, volume, vibration, enable/disable, edit and delete.
-- City clocks and a time-zone converter based on the browser Intl time-zone database.
+- Searchable city clocks across 35 preset world cities and a time-zone converter based on the browser Intl time-zone database.
 - Stopwatch with lap and split history.
 - Multiple independent countdown timers.
-- Saved bedtime/wake-up schedules and wind-down preference.
+- Saved bedtime/wake-up schedules that automatically create managed wind-down, bedtime and Smart Wake-Up alarms, plus wind-down preference.
 - Pomodoro focus sessions with configurable work and breaks.
-- Countdown events, annual flag, and calendar-file export.
+- Countdown events with annual recurrence, optional create/update/delete sync to Minglora Calendar, and ICS export with yearly recurrence rules.
 - Local preferences, export and reset controls.
 - Minglora desktop side-rail and mobile Explore / More navigation entries.
 
