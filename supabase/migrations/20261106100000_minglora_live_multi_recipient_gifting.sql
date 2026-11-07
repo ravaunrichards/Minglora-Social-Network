@@ -48,7 +48,7 @@ BEGIN
     SELECT 1 FROM public.live_participants lp
     WHERE lp.broadcast_id=broadcast.id
       AND lp.user_id=p_recipient_id
-      AND lp.role IN ('guest','cohost','viewer')
+      AND lp.role IN ('guest','cohost')
       AND lp.status='connected'
       AND lp.left_at IS NULL
   ) THEN
