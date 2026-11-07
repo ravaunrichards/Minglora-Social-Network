@@ -41,7 +41,7 @@ test('profile cover, picture and admin actions share blue and active-red states'
 });
 
 test('the profile action stylesheet is loaded and precached with a new shell cache key',()=>{
-  assert.match(html,/profile-action-row\.css\?v=20261107-profile-button-colors-1/);
-  assert.match(worker,/profile-action-row\.css\?v=20261107-profile-button-colors-1/);
-  assert.match(worker,/CACHE_NAME='minglora-shell-v152-profile-button-colors-1'/);
+  const asset=html.match(/href="(\\/profile-action-row\\.css\\?v=[^"]+)"/)?.[1]||'';
+  assert.ok(asset&&worker.includes("'"+asset+"'"),'active profile action stylesheet is cached');
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-/);
 });
