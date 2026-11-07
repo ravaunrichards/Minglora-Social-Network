@@ -877,13 +877,44 @@ async function publicStory(story,viewerId,includeViews=false) {
 }
 
 const LIVE_HOST_CONNECT_GRACE_MS = 30_000;
+const LIVE_ROOM_CLEANUP_RETRY_MS = 60_000;
+const LIVE_SESSION_CLEANUP_INTERVAL_MS = 10_000;
 const liveSessionEndOperations = new Map();
 let liveSessionCleanupReady = Promise.resolve({ ended: 0, preserved: 0, verified: true });
+let liveSessionCleanupTimer = null;
+let liveSessionCleanupInProgress = false;
 
 function isMissingLiveKitRoom(error) {
   const status = Number(error?.statusCode || error?.status || error?.response?.status || 0);
   const message = String(error?.message || '');
   return status === 404 || /requested room does not exist|room not found|no such room/i.test(message);
+}
+
+async function deleteEndedLiveKitRoom(session, { force = false } = {}) {
+  if (!session?.roomName) return true;
+  if (session.liveKitRoomCleanupSynced === true) return true;
+  const lastAttempt = Date.parse(session.liveKitRoomCleanupAttemptedAt || '');
+  if (!force && Number.isFinite(lastAttempt) && Date.now() - lastAttempt < LIVE_ROOM_CLEANUP_RETRY_MS) {
+    return false;
+  }
+  session.liveKitRoomCleanupAttemptedAt = now();
+  try {
+    await deleteLiveKitRoom(session.roomName);
+    session.liveKitRoomCleanupSynced = true;
+    return true;
+  } catch (error) {
+    if (isMissingLiveKitRoom(error)) {
+      session.liveKitRoomCleanupSynced = true;
+      return true;
+    }
+    session.liveKitRoomCleanupSynced = false;
+    console.warn('[Minglora LIVE cleanup] Ended room deletion will be retried.', {
+      sessionId: session.id,
+      status: Number(error?.statusCode || error?.status || error?.response?.status || 0),
+      message: String(error?.message || 'provider room cleanup failed').slice(0, 180)
+    });
+    return false;
+  }
 }
 
 async function endLiveSession(session, { deleteRoom = false } = {}) {
@@ -922,12 +953,8 @@ async function endLiveSession(session, { deleteRoom = false } = {}) {
       }
     }
     if (deleteRoom && session.roomName) {
-      try { await deleteLiveKitRoom(session.roomName); }
-      catch (error) {
-        // A missing room is already stopped; record only the session cleanup failure details.
-        const status = Number(error?.statusCode || error?.status || 0);
-        if (status !== 404) console.warn('[Minglora LIVE cleanup] Could not delete an inactive LiveKit room.', { sessionId: session.id, status });
-      }
+      await deleteEndedLiveKitRoom(session, { force: true });
+      await saveStore();
     }
     return wasLive;
   })();
@@ -951,13 +978,39 @@ async function cleanupPersistedLiveSessions() {
       });
     }
   }
+
   const pending = (db.liveSessions || []).filter(session => session.status === 'live');
-  if (!pending.length) return { ended: 0, preserved: 0, verified: true };
+  const unfinishedEndedRooms = (db.liveSessions || []).filter(session =>
+    session.status === 'ended' && session.roomName && session.liveKitRoomCleanupSynced !== true
+  );
+  const dueEndedRooms = unfinishedEndedRooms.filter(session => {
+    const lastAttempt = Date.parse(session.liveKitRoomCleanupAttemptedAt || '');
+    return !Number.isFinite(lastAttempt) || Date.now() - lastAttempt >= LIVE_ROOM_CLEANUP_RETRY_MS;
+  });
+  if (!pending.length && !dueEndedRooms.length) {
+    return { ended: 0, preserved: 0, roomsCleaned: 0, roomsPending: unfinishedEndedRooms.length, verified: true };
+  }
+
   const health = await verifyLiveKitConnection({ force: true });
   if (!health.connected) {
-    console.warn('[Minglora LIVE cleanup] LiveKit is not reachable; active rows will stay hidden until room presence can be verified.');
-    return { ended: 0, preserved: 0, verified: false };
+    console.warn('[Minglora LIVE cleanup] LiveKit is not reachable; ended rooms remain hidden and cleanup will retry.');
+    return { ended: 0, preserved: 0, roomsCleaned: 0, roomsPending: unfinishedEndedRooms.length, verified: false };
   }
+
+  let roomsCleaned = 0, roomsPending = 0;
+  for (let offset = 0; offset < dueEndedRooms.length; offset += 8) {
+    const batch = dueEndedRooms.slice(offset, offset + 8);
+    const results = await Promise.all(batch.map(async session => ({
+      session,
+      cleaned: await deleteEndedLiveKitRoom(session)
+    })));
+    for (const result of results) {
+      if (result.cleaned) roomsCleaned++;
+      else roomsPending++;
+    }
+  }
+  if (dueEndedRooms.length) await saveStore();
+
   let ended = 0, preserved = 0;
   for (const session of pending) {
     try {
@@ -978,7 +1031,30 @@ async function cleanupPersistedLiveSessions() {
       }
     }
   }
-  return { ended, preserved, verified: true };
+  return {
+    ended,
+    preserved,
+    roomsCleaned,
+    roomsPending: Math.max(roomsPending, unfinishedEndedRooms.length - roomsCleaned),
+    verified: true
+  };
+}
+
+function startLiveSessionCleanupSweep() {
+  if (liveSessionCleanupTimer) return;
+  liveSessionCleanupTimer = setInterval(() => {
+    if (liveSessionCleanupInProgress) return;
+    liveSessionCleanupInProgress = true;
+    liveSessionCleanupReady = cleanupPersistedLiveSessions()
+      .catch(error => {
+        console.warn('[Minglora LIVE cleanup] Scheduled cleanup failed; it will retry.', {
+          message: String(error?.message || 'cleanup failed').slice(0, 180)
+        });
+        return { ended: 0, preserved: 0, roomsCleaned: 0, roomsPending: 0, verified: false };
+      })
+      .finally(() => { liveSessionCleanupInProgress = false; });
+  }, LIVE_SESSION_CLEANUP_INTERVAL_MS);
+  liveSessionCleanupTimer.unref?.();
 }
 
 async function route(req, res) {
@@ -5765,6 +5841,7 @@ server.listen(PORT,'0.0.0.0',async()=>{
   liveSessionCleanupReady = cleanupPersistedLiveSessions();
   const liveCleanup = await liveSessionCleanupReady;
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
+  startLiveSessionCleanupSweep();
   console.log(`Minglora listening on port ${PORT}`);
   const persistence = await persistenceHealth();
   console.info('[Minglora readiness]', JSON.stringify({
