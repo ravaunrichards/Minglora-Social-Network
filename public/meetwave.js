@@ -152,6 +152,15 @@
     roomClient.on(client.RoomEvent.ParticipantConnected,()=>updateCount());
     roomClient.on(client.RoomEvent.ParticipantDisconnected,participant=>{$('#mw-tile-'+participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_'))?.remove();updateCount();});
     if(client.RoomEvent.ActiveSpeakersChanged)roomClient.on(client.RoomEvent.ActiveSpeakersChanged,speakers=>setSpeakerFocus(speakers));
+    if(client.RoomEvent.Disconnected)roomClient.on(client.RoomEvent.Disconnected,async()=>{
+      if(!activeRoom)return;
+      activeRoom=null;
+      if(poller){clearInterval(poller);poller=null;}
+      roomClient=null;
+      state.view='meetwave';
+      await render();
+      note('Your meeting connection ended. Rejoin from the room list or accept a new host invitation.',true);
+    });
     try{await roomClient.connect(result.liveKit.url,result.liveKit.token);}
     catch(error){await disconnect();activeRoom=null;await api(endpoint(id)+'/leave',{method:'POST',body:'{}'}).catch(()=>{});throw error;}
     try{
@@ -168,7 +177,7 @@
     }
     updateCount();setSpeakerFocus([]);
     $('#mw-mic').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isMicrophoneEnabled;await roomClient.localParticipant.setMicrophoneEnabled(enabled);$('#mw-mic small').textContent=enabled?'Mute':'Unmute';}catch(error){note(error.message,true);}};
-    $('#mw-camera').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isCameraEnabled;await roomClient.localParticipant.setCameraEnabled(enabled);$('#mw-camera small').textContent=enabled?'Camera on':'Camera off';}catch(error){note(error.message,true);}};
+    $('#mw-camera').onclick=async()=>{try{const enabled=!roomClient.localParticipant.isCameraEnabled;const publication=await roomClient.localParticipant.setCameraEnabled(enabled);$('#mw-camera small').textContent=enabled?'Camera on':'Camera off';const tile=$('#mw-local');tile.querySelector('video')?.remove();if(enabled){const track=publication?.track||Array.from(roomClient.localParticipant.trackPublications.values()).find(item=>item.track?.kind==='video')?.track;if(track){const video=track.attach();video.autoplay=true;video.playsInline=true;tile.querySelector('.mw-video-placeholder')?.remove();tile.prepend(video);}}else if(!tile.querySelector('.mw-video-placeholder')){const placeholder=document.createElement('div');placeholder.className='mw-video-placeholder';placeholder.textContent='Camera off';tile.prepend(placeholder);}}catch(error){note(error.message,true);}};
     $('#mw-screen').onclick=async()=>{try{screenOn=!screenOn;await roomClient.localParticipant.setScreenShareEnabled(screenOn);$('#mw-screen small').textContent=screenOn?'Stop sharing':'Share screen';}catch(error){screenOn=false;$('#mw-screen small').textContent='Share screen';note(error.message,true);}};
     $('#mw-layout').onclick=toggleMeetingLayout;$('#mw-fullscreen').onclick=toggleMeetingFullscreen;
     $('#mw-room-invite')?.addEventListener('click',()=>inviteMembers(activeRoom.id));
