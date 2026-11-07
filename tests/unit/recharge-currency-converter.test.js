@@ -17,7 +17,7 @@ const twoWay = read('public/quick-currency.js');
 const global = read('public/currency-converter.js');
 const icon = read('public/assets/icons/navigation-3d.svg');
 
-test('Recharge presents four horizontal destinations in the requested order', () => {
+test('Recharge presents five horizontal destinations in the requested order', () => {
   const start = app.indexOf("const tabs=\"<nav class='recharge-tabs'");
   const end = app.indexOf('const bindTabs=', start);
   assert.ok(start >= 0 && end > start, 'Recharge tab markup exists');
@@ -34,14 +34,14 @@ test('Recharge presents four horizontal destinations in the requested order', ()
 });
 
 test('Currency Converter is an enabled Recharge tab with persistent two-way and full modes', () => {
-  assert.match(app, /\['recharge','earnings','exchange','currency'\]\.includes\(state\.rechargeTab\)/);
+  assert.match(app, /\['recharge','earnings','exchange','currency','calculator'\]\.includes\(state\.rechargeTab\)/);
   assert.match(app, /if\(activeTab==="currency"\)/);
   assert.match(app, /data-recharge-currency-mode='two-way'/);
   assert.match(app, /data-recharge-currency-mode='global'/);
   assert.match(app, /window\.MingloraQuickCurrency/);
   assert.match(app, /window\.MingloraCurrencyConverter/);
   assert.match(app, /state\.rechargeCurrencyMode=saved\.rechargeCurrencyMode/);
-  assert.match(app, /state\.rechargeTab=\['recharge','earnings','exchange','currency'\]/);
+  assert.match(app, /state\.rechargeTab=\['recharge','earnings','exchange','currency','calculator'\]/);
 });
 
 test('Embedded converter modules mount inside the Recharge tab, not over the whole app', () => {
@@ -84,4 +84,6 @@ test('HTML and service worker load and cache both converter modes and 3D artwork
   assert.match(icon, /<symbol id="currency-exchange"/);
   assert.match(icon, /<symbol id="currency-quick"/);
   assert.ok(app.includes('#currency-exchange'));
+  assert.match(icon, /<symbol id="calculator"/);
+  assert.ok(app.includes('#calculator'));
 });
