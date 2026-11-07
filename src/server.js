@@ -1961,7 +1961,7 @@ async function route(req, res) {
         }));
         return json(res,200,{members,total:matches.length,limit:100});
       }
-      const adminMemberStatusMatch=p.match(/^\\/api\\/admin\\/members\\/([^/]+)\\/status$/);
+      const adminMemberStatusMatch=p.match(/^\/api\/admin\/members\/([^/]+)\/status$/);
       if(method==='POST'&&adminMemberStatusMatch){
         if(!adminMemberRoutesAuthorized())return json(res,403,{error:'Only the MFA-verified Creator Hub administrator can manage Minglora accounts.'});
         const targetId=decodeURIComponent(adminMemberStatusMatch[1]);
