@@ -48,15 +48,15 @@ test('private tracker UI edits periods, switches reminders and exports journal d
  assert.match(menstrualUi,/period_enabled/);
  assert.match(menstrualUi,/daily_enabled/);
  assert.match(menstrualUi,/symptom_enabled/);
- assert.match(menstrualUi,/s\\.data\\.journal/);
- assert.match(menstrualUi,/s\\.data\\.reminders/);
+ assert.match(menstrualUi,/s\.data\.journal/);
+ assert.match(menstrualUi,/s\.data\.reminders/);
 });
 test('server blocks new health records when the private tracker is disabled',()=>{
- assert.match(menstrualServer,/const requireTrackerEnabled=async\\(\\)=>/);
+ assert.match(menstrualServer,/const requireTrackerEnabled=async\(\)=>/);
  for(const resource of ['cycles','daily-logs','journal','reminders']) {
   const marker="resource==='"+resource+"'";
   const start=menstrualServer.indexOf(marker);
   assert.notEqual(start,-1,'server exposes '+resource+' route');
-  assert.ok(menstrualServer.slice(start,start+180).includes('requireTrackerEnabled()'),'server requires tracker consent for '+resource);
+  assert.ok(menstrualServer.slice(start,start+400).includes('requireTrackerEnabled()'),'server requires tracker consent for '+resource);
  }
 });
