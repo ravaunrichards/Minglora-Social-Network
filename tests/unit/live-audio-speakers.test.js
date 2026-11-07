@@ -119,3 +119,29 @@ test('Audio LIVE follows the Video LIVE panel grid without collapsing or clippin
   assert.match(app, /function renderLiveGuestLayout\(/);
   assert.match(app, /function renderLiveSpeakerRoster\(/);
 });
+
+const AUDIO_LIVE_LAYOUTS = [
+  'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
+  'side-by-side','spotlight','roundtable-1','roundtable-2'
+];
+
+test('Audio LIVE defines rounded speaker grids for all nine screen layouts', () => {
+  for (const layout of AUDIO_LIVE_LAYOUTS) {
+    assert.match(fit, new RegExp('\\.audio-guest-layout\\[data-live-layout="' + layout + '"\\]'));
+  }
+  assert.match(fit, /grid-auto-flow:row dense!important/);
+  assert.match(fit, /border-radius:18px!important/);
+  assert.match(fit, /border-radius:50%!important/);
+  assert.match(fit, /\.live-audio-stage #live-guest-layout\.audio-guest-layout/);
+});
+
+test('All nine Audio LIVE layouts are persisted and synchronized to room participants', () => {
+  for (const layout of AUDIO_LIVE_LAYOUTS) {
+    assert.ok(server.includes("'" + layout + "'"), layout + ' must be accepted by the server');
+    assert.ok(app.includes("value:'" + layout + "'"), layout + ' must be available in the selector');
+  }
+  assert.match(server, /LIVE_SCREEN_LAYOUTS\.includes\(layout\)/);
+  assert.match(server, /session\.liveLayout = layout/);
+  assert.match(app, /topic:"minglora-live-layout"/);
+  assert.match(app, /applyLiveScreenLayout\(nextLayout\)/);
+});
