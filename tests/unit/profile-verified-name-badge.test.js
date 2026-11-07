@@ -29,5 +29,5 @@ test('the app keeps its established asset URL and refreshes the service worker c
   assert.ok(html.includes('/app.js?v=20261107-profile-controls-functional-1'));
   assert.ok(serviceWorker.includes('/app.js?v=20261107-profile-controls-functional-1'));
   assert.ok(serviceWorker.includes("cache:'no-cache'"));
-  assert.ok(serviceWorker.includes('minglora-shell-v131-live-top-gifters-1'));
+  assert.ok(serviceWorker.includes('minglora-shell-v132-live-top-gifters-2'));
 });
