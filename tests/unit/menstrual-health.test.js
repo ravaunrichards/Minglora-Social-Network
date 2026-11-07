@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -35,6 +36,27 @@ test('validates daily symptoms, pain, reminders and preferences',()=>{
  assert.deepEqual(log.symptoms,['cramps','bloating']);
  assert.throws(()=>normalizeDailyLogInput({entry_date:'2026-11-07',pain_level:11}),/Pain level/);
  assert.equal(normalizeReminderInput({reminder_type:'period_due',time_local:'08:30',timezone:'America/Jamaica'}).lead_days,1);
+ assert.equal(normalizeReminderInput({reminder_type:'daily_log',enabled:false}).enabled,false);
  assert.throws(()=>normalizeReminderInput({reminder_type:'period_due',time_local:'25:90'}),/valid reminder time/);
  assert.deepEqual(normalizeTrackerPreferences({enabled:false,fertility_estimates_enabled:true}),{enabled:false,fertility_estimates_enabled:true});
+});
+
+const menstrualUi=fs.readFileSync(new URL('../../public/menstrual-health.js',import.meta.url),'utf8');
+const menstrualServer=fs.readFileSync(new URL('../../src/server.js',import.meta.url),'utf8');
+test('private tracker UI edits periods, switches reminders and exports journal data',()=>{
+ assert.match(menstrualUi,/data-edit-cycle/);
+ assert.match(menstrualUi,/period_enabled/);
+ assert.match(menstrualUi,/daily_enabled/);
+ assert.match(menstrualUi,/symptom_enabled/);
+ assert.match(menstrualUi,/s\\.data\\.journal/);
+ assert.match(menstrualUi,/s\\.data\\.reminders/);
+});
+test('server blocks new health records when the private tracker is disabled',()=>{
+ assert.match(menstrualServer,/const requireTrackerEnabled=async\\(\\)=>/);
+ for(const resource of ['cycles','daily-logs','journal','reminders']) {
+  const marker="resource==='"+resource+"'";
+  const start=menstrualServer.indexOf(marker);
+  assert.notEqual(start,-1,'server exposes '+resource+' route');
+  assert.ok(menstrualServer.slice(start,start+180).includes('requireTrackerEnabled()'),'server requires tracker consent for '+resource);
+ }
 });
