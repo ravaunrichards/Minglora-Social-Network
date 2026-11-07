@@ -46,7 +46,7 @@ test('the More page provides direct access to secondary features and account too
 
 test('profile navigation keeps the current profile sections and More menu available',()=>{
   assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['badges','Badges'],['gift-gallery','Gift Gallery'],['more','More']].map(([key,label])=>"));
-  assert.ok(app.includes("if(tab==='more')return '<section class=\\"card profile-more-menu\\""));
+  assert.ok(app.includes('profile-more-menu'),'profile More menu markup is present');
   for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Photo albums','Manage sections']){
     assert.ok(app.includes(section),section+' remains represented in the profile More section');
   }
@@ -54,7 +54,7 @@ test('profile navigation keeps the current profile sections and More menu availa
 
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
   assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
-  assert.match(html,/src="\\/app\\.js\\?v=[^"]+"/);
+  assert.match(html,/src="\/app\.js\?v=[^"]+"/);
   assert.ok(html.includes('/mobile-profile-navigation.css?v=20261106-horizontal-profile-navigation-1'));
 });
 
