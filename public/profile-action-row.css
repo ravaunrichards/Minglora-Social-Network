@@ -110,3 +110,46 @@
     font-size:10px!important;
   }
 }
+
+
+/* Consistent Minglora profile action colors.
+   All profile actions are blue at rest and red while pressed or semantically active. */
+.profile-header-card .profile-inline-media-edit,
+.profile-header-card .profile-actions .profile-edit,
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool{
+  background:var(--blue)!important;
+  border:1px solid var(--blue)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-inline-media-edit:hover:not(:disabled),
+.profile-header-card .profile-actions .profile-edit:hover:not(:disabled):not([data-following="true"]):not([data-friendship="accepted"]):not([data-subscription-active="true"]),
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool:hover:not(:disabled){
+  background:var(--blue-dark)!important;
+  border-color:var(--blue-dark)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-inline-media-edit:active:not(:disabled),
+.profile-header-card .profile-actions .profile-edit:active:not(:disabled),
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool:active:not(:disabled),
+.profile-header-card .profile-inline-media-edit:is([aria-pressed="true"],[data-active="true"],.is-active,[aria-busy="true"]),
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool:is([aria-pressed="true"],[data-active="true"],.is-active,[aria-busy="true"]){
+  background:var(--danger,#c43d4b)!important;
+  border-color:var(--danger,#c43d4b)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-inline-media-edit:focus-visible,
+.profile-header-card .profile-actions .profile-edit:focus-visible,
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--blue) 48%,transparent)!important;
+  outline-offset:2px!important;
+}
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool-icon{
+  background:rgba(255,255,255,.16)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-inline-media-edit:disabled,
+.profile-header-card .profile-actions .profile-edit:disabled,
+.profile-header-card .profile-admin-tools-grid .profile-admin-tool:disabled{
+  opacity:.58;
+  cursor:not-allowed;
+}
