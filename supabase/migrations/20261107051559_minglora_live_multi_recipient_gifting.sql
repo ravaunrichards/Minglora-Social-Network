@@ -1,19 +1,12 @@
 BEGIN;
 
--- Keep a single RPC signature: PostgREST does not reliably resolve overloaded
--- functions. A default NULL recipient preserves compatibility for older app
--- servers while new clients supply the selected room participant explicitly.
-DROP FUNCTION IF EXISTS public.minglora_send_live_gift(uuid,uuid,text);
-
-CREATE FUNCTION public.minglora_send_live_gift(
-  p_sender_id uuid,
-  p_broadcast_id uuid,
-  p_gift_code text,
-  p_recipient_id uuid DEFAULT NULL
-) RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO ''
+-- Keep the deployed single RPC signature. The recipient defaults to the host
+-- for older clients, while new LIVE clients identify the selected participant.
+CREATE OR REPLACE FUNCTION public.minglora_send_live_gift(p_sender_id uuid, p_broadcast_id uuid, p_gift_code text, p_recipient_id uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
 AS $function$
 DECLARE
   broadcast public.live_broadcasts%ROWTYPE;
@@ -150,7 +143,8 @@ BEGIN
     'promoCoins',promo_used,'fundingSource',source_label,'currency','USD'
   );
 END;
-$function$;
+$function$
+
 
 REVOKE ALL ON FUNCTION public.minglora_send_live_gift(uuid,uuid,text,uuid)
   FROM PUBLIC, anon, authenticated;
