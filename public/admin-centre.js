@@ -1395,7 +1395,7 @@
       } else {
         metrics.innerHTML = '';
         creators.textContent = 'The verified earnings report could not be loaded. ' +
-          (error.message || 'Try refreshing the report.');
+          (error.message || 'Automatic updates will retry.');
         status.textContent = 'Financial report unavailable.';
       }
     }
