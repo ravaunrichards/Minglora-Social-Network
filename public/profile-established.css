@@ -223,3 +223,23 @@
   outline:3px solid color-mix(in srgb,var(--blue) 48%,transparent)!important;
   outline-offset:2px!important;
 }
+
+
+/* Keep every profile action button in Minglora blue, matching Follow. */
+.profile-header-card .profile-actions .profile-edit{
+  background:var(--blue)!important;
+  border:1px solid var(--blue)!important;
+  color:#fff!important;
+}
+.profile-header-card .profile-actions .profile-edit:hover:not(:disabled){
+  background:var(--blue-dark)!important;
+  border-color:var(--blue-dark)!important;
+}
+.profile-header-card .profile-actions .profile-edit:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--blue) 48%,transparent)!important;
+  outline-offset:2px!important;
+}
+.profile-header-card .profile-actions .profile-edit:disabled{
+  opacity:.58;
+  cursor:not-allowed;
+}
