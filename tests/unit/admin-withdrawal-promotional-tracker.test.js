@@ -27,7 +27,7 @@ test("admin withdrawal tracker renders status totals, filtering and user-control
   assert.match(admin, /earningsRefreshButton\.onclick = \(\) => \{ void loadAdminGiftEarnings\(panel\); \}/);
   assert.doesNotMatch(admin, /mingloraWithdrawalTimer|mingloraWithdrawalAutoRefresh/);
   assert.match(adminCss, /admin-withdrawal-tracker-row/);
-  assert.match(adminHtml, /admin-withdrawal-promotional-tracker-1/);
+  assert.match(adminHtml, /admin-centre.js\?v=20261106-user-controlled-refresh-1/);
 });
 
 test("promotional wallet, cash reserve and cash-backed gift activity stay separately visible", () => {
