@@ -296,7 +296,7 @@
     tile.className='mw-video-tile live-guest-seat'+(identity===activeRoom?.ownerId?' is-host':' is-guest');
     tile.dataset.identity=identity;tile.dataset.seatIndex=empty.dataset.seatIndex||'1';
     tile.innerHTML='<div class="mw-video-placeholder">'+esc(name)+'</div><span class="live-guest-seat-tag">'+(identity===activeRoom?.ownerId?'HOST':'GUEST')+'</span><span class="live-guest-seat-meta"><strong>'+esc(name)+'</strong><small>Connecting to stage</small></span>';
-    if(identity===activeRoom?.ownerId){const heading=$('#mw-grid .live-guest-layout-heading');if(heading)heading.after(tile);else empty.replaceWith(tile);}
+    if(identity===activeRoom?.ownerId){empty.remove();const heading=$('#mw-grid .live-guest-layout-heading');if(heading)heading.after(tile);else $('#mw-grid')?.prepend(tile);}
     else empty.replaceWith(tile);
     updateGuestSeatCount();return tile;
   }
