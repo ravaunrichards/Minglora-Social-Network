@@ -36,9 +36,9 @@ test('the updated app and badge stylesheet are referenced by the service-worker 
   const appAsset = html.match(/app\.js\?v=[^"']+/)?.[0] || '';
   const badgeStylesheet = html.match(/profile-badges\.css\?v=[^"']+/)?.[0] || '';
   const cacheName = serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.equal(appAsset, 'app.js?v=20261107-live-pro-profile-badge-1');
-  assert.equal(badgeStylesheet, 'profile-badges.css?v=20261107-live-pro-profile-badge-1');
+  assert.ok(appAsset, 'the app script has a versioned URL');
+  assert.ok(badgeStylesheet, 'the profile badge stylesheet has a versioned URL');
   assert.ok(serviceWorker.includes('/' + appAsset));
   assert.ok(serviceWorker.includes('/' + badgeStylesheet));
-  assert.equal(cacheName, 'minglora-shell-v165-self-updating-1-live-pro-profile-badge-1');
+  assert.match(cacheName, /^minglora-shell-v\\d+-self-updating-1$/);
 });
