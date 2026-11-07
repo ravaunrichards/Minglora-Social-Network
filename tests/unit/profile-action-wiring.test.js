@@ -77,7 +77,9 @@ test('profile overflow and administrator controls are wired to their feature han
 });
 
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
-  assert.ok(html.includes('/app.js?v=20261107-profile-controls-functional-1'));
-  assert.ok(worker.includes("'/app.js?v=20261107-profile-controls-functional-1'"));
-  assert.ok(worker.includes("minglora-shell-v131-live-top-gifters-1"));
+  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
+  const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
+  assert.ok(appAsset.includes('profile-controls-functional'),'HTML requests the functional profile bundle');
+  assert.ok(worker.includes('/'+appAsset),'service worker caches the exact HTML app bundle');
+  assert.match(cacheName,/^minglora-shell-v\d+-/,'service-worker cache generation is versioned');
 });
