@@ -57,7 +57,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
   assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(html, /src="\/settings\.js\?v=[^"]+"/);
-  assert.match(sw, /CACHE_NAME='minglora-shell-v\\d+[^']*'/);
+  assert.match(sw, /CACHE_NAME='minglora-shell-v[0-9]+[^']*'/);
   assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(sw, /\/settings\.js\?v=[^']+'/);
 });
