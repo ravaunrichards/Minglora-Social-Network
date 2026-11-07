@@ -8239,9 +8239,55 @@ function renderMoreHub(){
   }));
 }
 async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+let accountSwitcherTopLayerCleanup=null;
+function positionAccountSwitcherTopLayer(){
+  const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
+  if(!panel||!anchor||panel.hidden)return;
+  const rect=anchor.getBoundingClientRect();
+  const viewportWidth=Math.max(280,window.innerWidth||280);
+  const panelWidth=Math.min(370,viewportWidth-16);
+  const right=Math.max(8,viewportWidth-rect.right);
+  const top=Math.max(8,Math.min(rect.bottom+8,Math.max(8,(window.innerHeight||480)-190)));
+  panel.style.position='fixed';
+  panel.style.zIndex='2147483647';
+  panel.style.top=top+'px';
+  panel.style.right=right+'px';
+  panel.style.left='auto';
+  panel.style.width=panelWidth+'px';
+  panel.style.maxHeight=Math.max(170,(window.innerHeight||480)-top-12)+'px';
+}
+function mountAccountSwitcherTopLayer(){
+  const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
+  if(!panel||!anchor)return;
+  if(panel.parentElement!==document.body)document.body.appendChild(panel);
+  panel.classList.add('is-top-layer');
+  panel.hidden=false;
+  positionAccountSwitcherTopLayer();
+  if(accountSwitcherTopLayerCleanup)accountSwitcherTopLayerCleanup();
+  const reposition=()=>positionAccountSwitcherTopLayer();
+  window.addEventListener('resize',reposition,{passive:true});
+  window.addEventListener('scroll',reposition,{passive:true,capture:true});
+  accountSwitcherTopLayerCleanup=()=>{
+    window.removeEventListener('resize',reposition);
+    window.removeEventListener('scroll',reposition,true);
+    accountSwitcherTopLayerCleanup=null;
+  };
+}
 function closeAccountSwitcherMenu(){
-  const panel=$('#profile-account-menu'),trigger=$('#profile-menu');
-  if(panel)panel.hidden=true;
+  const panel=$('#profile-account-menu'),trigger=$('#profile-menu'),anchor=$('.profile-menu-anchor');
+  if(accountSwitcherTopLayerCleanup)accountSwitcherTopLayerCleanup();
+  if(panel){
+    panel.hidden=true;
+    panel.classList.remove('is-top-layer');
+    panel.style.position='';
+    panel.style.zIndex='';
+    panel.style.top='';
+    panel.style.right='';
+    panel.style.left='';
+    panel.style.width='';
+    panel.style.maxHeight='';
+    if(anchor&&panel.parentElement!==anchor)anchor.appendChild(panel);
+  }
   trigger?.setAttribute('aria-expanded','false');
 }
 async function renderAccountSwitcherMenu(){
@@ -8322,13 +8368,16 @@ function bindAccountSwitcherMenu(){
   trigger.addEventListener('click',async event=>{
     event.preventDefault();event.stopPropagation();
     if(!panel.hidden){closeAccountSwitcherMenu();return;}
-    panel.hidden=false;trigger.setAttribute('aria-expanded','true');
+    mountAccountSwitcherTopLayer();
+    trigger.setAttribute('aria-expanded','true');
     await renderAccountSwitcherMenu();
+    positionAccountSwitcherTopLayer();
   });
   if(!document.documentElement.dataset.accountSwitcherOutsideBound){
     document.documentElement.dataset.accountSwitcherOutsideBound='true';
     document.addEventListener('pointerdown',event=>{
-      if(!anchor.contains(event.target))closeAccountSwitcherMenu();
+      const panel=$('#profile-account-menu');
+      if(!anchor.contains(event.target)&&!panel?.contains(event.target))closeAccountSwitcherMenu();
     });
     document.addEventListener('keydown',event=>{
       if(event.key==='Escape'){closeAccountSwitcherMenu();document.querySelector('.account-access-backdrop')?.remove();}
