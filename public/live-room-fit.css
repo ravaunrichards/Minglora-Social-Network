@@ -159,15 +159,15 @@ body:has(#live-player-shell) #live-video-stage .live-video-element{width:100%!im
 body:has(#live-player-shell) #live-audio-root{display:none!important}
 body:has(#live-player-shell) .live-player-controls.live-icon-controls{
   position:relative!important;inset:auto!important;display:grid!important;
-  grid-template-columns:repeat(8,minmax(0,1fr))!important;grid-auto-rows:54px!important;
+  grid-template-columns:repeat(8,minmax(0,1fr))!important;grid-auto-rows:48px!important;
   align-content:center!important;align-items:stretch!important;justify-content:stretch!important;gap:5px!important;
-  width:100%!important;min-width:0!important;min-height:58px!important;max-height:116px!important;
+  width:100%!important;min-width:0!important;min-height:52px!important;max-height:114px!important;
   margin:0!important;padding:5px!important;overflow:visible!important;border:1px solid rgba(255,255,255,.14)!important;
   border-radius:12px!important;background:#0c111c!important;
 }
 body:has(#live-player-shell) .live-player-controls .live-control-button{
   display:flex!important;flex-direction:column!important;flex:1 1 auto!important;align-items:center!important;justify-content:center!important;gap:3px!important;
-  width:100%!important;min-width:0!important;min-height:48px!important;height:52px!important;max-width:none!important;margin:0!important;padding:3px!important;
+  width:100%!important;min-width:0!important;min-height:44px!important;height:46px!important;max-width:none!important;margin:0!important;padding:3px!important;
   border:0!important;border-radius:9px!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;
 }
 body:has(#live-player-shell) .live-player-controls .live-control-icon{
@@ -279,10 +279,10 @@ body:has(#live-player-shell) #live-guest-layout .live-guest-seat.is-host .live-g
   body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta strong{font-size:8px!important}
   body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta small{font-size:7px!important}
   body:has(#live-player-shell) .live-player-controls.live-icon-controls{
-    grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-auto-rows:48px!important;
-    min-height:50px!important;max-height:100px!important;gap:3px!important;padding:3px!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-auto-rows:44px!important;
+    min-height:48px!important;max-height:100px!important;gap:3px!important;padding:3px!important;
   }
-  body:has(#live-player-shell) .live-player-controls .live-control-button{height:46px!important;min-height:44px!important;gap:2px!important}
+  body:has(#live-player-shell) .live-player-controls .live-control-button{height:42px!important;min-height:40px!important;gap:2px!important}
   body:has(#live-player-shell) .live-player-controls .live-control-icon{width:28px!important;height:28px!important;flex-basis:28px!important}
   body:has(#live-player-shell) .live-player-controls .live-control-icon svg{width:19px!important;height:19px!important}
   body:has(#live-player-shell) .live-player-controls .live-control-caption{font-size:8px!important}
@@ -302,8 +302,8 @@ body:has(#live-player-shell) #live-guest-layout .live-guest-seat.is-host .live-g
   body:has(#live-player-shell) .live-video-column>.live-stage-topbar button.live-host-profile{max-width:35vw!important}
   body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-profile strong{max-width:22vw!important;font-size:9px!important}
   body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-like-count>small{display:none!important}
-  body:has(#live-player-shell) .live-player-controls.live-icon-controls{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-auto-rows:43px!important;max-height:88px!important}
-  body:has(#live-player-shell) .live-player-controls .live-control-button{height:41px!important;min-height:40px!important}
+  body:has(#live-player-shell) .live-player-controls.live-icon-controls{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-auto-rows:44px!important;max-height:100px!important}
+  body:has(#live-player-shell) .live-player-controls .live-control-button{height:42px!important;min-height:40px!important}
   body:has(#live-player-shell) .live-player-controls .live-control-caption{font-size:7px!important}
 }
 
