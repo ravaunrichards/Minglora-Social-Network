@@ -27,24 +27,38 @@ test('phone layout preserves two landscape video tiles and side-by-side People a
   assert.doesNotMatch(css, /@media\(max-width:430px\)[\s\S]*?\.mw-video-grid\s*\{[^}]*grid-template-columns:1fr/);
 });
 
-test('MeetWave mirrors LIVE with a bottom control rail and panel toggles', () => {
+test('MeetWave room dock stays attached and meeting chat remains in the room', () => {
   assert.match(js, /class="mw-controls live-player-controls live-icon-controls"/);
   assert.match(js, /id="mw-people-toggle"/);
   assert.match(js, /id="mw-chat-toggle"/);
   assert.match(js, /function toggleSupportPanel\(name\)/);
   assert.match(js, /setRoomControlState\('mw-mic'/);
   assert.match(js, /setRoomControlState\('mw-camera'/);
-  assert.match(css, /\.mw-controls\.live-player-controls\.live-icon-controls\{[\s\S]*?position:fixed/);
+  assert.match(css, /\.mw-controls\.live-player-controls\.live-icon-controls\{[\s\S]*?position:relative!important/);
   assert.match(css, /\.mw-support-column\[hidden\]\{display:none!important\}/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?bottom:calc\(66px \+ env\(safe-area-inset-bottom\)\)/);
 });
 
 test('MeetWave automatic-sync assets bypass stale browser and service-worker caches', () => {
-  const cssVersion = '20261107-auto-sync-no-refresh-1';
-  const jsVersion = '20261106-auto-sync-no-refresh-1';
+  const cssVersion = '20261107-meetwave-full-room-1';
+  const jsVersion = '20261107-meetwave-full-room-1';
   assert.ok(html.includes('/meetwave.css?v=' + cssVersion));
   assert.ok(html.includes('/meetwave.js?v=' + jsVersion));
-  assert.match(serviceWorker, new RegExp('minglora-shell-v119-auto-sync-no-refresh-1'));
+  assert.match(serviceWorker, new RegExp('minglora-shell-v120-meetwave-full-room-1'));
   assert.ok(serviceWorker.includes('/meetwave.css?v=' + cssVersion));
   assert.ok(serviceWorker.includes('/meetwave.js?v=' + jsVersion));
+});
+
+test('MeetWave has eight selectable meeting layouts', () => {
+  for (const layout of ['gallery-2','gallery-3','gallery-4','speaker','spotlight','sidebar','filmstrip','presentation']) {
+    assert.ok(js.includes('data-mw-layout=\"'+layout+'\"'));
+    assert.ok(css.includes('data-layout=\"'+layout+'\"'));
+  }
+  assert.match(js, /function applyMeetingLayout\(layout\)/);
+});
+
+test('MeetWave settings cover devices and appearance while retaining visible room chat', () => {
+  for (const id of ['mw-settings-panel','mw-audio-input','mw-audio-output','mw-video-input','mw-echo-cancellation','mw-noise-suppression','mw-auto-gain','mw-video-fit','mw-mirror-self','mw-show-names','mw-chat-panel']) assert.ok(js.includes('id=\"'+id+'\"'));
+  assert.match(js, /function switchMeetingDevice\(kind,deviceId\)/);
+  assert.match(js, /function applyMeetingVisualSettings\(\)/);
 });
