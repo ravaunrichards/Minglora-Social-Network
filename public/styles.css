@@ -6885,3 +6885,51 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
 
 /* Five phone-first destinations stay evenly sized without a horizontal-scroll navigation bar. */
 @media(max-width:760px){.mobile-nav>button{flex:1 1 20%!important;max-width:20%!important;min-width:0}}
+
+
+/* Accessible password reveal controls on Minglora sign-in and registration. */
+.auth-password-control{
+  position:relative;
+  display:block;
+  width:100%;
+  margin-top:6px;
+}
+.auth-card .auth-password-control input{
+  width:100%;
+  margin-top:0;
+  padding-right:58px;
+}
+.auth-password-toggle{
+  position:absolute;
+  top:50%;
+  right:7px;
+  display:grid;
+  width:40px;
+  height:40px;
+  padding:0;
+  place-items:center;
+  transform:translateY(-50%);
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:#536174;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.auth-password-toggle:hover{
+  background:#eef3fb;
+  color:#1769e0;
+}
+.auth-password-toggle:focus-visible{
+  outline:3px solid #82b4ff;
+  outline-offset:1px;
+}
+.auth-password-toggle svg{
+  display:block;
+  width:22px;
+  height:22px;
+  pointer-events:none;
+}
+@media(max-width:420px){
+  .auth-password-toggle{right:5px;width:40px;height:40px}
+}
