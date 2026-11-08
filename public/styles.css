@@ -7240,3 +7240,15 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
  .nav-item .nav-3d-icon,.nav-item .league-nav-icon{width:22px;height:22px;flex-basis:22px}
  .nav-item small{font-size:8px}
 }
+
+
+/* TikTok-style For You profile action sits above the engagement rail. */
+.fyp-profile-action{position:relative;display:flex;flex-direction:column;align-items:center;margin-bottom:2px}
+.fyp-profile-action .fyp-avatar-button{width:48px;height:48px;border:2px solid #fff;border-radius:50%;background:#111}
+.fyp-profile-action .fyp-follow{display:grid;place-items:center;width:23px;height:23px;min-height:23px;margin-top:-11px;padding:0;border:0;border-radius:50%;background:#fe2c55;color:#fff;font-size:19px;line-height:1;z-index:1}
+.fyp-profile-action .fyp-follow.following{background:#656565;color:#fff}
+.fyp-overlay-bottom{bottom:18px}
+@media(max-width:760px){
+  .fyp-overlay-bottom{bottom:calc(17px + env(safe-area-inset-bottom))}
+  .fyp-action-rail{bottom:calc(24px + env(safe-area-inset-bottom))}
+}
