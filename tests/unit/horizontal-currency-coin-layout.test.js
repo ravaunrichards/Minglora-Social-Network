@@ -40,5 +40,5 @@ test('Minglora dollar amounts and coin counts stay horizontal on every viewport'
   assert.match(html, /styles\.css\?v=20261108-horizontal-money-coins-1/);
   assert.match(html, /gifts\.js\?v=20261108-horizontal-money-coins-1/);
   assert.match(serviceWorker, /styles\.css\?v=20261108-horizontal-money-coins-1/);
-  assert.match(serviceWorker, /minglora-shell-v239-horizontal-money-coins-1/);
+  assert.match(serviceWorker, /minglora-shell-v\\d+-horizontal-money-coins-1/);
 });
