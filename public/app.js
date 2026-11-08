@@ -9034,11 +9034,12 @@ function forYouCard(post,index){
   return '<article class="fyp-video-card" data-fyp-post="'+esc(post.id)+'" data-post="'+esc(post.id)+'">'+
     '<video class="fyp-video" data-fyp-video data-post-id="'+esc(post.id)+'" playsinline webkit-playsinline loop muted preload="'+(index<2?'auto':'metadata')+'" src="'+esc(media.url)+'" aria-label="Video by '+esc(author.name||'Minglora member')+'"></video>'+
     '<div class="fyp-video-shade" aria-hidden="true"></div>'+
-    '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'creator')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button><button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id||'')+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button></div>'+
+    '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button></div>'+
     '<p class="fyp-caption">'+esc(caption||'')+'</p>'+
     '<div class="fyp-sound-line">'+(post.soundtrack?renderPostSoundtrack(post):'<span>♫ Original audio · '+esc(author.username||'Minglora creator')+'</span>')+'</div>'+
     '<form class="comment-form fyp-comment-form" data-comment-form="'+esc(post.id)+'" hidden><input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Add a comment" required><button type="submit">Send</button></form></div>'+
     '<aside class="fyp-action-rail" aria-label="Video actions">'+
+    '<div class="fyp-profile-action"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'creator')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id||'')+'" data-following="'+(following?'true':'false')+'" aria-label="'+(following?'Following creator':'Follow creator')+'">'+(following?'✓':'+')+'</button></div>'+
     '<button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" aria-label="Like video"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
     '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button>'+
     '<button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save video"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
@@ -9139,7 +9140,7 @@ function setupForYouPlayback(root){
     const following=button.dataset.following==='true';button.disabled=true;
     try{
       const result=await api('/users/'+encodeURIComponent(id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
-      const next=!following;button.dataset.following=String(next);button.classList.toggle('following',next);button.textContent=next?'Following':'Follow';
+      const next=!following;button.dataset.following=String(next);button.classList.toggle('following',next);button.textContent=next?'✓':'+';button.setAttribute('aria-label',next?'Following creator':'Follow creator');
       state.videoFeed.filter(post=>post.author?.id===id).forEach(post=>post.following=next);
       toast(result.friends?'You are now friends through mutual follows.':(next?'Now following creator.':'Unfollowed creator.'));
     }catch(error){toast(error.message);}
@@ -9151,13 +9152,6 @@ function setupForYouPlayback(root){
     state.forYouScope=scope;
     state.forYouSearch='';
     await renderForYouFeed();
-  });
-  bindOnce('[data-fyp-home]',()=>activateNav('feed'));
-  bindOnce('[data-fyp-nav]',button=>{
-    const destination=button.dataset.fypNav;
-    if(destination==='create'){openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()});return;}
-    if(destination==='profile'){openProfile(state.user.id);return;}
-    if(destination)activateNav(destination);
   });
   bindOnce('[data-fyp-search]',()=>{
     const search=root.querySelector('#fyp-search-input');
@@ -9211,7 +9205,7 @@ async function renderForYouFeed(){
   try{
     await fetchForYouPage({reset:true});
     const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
-    root.innerHTML='<section class="minglora-for-you"><div class="fyp-top-search"><button type="button" class="fyp-brand" data-fyp-home aria-label="Minglora home">m</button><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos">⌕</button></div><div class="fyp-feed-switch"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><span></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="For You videos">'+(cards||'<div class="fyp-empty"><div class="fyp-empty-mark">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'Your For You feed is ready for its first videos')+'</h2><p>When Minglora members publish eligible public videos, they will appear here. Follow creators, watch videos and interact to personalize recommendations.</p><button type="button" class="primary" id="fyp-create-video">Create a video</button></div>')+'</div><nav class="fyp-bottom-nav" aria-label="Minglora navigation"><button type="button" data-fyp-nav="feed"><span>⌂</span><small>Home</small></button><button type="button" data-fyp-nav="friends"><span>♙</span><small>Friends</small></button><button type="button" data-fyp-nav="create" class="fyp-create-tab" aria-label="Create video"><span>＋</span></button><button type="button" data-fyp-nav="messages"><span>▣</span><small>Inbox</small></button><button type="button" data-fyp-nav="profile"><span>◉</span><small>Profile</small></button></nav></section>';
+    root.innerHTML='<section class="minglora-for-you"><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos">⌕</button></div><div class="fyp-feed-switch"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><span></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="For You videos">'+(cards||'<div class="fyp-empty"><div class="fyp-empty-mark">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'Your For You feed is ready for its first videos')+'</h2><p>When Minglora members publish eligible public videos, they will appear here. Follow creators, watch videos and interact to personalize recommendations.</p><button type="button" class="primary" id="fyp-create-video">Create a video</button></div>')+'</div></section>';
     const main=$('#main-content');
     main.querySelector('#fyp-create-video')?.addEventListener('click',()=>openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()}));
     bindFeed(main.querySelector('#fyp-stream')||main);
