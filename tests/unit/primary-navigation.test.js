@@ -45,7 +45,7 @@ test('the More page provides direct access to secondary features and account too
 });
 
 test('profile navigation keeps creator tabs and the More menu available',()=>{
-  assert.ok(app.includes("[['posts','Posts'],['reels','Reels'],['photos','Photos'],['friends','Friends'],['about','About'],['more','More']].map(([key,label])=>"));
+  assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>"));
   assert.ok(app.includes('profile-more-menu'),'profile More menu markup is present');
   for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Badges','Gift Gallery','Photo albums','Manage sections']){
     assert.ok(app.includes(section),section+' remains represented in the profile More section');
