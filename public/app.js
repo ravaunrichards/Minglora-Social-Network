@@ -9243,7 +9243,9 @@ function renderForYouStreamContent(stream){
   stream.querySelector('[data-fyp-refresh]')?.addEventListener('click',()=>void renderForYouFeed());
 }
 let forYouSearchTimer=null;
+let forYouSearchSequence=0;
 async function searchForYouPosts(){
+  const searchRequestId=++forYouSearchSequence;
   if(state.view!=='for-you')return;
   const stream=document.querySelector('#fyp-stream');
   if(!stream)return;
@@ -9251,11 +9253,11 @@ async function searchForYouPosts(){
   stream.innerHTML='<div class="fyp-search-loading" role="status">'+(query?'Searching Minglora posts…':'Loading the feed…')+'</div>';
   try{
     await fetchForYouPage({reset:true});
-    if(state.view!=='for-you'||!stream.isConnected)return;
+    if(searchRequestId!==forYouSearchSequence||state.view!=='for-you'||!stream.isConnected)return;
     renderForYouStreamContent(stream);
     stream.scrollTop=0;
   }catch(error){
-    if(state.view==='for-you'&&stream.isConnected){
+    if(searchRequestId===forYouSearchSequence&&state.view==='for-you'&&stream.isConnected){
       stream.innerHTML='<div class="fyp-empty"><h2>Search could not load</h2><p>'+esc(error.message||'Check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Try again</button></div>';
       stream.querySelector('[data-fyp-refresh]')?.addEventListener('click',()=>void searchForYouPosts());
     }
@@ -9297,6 +9299,8 @@ function startForYouAutoRefresh(){
   },30000);
 }
 async function renderForYouFeed(){
+  forYouSearchSequence++;
+  if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
   state.view='for-you';
   syncPageLayout();
   state.forYouScope=state.forYouScope==='following'?'following':'for-you';
