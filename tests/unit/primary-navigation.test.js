@@ -45,9 +45,9 @@ test('the More page provides direct access to secondary features and account too
 });
 
 test('profile navigation keeps the current profile sections and More menu available',()=>{
-  assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['badges','Badges'],['gift-gallery','Gift Gallery'],['more','More']].map(([key,label])=>"));
+  assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>"));
   assert.ok(app.includes('profile-more-menu'),'profile More menu markup is present');
-  for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Photo albums','Manage sections']){
+  for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Badges','Gift Gallery','Photo albums','Manage sections']){
     assert.ok(app.includes(section),section+' remains represented in the profile More section');
   }
 });
