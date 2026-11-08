@@ -7,11 +7,11 @@ const read = path => readFile(new URL(path, root), 'utf8');
 
 test('the final phone experience stylesheet loads after feature skins and is shell-cached', async () => {
   const [html, worker] = await Promise.all([read('public/index.html'), read('public/sw.js')]);
-  const finalPhone = html.indexOf('phone-experience.css?v=20261107-phone-experience-1');
+  const finalPhone = html.indexOf('phone-experience.css?v=20261108-phone-overlay-panels-1');
   const appLock = html.indexOf('app-lock.css?v=20261107-app-lock-1');
   assert.ok(finalPhone > appLock && appLock >= 0, 'phone overrides must load after the feature and app-lock styles');
   assert.match(html, /name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/);
-  assert.ok(worker.includes("'/phone-experience.css?v=20261107-phone-experience-1'"), 'the phone stylesheet is pre-cached');
+  assert.ok(worker.includes("'/phone-experience.css?v=20261108-phone-overlay-panels-1'"), 'the phone stylesheet is pre-cached');
   assert.ok(/^const CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1';$/m.test(worker));
 });
 
