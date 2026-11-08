@@ -7397,7 +7397,20 @@ function startMessengerRealtime(){
   if(messengerRealtimeSocket&&[WebSocket.OPEN,WebSocket.CONNECTING].includes(messengerRealtimeSocket.readyState))return;
   if(messengerRealtimeReconnectTimer){clearTimeout(messengerRealtimeReconnectTimer);messengerRealtimeReconnectTimer=null;}
   const scheme=window.location.protocol==='https:'?'wss:':'ws:';
-  const socket=new WebSocket(scheme+'//'+window.location.host+'/api/messages/realtime');
+  let socket;
+  try{
+    socket=new WebSocket(scheme+'//'+window.location.host+'/api/messages/realtime');
+  }catch(error){
+    console.warn('Minglora Messenger realtime could not start; using API refresh fallback:',error?.message||error);
+    messengerRealtimeSocket=null;state.messengerRealtimeConnected=false;
+    syncMessageRefreshPolling();
+    if(state.user){
+      messengerRealtimeReconnectAttempts=Math.min(messengerRealtimeReconnectAttempts+1,8);
+      const delay=Math.min(15000,800*Math.pow(1.7,messengerRealtimeReconnectAttempts));
+      messengerRealtimeReconnectTimer=setTimeout(()=>{messengerRealtimeReconnectTimer=null;startMessengerRealtime();},delay);
+    }
+    return;
+  }
   messengerRealtimeSocket=socket;
   socket.addEventListener('open',()=>{
     if(messengerRealtimeSocket!==socket)return;
@@ -8915,17 +8928,22 @@ async function pollBrowserNotifications(){
   try{
     const items=(await api('/notifications')).notifications||[];
     paintNotificationBadge(items);
+    let fresh=[];
     if(!browserNotificationPrimed){
       browserNotificationSeen=new Set(items.map(item=>item.id));
       browserNotificationPrimed=true;
     }else{
-      const fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
+      fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
         if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
-        const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
-        notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
+        try{
+          const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
+          notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
+        }catch(error){
+          console.warn('Minglora could not display a browser notification:',error?.message||error);
+        }
       }
     }
     if(fresh.length&&state.view==='notifications')void renderNotifications();
