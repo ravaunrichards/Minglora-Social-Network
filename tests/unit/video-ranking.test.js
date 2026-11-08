@@ -9,15 +9,15 @@ const post = (id, userId, extra = {}) => ({
 });
 
 test('For You videos learn creator preferences from completed watch events', () => {
-  const posts = [post('new', 'unfamiliar'), post('watched', 'known')];
+  const posts = [post('new', 'unfamiliar'), post('known-candidate', 'known-creator')];
   const ranked = rankForYouVideos(
     posts, 'viewer', [],
     [],
-    [{ userId: 'viewer', postId: 'old-known-video', watchedMs: 18000, durationMs: 20000, completed: true, createdAt: new Date(now - 1000).toISOString() }],
+    [{ userId: 'viewer', authorId: 'known-creator', postId: 'old-known-video', watchedMs: 18000, durationMs: 20000, completed: true, createdAt: new Date(now - 1000).toISOString() }],
     [],
     now
   );
-  assert.ok(ranked.length === 2);
+  assert.equal(ranked[0].id, 'known-candidate');
 });
 
 test('For You removes videos explicitly marked not interested', () => {
