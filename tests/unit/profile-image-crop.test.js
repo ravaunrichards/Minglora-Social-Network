@@ -91,12 +91,21 @@ test('crop preview and saved output use the visible inner frame rather than its 
 
 test('public profile page uses the Facebook-style wide cover and portrait crop presentation',()=>{
   const profileCss=fs.readFileSync(path.join(root,'public/profile-action-row.css'),'utf8');
+  const facebookCss=fs.readFileSync(path.join(root,'public/profile-facebook-panel.css'),'utf8');
   const alignment=fs.readFileSync(path.join(root,'public/profile-alignment.css'),'utf8');
   assert.ok(app.includes('class="profile-cover"'), 'profile cover container must exist');
   assert.ok(app.includes('class="profile-cover-image" data-view-image='));
   assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[^}]*aspect-ratio:2\.7 \/ 1/);
   assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-cover-image\{[^}]*object-fit:cover/);
   assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[\s\S]*?aspect-ratio:2\.7 \/ 1!important/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?margin-top:calc\(var\(--minglora-profile-avatar-size\) \/ -2\)!important/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?border-radius:50%!important/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?object-fit:cover!important/);
+  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?--minglora-profile-avatar-size:clamp\(88px,25vw,112px\)/);
+  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?aspect-ratio:2\.7 \/ 1!important/);
+  assert.doesNotMatch(facebookCss,/aspect-ratio:2\.5 \/ 1/);
+  assert.match(profileCss,/\.profile-crop-preview--cover\{aspect-ratio:2\.7 \/ 1!important/);
   assert.match(alignment,/--minglora-profile-avatar-size:168px/);
   assert.ok(css.includes('.person-card--immersive .person-cover{'));
   assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
