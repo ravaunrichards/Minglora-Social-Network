@@ -7,40 +7,37 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
-const alignment=read('public/profile-alignment.css');
-const css=read('public/profile-action-row.css');
+const tiktokCss=read('public/profile-tiktok-layout.css');
 const facebookCss=read('public/profile-facebook-panel.css');
-const guardrails=read('public/profile-layout-guardrails.css');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
 
-test('owner profile has Edit profile and Add to story without separate photo edit buttons',()=>{
+test('owner profile keeps Edit profile and Add to story without separate photo edit buttons',()=>{
   assert.match(app,/class="profile-actions profile-owner-actions"/);
   assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
   assert.match(app,/id="profile-add-story" type="button" aria-label="Add to story"/);
   assert.match(app,/<span>Add to story<\/span>/);
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
-  assert.doesNotMatch(app,/profile-media-action-row|profile-avatar-inline-edit|profile-inline-media-edit/);
 });
 
-test('desktop profile uses a Facebook-scale portrait, wide cover and lower-left overlap',()=>{
-  assert.match(alignment,/--minglora-profile-avatar-size:168px/);
-  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[^}]*aspect-ratio:2\.7 \/ 1/);
-  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-cover-image\{[^}]*object-fit:cover/);
-  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[^}]*grid-row:2/);
-  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[^}]*margin-top:calc\(var\(--minglora-profile-avatar-size\) \/ -2\)/);
-  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
+test('profile uses a TikTok-style creator header with no cover overlap',()=>{
+  assert.match(tiktokCss,/\.profile-header-card \.profile-cover\s*\{\s*display:\s*none/);
+  assert.match(tiktokCss,/\.profile-avatar-edit-wrap\s*\{[\s\S]*?margin:\s*0/);
+  assert.match(tiktokCss,/\.profile-avatar-edit-wrap > \.avatar\s*\{[\s\S]*?width:\s*128px/);
+  assert.match(tiktokCss,/\.profile-header-card \.profile-counts\s*\{[\s\S]*?grid-column:\s*2/);
+  assert.ok(app.includes('const profileBioMarkup='));
+  assert.ok(app.includes("profileBioMarkup+(data.profileStatus?"));
+  assert.ok(app.includes("[['posts','Posts'],['reels','Reels'],['photos','Photos']"));
 });
 
-test('phone profile retains its larger visible portrait and action row below identity',()=>{
-  assert.match(css,/@media\(max-width:760px\)[\s\S]*?:root\{--minglora-profile-avatar-size:112px\}/);
-  assert.match(css,/@media\(max-width:390px\)[\s\S]*?:root\{--minglora-profile-avatar-size:100px\}/);
-  assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.minglora-profile-page \.profile-header-card--owner \.profile-owner-actions\{[^}]*grid-row:3/);
-  assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.minglora-profile-page \.profile-header-card--owner \.profile-counts\{grid-row:4!important\}/);
-  assert.doesNotMatch(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[^}]*display:none!important/);
+test('phone profile stacks identity, stats and actions without hiding the portrait',()=>{
+  assert.match(tiktokCss,/@media \(max-width: 760px\)[\s\S]*?flex-basis: 84px/);
+  assert.match(tiktokCss,/@media \(max-width: 760px\)[\s\S]*?grid-row: 2/);
+  assert.match(tiktokCss,/@media \(max-width: 760px\)[\s\S]*?grid-row: 3/);
+  assert.doesNotMatch(tiktokCss,/profile-avatar-edit-wrap\s*\{[^}]*display:\s*none/);
 });
 
-test('picture and cover remain editable in the normal Edit profile dialog only',()=>{
+test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/data-profile-media-section="cover"/);
@@ -53,7 +50,18 @@ test('picture and cover remain editable in the normal Edit profile dialog only',
   assert.match(app,/\$\('#edit-profile'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u\)\)/);
 });
 
-test('updated profile assets are loaded and precached by a refreshed shell cache',()=>{
+test('TikTok-style post tiles open real posts with the existing feed actions',()=>{
+  assert.ok(app.includes('function profilePostTileMarkup(post)'));
+  assert.ok(app.includes('function profilePostsGridMarkup(data,isMe)'));
+  assert.ok(app.includes('function openProfilePostViewer(post)'));
+  assert.ok(app.includes("if(tab==='posts')return profilePostsGridMarkup(data,isMe)"));
+  assert.ok(app.includes("panel.querySelectorAll('[data-profile-post-open]')"));
+  assert.ok(app.includes('bindFeed(modal)'));
+  assert.ok(tiktokCss.includes('.profile-post-grid'));
+  assert.ok(tiktokCss.includes('aspect-ratio: 3 / 4'));
+});
+
+test('new profile assets are loaded and precached by the active service-worker cache',()=>{
   const assetFrom=(attribute,prefix)=>{
     const marker=attribute+'="'+prefix;
     const start=html.indexOf(marker);
@@ -63,9 +71,7 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
     return valueEnd>valueStart?html.slice(valueStart,valueEnd):'';
   };
   const assets=[
-    assetFrom('href','/profile-alignment.css?'),
-    assetFrom('href','/profile-action-row.css?'),
-    assetFrom('href','/profile-facebook-panel.css?'),
+    assetFrom('href','/profile-tiktok-layout.css?'),
     assetFrom('src','/app.js?')
   ];
   for(const asset of assets){
@@ -77,21 +83,5 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
   assert.match(app,/id="profile-people-panel"/);
   assert.match(app,/data-profile-people-scroll="1"/);
   assert.match(app,/data-profile-people-more/);
-  assert.ok(app.includes('<path d="m7 10 5 5 5-5"></path>'),'closed People You May Know chevron points down');
-  assert.ok(facebookCss.includes('.minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:clamp(112px,15vw,176px) minmax(0,1fr) auto!important;}'),'owner header has explicit portrait, identity and action columns');
-  assert.ok(facebookCss.includes('.profile-people-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}'),'the dropdown chevron flips when opened');
-
-
-});
-
-
-test('final profile guardrails keep the portrait anchored across the cover edge like Facebook',()=>{
-  const coverLink=html.indexOf('/profile-facebook-panel.css?');
-  const finalLink=html.indexOf('/profile-layout-guardrails.css?v=20261108-facebook-avatar-position-fix-1');
-  assert.ok(coverLink>=0&&finalLink>coverLink,'the authoritative profile fix loads after earlier profile styles');
-  assert.match(guardrails,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?position:absolute!important;[\s\S]*?left:24px!important;[\s\S]*?top:calc\(var\(--minglora-profile-avatar-size\) \/ -2\)!important;/);
-  assert.match(guardrails,/@media \(max-width:760px\)[\s\S]*?\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?left:13px!important;[\s\S]*?top:-48px!important;/);
-  assert.match(guardrails,/\.minglora-profile-page \.profile-header-card \.profile-info-main[\s\S]*?grid-column:1!important;[\s\S]*?grid-row:1!important;/);
-  assert.ok(worker.includes("'/profile-layout-guardrails.css?v=20261108-facebook-avatar-position-fix-1'"),'service worker precaches the corrected final profile stylesheet');
-  assert.match(worker,/CACHE_NAME='minglora-shell-v215-facebook-avatar-position-1'/);
+  assert.ok(facebookCss.includes('.profile-people-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}'));
 });
