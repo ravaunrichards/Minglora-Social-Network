@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
@@ -8986,7 +8986,7 @@ function renderReelCard(post,media,index){
   const likedLabel=post.myReaction?String(post.myReaction).charAt(0).toUpperCase()+String(post.myReaction).slice(1):'Like';
   return '<article class="minglora-reel" data-post="'+esc(post.id)+'" data-reel-index="'+index+'">'+
     '<div class="minglora-reel-stage">'+
-      '<video class="post-media-video minglora-reel-video" data-reel-video controls playsinline loop muted preload="metadata" src="'+esc(media.url)+'" aria-label="Video shared by @'+esc(author.username||'member')+'"></video>'+
+      '<video class="post-media-video minglora-reel-video" data-reel-video data-post-id="'+esc(post.id)+'" controls playsinline loop muted preload="metadata" src="'+esc(media.url)+'" aria-label="Video shared by @'+esc(author.username||'member')+'"></video>'+
       '<button type="button" class="minglora-reel-sound" data-reel-sound="'+esc(post.id)+'" aria-pressed="false">Unmute</button>'+
       (post.text?'<div class="minglora-reel-caption-overlay">'+esc(post.text)+'</div>':'')+
     '</div>'+
@@ -9007,11 +9007,44 @@ function renderReelCard(post,media,index){
   '</article>';
 }
 let videoReelObserver=null;
+let videoCentrePaginationObserver=null;
 function bindReelPlayback(root){
   if(videoReelObserver){videoReelObserver.disconnect();videoReelObserver=null;}
   const videos=Array.from(root.querySelectorAll('[data-reel-video]'));
   if(!videos.length)return;
   const scroller=root.querySelector('.video-centre-reels');
+  const sendWatch=async video=>{
+    const postId=video.dataset.postId||video.closest('.minglora-reel')?.dataset.post;
+    const watchedMs=Math.round(Number(video.dataset.watchBuffer||0));
+    const durationMs=Math.round(Number(video.duration||0)*1000);
+    if(!postId||watchedMs<1000||durationMs<1000||video.dataset.reelWatchSending==='true')return;
+    video.dataset.watchBuffer='0';
+    video.dataset.reelWatchSending='true';
+    try{
+      await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});
+    }catch(error){
+      video.dataset.watchBuffer=String(Math.min(600000,Number(video.dataset.watchBuffer||0)+watchedMs));
+      console.warn('[Minglora] Reel watch signal not saved:',error?.message||error);
+    }finally{video.dataset.reelWatchSending='false';}
+  };
+  videos.forEach(video=>{
+    if(video.dataset.reelWatchBound!=='true'){
+      video.dataset.reelWatchBound='true';
+      video.dataset.lastMediaTime='0';
+      video.dataset.watchBuffer='0';
+      video.addEventListener('timeupdate',()=>{
+        const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0),delta=current-previous;
+        if(!video.paused&&delta>0&&delta<=2.5){
+          video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
+          if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
+        }
+        video.dataset.lastMediaTime=String(current);
+      });
+      video.addEventListener('seeking',()=>{video.dataset.lastMediaTime=String(video.currentTime||0);});
+      video.addEventListener('pause',()=>{video.dataset.lastMediaTime=String(video.currentTime||0);void sendWatch(video);});
+      video.addEventListener('ended',()=>void sendWatch(video));
+    }
+  });
   if('IntersectionObserver' in window){
     videoReelObserver=new IntersectionObserver(entries=>{
       entries.forEach(entry=>{
@@ -9027,6 +9060,8 @@ function bindReelPlayback(root){
     videos[0].play().catch(()=>{});
   }
   root.querySelectorAll('[data-reel-sound]').forEach(button=>{
+    if(button.dataset.reelSoundBound==='true')return;
+    button.dataset.reelSoundBound='true';
     button.addEventListener('click',()=>{
       const video=button.closest('.minglora-reel')?.querySelector('[data-reel-video]');
       if(!video)return;
@@ -9037,6 +9072,149 @@ function bindReelPlayback(root){
     });
   });
 }
+function bindVideoCentrePagination(feed,mode,onLoadMore){
+  if(videoCentrePaginationObserver){videoCentrePaginationObserver.disconnect();videoCentrePaginationObserver=null;}
+  const button=feed.querySelector('[data-video-load-more]');
+  if(!button||!state.videoHasMore)return;
+  if(button.dataset.paginationBound!=='true'){
+    button.dataset.paginationBound='true';
+    button.addEventListener('click',()=>void onLoadMore(button));
+  }
+  if('IntersectionObserver' in window){
+    const scroller=mode==='reels'?feed.querySelector('.video-centre-reels'):null;
+    videoCentrePaginationObserver=new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)&&!button.disabled)void onLoadMore(button);
+    },{root:scroller,rootMargin:'650px',threshold:0});
+    videoCentrePaginationObserver.observe(button);
+  }
+}
+async function fetchVideoCentrePage({reset=false,watchLater=false}={}){
+  if(state.videoLoading&&!reset)return [];
+  const requestId=++state.videoRequestSequence;
+  if(reset){state.videoFeed=[];state.videoNextCursor=null;state.videoHasMore=false;}
+  state.videoLoading=true;
+  try{
+    let result;
+    if(watchLater)result=await api('/video-watch-later');
+    else{
+      const cursorQuery=!reset&&state.videoNextCursor?'&cursor='+encodeURIComponent(state.videoNextCursor):'';
+      result=await api('/feed?scope='+encodeURIComponent(state.videoScope)+'&limit=100'+cursorQuery);
+    }
+    if(requestId!==state.videoRequestSequence)return [];
+    const incoming=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+    if(reset)state.videoFeed=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+    else{
+      const existingIds=new Set(state.videoFeed.map(post=>String(post.id)));
+      state.videoFeed=[...state.videoFeed,...incoming.filter(post=>!existingIds.has(String(post.id)))];
+    }
+    state.videoNextCursor=watchLater?null:(result.nextCursor||null);
+    state.videoHasMore=!watchLater&&result.hasMore===true&&Boolean(state.videoNextCursor);
+    return incoming;
+  }finally{if(requestId===state.videoRequestSequence)state.videoLoading=false;}
+}
+async function renderVideoCentre(){
+  const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
+  const mode=['videos','reels','watch-later'].includes(state.videoMode)?state.videoMode:'videos';
+  state.videoScope=scope;
+  state.videoMode=mode;
+  await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button></nav><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
+  const root=$('#main-content');
+  const feed=root.querySelector('#video-centre-feed');
+  const loadMoreVideoPage=async button=>{
+    if(state.videoLoading||!state.videoHasMore)return;
+    button.disabled=true;
+    button.textContent='Loading more videos…';
+    try{
+      const incoming=await fetchVideoCentrePage({reset:false});
+      const query=String(state.videoSearch||'').trim().toLowerCase();
+      const matching=incoming.filter(post=>(mode==='reels'?post.videoFormat==='reel':mode==='videos'?post.videoFormat!=='reel':true))
+        .filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
+      if(mode==='reels'){
+        let list=feed.querySelector('.video-centre-reels');
+        if(!list){
+          feed.querySelector('.empty-state')?.remove();
+          list=document.createElement('div');
+          list.className='video-centre-reels';
+          feed.prepend(list);
+        }
+        if(button.parentElement!==list)list.appendChild(button);
+        const markup=matching.flatMap(post=>(post.media||[]).filter(media=>media.mediaType==='video'&&media.url)
+          .map(media=>renderReelCard(post,media,state.videoFeed.findIndex(item=>item.id===post.id)))).join('');
+        const pending=document.createElement('div');
+        pending.innerHTML=markup;
+        bindFeed(pending);
+        while(pending.firstChild)list.insertBefore(pending.firstChild,button);
+        bindReelPlayback(feed);
+      }else if(matching.length){
+        feed.querySelector('.empty-state')?.remove();
+        const pending=document.createElement('div');
+        pending.innerHTML=matching.map(post=>postCard(post,{videoWatchLater:true})).join('');
+        bindFeed(pending);
+        while(pending.firstChild)feed.insertBefore(pending.firstChild,button);
+      }
+      if(!matching.length&&state.videoHasMore){
+        button.disabled=false;
+        button.textContent='Load more videos';
+        return loadMoreVideoPage(button);
+      }
+      if(!state.videoHasMore){
+        button.remove();
+        if(videoCentrePaginationObserver){videoCentrePaginationObserver.disconnect();videoCentrePaginationObserver=null;}
+      }else{
+        button.disabled=false;
+        button.textContent='Load more videos';
+        bindVideoCentrePagination(feed,mode,loadMoreVideoPage);
+      }
+    }catch(error){
+      button.disabled=false;
+      button.textContent='Try loading more';
+      if(videoCentrePaginationObserver){videoCentrePaginationObserver.disconnect();videoCentrePaginationObserver=null;}
+      toast(error.message||'More videos could not be loaded.');
+    }
+  };
+  const drawVideoPosts=()=>{
+    const query=String(state.videoSearch||'').trim().toLowerCase();
+    const modePosts=mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
+    const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
+    if(mode==='reels'){
+      const reels=visible.flatMap(post=>(post.media||[]).filter(media=>media.mediaType==='video'&&media.url).map(media=>({post,media})));
+      feed.innerHTML=reels.length?'<div class="video-centre-reels">'+reels.map((reel,index)=>renderReelCard(reel.post,reel.media,index)).join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No Reels found</h3><p>'+(query?'Try another search or change the video audience.':'There are no real video posts in this feed yet. Publish a video to start the Reels experience.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      bindFeed(feed);
+      bindReelPlayback(feed);
+    }else{
+      const emptyTitle=mode==='watch-later'?'Your Watch Later list is empty':'No videos found';
+      const emptyCopy=mode==='watch-later'?'Save any video or Reel here to watch it later.':(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.');
+      feed.innerHTML=visible.length?visible.map(post=>postCard(post,{videoWatchLater:true})).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>'+emptyTitle+'</h3><p>'+emptyCopy+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      bindFeed(feed);
+    }
+    feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
+    if(state.videoHasMore&&mode!=='watch-later'){
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='primary video-centre-load-more';
+      button.dataset.videoLoadMore='true';
+      button.textContent='Load more videos';
+      const paginationHost=mode==='reels'?(feed.querySelector('.video-centre-reels')||feed):feed;
+      paginationHost.appendChild(button);
+      bindVideoCentrePagination(feed,mode,loadMoreVideoPage);
+    }else if(videoCentrePaginationObserver){
+      videoCentrePaginationObserver.disconnect();
+      videoCentrePaginationObserver=null;
+    }
+  };
+  root.querySelectorAll('[data-video-mode]').forEach(button=>button.addEventListener('click',async()=>{
+    if(state.videoMode===button.dataset.videoMode)return;
+    state.videoMode=button.dataset.videoMode;
+    await renderVideoCentre();
+  }));
+  root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
+  root.querySelector('#video-scope')?.addEventListener('change',async event=>{state.videoScope=event.target.value;await renderVideoCentre();});
+  root.querySelector('#video-search')?.addEventListener('input',event=>{state.videoSearch=event.target.value;drawVideoPosts();});
+  drawVideoPosts();
+}
+
+
 let forYouPlaybackObserver=null;
 let forYouActiveVideos=[];
 let forYouLiveSessions=[];

@@ -88,3 +88,21 @@ test('Minglora Watch Later is private and accepts only posts containing an acces
   assert.match(server, /isWatchLater:\(db\.savedPosts\|\|\[\]\)\.some\(saved=>saved\.userId===viewerId&&saved\.postId===p\.id&&saved\.readLater===true\)/);
   assert.match(store, /'savedPosts'/);
 });
+
+test('Reels record genuine watch-time and the Video Centre paginates without replacing the current reel stack', async () => {
+  const app = await read('../../public/app.js');
+
+  assert.match(app, /data-reel-video data-post-id=/);
+  assert.match(app, /video\.dataset\.watchBuffer/);
+  assert.match(app, /api\('\/videos\/'\+encodeURIComponent\(postId\)\+'\/watch'/);
+  assert.match(app, /video\.addEventListener\('timeupdate'/);
+  assert.match(app, /video\.addEventListener\('pause'/);
+  assert.match(app, /async function fetchVideoCentrePage\(\{reset=false,watchLater=false\}=\{\}\)/);
+  assert.match(app, /cursorQuery=!reset&&state\.videoNextCursor/);
+  assert.match(app, /state\.videoHasMore=!watchLater&&result\.hasMore===true/);
+  assert.match(app, /data-video-load-more/);
+  assert.match(app, /new IntersectionObserver\(entries=>\{/);
+  assert.match(app, /root:scroller,rootMargin:'650px'/);
+  assert.match(app, /while\(pending\.firstChild\)list\.insertBefore\(pending\.firstChild,button\)/);
+  assert.match(app, /videoCentrePaginationObserver/);
+});
