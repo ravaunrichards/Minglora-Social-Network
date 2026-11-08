@@ -6,13 +6,11 @@
   let checkingAdminAccess = false;
 
   async function addProfileEntry() {
-    const profileInfo = document.querySelector('.profile-info-main');
-    const ownProfileControls = document.querySelector('#edit-profile');
+    const profileInfo = document.querySelector('.profile-info--admin .profile-info-main');
     const profile = profileInfo?.closest('.minglora-profile-page');
-    const adminTools = profile?.querySelector('.profile-admin-tools');
-    const adminGrid = adminTools?.querySelector('.profile-admin-tools-grid');
-    if (!profileInfo || !ownProfileControls || !adminTools || !adminGrid ||
-        adminGrid.querySelector('[data-open-admin-centre]') || checkingAdminAccess) return;
+    const adminProfile = profile?.querySelector('.profile-info--admin');
+    if (!profileInfo || !adminProfile ||
+        adminProfile.querySelector('[data-open-admin-centre]') || checkingAdminAccess) return;
 
     checkingAdminAccess = true;
     try {
@@ -23,16 +21,16 @@
       if (!response.ok) return;
       const access = await response.json();
       if ((access?.canAccess !== true && access?.setupRequired !== true) ||
-          !profileInfo.isConnected || !ownProfileControls.isConnected ||
-          !adminGrid.isConnected || adminGrid.querySelector('[data-open-admin-centre]')) return;
+          !profileInfo.isConnected || !adminProfile.isConnected ||
+          adminProfile.querySelector('[data-open-admin-centre]')) return;
 
       const link = document.createElement('a');
       link.href = '/admin-centre.html';
-      link.className = 'profile-admin-tool profile-admin-tool--centre';
+      link.className = 'profile-admin-centre-entry';
       link.dataset.openAdminCentre = 'true';
       link.setAttribute('aria-label', 'Open the separate Minglora Admin Centre page');
-      link.innerHTML = '<span class="profile-admin-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5z"></path><path d="M8 8h8M8 12h8M8 16h4"></path></svg></span><span>Admin Centre</span><span class="profile-admin-tool-arrow" aria-hidden="true">↗</span>';
-      adminGrid.append(link);
+      link.innerHTML = '<span class="profile-admin-centre-entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5z"></path><path d="M8 8h8M8 12h8M8 16h4"></path></svg></span><span>Admin Centre</span><span class="profile-admin-centre-entry-arrow" aria-hidden="true">↗</span>';
+      profileInfo.insertAdjacentElement('afterend', link);
     } catch (error) {
       console.warn('[Minglora admin] Admin Centre access could not be checked.', error);
     } finally {
