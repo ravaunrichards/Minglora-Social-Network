@@ -10,6 +10,7 @@ const app=read('public/app.js');
 const alignment=read('public/profile-alignment.css');
 const css=read('public/profile-action-row.css');
 const facebookCss=read('public/profile-facebook-panel.css');
+const guardrails=read('public/profile-layout-guardrails.css');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
 
@@ -81,4 +82,16 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
   assert.ok(facebookCss.includes('.profile-people-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}'),'the dropdown chevron flips when opened');
 
 
+});
+
+
+test('final profile guardrails keep the portrait anchored across the cover edge like Facebook',()=>{
+  const coverLink=html.indexOf('/profile-facebook-panel.css?');
+  const finalLink=html.indexOf('/profile-layout-guardrails.css?v=20261108-facebook-avatar-position-fix-1');
+  assert.ok(coverLink>=0&&finalLink>coverLink,'the authoritative profile fix loads after earlier profile styles');
+  assert.match(guardrails,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?position:absolute!important;[\s\S]*?left:24px!important;[\s\S]*?top:calc\(var\(--minglora-profile-avatar-size\) \/ -2\)!important;/);
+  assert.match(guardrails,/@media \(max-width:760px\)[\s\S]*?\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?left:13px!important;[\s\S]*?top:-48px!important;/);
+  assert.match(guardrails,/\.minglora-profile-page \.profile-header-card \.profile-info-main[\s\S]*?grid-column:1!important;[\s\S]*?grid-row:1!important;/);
+  assert.ok(worker.includes("'/profile-layout-guardrails.css?v=20261108-facebook-avatar-position-fix-1'"),'service worker precaches the corrected final profile stylesheet');
+  assert.match(worker,/CACHE_NAME='minglora-shell-v215-facebook-avatar-position-1'/);
 });
