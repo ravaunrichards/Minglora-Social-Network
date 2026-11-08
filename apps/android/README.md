@@ -66,6 +66,17 @@ The update manifest download is HTTPS-only and restricted to this repository's f
 
 Database migrations remain a reviewed deployment operation. This workflow does not automatically apply production database migrations or change provider credentials.
 
+## Android playback, loading and lifecycle behavior
+
+- Video players that request HTML fullscreen are promoted into a native immersive Android fullscreen surface. The Android Back action exits fullscreen before navigating backward.
+- The WebView displays native page-load progress and a retry screen for main-frame network, HTTP and secure-connection failures. Failed image, script and other subresource requests do not replace the whole app with an error screen.
+- The retry action reloads the current Minglora route, or opens the configured production entry point when no route is available.
+- Android's system document picker now receives the media accept types and single/multiple-selection mode requested by the Minglora upload control.
+- The WebView pauses and resumes with the Activity lifecycle and flushes its cookies when backgrounded or after a page finishes loading.
+- If Android terminates the WebView renderer, the app recreates the WebView and returns to the live Minglora entry point rather than keeping a dead white surface.
+
+These changes improve the native Android container around the shared live product. They do not turn the existing WebView into a fully native reimplementation of every Minglora screen; the responsive Minglora client continues to supply the actual social-network features and account data.
+
 ## Security and platform boundaries
 
 - HTTPS-only production origin; cleartext traffic is disabled.
