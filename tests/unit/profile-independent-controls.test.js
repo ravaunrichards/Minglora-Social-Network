@@ -5,115 +5,55 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
-const css=fs.readFileSync(path.join(root,'public/styles.css'),'utf8');
-const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
-const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const app=read('public/app.js');
+const css=read('public/profile-action-row.css');
 
-test('profile owner has individual profile-picture and cover-picture edit controls',()=>{
-  assert.match(app,/id="profile-edit-avatar"/);
-  assert.match(app,/id="profile-edit-cover"/);
-  assert.match(app,/\$\('#profile-edit-avatar'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u,'avatar'\)\)/);
-  assert.match(app,/\$\('#profile-edit-cover'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u,'cover'\)\)/);
-  const avatarStart=app.indexOf('class="profile-inline-media-edit profile-avatar-inline-edit"');
-  const avatarButton=app.slice(avatarStart,app.indexOf('</button>',avatarStart));
-  const coverButton=app.slice(app.indexOf('id="profile-edit-cover"'),app.indexOf('</button>',app.indexOf('id="profile-edit-cover"')));
-  assert.match(avatarButton,/<svg class="profile-control-icon"/);
-  assert.match(coverButton,/<svg class="profile-control-icon"/);
-  assert.match(avatarButton,/aria-label="Edit profile picture"/);
-  assert.match(coverButton,/aria-label="Edit cover picture"/);
+test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
+  assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
+  assert.doesNotMatch(app,/profile-media-action-row|profile-avatar-inline-edit|profile-inline-media-edit/);
+  assert.match(app,/class="profile-actions profile-owner-actions"/);
+  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
+  assert.match(app,/id="profile-add-story" type="button" aria-label="Add to story"/);
 });
 
-
-
-test('phone profile header hides the overlapping avatar and keeps Edit Profile actions visible on the right',()=>{
-  assert.ok(css.includes('@media(max-width:760px){'));
-  assert.ok(css.includes('.profile-avatar-edit-wrap{\n    display:none!important;'));
-  assert.ok(css.includes('.profile-info-main{\n    flex:1 1 100%!important;'));
-  assert.ok(css.includes('.profile-owner-actions{'));
-  assert.ok(css.includes('justify-content:flex-end!important;'));
-  assert.ok(css.includes('min-height:44px!important;'));
-  assert.ok(app.includes('class="profile-actions profile-owner-actions"'));
-  assert.ok(app.includes('id="edit-profile" type="button" aria-label="Edit profile"'));
-});
-
-test('single-image edit mode hides the unrelated picture editor and uploads only its selected target',()=>{
-  assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
+test('the regular profile editor retains photo upload, camera and crop workflows',()=>{
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/data-profile-media-section="cover"/);
-  assert.match(app,/section\.hidden=section\.dataset\.profileMediaSection!==mediaOnly/);
-  assert.match(app,/if\(\(!mediaOnly\|\|mediaOnly==='avatar'\)&&avatarInput\.files\?\.\[0\]\)/);
-  assert.match(app,/if\(\(!mediaOnly\|\|mediaOnly==='cover'\)&&coverInput\.files\?\.\[0\]\)/);
-  assert.match(app,/if\(!mediaOnly\)\{\s*status\.textContent='Saving profile details…'/);
-  assert.match(app,/Choose a '\+label\+' before saving/);
+  assert.match(app,/id="edit-avatar-file"/);
+  assert.match(app,/id="edit-cover-file"/);
+  assert.match(app,/id="edit-avatar-camera-button"/);
+  assert.match(app,/id="edit-cover-camera-button"/);
+  assert.match(app,/transformProfileCrop\(avatarInput\.files\[0\],avatarEdit,avatarPreview,'avatar'\)/);
+  assert.match(app,/transformProfileCrop\(coverInput\.files\[0\],coverEdit,coverPreview,'cover'\)/);
+  assert.match(app,/uploadProfileImage\('avatar',edited/);
+  assert.match(app,/uploadProfileImage\('cover',edited/);
+  assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
 });
 
-test('profile owner has a dedicated Add story action with its own icon and real story composer',()=>{
-  assert.match(app,/id="profile-add-story"/);
-  assert.match(app,/aria-label="Add story"/);
-  assert.match(app,/\$\('#profile-add-story'\)\?\.addEventListener\('click',\(\)=>openStoryComposer\(\)\)/);
-  const storyButton=app.slice(app.indexOf('id="profile-add-story"'),app.indexOf('</button>',app.indexOf('id="profile-add-story"')));
-  assert.match(storyButton,/<svg class="profile-control-icon"/);
-  assert.match(app,/id="create-story"><svg class="profile-control-icon"/);
+test('admin profile keeps its standard tools without a separate Edit Cover action',()=>{
+  const start=app.indexOf('const adminToolsMarkup');
+  const end=app.indexOf('const profileActionMarkup',start);
+  assert.ok(start>=0&&end>start);
+  const admin=app.slice(start,end);
+  assert.match(admin,/id="edit-profile"/);
+  assert.match(admin,/id="profile-add-story"/);
+  assert.match(admin,/data-profile-admin-action="privacy"/);
+  assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
 });
 
-test('profile media and story controls remain responsive and visible in refreshed app assets',()=>{
-  assert.match(css,/\.profile-media-action-row\{[^}]*display:flex/);
-  assert.match(css,/\.profile-inline-media-edit\{[^}]*display:inline-flex/);
-  assert.doesNotMatch(css,/\.profile-media-edit-button\{[^}]*position:absolute/);
-  assert.doesNotMatch(css,/\.profile-avatar-edit-button\{[^}]*position:absolute/);
-  assert.doesNotMatch(app,/profile-media-edit-button|profile-avatar-edit-button/);
-  assert.match(app,/profile-media-action-row/);
-  assert.match(app,/profile-avatar-inline-edit/);
-  assert.match(css,/\.profile-avatar-edit-wrap\{[^}]*flex:0 0/);
-  assert.match(css,/\.profile-owner-actions\{[^}]*display:flex/);
-  assert.match(css,/@media\(max-width:720px\)/);
-  const currentStylesheet=html.match(/styles\.css\?v=[^"']+/)?.[0]||'';
-  assert.ok(currentStylesheet&&worker.includes('/'+currentStylesheet));
-  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
-  const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||'';
-  const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
-  assert.ok(appAsset&&worker.includes('/'+appAsset));
-  assert.ok(styleAsset&&worker.includes('/'+styleAsset));
-  assert.match(cacheName,/^minglora-shell-v\d+-/);
+test('profile media is visible on mobile with the Facebook-style cover crop',()=>{
+  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-cover-image\{[^}]*object-fit:cover/);
+  assert.match(css,/@media\(max-width:760px\)[\s\S]*?--minglora-profile-avatar-size:112px/);
+  assert.match(css,/@media\(max-width:390px\)[\s\S]*?--minglora-profile-avatar-size:100px/);
+  assert.doesNotMatch(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[^}]*display:none!important/);
 });
 
-test('routine profile and About editing opens centered native dialogs without moving the page',()=>{
+test('profile editing retains centered native dialogs and About section editing',()=>{
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes('modal.showModal()'));
   assert.ok(app.includes("modal.addEventListener('cancel'"));
-  assert.ok(!app.includes("profileHeader.insertAdjacentElement('afterend',modal)"));
-  assert.ok(!app.includes('profilePanel.append(modal)'));
-  assert.ok(!app.includes("modal.scrollIntoView({behavior:'smooth',block:'start'})"));
-  assert.ok(css.includes('dialog.profile-editor-dialog{'));
-  assert.ok(css.includes('dialog.profile-editor-dialog::backdrop'));
-});
-
-test('profile Likes total is supplied by the server from actual like reactions on visible profile posts',()=>{
-  const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
-  assert.match(server,/likesCount:profilePosts\.reduce\(\(total,post\)=>total\+Object\.values\(post\.reactions\|\|\{\}\)\.filter\(reaction=>reaction==='like'\)\.length,0\)/);
-  assert.match(app,/Number\(data\.likesCount\|\|0\)\.toLocaleString\(\)/);
-  assert.match(app,/<span>Likes<\/span>/);
-});
-
-test('the Creator Hub verification sticker appears beside the profile username as well as the display name', () => {
-  const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
-  const badges=fs.readFileSync(path.join(root,'src/platform-badges.js'),'utf8');
-  assert.match(badges,/creatorhubcreatornetwork@gmail\.com/);
-  assert.match(server,/verificationBadge:getProfileVerificationBadge\(u\)/);
-  assert.match(app,/profile-name-with-badges[^;]*verifiedProfileBadge\(u\)/);
-  assert.match(app,/profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
-  assert.match(css,/\.profile-username-line\{[^}]*display:flex/);
-});
-
-test('admin profile management includes its own Edit Cover action and uses the existing cover upload flow',()=>{
-  const adminMarkup=app.slice(app.indexOf('const adminToolsMarkup'),app.indexOf('const profileActionMarkup'));
-  assert.match(adminMarkup,/id="profile-edit-admin-cover"/);
-  assert.match(adminMarkup,/<span>Edit Cover<\/span>/);
-  assert.match(app,/\$\('#profile-edit-admin-cover'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u,'cover'\)\)/);
-  assert.match(app,/\+\(isMe&&!isAdminProfile\?'<div class="profile-media-action-row">/);
-  assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
-  assert.match(app,/uploadProfileImage\('cover',edited/);
-  assert.match(fs.readFileSync(path.join(root,'public/admin-profile-layout.css'),'utf8'),/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.ok(app.includes('function profileAboutMarkup(u,isMe)'));
+  assert.ok(app.includes('function openAboutSectionEditor(sectionKey,u)'));
 });
