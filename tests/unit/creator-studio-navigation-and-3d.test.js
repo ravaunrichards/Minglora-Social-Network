@@ -97,13 +97,13 @@ test('the app shell and service worker cache the current navigation and stage bu
 });
 
 
-test('primary navigation contains only five main destinations', () => {
+test('primary navigation contains six main destinations including Reels', () => {
   const topStart = html.indexOf('<nav class="top-nav"');
   const topEnd = html.indexOf('</nav>', topStart);
   const primaryTop = html.slice(topStart, topEnd);
   assert.deepEqual(
     [...primaryTop.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'for-you', 'live', 'meetwave', 'leagues']
+    ['feed', 'reels', 'for-you', 'live', 'meetwave', 'leagues']
   );
 
   const mobileStart = html.indexOf('<div class="mobile-nav"');
@@ -111,7 +111,7 @@ test('primary navigation contains only five main destinations', () => {
   const mobilePrimary = html.slice(mobileStart, mobileEnd);
   assert.deepEqual(
     [...mobilePrimary.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'friends', 'for-you', 'live', 'more']
+    ['feed', 'reels', 'for-you', 'friends', 'live', 'more']
   );
   assert.match(html, /id="mobile-more-nav"/);
   const hubStart = app.indexOf('function renderMoreHub(){');
