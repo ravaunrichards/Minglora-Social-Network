@@ -26,6 +26,7 @@
   object-position:center!important;
 }
 /* The portrait is a separate, circular image with its own solid border—not blended into the cover. */
+.minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:clamp(112px,15vw,176px) minmax(0,1fr) auto!important;}
 .minglora-profile-page .profile-header-card .profile-info{
   display:grid!important;
   grid-template-columns:clamp(112px,15vw,176px) minmax(0,1fr)!important;
