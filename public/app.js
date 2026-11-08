@@ -5783,6 +5783,7 @@ async function handleProfileOverflowAction(action,u,data){
     return;
   }
   if(action==='highlights'){await openProfileHighlightsManager(u.id);return;}
+  if(action==='status'){await openProfileStatusEditor(u);return;}
   if(action==='create-post'){openComposer({returnToProfile:u.id});return;}
   if(action==='archive'){await openProfileArchiveManager(u.id);return;}
   if(action==='story-archive'){await openStoryArchiveManager(u.id);return;}
