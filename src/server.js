@@ -4464,7 +4464,7 @@ async function route(req, res) {
       }
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
-        if(!['all','following','friends','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, or for-you.'});
+        if(!['all','following','friends','subscribers','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, subscribers, or for-you.'});
         const followedIds=new Set((db.follows||[]).filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
         const followedOnly=url.searchParams.get('followedOnly')==='1'&&scope==='following';
         let eligibleIds=null;
@@ -4472,6 +4472,17 @@ async function route(req, res) {
           eligibleIds=followedOnly?followedIds:new Set([user.id,...followedIds]);
         } else if(scope==='friends'){
           eligibleIds=new Set([user.id,...getMutualFollowIds(db.follows||[],user.id,db.blocks||[])]);
+        } else if(scope==='subscribers'){
+          let subscriberIds=[];
+          try{
+            const subscriptionResult=isSupabasePersistence()
+              ?await requestSupabaseState('subscription_subscribers_list',{creatorId:user.id})
+              :{subscriberIds:listActiveCreatorSubscriptions(db.creatorSubscriptions,user.id).map(item=>item.subscriberId)};
+            subscriberIds=Array.isArray(subscriptionResult?.subscriberIds)?subscriptionResult.subscriberIds:[];
+          }catch(error){
+            console.warn('[Minglora feed] Subscriber audience lookup failed closed:',String(error?.message||error).slice(0,180));
+          }
+          eligibleIds=new Set([...new Set(subscriberIds.map(value=>String(value||'')).filter(Boolean))].filter(id=>id!==user.id));
         }
         const searchQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
         let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
