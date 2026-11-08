@@ -46,8 +46,8 @@ test('Minglora Video Centre publishes through a video-only one-file composer', a
   assert.match(app, /Choose one supported video file before publishing/);
   assert.match(app, /if\(mediaIds\.length!==1\)/);
   assert.match(app, /api\('\/posts',\{method:'POST',body:JSON\.stringify\(\{text:values\.get\('text'\),audience:values\.get\('audience'\),mediaIds,videoFormat:options\.videoFormat==='reel'\?'reel':'video'\}\)\}\)/);
-  assert.ok(app.includes("root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer())"));
-  assert.ok(app.includes("feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer())"));
+  assert.ok(app.includes("root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}))"));
+  assert.ok(app.includes("feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}))"));
 });
 
 test('profile Create reel reuses the single-video composer and returns to the profile', async () => {
