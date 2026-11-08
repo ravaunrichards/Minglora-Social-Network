@@ -93,9 +93,9 @@ test('Stories create button stays above its label and uses consistent Facebook-s
 });
 test('Stories support tap, swipe, timed progression and media-end navigation', async () => {
   const app = await read('public/app.js');
-  assert.match(app, /const bindStoryTapNavigation=\\(\\)=>\\{/);
+  assert.match(app, /const bindStoryTapNavigation=\(\)=>\{/);
   assert.match(app, /touchstart/);
   assert.match(app, /touchend/);
-  assert.match(app, /setTimeout\\(\\(\\)=>advanceStoryItem\\(1\\),5000\\)/);
-  assert.match(app, /addEventListener\\('ended',[\\s\\S]*advanceStoryItem\\(1\\)/);
+  assert.match(app, /setTimeout\(\(\)=>advanceStoryItem\(1\),5000\)/);
+  assert.match(app, /addEventListener\('ended',[\s\S]*advanceStoryItem\(1\)/);
 });
