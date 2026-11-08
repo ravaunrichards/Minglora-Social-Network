@@ -9,6 +9,7 @@ const read=name=>fs.readFileSync(path.join(root,name),'utf8');
 const app=read('public/app.js');
 const html=read('public/index.html');
 const css=read('public/styles.css');
+const profileCss=read('public/profile-alignment.css')+'\n'+read('public/profile-action-row.css');
 const server=read('src/server.js');
 const settings=read('public/settings.js');
 
