@@ -8,6 +8,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
 const finalHeaderCss=read('public/profile-layout-guardrails.css');
+const avatarAnchorCss=read('public/profile-facebook-avatar-anchor.css');
 const facebookCss=read('public/profile-facebook-panel.css');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
@@ -27,6 +28,8 @@ test('profile cover and portrait match Facebook lower-edge placement',()=>{
   assert.ok(finalHeaderCss.includes('margin: -84px 0 0 !important'));
   assert.ok(finalHeaderCss.includes('width: 168px !important')&&finalHeaderCss.includes('height: 168px !important'));
   assert.ok(finalHeaderCss.includes('border-radius: 50% !important'));
+  assert.ok(app.includes('class="profile-avatar-edit-wrap"><img class="avatar"'));
+  assert.ok(app.includes("src=\"'+avatar(u)+'\" alt=\"\""));
   assert.ok(app.includes('const profileBioMarkup='));
   assert.ok(app.includes("profileBioMarkup+(data.profileStatus?"));
   assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
@@ -36,6 +39,13 @@ test('phone profile keeps the portrait overlapping the cover edge and clears ide
   assert.match(finalHeaderCss,/@media \(max-width:760px\)[\s\S]*?\.profile-info-main\{[\s\S]*?padding:0 0 0 109px!important/);
   assert.match(finalHeaderCss,/@media \(max-width:390px\)[\s\S]*?left:10px!important;[\s\S]*?top:-44px!important/);
   assert.doesNotMatch(finalHeaderCss,/\.profile-avatar-edit-wrap\s*\{[^}]*display:\s*none/);
+});
+
+test('phone avatar is absolutely anchored to the Facebook cover edge',()=>{
+  assert.match(avatarAnchorCss,/@media \\(max-width:760px\\)[\\s\\S]*?position:absolute!important;[\\s\\S]*?left:13px!important;[\\s\\S]*?top:-48px!important/);
+  assert.ok(avatarAnchorCss.includes('width:96px!important')&&avatarAnchorCss.includes('height:96px!important'));
+  assert.match(avatarAnchorCss,/@media \\(max-width:390px\\)[\\s\\S]*?left:10px!important;[\\s\\S]*?top:-44px!important/);
+  assert.match(avatarAnchorCss,/@media \\(max-width:380px\\)[\\s\\S]*?top:-42px!important/);
 });
 
 test('picture and cover remain editable in the normal Edit profile dialog',()=>{
@@ -71,6 +81,7 @@ test('new profile assets are loaded and precached by the active service-worker c
   };
   const assets=[
     assetFrom('href','/profile-layout-guardrails.css?'),
+    assetFrom('href','/profile-facebook-avatar-anchor.css?'),
     assetFrom('src','/app.js?')
   ];
   for(const asset of assets){
