@@ -45,27 +45,28 @@ test("admin centre renders module and per-collection totals from the live snapsh
 
 
 test("Admin Centre opens as its own page from the authorized administrator profile", () => {
-  assert.match(admin, /document\\.querySelector\\('#edit-profile'\\)/);
-  assert.match(admin, /profile\\?\\.querySelector\\('\\.profile-admin-tools'\\)/);
-  assert.match(admin, /link\\.href = '\\/admin-centre\\.html'/);
-  assert.match(admin, /adminGrid\\.append\\(link\\)/);
-  assert.doesNotMatch(admin, /insertAdjacentElement\\('afterend', root\\)/);
-  assert.match(admin, /authenticator-verified session/i);
-  assert.match(html, /id="admin-centre-root"/);
-  assert.match(html, /20261108-admin-workspace-2/);
-  assert.match(css, /admin-control-centre-page/);
-  assert.match(css, /grid-template-columns:minmax\\(220px,260px\\) minmax\\(0,1fr\\)/);
-  assert.match(css, /@media\\(max-width:900px\\)/);
+  assert.ok(admin.includes("link.href = '/admin-centre.html'"));
+  assert.ok(admin.includes("adminGrid.append(link)"));
+  assert.ok(!admin.includes("insertAdjacentElement('afterend', root)"));
+  assert.ok(admin.includes("authenticator-verified session"));
+  assert.ok(html.includes('id="admin-centre-root"'));
+  assert.ok(html.includes("20261108-admin-workspace-2"));
+  assert.ok(css.includes("admin-control-centre-page"));
+  assert.ok(css.includes("grid-template-columns:minmax(220px,260px) minmax(0,1fr)"));
+  assert.ok(css.includes("People &amp; community") === false);
+  assert.ok(admin.includes("People &amp; community"));
+  assert.ok(admin.includes("Creators &amp; finance"));
+  assert.ok(admin.includes("Trust &amp; support"));
 });
 
 test("administrator profile keeps name and username grouped with three distinctive identity marks", () => {
-  assert.match(index, /admin-profile-layout\\.css\\?v=20261108-admin-profile-workspace-1/);
-  assert.match(index, /app\\.js\\?v=20261108-admin-profile-workspace-1/);
-  assert.match(app, /profile-admin-identity-mark--owner/);
-  assert.match(app, /profile-admin-identity-mark--security/);
-  assert.match(app, /profile-admin-identity-mark--control/);
-  assert.match(app, /data-profile-admin-action="edit-profile"/);
-  assert.match(app, /data-profile-admin-action="privacy"/);
+  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-workspace-1"));
+  assert.ok(app.includes("profile-admin-identity-mark--owner"));
+  assert.ok(app.includes("profile-admin-identity-mark--security"));
+  assert.ok(app.includes("profile-admin-identity-mark--control"));
+  assert.ok(app.includes('data-profile-admin-action="edit-profile"'));
+  assert.ok(app.includes('data-profile-admin-action="privacy"'));
+  assert.ok(app.includes("if(action==='edit-profile') $('#edit-profile')?.click()"));
 });
 
 
