@@ -19,7 +19,7 @@ test('reaction picker submits the selected reaction to the existing persisted AP
   const server = await read('../../src/server.js');
   assert.match(app, /data-reaction-choice/);
   assert.match(app, /JSON\.stringify\(\{reaction\}\)/);
-  assert.match(app, /data-current-reaction\|\|'like'/);
+  assert.match(app, /currentReaction\|\|'like'/);
   assert.match(server, /\['like','love','care','haha','wow','sad','angry'\]/);
   assert.match(server, /if\(post\.reactions\[user\.id\]===reaction\)delete post\.reactions\[user\.id\]/);
 });
