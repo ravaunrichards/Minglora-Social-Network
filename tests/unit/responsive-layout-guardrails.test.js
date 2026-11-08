@@ -161,7 +161,7 @@ test('routine profile editors open in centered native dialogs without scrolling 
   const [css, app] = await Promise.all([read('public/styles.css'), read('public/app.js')]);
   assert.ok(css.includes('dialog.profile-editor-dialog{'));
   assert.ok(css.includes('dialog.profile-editor-dialog::backdrop'));
-  assert.ok(app.includes("document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes("document.createElement('dialog');modal.id='minglora-profile-editor';modal.className='profile-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes("document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes('modal.showModal()'));
   assert.ok(app.includes("modal.addEventListener('cancel'"));
