@@ -7506,3 +7506,51 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
   dialog#minglora-profile-editor #profile-upload-status{margin-inline:14px}
   dialog#minglora-profile-editor .modal-actions{padding:12px 14px 15px}
 }
+
+/* Keep all money amounts and coin counts on a single horizontal line. */
+.gift-balance-pill strong,
+.gift-catalog-card small,
+.live-promo-actions strong,
+.live-gift-pick-button small,
+.live-gift-preview-copy>small{
+  white-space:nowrap;
+  overflow-wrap:normal;
+  word-break:keep-all;
+  writing-mode:horizontal-tb;
+}
+.gift-currency-inline{
+  display:inline-block;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  word-break:keep-all;
+  writing-mode:horizontal-tb;
+  unicode-bidi:isolate;
+}
+.live-package-preview{
+  flex-wrap:nowrap;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  white-space:nowrap;
+  writing-mode:horizontal-tb;
+}
+.live-package-preview>span{
+  flex:0 0 auto;
+  max-width:none;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  word-break:keep-all;
+  writing-mode:horizontal-tb;
+}
+.live-promo-actions,
+.live-coins-promo{
+  writing-mode:horizontal-tb;
+}
+.live-promo-actions>strong,
+.live-promo-actions button{
+  white-space:nowrap;
+  overflow-wrap:normal;
+  word-break:keep-all;
+  writing-mode:horizontal-tb;
+}
