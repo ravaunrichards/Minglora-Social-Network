@@ -111,7 +111,7 @@ test('primary navigation contains only five main destinations', () => {
   const mobilePrimary = html.slice(mobileStart, mobileEnd);
   assert.deepEqual(
     [...mobilePrimary.matchAll(/data-view="([^"]+)"/g)].map(match => match[1]),
-    ['feed', 'friends', 'videos', 'live', 'more']
+    ['feed', 'friends', 'for-you', 'live', 'more']
   );
   assert.match(html, /id="mobile-more-nav"/);
   const hubStart = app.indexOf('function renderMoreHub(){');
