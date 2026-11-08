@@ -1,7 +1,7 @@
 /* Minglora profile and shared layout alignment pass.
    Loaded last so the avatar and action layout remains consistent on every screen. */
 :root{
-  --minglora-profile-avatar-size:105px;
+  --minglora-profile-avatar-size:168px;
   --minglora-content-gutter:16px;
 }
 
