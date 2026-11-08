@@ -1,5 +1,5 @@
 # Video and short-form content
 
-**Current:** video upload, transcoding, playback and short-form feed are not implemented.
+**Current:** members can upload video posts through the video-only composer. The browser plays real uploaded video attachments. The dedicated For You endpoint filters viewer-authorized video content, ranks it using persisted member activity and paginates recommendations. Watch-time and Not interested feedback are stored as first-party Minglora signals.
 
-**Ownership:** upload policy, media processing state, thumbnails, captions, playback delivery, viewing eligibility, safety review and cleanup. Plays, completion rate and engagement must be backed by measured events, never invented.
+**Still pending:** server-side transcoding, adaptive streaming, processing queues, generated thumbnails, caption generation and media delivery optimization. Plays, completion and engagement must come from measured events, never invented.
