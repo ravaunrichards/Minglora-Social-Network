@@ -18,7 +18,7 @@ const profile=app.slice(profileStart,profileEnd);
 
 test('profile owner edit, media and story buttons invoke their real actions',()=>{
   for(const action of [
-    "$('#edit-profile')?.addEventListener('click',()=>openEditProfile(u))",
+    "$('#edit-profile')?.addEventListener('click',()=>{\n    showTab('about');\n    const aboutPanel=$('#profile-tab-panel');\n    aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});\n    aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});\n  })",
     "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())",
     "openProfileStoryEditor(u.id)"
   ])assert.ok(profile.includes(action),'Missing profile action: '+action);
