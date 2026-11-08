@@ -8,6 +8,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
 const css=read('public/profile-layout-guardrails.css');
+const avatarCss=read('public/profile-facebook-avatar-anchor.css');
 
 test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
@@ -51,10 +52,11 @@ test('Facebook profile keeps the cover visible with the portrait overlapping its
   assert.ok(css.includes('margin: -84px 0 0 !important'));
   assert.ok(css.includes('width: 168px !important')&&css.includes('height: 168px !important'));
   assert.ok(css.includes('border-radius: 50% !important'));
-  assert.ok(css.includes('@media (max-width:760px)'));
-  assert.ok(css.includes('left:13px!important')&&css.includes('top:-48px!important'));
-  assert.ok(css.includes('@media (max-width:390px)'));
-  assert.ok(css.includes('left:10px!important')&&css.includes('top:-44px!important'));
+  assert.ok(avatarCss.includes('@media (max-width:760px)'));
+  assert.ok(avatarCss.includes('position:absolute!important'));
+  assert.ok(avatarCss.includes('left:13px!important')&&avatarCss.includes('top:-48px!important'));
+  assert.ok(avatarCss.includes('@media (max-width:390px)'));
+  assert.ok(avatarCss.includes('left:10px!important')&&avatarCss.includes('top:-44px!important'));
 });
 test('profile editing retains centered native dialogs and About section editing',()=>{
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
