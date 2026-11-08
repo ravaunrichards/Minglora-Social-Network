@@ -48,5 +48,5 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*grid-template-areas:[\s\S]*"search search"/);
   assert.ok(html.includes('/for-you-controls.css?v=20261108-for-you-controls-search-1'));
   assert.ok(sw.includes('/for-you-controls.css?v=20261108-for-you-controls-search-1'));
-  assert.match(sw, /^const CACHE_NAME='minglora-shell-v211-for-you-controls-search-1';$/m);
+  assert.match(sw, /^const CACHE_NAME='minglora-shell-v211-self-updating-1';$/m);
 });
