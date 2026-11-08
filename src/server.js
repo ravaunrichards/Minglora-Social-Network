@@ -4502,9 +4502,9 @@ async function route(req, res) {
         const posts=items.filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
         return json(res,200,{posts,nextCursor:hasMore?String(offset+rawLimit):null,hasMore,scope});
       }
-      m=p.match(new RegExp('^/api/videos/([^/]+)/watch$'));
-      if(method==='POST'&&m){
-        const post=(db.posts||[]).find(item=>item.id===m[1]);
+      const videoWatchMatch=p.match(new RegExp('^/api/videos/([^/]+)/watch$'));
+      if(method==='POST'&&videoWatchMatch){
+        const post=(db.posts||[]).find(item=>item.id===videoWatchMatch[1]);
         if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||
           !canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||
           !canViewProfileAudience(user.id,post.userId,post.audience||'public')||
@@ -4532,9 +4532,9 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{tracked:true,completed});
       }
-      m=p.match(new RegExp('^/api/videos/([^/]+)/feedback$'));
-      if(method==='POST'&&m){
-        const post=(db.posts||[]).find(item=>item.id===m[1]);
+      const videoFeedbackMatch=p.match(new RegExp('^/api/videos/([^/]+)/feedback$'));
+      if(method==='POST'&&videoFeedbackMatch){
+        const post=(db.posts||[]).find(item=>item.id===videoFeedbackMatch[1]);
         if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||
           !canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||
           !canViewProfileAudience(user.id,post.userId,post.audience||'public')||
