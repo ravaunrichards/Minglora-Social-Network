@@ -96,7 +96,7 @@ test('service-worker shell pre-caches the latest icon sprite, stylesheet and app
   assert.match(serviceWorker,/^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
   assert.ok(activeStyles&&serviceWorker.includes("'"+activeStyles+"'"),'active stylesheet is cached');
   assert.ok(activeScript&&serviceWorker.includes("'"+activeScript+"'"),'active app script is cached');
-  assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261106-horizontal-profile-navigation-1/);
+  assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261108-five-profile-metrics-1/);
   assert.match(serviceWorker,/\/assets\/icons\/navigation-3d\.svg/);
 });
 
