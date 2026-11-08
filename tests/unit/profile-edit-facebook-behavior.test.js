@@ -27,7 +27,7 @@ test('profile Edit profile control navigates directly to About without opening a
   assert.ok(profile.includes("$('#edit-profile')?.addEventListener('click',()=>{\n    showTab('about');"));
   assert.ok(profile.includes("aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'})"));
   assert.ok(profile.includes("aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true})"));
-  assert.ok(profile.includes('data-edit-about-section='));
+  assert.ok(app.includes('data-edit-about-section='));
 });
 
 test('the full account editor remains available to other legitimate editor entry points',()=>{
