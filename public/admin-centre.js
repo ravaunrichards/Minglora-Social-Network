@@ -7,9 +7,12 @@
 
   async function addProfileEntry() {
     const profileInfo = document.querySelector('.profile-info-main');
-    const ownProfileControls = document.querySelector('#profile-edit-avatar');
-    if (!profileInfo || !ownProfileControls ||
+    const ownProfileControls = document.querySelector('#edit-profile');
+    const profile = profileInfo?.closest('.minglora-profile-page');
+    const adminTools = profile?.querySelector('.profile-admin-tools');
+    if (!profileInfo || !ownProfileControls || !adminTools ||
         profileInfo.querySelector('[data-open-admin-centre]') ||
+        adminTools.querySelector('[data-open-admin-centre]') ||
         checkingAdminAccess) return;
 
     checkingAdminAccess = true;
@@ -20,19 +23,45 @@
       });
       if (!response.ok) return;
       const access = await response.json();
-      if ((access?.canAccess !== true && access?.setupRequired !== true) || !profileInfo.isConnected ||
-          !ownProfileControls.isConnected ||
-          profileInfo.querySelector('[data-open-admin-centre]')) return;
+      if ((access?.canAccess !== true && access?.setupRequired !== true) ||
+          !profileInfo.isConnected || !ownProfileControls.isConnected ||
+          !adminTools.isConnected || adminTools.querySelector('[data-open-admin-centre]')) return;
 
-      const button = document.createElement('a');
-      button.href = '/admin-centre.html';
+      const button = document.createElement('button');
+      button.type = 'button';
       button.className = 'admin-centre-profile-button';
       button.dataset.openAdminCentre = 'true';
-      button.setAttribute('aria-label', 'Open the separate private Admin Control Centre');
-      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3.5 5.5v6.1c0 5.2 3.4 8.8 8.5 10.4 5.1-1.6 8.5-5.2 8.5-10.4V5.5L12 2Z"></path><path d="M8 12h8M12 8v8"></path></svg><span>Private Admin Controls</span>';
-      profileInfo.append(button);
+      button.setAttribute('aria-controls', 'admin-centre-root');
+      button.setAttribute('aria-expanded', 'false');
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3.5 5.5v6.1c0 5.2 3.4 8.8 8.5 10.4 5.1-1.6 8.5-5.2 8.5-10.4V5.5L12 2Z"></path><path d="M8 12h8M12 8v8"></path></svg><span>Open Admin Centre</span>';
+      button.addEventListener('click', async () => {
+        const profilePage = button.closest('.minglora-profile-page');
+        const profileHeader = profilePage?.querySelector('.profile-header-card');
+        if (!profilePage || !profileHeader) return;
+
+        let root = profilePage.querySelector('#admin-centre-root');
+        if (!root) {
+          root = document.createElement('div');
+          root.id = 'admin-centre-root';
+          root.className = 'admin-centre-profile-root';
+          root.hidden = true;
+          root.setAttribute('aria-label', 'Minglora Admin Centre');
+          profileHeader.insertAdjacentElement('afterend', root);
+        }
+
+        const opening = root.hidden;
+        root.hidden = !opening;
+        button.setAttribute('aria-expanded', String(opening));
+        const label = button.querySelector('span');
+        if (label) label.textContent = opening ? 'Close Admin Centre' : 'Open Admin Centre';
+        if (!opening) return;
+
+        if (root.dataset.initialized !== 'true') await initializeAdminCentre(root);
+        root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      adminTools.append(button);
     } catch (error) {
-      console.warn('[Minglora admin] Private admin controls could not be checked.', error);
+      console.warn('[Minglora admin] Admin Centre access could not be checked.', error);
     } finally {
       checkingAdminAccess = false;
     }
@@ -230,12 +259,12 @@
       <div class="admin-control-centre-head">
         <div>
           <h3>Admin Control Centre</h3>
-          <p>Private platform tools for the designated Creator Hub administrator.</p>
+          <p>All platform controls for the authorized Minglora administrator.</p>
         </div>
         <span class="admin-control-centre-status">${unlocked ? 'Secure session active' : 'MFA required'}</span>
       </div>
       <div class="admin-control-centre-note">
-        This is Minglora’s separate private administrator workspace, not member Settings. Protected actions require the designated Creator Hub account and an authenticator-verified session.
+        This is the existing Minglora Admin Centre, embedded in the authorized Admin Account. Protected actions require the designated Creator Hub account and an authenticator-verified session.
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
@@ -1968,20 +1997,23 @@
     finally { if (button) button.disabled = false; }
   }
 
-  async function initializeAdminCentre() {
-    const root = document.querySelector('#admin-centre-root');
+  async function initializeAdminCentre(rootOverride = null) {
+    const root = rootOverride || document.querySelector('#admin-centre-root');
     if (!root) return;
-    root.innerHTML = '<section class="admin-centre-loading"><h2>Verifying private administrator access…</h2><p>This workspace is separate from member Settings.</p></section>';
+    root.dataset.initialized = 'true';
+    root.innerHTML = '<section class="admin-centre-loading"><h2>Verifying private administrator access…</h2><p>Checking the protected Admin Centre for this account.</p></section>';
     try {
       const response = await fetch('/api/admin/access', {credentials:'same-origin',headers:{Accept:'application/json'}});
       const access = await response.json().catch(() => ({}));
       if (!response.ok || (!access.canAccess && !access.setupRequired)) {
-        root.innerHTML = '<section class="admin-centre-access-denied"><h2>Private Admin Centre</h2><p>This workspace is available only to the designated Creator Hub administrator. Sign in with that account and try again.</p><a class="secondary" href="/">Return to Minglora</a></section>';
+        root.dataset.initialized = 'false';
+        root.innerHTML = '<section class="admin-centre-access-denied"><h2>Private Admin Centre</h2><p>This control centre is available only to the designated Creator Hub administrator with the required secure session.</p><a class="secondary" href="/">Return to Minglora</a></section>';
         return;
       }
       window.__mingloraAdminAccess = access;
       addControlCentrePanel();
     } catch (error) {
+      root.dataset.initialized = 'false';
       root.innerHTML = '<section class="admin-centre-access-denied"><h2>Admin access could not be checked</h2><p>' +
         escapeText(error.message || 'Sign in with the designated administrator account and try again.') +
         '</p><a class="secondary" href="/">Return to Minglora</a></section>';
