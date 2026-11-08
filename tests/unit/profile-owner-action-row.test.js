@@ -59,5 +59,5 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
     assert.ok(html.includes(asset),'index.html references '+asset);
     assert.ok(worker.includes("'"+asset+"'"),'service worker precaches '+asset);
   }
-  assert.match(worker,/CACHE_NAME='minglora-shell-v192-facebook-profile-layout-1'/);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
 });
