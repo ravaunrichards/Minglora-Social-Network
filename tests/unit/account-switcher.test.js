@@ -50,6 +50,7 @@ test('signed-in accounts persist across restarts and renew while active until th
   assert.match(server,/activeSession\.expiresAt = new Date\(activityTime \+ APP_SESSION_TTL_MS\)/);
   assert.match(server,/res\.setHeader\('Set-Cookie', refreshedCookies\)/);
   assert.match(server,/activityTime - previousActivity >= APP_SESSION_ACTIVITY_PERSIST_INTERVAL_MS/);
+  assert.match(server,/if \(!Number\.isFinite\(previousActivity\)[\s\S]*?activeSession\.lastSeenAt = now\(\);\s*await saveStore\(\);/,'persist the renewal checkpoint only when it is saved');
   assert.match(server,/p==='\/api\/auth\/logout'/,'explicit sign-out remains the action that removes the active saved session');
   assert.match(server,/db\.sessions=db\.sessions\.filter\(s=>s\.id!==id\)/);
 });
