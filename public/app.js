@@ -675,6 +675,12 @@ function bindFeed(root=document){
   }else bindSoundtrackPlayback(root);
   root.querySelector('#create-story')?.addEventListener('click',()=>openStoryComposer());
   root.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
+  const storyRail=root.querySelector('[data-stories-rail]');
+  root.querySelectorAll('[data-story-scroll]').forEach(button=>button.addEventListener('click',()=>{
+    if(!storyRail)return;
+    const direction=Number(button.dataset.storyScroll)||1;
+    storyRail.scrollBy({left:direction*Math.max(220,storyRail.clientWidth*.72),behavior:'smooth'});
+  }));
   bindProfileLinks(root);
   root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
     el.disabled=true;
@@ -842,7 +848,22 @@ async function syncFeedAutomatically(){
     console.warn('[Minglora] Feed background sync failed:',error?.message||error);
   }finally{feedAutoSyncBusy=false;}
 }
-function renderStoriesPanel(){const seen=new Set();const visible=state.stories.filter(story=>{const id=story.author?.id;if(!id||seen.has(id))return false;seen.add(id);return true;});const cards=visible.map(story=>'<button class="story-card" data-open-story="'+esc(story.id)+'">'+(story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>')+'<span class="story-shade"></span><img class="story-avatar" src="'+avatar(story.author)+'" alt=""><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(Array.isArray(story.mediaItems)&&story.mediaItems.length>1?'<span class="story-media-count">'+story.mediaItems.length+' items</span>':'')+(story.viewedByMe?'<span class="story-viewed">Viewed</span>':'')+'</button>').join('');return '<section class="card story-panel"><div class="story-panel-head"><h2>Stories</h2><button class="primary" id="create-story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add to story</span></button></div>'+(visible.length?'<div class="story-cards">'+cards+'</div>':'<p class="story-empty">No stories yet. Add a story to share an update for 24 hours.</p>')+'</section>';}
+function renderStoriesPanel(){
+  const seen=new Set();
+  const visible=state.stories.filter(story=>{
+    const id=story.author?.id;
+    if(!id||seen.has(id))return false;
+    seen.add(id);
+    return true;
+  });
+  const createCard='<button type="button" id="create-story" class="story-create-card" aria-label="Create a story"><span class="story-create-photo"><img src="'+avatar(state.user)+'" alt=""></span><span class="story-create-plus" aria-hidden="true">+</span><span class="story-create-label">Create story</span></button>';
+  const cards=visible.map(story=>{
+    const media=story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>';
+    const ringClass=story.viewedByMe?'is-viewed':'is-unviewed';
+    return '<button type="button" class="story-card '+ringClass+'" data-open-story="'+esc(story.id)+'" aria-label="View story by '+esc(story.author?.name||'Minglora member')+'"><span class="story-card-media">'+media+'</span><span class="story-shade"></span><span class="story-avatar-ring"><img class="story-avatar" src="'+avatar(story.author)+'" alt=""></span><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(Array.isArray(story.mediaItems)&&story.mediaItems.length>1?'<span class="story-media-count">'+story.mediaItems.length+'</span>':'')+'</button>';
+  }).join('');
+  return '<section class="story-panel" aria-label="Stories"><div class="story-panel-head"><h2>Stories</h2><div class="story-panel-tools"><span>Share moments with your community</span><div class="story-rail-nav"><button type="button" data-story-scroll="-1" aria-label="Scroll stories left">‹</button><button type="button" data-story-scroll="1" aria-label="Scroll stories right">›</button></div></div></div><div class="story-cards" data-stories-rail>'+createCard+cards+'</div></section>';
+}
 async function renderFeed(){state.view='feed';const noPosts=state.feedScope==='for-you'?'There are no recommendations yet. Follow creators, react to posts, comment and save content to help personalize your feed.':state.feedScope==='following'?'You are not following anyone who has posted yet.':state.feedScope==='friends'?'Your friends have not shared posts yet.':'Share your first post or connect with people to see updates.';const title=state.feedScope==='for-you'?'For You':state.feedScope==='following'?'Following feed':state.feedScope==='friends'?'Friends feed':'Recent posts';setContent(`<section class="card welcome"><h1>Good to see you, ${esc(state.user.name.split(' ')[0])} 👋</h1><p>Your community is here. Catch up and share something good.</p></section>${renderStoriesPanel()}${composer()}<div class="feed-header"><h2>${title}</h2><div class="feed-controls"><select id="feed-scope" class="sort-select" aria-label="Feed audience"><option value="for-you" ${state.feedScope==='for-you'?'selected':''}>For You</option><option value="all" ${state.feedScope==='all'?'selected':''}>All posts</option><option value="following" ${state.feedScope==='following'?'selected':''}>Following</option><option value="friends" ${state.feedScope==='friends'?'selected':''}>Friends</option></select><select id="feed-sort" class="sort-select" aria-label="Feed sort"><option value="new">Most recent</option><option value="old">Oldest first</option></select></div></div><div id="feed-list">${state.feed.length?state.feed.map(postCard).join(''):`<section class="card empty-state"><div class="empty-icon">✦</div><h3>No posts here yet</h3><p>${noPosts}</p></section>`}</div>`);bindFeed();startFeedAutoSync();$('#feed-scope')?.addEventListener('change',async e=>{try{await loadFeed(e.target.value);syncNavigationActive();await renderFeed();}catch(err){toast(err.message);}});$('#feed-sort')?.addEventListener('change',e=>{const posts=[...state.feed].sort((a,b)=>e.target.value==='old'?new Date(a.createdAt)-new Date(b.createdAt):new Date(b.createdAt)-new Date(a.createdAt));$('#feed-list').innerHTML=posts.map(postCard).join('');bindFeed($('#feed-list'))});if(state.settings?.preferences?.feedSort==='oldest'){const sort=$('#feed-sort');if(sort){sort.value='old';sort.dispatchEvent(new Event('change'));}}}
 
 function measureAudioDurationMs(file){
@@ -6882,37 +6903,124 @@ function openStoryComposer(){
 }
 
 async function openStory(id){
-  try{
-    const result=await api('/stories/'+encodeURIComponent(id)+'/view',{method:'POST',body:'{}'});const s=result.story;const isOwner=s.userId===state.user.id;
-    const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
-    const storyMedia=Array.isArray(s.mediaItems)&&s.mediaItems.length?s.mediaItems:(s.media?[s.media]:[]);
-    let activeMediaIndex=0;
-    const storyMediaMarkup=()=>{
-      if(!storyMedia.length)return '';
-      const current=storyMedia[activeMediaIndex];
-      const controls=storyMedia.length>1?'<div class="story-media-controls"><button type="button" class="secondary" data-story-prev aria-label="Previous story item">‹</button><span>'+Number(activeMediaIndex+1)+' / '+storyMedia.length+'</span><button type="button" class="secondary" data-story-next aria-label="Next story item">›</button></div>':'';
-      return '<div class="story-media-stage">'+renderSingleMedia(current,'story-viewer-image')+'</div>'+controls;
-    };
-    const modal=document.createElement('div');modal.className='modal-backdrop story-viewer-backdrop';
-    modal.innerHTML='<section class="modal story-viewer" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="modal-head"><div><h2 id="story-viewer-title">'+esc(s.author?.name||'Story')+'</h2><small>'+timeAgo(s.createdAt)+' · expires '+new Date(s.expiresAt).toLocaleString()+'</small></div><button class="modal-close" aria-label="Close">×</button></div><div data-story-media-container>'+storyMediaMarkup()+'</div>'+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+(s.text?'<p class="story-viewer-text">'+esc(s.text)+'</p>':'')+(isOwner?'<section class="story-viewer-stats"><strong>'+result.story.viewCount+' views</strong>'+(viewers?'<ul>'+viewers+'</ul>':'<p class="muted">No other viewers yet.</p>')+'<button class="secondary full" id="delete-story">Delete story</button></section>':'<button class="secondary full" id="report-story">Report story</button>')+'</section>';
-    document.body.append(modal);
-    const moveStoryMedia=step=>{
-      if(storyMedia.length<2)return;
-      activeMediaIndex=(activeMediaIndex+step+storyMedia.length)%storyMedia.length;
+  let modal=null;
+  let activeIndex=0;
+  let mediaIndex=0;
+  let storySequence=[];
+  let activeMedia=[];
+  let activeStory=null;
+  const authorKey=item=>String(item?.author?.id||item?.userId||item?.id||'');
+  const close=()=>{
+    if(!modal)return;
+    modal.remove();
+    document.removeEventListener('keydown',onStoryViewerKeydown);
+    modal=null;
+    loadStories().catch(()=>{});
+  };
+  const onStoryViewerKeydown=event=>{
+    if(!modal)return;
+    if(event.key==='Escape'){event.preventDefault();close();}
+    else if(event.key==='ArrowRight'){event.preventDefault();moveStory(1);}
+    else if(event.key==='ArrowLeft'){event.preventDefault();moveStory(-1);}
+  };
+  const moveStory=async step=>{
+    const next=activeIndex+step;
+    if(next<0||next>=storySequence.length)return;
+    activeIndex=next;
+    mediaIndex=0;
+    await renderCurrentStory();
+  };
+  const renderStoryMedia=()=>{
+    if(!activeMedia.length)return '';
+    const current=activeMedia[mediaIndex];
+    const controls=activeMedia.length>1?'<div class="story-media-controls"><button type="button" class="secondary" data-story-media-prev aria-label="Previous photo or video">‹</button><span>'+Number(mediaIndex+1)+' / '+activeMedia.length+'</span><button type="button" class="secondary" data-story-media-next aria-label="Next photo or video">›</button></div>':'';
+    return '<div class="story-media-stage">'+renderSingleMedia(current,'story-viewer-image')+'</div>'+controls;
+  };
+  const bindStoryMediaControls=()=>{
+    modal.querySelector('[data-story-media-prev]')?.addEventListener('click',()=>{
+      mediaIndex=(mediaIndex-1+activeMedia.length)%activeMedia.length;
       const container=modal.querySelector('[data-story-media-container]');
-      container.innerHTML=storyMediaMarkup();
+      if(container)container.innerHTML=renderStoryMedia();
+      bindStoryMediaControls();
       bindSoundtrackPlayback(modal);
-      container.querySelector('[data-story-prev]')?.addEventListener('click',()=>moveStoryMedia(-1));
-      container.querySelector('[data-story-next]')?.addEventListener('click',()=>moveStoryMedia(1));
-    };
+    });
+    modal.querySelector('[data-story-media-next]')?.addEventListener('click',()=>{
+      mediaIndex=(mediaIndex+1)%activeMedia.length;
+      const container=modal.querySelector('[data-story-media-container]');
+      if(container)container.innerHTML=renderStoryMedia();
+      bindStoryMediaControls();
+      bindSoundtrackPlayback(modal);
+    });
+  };
+  const renderCurrentStory=async()=>{
+    const selected=storySequence[activeIndex];
+    if(!selected?.id)return;
+    const result=await api('/stories/'+encodeURIComponent(selected.id)+'/view',{method:'POST',body:'{}'});
+    const s=result.story;
+    activeStory=s;
+    const isOwner=s.userId===state.user.id;
+    activeMedia=Array.isArray(s.mediaItems)&&s.mediaItems.length?s.mediaItems:(s.media?[s.media]:[]);
+    mediaIndex=0;
+    const group=storySequence.filter(item=>authorKey(item)===authorKey(selected));
+    const groupPosition=Math.max(0,group.findIndex(item=>item.id===selected.id));
+    const progress=group.map((item,index)=>'<span class="story-progress-segment '+(index<groupPosition?'is-complete':index===groupPosition?'is-active':'')+'"></span>').join('');
+    const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
+    const viewerStats=isOwner?'<details class="story-viewer-viewers"><summary>'+Number(s.viewCount||0)+' views</summary>'+(viewers?'<ul>'+viewers+'</ul>':'<p>No other viewers yet.</p>')+'</details><button type="button" class="story-viewer-delete" id="delete-story">Delete story</button>':'<button type="button" class="story-viewer-report" id="report-story">Report story</button>';
+    const mediaMarkup=activeMedia.length?renderStoryMedia():'<div class="story-viewer-text story-viewer-text-standalone">'+esc(s.text||'')+'</div>';
+    const caption=s.text&&activeMedia.length?'<p class="story-viewer-caption">'+esc(s.text)+'</p>':'';
+    const previousDisabled=activeIndex<=0?' disabled':'';
+    const nextDisabled=activeIndex>=storySequence.length-1?' disabled':'';
+    modal.innerHTML='<div class="story-viewer-brand" aria-hidden="true">Minglora</div><button type="button" class="story-viewer-close" aria-label="Close story">×</button><div class="story-viewer-layout"><button type="button" class="story-viewer-arrow" data-story-previous aria-label="Previous story"'+previousDisabled+'>‹</button><section class="modal story-viewer story-viewer-fullscreen-card" role="dialog" aria-modal="true" aria-labelledby="story-viewer-title"><div class="story-viewer-progress">'+progress+'</div><header class="story-viewer-head"><img src="'+avatar(s.author)+'" alt="" class="story-viewer-avatar"><div class="story-viewer-author"><strong id="story-viewer-title">'+esc(s.author?.name||'Story')+'</strong><small>'+esc(timeAgo(s.createdAt))+' · expires '+esc(new Date(s.expiresAt).toLocaleString())+'</small></div></header><div class="story-viewer-content"><div data-story-media-container>'+mediaMarkup+'</div>'+renderPostSoundtrack({id:s.id,soundtrack:s.soundtrack})+caption+'</div><footer class="story-viewer-footer"><div class="story-viewer-actions">'+viewerStats+'</div><div class="story-viewer-mobile-nav"><button type="button" data-story-previous aria-label="Previous story"'+previousDisabled+'>Previous</button><button type="button" data-story-next aria-label="Next story"'+nextDisabled+'>Next</button></div></footer></section><button type="button" class="story-viewer-arrow" data-story-next aria-label="Next story"'+nextDisabled+'>›</button></div>';
+    modal.querySelectorAll('[data-story-previous]').forEach(button=>button.addEventListener('click',()=>moveStory(-1)));
+    modal.querySelectorAll('[data-story-next]').forEach(button=>button.addEventListener('click',()=>moveStory(1)));
+    modal.querySelector('.story-viewer-close')?.addEventListener('click',close);
+    bindStoryMediaControls();
     bindSoundtrackPlayback(modal);
-    modal.querySelector('[data-story-prev]')?.addEventListener('click',()=>moveStoryMedia(-1));
-    modal.querySelector('[data-story-next]')?.addEventListener('click',()=>moveStoryMedia(1));
-    modal.querySelector('.modal-close').onclick=()=>{modal.remove();loadStories().catch(()=>{});};
-    modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();loadStories().catch(()=>{});}});
-    modal.querySelector('#report-story')?.addEventListener('click',()=>{modal.remove();openReportComposer('story',s.id);});
-    modal.querySelector('#delete-story')?.addEventListener('click',async()=>{if(!window.confirm('Delete this story?'))return;try{await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});modal.remove();await loadStories();if(state.view==='feed')await renderFeed();toast('Story deleted.');}catch(err){toast(err.message);}});
-  }catch(err){toast(err.message);}
+    modal.querySelector('#report-story')?.addEventListener('click',()=>{
+      const storyId=s.id;
+      close();
+      openReportComposer('story',storyId);
+    });
+    modal.querySelector('#delete-story')?.addEventListener('click',async()=>{
+      if(!window.confirm('Delete this story?'))return;
+      try{
+        await api('/stories/'+encodeURIComponent(s.id),{method:'DELETE',body:'{}'});
+        storySequence=storySequence.filter(item=>item.id!==s.id);
+        state.stories=state.stories.filter(item=>item.id!==s.id);
+        if(storySequence.length){
+          activeIndex=Math.min(activeIndex,storySequence.length-1);
+          mediaIndex=0;
+          await renderCurrentStory();
+        }else{
+          close();
+          if(state.view==='feed')await renderFeed();
+        }
+        toast('Story deleted.');
+      }catch(error){toast(error.message||'Could not delete this story.');}
+    });
+  };
+  try{
+    const grouped=new Map();
+    (Array.isArray(state.stories)?state.stories:[]).forEach(story=>{
+      if(!story?.id)return;
+      const key=authorKey(story);
+      if(!grouped.has(key))grouped.set(key,[]);
+      grouped.get(key).push(story);
+    });
+    storySequence=[...grouped.values()].flat();
+    activeIndex=storySequence.findIndex(story=>story.id===id);
+    if(activeIndex<0){storySequence.unshift({id});activeIndex=0;}
+    modal=document.createElement('div');
+    modal.className='modal-backdrop story-viewer-backdrop';
+    modal.addEventListener('click',event=>{if(event.target===modal)close();});
+    document.body.append(modal);
+    document.addEventListener('keydown',onStoryViewerKeydown);
+    await renderCurrentStory();
+  }catch(error){
+    if(modal)modal.remove();
+    document.removeEventListener('keydown',onStoryViewerKeydown);
+    toast(error.message||'Could not open this story.');
+  }
 }
 async function loadPages(){
   const result=await api('/pages');
