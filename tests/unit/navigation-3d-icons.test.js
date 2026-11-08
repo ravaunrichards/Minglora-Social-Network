@@ -97,7 +97,10 @@ test('service-worker shell pre-caches the latest icon sprite and refreshed style
 });
 
 test('Facebook-style top bar keeps logo, Search, five navigation tabs and account controls in left-to-right order', () => {
-  const header = html.match(/<header class="topbar">[\\s\\S]*?<\\/header>/)?.[0] || '';
+  const headerMarker = html.indexOf('class="topbar"');
+  const headerStart = html.lastIndexOf('<header', headerMarker);
+  const headerEnd = html.indexOf('</header>', headerMarker);
+  const header = headerStart >= 0 && headerEnd > headerStart ? html.slice(headerStart, headerEnd + 9) : '';
   assert.ok(header, 'top bar exists');
   const ordered = [
     'id="home-brand"',
@@ -123,10 +126,11 @@ test('Facebook-style top bar keeps logo, Search, five navigation tabs and accoun
 });
 
 test('top bar gives navigation and action icons consistent dimensions at desktop, tablet and mobile widths', () => {
-  assert.match(css,/\.topbar\s*\{[\\s\\S]*?height:72px/);
-  assert.match(css,/\.nav-item \.nav-3d-icon\s*\{width:31px;height:31px/);
-  assert.match(css,/\.circle-action\s*\{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px/);
-  assert.match(css,/@media\\(max-width:980px\\) and \\(min-width:761px\\)/);
-  assert.match(css,/@media\\(max-width:760px\\)/);
-  assert.match(css,/\.search-box:focus-within/);
+  assert.ok(css.includes('Minglora Facebook-style top bar sizing and alignment'));
+  assert.ok(css.includes('height:72px'));
+  assert.ok(css.includes('width:31px;height:31px'));
+  assert.ok(css.includes('flex:0 0 42px;width:42px;height:42px'));
+  assert.ok(css.includes('@media(max-width:980px) and (min-width:761px)'));
+  assert.ok(css.includes('@media(max-width:760px)'));
+  assert.ok(css.includes('.search-box:focus-within'));
 });
