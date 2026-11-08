@@ -55,14 +55,14 @@ test('profile navigation keeps the current profile sections and More menu availa
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
   assert.ok(html.includes('/mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
   assert.match(html,/src="\/app\.js\?v=[^"]+"/);
-  assert.ok(html.includes('/mobile-profile-navigation.css?v=20261106-horizontal-profile-navigation-1'));
+  assert.ok(html.includes('/mobile-profile-navigation.css?v=20261108-five-profile-metrics-1'));
 });
 
 test('phone profile counts stay horizontal and the top account menu remains the profile entry point',()=>{
   const css=fs.readFileSync(path.join(root,'public/mobile-profile-navigation.css'),'utf8');
   assert.ok(css.includes('display:flex!important'));
   assert.ok(css.includes('flex-flow:row nowrap!important'));
-  assert.ok(css.includes('flex:0 0 16.666667%!important'));
+  assert.ok(css.includes('flex:0 0 20%!important'));
   assert.ok(css.includes('overflow-x:auto!important'));
   assert.ok(css.includes('flex-shrink:0!important'));
   assert.ok(html.includes('id="profile-menu"'),'signed-in profile remains available from the top account menu');
