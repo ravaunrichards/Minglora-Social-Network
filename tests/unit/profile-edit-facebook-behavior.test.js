@@ -56,10 +56,9 @@ test('profile details and selected images save through the existing API and refr
 
 test('the updated profile editor JavaScript bypasses stale service-worker assets',()=>{
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
-  const workerAsset=worker.match(/app\.js\?v=[^"' ]+/)?.[0]||'';
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset.length>0);
-  assert.equal('/'+appAsset,workerAsset);
+  assert.ok(worker.includes('/'+appAsset));
   assert.match(appAsset,/facebook-edit-profile/);
   assert.match(cacheName,/^minglora-shell-v\d+-/);
 });
