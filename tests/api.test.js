@@ -1019,11 +1019,41 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const friendsCountProfile = await request(`/api/users/${firstUserId}`);
   assert.equal(friendsCountProfile.body.friendsCount, 1);
 
+  const customStory = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'Only my selected friend can see this.', audience: 'custom', customUserIds: [secondUserId] })
+  });
+  assert.equal(customStory.status, 201);
+  assert.deepEqual(customStory.body.story.customUserIds, [secondUserId]);
+  const hiddenStory = await request('/api/stories', {
+    method: 'POST',
+    body: JSON.stringify({ text: 'Public except for one friend.', audience: 'public', hiddenUserIds: [secondUserId] })
+  });
+  assert.equal(hiddenStory.status, 201);
+  assert.deepEqual(hiddenStory.body.story.hiddenUserIds, [secondUserId]);
+  const storyPrivacySettings = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ privacy: {
+      storyAudience: 'custom',
+      storyPrivacyMode: 'hide',
+      storyCustomUserIds: [secondUserId],
+      storyHiddenUserIds: [secondUserId]
+    } })
+  });
+  assert.equal(storyPrivacySettings.status, 200);
+  assert.equal(storyPrivacySettings.body.settings.privacy.storyPrivacyMode, 'hide');
+  assert.deepEqual(storyPrivacySettings.body.settings.privacy.storyCustomUserIds, [secondUserId]);
+
   cookie = secondCookie;
   const friendsStoryAfterMutualFollow = await request('/api/stories');
   assert.equal(friendsStoryAfterMutualFollow.body.stories.some(story => story.id === friendsStory.body.story.id), true);
+  assert.equal(friendsStoryAfterMutualFollow.body.stories.some(story => story.id === customStory.body.story.id), true);
+  assert.equal(friendsStoryAfterMutualFollow.body.stories.some(story => story.id === hiddenStory.body.story.id), false);
+  assert.equal(Object.hasOwn(friendsStoryAfterMutualFollow.body.stories.find(story => story.id === customStory.body.story.id), 'customUserIds'), false);
   const friendStoryView = await request(`/api/stories/${friendsStory.body.story.id}/view`, { method: 'POST', body: '{}' });
   assert.equal(friendStoryView.status, 200);
+  const hiddenStoryView = await request(`/api/stories/${hiddenStory.body.story.id}/view`, { method: 'POST', body: '{}' });
+  assert.equal(hiddenStoryView.status, 404);
   cookie = firstCookie;
   const deleteOwnStory = await request(`/api/stories/${friendsStory.body.story.id}`, { method: 'DELETE', body: '{}' });
   assert.equal(deleteOwnStory.status, 200);
