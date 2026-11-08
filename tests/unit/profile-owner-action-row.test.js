@@ -17,7 +17,7 @@ const worker=read('public/sw.js');
 
 test('owner profile keeps Edit profile and Add to story without separate photo edit buttons',()=>{
   assert.match(app,/class="profile-actions profile-owner-actions"/);
-  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
+  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile(?: details in About)?"/);
   assert.match(app,/id="profile-add-story" type="button" aria-label="Add to story"/);
   assert.match(app,/<span>Add to story<\/span>/);
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
