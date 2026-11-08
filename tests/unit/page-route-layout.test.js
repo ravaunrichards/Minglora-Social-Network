@@ -45,4 +45,7 @@ test('Home navigation and global navigation remain present',()=>{
     'Home retains its feature rail markup');
   assert.match(app,/const standalone=state\.view!=='feed'&&!forYou;/,
     'Only the Home feed keeps the feature rail');
+  const navStart=app.indexOf('function syncNavigationActive(){');
+  assert.ok(app.slice(navStart,navStart+100).includes('syncPageLayout();'),
+    'Direct route navigation also synchronizes the standalone page shell');
 });
