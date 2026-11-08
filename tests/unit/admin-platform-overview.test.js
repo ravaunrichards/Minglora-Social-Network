@@ -2,14 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [runtime, admin, css, html, store, index, serviceWorker] = await Promise.all([
+const [runtime, admin, css, html, store, index, serviceWorker, app] = await Promise.all([
   readFile(new URL("../../supabase/functions/minglora-runtime-state/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.css", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8"),
   readFile(new URL("../../src/store.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/index.html", import.meta.url), "utf8"),
-  readFile(new URL("../../public/sw.js", import.meta.url), "utf8")
+  readFile(new URL("../../public/sw.js", import.meta.url), "utf8"),
+  readFile(new URL("../../public/app.js", import.meta.url), "utf8")
 ]);
 
 test("runtime gateway accepts the audit action called by the owner dashboard", () => {
@@ -60,11 +61,11 @@ test("Admin Centre opens as its own page from the authorized administrator profi
 test("administrator profile keeps name and username grouped with three distinctive identity marks", () => {
   assert.match(index, /admin-profile-layout\\.css\\?v=20261108-admin-profile-workspace-1/);
   assert.match(index, /app\\.js\\?v=20261108-admin-profile-workspace-1/);
-  assert.match(admin, /profile-admin-identity-mark--owner/);
-  assert.match(admin, /profile-admin-identity-mark--security/);
-  assert.match(admin, /profile-admin-identity-mark--control/);
-  assert.match(admin, /data-profile-admin-action="edit-profile"/);
-  assert.match(admin, /data-profile-admin-action="privacy"/);
+  assert.match(app, /profile-admin-identity-mark--owner/);
+  assert.match(app, /profile-admin-identity-mark--security/);
+  assert.match(app, /profile-admin-identity-mark--control/);
+  assert.match(app, /data-profile-admin-action="edit-profile"/);
+  assert.match(app, /data-profile-admin-action="privacy"/);
 });
 
 
