@@ -6846,3 +6846,17 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
   dialog.profile-editor-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:14px}
   @supports not (height:100dvh){dialog.profile-editor-dialog{max-height:calc(100vh - 20px)}}
 }
+/* Minglora Video Centre: responsive discovery surfaces using real member video posts. */
+.video-centre{display:flex;flex-direction:column;gap:14px;min-width:0}
+.video-centre-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px}
+.video-centre-heading h1{margin:4px 0 6px;font-size:clamp(22px,3vw,30px)}
+.video-centre-heading p{margin:0;color:var(--muted);max-width:680px;line-height:1.5}
+.video-centre-heading .primary{flex:0 0 auto;min-height:42px}
+.video-centre-toolbar{display:grid;grid-template-columns:minmax(160px,.65fr) minmax(200px,1fr);gap:12px;padding:14px}
+.video-centre-toolbar label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:700}
+.video-centre-toolbar input,.video-centre-toolbar select{width:100%;min-width:0;min-height:42px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}
+.video-centre-feed{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;width:100%;max-width:900px;margin:0 auto}
+.video-centre-feed .post{min-width:0;overflow:hidden}
+.video-centre-feed .post-media-video{display:block;width:100%;max-height:min(76vh,820px);object-fit:contain;background:var(--surface-soft,#101828);border-radius:10px}
+.video-centre-note{margin:0;color:var(--muted);font-size:12px;text-align:center}
+@media(max-width:640px){.video-centre-heading{align-items:stretch;flex-direction:column;padding:14px}.video-centre-heading .primary{width:100%}.video-centre-toolbar{grid-template-columns:minmax(0,1fr);padding:12px}.video-centre-feed{gap:10px}.video-centre-feed .post-media-video{max-height:72vh;border-radius:0}}
