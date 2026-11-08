@@ -1,0 +1,22 @@
+/* Dedicated Minglora Reels navigation and responsive viewing layout. */
+body.minglora-reels-active .layout{display:block;width:100%;max-width:1480px;padding:14px 22px 28px}
+body.minglora-reels-active .left-rail,body.minglora-reels-active .right-rail{display:none!important}
+body.minglora-reels-active #main-content,body.minglora-reels-active .video-centre{width:100%;max-width:none;min-width:0}
+.reels-view-shell{display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:clamp(16px,2.6vw,34px);width:100%;max-width:1320px;margin:0 auto;align-items:start}
+.reels-experience-sidebar{position:sticky;top:86px;display:flex;flex-direction:column;gap:14px;min-width:0;padding:12px 10px;border:1px solid var(--line,#dfe4ec);border-radius:18px;background:var(--surface,#fff)}
+.reels-experience-title{display:flex;align-items:center;gap:10px;padding:4px 8px 12px;border-bottom:1px solid var(--line,#dfe4ec);color:var(--text,#243044);font-size:20px}
+.reels-experience-mark{display:grid;width:36px;height:36px;place-items:center;border-radius:12px;background:#1769e0;color:#fff;font-size:17px}
+.reels-experience-links{display:grid;gap:5px}
+.reels-experience-link{display:flex;align-items:center;gap:11px;width:100%;min-width:0;min-height:48px;padding:7px 10px;border:0;border-radius:12px;background:transparent;color:var(--text,#243044);text-align:left;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.reels-experience-link:hover{background:var(--surface-soft,#f0f4fa)}
+.reels-experience-link.active{background:color-mix(in srgb,var(--primary,#1769e0) 12%,transparent);color:var(--primary,#1769e0)}
+.reels-experience-icon{display:grid;flex:0 0 36px;width:36px;height:36px;place-items:center;border-radius:11px;background:var(--surface-soft,#edf2fa)}
+.reels-experience-icon .nav-3d-icon{width:29px;height:29px}
+.reels-experience-create{width:100%;min-height:44px;margin-top:4px;border-radius:12px}
+.reels-experience-search{display:grid;gap:6px;width:min(100%,900px);margin:0 auto 12px;padding:10px 12px;border:1px solid var(--line,#dfe4ec);border-radius:13px;background:var(--surface,#fff);color:var(--muted,#65728a);font-size:12px;font-weight:700}
+.reels-experience-search input{width:100%;min-width:0}
+.reels-experience-feed{width:100%;max-width:900px;margin:0 auto}
+body.minglora-reels-active .video-centre-reels{width:100%;max-width:760px;max-height:calc(100svh - 118px);min-height:0;margin:0 auto;padding:0 2px 16px;gap:13px}
+body.minglora-reels-active .minglora-reel-stage{height:min(76svh,840px);min-height:440px}
+body.minglora-reels-active .video-centre-note{margin:10px auto 0;max-width:900px}
+@media(max-width:760px){body.minglora-reels-active .layout{padding:10px 10px 92px}.reels-view-shell{grid-template-columns:minmax(0,1fr);gap:10px}.reels-experience-sidebar{position:static;gap:8px;padding:10px}.reels-experience-title{min-height:34px;padding:0 5px 8px;font-size:17px}.reels-experience-links{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}.reels-experience-link{min-height:58px;flex-direction:column;justify-content:center;gap:3px;padding:5px 2px;font-size:10px;text-align:center}.reels-experience-icon{flex-basis:auto;width:29px;height:29px}.reels-experience-icon .nav-3d-icon{width:24px;height:24px}.reels-experience-create{width:100%}body.minglora-reels-active .video-centre-reels{max-height:none;min-height:0;padding:0 0 12px}body.minglora-reels-active .minglora-reel-stage{height:min(70svh,700px);min-height:330px}}
