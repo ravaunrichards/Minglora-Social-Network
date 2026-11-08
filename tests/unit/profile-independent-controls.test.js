@@ -14,7 +14,7 @@ const independentCss=read('public/profile-independent-avatar-header.css');
 test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
   assert.match(app,/class="profile-actions profile-owner-actions"/);
-  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
+  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile(?: details in About)?"/);
   assert.match(app,/id="profile-add-story" type="button" aria-label="Add to story"/);
 });
 
