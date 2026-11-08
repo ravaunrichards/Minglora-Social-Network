@@ -102,18 +102,12 @@
     panel.innerHTML =
       '<header class="minglora-menu-header">' +
         '<div class="minglora-menu-heading"><h2>Menu</h2><p>Explore Minglora</p></div>' +
-        '<label class="minglora-menu-search"><span class="sr-only">Search Menu</span>' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>' +
-          '<input id="minglora-menu-search" type="search" autocomplete="off" placeholder="Search Menu" aria-label="Search Menu">' +
-          '<button type="button" class="minglora-menu-search-clear" aria-label="Clear menu search" hidden>×</button>' +
-        '</label>' +
         '<button type="button" class="minglora-menu-close" aria-label="Close menu" title="Close menu">×</button>' +
       '</header>' +
       '<div class="minglora-menu-body">' +
         '<div class="minglora-menu-main-scroll">' +
           sections.map(sectionMarkup).join('') +
           sectionMarkup({ title: 'More from Meta', items: metaItems }) +
-          '<p class="minglora-menu-no-results" hidden>No matching menu items found.</p>' +
         '</div>' +
         '<aside class="minglora-menu-create-column" aria-label="Create">' +
           '<section class="minglora-menu-create-card" data-menu-section>' +
@@ -122,10 +116,6 @@
           '</section>' +
         '</aside>' +
       '</div>';
-
-    const search = panel.querySelector('#minglora-menu-search');
-    const clear = panel.querySelector('.minglora-menu-search-clear');
-    const noResults = panel.querySelector('.minglora-menu-no-results');
 
     function closeMenu() {
       panel.hidden = true;
@@ -144,35 +134,8 @@
       panel.classList.add('is-open');
       document.body.classList.add('minglora-menu-open');
       trigger.setAttribute('aria-expanded', 'true');
-      search.value = '';
-      filterMenu('');
-      window.requestAnimationFrame(() => search.focus());
     }
 
-    function filterMenu(value) {
-      const query = String(value || '').trim().toLowerCase();
-      let visibleCount = 0;
-      panel.querySelectorAll('[data-menu-section]').forEach(section => {
-        const items = Array.from(section.querySelectorAll('[data-menu-item]'));
-        let sectionCount = 0;
-        items.forEach(item => {
-          const visible = !query || item.textContent.toLowerCase().includes(query);
-          item.hidden = !visible;
-          if (visible) sectionCount += 1;
-        });
-        section.hidden = sectionCount === 0;
-        visibleCount += sectionCount;
-      });
-      noResults.hidden = visibleCount > 0;
-      clear.hidden = !query;
-    }
-
-    search.addEventListener('input', () => filterMenu(search.value));
-    clear.addEventListener('click', () => {
-      search.value = '';
-      filterMenu('');
-      search.focus();
-    });
     trigger.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
@@ -278,7 +241,7 @@
       await runCreateAction(action);
     });
 
-    window.MingloraMenu = { open: openMenu, close: closeMenu, filter: filterMenu };
+    window.MingloraMenu = { open: openMenu, close: closeMenu };
   }
 
   function installAccountActions() {
