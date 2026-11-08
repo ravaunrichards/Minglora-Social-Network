@@ -118,3 +118,15 @@ test('public profile page uses the Facebook-style wide cover and portrait crop p
   assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
   assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
 });
+
+test('Facebook profile shell keeps the whole page, portrait overlap and identity row aligned',()=>{
+  const facebookCss=fs.readFileSync(path.join(root,'public/profile-facebook-panel.css'),'utf8');
+  assert.match(facebookCss,/\.minglora-profile-page\{[\s\S]*?max-width:851px!important[\s\S]*?margin-inline:auto!important/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?position:absolute!important[\s\S]*?left:24px!important[\s\S]*?top:-84px!important/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?width:168px!important[\s\S]*?height:168px!important[\s\S]*?object-fit:cover!important/);
+  assert.match(facebookCss,/\.profile-header-card--owner \.profile-owner-actions\{[\s\S]*?grid-column:2!important[\s\S]*?grid-row:1!important/);
+  assert.match(facebookCss,/\.profile-header-card \.profile-info-main\{[\s\S]*?grid-column:1!important[\s\S]*?grid-row:1!important/);
+  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?left:13px!important[\s\S]*?top:-48px!important[\s\S]*?width:96px!important/);
+  assert.match(facebookCss,/@media\(max-width:390px\)[\s\S]*?left:10px!important[\s\S]*?top:-44px!important[\s\S]*?width:88px!important/);
+  assert.match(facebookCss,/\.minglora-profile-page>#profile-tab-panel\{[\s\S]*?max-width:851px!important/);
+});
