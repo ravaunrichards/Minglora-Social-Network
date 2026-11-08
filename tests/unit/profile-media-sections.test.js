@@ -4,17 +4,17 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('profile exposes Facebook-style Posts, About, Friends, Photos, Reels and More sections', async () => {
+test('profile exposes TikTok-style Posts, Reels, Photos, Friends, About and More sections', async () => {
   const app = await read('../../public/app.js');
-  const sections = [['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']];
+  const sections = [['posts','Posts'],['reels','Reels'],['photos','Photos'],['friends','Friends'],['about','About'],['more','More']];
   for (const [key,label] of sections) assert.ok(app.includes("['"+key+"','"+label+"']"), label+' profile section must exist');
   assert.match(app, /function profileTabMarkup/);
   assert.match(app, /function bindProfileTabActions/);
   assert.match(app, /profile-albums-grid/);
   assert.match(app, /profile-reels-grid/);
   assert.match(app, /data-profile-tab="videos"/);
+  assert.match(app, /function profilePostsGridMarkup/);
 });
-
 test('profile status, check-ins, events and Highlights are loaded into visible profile sections', async () => {
   const app = await read('../../public/app.js');
   assert.match(app, /profile-status-badge/);
