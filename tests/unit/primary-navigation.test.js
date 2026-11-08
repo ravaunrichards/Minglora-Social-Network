@@ -53,7 +53,7 @@ test('profile navigation keeps the current profile sections and More menu availa
 });
 
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
-  assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
+  assert.ok(html.includes('/mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
   assert.match(html,/src="\/app\.js\?v=[^"]+"/);
   assert.ok(html.includes('/mobile-profile-navigation.css?v=20261106-horizontal-profile-navigation-1'));
 });
