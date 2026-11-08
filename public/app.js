@@ -9944,4 +9944,46 @@ $('#register-form').addEventListener('submit',async e=>{
   }catch(err){error.textContent=err.message;}
   finally{button.disabled=false;button.removeAttribute('aria-busy');}
 });
-(async()=>{await finishPasswordRecoveryFromLink();if(await finishMagicLinkFromUrl())return;try{const me=await api('/auth/me');if(me.user){await enterMingloraApp(me.user);}else showAuth()}catch{showAuth()}})();
+let sessionRestoreBusy=false;
+async function restoreMingloraSession(){
+  if(sessionRestoreBusy)return;
+  sessionRestoreBusy=true;
+  const panel=$('#session-restore-screen');
+  const message=$('#session-restore-message');
+  const retry=$('#session-restore-retry');
+  panel?.classList.remove('hidden');
+  $('#auth-screen')?.classList.add('hidden');
+  $('#app')?.classList.add('hidden');
+  if(retry)retry.hidden=true;
+  const retryDelays=[0,700,1400,2800,5000];
+  for(let attempt=0;attempt<retryDelays.length;attempt++){
+    if(retryDelays[attempt])await new Promise(resolve=>window.setTimeout(resolve,retryDelays[attempt]));
+    if(message)message.textContent=attempt===0?'Checking your saved sign-in…':'Reconnecting to Minglora. Your saved sign-in is still being preserved…';
+    try{
+      const options=typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function'
+        ?{signal:AbortSignal.timeout(12000)}:{};
+      const me=await api('/auth/me',options);
+      panel?.classList.add('hidden');
+      sessionRestoreBusy=false;
+      if(me.user){
+        try{await enterMingloraApp(me.user);}
+        catch(error){
+          console.warn('Minglora session was restored, but some initial content could not load:',error?.message||error);
+          toast('You are signed in. Some content could not load yet.');
+        }
+      }else showAuth();
+      return;
+    }catch(error){
+      if(message)message.textContent='Reconnecting to Minglora. Your saved sign-in has not been cleared.';
+    }
+  }
+  sessionRestoreBusy=false;
+  if(message)message.textContent='Minglora could not verify your saved sign-in because the connection is unavailable. Your session has not been removed. Restore your connection and try again.';
+  if(retry)retry.hidden=false;
+}
+$('#session-restore-retry')?.addEventListener('click',()=>void restoreMingloraSession());
+(async()=>{
+  await finishPasswordRecoveryFromLink();
+  if(await finishMagicLinkFromUrl())return;
+  await restoreMingloraSession();
+})();
