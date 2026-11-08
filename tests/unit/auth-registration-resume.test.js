@@ -78,3 +78,19 @@ test('a successful registration response without a valid Auth user is rejected',
     error => error.status === 502 && error.code === 'registration_user_missing'
   );
 });
+
+test('a username collision never attempts password sign-in as an email retry', async () => {
+  let signInCalls = 0;
+  const usernameTaken = Object.assign(new Error('That username is already taken. Choose another username.'), {
+    status: 409,
+    code: 'username_already_taken'
+  });
+  await assert.rejects(
+    createOrResumeSupabaseAccount({
+      register: async () => { throw usernameTaken; },
+      signIn: async () => { signInCalls++; return session(); }
+    }),
+    error => error === usernameTaken
+  );
+  assert.equal(signInCalls, 0);
+});
