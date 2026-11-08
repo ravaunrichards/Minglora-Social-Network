@@ -9322,8 +9322,8 @@ async function renderForYouFeed(){
     renderForYouStreamContent(stream);
   }catch(error){
     if(!stream.isConnected||state.view!=='for-you')return;
-    stream.innerHTML='<div class="fyp-empty"><h2>Could not load posts</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Try again</button></div>';
-    stream.querySelector('[data-fyp-refresh]')?.addEventListener('click',()=>void renderForYouFeed());
+    stream.innerHTML='<div class="fyp-empty"><h2>Could not load posts</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" data-fyp-retry>Try again</button></div>';
+    stream.querySelector('[data-fyp-retry]')?.addEventListener('click',()=>void renderForYouFeed());
   }
   startForYouAutoRefresh();
 }
