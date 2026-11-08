@@ -260,3 +260,72 @@
   .profile-thought-card-text{max-width:245px;font-size:12px}
   .profile-thought-card--empty{max-width:min(250px,calc(100vw - 34px))!important}
 }
+
+
+/* Administrator identity and profile management refinement. */
+.profile-header-card--admin .profile-info--admin .profile-info-main{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  gap:5px!important;
+  min-width:0;
+}
+.profile-header-card--admin .profile-info-main .profile-name-with-badges{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:7px!important;
+  margin:0!important;
+  line-height:1.12!important;
+}
+.profile-header-card--admin .profile-info-main .profile-username-line{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  margin:0!important;
+  color:var(--muted)!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+}
+.profile-admin-identity{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:5px;
+}
+.profile-admin-identity-mark{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:30px;
+  padding:5px 9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--card);
+  color:var(--text);
+  box-shadow:0 2px 7px rgba(15,23,42,.07);
+}
+.profile-admin-identity-mark svg{
+  width:17px;height:17px;flex:0 0 17px;fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
+.profile-admin-identity-mark small{font-size:10px;font-weight:850;letter-spacing:.035em}
+.profile-admin-identity-mark--owner{border-color:rgba(190,157,82,.45);background:linear-gradient(135deg,#fff9e9,#fff);color:#8a641c}
+.profile-admin-identity-mark--security{border-color:rgba(43,121,202,.28);background:linear-gradient(135deg,#edf6ff,#fff);color:#2468ae}
+.profile-admin-identity-mark--control{border-color:rgba(117,91,180,.28);background:linear-gradient(135deg,#f4efff,#fff);color:#7254a9}
+.profile-admin-tools-heading{align-items:flex-end}
+.profile-admin-tools-heading>p{max-width:390px}
+.profile-admin-tool{position:relative;text-decoration:none}
+.profile-admin-tool:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.profile-admin-tool--centre{border-color:color-mix(in srgb,var(--blue) 40%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 8%,var(--card)),var(--card))}
+.profile-admin-tool--centre .profile-admin-tool-icon{background:linear-gradient(145deg,#2d7de0,#174d9d);color:#fff}
+.profile-admin-tool--centre .profile-admin-tool-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.profile-admin-tool-arrow{margin-left:auto;color:var(--blue);font-size:15px;font-weight:900}
+@media(max-width:760px){
+  .profile-admin-identity{gap:6px}
+  .profile-admin-identity-mark{min-height:28px;padding:4px 7px}
+  .profile-admin-identity-mark small{font-size:9px}
+}
