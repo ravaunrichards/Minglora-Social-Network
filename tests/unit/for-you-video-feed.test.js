@@ -68,11 +68,14 @@ test('For You is a dedicated full-screen video route with swipe snapping and pho
   assert.match(app, /api\('\/for-you\/videos\?'/);
   assert.match(app, /data-fyp-scope="for-you"/);
   assert.match(app, /data-fyp-scope="following"/);
-  assert.match(app, /data-fyp-nav="create"/);
+  assert.match(app, /data-fyp-scope="following"/);
+  assert.match(app, /data-fyp-scope="for-you"/);
+  assert.match(app, /fyp-profile-action/);
+  assert.doesNotMatch(app, /fyp-bottom-nav|data-fyp-nav="(?:feed|friends|create|messages|profile)"|data-fyp-home/);
   assert.match(styles, /body\.minglora-for-you-active \.topbar[\s\S]*display:none!important/);
   assert.match(styles, /\.fyp-stream\{[\s\S]*scroll-snap-type:y mandatory/);
   assert.match(styles, /\.fyp-video-card\{[\s\S]*height:100dvh/);
-  assert.match(styles, /\.fyp-bottom-nav/);
+  assert.doesNotMatch(styles, /\.fyp-bottom-nav|\.fyp-brand/);
   assert.match(html, /data-view="for-you"/);
 });
 
