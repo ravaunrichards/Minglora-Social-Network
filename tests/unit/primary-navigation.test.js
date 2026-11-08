@@ -24,7 +24,7 @@ test('desktop primary navigation remains unchanged and mobile navigation stays f
   assert.ok(!html.includes('id="mobile-more-menu"'),'The old cramped floating More menu is removed');
   assert.ok(!html.includes('id="mobile-more-btn"'),'The obsolete More dropdown trigger is removed');
   assert.ok(html.includes('id="mobile-more-nav"'),'The More destination is a proper navigation item');
-  assert.ok(html.indexOf('id="search-form"')<html.indexOf('class="top-nav"'),'Search remains before the desktop navigation');
+  assert.ok(html.indexOf('id="top-search-form"')<html.indexOf('class="top-nav"'),'Search remains before the desktop navigation');
 });
 
 test('the More page provides direct access to secondary features and account tools',()=>{
