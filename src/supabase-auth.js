@@ -65,10 +65,13 @@ async function authRequest(path, payload) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data.msg || data.message || data.error_description || data.error || 'Supabase Auth request failed.';
-    const error = new Error(String(message));
-    error.status = response.status === 429 ? 429 : response.status >= 500 ? 503 : response.status;
-    error.code = data.code || data.error || null;
+    const message = String(data.msg || data.message || data.error_description || data.error || 'Supabase Auth request failed.');
+    const invalidCredentials = /invalid login credentials|invalid email or password/i.test(message);
+    const error = new Error(invalidCredentials
+      ? 'Email or password is incorrect. Check the address and password, or use Forgot password to reset it.'
+      : message);
+    error.status = invalidCredentials ? 401 : response.status === 429 ? 429 : response.status >= 500 ? 503 : response.status;
+    error.code = invalidCredentials ? 'invalid_credentials' : (data.code || data.error || null);
     throw error;
   }
   return data;
