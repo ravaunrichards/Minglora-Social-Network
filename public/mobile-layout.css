@@ -48,8 +48,6 @@
   .profile-counts{display:flex;flex-wrap:wrap;gap:8px 14px}
   .profile-info,.profile-info-main,.profile-actions{min-width:0}
   .profile-actions{width:100%;margin-left:0;flex-wrap:wrap}
-  .modal-backdrop{align-items:stretch;overflow:visible!important;max-height:none!important;padding:0;margin:12px 0}
-  .modal{width:100%;max-width:520px;max-height:none!important;overflow:visible!important;margin:0 auto}
 }
 @media(max-width:390px){
   .mobile-hub-grid{grid-template-columns:1fr}
