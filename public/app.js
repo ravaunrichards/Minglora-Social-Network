@@ -9280,6 +9280,7 @@ function renderForYouStreamContent(stream){
       while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex++],index+liveIndex));
     }
   });
+  while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex],state.videoFeed.length+liveIndex++));
   const cards=entries.join('');
   const query=String(state.forYouSearch||'').trim();
   const heading=query?'No matching posts':following?'No posts from accounts you follow yet':'No posts available right now';
