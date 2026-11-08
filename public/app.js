@@ -555,6 +555,7 @@ async function handleMingloraPushNavigation(){
   }catch(error){toast(error.message);}
 }
 function syncNavigationActive(){
+  syncPageLayout();
   const activeView=state.view==='feed'&&state.feedScope==='for-you'?'for-you':state.view;
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===activeView));
   const moreButton=document.querySelector('#mobile-more-nav');
