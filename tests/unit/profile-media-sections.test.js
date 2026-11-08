@@ -42,6 +42,7 @@ test('profile Photos and Reels use media actually attached to the member profile
   assert.match(server, /const profilePhotos=profileMedia\.filter\(media=>media\.mediaType==='image'\)/);
   assert.match(server, /const profileVideos=profileMedia\.filter\(media=>media\.mediaType==='video'&&media\.videoFormat!=='reel'\)/);
   assert.match(server, /const profileReels=profileMedia\.filter\(media=>media\.mediaType==='video'&&media\.videoFormat==='reel'\)/);
+  assert.match(server, /videoFormat:post\.videoFormat==='reel'\?'reel':'video'/);
   assert.match(server, /reels:profileReels/);
   assert.match(server, /videos:profileVideos/);
   assert.match(app, /function openProfileAlbumEditor/);
