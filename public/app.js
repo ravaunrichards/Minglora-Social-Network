@@ -500,7 +500,7 @@ function startMingloraServiceWorkerUpdates(registration){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261107-self-updating-1',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-for-you-general-posts-1',{scope:'/',updateViaCache:'none'});
     startMingloraServiceWorkerUpdates(registration);
     // Keep the installed shell current even while the visitor is signed out.
     // The browser checks for worker updates normally; new versions must not take over this open page.
@@ -9195,6 +9195,8 @@ function setupForYouPlayback(root){
     search.value=state.forYouSearch||'';
     search.addEventListener('input',()=>{
       state.forYouSearch=search.value.trim().slice(0,100);
+      const clearButton=root.querySelector('[data-fyp-search-clear]');
+      if(clearButton)clearButton.hidden=!state.forYouSearch;
       if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
       forYouSearchTimer=window.setTimeout(()=>void searchForYouPosts(),320);
     });
@@ -9303,7 +9305,7 @@ async function renderForYouFeed(){
   state.videoFeed=[];
   state.forYouNextCursor=null;
   state.forYouHasMore=false;
-  setContent('<section class="minglora-for-you"><div class="fyp-loading"><span class="fyp-loading-spinner" aria-hidden="true"></span><strong>Finding videos for you…</strong><small>Loading real videos from Minglora members</small></div></section>');
+  setContent('<section class="minglora-for-you"><div class="fyp-loading"><span class="fyp-loading-spinner" aria-hidden="true"></span><strong>Finding posts for you…</strong><small>Loading real posts from Minglora members</small></div></section>');
   const root=$('#main-content');
   try{
     await fetchForYouPage({reset:true});
