@@ -22,6 +22,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
 
   for (const [view, icon, label] of [
     ['feed', 'home', 'Home'],
+    ['reels', 'video', 'Reels'],
     ['for-you', 'explore', 'For You'],
     ['live', 'live', 'LIVE'],
     ['meetwave', 'meetwave', 'MeetWave'],
@@ -34,13 +35,14 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
   assert.ok(nav.includes('<span class="league-nav-icon" aria-hidden="true">🏆</span><small>Leagues</small>'));
 });
 
-test('mobile header keeps the requested five primary tabs visible below logo and Search', () => {
+test('mobile header keeps the six requested primary tabs visible below logo and Search', () => {
   const navStart = html.indexOf('<nav class="top-nav"');
   const navEnd = html.indexOf('</nav>', navStart);
   const nav = navStart >= 0 && navEnd > navStart ? html.slice(navStart, navEnd) : '';
   assert.ok(nav, 'shared navigation is present in the header');
   for (const [view, icon, label] of [
     ['feed', 'home', 'Home'],
+    ['reels', 'video', 'Reels'],
     ['for-you', 'explore', 'For You'],
     ['live', 'live', 'LIVE'],
     ['meetwave', 'meetwave', 'MeetWave'],
@@ -49,7 +51,7 @@ test('mobile header keeps the requested five primary tabs visible below logo and
     assert.ok(nav.includes(useIcon(icon)), view + ' uses the shared 3D artwork');
     assert.ok(nav.includes('<small>' + label + '</small>'), label + ' label is visible');
   }
-  assert.ok(nav.includes('data-view="leagues"') && nav.includes('Leagues'), 'Leagues remains the fifth primary tab');
+  assert.ok(nav.includes('data-view="leagues"') && nav.includes('Leagues'), 'Leagues remains in the primary navigation');
   assert.ok(css.includes('.top-nav{') && css.includes('display:flex!important'), 'mobile breakpoint explicitly displays the same top navigation');
   assert.ok(css.includes('.mobile-nav{display:none!important}'), 'duplicate bottom navigation is hidden on mobile');
   assert.ok(html.includes('id="top-search-form"') && html.includes('id="top-search-input"'), 'Search remains beside the Minglora logo');
@@ -100,7 +102,7 @@ test('service-worker shell pre-caches the latest icon sprite, stylesheet and app
   assert.match(serviceWorker,/\/assets\/icons\/navigation-3d\.svg/);
 });
 
-test('Facebook-style top bar keeps logo, Search, five navigation tabs and account controls in left-to-right order', () => {
+test('Facebook-style top bar keeps logo, Search, six navigation tabs and account controls in left-to-right order', () => {
   const headerMarker = html.indexOf('class="topbar"');
   const headerStart = html.lastIndexOf('<header', headerMarker);
   const headerEnd = html.indexOf('</header>', headerMarker);
@@ -111,6 +113,7 @@ test('Facebook-style top bar keeps logo, Search, five navigation tabs and accoun
     'id="top-search-form"',
     'class="top-nav"',
     'data-view="feed"',
+    'data-view="reels"',
     'data-view="for-you"',
     'data-view="live"',
     'data-view="meetwave"',
