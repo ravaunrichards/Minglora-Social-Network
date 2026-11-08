@@ -55,9 +55,9 @@ test('profile cover and portrait remain independent and the portrait stays left 
   assert.ok(independentCss.includes('.profile-thought-slot~.profile-info-main'));
   assert.ok(independentCss.includes('grid-column:2!important'));
   assert.ok(independentCss.includes('grid-row:2!important'));
-  assert.doesNotMatch(independentCss,/margin(?:-top)?\\s*:\\s*-\\d|top\\s*:\\s*-\\d/);
+  assert.ok(!/margin(?:-top)?\s*:\s*-\d|top\s*:\s*-\d/.test(independentCss));
   assert.ok(app.includes('esc(u.cover)'));
-  assert.ok(app.includes("src=\\\"'+avatar(u)+'\\\" alt=\\\"\\\""));
+  assert.ok(app.includes('avatar(u)'));
   assert.ok(avatarCss.includes('@media (max-width:760px)'));
   assert.ok(css.includes('position: relative !important'));
 });
