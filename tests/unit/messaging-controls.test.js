@@ -79,7 +79,9 @@ test('Messenger top-right control opens a right-side chats panel with filters, q
     read('../../public/app.js'),read('../../public/styles.css'),read('../../public/index.html'),
     read('../../src/server.js'),read('../../public/settings.js')
   ]);
-  assert.ok(app.includes("$('#messenger-btn')?.addEventListener('click',toggleMessengerPanel)"));
+  assert.ok(app.includes("const messengerButton=$('#messenger-btn')"));
+  assert.ok(app.includes('messengerButton.onclick=()=>{void toggleMessengerPanel()'));
+  assert.ok(app.includes("const notificationsButton=$('#notifications-btn')"));
   assert.ok(app.includes("if(state.view==='messages')updateMessageInboxRows()"));
   assert.ok(app.includes('if(state.messengerPanelOpen)renderMessengerPanelList()'));
   assert.ok(app.includes('if(state.messengerPanelOpen)renderMessengerPanelList()'));
