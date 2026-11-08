@@ -14,7 +14,7 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="messenger-btn"'));
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
-  assert.ok(html.includes('minglora-menu.css?v=20261108-menu-clean-header-2'));
+  assert.ok(html.includes('minglora-menu.css?v=20261108-create-column-scroll-3'));
   assert.ok(html.includes('minglora-menu.js?v=20261108-menu-clean-header-2'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
@@ -45,4 +45,12 @@ test('Menu header does not show the redundant Search Menu side field', () => {
   assert.ok(!script.includes('minglora-menu-search'));
   assert.ok(!css.includes('.minglora-menu-search'));
   assert.match(css, /\.minglora-menu-header\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) 40px/s);
+});
+
+
+test('Create options have their own scroll area on desktop and remain in normal mobile page flow', () => {
+  const css = read('public/minglora-menu.css');
+  assert.match(css, /\.minglora-menu-create-list\s*\{[^}]*max-height:min\(520px,calc\(100dvh - 290px\)\)[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/s);
+  assert.match(css, /\.minglora-menu-create-card\s*\{[^}]*position:sticky/s);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*\.minglora-menu-create-list\s*\{[^}]*max-height:none[^}]*overflow:visible/s);
 });
