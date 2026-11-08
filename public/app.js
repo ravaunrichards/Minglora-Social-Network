@@ -5785,6 +5785,7 @@ function renderProfile(data){
     ? '<section class="profile-admin-tools" aria-label="Administrator profile management"><div class="profile-admin-tools-heading"><div><span>ADMIN ACCOUNT</span><strong>Profile management</strong></div><p>Manage your profile identity, privacy and account presentation.</p></div><div class="profile-admin-tools-grid">'+
       '<button type="button" class="profile-admin-tool" data-profile-admin-action="edit-profile"><span class="profile-admin-tool-icon" aria-hidden="true">✎</span><span>Edit profile</span></button>'+
       '<button type="button" class="profile-admin-tool" data-profile-admin-action="privacy"><span class="profile-admin-tool-icon" aria-hidden="true">⚙</span><span>Privacy &amp; visibility</span></button>'+
+      '<button type="button" class="profile-admin-tool" data-profile-admin-action="edit-story"><span class="profile-admin-tool-icon" aria-hidden="true">▣</span><span>Edit Story</span></button>'+
                   '</div></section>'
     : '';
   const profileActionMarkup=relationshipActions;
