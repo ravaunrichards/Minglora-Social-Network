@@ -29,12 +29,12 @@ test('Minglora Video Centre discovers only real video attachments from the authe
   assert.match(app, /function findVisiblePost\(id\)[\s\S]*state\.videoFeed/);
   assert.match(app, /video-create-button/);
   assert.match(app, /data-video-search|video-search/);
-  assert.match(html, /reels-viewer-1/);
+  assert.match(html, /video-format-separation-1/);
   assert.match(styles, /\.video-centre-feed/);
   assert.match(styles, /\.video-centre-reels/);
   assert.match(styles, /scroll-snap-type:y mandatory/);
   assert.match(styles, /\.minglora-reel-video/);
-  assert.match(html, /reels-viewer-1/);
+  assert.match(html, /video-format-separation-1/);
   assert.doesNotMatch(app, /sampleVideoFixtures|fakeVideoFixtures|seedVideoFeed/i);
 });
 
@@ -45,14 +45,14 @@ test('Minglora Video Centre publishes through a video-only one-file composer', a
   assert.match(app, /new Set\(\['video\/mp4','video\/webm','video\/quicktime'\]\)/);
   assert.match(app, /Choose one supported video file before publishing/);
   assert.match(app, /if\(mediaIds\.length!==1\)/);
-  assert.match(app, /api\('\/posts',\{method:'POST',body:JSON\.stringify\(\{text:values\.get\('text'\),audience:values\.get\('audience'\),mediaIds\}\)\}\)/);
+  assert.match(app, /api\('\/posts',\{method:'POST',body:JSON\.stringify\(\{text:values\.get\('text'\),audience:values\.get\('audience'\),mediaIds,videoFormat:options\.videoFormat==='reel'\?'reel':'video'\}\)\}\)/);
   assert.ok(app.includes("root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer())"));
   assert.ok(app.includes("feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer())"));
 });
 
 test('profile Create reel reuses the single-video composer and returns to the profile', async () => {
   const app = await read('../../public/app.js');
-  assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
+  assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{videoFormat:'reel',onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
   assert.match(app, /if\(typeof options\.onPublished==='function'\)await options\.onPublished\(\)/);
 });
 
