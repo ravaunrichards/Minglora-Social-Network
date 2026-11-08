@@ -27,7 +27,7 @@ test('Home and Following both use real posts and only verified, visible LIVE ses
   assert.match(app, /session\?\.status==='live'&&session\.viewerCountVerified===true/);
   assert.match(app, /scope!=='following'\|\|session\.host\?\.following===true/);
   assert.match(server, /hostPresent/);
-  assert.match(server, /viewerCountVerified:true/);
+  assert.match(server, /viewerCountVerified:\s*true/);
   assert.match(server, /session\.visibility==='public'/);
 });
 
