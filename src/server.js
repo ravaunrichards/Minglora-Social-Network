@@ -23,6 +23,7 @@ import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
+import { buildCreatorVideoAnalytics, CREATOR_VIDEO_ANALYTICS_WINDOWS } from './domain/creator-video-analytics.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
@@ -3594,6 +3595,18 @@ async function route(req, res) {
           userId: user.id, subscriptionId
         });
         return json(res, 200, { ok: true, subscription: saved.subscription });
+      }
+
+      if(method==='GET'&&p==='/api/creator/video-analytics'){
+        const requestedDays=Number(url.searchParams.get('days')||30);
+        if(!CREATOR_VIDEO_ANALYTICS_WINDOWS.includes(requestedDays)){
+          return json(res,400,{error:'Choose a video analytics range of 7, 30 or 90 days.'});
+        }
+        const analytics=buildCreatorVideoAnalytics({
+          creatorId:user.id,posts:db.posts||[],mediaAssets:db.mediaAssets||[],
+          watchEvents:db.videoWatchEvents||[],days:requestedDays,now:new Date()
+        });
+        return json(res,200,analytics);
       }
 
       if(method==='GET'&&p==='/api/creator/earnings'){
