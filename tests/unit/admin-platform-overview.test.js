@@ -2,12 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [runtime, admin, css, html, store] = await Promise.all([
+const [runtime, admin, css, html, store, index, serviceWorker] = await Promise.all([
   readFile(new URL("../../supabase/functions/minglora-runtime-state/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.css", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8"),
-  readFile(new URL("../../src/store.js", import.meta.url), "utf8")
+  readFile(new URL("../../src/store.js", import.meta.url), "utf8"),
+  readFile(new URL("../../public/index.html", import.meta.url), "utf8"),
+  readFile(new URL("../../public/sw.js", import.meta.url), "utf8")
 ]);
 
 test("runtime gateway accepts the audit action called by the owner dashboard", () => {
@@ -37,7 +39,7 @@ test("admin centre renders module and per-collection totals from the live snapsh
   assert.match(admin, /private message contents/i);
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
-  assert.match(html, /20261108-admin-overview-1/);
+  assert.match(html, /20261108-admin-account-inline-1/);
 });
 
 
@@ -50,4 +52,13 @@ test("existing Admin Centre opens inside the authorized Admin Account using the 
   assert.match(admin, /authenticator-verified session/i);
   assert.match(css, /admin-centre-profile-root\[hidden\]/);
   assert.match(html, /20261108-admin-account-inline-1/);
+});
+
+
+test("app shell and service worker load the current embedded Admin Centre assets", () => {
+  assert.match(index, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
+  assert.match(index, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
+  assert.match(serviceWorker, /minglora-shell-v233-admin-account-centre-1/);
+  assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
+  assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
 });
