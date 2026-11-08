@@ -8,6 +8,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
 const tiktokCss=read('public/profile-tiktok-layout.css');
+const finalHeaderCss=tiktokCss.slice(tiktokCss.indexOf('/* FINAL FACEBOOK PROFILE HEADER'));
 const facebookCss=read('public/profile-facebook-panel.css');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
@@ -20,21 +21,22 @@ test('owner profile keeps Edit profile and Add to story without separate photo e
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
 });
 
-test('profile uses a TikTok-style creator header with no cover overlap',()=>{
-  assert.match(tiktokCss,/\.profile-header-card \.profile-cover\s*\{\s*display:\s*none/);
-  assert.match(tiktokCss,/\.profile-avatar-edit-wrap\s*\{[\s\S]*?margin:\s*0/);
-  assert.match(tiktokCss,/\.profile-avatar-edit-wrap > \.avatar\s*\{[\s\S]*?width:\s*128px/);
-  assert.match(tiktokCss,/\.profile-header-card \.profile-counts\s*\{[\s\S]*?grid-column:\s*2/);
+test('profile cover and portrait match Facebook lower-edge placement',()=>{
+  assert.ok(finalHeaderCss.length>0,'final header override exists in the last-loaded profile stylesheet');
+  assert.match(finalHeaderCss,/\.profile-header-card \.profile-cover\{[\s\S]*?display:block!important/);
+  assert.match(finalHeaderCss,/\.profile-avatar-edit-wrap\{[\s\S]*?position:absolute!important;[\s\S]*?left:22px!important;[\s\S]*?top:-84px!important/);
+  assert.match(finalHeaderCss,/\.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?width:168px!important;[\s\S]*?height:168px!important/);
+  assert.match(finalHeaderCss,/\.profile-info\{[\s\S]*?padding:16px 22px 14px 212px!important/);
   assert.ok(app.includes('const profileBioMarkup='));
   assert.ok(app.includes("profileBioMarkup+(data.profileStatus?"));
   assert.ok(app.includes("[['posts','Posts'],['reels','Reels'],['photos','Photos']"));
 });
 
-test('phone profile stacks identity, stats and actions without hiding the portrait',()=>{
-  assert.match(tiktokCss,/@media \(max-width: 760px\)[\s\S]*?flex-basis: 84px/);
-  assert.match(tiktokCss,/@media \(max-width: 760px\)[\s\S]*?grid-row: 2/);
-  assert.match(tiktokCss,/@media \(max-width: 760px\)[\s\S]*?grid-row: 3/);
-  assert.doesNotMatch(tiktokCss,/profile-avatar-edit-wrap\s*\{[^}]*display:\s*none/);
+test('phone profile keeps the portrait on the cover edge and clears identity beside it',()=>{
+  assert.match(finalHeaderCss,/@media \(max-width:760px\)[\s\S]*?\.profile-avatar-edit-wrap\{[\s\S]*?left:13px!important;[\s\S]*?top:-48px!important/);
+  assert.match(finalHeaderCss,/@media \(max-width:760px\)[\s\S]*?\.profile-info-main\{[\s\S]*?padding:0 0 0 109px!important/);
+  assert.match(finalHeaderCss,/@media \(max-width:390px\)[\s\S]*?left:10px!important;[\s\S]*?top:-44px!important/);
+  assert.doesNotMatch(finalHeaderCss,/\.profile-avatar-edit-wrap\s*\{[^}]*display:\s*none/);
 });
 
 test('picture and cover remain editable in the normal Edit profile dialog',()=>{
