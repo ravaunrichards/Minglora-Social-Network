@@ -7,11 +7,10 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
-const css=read('public/profile-action-row.css');
+const css=read('public/profile-tiktok-layout.css');
 
 test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
-  assert.doesNotMatch(app,/profile-media-action-row|profile-avatar-inline-edit|profile-inline-media-edit/);
   assert.match(app,/class="profile-actions profile-owner-actions"/);
   assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
   assert.match(app,/id="profile-add-story" type="button" aria-label="Add to story"/);
@@ -45,11 +44,11 @@ test('admin profile keeps shared owner actions and its standard administrator to
   assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
 });
 
-test('profile media is visible on mobile with the Facebook-style cover crop',()=>{
-  assert.match(css,/\.minglora-profile-page \.profile-header-card \.profile-cover-image\{[^}]*object-fit:cover/);
-  assert.match(css,/@media\(max-width:760px\)[\s\S]*?--minglora-profile-avatar-size:112px/);
-  assert.match(css,/@media\(max-width:390px\)[\s\S]*?--minglora-profile-avatar-size:100px/);
-  assert.doesNotMatch(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[^}]*display:none!important/);
+test('profile uses TikTok-style mobile sizing without hiding the profile portrait',()=>{
+  assert.match(css,/\.profile-header-card \.profile-cover\s*\{\s*display:\s*none/);
+  assert.match(css,/@media \(max-width: 760px\)[\s\S]*?flex-basis: 84px/);
+  assert.match(css,/@media \(max-width: 760px\)[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(css,/profile-avatar-edit-wrap\s*\{[^}]*display:\s*none/);
 });
 
 test('profile editing retains centered native dialogs and About section editing',()=>{
