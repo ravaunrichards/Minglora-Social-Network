@@ -9372,8 +9372,8 @@ async function renderVideoCentre(){
   };
   const drawVideoPosts=()=>{
     const query=String(state.videoSearch||'').trim().toLowerCase();
-    const modePosts=(mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel')).filter(post=>state.videoScope!=='profile'||isCurrentProfilePost(post));
-    const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
+    const modePosts=mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
+    const visible=modePosts.filter(post=>state.videoScope!=='profile'||isCurrentProfilePost(post)).filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
     if(mode==='reels'){
       const reels=visible.flatMap(post=>(post.media||[]).filter(media=>media.mediaType==='video'&&media.url).map(media=>({post,media})));
       feed.innerHTML=reels.length?'<div class="video-centre-reels">'+reels.map((reel,index)=>renderReelCard(reel.post,reel.media,index)).join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No Reels found</h3><p>'+(query?'Try another search or change the video audience.':'There are no real video posts in this feed yet. Publish a video to start the Reels experience.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
