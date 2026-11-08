@@ -679,6 +679,7 @@ function renderSavedControls(post){
 function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
   const savedControls=options.saved?renderSavedControls(post):'';
+  const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
       <div class="post-author"><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}</strong><small>@${esc(author.username||'')} ${verifiedProfileBadge(author)}${gifterProfileBadge(author)} · ${timeAgo(post.createdAt)} · ◉</small></div>
@@ -691,6 +692,7 @@ function postCard(post,options={}){
     <div class="post-actions">
       <button class="${post.myReaction?'liked':''}" data-react="${esc(post.id)}">${post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction?'👍':'♡'} &nbsp; ${post.myReaction?esc(post.myReaction[0].toUpperCase()+post.myReaction.slice(1)):'Like'}</button>
       <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
+      ${watchLaterControl}
       <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
@@ -742,6 +744,16 @@ function bindFeed(root=document){
     catch(err){toast(err.message);}
   }));
   root.querySelectorAll('[data-focus-comment]').forEach(el=>el.addEventListener('click',()=>root.querySelector(`[data-comment-form="${el.dataset.focusComment}"] input`)?.focus()));
+  root.querySelectorAll('[data-watch-later]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const adding=btn.dataset.watchLaterSaved!=='true';
+    btn.disabled=true;
+    try{
+      await api('/posts/'+encodeURIComponent(btn.dataset.watchLater)+'/watch-later',{method:adding?'POST':'DELETE',body:'{}'});
+      toast(adding?'Added to Watch Later.':'Removed from Watch Later.');
+      if(state.view==='videos')await renderVideoCentre();
+      else await refreshVisiblePosts();
+    }catch(error){toast(error.message);btn.disabled=false;}
+  }));
   root.querySelectorAll('[data-toggle-save]').forEach(btn=>btn.addEventListener('click',async()=>{
     const saving=btn.dataset.saved!=='true';
     try{await api(`/posts/${btn.dataset.toggleSave}/save`,{method:saving?'POST':'DELETE',body:'{}'});await refreshVisiblePosts();toast(saving?'Post saved.':'Post removed from saved posts.');}
@@ -8902,6 +8914,7 @@ function renderReelCard(post,media,index){
       '<div class="minglora-reel-actions">'+
         '<button type="button" class="'+(post.myReaction?'liked':'')+'" data-react="'+esc(post.id)+'">♡ '+esc(likedLabel)+' · '+Number(post.reactionCount||0).toLocaleString()+'</button>'+
         '<button type="button" data-focus-comment="'+esc(post.id)+'">Comments · '+comments.length.toLocaleString()+'</button>'+
+        '<button type="button" data-watch-later="'+esc(post.id)+'" data-watch-later-saved="'+(post.isWatchLater?'true':'false')+'">'+(post.isWatchLater?'✓ Watch Later':'＋ Watch Later')+'</button>'+
         '<button type="button" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'">'+(post.isSaved?'Saved':'Save')+'</button>'+
         '<button type="button" data-share="'+esc(post.id)+'">Share</button>'+
         '<button type="button" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'">Gift</button>'+
@@ -8944,17 +8957,17 @@ function bindReelPlayback(root){
 }
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
-  const mode=['videos','reels'].includes(state.videoMode)?state.videoMode:'videos';
+  const mode=['videos','reels','watch-later'].includes(state.videoMode)?state.videoMode:'videos';
   state.videoScope=scope;
   state.videoMode=mode;
-  const result=await api('/feed?scope='+encodeURIComponent(scope)+'&limit=100');
+  const result=mode==='watch-later'?await api('/video-watch-later'):await api('/feed?scope='+encodeURIComponent(scope)+'&limit=100');
   state.videoFeed=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
-  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button></nav><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button></nav><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
   const root=$('#main-content');
   const feed=root.querySelector('#video-centre-feed');
   const drawVideoPosts=()=>{
     const query=String(state.videoSearch||'').trim().toLowerCase();
-    const modePosts=state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
+    const modePosts=mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
     const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
     if(mode==='reels'){
       const reels=visible.flatMap(post=>(post.media||[]).filter(media=>media.mediaType==='video'&&media.url).map(media=>({post,media})));
@@ -8962,7 +8975,9 @@ async function renderVideoCentre(){
       bindFeed(feed);
       bindReelPlayback(feed);
     }else{
-      feed.innerHTML=visible.length?visible.map(postCard).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No videos found</h3><p>'+(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      const emptyTitle=mode==='watch-later'?'Your Watch Later list is empty':'No videos found';
+      const emptyCopy=mode==='watch-later'?'Save any video or Reel here to watch it later.':(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.');
+      feed.innerHTML=visible.length?visible.map(post=>postCard(post,{videoWatchLater:true})).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>'+emptyTitle+'</h3><p>'+emptyCopy+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
       bindFeed(feed);
     }
     feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));

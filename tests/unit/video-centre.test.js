@@ -29,12 +29,12 @@ test('Minglora Video Centre discovers only real video attachments from the authe
   assert.match(app, /function findVisiblePost\(id\)[\s\S]*state\.videoFeed/);
   assert.match(app, /video-create-button/);
   assert.match(app, /data-video-search|video-search/);
-  assert.match(html, /video-format-separation-1/);
+  assert.match(html, /watch-later-1/);
   assert.match(styles, /\.video-centre-feed/);
   assert.match(styles, /\.video-centre-reels/);
   assert.match(styles, /scroll-snap-type:y mandatory/);
   assert.match(styles, /\.minglora-reel-video/);
-  assert.match(html, /video-format-separation-1/);
+  assert.match(html, /watch-later-1/);
   assert.doesNotMatch(app, /sampleVideoFixtures|fakeVideoFixtures|seedVideoFeed/i);
 });
 
@@ -62,9 +62,29 @@ test('Minglora stores and filters Video and Reel posts as distinct formats', asy
     read('../../src/server.js')
   ]);
   assert.match(app, /videoFormat:options\.videoFormat==='reel'\?'reel':'video'/);
-  assert.match(app, /modePosts=state\.videoFeed\.filter\(post=>mode==='reels'\?post\.videoFormat==='reel':post\.videoFormat!=='reel'\)/);
+  assert.match(app, /modePosts=mode==='watch-later'\?state\.videoFeed:state\.videoFeed\.filter\(post=>mode==='reels'\?post\.videoFormat==='reel':post\.videoFormat!=='reel'\)/);
   assert.match(app, /openVideoComposer\(\{videoFormat:mode==='reels'\?'reel':'video'\}\)/);
   assert.match(server, /requestedVideoFormat=input\.videoFormat===undefined\|\|input\.videoFormat===null\?null:String\(input\.videoFormat\)/);
   assert.match(server, /requestedVideoFormat&&\(assets\.length!==1\|\|assets\[0\]\?\.mediaType!=='video'\)/);
   assert.match(server, /videoFormat:requestedVideoFormat/);
+});
+
+test('Minglora Watch Later is private and accepts only posts containing an accessible video', async () => {
+  const [app, server, store] = await Promise.all([
+    read('../../public/app.js'),
+    read('../../src/server.js'),
+    read('../../src/store.js')
+  ]);
+  assert.match(app, /data-video-mode="watch-later"/);
+  assert.match(app, /api\('\/video-watch-later'\)/);
+  assert.match(app, /data-watch-later=/);
+  assert.match(app, /data-watch-later-saved=/);
+  assert.match(server, /if\(method==='GET'&&p==='\/api\/video-watch-later'\)/);
+  assert.match(server, /if\(\(method==='POST'\|\|method==='DELETE'\)&&m\)/);
+  assert.match(server, /saved\.readLater=true/);
+  assert.match(server, /saved\.readLater=false/);
+  assert.match(server, /media\.mediaType==='video'&&media\.url/);
+  assert.match(server, /canViewProfileAudience\(user\.id,post\.userId,post\.audience\|\|'public'\)/);
+  assert.match(server, /isWatchLater:\(db\.savedPosts\|\|\[\]\)\.some\(saved=>saved\.userId===viewerId&&saved\.postId===p\.id&&saved\.readLater===true\)/);
+  assert.match(store, /'savedPosts'/);
 });

@@ -975,6 +975,7 @@ async function publicPost(p,viewerId) {
   const {imageUrl,...cleanPost}=p;
   return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
+    isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
 async function publicDiscoveryPost(post) {
@@ -4563,6 +4564,42 @@ async function route(req, res) {
         (post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
         db.savedPosts=(db.savedPosts||[]).filter(saved=>saved.postId!==post.id);
         await saveStore();return json(res,200,{ok:true,id:post.id});
+      }
+      if(method==='GET'&&p==='/api/video-watch-later'){
+        const records=(db.savedPosts||[]).filter(saved=>saved.userId===user.id&&saved.readLater===true);
+        const posts=(await Promise.all(records.map(async saved=>{
+          const post=(db.posts||[]).find(item=>item.id===saved.postId);
+          if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||
+            !canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||
+            !canViewProfileAudience(user.id,post.userId,post.audience||'public'))return null;
+          const published=await publicPost(post,user.id);
+          if(!(published.media||[]).some(media=>media.mediaType==='video'&&media.url))return null;
+          return {...published,watchLaterAt:saved.updatedAt||saved.createdAt||null,isWatchLater:true};
+        }))).filter(Boolean).sort((a,b)=>new Date(b.watchLaterAt||0)-new Date(a.watchLaterAt||0));
+        return json(res,200,{posts});
+      }
+      m=p.match(/^\/api\/posts\/([^/]+)\/watch-later$/);
+      if((method==='POST'||method==='DELETE')&&m){
+        const post=(db.posts||[]).find(item=>item.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||
+          !canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||
+          !canViewProfileAudience(user.id,post.userId,post.audience||'public'))return json(res,404,{error:'Video post not found.'});
+        const published=await publicPost(post,user.id);
+        if(!(published.media||[]).some(media=>media.mediaType==='video'&&media.url))return json(res,400,{error:'Only posts containing an available video can be added to Watch Later.'});
+        let saved=(db.savedPosts||[]).find(item=>item.userId===user.id&&item.postId===post.id);
+        if(method==='POST'){
+          if(!saved){
+            saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false};
+            db.savedPosts.push(saved);
+          }
+          saved.readLater=true;
+          saved.updatedAt=now();
+        }else if(saved){
+          saved.readLater=false;
+          saved.updatedAt=now();
+        }
+        await saveStore();
+        return json(res,200,{watchLater:method==='POST',postId:post.id});
       }
       if(method==='GET'&&p==='/api/saved-posts'){
         const records=(db.savedPosts||[]).filter(saved=>saved.userId===user.id);
