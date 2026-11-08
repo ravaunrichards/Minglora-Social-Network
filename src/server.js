@@ -4451,7 +4451,14 @@ async function route(req, res) {
         } else if(scope==='friends'){
           eligibleIds=new Set([user.id,...getMutualFollowIds(db.follows||[],user.id,db.blocks||[])]);
         }
-        const visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
+        const searchQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
+        if(searchQuery){
+          visiblePosts=visiblePosts.filter(post=>{
+            const author=db.users.find(profile=>profile.id===post.userId);
+            return [post.text,author?.name,author?.username].some(value=>String(value||'').toLowerCase().includes(searchQuery));
+          });
+        }
         const orderedPosts=scope==='for-you'
           ?rankForYouFeed(visiblePosts,user.id,db.follows||[],db.savedPosts||[])
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
