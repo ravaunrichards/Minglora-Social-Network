@@ -288,7 +288,8 @@ public final class MainActivity extends Activity {
         }
 
         String fileName = URLUtil.guessFileName(rawUrl, contentDisposition, mimeType);
-        fileName = fileName == null ? "" : fileName.replaceAll("[\\\\/\\\\\\\\\\p{Cntrl}]", "_").trim();
+        fileName = fileName == null ? "" : fileName.replaceAll("[^A-Za-z0-9._ -]", "_").trim();
+        if (fileName.length() > 120) fileName = fileName.substring(0, 120);
         if (fileName.isEmpty() || ".".equals(fileName) || "..".equals(fileName)) {
             fileName = "minglora-download";
         }
