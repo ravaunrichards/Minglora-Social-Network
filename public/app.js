@@ -9,6 +9,7 @@ function getBrowserNavigationSnapshot(){
   return {
     view:state.view,
     feedScope:state.feedScope||'all',
+    forYouScope:state.forYouScope||'for-you',
     profileId:state.profileTargetId||state.profile?.user?.id||'',
     profileTab:state.profileTab||'posts',
     activePage:state.activePage||'',
@@ -72,6 +73,7 @@ async function restoreBrowserNavigation(event){
   try{
     state.view=saved.view;
     state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
+    state.forYouScope=saved.forYouScope==='following'?'following':'for-you';
     state.profileTargetId=String(saved.profileId||'');
     state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
     state.activePage=String(saved.activePage||'')||null;
@@ -111,6 +113,7 @@ function persistCurrentView(){
     sessionStorage.setItem(lastViewStorageKey(),JSON.stringify({
       view:state.view,
       feedScope:state.feedScope,
+      forYouScope:state.forYouScope,
       profileId:state.profileTargetId||state.profile?.user?.id||'',
       profileTab:state.profileTab||'posts',
       activePage:state.activePage||'',
@@ -149,6 +152,7 @@ async function restoreLastView(){
   const saved=readPersistedView();
   if(!saved){activateNav('feed');return;}
   state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
+  state.forYouScope=saved.forYouScope==='following'?'following':'for-you';
   state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
   state.profileTargetId=String(saved.profileId||'');
   state.activePage=String(saved.activePage||'')||null;
@@ -9046,10 +9050,11 @@ function forYouCard(post,index){
 }
 function teardownForYouPlayback(){
   if(forYouPlaybackObserver){forYouPlaybackObserver.disconnect();forYouPlaybackObserver=null;}
-  forYouActiveVideos.forEach(video=>{video.pause();video.removeAttribute('src');});
+  forYouActiveVideos.forEach(video=>video.pause());
   forYouActiveVideos=[];
 }
 function setupForYouPlayback(root){
+  if(!root)return;
   teardownForYouPlayback();
   const cards=Array.from(root.querySelectorAll('.fyp-video-card'));
   const videos=cards.map(card=>card.querySelector('[data-fyp-video]')).filter(Boolean);
@@ -9060,15 +9065,17 @@ function setupForYouPlayback(root){
     const durationMs=Math.round(Number(video.duration||0)*1000);
     video.dataset.watchBuffer='0';
     if(postId&&watchedMs>=1000&&durationMs>=1000){
-      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});}catch(error){console.warn('[Minglora] Video watch signal not saved:',error?.message||error);}
+      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});}
+      catch(error){console.warn('[Minglora] Video watch signal not saved:',error?.message||error);}
     }
   };
   videos.forEach(video=>{
+    if(video.dataset.fypBound==='true')return;
+    video.dataset.fypBound='true';
     video.dataset.lastMediaTime='0';
     video.dataset.watchBuffer='0';
     video.addEventListener('timeupdate',()=>{
-      const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0);
-      const delta=current-previous;
+      const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0),delta=current-previous;
       if(!video.paused&&delta>0&&delta<=2.5){
         video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
         if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
@@ -9089,75 +9096,88 @@ function setupForYouPlayback(root){
         const video=entry.target;
         if(entry.isIntersecting&&entry.intersectionRatio>=0.7){
           videos.forEach(other=>{if(other!==video)other.pause();});
-          video.play().then(()=>{video.closest('.fyp-video-card')?.classList.remove('is-paused');}).catch(()=>{video.closest('.fyp-video-card')?.classList.add('is-paused');});
+          video.play().then(()=>video.closest('.fyp-video-card')?.classList.remove('is-paused'))
+            .catch(()=>video.closest('.fyp-video-card')?.classList.add('is-paused'));
         }else video.pause();
       });
     },{root:stream,threshold:[0,0.7,1]});
     videos.forEach(video=>forYouPlaybackObserver.observe(video));
   }else if(videos[0])videos[0].play().catch(()=>{});
-  root.querySelectorAll('[data-fyp-play]').forEach(button=>button.addEventListener('click',()=>{
+
+  const bindOnce=(selector,handler)=>root.querySelectorAll(selector).forEach(button=>{
+    if(button.dataset.fypBound==='true')return;
+    button.dataset.fypBound='true';
+    button.addEventListener('click',handler);
+  });
+  bindOnce('[data-fyp-play]',button=>{
     const video=button.closest('.fyp-video-card')?.querySelector('[data-fyp-video]');
     if(!video)return;
-    if(video.paused)video.play().catch(()=>{});
-    else video.pause();
+    if(video.paused)video.play().catch(()=>{});else video.pause();
     button.closest('.fyp-video-card')?.classList.toggle('is-paused',video.paused);
-  }));
-  root.querySelectorAll('[data-fyp-sound]').forEach(button=>button.addEventListener('click',()=>{
+  });
+  bindOnce('[data-fyp-sound]',button=>{
     const video=button.closest('.fyp-video-card')?.querySelector('[data-fyp-video]');
     if(!video)return;
     video.muted=!video.muted;
     button.textContent=video.muted?'♫':'🔊';
     if(!video.paused)video.play().catch(()=>{});
-  }));
-  root.querySelectorAll('[data-fyp-not-interested]').forEach(button=>button.addEventListener('click',async()=>{
+  });
+  bindOnce('[data-fyp-not-interested]',async button=>{
     const postId=button.dataset.fypNotInterested;
     button.disabled=true;
     try{
       await api('/videos/'+encodeURIComponent(postId)+'/feedback',{method:'POST',body:JSON.stringify({action:'not_interested'})});
       state.videoFeed=state.videoFeed.filter(post=>post.id!==postId);
-      const card=button.closest('.fyp-video-card');card?.remove();
+      button.closest('.fyp-video-card')?.remove();
       if(state.videoFeed.length<4&&state.forYouHasMore)await loadMoreForYouVideos();
       toast('We’ll show you fewer videos like this.');
     }catch(error){toast(error.message);button.disabled=false;}
-  }));
-  root.querySelectorAll('[data-foryou-follow]').forEach(button=>button.addEventListener('click',async()=>{
+  });
+  bindOnce('[data-foryou-follow]',async button=>{
     const id=button.dataset.foryouFollow;if(!id)return;
     const following=button.dataset.following==='true';button.disabled=true;
     try{
       const result=await api('/users/'+encodeURIComponent(id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
       const next=!following;button.dataset.following=String(next);button.classList.toggle('following',next);button.textContent=next?'Following':'Follow';
-      const post=state.videoFeed.find(item=>item.author?.id===id);if(post)post.following=next;
+      state.videoFeed.filter(post=>post.author?.id===id).forEach(post=>post.following=next);
       toast(result.friends?'You are now friends through mutual follows.':(next?'Now following creator.':'Unfollowed creator.'));
     }catch(error){toast(error.message);}
     finally{button.disabled=false;}
-  }));
-  root.querySelectorAll('[data-fyp-scope]').forEach(button=>button.addEventListener('click',async()=>{
+  });
+  bindOnce('[data-fyp-scope]',async button=>{
     const scope=button.dataset.fypScope;
     if(scope===state.forYouScope)return;
-    state.forYouScope=scope;state.forYouSearch='';
+    state.forYouScope=scope;
+    state.forYouSearch='';
     await renderForYouFeed();
-  }));
-  root.querySelectorAll('[data-fyp-home]').forEach(button=>button.addEventListener('click',()=>activateNav('feed')));
-  root.querySelectorAll('[data-fyp-search]').forEach(button=>button.addEventListener('click',()=>{
+  });
+  bindOnce('[data-fyp-home]',()=>activateNav('feed'));
+  bindOnce('[data-fyp-search]',()=>{
     const search=root.querySelector('#fyp-search-input');
     if(search){search.hidden=false;search.focus();}
-  }));
-  root.querySelectorAll('[data-focus-comment]').forEach(button=>button.addEventListener('click',()=>{
+  });
+  bindOnce('[data-focus-comment]',button=>{
     const form=root.querySelector('[data-comment-form="'+CSS.escape(button.dataset.focusComment)+'"]');
     if(form){form.hidden=false;form.querySelector('input')?.focus();}
-  }));
-  const search=root.querySelector('#fyp-search-input');
-  search?.addEventListener('input',()=>{
-    const q=search.value.trim().toLowerCase();
-    root.querySelectorAll('.fyp-video-card').forEach(card=>{
-      const post=state.videoFeed.find(item=>item.id===card.dataset.fypPost);
-      const haystack=[post?.text,post?.author?.name,post?.author?.username].join(' ').toLowerCase();
-      card.hidden=Boolean(q&&!haystack.includes(q));
-    });
   });
-  stream?.addEventListener('scroll',()=>{
-    if(stream.scrollTop+stream.clientHeight>=stream.scrollHeight-700&&state.forYouHasMore&&!state.forYouLoading)void loadMoreForYouVideos();
-  },{passive:true});
+  const search=root.querySelector('#fyp-search-input');
+  if(search&&search.dataset.fypBound!=='true'){
+    search.dataset.fypBound='true';
+    search.addEventListener('input',()=>{
+      const q=search.value.trim().toLowerCase();
+      root.querySelectorAll('.fyp-video-card').forEach(card=>{
+        const post=state.videoFeed.find(item=>item.id===card.dataset.fypPost);
+        const haystack=[post?.text,post?.author?.name,post?.author?.username].join(' ').toLowerCase();
+        card.hidden=Boolean(q&&!haystack.includes(q));
+      });
+    });
+  }
+  if(stream&&stream.dataset.fypScrollBound!=='true'){
+    stream.dataset.fypScrollBound='true';
+    stream.addEventListener('scroll',()=>{
+      if(stream.scrollTop+stream.clientHeight>=stream.scrollHeight-700&&state.forYouHasMore&&!state.forYouLoading)void loadMoreForYouVideos();
+    },{passive:true});
+  }
 }
 async function loadMoreForYouVideos(){
   if(state.forYouLoading||!state.forYouHasMore)return;
@@ -9166,9 +9186,11 @@ async function loadMoreForYouVideos(){
   const stream=document.querySelector('#fyp-stream');
   if(!stream)return;
   const start=state.videoFeed.length-items.length;
-  stream.insertAdjacentHTML('beforeend',items.map((post,index)=>forYouCard(post,start+index)).join(''));
+  const pending=document.createElement('div');
+  pending.innerHTML=items.map((post,index)=>forYouCard(post,start+index)).join('');
+  bindFeed(pending);
+  while(pending.firstChild)stream.appendChild(pending.firstChild);
   setupForYouPlayback(document.querySelector('.minglora-for-you'));
-  bindFeed(stream);
 }
 async function renderForYouFeed(){
   state.view='for-you';
@@ -9187,20 +9209,10 @@ async function renderForYouFeed(){
     main.querySelector('#fyp-create-video')?.addEventListener('click',()=>openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()}));
     bindFeed(main.querySelector('#fyp-stream')||main);
     setupForYouPlayback(main.querySelector('.minglora-for-you'));
-    main.querySelectorAll('[data-fyp-scope]').forEach(button=>button.addEventListener('click',async()=>{
-      const scope=button.dataset.fypScope;if(scope===state.forYouScope)return;
-      state.forYouScope=scope;await renderForYouFeed();
-    }));
-    main.querySelectorAll('[data-fyp-search]').forEach(button=>button.addEventListener('click',()=>{const input=main.querySelector('#fyp-search-input');input.hidden=false;input.focus();}));
-    main.querySelector('#fyp-search-input')?.addEventListener('input',event=>{
-      const q=event.target.value.trim().toLowerCase();
-      main.querySelectorAll('.fyp-video-card').forEach(card=>{
-        const post=state.videoFeed.find(item=>item.id===card.dataset.fypPost);
-        card.hidden=Boolean(q&&!([post?.text,post?.author?.name,post?.author?.username].join(' ').toLowerCase().includes(q)));
-      });
-    });
-    main.querySelectorAll('[data-fyp-home]').forEach(button=>button.addEventListener('click',()=>activateNav('feed')));
-  }catch(error){setContent('<section class="minglora-for-you"><div class="fyp-empty"><h2>Could not load For You videos</h2><p>'+esc(error.message)+'</p><button type="button" class="primary" id="fyp-retry">Try again</button></div></section>');$('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());}
+  }catch(error){
+    setContent('<section class="minglora-for-you"><div class="fyp-empty"><h2>Could not load For You videos</h2><p>'+esc(error.message)+'</p><button type="button" class="primary" id="fyp-retry">Try again</button></div></section>');
+    $('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());
+  }
 }
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
