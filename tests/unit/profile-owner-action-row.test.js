@@ -34,6 +34,7 @@ test('phone profile retains its larger visible portrait and action row below ide
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?:root\{--minglora-profile-avatar-size:112px\}/);
   assert.match(css,/@media\(max-width:390px\)[\s\S]*?:root\{--minglora-profile-avatar-size:100px\}/);
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.minglora-profile-page \.profile-header-card--owner \.profile-owner-actions\{[^}]*grid-row:3/);
+  assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.minglora-profile-page \.profile-header-card--owner \.profile-counts\{grid-row:4!important\}/);
   assert.doesNotMatch(css,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[^}]*display:none!important/);
 });
 
@@ -53,8 +54,8 @@ test('picture and cover remain editable in the normal Edit profile dialog only',
 test('updated profile assets are loaded and precached by a refreshed shell cache',()=>{
   for(const asset of [
     '/profile-alignment.css?v=20261108-facebook-profile-avatar-168-1',
-    '/profile-action-row.css?v=20261108-facebook-profile-header-6',
-    '/app.js?v=20261108-facebook-profile-tabs-4'
+    '/profile-action-row.css?v=20261108-facebook-profile-header-7',
+    '/app.js?v=20261108-tiktok-for-you-focus-1'
   ]){
     assert.ok(html.includes(asset),'index.html references '+asset);
     assert.ok(worker.includes("'"+asset+"'"),'service worker precaches '+asset);
