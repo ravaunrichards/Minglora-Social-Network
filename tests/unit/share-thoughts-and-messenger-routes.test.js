@@ -32,8 +32,11 @@ test('Messenger controls connect to conversation, user, settings and read-receip
 
   assert.ok(app.includes("$('#messenger-btn')?.addEventListener('click',toggleMessengerPanel)"));
   assert.ok(app.includes("panel.querySelector('[data-messenger-close]')?.addEventListener('click',closeMessengerPanel)"));
-  assert.ok(app.includes("function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'"), 'navigation must not dismiss pinned chats');
-  assert.ok(app.includes('Keep Chats pinned while the user works elsewhere.'));
+  const activateNavStart=app.indexOf('function activateNav(view){');
+  const activateNavEnd=app.indexOf('\nwindow.MingloraActivateView',activateNavStart);
+  const activateNav=activateNavStart>=0&&activateNavEnd>activateNavStart?app.slice(activateNavStart,activateNavEnd):'';
+  assert.ok(activateNav.includes('state.view=view;')&&activateNav.includes('syncMessageRefreshPolling()'), 'navigation keeps the authenticated Messenger session active');
+  assert.ok(!activateNav.includes('closeMessengerPanel('), 'navigation must not dismiss pinned chats');
   assert.ok(!app.includes("if(event.key==='Escape'&&state.messengerPanelOpen)closeMessengerPanel()"), 'Escape must not dismiss pinned chats');
   assert.ok(!app.includes("!panel.contains(event.target)&&!button?.contains(event.target))closeMessengerPanel()"), 'outside clicks must not dismiss pinned chats');
   assert.ok(app.includes("panel.querySelectorAll('[data-messenger-destination]').forEach(button=>button.onclick=()=>openMessengerDestination(button.dataset.messengerDestination))"));
