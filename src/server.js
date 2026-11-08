@@ -19,6 +19,7 @@ import { normalizeCalendarEntry } from '../backend/modules/calendar/service.js';
 import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired, getMessageConversationPeerId } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
+import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
@@ -1468,20 +1469,17 @@ async function route(req, res) {
           if (db.users.some(u=>u.username===username)) return json(res,409,{error:'That username is already taken. Choose another username.',code:'username_already_taken'});
         }
         if (AUTH_PROVIDER === 'supabase') {
-          const registration = await requestSupabaseState('auth_register_user', {
-            email, password, name, username, phoneNumber
+          const { authenticated, resumedExistingAccount } = await createOrResumeSupabaseAccount({
+            register: () => requestSupabaseState('auth_register_user', {
+              email, password, name, username, phoneNumber
+            }),
+            signIn: () => supabaseSignIn({ email, password })
           });
-          const authUser = registration.user;
-          if (!authUser?.id || !registration.emailConfirmed) {
-            return json(res,502,{error:'Minglora could not confirm the new account with its private Auth service.'});
-          }
-          const authenticated = await supabaseSignIn({ email, password });
-          if (!authenticated.user?.id || !authenticated.access_token) {
-            return json(res,502,{error:'Your account was created, but Minglora could not start your sign-in session. Please log in with the same email and password.'});
-          }
-          const created = ensureLocalUser(authenticated.user, { name, username, phoneNumber });
+          const created = resumedExistingAccount
+            ? ensureLocalUser(authenticated.user)
+            : ensureLocalUser(authenticated.user, { name, username, phoneNumber });
           const sessionCookie = await createAppSession(created,authenticated,req);
-          return json(res,201,{user:safeUser(created,created.id)},{'Set-Cookie':sessionCookie});
+          return json(res,resumedExistingAccount?200:201,{user:safeUser(created,created.id)},{'Set-Cookie':sessionCookie});
         }
         const salt=crypto.randomBytes(16).toString('hex'); const hash=(await scrypt(password,salt,64)).toString('hex'); const created={id:uid(),name,username,email,passwordHash:`${salt}:${hash}`,bio:'',location:'',contactPhone:phoneNumber,country:'',county:'',parish:'',city:'',gender:'',relationshipStatus:'',aboutVisibility:DEFAULT_ABOUT_VISIBILITY,avatar:'',cover:'',createdAt:now()}; db.users.push(created);
         const sessionCookie = await createAppSession(created,null,req);
@@ -1594,7 +1592,8 @@ async function route(req, res) {
             authenticated=await supabaseSignIn({email,password});
           }catch(authError){
             const legacyUser=db.users.find(item=>normalizeEmail(item.email)===email);
-            if(/invalid login credentials|invalid email or password/i.test(authError.message)&&legacyUser?.passwordHash){
+            const invalidCredentials=authError.code==='invalid_credentials'||/invalid login credentials|invalid email or password/i.test(authError.message);
+            if(invalidCredentials&&legacyUser?.passwordHash){
               const [salt,expected]=legacyUser.passwordHash.split(':');
               const actual=(await scrypt(password,salt,64)).toString('hex');
               if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected))){recordLoginFailure(rate.key);return json(res,401,{error:'Email or password is incorrect.'});}
@@ -1604,7 +1603,7 @@ async function route(req, res) {
               if(!migrated.user?.id||!migrated.emailConfirmed)return json(res,502,{error:'Minglora could not migrate this account into Supabase Auth.'});
               authenticated=await supabaseSignIn({email,password});
             }else{
-              if(/invalid login credentials|invalid email or password/i.test(authError.message))recordLoginFailure(rate.key);
+              if(invalidCredentials)recordLoginFailure(rate.key);
               throw authError;
             }
           }
