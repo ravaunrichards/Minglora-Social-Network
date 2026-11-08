@@ -7189,7 +7189,7 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
 .profile-menu{min-height:42px;gap:7px;padding:4px 10px 4px 4px;border-radius:24px;white-space:nowrap}
 .profile-menu img{width:36px;height:36px;flex:0 0 36px}
 .profile-menu-chevron{font-size:15px;line-height:1}
-@media(max-width:1180px) and (min-width:981px){
+@media(max-width:1240px) and (min-width:981px){
  .topbar{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:58px 48px;height:110px;min-height:110px;padding:3px 14px 0;column-gap:10px}
  .top-left{grid-column:1;grid-row:1}.top-nav{grid-column:1/-1;grid-row:2;max-width:650px;justify-self:center}
  .top-actions{grid-column:2;grid-row:1;gap:6px}.brand-word{display:none}.search-box{max-width:290px;min-width:190px}.nav-item{min-width:82px}
