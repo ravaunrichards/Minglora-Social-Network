@@ -59,19 +59,21 @@ test("Admin Centre opens as its own page from the authorized administrator profi
   assert.ok(admin.includes("Trust &amp; support"));
 });
 
-test("administrator profile keeps name and username grouped with three distinctive identity marks", () => {
-  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-horizontal-tools-1"));
-  assert.ok(app.includes("<span>Edit Profile</span>"));
-  assert.ok(app.includes("<span>Privacy Controls</span>"));
-  assert.ok(css.includes("grid-template-columns:repeat(4,minmax(0,1fr))!important"));
-  assert.ok(css.includes("Administrator profile actions: keep all four controls in one horizontal row"));
+test("administrator profile has no duplicate profile-management controls and keeps one secured Admin Centre entry", () => {
+  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-centre-only-1"));
+  assert.ok(!app.includes("profile-admin-tools"));
+  assert.ok(!app.includes("data-profile-admin-action"));
+  assert.ok(!app.includes("Profile management"));
+  assert.ok(admin.includes("profile-admin-centre-entry"));
+  assert.ok(admin.includes("adminProfile.querySelector('[data-open-admin-centre]')"));
+  assert.ok(admin.includes("access?.canAccess !== true && access?.setupRequired !== true"));
+  assert.ok(admin.includes("profileInfo.insertAdjacentElement('afterend', link)"));
+  assert.ok(css.includes(".profile-admin-centre-entry{"));
+  assert.ok(!css.includes("profile-admin-tools"));
+  assert.ok(!css.includes("profile-admin-tool"));
   assert.ok(app.includes("profile-admin-identity-mark--owner"));
   assert.ok(app.includes("profile-admin-identity-mark--security"));
   assert.ok(app.includes("profile-admin-identity-mark--control"));
-  assert.ok(app.includes('data-profile-admin-action="edit-profile"'));
-  assert.ok(app.includes('data-profile-admin-action="privacy"'));
-  assert.ok(app.includes('data-profile-admin-action="edit-story"'));
-  assert.ok(app.includes("if(action==='edit-profile') $('#edit-profile')?.click()"));
 });
 
 
