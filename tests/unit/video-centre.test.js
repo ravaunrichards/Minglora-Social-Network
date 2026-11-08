@@ -49,3 +49,9 @@ test('Minglora Video Centre publishes through a video-only one-file composer', a
   assert.ok(app.includes("root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer())"));
   assert.ok(app.includes("feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer())"));
 });
+
+test('profile Create reel reuses the single-video composer and returns to the profile', async () => {
+  const app = await read('../../public/app.js');
+  assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
+  assert.match(app, /if\(typeof options\.onPublished==='function'\)await options\.onPublished\(\)/);
+});
