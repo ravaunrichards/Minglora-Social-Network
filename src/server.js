@@ -5308,11 +5308,9 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
         const target=db.users.find(member=>member.id===m[1]);
-        // The profile's league badge must use the same reconciled standings
-        // as League Arena, rather than a stale pre-settlement snapshot.
-        await syncRefundedGiftActivity();
-        const leagueReconciliation=settleScheduledCreatorLeagueDays(db,new Date());
-        if(leagueReconciliation.changed)await saveStore();
+        // Profile reads stay read-only and fast. Creator League settlement is
+        // handled by the scheduled worker; it must never block a profile page
+        // on a global reconciliation or persistence write.
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         db.profileViews ||= [];
         db.profileViewPresence ||= [];
