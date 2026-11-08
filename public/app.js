@@ -9274,7 +9274,7 @@ function renderForYouStreamContent(stream){
   let liveIndex=0;
   const lives=forYouLiveSessions.slice(0,4);
   state.videoFeed.forEach((post,index)=>{
-    if(liveIndex<lives.length&&index%3===0)entries.push(forYouLiveCard(lives[liveIndex],index));
+    if(liveIndex<lives.length&&index%3===0)entries.push(forYouLiveCard(lives[liveIndex++],index));
     entries.push(forYouCard(post,index));
   });
   while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex],state.videoFeed.length+liveIndex++));
