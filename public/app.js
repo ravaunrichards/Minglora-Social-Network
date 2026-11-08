@@ -6587,17 +6587,31 @@ async function transformProfileCrop(file,edit,stage,slot){
 
 function openEditProfile(u,mediaOnly=null){
   if(!['avatar','cover'].includes(mediaOnly))mediaOnly=null;
+  if(!u||typeof u!=='object')u=state.user;
+  if(!u?.id)return;
+  if(state.user?.id===u.id){
+    const current=Object.fromEntries(Object.entries(state.user).filter(([,value])=>value!==undefined&&value!==null));
+    u={...u,...current};
+  }
+  const existing=document.querySelector('dialog#minglora-profile-editor[open]');
+  if(existing){existing.focus({preventScroll:true});return;}
   const priorGender=String(u.gender||'').trim();
   const aboutVisibility={bio:true,location:true,country:false,county:false,parish:false,city:false,gender:false,relationshipStatus:false,contactPhone:false,...(u.aboutVisibility||{})};
-  const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog';modal.setAttribute('aria-labelledby','edit-profile-title');modal.tabIndex=-1;
+  const modal=document.createElement('dialog');modal.id='minglora-profile-editor';modal.className='profile-inline-editor profile-editor-dialog';modal.setAttribute('aria-labelledby','edit-profile-title');modal.tabIndex=-1;
   modal.innerHTML=`<div class="profile-inline-editor-content" aria-labelledby="edit-profile-title">
-    <div class="modal-head"><h2 id="edit-profile-title">${mediaOnly==='avatar'?'Edit profile picture':mediaOnly==='cover'?'Edit cover picture':'Edit profile'}</h2><button class="modal-close" aria-label="Close">×</button></div>
+    <div class="modal-head"><div><h2 id="edit-profile-title">${mediaOnly==='avatar'?'Edit profile picture':mediaOnly==='cover'?'Edit cover picture':'Edit profile'}</h2><p id="edit-profile-description" class="profile-editor-description">Update your introduction, personal details and profile photos.</p></div><button type="button" class="modal-close" aria-label="Close profile editor">×</button></div>
+    <nav class="profile-editor-nav" aria-label="Edit profile sections">
+      <button type="button" data-profile-editor-jump="intro" aria-current="true">Intro</button>
+      <button type="button" data-profile-editor-jump="details" aria-current="false">About details</button>
+      <button type="button" data-profile-editor-jump="avatar" aria-current="false">Profile picture</button>
+      <button type="button" data-profile-editor-jump="cover" aria-current="false">Cover photo</button>
+    </nav>
     <form class="modal-body" id="edit-profile-form">
-      <div class="profile-editor-details">
+      <div class="profile-editor-details" data-profile-editor-target="intro">
       <div class="field"><label for="edit-profile-name">Display name</label><input id="edit-profile-name" name="name" maxlength="120" value="${esc(u.name)}" required></div><div class="field"><label for="edit-profile-username">Username</label><input id="edit-profile-username" name="username" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" value="${esc(u.username)}" required><small class="muted">3–30 letters, numbers or underscores. Usernames are case-insensitive.</small></div>
       <div class="field"><label for="edit-profile-bio">Bio</label><textarea id="edit-profile-bio" name="bio" maxlength="500">${esc(u.bio||'')}</textarea></div>
       <div class="field"><label for="edit-profile-location">Location</label><input id="edit-profile-location" name="location" maxlength="120" value="${esc(u.location||'')}"><label class="about-toggle"><input type="checkbox" name="show_location" ${aboutVisibility.location?'checked':''}> Display location on my profile</label></div>
-      <section class="about-editor-section"><h3>About details</h3><p class="muted">Choose what people can see. Hidden details remain saved privately.</p>
+      <section class="about-editor-section" data-profile-editor-target="details"><h3>About details</h3><p class="muted">Choose what people can see. Hidden details remain saved privately.</p>
         <div class="field"><label for="edit-contact-phone">Contact phone</label><input id="edit-contact-phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" pattern="\+[1-9][0-9]{7,14}" maxlength="24" value="${esc(u.contactPhone||'')}" placeholder="+18765551234"><button class="secondary" type="button" id="request-phone-verification">Verify phone for Supabase</button><div id="phone-verification-panel" hidden><label for="phone-verification-code">SMS verification code</label><input id="phone-verification-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code"><button class="secondary" type="button" id="confirm-phone-verification">Confirm phone number</button></div><small id="phone-verification-status" class="muted" role="status">Verification saves this number in Supabase Auth. It remains hidden from your profile unless you enable Display.</small><label class="about-toggle"><input type="checkbox" name="show_contactPhone" ${aboutVisibility.contactPhone?'checked':''}> Display contact phone on my profile</label></div>
         <div class="about-editor-grid">
           <div class="field"><label for="edit-country">Country</label><input id="edit-country" name="country" maxlength="120" value="${esc(u.country||'')}"><label class="about-toggle"><input type="checkbox" name="show_country" ${aboutVisibility.country?'checked':''}> Display</label></div>
@@ -6610,7 +6624,7 @@ function openEditProfile(u,mediaOnly=null){
         <div class="field"><label class="about-toggle"><input type="checkbox" name="show_bio" ${aboutVisibility.bio?'checked':''}> Display my bio on my profile</label></div>
       </section>
       </div>
-      <div class="profile-upload-section" data-profile-media-section="avatar">
+      <div class="profile-upload-section" id="profile-editor-avatar" data-profile-media-section="avatar" data-profile-editor-target="avatar">
         <h3>Profile picture</h3>
         <div class="profile-crop-workspace profile-crop-workspace--avatar">
           <div class="profile-crop-visual">
@@ -6626,7 +6640,7 @@ function openEditProfile(u,mediaOnly=null){
           </div>
         </div>
       </div>
-      <div class="profile-upload-section" data-profile-media-section="cover">
+      <div class="profile-upload-section" id="profile-editor-cover" data-profile-media-section="cover" data-profile-editor-target="cover">
         <h3>Cover photo</h3>
         <div class="profile-crop-workspace profile-crop-workspace--cover">
           <div id="edit-cover-preview" class="profile-crop-preview profile-crop-preview--cover" role="img" aria-label="Wide rectangular cover photo crop preview"><img id="edit-cover-crop-image" src="${esc(u.cover||'data:,')}" alt=""></div>
@@ -6641,7 +6655,7 @@ function openEditProfile(u,mediaOnly=null){
         </div>
       </div>
       <p class="profile-upload-status muted" id="profile-upload-status" role="status">Profile details save automatically. Selected profile and cover photos upload securely when you select Save changes.</p>
-      <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button class="primary" id="save-profile-button">Save changes</button></div>
+      <div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary" id="save-profile-button">Save changes</button></div>
     </form></div>`;
   document.body.append(modal);
   document.body.classList.add('profile-dialog-open');
@@ -6653,6 +6667,7 @@ function openEditProfile(u,mediaOnly=null){
       section.hidden=section.dataset.profileMediaSection!==mediaOnly;
     });
     modal.querySelector('#save-profile-button').textContent=mediaOnly==='avatar'?'Save profile picture':'Save cover picture';
+    const editorNav=modal.querySelector('.profile-editor-nav');if(editorNav)editorNav.hidden=true;
     modal.querySelector('#profile-upload-status').textContent=mediaOnly==='avatar'
       ?'Choose or take a profile picture, drag to position it and pinch with two fingers to zoom, then save only the profile picture.'
       :'Choose or take a cover picture, drag to position it and pinch with two fingers to zoom, then save only the cover picture.';
@@ -6735,6 +6750,16 @@ function openEditProfile(u,mediaOnly=null){
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.focus({preventScroll:true});
+  const editorNav=modal.querySelector('.profile-editor-nav');
+  editorNav?.querySelectorAll('[data-profile-editor-jump]').forEach(button=>button.addEventListener('click',()=>{
+    const key=button.dataset.profileEditorJump;
+    const target=modal.querySelector('[data-profile-editor-target="'+key+'"]');
+    if(!target)return;
+    editorNav.querySelectorAll('[data-profile-editor-jump]').forEach(item=>item.setAttribute('aria-current',item===button?'true':'false'));
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+    const focusTarget=key==='intro'?modal.querySelector('#edit-profile-name'):key==='details'?modal.querySelector('#edit-contact-phone'):null;
+    focusTarget?.focus({preventScroll:true});
+  }));
   const profileForm=modal.querySelector('#edit-profile-form');
   const collectProfilePayload=()=>{
     const values=new FormData(profileForm);
