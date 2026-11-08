@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
 const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
-const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
+const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health','story-create','story-privacy']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
 const FOR_YOU_SCOPE_VALUES=new Set(['for-you','friends','subscribers','following']);
 function normalizeForYouScope(value){return FOR_YOU_SCOPE_VALUES.has(value)?value:'for-you';}
@@ -46,7 +46,9 @@ function recordBrowserNavigation({replace=false}={}){
   if(!state.user||restoringBrowserNavigation)return;
   const snapshot=getBrowserNavigationSnapshot();
   const current=window.history.state?.[MINGLORA_HISTORY_KEY];
-  const targetUrl=snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):(window.location.pathname.startsWith('/for-you/')?'/':window.location.href);
+  const storyRoute=snapshot.view==='story-create'?'/stories/create':snapshot.view==='story-privacy'?'/stories/privacy':null;
+  const leavingSpecialRoute=window.location.pathname.startsWith('/for-you/')||window.location.pathname.startsWith('/stories/');
+  const targetUrl=storyRoute||(snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):(leavingSpecialRoute?'/':window.location.href));
   const targetPath=new URL(targetUrl,window.location.origin).pathname;
   if(current&&JSON.stringify(current)===JSON.stringify(snapshot)&&window.location.pathname===targetPath)return;
   try{
@@ -6908,24 +6910,284 @@ async function openProfileStoryEditor(profileId){
   }catch(error){toast(error.message||'Could not load your active stories.');}
 }
 
-function openStoryComposer(){
-  const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose photos or videos (up to 10)</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
-  document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
-  const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
-  const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
-  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
-  modal.addEventListener('click',event=>{if(event.target===modal)close();});
-  modal.querySelector('form').onsubmit=async event=>{
-    event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
-    try{
-      const values=new FormData(event.currentTarget),mediaIds=await picker.upload(),track=soundtrack.value();
-      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track){toast('Write a Story, choose a photo/video or add a sound.');button.disabled=false;return;}
-      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:track})});
-      close();await loadStories();if(state.view==='feed')await renderFeed();toast('Story published for 24 hours.');
-    }catch(error){toast(error.message);button.disabled=false;}
+let mingloraStoryWorkspaceDraft = null;
+function newStoryWorkspaceDraft(){
+  return {
+    mode:'choose',
+    text:'',
+    background:'blue',
+    privacy:{storyAudience:'public',storyPrivacyMode:'audience',storyCustomUserIds:[],storyHiddenUserIds:[]},
+    privacySaved:null,
+    friends:[],
+    friendsLoaded:false,
+    settingsLoaded:false,
+    pickerRoot:null,
+    picker:null,
+    soundtrackRoot:null,
+    soundtrack:null,
+    friendSearch:''
   };
+}
+function cloneStoryPrivacy(value){
+  return JSON.parse(JSON.stringify(value||{storyAudience:'public',storyPrivacyMode:'audience',storyCustomUserIds:[],storyHiddenUserIds:[]}));
+}
+async function loadStoryWorkspaceSettings(){
+  const draft=mingloraStoryWorkspaceDraft||(mingloraStoryWorkspaceDraft=newStoryWorkspaceDraft());
+  if(draft.settingsLoaded)return;
+  try{
+    const response=await api('/settings');
+    const privacy=response.settings?.privacy||{};
+    draft.privacy={
+      storyAudience:['public','friends','custom'].includes(privacy.storyAudience)?privacy.storyAudience:'public',
+      storyPrivacyMode:privacy.storyPrivacyMode==='hide'?'hide':'audience',
+      storyCustomUserIds:Array.isArray(privacy.storyCustomUserIds)?privacy.storyCustomUserIds.map(String):[],
+      storyHiddenUserIds:Array.isArray(privacy.storyHiddenUserIds)?privacy.storyHiddenUserIds.map(String):[]
+    };
+    state.settings=response.settings||state.settings;
+  }catch(error){
+    console.warn('Minglora story privacy defaults could not be loaded:',error?.message||error);
+  }
+  draft.settingsLoaded=true;
+}
+async function loadStoryWorkspaceFriends(){
+  const draft=mingloraStoryWorkspaceDraft;
+  if(!draft||draft.friendsLoaded)return;
+  try{
+    const response=await api('/friends/manage');
+    draft.friends=Array.isArray(response.friends)?response.friends:[];
+    const friendIds=new Set(draft.friends.map(member=>String(member.id)));
+    draft.privacy.storyCustomUserIds=draft.privacy.storyCustomUserIds.filter(id=>friendIds.has(String(id)));
+    draft.privacy.storyHiddenUserIds=draft.privacy.storyHiddenUserIds.filter(id=>friendIds.has(String(id)));
+  }catch(error){
+    draft.friends=[];
+    toast(error.message||'Your friends list could not be loaded.');
+  }
+  draft.friendsLoaded=true;
+}
+function storyPrivacyLabel(privacy){
+  if(privacy?.storyPrivacyMode==='hide')return 'Hide story from';
+  if(privacy?.storyAudience==='friends')return 'Friends';
+  if(privacy?.storyAudience==='custom')return 'Custom';
+  return 'Public';
+}
+function closeStoryWorkspace(){
+  const draft=mingloraStoryWorkspaceDraft;
+  if(draft?.picker)draft.picker.destroy();
+  if(draft?.soundtrack)draft.soundtrack.destroy();
+  mingloraStoryWorkspaceDraft=null;
+  if(window.history.length>1)window.history.back();
+  else void activateNav('feed');
+}
+function openStoryComposer(){
+  mingloraStoryWorkspaceDraft=newStoryWorkspaceDraft();
+  activateSilent('story-create');
+  void renderStoryWorkspace();
+}
+function storyPrivacyIcon(kind){
+  const icons={
+    public:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>',
+    friends:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.3"></circle><path d="M3.5 19c.4-3.1 2.3-5 5.5-5s5.1 1.9 5.5 5M14.5 14.5c2.9-.5 5.2 1.1 5.7 4.5"></path></svg>',
+    custom:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.5" r="3.4"></circle><path d="M5 20c.5-4 2.9-6.2 7-6.2s6.5 2.2 7 6.2"></path></svg>',
+    hide:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17.3" cy="9" r="2.2"></circle><path d="M2.8 19c.4-3.7 2.2-5.7 5.2-5.7s4.8 2 5.2 5.7M13.7 14.4c3.9-1 6.8.7 7.4 4.6M3 3l18 18"></path></svg>'
+  };
+  return icons[kind]||icons.public;
+}
+async function openStoryPrivacyPage(){
+  if(!mingloraStoryWorkspaceDraft)mingloraStoryWorkspaceDraft=newStoryWorkspaceDraft();
+  await loadStoryWorkspaceSettings();
+  mingloraStoryWorkspaceDraft.privacySaved=cloneStoryPrivacy(mingloraStoryWorkspaceDraft.privacy);
+  activateSilent('story-privacy');
+  await renderStoryPrivacyPage();
+}
+async function renderStoryPrivacyPage(){
+  if(!mingloraStoryWorkspaceDraft)mingloraStoryWorkspaceDraft=newStoryWorkspaceDraft();
+  await loadStoryWorkspaceSettings();
+  await loadStoryWorkspaceFriends();
+  const draft=mingloraStoryWorkspaceDraft,privacy=draft.privacy;
+  const mode=privacy.storyPrivacyMode==='hide'?'hide':'audience';
+  const selected=mode==='hide'?'hide':privacy.storyAudience;
+  const peopleTitle=mode==='hide'?'Hide your story from':'Allow these friends to see your story';
+  const peopleHelp=mode==='hide'?'These friends will not be able to view your story.':'Only friends selected here will be able to view your story.';
+  const selectedIds=mode==='hide'?privacy.storyHiddenUserIds:privacy.storyCustomUserIds;
+  const peopleMarkup=draft.friends.length?draft.friends.map(member=>{
+    const id=String(member.id||'');
+    const checked=selectedIds.includes(id);
+    return '<label class="story-privacy-person"><input type="checkbox" data-story-privacy-person value="'+esc(id)+'" '+(checked?'checked':'')+'><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span><span class="story-privacy-person-check" aria-hidden="true">✓</span></label>';
+  }).join(''):'<div class="story-privacy-empty">Your friends will appear here when you connect with them.</div>';
+  setContent('<section class="story-workspace story-privacy-workspace" aria-labelledby="story-privacy-title"><header class="story-workspace-header"><div class="story-workspace-heading"><span class="story-workspace-kicker">YOUR STORY</span><h1 id="story-privacy-title">Story privacy</h1></div><button type="button" class="story-workspace-icon-button" id="story-privacy-close" aria-label="Close story privacy" title="Close">×</button></header><div class="story-privacy-content"><p class="story-privacy-intro">Who can see your story?</p><p class="story-privacy-expiry">Your story will be visible for 24 hours on Minglora and Messenger.</p><div class="story-privacy-options" role="radiogroup" aria-label="Who can see your story?"><button type="button" class="story-privacy-choice '+(selected==='public'?'is-selected':'')+'" data-story-privacy-choice="public" role="radio" aria-checked="'+(selected==='public')+'"><span class="story-privacy-choice-icon">'+storyPrivacyIcon('public')+'</span><span class="story-privacy-choice-copy"><strong>Public</strong><small>Anyone on or off Minglora</small></span><span class="story-privacy-choice-check">✓</span></button><button type="button" class="story-privacy-choice '+(selected==='friends'?'is-selected':'')+'" data-story-privacy-choice="friends" role="radio" aria-checked="'+(selected==='friends')+'"><span class="story-privacy-choice-icon">'+storyPrivacyIcon('friends')+'</span><span class="story-privacy-choice-copy"><strong>Friends</strong><small>Your Minglora friends</small></span><span class="story-privacy-choice-check">✓</span></button><button type="button" class="story-privacy-choice '+(selected==='custom'?'is-selected':'')+'" data-story-privacy-choice="custom" role="radio" aria-checked="'+(selected==='custom')+'"><span class="story-privacy-choice-icon">'+storyPrivacyIcon('custom')+'</span><span class="story-privacy-choice-copy"><strong>Custom</strong><small>Only friends you select</small></span><span class="story-privacy-choice-check">✓</span></button><button type="button" class="story-privacy-choice '+(selected==='hide'?'is-selected':'')+'" data-story-privacy-choice="hide" role="radio" aria-checked="'+(selected==='hide')+'"><span class="story-privacy-choice-icon">'+storyPrivacyIcon('hide')+'</span><span class="story-privacy-choice-copy"><strong>Hide story from</strong><small>Choose friends who should not see it</small></span><span class="story-privacy-choice-check">✓</span></button></div>'+((selected==='custom'||selected==='hide')?'<section class="story-privacy-people"><div><h2>'+peopleTitle+'</h2><p>'+peopleHelp+'</p></div><input id="story-privacy-search" type="search" placeholder="Search friends" value="'+esc(draft.friendSearch||'')+'" aria-label="Search friends"><div class="story-privacy-people-list" id="story-privacy-people-list">'+peopleMarkup+'</div><p class="story-privacy-selection-count"><strong>'+selectedIds.length+'</strong> selected</p></section>':'')+'<div class="story-privacy-actions"><button type="button" class="secondary" id="story-privacy-cancel">Cancel</button><button type="button" class="primary" id="story-privacy-save">Save</button></div></div></section>');
+  const paintPeople=()=>{
+    const list=document.querySelector('#story-privacy-people-list');
+    if(!list)return;
+    const key=privacy.storyPrivacyMode==='hide'?'storyHiddenUserIds':'storyCustomUserIds';
+    const ids=privacy[key]||[];
+    const query=String(draft.friendSearch||'').trim().toLowerCase();
+    const filtered=draft.friends.filter(member=>(String(member.name||'')+' '+String(member.username||'')).toLowerCase().includes(query));
+    list.innerHTML=filtered.length?filtered.map(member=>{
+      const id=String(member.id||''),checked=ids.includes(id);
+      return '<label class="story-privacy-person"><input type="checkbox" data-story-privacy-person value="'+esc(id)+'" '+(checked?'checked':'')+'><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span><span class="story-privacy-person-check" aria-hidden="true">✓</span></label>';
+    }).join(''):'<div class="story-privacy-empty">No matching friends found.</div>';
+    const count=document.querySelector('.story-privacy-selection-count strong');
+    if(count)count.textContent=String(ids.length);
+  };
+  document.querySelectorAll('[data-story-privacy-choice]').forEach(button=>button.addEventListener('click',()=>{
+    const choice=button.dataset.storyPrivacyChoice;
+    if(choice==='hide'){
+      privacy.storyPrivacyMode='hide';
+      if(privacy.storyAudience==='custom')privacy.storyAudience='public';
+    }else{
+      privacy.storyPrivacyMode='audience';
+      privacy.storyAudience=choice;
+    }
+    draft.friendSearch='';
+    void renderStoryPrivacyPage();
+  }));
+  document.querySelector('#story-privacy-search')?.addEventListener('input',event=>{
+    draft.friendSearch=event.target.value||'';
+    paintPeople();
+  });
+  document.querySelector('#story-privacy-people-list')?.addEventListener('change',event=>{
+    const input=event.target.closest('[data-story-privacy-person]');
+    if(!input)return;
+    const key=privacy.storyPrivacyMode==='hide'?'storyHiddenUserIds':'storyCustomUserIds';
+    const ids=new Set(privacy[key]||[]);
+    if(input.checked)ids.add(input.value);else ids.delete(input.value);
+    privacy[key]=[...ids];
+    paintPeople();
+  });
+  const cancel=()=>{
+    if(draft.privacySaved)draft.privacy=cloneStoryPrivacy(draft.privacySaved);
+    draft.friendSearch='';
+    window.history.back();
+  };
+  document.querySelector('#story-privacy-close')?.addEventListener('click',cancel);
+  document.querySelector('#story-privacy-cancel')?.addEventListener('click',cancel);
+  document.querySelector('#story-privacy-save')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    if(privacy.storyPrivacyMode!=='hide'&&privacy.storyAudience==='custom'&&!privacy.storyCustomUserIds.length){
+      toast('Select at least one friend who can see your story.');
+      return;
+    }
+    button.disabled=true;
+    try{
+      const result=await api('/settings',{method:'PATCH',body:JSON.stringify({privacy:{
+        storyAudience:privacy.storyAudience,
+        storyPrivacyMode:privacy.storyPrivacyMode,
+        storyCustomUserIds:privacy.storyCustomUserIds,
+        storyHiddenUserIds:privacy.storyHiddenUserIds
+      }})});
+      state.settings=result.settings||state.settings;
+      draft.privacySaved=cloneStoryPrivacy(privacy);
+      draft.friendSearch='';
+      toast('Story privacy saved.');
+      window.history.back();
+    }catch(error){
+      toast(error.message||'Could not save story privacy.');
+      button.disabled=false;
+    }
+  });
+}
+async function renderStoryWorkspace(){
+  if(!mingloraStoryWorkspaceDraft)mingloraStoryWorkspaceDraft=newStoryWorkspaceDraft();
+  await loadStoryWorkspaceSettings();
+  const draft=mingloraStoryWorkspaceDraft;
+  const privacyLabel=storyPrivacyLabel(draft.privacy);
+  let body='';
+  if(draft.mode==='choose'){
+    body='<div class="story-workspace-choose"><div class="story-workspace-intro"><h2>Create your story</h2><p>Share a photo, video or a quick text update with your friends.</p></div><button type="button" class="story-create-choice" data-story-create-mode="media"><span class="story-create-choice-icon story-create-photo-icon">▧</span><span><strong>Create a photo or video story</strong><small>Choose from your gallery or take a new photo or video</small></span><span class="story-create-choice-arrow">›</span></button><button type="button" class="story-create-choice" data-story-create-mode="text"><span class="story-create-choice-icon story-create-text-icon">T</span><span><strong>Create a text story</strong><small>Share a thought with a colourful text background</small></span><span class="story-create-choice-arrow">›</span></button></div>';
+  }else{
+    const isMedia=draft.mode==='media';
+    const previewText=String(draft.text||'').trim();
+    const previewMarkup=isMedia?'<div class="story-preview-empty"><span>▧</span><strong>Your story preview</strong><small>Your selected photo or video will appear in the media preview.</small></div>':'<div class="story-text-preview story-text-preview-'+esc(draft.background)+'" id="story-text-preview"><span>'+esc(previewText||'Your story text will appear here')+'</span></div>';
+    body='<div class="story-workspace-editor"><form id="story-workspace-form" class="story-workspace-form"><div class="story-workspace-form-top"><button type="button" class="story-workspace-back" id="story-workspace-back">← Change story type</button><h2>'+(isMedia?'Create a photo or video story':'Create a text story')+'</h2></div>'+(isMedia?'<section class="story-workspace-card"><h3>Add photos or videos</h3><p>Choose from your device or use your camera. You can add up to 10 files.</p><div id="story-workspace-media-slot"></div></section><section class="story-workspace-card"><label for="story-workspace-text">Add a caption <span>(optional)</span></label><textarea id="story-workspace-text" maxlength="1000" placeholder="Say something about this moment...">'+esc(draft.text)+'</textarea></section>':'<section class="story-workspace-card story-text-creator"><label for="story-workspace-text">Write your story</label><textarea id="story-workspace-text" maxlength="1000" required placeholder="Start typing...">'+esc(draft.text)+'</textarea><div class="story-text-backgrounds" aria-label="Text background"><button type="button" data-story-background="blue" class="'+(draft.background==='blue'?'is-selected':'')+'" aria-label="Blue background"></button><button type="button" data-story-background="sunset" class="'+(draft.background==='sunset'?'is-selected':'')+'" aria-label="Sunset background"></button><button type="button" data-story-background="violet" class="'+(draft.background==='violet'?'is-selected':'')+'" aria-label="Violet background"></button><button type="button" data-story-background="dark" class="'+(draft.background==='dark'?'is-selected':'')+'" aria-label="Dark background"></button><button type="button" data-story-background="green" class="'+(draft.background==='green'?'is-selected':'')+'" aria-label="Green background"></button></div></section>')+'<section class="story-workspace-card"><h3>Story soundtrack</h3><div id="story-workspace-soundtrack-slot"></div></section><div class="story-workspace-publish-row"><p>Stories disappear after 24 hours.</p><button type="submit" class="primary" id="story-workspace-publish">Share to story</button></div></form><aside class="story-workspace-preview-panel"><h3>Preview</h3>'+previewMarkup+'<button type="button" class="story-workspace-privacy-link" id="story-workspace-privacy-bottom"> '+storyPrivacyIcon(draft.privacy.storyPrivacyMode==='hide'?'hide':draft.privacy.storyAudience)+' <span><strong>'+esc(privacyLabel)+'</strong><small>Who can see your story</small></span><span>›</span></button></aside></div>';
+  }
+  setContent('<section class="story-workspace" aria-labelledby="story-workspace-title"><header class="story-workspace-header"><div class="story-workspace-heading"><span class="story-workspace-kicker">MINGLORA STORIES</span><h1 id="story-workspace-title">Your story</h1><p>Share a moment with your community.</p></div><div class="story-workspace-header-actions"><button type="button" class="story-workspace-privacy-link" id="story-workspace-privacy">'+storyPrivacyIcon(draft.privacy.storyPrivacyMode==='hide'?'hide':draft.privacy.storyAudience)+'<span><strong>Story privacy</strong><small>'+esc(privacyLabel)+'</small></span></button><button type="button" class="story-workspace-icon-button" id="story-workspace-close" aria-label="Close your story" title="Close">×</button></div></header>'+body+'</section>');
+  document.querySelector('#story-workspace-close')?.addEventListener('click',closeStoryWorkspace);
+  document.querySelector('#story-workspace-privacy')?.addEventListener('click',()=>void openStoryPrivacyPage());
+  document.querySelector('#story-workspace-privacy-bottom')?.addEventListener('click',()=>void openStoryPrivacyPage());
+  document.querySelectorAll('[data-story-create-mode]').forEach(button=>button.addEventListener('click',()=>{
+    draft.mode=button.dataset.storyCreateMode==='text'?'text':'media';
+    void renderStoryWorkspace();
+  }));
+  document.querySelector('#story-workspace-back')?.addEventListener('click',()=>{
+    draft.mode='choose';
+    void renderStoryWorkspace();
+  });
+  const textArea=document.querySelector('#story-workspace-text');
+  if(textArea)textArea.addEventListener('input',()=>{
+    draft.text=textArea.value;
+    const preview=document.querySelector('#story-text-preview span');
+    if(preview)preview.textContent=String(draft.text||'').trim()||'Your story text will appear here';
+  });
+  document.querySelectorAll('[data-story-background]').forEach(button=>button.addEventListener('click',()=>{
+    draft.background=button.dataset.storyBackground;
+    document.querySelectorAll('[data-story-background]').forEach(item=>item.classList.toggle('is-selected',item===button));
+    const preview=document.querySelector('#story-text-preview');
+    if(preview)preview.className='story-text-preview story-text-preview-'+draft.background;
+  }));
+  if(draft.mode==='media'){
+    const slot=document.querySelector('#story-workspace-media-slot');
+    if(slot){
+      if(!draft.pickerRoot){
+        draft.pickerRoot=document.createElement('div');
+        draft.picker=createMediaPicker(draft.pickerRoot,{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
+      }
+      slot.appendChild(draft.pickerRoot);
+    }
+  }
+  if(draft.mode==='media'||draft.mode==='text'){
+    const slot=document.querySelector('#story-workspace-soundtrack-slot');
+    if(slot){
+      if(!draft.soundtrackRoot){
+        draft.soundtrackRoot=document.createElement('div');
+        draft.soundtrack=createSoundtrackEditor(draft.soundtrackRoot);
+      }
+      slot.appendChild(draft.soundtrackRoot);
+    }
+  }
+  document.querySelector('#story-workspace-form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const button=document.querySelector('#story-workspace-publish');
+    if(button.disabled)return;
+    const text=String(draft.text||'').trim();
+    if(draft.mode==='text'&&!text){
+      toast('Write something before sharing your text story.');
+      return;
+    }
+    if(draft.mode==='media'&&!draft.picker?.hasSelection()&&!text&&!draft.soundtrack?.value?.()){
+      toast('Choose a photo or video, add a caption or select a soundtrack.');
+      return;
+    }
+    const privacy=draft.privacy;
+    if(privacy.storyPrivacyMode==='audience'&&privacy.storyAudience==='custom'&&!privacy.storyCustomUserIds.length){
+      toast('Open Story privacy and select at least one friend for a Custom story.');
+      return;
+    }
+    if(privacy.storyPrivacyMode==='hide'&&!privacy.storyHiddenUserIds.length){
+      toast('Select at least one friend to hide your story from.');
+      return;
+    }
+    button.disabled=true;
+    try{
+      const mediaIds=draft.mode==='media'&&draft.picker?await draft.picker.upload():[];
+      const audience=privacy.storyPrivacyMode==='hide'&&privacy.storyAudience==='custom'?'public':privacy.storyAudience;
+      const customUserIds=privacy.storyPrivacyMode==='audience'&&audience==='custom'?privacy.storyCustomUserIds:[];
+      const hiddenUserIds=privacy.storyPrivacyMode==='hide'?privacy.storyHiddenUserIds:[];
+      await api('/stories',{method:'POST',body:JSON.stringify({
+        text,mediaIds,audience,customUserIds,hiddenUserIds,
+        soundtrack:draft.soundtrack?.value?.()||null
+      })});
+      if(draft.picker)draft.picker.destroy();
+      if(draft.soundtrack)draft.soundtrack.destroy();
+      mingloraStoryWorkspaceDraft=null;
+      await loadStories();
+      toast('Your story has been shared and will be visible for 24 hours.');
+      if(window.history.length>1)window.history.back();
+      else await activateNav('feed');
+    }catch(error){
+      toast(error.message||'Your story could not be shared.');
+      button.disabled=false;
+    }
+  });
 }
 
 async function openStory(id){
@@ -9906,7 +10168,7 @@ function renderMoreHub(){
     else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='story-create')await renderStoryWorkspace();else if(state.view==='story-privacy')await renderStoryPrivacyPage();else if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 let accountSwitcherTopLayerCleanup=null;
 function positionAccountSwitcherTopLayer(){
   const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
