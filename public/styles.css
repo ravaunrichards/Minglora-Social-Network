@@ -7252,3 +7252,13 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
   .fyp-overlay-bottom{bottom:calc(17px + env(safe-area-inset-bottom))}
   .fyp-action-rail{bottom:calc(24px + env(safe-area-inset-bottom))}
 }
+
+/* Keep the saved sign-in while Minglora reconnects after a refresh or app restart. */
+.session-restore-screen{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:var(--page-bg,#f4f7fb);color:var(--text,#17233a)}
+.session-restore-card{width:min(100%,420px);padding:clamp(24px,5vw,36px);border:1px solid var(--line,#dfe5ee);border-radius:22px;background:var(--card,#fff);box-shadow:0 18px 64px rgba(15,35,65,.12);text-align:center}
+.session-restore-spinner{display:block;width:32px;height:32px;margin:0 auto 18px;border:3px solid var(--line,#dfe5ee);border-top-color:var(--primary,#1769e0);border-radius:50%;animation:minglora-session-spin .8s linear infinite}
+.session-restore-card h1{margin:0 0 10px;font-size:clamp(20px,4vw,25px);line-height:1.2}
+.session-restore-card p{margin:0;color:var(--muted,#65748b);line-height:1.55}
+.session-restore-card button{margin-top:18px}
+@keyframes minglora-session-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.session-restore-spinner{animation:none}}
