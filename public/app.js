@@ -500,7 +500,7 @@ function startMingloraServiceWorkerUpdates(registration){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-for-you-general-posts-2',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-for-you-general-posts-3',{scope:'/',updateViaCache:'none'});
     startMingloraServiceWorkerUpdates(registration);
     // Keep the installed shell current even while the visitor is signed out.
     // The browser checks for worker updates normally; new versions must not take over this open page.
@@ -9186,6 +9186,8 @@ function setupForYouPlayback(root){
     state.forYouSearch='';
     const search=root.querySelector('#fyp-search-input');
     if(search)search.value='';
+    const clearButton=root.querySelector('[data-fyp-search-clear]');
+    if(clearButton)clearButton.hidden=true;
     if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
     void searchForYouPosts();
   });
@@ -9324,7 +9326,7 @@ async function renderForYouFeed(){
     main.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
     startForYouAutoRefresh();
   }catch(error){
-    root.innerHTML='<section class="minglora-for-you"><button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button><div class="fyp-empty"><h2>Could not load videos</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" id="fyp-retry">Try again</button></div></section>';
+    root.innerHTML='<section class="minglora-for-you"><button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button><div class="fyp-empty"><h2>Could not load posts</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" id="fyp-retry">Try again</button></div></section>';
     root.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
     root.querySelector('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());
     startForYouAutoRefresh();
