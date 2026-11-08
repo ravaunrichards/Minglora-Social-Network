@@ -5,17 +5,42 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-test('the For You destination presents Home and Following as the two clear feed choices', async () => {
+test('the For You destination presents four switchable feed choices in the intended order', async () => {
   const app = await read('public/app.js');
   const shell = app.slice(app.indexOf('function forYouFeedShellMarkup()'), app.indexOf('async function renderForYouFeed()'));
-  assert.ok(shell.indexOf('data-fyp-scope="for-you"') < shell.indexOf('data-fyp-scope="following"'));
-  assert.match(shell, /data-fyp-scope="for-you"[\s\S]*?>Home<\/button>/);
-  assert.match(shell, /data-fyp-scope="following"[\s\S]*?>Following<\/button>/);
-  assert.match(shell, /aria-label="Show Home feed"/);
-  assert.match(shell, /aria-label="Show Following feed"/);
-  assert.match(app, /bindOnce\('\[data-fyp-scope\]'[\s\S]*state\.forYouScope=scope;[\s\S]*await renderForYouFeed\(\)/);
+  const scopes = ['for-you', 'friends', 'subscribers', 'following'];
+  const positions = scopes.map(scope => shell.indexOf('data-fyp-scope="' + scope + '"'));
+  assert.ok(positions.every(position => position >= 0), 'all four destinations must be present');
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), 'Home, Friends, Subscribers and Following must stay in order');
+  for (const [scope, label] of [['for-you', 'Home'], ['friends', 'Friends'], ['subscribers', 'Subscribers'], ['following', 'Following']]) {
+    assert.ok(shell.includes('data-fyp-scope="' + scope + '"'));
+    assert.ok(shell.includes('>' + label + '</button>'));
+    assert.ok(shell.includes('aria-label="Show ' + label + ' feed"'));
+  }
+  assert.ok(app.includes("FOR_YOU_SCOPE_VALUES=new Set(['for-you','friends','subscribers','following'])"));
+  assert.ok(app.includes('state.forYouScope=normalizeForYouScope(scope);'));
+  assert.ok(app.includes('recordBrowserNavigation();'));
 });
 
+test('each For You choice has a direct route and restores correctly on a fresh app load', async () => {
+  const app = await read('public/app.js');
+  assert.ok(app.includes("return '/for-you/'+(normalized==='for-you'?'home':normalized);"));
+  assert.ok(app.includes('function forYouScopeFromPath(pathname=window.location.pathname)'));
+  assert.ok(app.includes('const routeScope=forYouScopeFromPath();'));
+  assert.ok(app.includes("state.view='for-you';"));
+  assert.ok(app.includes('state.forYouScope=normalizeForYouScope(routeScope);'));
+});
+
+test('Friends and Subscribers use their real audience relationships for posts and verified LIVE sessions', async () => {
+  const [app, server] = await Promise.all([read('public/app.js'), read('src/server.js')]);
+  assert.ok(app.includes("api('/friends')"));
+  assert.ok(app.includes("api('/users/'+encodeURIComponent(state.user.id)+'/subscribers')"));
+  assert.ok(app.includes("audienceIds=new Set(members.map(member=>String(member?.id||'')).filter(Boolean))"));
+  assert.ok(server.includes("!['all','following','friends','subscribers','for-you'].includes(scope)"));
+  assert.ok(server.includes("scope==='subscribers'"));
+  assert.ok(server.includes("subscription_subscribers_list"));
+  assert.ok(server.includes("listActiveCreatorSubscriptions(db.creatorSubscriptions,user.id)"));
+});
 test('Home and Following both use real posts and only verified, visible LIVE sessions', async () => {
   const [app, server] = await Promise.all([
     read('public/app.js'),
