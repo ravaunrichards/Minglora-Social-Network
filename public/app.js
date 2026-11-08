@@ -1019,7 +1019,7 @@ function openVideoComposer(){
   });
 }
 
-async function loadPeople(){state.people=(await api('/users')).users;
+async function loadPeople(){state.people=(await api('/users')).users;}
 async function loadPeopleDiscovery(){
   const result=await api('/discovery/people');
   state.people=result.users||[];
