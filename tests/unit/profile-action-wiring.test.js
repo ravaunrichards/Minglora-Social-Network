@@ -20,11 +20,11 @@ test('profile owner edit, media and story buttons invoke their real actions',()=
   for(const action of [
     "$('#edit-profile')?.addEventListener('click',()=>openEditProfile(u))",
     "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())",
-    "$('#profile-edit-avatar')?.addEventListener('click',()=>openEditProfile(u,'avatar'))",
-    "$('#profile-edit-cover')?.addEventListener('click',()=>openEditProfile(u,'cover'))",
-    "$('#profile-edit-admin-cover')?.addEventListener('click',()=>openEditProfile(u,'cover'))",
     "openProfileStoryEditor(u.id)"
   ])assert.ok(profile.includes(action),'Missing profile action: '+action);
+  assert.doesNotMatch(profile,/profile-edit-avatar|profile-edit-cover|profile-edit-admin-cover/);
+  assert.match(app,/data-profile-media-section="avatar"/);
+  assert.match(app,/data-profile-media-section="cover"/);
 });
 
 test('visitor Follow, Subscribe, Message, call, Report and Block controls are connected',()=>{
@@ -47,9 +47,16 @@ test('profile counts, section tabs and profile links navigate to live views',()=
   assert.ok(profile.includes("renderConnections(u.id,button.dataset.openConnections)"));
   assert.ok(profile.includes("document.querySelectorAll('.profile-tabs [data-profile-tab]')"));
   assert.ok(profile.includes("showTab(button.dataset.profileTab)"));
-  for(const tab of ["['posts','All']","['about','About']","['friends','Friends']","['photos','Photos']","['reels','Reels']","['badges','Badges']","['gift-gallery','Gift Gallery']","['more','More']"]){
+  for(const tab of ["['posts','All']","['about','About']","['friends','Friends']","['photos','Photos']","['reels','Reels']","['more','More']"]){
     assert.ok(profile.includes(tab),'Missing profile tab '+tab);
   }
+  assert.doesNotMatch(profile,/\['badges','Badges'\]|\['gift-gallery','Gift Gallery'\]/);
+  const moreStart=app.indexOf("if(tab==='more')return",app.indexOf('function profileTabMarkup'));
+  const moreEnd=app.indexOf("const previewPhotos=",moreStart);
+  const more=app.slice(moreStart,moreEnd);
+  assert.match(more,/data-profile-tab="badges"/);
+  assert.match(more,/data-profile-tab="gift-gallery"/);
+  assert.match(profile,/\['checkins','events','highlights','groups','videos','badges','gift-gallery','manage'\]\.includes\(nextTab\)/);
 });
 
 test('profile overflow and administrator controls are wired to their feature handlers',()=>{
