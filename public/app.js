@@ -10,7 +10,6 @@ function getBrowserNavigationSnapshot(){
     view:state.view,
     feedScope:state.feedScope||'all',
     forYouScope:state.forYouScope||'for-you',
-    forYouScope:state.forYouScope||'for-you',
     profileId:state.profileTargetId||state.profile?.user?.id||'',
     profileTab:state.profileTab||'posts',
     activePage:state.activePage||'',
@@ -114,7 +113,6 @@ function persistCurrentView(){
     sessionStorage.setItem(lastViewStorageKey(),JSON.stringify({
       view:state.view,
       feedScope:state.feedScope,
-      forYouScope:state.forYouScope,
       forYouScope:state.forYouScope,
       profileId:state.profileTargetId||state.profile?.user?.id||'',
       profileTab:state.profileTab||'posts',
