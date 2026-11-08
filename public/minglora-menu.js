@@ -102,20 +102,51 @@
     panel.innerHTML =
       '<header class="minglora-menu-header">' +
         '<div class="minglora-menu-heading"><h2>Menu</h2><p>Explore Minglora</p></div>' +
+        '<label class="minglora-menu-search" for="minglora-menu-search"><span class="minglora-menu-search-icon">' + sprite('search') + '</span><input id="minglora-menu-search" type="search" placeholder="Search menu" aria-label="Search menu" autocomplete="off" spellcheck="false"></label>' +
         '<button type="button" class="minglora-menu-close" aria-label="Close menu" title="Close menu">×</button>' +
       '</header>' +
       '<div class="minglora-menu-body">' +
         '<div class="minglora-menu-main-scroll">' +
           sections.map(sectionMarkup).join('') +
           sectionMarkup({ title: 'More from Meta', items: metaItems }) +
+          '<p class="minglora-menu-no-results" data-menu-empty hidden>No menu items match your search.</p>' +
         '</div>' +
         '<aside class="minglora-menu-create-column" aria-label="Create">' +
           '<section class="minglora-menu-create-card" data-menu-section>' +
             '<h3>Create</h3><p class="minglora-menu-create-intro">Make something to share with your community.</p>' +
-            '<div class="minglora-menu-create-list">' + createItems.map(itemMarkup).join('') + '</div>' +
+            '<div class="minglora-menu-create-list"><p class="minglora-menu-no-results" data-menu-create-empty hidden>No Create options match your search.</p>' + createItems.map(itemMarkup).join('') + '</div>' +
           '</section>' +
         '</aside>' +
       '</div>';
+
+    const searchInput = panel.querySelector('#minglora-menu-search');
+    const menuEmpty = panel.querySelector('[data-menu-empty]');
+    const createEmpty = panel.querySelector('[data-menu-create-empty]');
+    const createList = panel.querySelector('.minglora-menu-create-list');
+
+    function filterMenu() {
+      const query = String(searchInput?.value || '').trim().toLocaleLowerCase();
+      let mainMatches = 0;
+      panel.querySelectorAll('.minglora-menu-main-scroll .minglora-menu-section').forEach(section => {
+        let sectionMatches = 0;
+        section.querySelectorAll('[data-menu-item]').forEach(item => {
+          const matches = !query || item.textContent.toLocaleLowerCase().includes(query);
+          item.hidden = !matches;
+          if (matches) sectionMatches += 1;
+        });
+        section.hidden = sectionMatches === 0;
+        mainMatches += sectionMatches;
+      });
+      let createMatches = 0;
+      createList?.querySelectorAll('[data-menu-item]').forEach(item => {
+        const matches = !query || item.textContent.toLocaleLowerCase().includes(query);
+        item.hidden = !matches;
+        if (matches) createMatches += 1;
+      });
+      if (menuEmpty) menuEmpty.hidden = !query || mainMatches > 0;
+      if (createEmpty) createEmpty.hidden = !query || createMatches > 0;
+    }
+    searchInput?.addEventListener('input', filterMenu);
 
     function closeMenu() {
       panel.hidden = true;
