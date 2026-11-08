@@ -36,12 +36,12 @@ test('a retry after a partially completed signup resumes the existing account', 
   assert.equal(result.authenticated.access_token, session().access_token);
 });
 
-test('a duplicate signup with a wrong password never creates a session', async () => {
+test('a duplicate signup with a wrong password shows the safe recovery error', async () => {
   const duplicate = Object.assign(new Error('An account with this email already exists. Log in instead.'), {
     status: 409,
     code: 'email_already_registered'
   });
-  const badPassword = Object.assign(new Error('Email or password is incorrect.'), {
+  const badPassword = Object.assign(new Error('Email or password is incorrect. Check the address and password, or use Forgot password to reset it.'), {
     status: 401,
     code: 'invalid_credentials'
   });
@@ -50,7 +50,7 @@ test('a duplicate signup with a wrong password never creates a session', async (
       register: async () => { throw duplicate; },
       signIn: async () => { throw badPassword; }
     }),
-    error => error === duplicate
+    error => error === badPassword && error.status === 401 && /Forgot password/.test(error.message)
   );
 });
 
