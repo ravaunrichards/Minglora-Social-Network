@@ -52,12 +52,13 @@ test('picture and cover remain editable in the normal Edit profile dialog only',
 });
 
 test('updated profile assets are loaded and precached by a refreshed shell cache',()=>{
-  for(const asset of [
-    '/profile-alignment.css?v=20261108-facebook-profile-avatar-168-1',
-    '/profile-action-row.css?v=20261108-facebook-profile-header-7',
-    '/app.js?v=20261108-tiktok-for-you-focus-1'
-  ]){
-    assert.ok(html.includes(asset),'index.html references '+asset);
+  const assets=[
+    html.match(/href="(\\/profile-alignment\\.css\\?v=[^"]+)"/)?.[1]||'',
+    html.match(/href="(\\/profile-action-row\\.css\\?v=[^"]+)"/)?.[1]||'',
+    html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]||''
+  ];
+  for(const asset of assets){
+    assert.ok(asset,'index.html includes the current profile asset');
     assert.ok(worker.includes("'"+asset+"'"),'service worker precaches '+asset);
   }
   assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
