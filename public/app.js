@@ -988,7 +988,7 @@ function openComposer(){
   });
 }
 
-function openVideoComposer(){
+function openVideoComposer(options={}){
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">Create a video post</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Share one video with your Minglora audience</small></div></div><div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div><div class="field"><label>Choose one video file</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish video</button></div></form></section>';
   document.body.append(modal);
@@ -1009,8 +1009,8 @@ function openVideoComposer(){
       const values=new FormData(event.currentTarget);
       await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds})});
       close();
-      state.videoMode='videos';
-      await renderVideoCentre();
+      if(typeof options.onPublished==='function')await options.onPublished();
+      else{state.videoMode='videos';await renderVideoCentre();}
       toast('Your video post is published.');
     }catch(error){
       toast(error.message);
@@ -5459,22 +5459,7 @@ function openProfilePhotoComposer(profileId){
   });
 }
 function openProfileReelComposer(profileId){
-  const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="profile-reel-title"><div class="modal-head"><h2 id="profile-reel-title">Create a reel</h2><button class="modal-close" type="button" aria-label="Close">×</button></div><form class="modal-body"><div class="field"><label>Caption<textarea name="text" maxlength="5000" placeholder="Write a caption for your reel"></textarea></label></div><div class="field"><label>Choose one or more video clips (up to 10)</label><div data-profile-reel-picker></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish reel</button></div></form></section>';
-  document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('[data-profile-reel-picker]'),{slot:'post',maxFiles:10,accept:'video/mp4,video/webm,video/quicktime'});
-  const close=()=>{picker.destroy();modal.remove();};
-  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.addEventListener('click',close));
-  modal.addEventListener('click',event=>{if(event.target===modal)close();});
-  modal.querySelector('form').addEventListener('submit',async event=>{
-    event.preventDefault();const submit=modal.querySelector('button[type="submit"]');submit.disabled=true;
-    try{
-      if(!picker.hasSelection())throw new Error('Choose a video for your reel.');
-      const mediaIds=await picker.upload(),values=new FormData(event.currentTarget);
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});
-      close();await openProfile(profileId);toast('Your reel has been published.');
-    }catch(error){toast(error.message);submit.disabled=false;}
-  });
+  return openVideoComposer({onPublished:()=>openProfile(profileId)});
 }
 
 function closeProfileOverflowMenu(){
