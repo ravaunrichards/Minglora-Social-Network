@@ -3919,7 +3919,10 @@ async function renderCreator(){
       settings:null,
       contentTab:"posts",
       section:"overview",
-      pagePickers:[]
+      pagePickers:[],
+      videoAnalyticsRange:30,
+      videoAnalytics:null,
+      videoAnalyticsError:null
     };
     await renderCreatorSection("overview");
   }catch(error){
@@ -4136,13 +4139,48 @@ function creatorAudienceMarkup(){
     "<div class='creator-audience-summary'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Members following your profile","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Profiles you follow","profile")+"</div>"+
     "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers,s.audienceError)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following,s.followingError)+"</div></section></div>";
 }
+function creatorAnalyticsDuration(value){
+  const milliseconds=Math.max(0,Number(value)||0);
+  if(milliseconds>=3600000)return (milliseconds/3600000).toFixed(1)+"h";
+  if(milliseconds>=60000)return Math.round(milliseconds/60000)+"m";
+  if(milliseconds>=1000)return Math.round(milliseconds/1000)+"s";
+  return "0m";
+}
+function creatorVideoAnalyticsMarkup(){
+  const s=state.creatorStudio||{},data=s.videoAnalytics,summary=data?.summary||{};
+  const rangeDays=Number(data?.rangeDays||s.videoAnalyticsRange||30);
+  const rangeButtons=[7,30,90].map(days=>"<button type='button' data-creator-video-range='"+days+"' class='"+(rangeDays===days?"active":"")+"' aria-pressed='"+(rangeDays===days?"true":"false")+"' aria-label='Show "+days+" days of video analytics'>"+days+" days</button>").join("");
+  if(s.videoAnalyticsError||!data){
+    return "<section class='creator-studio-panel creator-video-analytics-unavailable'><span class='creator-eyebrow'>VIDEO PERFORMANCE</span><h3>Video analytics unavailable</h3><p>"+esc(s.videoAnalyticsError||"Minglora could not load your video analytics.")+"</p><button type='button' class='secondary' data-creator-retry-video-analytics>Retry analytics</button></section>";
+  }
+  const daily=Array.isArray(data.daily)?data.daily:[];
+  const maxViewers=Math.max(1,...daily.map(day=>Number(day.uniqueViewers)||0));
+  const bars=daily.map(day=>{
+    const count=Math.max(0,Number(day.uniqueViewers)||0),height=Math.round(count/maxViewers*100),date=String(day.date||"");
+    return "<span class='creator-video-day' title='"+esc(date+" · "+count+" unique viewers")+"' aria-label='"+esc(date+": "+count+" unique viewers")+"'><i style='--viewer-bar:"+height+"%'></i></span>";
+  }).join("");
+  const videos=Array.isArray(data.videos)?data.videos:[];
+  const rows=videos.length?videos.slice(0,12).map(video=>
+    "<article class='creator-video-performance-row'><div class='creator-video-performance-title'><span class='creator-video-format'>"+(video.videoFormat==="reel"?"REEL":"VIDEO")+"</span><strong>"+esc(video.title||"Untitled video")+"</strong><small>"+esc(video.createdAt?new Date(video.createdAt).toLocaleDateString():"Publication date unavailable")+"</small></div><div><strong>"+creatorNumber(video.uniqueViewers)+"</strong><small>Unique viewers</small></div><div><strong>"+creatorNumber(video.completedViewers)+"</strong><small>Completed viewers</small></div><div><strong>"+creatorAnalyticsDuration(video.watchTimeMs)+"</strong><small>Watch time</small></div></article>"
+  ).join(""):"<div class='creator-video-no-data'><strong>No video watch data yet</strong><p>Publish a video or Reel and real viewer activity will appear here after members watch it.</p></div>";
+  const startLabel=daily[0]?.date||"",endLabel=daily[daily.length-1]?.date||"";
+  return "<section class='creator-studio-panel creator-video-analytics'><div class='creator-video-analytics-heading'><div><span class='creator-eyebrow'>VIDEO PERFORMANCE · LAST "+creatorNumber(rangeDays)+" DAYS</span><h3>Real video audience</h3><p>Unique viewers are counted once per creator across this range. Watch time and completion totals use persisted playback events.</p></div><div class='creator-video-heading-actions'><span class='creator-video-data-tag'>Measured activity</span><nav class='creator-video-range' aria-label='Analytics date range'>"+rangeButtons+"</nav></div></div>"+
+    "<div class='creator-video-metrics'>"+
+      creatorMetric("Unique viewers",creatorNumber(summary.uniqueViewers),"Distinct members who watched your videos","friends")+
+      creatorMetric("Watch time",creatorAnalyticsDuration(summary.watchTimeMs),"Recorded playback time","live")+
+      creatorMetric("Completed views",creatorNumber(summary.completedViews),"Distinct viewer/video completions","video")+
+      creatorMetric("Video posts",creatorNumber(summary.videoCount),"Published video and Reel posts","saved")+
+    "</div>"+
+    "<section class='creator-video-daily-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>AUDIENCE ACTIVITY</span><h3>Daily unique viewers</h3></div><span>"+daily.length+" days</span></div><div class='creator-video-daily-bars' style='--day-count:"+daily.length+"' role='img' aria-label='Daily unique video viewers for the last "+creatorNumber(rangeDays)+" days'>"+bars+"</div><div class='creator-video-daily-legend'><span>"+esc(startLabel)+"</span><span>"+esc(endLabel)+"</span></div></section>"+
+    "<section class='creator-video-performance'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR TOP VIDEOS</span><h3>Video performance</h3></div><span>Up to 12 videos</span></div><div class='creator-video-performance-list'>"+rows+"</div></section>"+
+    "<p class='creator-video-analytics-footnote'>This report excludes your own playback and shows only member watch activity recorded by Minglora. It does not estimate impressions or invent play counts.</p></section>";
+}
 function creatorAnalyticsMarkup(){
-  const s=state.creatorStudio,p=s.profile||{};
-  const posts=Array.isArray(p.posts)?p.posts:[];
-  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Only metrics returned by Minglora’s existing profile insights API are displayed here.</p></div></div>"+
-    "<div class='creator-analytics-source'><span>✓</span><div><strong>Account-backed profile insights</strong><small>Counts below are returned by Minglora. Profile viewer history lives in Notification Settings; no estimated or sample view metrics are shown here.</small></div></div>"+
+  const s=state.creatorStudio,p=s.profile||{},posts=Array.isArray(p.posts)?p.posts:[];
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Profile audience and video performance from Minglora’s authenticated data.</p></div></div>"+
+    "<div class='creator-analytics-source'><span>✓</span><div><strong>Account-backed profile insights</strong><small>Profile totals and video activity are returned by Minglora. Video metrics come from saved watch-time events, not estimated views.</small></div></div>"+
     "<div class='creator-analytics-grid'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")+creatorMetric("Published posts",creatorNumber(posts.length),"Personal posts visible on your profile","saved")+"</div>"+
-    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Follower count, following count and published posts.</span></p><p><b>Not yet available</b><span>Per-post impressions, watch time, retention, completion, audience demographics, conversion funnels and time-series charts.</span></p></div></section>";
+    creatorVideoAnalyticsMarkup();
 }
 function creatorPageCard(page,details){
   const posts=details?.posts||[],canDelete=page.myRole==="owner";
@@ -4284,8 +4322,15 @@ async function renderCreatorSection(section){
     s.followingError=following.status==="rejected"?following.reason?.message:null;
     content=creatorAudienceMarkup();
   }else if(section==="analytics"){
-    try{s.profile=await api("/users/"+encodeURIComponent(state.user.id));}
-    catch(error){s.analyticsError=error.message;}
+    const rangeDays=[7,30,90].includes(Number(s.videoAnalyticsRange))?Number(s.videoAnalyticsRange):30;
+    const [profileResult,videoResult]=await Promise.allSettled([
+      api("/users/"+encodeURIComponent(state.user.id)),
+      api("/creator/video-analytics?days="+rangeDays)
+    ]);
+    if(profileResult.status==="fulfilled"){s.profile=profileResult.value;s.analyticsError=null;}
+    else s.analyticsError=profileResult.reason?.message||"Profile insights are unavailable.";
+    if(videoResult.status==="fulfilled"){s.videoAnalytics=videoResult.value;s.videoAnalyticsError=null;}
+    else{s.videoAnalytics=null;s.videoAnalyticsError=videoResult.reason?.message||"Video analytics are unavailable.";}
     content=creatorAnalyticsMarkup();
   }else if(section==="pages"){
     content=await creatorPagesMarkup();
@@ -4400,6 +4445,15 @@ async function renderCreatorSection(section){
   }
   if(section==="overview"){
     initCreatorStudio3D(document.getElementById("creator-stage-canvas"));
+  }
+  if(section==="analytics"){
+    document.querySelectorAll("[data-creator-video-range]").forEach(button=>button.addEventListener("click",()=>{
+      const days=Number(button.dataset.creatorVideoRange);
+      if(![7,30,90].includes(days)||days===state.creatorStudio?.videoAnalyticsRange)return;
+      state.creatorStudio.videoAnalyticsRange=days;
+      renderCreatorSection("analytics").catch(error=>toast(error.message));
+    }));
+    document.querySelector("[data-creator-retry-video-analytics]")?.addEventListener("click",()=>renderCreatorSection("analytics").catch(error=>toast(error.message)));
   }
   if(section==="content"){
     document.querySelectorAll("[data-creator-content-tab]").forEach(button=>button.addEventListener("click",()=>{
