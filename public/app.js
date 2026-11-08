@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
-const RESTORABLE_VIEWS=new Set(['feed','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
+const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
 let restoringSavedView=false;
 let restoringBrowserNavigation=false;
@@ -555,7 +555,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=state.forYouScope==='following'?'following':'for-you';view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
@@ -721,7 +721,7 @@ async function refreshVisiblePosts(){
   if(state.view==='creator'&&state.creatorStudio){state.creatorStudio.profile=await api('/users/'+encodeURIComponent(state.user.id));await renderCreatorSection(state.creatorStudio.section||'content');return;}
   if(state.view==='group'&&state.activeGroup){await renderGroup(state.activeGroup);return;}
   if(state.view==='saved'){await renderSavedPosts();return;}
-  if(state.view==='videos'){await renderVideoCentre();return;}
+  if(state.view==='for-you'){await renderForYouFeed();return;}\n  if(state.view==='videos'){await renderVideoCentre();return;}
   if(state.view==='profile'&&state.profile?.user?.id){await openProfile(state.profile.user.id);return;}
   if(state.view==='search'){
     const query=$('#search-input')?.value.trim();
@@ -4869,7 +4869,7 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function syncPageLayout(){const active=state.view==='profile';const layout=document.querySelector('.layout');if(layout)layout.classList.toggle('profile-view',active);document.body.classList.toggle('minglora-profile-active',active);document.documentElement.classList.toggle('minglora-profile-active',active);}
+function syncPageLayout(){const active=state.view==='profile';const forYou=state.view==='for-you';const layout=document.querySelector('.layout');if(layout)layout.classList.toggle('profile-view',active);document.body.classList.toggle('minglora-profile-active',active);document.documentElement.classList.toggle('minglora-profile-active',active);document.body.classList.toggle('minglora-for-you-active',forYou);document.documentElement.classList.toggle('minglora-for-you-active',forYou);}
 function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();recordBrowserNavigation();}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
@@ -9002,6 +9002,206 @@ function bindReelPlayback(root){
     });
   });
 }
+let forYouPlaybackObserver=null;
+let forYouActiveVideos=[];
+async function fetchForYouPage({reset=false}={}){
+  if(state.forYouLoading)return;
+  state.forYouLoading=true;
+  try{
+    const scope=state.forYouScope==='following'?'following':'for-you';
+    const params=new URLSearchParams({scope,limit:'12'});
+    if(!reset&&state.forYouNextCursor)params.set('cursor',state.forYouNextCursor);
+    const result=await api('/for-you/videos?'+params.toString());
+    const posts=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+    state.videoFeed=reset?posts:[...state.videoFeed,...posts.filter(post=>!state.videoFeed.some(old=>old.id===post.id))];
+    state.forYouNextCursor=result.nextCursor||null;
+    state.forYouHasMore=result.hasMore===true;
+    return posts;
+  }finally{state.forYouLoading=false;}
+}
+function forYouCard(post,index){
+  const author=post.author||{},media=(post.media||[]).find(item=>item.mediaType==='video'&&item.url);
+  if(!media)return '';
+  const following=post.following===true||post.isFollowing===true;
+  const caption=String(post.text||'').trim();
+  const liked=post.myReaction?'liked':'';
+  return '<article class="fyp-video-card" data-fyp-post="'+esc(post.id)+'" data-post="'+esc(post.id)+'">'+
+    '<video class="fyp-video" data-fyp-video data-post-id="'+esc(post.id)+'" playsinline webkit-playsinline loop muted preload="'+(index<2?'auto':'metadata')+'" src="'+esc(media.url)+'" aria-label="Video by '+esc(author.name||'Minglora member')+'"></video>'+
+    '<div class="fyp-video-shade" aria-hidden="true"></div>'+
+    '<header class="fyp-overlay-top"><button type="button" class="fyp-brand" data-fyp-home aria-label="Minglora home">m</button><nav class="fyp-tabs" aria-label="Video feed"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><i></i><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></nav><button type="button" class="fyp-search" data-fyp-search aria-label="Search videos">⌕</button></header>'+
+    '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'creator')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button><button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id||'')+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button></div>'+
+    '<p class="fyp-caption">'+esc(caption||'')+'</p>'+
+    '<div class="fyp-sound-line">'+(post.soundtrack?renderPostSoundtrack(post):'<span>♫ Original audio · '+esc(author.username||'Minglora creator')+'</span>')+'</div>'+
+    '<form class="comment-form fyp-comment-form" data-comment-form="'+esc(post.id)+'" hidden><input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Add a comment" required><button type="submit">Send</button></form></div>'+
+    '<aside class="fyp-action-rail" aria-label="Video actions">'+
+    '<button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" aria-label="Like video"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
+    '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button>'+
+    '<button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save video"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
+    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share video"><span>↗</span><small>Share</small></button>'+
+    '<button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
+    '<button type="button" class="fyp-action fyp-more-action" data-fyp-not-interested="'+esc(post.id)+'" aria-label="Not interested"><span>⋯</span><small>More</small></button>'+
+    '<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button></aside>'+
+    '<button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>'+
+    '</article>';
+}
+function teardownForYouPlayback(){
+  if(forYouPlaybackObserver){forYouPlaybackObserver.disconnect();forYouPlaybackObserver=null;}
+  forYouActiveVideos.forEach(video=>{video.pause();video.removeAttribute('src');});
+  forYouActiveVideos=[];
+}
+function setupForYouPlayback(root){
+  teardownForYouPlayback();
+  const cards=Array.from(root.querySelectorAll('.fyp-video-card'));
+  const videos=cards.map(card=>card.querySelector('[data-fyp-video]')).filter(Boolean);
+  forYouActiveVideos=videos;
+  const stream=root.querySelector('#fyp-stream');
+  const sendWatch=async video=>{
+    const postId=video.dataset.postId,watchedMs=Math.round(Number(video.dataset.watchBuffer||0));
+    const durationMs=Math.round(Number(video.duration||0)*1000);
+    video.dataset.watchBuffer='0';
+    if(postId&&watchedMs>=1000&&durationMs>=1000){
+      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});}catch(error){console.warn('[Minglora] Video watch signal not saved:',error?.message||error);}
+    }
+  };
+  videos.forEach(video=>{
+    video.dataset.lastMediaTime='0';
+    video.dataset.watchBuffer='0';
+    video.addEventListener('timeupdate',()=>{
+      const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0);
+      const delta=current-previous;
+      if(!video.paused&&delta>0&&delta<=2.5){
+        video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
+        if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
+      }
+      video.dataset.lastMediaTime=String(current);
+    });
+    video.addEventListener('seeking',()=>{video.dataset.lastMediaTime=String(video.currentTime||0);});
+    video.addEventListener('pause',()=>{video.dataset.lastMediaTime=String(video.currentTime||0);void sendWatch(video);});
+    video.addEventListener('ended',()=>void sendWatch(video));
+    video.addEventListener('click',()=>{
+      if(video.paused)video.play().catch(()=>{});
+      else video.pause();
+    });
+  });
+  if('IntersectionObserver' in window){
+    forYouPlaybackObserver=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        const video=entry.target;
+        if(entry.isIntersecting&&entry.intersectionRatio>=0.7){
+          videos.forEach(other=>{if(other!==video)other.pause();});
+          video.play().then(()=>{video.closest('.fyp-video-card')?.classList.remove('is-paused');}).catch(()=>{video.closest('.fyp-video-card')?.classList.add('is-paused');});
+        }else video.pause();
+      });
+    },{root:stream,threshold:[0,0.7,1]});
+    videos.forEach(video=>forYouPlaybackObserver.observe(video));
+  }else if(videos[0])videos[0].play().catch(()=>{});
+  root.querySelectorAll('[data-fyp-play]').forEach(button=>button.addEventListener('click',()=>{
+    const video=button.closest('.fyp-video-card')?.querySelector('[data-fyp-video]');
+    if(!video)return;
+    if(video.paused)video.play().catch(()=>{});
+    else video.pause();
+    button.closest('.fyp-video-card')?.classList.toggle('is-paused',video.paused);
+  }));
+  root.querySelectorAll('[data-fyp-sound]').forEach(button=>button.addEventListener('click',()=>{
+    const video=button.closest('.fyp-video-card')?.querySelector('[data-fyp-video]');
+    if(!video)return;
+    video.muted=!video.muted;
+    button.textContent=video.muted?'♫':'🔊';
+    if(!video.paused)video.play().catch(()=>{});
+  }));
+  root.querySelectorAll('[data-fyp-not-interested]').forEach(button=>button.addEventListener('click',async()=>{
+    const postId=button.dataset.fypNotInterested;
+    button.disabled=true;
+    try{
+      await api('/videos/'+encodeURIComponent(postId)+'/feedback',{method:'POST',body:JSON.stringify({action:'not_interested'})});
+      state.videoFeed=state.videoFeed.filter(post=>post.id!==postId);
+      const card=button.closest('.fyp-video-card');card?.remove();
+      if(state.videoFeed.length<4&&state.forYouHasMore)await loadMoreForYouVideos();
+      toast('We’ll show you fewer videos like this.');
+    }catch(error){toast(error.message);button.disabled=false;}
+  }));
+  root.querySelectorAll('[data-foryou-follow]').forEach(button=>button.addEventListener('click',async()=>{
+    const id=button.dataset.foryouFollow;if(!id)return;
+    const following=button.dataset.following==='true';button.disabled=true;
+    try{
+      const result=await api('/users/'+encodeURIComponent(id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
+      const next=!following;button.dataset.following=String(next);button.classList.toggle('following',next);button.textContent=next?'Following':'Follow';
+      const post=state.videoFeed.find(item=>item.author?.id===id);if(post)post.following=next;
+      toast(result.friends?'You are now friends through mutual follows.':(next?'Now following creator.':'Unfollowed creator.'));
+    }catch(error){toast(error.message);}
+    finally{button.disabled=false;}
+  }));
+  root.querySelectorAll('[data-fyp-scope]').forEach(button=>button.addEventListener('click',async()=>{
+    const scope=button.dataset.fypScope;
+    if(scope===state.forYouScope)return;
+    state.forYouScope=scope;state.forYouSearch='';
+    await renderForYouFeed();
+  }));
+  root.querySelectorAll('[data-fyp-home]').forEach(button=>button.addEventListener('click',()=>activateNav('feed')));
+  root.querySelectorAll('[data-fyp-search]').forEach(button=>button.addEventListener('click',()=>{
+    const search=root.querySelector('#fyp-search-input');
+    if(search){search.hidden=false;search.focus();}
+  }));
+  root.querySelectorAll('[data-focus-comment]').forEach(button=>button.addEventListener('click',()=>{
+    const form=root.querySelector('[data-comment-form="'+CSS.escape(button.dataset.focusComment)+'"]');
+    if(form){form.hidden=false;form.querySelector('input')?.focus();}
+  }));
+  const search=root.querySelector('#fyp-search-input');
+  search?.addEventListener('input',()=>{
+    const q=search.value.trim().toLowerCase();
+    root.querySelectorAll('.fyp-video-card').forEach(card=>{
+      const post=state.videoFeed.find(item=>item.id===card.dataset.fypPost);
+      const haystack=[post?.text,post?.author?.name,post?.author?.username].join(' ').toLowerCase();
+      card.hidden=Boolean(q&&!haystack.includes(q));
+    });
+  });
+  stream?.addEventListener('scroll',()=>{
+    if(stream.scrollTop+stream.clientHeight>=stream.scrollHeight-700&&state.forYouHasMore&&!state.forYouLoading)void loadMoreForYouVideos();
+  },{passive:true});
+}
+async function loadMoreForYouVideos(){
+  if(state.forYouLoading||!state.forYouHasMore)return;
+  const items=await fetchForYouPage({reset:false});
+  if(!items?.length){state.forYouHasMore=false;return;}
+  const stream=document.querySelector('#fyp-stream');
+  if(!stream)return;
+  const start=state.videoFeed.length-items.length;
+  stream.insertAdjacentHTML('beforeend',items.map((post,index)=>forYouCard(post,start+index)).join(''));
+  setupForYouPlayback(document.querySelector('.minglora-for-you'));
+  bindFeed(stream);
+}
+async function renderForYouFeed(){
+  state.view='for-you';
+  state.forYouScope=state.forYouScope==='following'?'following':'for-you';
+  teardownForYouPlayback();
+  state.videoFeed=[];
+  state.forYouNextCursor=null;
+  state.forYouHasMore=false;
+  setContent('<section class="minglora-for-you"><div class="fyp-loading">Loading your videos…</div></section>');
+  const root=$('#main-content');
+  try{
+    await fetchForYouPage({reset:true});
+    const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
+    root.innerHTML='<section class="minglora-for-you"><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos">⌕</button></div><div class="fyp-feed-switch"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><span></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="For You videos">'+(cards||'<div class="fyp-empty"><div class="fyp-empty-mark">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'Your For You feed is ready for its first videos')+'</h2><p>When Minglora members publish eligible public videos, they will appear here. Follow creators, watch videos and interact to personalize recommendations.</p><button type="button" class="primary" id="fyp-create-video">Create a video</button></div>')+'</div></section>';
+    const main=$('#main-content');
+    main.querySelector('#fyp-create-video')?.addEventListener('click',()=>openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()}));
+    bindFeed(main.querySelector('#fyp-stream')||main);
+    setupForYouPlayback(main.querySelector('.minglora-for-you'));
+    main.querySelectorAll('[data-fyp-scope]').forEach(button=>button.addEventListener('click',async()=>{
+      const scope=button.dataset.fypScope;if(scope===state.forYouScope)return;
+      state.forYouScope=scope;await renderForYouFeed();
+    }));
+    main.querySelectorAll('[data-fyp-search]').forEach(button=>button.addEventListener('click',()=>{const input=main.querySelector('#fyp-search-input');input.hidden=false;input.focus();}));
+    main.querySelector('#fyp-search-input')?.addEventListener('input',event=>{
+      const q=event.target.value.trim().toLowerCase();
+      main.querySelectorAll('.fyp-video-card').forEach(card=>{
+        const post=state.videoFeed.find(item=>item.id===card.dataset.fypPost);
+        card.hidden=Boolean(q&&!([post?.text,post?.author?.name,post?.author?.username].join(' ').toLowerCase().includes(q)));
+      });
+    });
+    main.querySelectorAll('[data-fyp-home]').forEach(button=>button.addEventListener('click',()=>activateNav('feed')));
+  }catch(error){setContent('<section class="minglora-for-you"><div class="fyp-empty"><h2>Could not load For You videos</h2><p>'+esc(error.message)+'</p><button type="button" class="primary" id="fyp-retry">Try again</button></div></section>');$('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());}
+}
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
   const mode=['videos','reels','watch-later'].includes(state.videoMode)?state.videoMode:'videos';
@@ -9086,7 +9286,7 @@ function renderMoreHub(){
     else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 let accountSwitcherTopLayerCleanup=null;
 function positionAccountSwitcherTopLayer(){
   const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
