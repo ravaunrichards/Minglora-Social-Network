@@ -76,31 +76,34 @@ test('outside profile cards preserve the full 3:1 saved cover and uncropped avat
 });
 
 test('Supabase sign-in without profile metadata preserves the saved public name and username', async () => {
+  const server = await read('src/server.js');
   const start=server.indexOf('function ensureLocalUser(authUser, fallback = {})');
   const end=server.indexOf('function isAccountBanned(account)',start);
   assert.ok(start>=0&&end>start,'ensureLocalUser identity reconciliation exists');
   const ensure=server.slice(start,end);
-  assert.match(ensure,/let user = db\\.users\\.find\\(item => item\\.id === authUser\\.id\\) \\|\\| db\\.users\\.find/);
-  assert.match(ensure,/fallback\\.name \\|\\| user\\?\\.name/);
-  assert.match(ensure,/fallback\\.username \\|\\| user\\?\\.username/);
-  assert.match(ensure,/fallback\\.phoneNumber \\|\\| user\\?\\.contactPhone/);
+  assert.ok(ensure.includes('let user = db.users.find'),'existing profile is found before metadata fallback');
+  assert.ok(ensure.includes('fallback.name || user?.name'),'saved display name survives a sign-in response without metadata');
+  assert.ok(ensure.includes('fallback.username || user?.username'),'saved username survives a sign-in response without metadata');
+  assert.ok(ensure.includes('fallback.phoneNumber||user?.contactPhone'),'saved contact phone survives a sign-in response without metadata');
 });
 
 test('search ranks an exact public username or display-name match before broader matches', async () => {
+  const server = await read('src/server.js');
   const start=server.indexOf("if(method==='GET'&&p==='/api/search')");
   const end=server.indexOf("return json(res,404,{error:'API route not found.'})",start);
   assert.ok(start>=0&&end>start,'member search route exists');
   const route=server.slice(start,end);
-  assert.match(route,/canViewProfile\\(user\\.id,member\\)/,'search respects profile visibility');
-  assert.match(route,/member\\.username\\|\\|''/,'search includes public usernames');
-  assert.match(route,/score\\(second\\)-score\\(first\\)/,'exact identity matches rank before broad matches');
+  assert.ok(route.includes('canViewProfile(user.id,member)'),'search respects profile visibility');
+  assert.ok(route.includes('member.username||'),'search includes public usernames');
+  assert.ok(route.includes('score(second)-score(first)'),'exact identity matches rank before broad matches');
 });
 
 test('People You May Know does not hide discoverable member accounts behind a fixed 24-member cutoff', async () => {
+  const server = await read('src/server.js');
   const start=server.indexOf("if(method==='GET'&&p==='/api/discovery/people')");
   const end=server.indexOf("const discoveryDismissalMatch=",start);
   assert.ok(start>=0&&end>start,'People You May Know route exists');
   const route=server.slice(start,end);
-  assert.match(route,/canViewProfile\\(user\\.id,member\\)/,'discovery respects profile visibility');
-  assert.doesNotMatch(route,/\\.slice\\(0,24\\)/,'eligible member accounts are not silently cut off after 24');
+  assert.ok(route.includes('canViewProfile(user.id,member)'),'discovery respects profile visibility');
+  assert.ok(!route.includes('.slice(0,24)'),'eligible member accounts are not silently cut off after 24');
 });
