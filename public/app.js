@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
@@ -8870,26 +8870,96 @@ async function renderSearch(q){
   document.querySelectorAll('[data-open-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openGroup)));
   document.querySelectorAll('[data-open-page]').forEach(button=>button.addEventListener('click',()=>renderPage(button.dataset.openPage)));
 }
+function renderReelCard(post,media,index){
+  const author=post.author||{},comments=post.comments||[];
+  const likedLabel=post.myReaction?String(post.myReaction).charAt(0).toUpperCase()+String(post.myReaction).slice(1):'Like';
+  return '<article class="minglora-reel" data-post="'+esc(post.id)+'" data-reel-index="'+index+'">'+
+    '<div class="minglora-reel-stage">'+
+      '<video class="post-media-video minglora-reel-video" data-reel-video controls playsinline loop muted preload="metadata" src="'+esc(media.url)+'" aria-label="Video shared by @'+esc(author.username||'member')+'"></video>'+
+      '<button type="button" class="minglora-reel-sound" data-reel-sound="'+esc(post.id)+'" aria-pressed="false">Unmute</button>'+
+      (post.text?'<div class="minglora-reel-caption-overlay">'+esc(post.text)+'</div>':'')+
+    '</div>'+
+    '<div class="minglora-reel-details">'+
+      '<div class="minglora-reel-author">'+thoughtAvatarMarkup(author,'avatar',true)+'<span><strong data-profile="'+esc(author.id||'')+'">'+esc(author.name||'Minglora member')+'</strong><small>@'+esc(author.username||'')+' · '+timeAgo(post.createdAt)+'</small></span></div>'+
+      renderPostSoundtrack(post)+
+      '<div class="minglora-reel-actions">'+
+        '<button type="button" class="'+(post.myReaction?'liked':'')+'" data-react="'+esc(post.id)+'">♡ '+esc(likedLabel)+' · '+Number(post.reactionCount||0).toLocaleString()+'</button>'+
+        '<button type="button" data-focus-comment="'+esc(post.id)+'">Comments · '+comments.length.toLocaleString()+'</button>'+
+        '<button type="button" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'">'+(post.isSaved?'Saved':'Save')+'</button>'+
+        '<button type="button" data-share="'+esc(post.id)+'">Share</button>'+
+        '<button type="button" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'">Gift</button>'+
+      '</div>'+
+      (comments.length?'<div class="minglora-reel-comments">'+comments.slice(-2).map(comment=>'<p><strong>'+esc(comment.author?.name||'Member')+'</strong> '+esc(comment.text||'')+'</p>').join('')+'</div>':'')+
+      '<form class="comment-form minglora-reel-comment-form" data-comment-form="'+esc(post.id)+'">'+thoughtAvatarMarkup(state.user)+'<input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Comment on this video" required><button type="submit">Send</button></form>'+
+    '</div>'+
+  '</article>';
+}
+let videoReelObserver=null;
+function bindReelPlayback(root){
+  if(videoReelObserver){videoReelObserver.disconnect();videoReelObserver=null;}
+  const videos=Array.from(root.querySelectorAll('[data-reel-video]'));
+  if(!videos.length)return;
+  const scroller=root.querySelector('.video-centre-reels');
+  if('IntersectionObserver' in window){
+    videoReelObserver=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting&&entry.intersectionRatio>=0.65){
+          videos.forEach(video=>{if(video!==entry.target)video.pause();});
+          entry.target.play().catch(()=>{});
+        }else entry.target.pause();
+      });
+    },{root:scroller,threshold:[0,0.65,1]});
+    videos.forEach(video=>videoReelObserver.observe(video));
+  }else{
+    videos.slice(1).forEach(video=>video.pause());
+    videos[0].play().catch(()=>{});
+  }
+  root.querySelectorAll('[data-reel-sound]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const video=button.closest('.minglora-reel')?.querySelector('[data-reel-video]');
+      if(!video)return;
+      video.muted=!video.muted;
+      button.textContent=video.muted?'Unmute':'Mute';
+      button.setAttribute('aria-pressed',video.muted?'false':'true');
+      if(!video.paused)video.play().catch(()=>{});
+    });
+  });
+}
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
+  const mode=['videos','reels'].includes(state.videoMode)?state.videoMode:'videos';
   state.videoScope=scope;
+  state.videoMode=mode;
   const result=await api('/feed?scope='+encodeURIComponent(scope)+'&limit=100');
-  state.videoFeed=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'));
-  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Publish a video from your device and it will appear here after posting.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Video discovery uses actual Minglora posts and uploaded video files. No sample videos or fabricated view counts are displayed.</p></div>');
+  state.videoFeed=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button></nav><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
   const root=$('#main-content');
   const feed=root.querySelector('#video-centre-feed');
   const drawVideoPosts=()=>{
     const query=String(state.videoSearch||'').trim().toLowerCase();
     const visible=state.videoFeed.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
-    feed.innerHTML=visible.length?visible.map(postCard).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No videos found</h3><p>'+(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
-    bindFeed(feed);
+    if(mode==='reels'){
+      const reels=visible.flatMap(post=>(post.media||[]).filter(media=>media.mediaType==='video'&&media.url).map(media=>({post,media})));
+      feed.innerHTML=reels.length?'<div class="video-centre-reels">'+reels.map((reel,index)=>renderReelCard(reel.post,reel.media,index)).join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No Reels found</h3><p>'+(query?'Try another search or change the video audience.':'There are no real video posts in this feed yet. Publish a video to start the Reels experience.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      bindFeed(feed);
+      bindReelPlayback(feed);
+    }else{
+      feed.innerHTML=visible.length?visible.map(postCard).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No videos found</h3><p>'+(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      bindFeed(feed);
+    }
     feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openComposer());
   };
+  root.querySelectorAll('[data-video-mode]').forEach(button=>button.addEventListener('click',async()=>{
+    if(state.videoMode===button.dataset.videoMode)return;
+    state.videoMode=button.dataset.videoMode;
+    await renderVideoCentre();
+  }));
   root.querySelector('#video-create-button')?.addEventListener('click',()=>openComposer());
   root.querySelector('#video-scope')?.addEventListener('change',async event=>{state.videoScope=event.target.value;await renderVideoCentre();});
   root.querySelector('#video-search')?.addEventListener('input',event=>{state.videoSearch=event.target.value;drawVideoPosts();});
   drawVideoPosts();
 }
+
 function renderMoreHub(){
   const sections=[
     {title:'Watch & create',items:[
