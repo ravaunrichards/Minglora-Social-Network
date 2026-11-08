@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
-const css=read('public/profile-tiktok-layout.css');
+const css=read('public/profile-layout-guardrails.css');
 
 test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
@@ -44,13 +44,18 @@ test('admin profile keeps shared owner actions and its standard administrator to
   assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
 });
 
-test('profile uses TikTok-style mobile sizing without hiding the profile portrait',()=>{
-  assert.match(css,/\.profile-header-card \.profile-cover\s*\{\s*display:\s*none/);
-  assert.match(css,/@media \(max-width: 760px\)[\s\S]*?flex-basis: 84px/);
-  assert.match(css,/@media \(max-width: 760px\)[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.doesNotMatch(css,/profile-avatar-edit-wrap\s*\{[^}]*display:\s*none/);
+test('Facebook profile keeps the cover visible with the portrait overlapping its lower-left edge',()=>{
+  assert.ok(css.includes('.minglora-profile-page .profile-header-card .profile-cover {'));
+  assert.ok(css.includes('display: block !important'));
+  assert.ok(css.includes('position: relative !important'));
+  assert.ok(css.includes('margin: -84px 0 0 !important'));
+  assert.ok(css.includes('width: 168px !important')&&css.includes('height: 168px !important'));
+  assert.ok(css.includes('border-radius: 50% !important'));
+  assert.ok(css.includes('@media (max-width:760px)'));
+  assert.ok(css.includes('left:13px!important')&&css.includes('top:-48px!important'));
+  assert.ok(css.includes('@media (max-width:390px)'));
+  assert.ok(css.includes('left:10px!important')&&css.includes('top:-44px!important'));
 });
-
 test('profile editing retains centered native dialogs and About section editing',()=>{
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
