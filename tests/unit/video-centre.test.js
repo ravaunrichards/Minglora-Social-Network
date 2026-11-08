@@ -92,7 +92,7 @@ test('Minglora Watch Later is private and accepts only posts containing an acces
 test('Reels record genuine watch-time and the Video Centre paginates without replacing the current reel stack', async () => {
   const app = await read('../../public/app.js');
 
-  assert.match(app, /data-reel-video data-post-id=/);
+  assert.match(app, /data-reel-video controls playsinline loop muted preload="metadata" data-post-id=/);
   assert.match(app, /video\.dataset\.watchBuffer/);
   assert.match(app, /api\('\/videos\/'\+encodeURIComponent\(postId\)\+'\/watch'/);
   assert.match(app, /video\.addEventListener\('timeupdate'/);
