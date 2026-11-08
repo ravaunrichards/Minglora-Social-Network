@@ -57,8 +57,8 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*grid-template-areas:[\s\S]*"search search"/);
   assert.ok(html.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
-  assert.ok(html.includes('/app.js?v=20261108-profile-separated-avatar-1'));
-  assert.ok(sw.includes('/app.js?v=20261108-profile-separated-avatar-1'));
+  assert.ok(html.includes('/app.js?v=20261108-facebook-stories-navigation-2'));
+  assert.ok(sw.includes('/app.js?v=20261108-facebook-stories-navigation-2'));
   assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
 
@@ -78,9 +78,24 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   assert.match(css, /\.story-create-card/);
   assert.match(css, /\.story-viewer-fullscreen-card/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*\.story-viewer-fullscreen-card/);
-  assert.ok(html.includes('/styles.css?v=20261108-facebook-stories-1'));
-  assert.ok(html.includes('/app.js?v=20261108-profile-separated-avatar-1'));
-  assert.ok(sw.includes('/styles.css?v=20261108-facebook-stories-1'));
-  assert.ok(sw.includes('/app.js?v=20261108-profile-separated-avatar-1'));
-  assert.match(sw, /minglora-shell-v226-profile-separated-avatar-1/);
+  assert.ok(html.includes('/styles.css?v=20261108-facebook-stories-2'));
+  assert.ok(html.includes('/app.js?v=20261108-facebook-stories-navigation-2'));
+  assert.ok(sw.includes('/styles.css?v=20261108-facebook-stories-2'));
+  assert.ok(sw.includes('/app.js?v=20261108-facebook-stories-navigation-2'));
+  assert.match(sw, /minglora-shell-v227-facebook-stories-navigation-2/);
+});
+
+test('Stories create button stays above its label and uses consistent Facebook-style card sizing', async () => {
+  const css = await read('public/styles.css');
+  assert.match(css, /\.story-create-plus\{[\s\S]*z-index:3/);
+  assert.match(css, /\.story-create-label\{[\s\S]*z-index:1/);
+  assert.match(css, /\.story-create-card,\.story-card\{[\s\S]*flex:0 0 112px[\s\S]*height:196px/);
+});
+test('Stories support tap, swipe, timed progression and media-end navigation', async () => {
+  const app = await read('public/app.js');
+  assert.match(app, /const bindStoryTapNavigation=\\(\\)=>\\{/);
+  assert.match(app, /touchstart/);
+  assert.match(app, /touchend/);
+  assert.match(app, /setTimeout\\(\\(\\)=>advanceStoryItem\\(1\\),5000\\)/);
+  assert.match(app, /addEventListener\\('ended',[\\s\\S]*advanceStoryItem\\(1\\)/);
 });
