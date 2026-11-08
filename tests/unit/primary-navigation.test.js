@@ -44,14 +44,13 @@ test('the More page provides direct access to secondary features and account too
   assert.ok(app.includes("else if(action==='themes')openPaletteSwitcher()"),'Theme controls open from More');
 });
 
-test('profile navigation keeps the current profile sections and More menu available',()=>{
-  assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>"));
+test('profile navigation keeps creator tabs and the More menu available',()=>{
+  assert.ok(app.includes("[['posts','Posts'],['reels','Reels'],['photos','Photos'],['friends','Friends'],['about','About'],['more','More']].map(([key,label])=>"));
   assert.ok(app.includes('profile-more-menu'),'profile More menu markup is present');
   for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Badges','Gift Gallery','Photo albums','Manage sections']){
     assert.ok(app.includes(section),section+' remains represented in the profile More section');
   }
 });
-
 test('mobile navigation stylesheet is linked and versioned independently',()=>{
   assert.ok(html.includes('/mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
   assert.match(html,/src="\/app\.js\?v=[^"]+"/);
