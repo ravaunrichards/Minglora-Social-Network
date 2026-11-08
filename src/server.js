@@ -21,6 +21,7 @@ import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateConta
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
+import { rankForYouVideos } from './domain/video-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
@@ -4470,6 +4471,85 @@ async function route(req, res) {
           const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
+      }
+      if(method==='GET'&&p==='/api/for-you/videos'){
+        const scope=String(url.searchParams.get('scope')||'for-you');
+        if(!['for-you','following'].includes(scope))return json(res,400,{error:'Video feed scope must be for-you or following.'});
+        const rawLimit=url.searchParams.has('limit')?Number(url.searchParams.get('limit')):12;
+        const rawCursor=url.searchParams.get('cursor');
+        const offset=rawCursor===null?0:Number(rawCursor);
+        if(!Number.isInteger(rawLimit)||rawLimit<1||rawLimit>30||!Number.isInteger(offset)||offset<0)return json(res,400,{error:'Invalid For You video pagination.'});
+        const followedIds=new Set((db.follows||[]).filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
+        const visiblePosts=(db.posts||[]).filter(post=>
+          post.status!=='hidden'&&!post.archivedAt&&
+          !blockedBetween(user.id,post.userId)&&
+          canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))&&
+          canViewProfileAudience(user.id,post.userId,post.audience||'public')&&
+          !friendPostsMuted(user.id,post.userId)&&
+          (scope==='for-you'||followedIds.has(post.userId))&&
+          (post.mediaIds||[]).some(assetId=>{
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId);
+            return asset&&asset.status==='attached'&&asset.mediaType==='video';
+          })
+        );
+        const excludedFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id&&item.action==='not_interested');
+        const orderedPosts=scope==='for-you'
+          ?rankForYouVideos(visiblePosts,user.id,db.follows||[],db.savedPosts||[],db.videoWatchEvents||[],excludedFeedback)
+          :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const page=orderedPosts.slice(offset,offset+rawLimit+1);
+        const hasMore=page.length>rawLimit;
+        const items=await Promise.all(page.slice(0,rawLimit).map(post=>publicPost(post,user.id)));
+        const posts=items.filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+        return json(res,200,{posts,nextCursor:hasMore?String(offset+rawLimit):null,hasMore,scope});
+      }
+      m=p.match(/^\\/api\\/videos\\/([^/]+)\\/watch$/);
+      if(method==='POST'&&m){
+        const post=(db.posts||[]).find(item=>item.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||
+          !canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||
+          !canViewProfileAudience(user.id,post.userId,post.audience||'public')||
+          !(post.mediaIds||[]).some(assetId=>{
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId);
+            return asset&&asset.status==='attached'&&asset.mediaType==='video';
+          }))return json(res,404,{error:'Video not found.'});
+        const watchedMs=Number(input.watchedMs),durationMs=Number(input.durationMs);
+        if(!Number.isFinite(watchedMs)||!Number.isFinite(durationMs)||watchedMs<0||durationMs<1000||durationMs>3600000)return json(res,400,{error:'Invalid video watch event.'});
+        const safeDurationMs=Math.round(durationMs);
+        const safeWatchedMs=Math.min(Math.round(watchedMs),Math.round(safeDurationMs*1.5),600000);
+        if(safeWatchedMs<1000)return json(res,200,{tracked:false});
+        const completed=safeWatchedMs>=Math.max(5000,safeDurationMs*0.85);
+        const events=db.videoWatchEvents||(db.videoWatchEvents=[]);
+        const recent=events.filter(item=>item.userId===user.id&&item.postId===post.id&&Date.now()-Date.parse(item.createdAt||'')<15000).sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0))[0];
+        if(recent){
+          recent.watchedMs=Math.min(Math.round(safeDurationMs*1.5),Number(recent.watchedMs||0)+safeWatchedMs);
+          recent.durationMs=safeDurationMs;
+          recent.completed=recent.completed===true||completed;
+          recent.createdAt=now();
+        }else{
+          events.push({id:uid(),userId:user.id,postId:post.id,authorId:post.userId,watchedMs:safeWatchedMs,durationMs:safeDurationMs,completed,createdAt:now()});
+        }
+        if(events.length>20000)db.videoWatchEvents=events.slice(-20000);
+        await saveStore();
+        return json(res,200,{tracked:true,completed});
+      }
+      m=p.match(/^\\/api\\/videos\\/([^/]+)\\/feedback$/);
+      if(method==='POST'&&m){
+        const post=(db.posts||[]).find(item=>item.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||
+          !canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId))||
+          !canViewProfileAudience(user.id,post.userId,post.audience||'public')||
+          !(post.mediaIds||[]).some(assetId=>{
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId);
+            return asset&&asset.status==='attached'&&asset.mediaType==='video';
+          }))return json(res,404,{error:'Video not found.'});
+        const action=String(input.action||'');
+        if(!['not_interested','interested'].includes(action))return json(res,400,{error:'Video feedback must be not_interested or interested.'});
+        const feedback=db.videoFeedback||(db.videoFeedback=[]);
+        const existing=feedback.find(item=>item.userId===user.id&&item.postId===post.id);
+        if(existing){existing.action=action;existing.updatedAt=now();}
+        else feedback.push({id:uid(),userId:user.id,postId:post.id,action,createdAt:now(),updatedAt:now()});
+        await saveStore();
+        return json(res,200,{ok:true,action,postId:post.id});
       }
       if(method==='GET'&&p==='/api/sounds'){
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase();
